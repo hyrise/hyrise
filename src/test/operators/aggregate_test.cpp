@@ -1,6 +1,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -203,6 +204,11 @@ TEST_F(OperatorsAggregateTest, SingleAggregateCount) {
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, SingleAggregateCountDistinct) {
+  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::CountDistinct}}, {ColumnID{0}},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
   this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max.tbl", 1);
@@ -289,7 +295,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum, optional<std::string>("sum_b")},
+  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum, std::optional<std::string>("sum_b")},
                                          {ColumnID{2}, AggregateFunction::Avg}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }

@@ -122,6 +122,7 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::Sum, "SUM"},
         {AggregateFunction::Avg, "AVG"},
         {AggregateFunction::Count, "COUNT"},
+        {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
     });
 
 }  // namespace opossum

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,7 +32,7 @@ const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::colum
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant& value,
-                                                                       const optional<AllTypeVariant>& value2) {
+                                                                       const std::optional<AllTypeVariant>& value2) {
   auto _row_count = row_count();
   if (_row_count == 0) {
     return shared_from_this();

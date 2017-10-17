@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 

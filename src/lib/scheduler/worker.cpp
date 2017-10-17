@@ -87,7 +87,7 @@ void Worker::operator()() {
 
       // Sleep iff there is no ready task in our queue and work stealing was not successful.
       if (!work_stealing_successful) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         continue;
       }
     }
@@ -103,7 +103,7 @@ void Worker::operator()() {
 }
 
 void Worker::_set_affinity() {
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);

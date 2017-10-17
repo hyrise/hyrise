@@ -1,12 +1,12 @@
 version: '2.1'
 
 services:
-  opossum:
-    image: opossum
+  hyrise:
+    image: hyrise
     build: .
     command: bash -c "bash --rcfile <(echo '. /etc/bash_completion')"
-    working_dir: /opossum
+    working_dir: /hyrise
     volumes:
-      - ".:/opossum"
+      - ".:/hyrise"
       - "~/.ssh/:/root/.ssh/"
       - "~/.gitconfig:/root/.gitconfig"

@@ -37,7 +37,7 @@ class TPCHTest : public BaseTest {
     StorageManager::get().add_table("supplier", std::move(supplier));
   }
 
-  std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query) {
+  std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -49,11 +49,16 @@ class TPCHTest : public BaseTest {
     }
 
     auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+
+    if (optimize) {
+      result_node = Optimizer::get().optimize(result_node);
+    }
+
     return ASTToOperatorTranslator::get().translate_node(result_node);
   }
 
-  std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query) {
-    auto result_operator = translate_query_to_operator(query);
+  std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query, bool optimize) {
+    auto result_operator = translate_query_to_operator(query, optimize);
     auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
     for (auto& task : tasks) {
       task->schedule();
@@ -63,8 +68,11 @@ class TPCHTest : public BaseTest {
 
   void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
                          bool order_sensitive = false) {
-    auto result_task = schedule_query_and_return_task(query);
-    EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result, order_sensitive);
+    auto result_unoptimized = schedule_query_and_return_task(query, false)->get_operator()->get_output();
+    EXPECT_TABLE_EQ(result_unoptimized, expected_result, order_sensitive);
+
+    auto result_optimized = schedule_query_and_return_task(query, true)->get_operator()->get_output();
+    EXPECT_TABLE_EQ(result_optimized, expected_result, order_sensitive);
   }
 };
 

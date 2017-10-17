@@ -108,7 +108,7 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
   std::vector<uint16_t> widths(t->col_count());
   // calculate the length of the column name
   for (ColumnID col{0}; col < t->col_count(); ++col) {
-    widths[col] = std::max(min, static_cast<uint16_t>(to_string(t->column_name(col)).size()));
+    widths[col] = std::max(min, static_cast<uint16_t>(t->column_name(col).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max

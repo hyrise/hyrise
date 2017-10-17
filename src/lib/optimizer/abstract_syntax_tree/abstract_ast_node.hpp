@@ -2,10 +2,9 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-
-#include "common.hpp"
 
 namespace opossum {
 
@@ -36,7 +35,7 @@ enum class ASTChildSide { Left, Right };
 
 struct NamedColumnReference {
   std::string column_name;
-  optional<std::string> table_name;
+  std::optional<std::string> table_name = std::nullopt;
 
   std::string as_string() const;
 };
@@ -125,14 +124,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * on this.
    *
    * AbstractASTNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
-   * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise nullopt
+   * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise std::nullopt
    * is returned.
    *
    * AbstractASTNode::get_column_id_by_named_column_reference() is more strict and will fail if the
    * @param named_column_reference cannot be found.
    *
    * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
-   * ColumnIdentifier{"y", nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
+   * ColumnIdentifier{"y", std::nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
    * ColumnIdentifier{"y", "table_name"}
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
@@ -140,7 +139,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
    */
   ColumnID get_column_id_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
-  virtual optional<ColumnID> find_column_id_by_named_column_reference(
+  virtual std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const;
   // @}
 
@@ -198,7 +197,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Sets the table alias for this subtree, see _table_alias for details.
    * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
    */
-  void set_alias(const optional<std::string>& table_alias);
+  void set_alias(const std::optional<std::string>& table_alias);
 
   void print(std::ostream& out = std::cout, std::vector<bool> levels = {}) const;
   virtual std::string description() const = 0;
@@ -212,12 +211,12 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   // Each subtree can be a subselect. A subselect can be given an alias:
   // SELECT y.* FROM (SELECT * FROM x) AS y
   // The alias applies to all nodes above the node where it is set until a new alias is set
-  optional<std::string> _table_alias;
+  std::optional<std::string> _table_alias;
 
   // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
   // only operatore on the column name. If an alias for this subtree is set, but this reference does not match
-  // it, the reference cannot be resolved (see knows_table) and nullopt is returned.
-  optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+  // it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
+  std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

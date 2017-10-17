@@ -1,9 +1,9 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+    all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.hpp
-    common.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -239,7 +239,6 @@ set(
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    type_cast.cpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
@@ -253,7 +252,6 @@ set(
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
-    utils/static_if.hpp
 )
 
 set(
@@ -267,24 +265,24 @@ if(${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
-# Configure the regular opossum library used for tests/server/playground...
-add_library(opossum STATIC ${SOURCES})
-target_link_libraries(opossum ${LIBRARIES})
+# Configure the regular hyrise library used for tests/server/playground...
+add_library(hyrise STATIC ${SOURCES})
+target_link_libraries(hyrise ${LIBRARIES})
 
-# Configure the lib used for asan
-add_library(opossumAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
+# Configure the lib used for sanitizers
+add_library(hyriseSanitizersLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
-    opossumAsanLib
+    hyriseSanitizersLib
     ${LIBRARIES}
-    -fsanitize=address
+    -fsanitize=address,undefined -fno-sanitize-recover=all
 )
-set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set_target_properties(hyriseSanitizersLib PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
-add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
+add_library(hyriseCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
-    opossumCoverageLib
+    hyriseCoverageLib
     ${LIBRARIES}
     --coverage
 )
-set_target_properties(opossumCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+set_target_properties(hyriseCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
