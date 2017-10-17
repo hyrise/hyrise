@@ -82,8 +82,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     total_rows_to_insert += chunk.size();
   }
 
-  // First, allocate space for all the rows to insert. Do so while locking the table
-  // to prevent multiple threads modifying the table's size simultaneously.
+  // First, allocate space for all the rows to insert. Do so while locking the table to prevent multiple threads
+  // modifying the table's size simultaneously.
   auto start_index = 0u;
   auto start_chunk_id = ChunkID{0};
   auto total_chunks_inserted = 0u;
