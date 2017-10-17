@@ -74,7 +74,7 @@ class CsvConverter : public AbstractCsvConverter {
 
   void insert(const std::string& value, ChunkOffset position) override {
 
-    if (_is_nullable && boost::to_upper_copy(value) == NULL_STRING) {
+    if (_is_nullable && boost::to_upper_copy(value) == CsvConfig::NULL_STRING) {
       _parsed_values[position] = T{};
       _null_values[position] = true;
     } else {

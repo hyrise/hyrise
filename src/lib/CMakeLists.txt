@@ -14,6 +14,7 @@ set(
     constant_mappings.hpp
     import_export/binary.hpp
     import_export/csv_converter.hpp
+    import_export/csv.cpp
     import_export/csv.hpp
     import_export/csv_parser.cpp
     import_export/csv_parser.hpp

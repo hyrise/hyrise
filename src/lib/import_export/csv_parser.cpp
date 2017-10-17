@@ -101,7 +101,7 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
     AbstractCsvConverter::unescape(property_type);
     row.erase(0, property_type_pos + 1);
 
-    if (property_type == NULLABLE_COLUMN_TYPE) {
+    if (property_type == CsvConfig::NULLABLE_COLUMN_TYPE) {
       is_nullable = true;
     }
 
