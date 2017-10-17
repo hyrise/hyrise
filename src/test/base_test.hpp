@@ -61,7 +61,7 @@ class BaseTest : public ::testing::Test {
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
     return DictionaryCompression::compress_column(type, value_column);
   }
-  
+
  public:
   virtual ~BaseTest();
 };
