@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 namespace opossum {
 
 /*
@@ -19,10 +17,10 @@ struct CsvConfig {
 
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;
-  
-  static const std::string NULL_STRING;
-  static const std::string COLUMN_TYPE;
-  static const std::string NULLABLE_COLUMN_TYPE;
+
+  static constexpr const char* NULL_STRING = "NULL";
+  static constexpr const char* COLUMN_TYPE = "ColumnType";
+  static constexpr const char* NULLABLE_COLUMN_TYPE = "NullableColumnType";
 };
 
 }  // namespace opossum

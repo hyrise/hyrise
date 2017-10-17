@@ -178,10 +178,10 @@ TEST_F(OperatorsExportCsvTest, NonsensePath) {
 TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
   table_wrapper->execute();
-  
+
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
-  
+
   EXPECT_TRUE(fileExists(filename));
   EXPECT_TRUE(fileExists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
@@ -194,10 +194,10 @@ TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
 TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/string_with_null.tbl", 4));
   table_wrapper->execute();
-  
+
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
-  
+
   EXPECT_TRUE(fileExists(filename));
   EXPECT_TRUE(fileExists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
@@ -222,9 +222,5 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
                            "\"NullableColumnType\",\"a\",\"int\"\n"
                            "\"NullableColumnType\",\"b\",\"float\"\n"));
 }
-
-
-
-
 
 }  // namespace opossum

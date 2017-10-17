@@ -173,7 +173,7 @@ void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
   for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
     converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(
-            table.column_type(column_id), row_count, _csv_config, table.column_is_nullable(column_id)));
+        table.column_type(column_id), row_count, _csv_config, table.column_is_nullable(column_id)));
   }
 
   size_t start = 0;
