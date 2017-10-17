@@ -175,4 +175,56 @@ TEST_F(OperatorsExportCsvTest, NonsensePath) {
   EXPECT_THROW(ex->execute(), std::exception);
 }
 
+TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
+  table_wrapper->execute();
+  
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  ex->execute();
+  
+  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(compare_file(filename,
+                           "12345,458.7\n"
+                           "123,NULL\n"
+                           "NULL,456.7\n"
+                           "1234,457.7\n"));
+}
+
+TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/string_with_null.tbl", 4));
+  table_wrapper->execute();
+  
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  ex->execute();
+  
+  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(compare_file(filename,
+                           "\"xxx\"\n"
+                           "\"www\"\n"
+                           "NULL\n"
+                           "\"zzz\"\n"));
+}
+
+TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(compare_file(meta_filename,
+                           "\"PropertyType\",\"Key\",\"Value\"\n"
+                           "\"ChunkSize\",\"\",4\n"
+                           "\"NullableColumnType\",\"a\",\"int\"\n"
+                           "\"NullableColumnType\",\"b\",\"float\"\n"));
+}
+
+
+
+
+
 }  // namespace opossum
