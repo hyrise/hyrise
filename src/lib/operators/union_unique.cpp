@@ -70,7 +70,7 @@ std::shared_ptr<const Table> UnionUnique::_on_execute() {
    */
   Chunk result_chunk;
 
-  for (ColumnID::base_type column_idx = 0; column_idx < _input_table_left()->col_count(); ++column_idx) {
+  for (auto column_idx = ColumnID{0}; column_idx < _input_table_left()->col_count(); ++column_idx) {
     const auto in_column = _input_table_left()->get_chunk(ChunkID{0}).get_column(ColumnID{column_idx});
     const auto in_ref_column = std::dynamic_pointer_cast<ReferenceColumn>(in_column);
 
