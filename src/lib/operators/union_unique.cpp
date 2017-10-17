@@ -31,35 +31,39 @@ const std::string UnionUnique::description() const { return "UnionUnique"; }
 std::shared_ptr<const Table> UnionUnique::_on_execute() {
   auto referenced_table = _verify_input_and_get_referenced_table();
 
-
   /**
-   * Build the pos list (out_pos_list) containing all row_ids of both tables
+   * For each input, create one pos list from all chunks
    */
-  auto out_pos_list = std::make_shared<PosList>();
-  out_pos_list->reserve(_input_table_left()->row_count() + _input_table_right()->row_count());
-  std::vector<ColumnID> out_column_ids(referenced_table->col_count());
+  auto pos_list_left = std::make_shared<PosList>();
+  pos_list_left->reserve(_input_table_left()->row_count());
+  auto pos_list_right = std::make_shared<PosList>();
+  pos_list_right->reserve(_input_table_right()->row_count());
 
-  auto add_row_ids_from_input_table = [&out_pos_list](const auto& input_table) {
+  auto add_row_ids_from_input_table = [](const auto& input_table, auto& pos_list) {
     for (ChunkID::base_type chunk_idx = 0; chunk_idx < input_table->chunk_count(); ++chunk_idx) {
       const auto column = input_table->get_chunk(ChunkID{chunk_idx}).get_column(ColumnID{0});
       const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
       const auto& in_pos_list = ref_column->pos_list();
 
-      std::copy(in_pos_list->begin(), in_pos_list->end(), std::back_inserter(*out_pos_list));
+      std::copy(in_pos_list->begin(), in_pos_list->end(), std::back_inserter(*pos_list));
     }
   };
 
-  add_row_ids_from_input_table(_input_table_left());
-  add_row_ids_from_input_table(_input_table_right());
+  add_row_ids_from_input_table(_input_table_left(), pos_list_left);
+  add_row_ids_from_input_table(_input_table_right(), pos_list_right);
 
   /**
    * This is where the magic happens:
-   * Compute the actual union by sorting the pos_list and then eliminating duplicates.
+   * Compute the actual union by sorting the pos_lists and then merging them using std::set_union
    */
-  std::sort(out_pos_list->begin(), out_pos_list->end());
-  const auto unique_end = std::unique(out_pos_list->begin(), out_pos_list->end());
+  std::sort(pos_list_left->begin(), pos_list_left->end());
+  std::sort(pos_list_right->begin(), pos_list_right->end());
 
-  out_pos_list->resize(static_cast<size_t>(unique_end - out_pos_list->begin()));
+  auto out_pos_list = std::make_shared<PosList>();
+  out_pos_list->reserve(_input_table_left()->row_count() + _input_table_right()->row_count());
+
+  std::set_union(pos_list_left->begin(), pos_list_left->end(), pos_list_right->begin(), pos_list_right->end(),
+     std::back_inserter(*out_pos_list));
 
   /**
    * Build result table
