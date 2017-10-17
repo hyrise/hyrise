@@ -1,5 +1,5 @@
 add_executable(
-    opossumBenchmark
+    hyriseBenchmark
 
     base_fixture.cpp
     base_fixture.hpp
@@ -18,13 +18,13 @@ add_executable(
 )
 
 target_link_libraries(
-    opossumBenchmark
-    opossum
+    hyriseBenchmark
+    hyrise
     benchmark
 )
 
 add_executable(
-    opossumBenchmarkTPCC
+    hyriseBenchmarkTPCC
 
     benchmark_main.cpp
     benchmark_template.cpp
@@ -36,8 +36,8 @@ add_executable(
 )
 
 target_link_libraries(
-    opossumBenchmarkTPCC
-    opossum
+    hyriseBenchmarkTPCC
+    hyrise
     benchmark
     tpcc
 )

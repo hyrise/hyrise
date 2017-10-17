@@ -1,10 +1,10 @@
 #include "predicate_node.hpp"
 
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 
-#include "common.hpp"
 #include "constant_mappings.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "types.hpp"
@@ -13,7 +13,7 @@
 namespace opossum {
 
 PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
-                             const optional<AllTypeVariant>& value2)
+                             const std::optional<AllTypeVariant>& value2)
     : AbstractASTNode(ASTNodeType::Predicate),
       _column_id(column_id),
       _scan_type(scan_type),
@@ -38,7 +38,7 @@ ScanType PredicateNode::scan_type() const { return _scan_type; }
 
 const AllParameterVariant& PredicateNode::value() const { return _value; }
 
-const optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
+const std::optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {

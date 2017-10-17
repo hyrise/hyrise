@@ -5,7 +5,6 @@
 #include <sstream>
 #include <string>
 
-#include "common.hpp"
 #include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 

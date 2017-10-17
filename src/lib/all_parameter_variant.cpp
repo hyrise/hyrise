@@ -1,9 +1,8 @@
-#include "type_cast.hpp"
+#include "all_parameter_variant.hpp"
 
 #include <string>
 
 namespace opossum {
-
 std::string to_string(const AllParameterVariant& x) {
   if (is_placeholder(x)) {
     return std::string("Placeholder #") + std::to_string(boost::get<ValuePlaceholder>(x).index());
@@ -13,5 +12,4 @@ std::string to_string(const AllParameterVariant& x) {
     return boost::lexical_cast<std::string>(x);
   }
 }
-
 }  // namespace opossum

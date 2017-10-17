@@ -205,6 +205,34 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   EXPECT_FALSE(t_node_1->right_child());
 }
 
+TEST_F(SQLToASTTranslatorTest, AggregateWithCountDistinct) {
+  const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_NE(projection_node, nullptr);
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
+  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  EXPECT_NE(aggregate_node, nullptr);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
+  const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
+  EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
+
+  auto t_node_1 = aggregate_node->left_child();
+  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_FALSE(t_node_1->left_child());
+  EXPECT_FALSE(t_node_1->right_child());
+}
+
 TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   auto result_node = compile_query(query);

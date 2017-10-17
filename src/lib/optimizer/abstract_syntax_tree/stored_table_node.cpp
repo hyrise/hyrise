@@ -1,6 +1,7 @@
 #include "stored_table_node.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -38,17 +39,17 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
 
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
-optional<ColumnID> StoredTableNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> StoredTableNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   if (named_column_reference.table_name && !knows_table(*named_column_reference.table_name)) {
-    return nullopt;
+    return std::nullopt;
   }
 
   const auto& columns = output_column_names();
   const auto iter = std::find(columns.begin(), columns.end(), named_column_reference.column_name);
 
   if (iter == columns.end()) {
-    return nullopt;
+    return std::nullopt;
   }
 
   auto idx = std::distance(columns.begin(), iter);
