@@ -197,17 +197,32 @@ void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode>& no
 
 void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
-void AbstractASTNode::print(const uint32_t level, std::ostream& out) const {
-  out << std::setw(level) << " ";
+void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
+  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
+  for (size_t level = 0; level < max_level; ++level) {
+    if (levels[level]) {
+      out << " | ";
+    } else {
+      out << "   ";
+    }
+  }
+
+  if (!levels.empty()) {
+    out << " \\_";
+  }
   out << description() << std::endl;
 
-  if (_left_child) {
-    _left_child->print(level + 2, out);
+  levels.emplace_back(right_child() != nullptr);
+
+  if (left_child()) {
+    left_child()->print(out, levels);
+  }
+  if (right_child()) {
+    levels.back() = false;
+    right_child()->print(out, levels);
   }
 
-  if (_right_child) {
-    _right_child->print(level + 2, out);
-  }
+  levels.pop_back();
 }
 
 std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
