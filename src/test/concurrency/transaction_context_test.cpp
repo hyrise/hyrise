@@ -31,7 +31,7 @@ class TransactionContextTest : public BaseTest {
  */
 class CommitFuncOp : public AbstractReadWriteOperator {
  public:
-  CommitFuncOp(std::function<void()> func) : _func{func} {}
+  explicit CommitFuncOp(std::function<void()> func) : _func{func} {}
 
   const std::string name() const override { return "CommitOp"; }
   uint8_t num_in_tables() const override { return 0u; }

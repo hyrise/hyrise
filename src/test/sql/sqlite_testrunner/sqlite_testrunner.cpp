@@ -77,7 +77,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     auto plan = SQLPlanner::plan(parse_result);
 
     auto tx_context = TransactionManager::get().new_transaction_context();
-    
+
     plan.set_transaction_context(tx_context);
     for (const auto& root : plan.tree_roots()) {
       auto tasks = OperatorTask::make_tasks_from_operator(root);
