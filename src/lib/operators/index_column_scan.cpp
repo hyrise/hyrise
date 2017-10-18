@@ -54,7 +54,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
-    ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
+    ScanContext(std::shared_ptr<const BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
         : table_in(referenced_table),
@@ -166,7 +166,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         // nullptr.
         std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
         for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
-          auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
+          auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in.get_column(column_id));
           std::shared_ptr<const PosList> pos_list_in;
           std::shared_ptr<const Table> referenced_table_out;
           ColumnID referenced_column_id;
@@ -209,9 +209,10 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     return output;
   }
 
-  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_value_column(const BaseValueColumn& base_column,
+                           std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto& column = static_cast<ValueColumn<T>&>(base_column);
+    const auto& column = static_cast<const ValueColumn<T>&>(base_column);
     const auto& values = column.values();
     auto& matches_out = context->matches_out;
 
@@ -233,11 +234,12 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     }
   }
 
-  void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_reference_column(const ReferenceColumn& column,
+                               std::shared_ptr<ColumnVisitableContext> base_context) override {
     column.visit_dereferenced<ScanContext>(*this, base_context);
   }
 
-  void handle_dictionary_column(BaseColumn& base_column,
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
     /*
      ValueID x;
@@ -257,14 +259,14 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
      */
 
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
+    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
     auto& matches_out = context->matches_out;
 
     // get the indices for this column
     auto in_table = _in_operator->get_output();
     const Chunk& chunk_in = in_table->get_chunk(context->chunk_id);
     auto col = chunk_in.get_column(_column_id);
-    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<BaseColumn>>{col});
+    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<const BaseColumn>>{col});
 
     if (!indices.empty()) {
       // with index

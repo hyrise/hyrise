@@ -57,7 +57,7 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
     if (chunk.size() == 0) continue;
 
     for (ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
-      std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
+      auto column = chunk.get_column(col_id);
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];

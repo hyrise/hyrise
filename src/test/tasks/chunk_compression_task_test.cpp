@@ -53,7 +53,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
     for (ColumnID column_id{0}; column_id < chunk.col_count(); ++column_id) {
       auto column = chunk.get_column(column_id);
 
-      auto dict_column = std::dynamic_pointer_cast<BaseDictionaryColumn>(column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
       ASSERT_NE(dict_column, nullptr);
 
       EXPECT_EQ(dict_column->unique_values_count(), dictionary_sizes[chunk_id][column_id]);

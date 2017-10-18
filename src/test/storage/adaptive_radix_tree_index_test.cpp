@@ -21,7 +21,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     // we want to custom-build the index, but we have to create an index with a non-empty column.
     // Therefore we build an index and reset the root.
     dict_col1 = create_dict_column_by_type<std::string>("string", {"test"});
-    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col1}));
+    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
     /* root   childx    childxx  childxxx  leaf->chunk offsets
