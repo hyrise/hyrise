@@ -21,6 +21,8 @@
  * Warnings do not print in tests.
  */
 
+namespace opossum {
+
 class PerformanceWarningDisabler;
 
 class PerformanceWarningClass {
@@ -70,3 +72,5 @@ class PerformanceWarningDisabler {
 #else
 #define PerformanceWarning(text)
 #endif
+
+}  // namespace opossum
