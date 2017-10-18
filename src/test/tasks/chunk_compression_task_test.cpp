@@ -6,9 +6,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/base_dictionary_column.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/tasks/chunk_compression_task.hpp"
+#include "storage/base_dictionary_column.hpp"
+#include "storage/storage_manager.hpp"
+#include "tasks/chunk_compression_task.hpp"
 
 namespace opossum {
 
@@ -50,10 +50,10 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto& chunk = table_dict->get_chunk(chunk_id);
 
-    for (ColumnID column_id{0}; column_id < chunk.col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
       auto column = chunk.get_column(column_id);
 
-      auto dict_column = std::dynamic_pointer_cast<BaseDictionaryColumn>(column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
       ASSERT_NE(dict_column, nullptr);
 
       EXPECT_EQ(dict_column->unique_values_count(), dictionary_sizes[chunk_id][column_id]);

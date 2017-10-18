@@ -71,7 +71,7 @@ class Chunk : private Noncopyable {
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t col_count() const;
+  uint16_t column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;
@@ -90,7 +90,8 @@ class Chunk : private Noncopyable {
    *       However, if you call get_column again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
+  std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
+  std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
 
@@ -126,10 +127,10 @@ class Chunk : private Noncopyable {
   void use_mvcc_columns_from(const Chunk& chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
-      const std::vector<std::shared_ptr<BaseColumn>>& columns) const;
+      const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>>& index_columns) {
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;
