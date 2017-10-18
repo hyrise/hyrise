@@ -44,7 +44,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant>& args) const {
-  Fail("Operator " + this->name() + " does not implement recreation.");
+  Fail("Operator " + name() + " does not implement recreation.");
   return {};
 }
 
@@ -250,7 +250,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        this->_emit_combination(output_cluster, left_row_id, right_row_id);
+        _emit_combination(output_cluster, left_row_id, right_row_id);
       });
     });
   }
@@ -260,7 +260,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      this->_emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+      _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
     });
   }
 
@@ -269,7 +269,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-      this->_emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+      _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
     });
   }
 

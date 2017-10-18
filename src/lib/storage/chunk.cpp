@@ -123,14 +123,14 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
 }
 
 bool Chunk::references_only_one_table() const {
-  if (this->column_count() == 0) return false;
+  if (column_count() == 0) return false;
 
-  auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(this->get_column(ColumnID{0}));
+  auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(ColumnID{0}));
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (ColumnID i{1}; i < this->column_count(); ++i) {
-    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(this->get_column(i));
+  for (ColumnID i{1}; i < column_count(); ++i) {
+    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(i));
 
     if (column == nullptr) return false;
 
