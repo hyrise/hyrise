@@ -191,4 +191,23 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
 
+TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv");
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "string");
+  expected_table->add_column("b", "int");
+  expected_table->add_column("c", "float");
+  expected_table->add_column("d", "double");
+  expected_table->add_column("e", "string");
+  expected_table->add_column("f", "int");
+  expected_table->add_column("g", "float");
+  expected_table->add_column("h", "double");
+  expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
+  expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
 }  // namespace opossum

@@ -180,6 +180,9 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
         _sanitize_field(field);
       }
 
+      // Unescape to remove enclosing quotes from fields
+      AbstractCsvConverter::unescape(field, _csv_config);
+
       converters[column_id]->insert(field, row_id);
     }
   }
