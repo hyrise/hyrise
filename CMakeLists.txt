@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
@@ -29,9 +29,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 # Link Time Optimization (LTO)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    include(CheckIPOSupported)
-    check_ipo_supported()
-    set_target_properties(PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
+        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+        include(CheckIPOSupported)
+        check_ipo_supported()
+        set_target_properties(PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+        add_definitions(-DWITH_LTO)
+    endif()
 endif()
 
 # Require NCurses over Curses

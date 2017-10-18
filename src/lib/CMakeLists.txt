@@ -246,6 +246,8 @@ set(
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
+    utils/performance_warning.cpp
+    utils/performance_warning.hpp
 )
 
 set(
