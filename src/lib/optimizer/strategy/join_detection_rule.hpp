@@ -38,7 +38,7 @@ struct ColumnID;
  * have to deal with ColumnID re-mappings for now. Projections, Aggregates, etc. amidst Joins and Predicates
  * should be rare anyway.
  */
-class JoinConditionDetectionRule : public AbstractRule {
+class JoinDetectionRule : public AbstractRule {
  protected:
   bool apply_to(const std::shared_ptr<AbstractASTNode>& node) override;
 

@@ -20,7 +20,7 @@
 
 namespace opossum {
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>>& indexed_columns) {
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns) {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
   if (IS_DEBUG) {
@@ -36,7 +36,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());
   for (const auto& column : indexed_columns) {
-    auto dict_column = std::dynamic_pointer_cast<BaseDictionaryColumn>(column);
+    auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
     DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with DictionaryColumns");
     _indexed_columns.emplace_back(dict_column);
   }
@@ -145,8 +145,8 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const
   return position_iter;
 }
 
-std::vector<std::shared_ptr<BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
-  auto result = std::vector<std::shared_ptr<BaseColumn>>();
+std::vector<std::shared_ptr<const BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
+  auto result = std::vector<std::shared_ptr<const BaseColumn>>();
   result.reserve(_indexed_columns.size());
   for (auto&& indexed_column : _indexed_columns) {
     result.emplace_back(indexed_column);

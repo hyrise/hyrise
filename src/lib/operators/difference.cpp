@@ -70,8 +70,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); column_id++) {
       const auto base_column = in_chunk.get_column(column_id);
       // temporary variables needed to create the reference column
-      const auto referenced_column =
-          std::dynamic_pointer_cast<ReferenceColumn>(_input_table_left()->get_chunk(chunk_id).get_column(column_id));
+      const auto referenced_column = std::dynamic_pointer_cast<const ReferenceColumn>(
+          _input_table_left()->get_chunk(chunk_id).get_column(column_id));
       auto out_column_id = column_id;
       auto out_referenced_table = _input_table_left();
       std::shared_ptr<const PosList> in_pos_list;

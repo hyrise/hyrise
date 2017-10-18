@@ -2,6 +2,10 @@
 
 #include <memory>
 
+#include "storage/base_dictionary_column.hpp"
+#include "storage/base_value_column.hpp"
+#include "common.hpp"
+
 namespace opossum {
 
 class BaseColumn;
@@ -14,9 +18,11 @@ class ColumnVisitableContext {};
 class ColumnVisitable {
  public:
   virtual ~ColumnVisitable() = default;
-  virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
-  virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
-  virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
+  virtual void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
+  virtual void handle_dictionary_column(const BaseDictionaryColumn& column,
+                                        std::shared_ptr<ColumnVisitableContext> context) = 0;
+  virtual void handle_reference_column(const ReferenceColumn& column,
+                                       std::shared_ptr<ColumnVisitableContext> context) = 0;
 };
 
 }  // namespace opossum

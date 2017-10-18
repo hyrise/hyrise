@@ -20,7 +20,7 @@ namespace opossum {
 class AbstractTypedColumnProcessor {
  public:
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
-  virtual void copy_data(std::shared_ptr<BaseColumn> source, size_t source_start_index,
+  virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
                          std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) = 0;
 };
 
@@ -36,13 +36,13 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   }
 
   // this copies
-  void copy_data(std::shared_ptr<BaseColumn> source, size_t source_start_index, std::shared_ptr<BaseColumn> target,
-                 size_t target_start_index, size_t length) override {
+  void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
+                 std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
     auto& vect = casted_target->values();
 
-    if (auto casted_source = std::dynamic_pointer_cast<ValueColumn<T>>(source)) {
+    if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
       std::copy_n(casted_source->values().begin() + source_start_index, length, vect.begin() + target_start_index);
       // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
       // since we have no guarantee that a referenceColumn references only a single other column,
@@ -82,8 +82,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     total_rows_to_insert += chunk.size();
   }
 
-  // First, allocate space for all the rows to insert. Do so while locking the table
-  // to prevent multiple threads modifying the table's size simultaneously.
+  // First, allocate space for all the rows to insert. Do so while locking the table to prevent multiple threads
+  // modifying the table's size simultaneously.
   auto start_index = 0u;
   auto start_chunk_id = ChunkID{0};
   auto total_chunks_inserted = 0u;
@@ -95,7 +95,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     start_index = last_chunk.size();
 
     // If last chunk is compressed, add a new uncompressed chunk
-    if (std::dynamic_pointer_cast<BaseDictionaryColumn>(last_chunk.get_column(ColumnID{0})) != nullptr) {
+    if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk.get_column(ColumnID{0})) != nullptr) {
       _target_table->create_new_chunk();
       total_chunks_inserted++;
     }
@@ -111,7 +111,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Resize current chunk to full size.
       auto old_size = current_chunk.size();
       for (ColumnID i{0}; i < current_chunk.col_count(); ++i) {
-        typed_column_processors[i]->resize_vector(current_chunk.get_column(i), old_size + rows_to_insert_this_loop);
+        typed_column_processors[i]->resize_vector(current_chunk.get_mutable_column(i),
+                                                  old_size + rows_to_insert_this_loop);
       }
 
       remaining_rows -= rows_to_insert_this_loop;
@@ -146,8 +147,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, n);
       for (ColumnID i{0}; i < target_chunk.col_count(); ++i) {
         auto source_column = source_chunk.get_column(i);
-        typed_column_processors[i]->copy_data(source_column, source_chunk_start_index, target_chunk.get_column(i),
-                                              target_start_index, num_to_insert);
+        typed_column_processors[i]->copy_data(source_column, source_chunk_start_index,
+                                              target_chunk.get_mutable_column(i), target_start_index, num_to_insert);
       }
       n -= num_to_insert;
       target_start_index += num_to_insert;

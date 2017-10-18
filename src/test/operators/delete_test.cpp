@@ -7,16 +7,16 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/concurrency/transaction_context.hpp"
-#include "../../lib/concurrency/transaction_manager.hpp"
-#include "../../lib/operators/delete.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/update.hpp"
-#include "../../lib/operators/validate.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/update.hpp"
+#include "operators/validate.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

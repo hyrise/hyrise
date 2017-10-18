@@ -177,7 +177,7 @@ void TableScan::_init_scan() {
   _is_reference_table = [&]() {
     // We assume if one column is a reference column, all are.
     const auto column = first_chunk.get_column(_left_column_id);
-    const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
+    const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
     return ref_column != nullptr;
   }();
 

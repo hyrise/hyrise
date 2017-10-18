@@ -10,16 +10,16 @@
 #include "gtest/gtest.h"
 #include "join_test.hpp"
 
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/join_hash.hpp"
-#include "../../lib/operators/join_nested_loop_a.hpp"
-#include "../../lib/operators/join_nested_loop_b.hpp"
-#include "../../lib/operators/join_sort_merge.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/union_all.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/get_table.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_nested_loop_b.hpp"
+#include "operators/join_sort_merge.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/union_all.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

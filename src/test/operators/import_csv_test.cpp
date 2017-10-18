@@ -4,8 +4,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "operators/import_csv.hpp"
 
 #include "scheduler/current_scheduler.hpp"

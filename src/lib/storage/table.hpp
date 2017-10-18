@@ -99,6 +99,8 @@ class Table : private Noncopyable {
   T get_value(const ColumnID column_id, const size_t row_number) const {
     PerformanceWarning("get_value() used");
 
+    Assert(column_id < col_count(), "column_id invalid");
+
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
       size_t current_size = chunk.size();

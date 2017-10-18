@@ -52,7 +52,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
         }
 
         current_row_in_left_chunk = 0u;
-        current_pos_list = std::static_pointer_cast<ReferenceColumn>(
+        current_pos_list = std::static_pointer_cast<const ReferenceColumn>(
                                _input_table_left()->get_chunk(current_left_chunk_id).get_column(ColumnID{0}))
                                ->pos_list();
         current_left_chunk_id++;
@@ -78,9 +78,9 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto& right_chunk = _input_table_right()->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); ++column_id) {
-      auto right_col = right_chunk.get_column(column_id);
+      auto right_col = right_chunk.get_mutable_column(column_id);
 
-      auto left_col = std::dynamic_pointer_cast<ReferenceColumn>(left_chunk.get_column(column_id));
+      auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk.get_column(column_id));
 
       insert_chunk.replace_column(left_col->referenced_column_id(), right_col);
     }
@@ -127,7 +127,7 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk.references_only_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(ColumnID{0}));
+    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk.get_column(ColumnID{0}));
     if (table_to_update != first_column->referenced_table()) return false;
   }
 
