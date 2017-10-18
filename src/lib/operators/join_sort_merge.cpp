@@ -401,7 +401,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _add_output_columns(std::shared_ptr<Table> output_table, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
-    auto column_count = input_table->col_count();
+    auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the column definition
       auto column_name = input_table->column_name(column_id);

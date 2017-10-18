@@ -67,7 +67,7 @@ std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
-uint16_t Chunk::col_count() const { return _columns.size(); }
+uint16_t Chunk::column_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
   if (_columns.empty()) return 0;
@@ -123,13 +123,13 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
 }
 
 bool Chunk::references_only_one_table() const {
-  if (this->col_count() == 0) return false;
+  if (this->column_count() == 0) return false;
 
   auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(this->get_column(ColumnID{0}));
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (ColumnID i{1}; i < this->col_count(); ++i) {
+  for (ColumnID i{1}; i < this->column_count(); ++i) {
     const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(this->get_column(i));
 
     if (column == nullptr) return false;

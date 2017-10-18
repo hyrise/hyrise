@@ -102,7 +102,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   table_scan2->execute();
 
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
-  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0}).col_count(), 2u);
+  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0}).column_count(), 2u);
 
   auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
   delete_op1->set_transaction_context(t1_context);

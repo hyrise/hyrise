@@ -119,7 +119,7 @@ class OperatorsTableScanTest : public BaseTest {
 
     auto chunk_out = Chunk{};
 
-    for (auto column_id = ColumnID{0u}; column_id < table->col_count(); ++column_id) {
+    for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
       table_out->add_column_definition(table->column_name(column_id), table->column_type(column_id));
 
       auto column_out = std::make_shared<ReferenceColumn>(table, column_id, pos_list);
@@ -217,7 +217,7 @@ TEST_F(OperatorsTableScanTest, EmptyResultScan) {
   scan_1->execute();
 
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
-    EXPECT_EQ(scan_1->get_output()->get_chunk(i).col_count(), 2u);
+    EXPECT_EQ(scan_1->get_output()->get_chunk(i).column_count(), 2u);
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {

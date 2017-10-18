@@ -472,7 +472,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   static void _copy_table_metadata(const std::shared_ptr<const Table> in_table,
                                    const std::shared_ptr<Table> out_table) {
-    for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
       // TODO(anyone): Refine since not all column are nullable
       out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id), true);
     }
@@ -619,7 +619,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
                                   std::shared_ptr<PosList> pos_list, bool is_ref_column) {
     // Add columns from input table to output chunk
-    for (ColumnID column_id{0}; column_id < input_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
 
       if (is_ref_column) {

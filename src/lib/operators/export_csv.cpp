@@ -39,7 +39,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   writer.write_line({"ChunkSize", "", static_cast<int64_t>(table->chunk_size())});
 
   // Column Types
-  for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
     writer.write_line({"ColumnType", table->column_name(col_id), table->column_type(col_id)});
   }
 }
@@ -60,7 +60,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
   // Create visitors for every column, so that we do not have to do that more than once.
   std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->col_count());
-  for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
     auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(col_id));
     visitors[col_id] = std::move(visitor);
   }
@@ -77,7 +77,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
     auto& chunk = table->get_chunk(chunk_id);
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
       context->currentRow = row;
-      for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
+      for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
         chunk.get_column(col_id)->visit(*(visitors[col_id]), context);
       }
       writer.end_line();
