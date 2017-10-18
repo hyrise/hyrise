@@ -135,7 +135,12 @@ bool CsvParser::_find_fields_in_chunk(string_view csv_content, const Table& tabl
     from = pos + 1;
     const char elem = csv_content.at(pos);
 
-    if (elem == _csv_config.quote) in_quotes = !in_quotes;
+    // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string
+    if (elem == _csv_config.quote) {
+      if (pos == 0 || csv_content.at(pos-1) != '\\') {
+        in_quotes = !in_quotes;
+      }
+    }
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _csv_config.delimiter && !in_quotes) {
@@ -178,6 +183,9 @@ void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_
         // CSV fields not following RFC 4810 might need some preprocessing
         _sanitize_field(field);
       }
+
+      // Unescape to remove enclosing quotes from fields
+      AbstractCsvConverter::unescape(field, _csv_config);
 
       converters[column_id]->insert(field, row_id);
     }
