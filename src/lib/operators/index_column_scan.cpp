@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,7 +17,7 @@ namespace opossum {
 
 IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id,
                                  const ScanType scan_type, const AllTypeVariant value,
-                                 const optional<AllTypeVariant> value2)
+                                 const std::optional<AllTypeVariant> value2)
     : AbstractReadOnlyOperator(in), _column_id(column_id), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string IndexColumnScan::name() const { return "IndexColumnScan"; }
@@ -40,12 +41,12 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   // IndexColumnScan currently does not support ScanType::OpLike
   // creates a new table with reference columns
   IndexColumnScanImpl(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id,
-                      const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2)
+                      const ScanType scan_type, const AllTypeVariant value, const std::optional<AllTypeVariant> value2)
       : _in_operator(in),
         _column_id(column_id),
         _scan_type(scan_type),
         _casted_value(type_cast<T>(value)),
-        _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
+        _casted_value2(value2 ? std::optional<T>(type_cast<T>(*value2)) : std::optional<T>(std::nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
     ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID>& mo,
@@ -53,7 +54,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
-    ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
+    ScanContext(std::shared_ptr<const BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
         : table_in(referenced_table),
@@ -165,7 +166,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         // nullptr.
         std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
         for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
-          auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
+          auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in.get_column(column_id));
           std::shared_ptr<const PosList> pos_list_in;
           std::shared_ptr<const Table> referenced_table_out;
           ColumnID referenced_column_id;
@@ -208,9 +209,10 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     return output;
   }
 
-  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_value_column(const BaseValueColumn& base_column,
+                           std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto& column = static_cast<ValueColumn<T>&>(base_column);
+    const auto& column = static_cast<const ValueColumn<T>&>(base_column);
     const auto& values = column.values();
     auto& matches_out = context->matches_out;
 
@@ -232,16 +234,17 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     }
   }
 
-  void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_reference_column(const ReferenceColumn& column,
+                               std::shared_ptr<ColumnVisitableContext> base_context) override {
     column.visit_dereferenced<ScanContext>(*this, base_context);
   }
 
-  void handle_dictionary_column(BaseColumn& base_column,
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
     /*
      ValueID x;
      T A;
-     optional<T> B;
+     std::optional<T> B;
 
      A ValueID x from the attribute vector is included in the result iff
 
@@ -256,14 +259,14 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
      */
 
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
+    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
     auto& matches_out = context->matches_out;
 
     // get the indices for this column
     auto in_table = _in_operator->get_output();
     const Chunk& chunk_in = in_table->get_chunk(context->chunk_id);
     auto col = chunk_in.get_column(_column_id);
-    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<BaseColumn>>{col});
+    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<const BaseColumn>>{col});
 
     if (!indices.empty()) {
       // with index
@@ -355,7 +358,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   }
 
   std::vector<ChunkOffset> get_pos_list_from_index(std::shared_ptr<BaseIndex> index, T search_value,
-                                                   optional<T> search_value_2) {
+                                                   std::optional<T> search_value_2) {
     BaseIndex::Iterator lower_bound, upper_bound;
 
     std::vector<ChunkOffset> result;
@@ -417,7 +420,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   std::function<bool(T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
   const T _casted_value;
-  const optional<T> _casted_value2;
+  const std::optional<T> _casted_value2;
   // by adding a second, optional parameter to the function, we could easily support between as well
 };
 

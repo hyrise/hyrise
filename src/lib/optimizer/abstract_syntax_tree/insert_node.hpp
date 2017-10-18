@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {

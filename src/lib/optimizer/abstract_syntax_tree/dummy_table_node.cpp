@@ -1,5 +1,6 @@
 #include "dummy_table_node.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,7 @@ std::vector<ColumnID> DummyTableNode::get_output_column_ids_for_table(const std:
   return {};
 }
 
-optional<ColumnID> DummyTableNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> DummyTableNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   return {};
 }

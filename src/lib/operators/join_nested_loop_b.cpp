@@ -37,7 +37,7 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
   auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
     auto base_column = input_table->get_chunk(chunk_id).get_column(column_id);
-    auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(base_column);
+    auto reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(base_column);
     input_pos_lists.push_back(reference_column->pos_list());
   }
 
@@ -59,7 +59,7 @@ void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> inp
 
     // Check whether the column consists of reference columns
     const auto r_column =
-        std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
+        std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
     if (r_column) {
       // Create a pos_list referencing the original column
       auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
@@ -204,10 +204,8 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left,
                                                             std::shared_ptr<JoinContext> context, bool reverse_order) {
   bool values_match = reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right);
   if (values_match) {
-    RowID left_row_id = _join_nested_loop_b._input_table_left()->calculate_row_id(
-        context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
-    RowID right_row_id = _join_nested_loop_b._input_table_right()->calculate_row_id(
-        context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+    RowID left_row_id = {context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset};
+    RowID right_row_id = {context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset};
 
     if (context->_mode == JoinMode::Left || context->_mode == JoinMode::Outer) {
       // For inner joins, the list of matched values is not needed and is not maintained
@@ -224,7 +222,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left,
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_value(const ValueColumn<T>& left, const ValueColumn<T>& right,
                                                                std::shared_ptr<JoinContext> context,
                                                                bool reverse_order) {
   const auto& values_left = left.values();
@@ -241,7 +239,8 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_value(ValueColumn<T>& l
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_dictionary(const ValueColumn<T>& left,
+                                                                    const DictionaryColumn<T>& right,
                                                                     std::shared_ptr<JoinContext> context,
                                                                     bool reverse_order) {
   const auto& values = left.values();
@@ -259,19 +258,19 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_dictionary(ValueColumn<
 
 // Resolves a reference in a reference column and returns the original value
 template <typename T>
-const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceColumn& ref_column,
+const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(const ReferenceColumn& ref_column,
                                                                      ChunkOffset chunk_offset) {
   // TODO(anyone): This can be replaced by operator[] once gcc optimizes properly
   auto& ref_table = ref_column.referenced_table();
   auto& pos_list = ref_column.pos_list();
-  const auto& row_location = ref_table->locate_row(pos_list->at(chunk_offset));
-  const auto& referenced_chunk_id = row_location.first;
-  const auto& referenced_chunk_offset = row_location.second;
+  const auto& row_id = pos_list->at(chunk_offset);
+  const auto& referenced_chunk_id = row_id.chunk_id;
+  const auto& referenced_chunk_offset = row_id.chunk_offset;
   const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
   const auto& referenced_column = referenced_chunk.get_column(ref_column.referenced_column_id());
 
-  const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
-  const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
+  const auto& d_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(referenced_column);
+  const auto& v_column = std::dynamic_pointer_cast<const ValueColumn<T>>(referenced_column);
 
   // Since it isn't ensured that the poslist isn't ordered according to the chunk distribution,
   // we have to check the column type for each row
@@ -285,7 +284,8 @@ const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceCo
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_reference(const ValueColumn<T>& left,
+                                                                   const ReferenceColumn& right,
                                                                    std::shared_ptr<JoinContext> context,
                                                                    bool reverse_order) {
   auto& values = left.values();
@@ -302,8 +302,8 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_reference(ValueColumn<T
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
-                                                                         DictionaryColumn<T>& right,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_dictionary(const DictionaryColumn<T>& left,
+                                                                         const DictionaryColumn<T>& right,
                                                                          std::shared_ptr<JoinContext> context,
                                                                          bool reverse_order) {
   const auto& att_left = left.attribute_vector();
@@ -320,8 +320,8 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_dictionary(Diction
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left,
-                                                                        ReferenceColumn& right,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_reference(const DictionaryColumn<T>& left,
+                                                                        const ReferenceColumn& right,
                                                                         std::shared_ptr<JoinContext> context,
                                                                         bool reverse_order) {
   const auto& att_left = left.attribute_vector();
@@ -338,7 +338,8 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_reference(Dictiona
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_reference_reference(const ReferenceColumn& left,
+                                                                       const ReferenceColumn& right,
                                                                        std::shared_ptr<JoinContext> context,
                                                                        bool reverse_order) {
   auto& pos_list_left = left.pos_list();
@@ -361,21 +362,21 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_reference_reference(Reference
 */
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(BaseColumn& column,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(const BaseValueColumn& column,
                                                                   std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
-  auto& value_column_left = dynamic_cast<ValueColumn<T>&>(column);
-  auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
+  auto& value_column_left = dynamic_cast<const ValueColumn<T>&>(column);
+  auto value_column_right = std::dynamic_pointer_cast<const ValueColumn<T>>(join_context->_column_right);
   if (value_column_right) {
     join_value_value(value_column_left, *value_column_right, join_context);
     return;
   }
-  auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
+  auto dictionary_column_right = std::dynamic_pointer_cast<const DictionaryColumn<T>>(join_context->_column_right);
   if (dictionary_column_right) {
     join_value_dictionary(value_column_left, *dictionary_column_right, join_context);
     return;
   }
-  auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
+  auto reference_column_right = std::dynamic_pointer_cast<const ReferenceColumn>(join_context->_column_right);
   if (reference_column_right) {
     join_value_reference(value_column_left, *reference_column_right, join_context);
     return;
@@ -384,21 +385,21 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(BaseColumn& co
 
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_dictionary_column(
-    BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) {
+    const BaseDictionaryColumn& column, std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
-  auto& dictionary_column_left = dynamic_cast<DictionaryColumn<T>&>(column);
+  auto& dictionary_column_left = dynamic_cast<const DictionaryColumn<T>&>(column);
 
-  auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
+  auto value_column_right = std::dynamic_pointer_cast<const ValueColumn<T>>(join_context->_column_right);
   if (value_column_right) {
     join_value_dictionary(*value_column_right, dictionary_column_left, join_context, true);
     return;
   }
-  auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
+  auto dictionary_column_right = std::dynamic_pointer_cast<const DictionaryColumn<T>>(join_context->_column_right);
   if (dictionary_column_right) {
     join_dictionary_dictionary(dictionary_column_left, *dictionary_column_right, join_context);
     return;
   }
-  auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
+  auto reference_column_right = std::dynamic_pointer_cast<const ReferenceColumn>(join_context->_column_right);
   if (reference_column_right) {
     join_dictionary_reference(dictionary_column_left, *reference_column_right, join_context);
     return;
@@ -406,21 +407,21 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_dictionary_column(
 }
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_reference_column(ReferenceColumn& reference_column_left,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_reference_column(const ReferenceColumn& reference_column_left,
                                                                       std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
 
-  auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
+  auto value_column_right = std::dynamic_pointer_cast<const ValueColumn<T>>(join_context->_column_right);
   if (value_column_right) {
     join_value_reference(*value_column_right, reference_column_left, join_context, true);
     return;
   }
-  auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
+  auto dictionary_column_right = std::dynamic_pointer_cast<const DictionaryColumn<T>>(join_context->_column_right);
   if (dictionary_column_right) {
     join_dictionary_reference(*dictionary_column_right, reference_column_left, join_context, true);
     return;
   }
-  auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
+  auto reference_column_right = std::dynamic_pointer_cast<const ReferenceColumn>(join_context->_column_right);
   if (reference_column_right) {
     join_reference_reference(reference_column_left, *reference_column_right, join_context);
     return;

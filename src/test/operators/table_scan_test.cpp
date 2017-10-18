@@ -2,6 +2,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,14 +10,14 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_read_only_operator.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/reference_column.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/print.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -61,16 +62,16 @@ class OperatorsTableScanTest : public BaseTest {
     const auto test_table_part_dict = get_table_op_part_dict()->get_output();
 
     auto pos_list = std::make_shared<PosList>();
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 1));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 0));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{1}, 1));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 3));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{1}, 3));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 2));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 2));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 4));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 0));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 4));
+    pos_list->emplace_back(RowID{ChunkID{3}, 1});
+    pos_list->emplace_back(RowID{ChunkID{2}, 0});
+    pos_list->emplace_back(RowID{ChunkID{1}, 1});
+    pos_list->emplace_back(RowID{ChunkID{3}, 3});
+    pos_list->emplace_back(RowID{ChunkID{1}, 3});
+    pos_list->emplace_back(RowID{ChunkID{0}, 2});
+    pos_list->emplace_back(RowID{ChunkID{2}, 2});
+    pos_list->emplace_back(RowID{ChunkID{2}, 4});
+    pos_list->emplace_back(RowID{ChunkID{0}, 0});
+    pos_list->emplace_back(RowID{ChunkID{0}, 4});
 
     auto col_a = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{1}, pos_list);
@@ -240,8 +241,8 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpBetween] = {104, 106, 108};
   for (const auto& test : tests) {
-    auto scan =
-        std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4, optional<AllTypeVariant>(9));
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4,
+                                            std::optional<AllTypeVariant>(9));
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -263,7 +264,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
     auto scan1 = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{1}, ScanType::OpLessThan, 108);
     scan1->execute();
 
-    auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4, optional<AllTypeVariant>(9));
+    auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4, std::optional<AllTypeVariant>(9));
     scan2->execute();
 
     ASSERT_COLUMN_EQ(scan2->get_output(), ColumnID{1}, test.second);
@@ -305,7 +306,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValu
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 30,
-                                            optional<AllTypeVariant>(34));
+                                            std::optional<AllTypeVariant>(34));
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -327,7 +328,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) 
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0} /* "a" */, test.first, -10,
-                                            optional<AllTypeVariant>(34));
+                                            std::optional<AllTypeVariant>(34));
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -406,7 +407,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 0,
-                                                     optional<AllTypeVariant>(10));
+                                                     std::optional<AllTypeVariant>(10));
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);

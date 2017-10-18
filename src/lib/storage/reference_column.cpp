@@ -16,7 +16,7 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
     : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
   if (IS_DEBUG) {
     auto referenced_column = _referenced_table->get_chunk(ChunkID{0}).get_column(referenced_column_id);
-    auto reference_col = std::dynamic_pointer_cast<ReferenceColumn>(referenced_column);
+    auto reference_col = std::dynamic_pointer_cast<const ReferenceColumn>(referenced_column);
 
     DebugAssert(!(reference_col), "referenced_column must not be a ReferenceColumn");
   }
@@ -42,16 +42,16 @@ ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_colu
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
-void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) {
+void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_reference_column(*this, std::move(context));
 }
 
 // writes the length and value at the chunk_offset to the end off row_string
 void ReferenceColumn::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   // retrieving the chunk_id for the given chunk_offset
-  auto chunk_info = _referenced_table->locate_row((*_pos_list).at(chunk_offset));
+  auto row_id = (*_pos_list).at(chunk_offset);
   // call the equivalent function of the referenced value column
-  _referenced_table->get_chunk(chunk_info.first)
+  _referenced_table->get_chunk(row_id.chunk_id)
       .get_column(_referenced_column_id)
       ->write_string_representation(row_string, chunk_offset);
 }

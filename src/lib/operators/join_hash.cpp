@@ -205,7 +205,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         values from different inputs (important for Multi Joins).
         For performance reasons this if statement is around the for loop.
         */
-        if (auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column)) {
+        if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
           // hash and add to the other elements
           ChunkOffset offset = 0;
           for (auto&& elem : materialized) {
@@ -582,11 +582,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
     */
     auto ref_col_left =
-        std::dynamic_pointer_cast<ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
             ? true
             : false;
     auto ref_col_right =
-        std::dynamic_pointer_cast<ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
             ? true
             : false;
 
@@ -624,14 +624,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (is_ref_column) {
         auto ref_col =
-            std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
+            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
 
         // Get all the input pos lists so that we only have to pointer cast the columns once
         auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
           // This works because we assume that the columns have to be either all ReferenceColumns or none.
           auto ref_column =
-              std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));
+              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));
           input_pos_lists.push_back(ref_column->pos_list());
         }
 

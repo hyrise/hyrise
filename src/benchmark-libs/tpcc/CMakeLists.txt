@@ -14,7 +14,7 @@ set(
 
 set(
     LIBRARIES
-    opossum
+    hyrise
 )
 
 # Configure the tpc library
