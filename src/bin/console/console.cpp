@@ -479,17 +479,7 @@ int Console::print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-<<<<<<< HEAD:src/bin/console.cpp
-  auto print = std::make_shared<Print>(gt, std::cout, PrintMvcc);
-  try {
-    print->execute();
-  } catch (const std::exception& exception) {
-    out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
-=======
   console.out(gt->get_output(), PrintMvcc);
->>>>>>> origin/master:src/bin/console/console.cpp
 
   return ReturnCode::Ok;
 }
