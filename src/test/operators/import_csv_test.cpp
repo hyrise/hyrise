@@ -204,8 +204,8 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   expected_table->add_column("f", "int");
   expected_table->add_column("g", "float");
   expected_table->add_column("h", "double");
-  expected_table->append({"xxx",23,0.5,24.23,"xxx",23,0.5,24.23});
-  expected_table->append({"yyy",56,7.4,2.123,"yyy",23,7.4,2.123});
+  expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
+  expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
 
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
