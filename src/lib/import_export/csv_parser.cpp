@@ -136,12 +136,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     from = pos + 1;
     const char elem = csv_content.at(pos);
 
-    // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string
-    if (elem == _csv_config.quote) {
-      if (pos == 0 || csv_content.at(pos-1) != '\\') {
-        in_quotes = !in_quotes;
-      }
-    }
+    if (elem == _csv_config.quote) in_quotes = !in_quotes;
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _csv_config.delimiter && !in_quotes) {
