@@ -84,7 +84,7 @@ class GDSCache : public AbstractCache<key_t, val_t> {
   }
 
   void clear_and_resize(size_t capacity) {
-    this->clear();
+    clear();
     this->_capacity = capacity;
   }
 
