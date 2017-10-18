@@ -70,7 +70,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
-  for (ColumnID column_id{0}; column_id < _target_table->get_chunk(ChunkID{0}).col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < _target_table->get_chunk(ChunkID{0}).column_count(); ++column_id) {
     typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
         _target_table->column_type(column_id)));
   }
@@ -110,7 +110,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
       // Resize current chunk to full size.
       auto old_size = current_chunk.size();
-      for (ColumnID i{0}; i < current_chunk.col_count(); ++i) {
+      for (ColumnID i{0}; i < current_chunk.column_count(); ++i) {
         typed_column_processors[i]->resize_vector(current_chunk.get_mutable_column(i),
                                                   old_size + rows_to_insert_this_loop);
       }
@@ -145,7 +145,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     while (target_start_index != target_chunk.size()) {
       const auto& source_chunk = _input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, n);
-      for (ColumnID i{0}; i < target_chunk.col_count(); ++i) {
+      for (ColumnID i{0}; i < target_chunk.column_count(); ++i) {
         auto source_column = source_chunk.get_column(i);
         typed_column_processors[i]->copy_data(source_column, source_chunk_start_index,
                                               target_chunk.get_mutable_column(i), target_start_index, num_to_insert);

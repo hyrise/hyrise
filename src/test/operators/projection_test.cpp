@@ -204,17 +204,17 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
 TEST_F(OperatorsProjectionTest, ValueColumnCount) {
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, _a_b_expr);
   projection_1->execute();
-  EXPECT_EQ(projection_1->get_output()->col_count(), (u_int)2);
+  EXPECT_EQ(projection_1->get_output()->column_count(), (u_int)2);
   EXPECT_EQ(projection_1->get_output()->row_count(), (u_int)3);
 
   auto projection_2 = std::make_shared<opossum::Projection>(_table_wrapper, _b_expr);
   projection_2->execute();
-  EXPECT_EQ(projection_2->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_2->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_2->get_output()->row_count(), (u_int)3);
 
   auto projection_3 = std::make_shared<opossum::Projection>(_table_wrapper, _a_expr);
   projection_3->execute();
-  EXPECT_EQ(projection_3->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_3->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_3->get_output()->row_count(), (u_int)3);
 }
 
@@ -225,17 +225,17 @@ TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
 
   auto projection_1 = std::make_shared<opossum::Projection>(scan, _a_b_expr);
   projection_1->execute();
-  EXPECT_EQ(projection_1->get_output()->col_count(), (u_int)2);
+  EXPECT_EQ(projection_1->get_output()->column_count(), (u_int)2);
   EXPECT_EQ(projection_1->get_output()->row_count(), (u_int)1);
 
   auto projection_2 = std::make_shared<opossum::Projection>(scan, _a_expr);
   projection_2->execute();
-  EXPECT_EQ(projection_2->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_2->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_2->get_output()->row_count(), (u_int)1);
 
   auto projection_3 = std::make_shared<opossum::Projection>(scan, _b_expr);
   projection_3->execute();
-  EXPECT_EQ(projection_3->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_3->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_3->get_output()->row_count(), (u_int)1);
 }
 

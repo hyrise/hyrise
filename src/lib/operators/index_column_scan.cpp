@@ -72,7 +72,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_operator->get_output();
-    for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
     }
 
@@ -165,7 +165,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         // PosList. Because Value/DictionaryColumns do not have an incoming PosList, they are represented with
         // nullptr.
         std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
-        for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
+        for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
           auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in.get_column(column_id));
           std::shared_ptr<const PosList> pos_list_in;
           std::shared_ptr<const Table> referenced_table_out;

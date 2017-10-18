@@ -59,7 +59,7 @@ void Table::create_new_chunk() {
   _chunks.push_back(std::move(newChunk));
 }
 
-uint16_t Table::col_count() const { return _column_types.size(); }
+uint16_t Table::column_count() const { return _column_types.size(); }
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
@@ -74,7 +74,7 @@ uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_in
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
-  for (ColumnID column_id{0}; column_id < col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
     // TODO(Anyone): make more efficient
     if (_column_names[column_id] == column_name) {
       return column_id;
@@ -118,13 +118,13 @@ const Chunk& Table::get_chunk(ChunkID chunk_id) const {
 }
 
 void Table::emplace_chunk(Chunk chunk) {
-  if (_chunks.size() == 1 && (_chunks.back().col_count() == 0 || _chunks.back().size() == 0)) {
+  if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  DebugAssert(chunk.col_count() == col_count(), std::string("adding chunk with ") + std::to_string(chunk.col_count()) +
-                                                    " columns to table with " + std::to_string(col_count()) +
-                                                    " columns");
+  DebugAssert(chunk.column_count() == column_count(),
+              std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
+                  std::to_string(column_count()) + " columns");
   _chunks.emplace_back(std::move(chunk));
 }
 
