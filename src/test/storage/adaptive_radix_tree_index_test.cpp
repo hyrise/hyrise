@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
-#include "../../lib/types.hpp"
+#include "types.hpp"
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/dictionary_column.hpp"
-#include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
 
 namespace opossum {
 
