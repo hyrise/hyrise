@@ -25,7 +25,7 @@ uint8_t UnionAll::num_out_tables() const { return 1; }
 std::shared_ptr<const Table> UnionAll::_on_execute() {
   auto output = std::make_shared<Table>();
 
-  DebugAssert((_input_table_left()->column_count() == _input_table_right()->col_count()),
+  DebugAssert((_input_table_left()->column_count() == _input_table_right()->column_count()),
               "Input tables must have same number of columns");
 
   // copy column definition from _input_table_left() to output table

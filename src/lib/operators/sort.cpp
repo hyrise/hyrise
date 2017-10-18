@@ -83,7 +83,7 @@ class Sort::SortImplMaterializeOutput {
       // Because we want to add the values row wise we have to save all columns temporarily before we can add them to
       // the
       // output chunk.
-      auto column_vectors = std::vector<std::shared_ptr<BaseColumn>>(output->col_count());
+      auto column_vectors = std::vector<std::shared_ptr<BaseColumn>>(output->column_count());
       for (ColumnID column_id{0}; column_id < output->column_count(); column_id++) {
         auto column_type = _table_in->column_type(column_id);
         column_vectors[column_id] =

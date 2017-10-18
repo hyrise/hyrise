@@ -46,7 +46,7 @@ void BaseTest::ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& no
 
 BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.column_count()));
 
   // set values
   unsigned row_offset = 0;
@@ -86,7 +86,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   Matrix right = _table_to_matrix(tright);
   // compare schema of tables
   //  - column count
-  if (tleft.column_count() != tright.col_count()) {
+  if (tleft.column_count() != tright.column_count()) {
     _print_matrix(left);
     _print_matrix(right);
     return ::testing::AssertionFailure() << "Number of columns is different.";

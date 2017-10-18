@@ -59,7 +59,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   CsvWriter writer(csv_file);
 
   // Create visitors for every column, so that we do not have to do that more than once.
-  std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->col_count());
+  std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->column_count());
   for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
     auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(col_id));
     visitors[col_id] = std::move(visitor);

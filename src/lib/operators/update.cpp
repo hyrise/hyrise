@@ -118,7 +118,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
-  if (_input_table_left()->column_count() != _input_table_right()->col_count()) return false;
+  if (_input_table_left()->column_count() != _input_table_right()->column_count()) return false;
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 

@@ -24,7 +24,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   auto output = std::make_shared<Table>();
 
   // checking if input meets preconditions
-  DebugAssert((_input_table_left()->column_count() == _input_table_right()->col_count()),
+  DebugAssert((_input_table_left()->column_count() == _input_table_right()->column_count()),
               "Input tables must have same number of columns");
 
   // copy column definition from _input_table_left() to output table

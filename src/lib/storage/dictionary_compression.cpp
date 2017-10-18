@@ -116,7 +116,7 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(const std::st
 }
 
 void DictionaryCompression::compress_chunk(const std::vector<std::string>& column_types, Chunk& chunk) {
-  DebugAssert((column_types.size() == chunk.col_count()),
+  DebugAssert((column_types.size() == chunk.column_count()),
               "Number of column types does not match the chunk’s column count.");
 
   for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {

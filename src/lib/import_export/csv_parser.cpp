@@ -160,18 +160,18 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
                                   Chunk& chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
-  const auto col_count = table.column_count();
-  const auto row_count = field_ends.size() / col_count;
+  const auto column_count = table.column_count();
+  const auto row_count = field_ends.size() / column_count;
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
-  for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
+  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
     converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id),
                                                                                            row_count, _csv_config));
   }
 
   size_t start = 0;
   for (ChunkOffset row_id = 0; row_id < row_count; ++row_id) {
-    for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
-      const auto end = field_ends.at(row_id * col_count + column_id);
+    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+      const auto end = field_ends.at(row_id * column_count + column_id);
       auto field = std::string{csv_chunk.substr(start, end - start)};
       start = end + 1;
 

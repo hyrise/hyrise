@@ -118,10 +118,10 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   _export_value(ofstream, static_cast<ChunkOffset>(table->chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
-  _export_value(ofstream, static_cast<ColumnID>(table->col_count()));
+  _export_value(ofstream, static_cast<ColumnID>(table->column_count()));
 
-  std::vector<std::string> column_types(table->col_count());
-  std::vector<std::string> column_names(table->col_count());
+  std::vector<std::string> column_types(table->column_count());
+  std::vector<std::string> column_names(table->column_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {

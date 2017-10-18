@@ -105,7 +105,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
 std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
-  std::vector<uint16_t> widths(t->col_count());
+  std::vector<uint16_t> widths(t->column_count());
   // calculate the length of the column name
   for (ColumnID col{0}; col < t->column_count(); ++col) {
     widths[col] = std::max(min, static_cast<uint16_t>(t->column_name(col).size()));
