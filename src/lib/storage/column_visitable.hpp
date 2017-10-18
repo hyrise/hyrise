@@ -4,7 +4,6 @@
 
 #include "storage/base_dictionary_column.hpp"
 #include "storage/base_value_column.hpp"
-#include "common.hpp"
 
 namespace opossum {
 
