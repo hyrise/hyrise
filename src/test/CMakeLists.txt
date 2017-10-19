@@ -13,7 +13,7 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_manager_test.cpp
-    lib/AllParameterVariant_test.cpp
+    lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     operators/aggregate_test.cpp
     operators/delete_test.cpp
@@ -131,3 +131,4 @@ add_sanitizer_executable(hyriseSanitizers "${HYRISE_TEST_SOURCES}" "hyriseSaniti
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
 target_link_libraries(hyriseTestTPCC hyrise hyriseBenchmarkLib ${LIBRARIES})
+add_dependencies(hyriseTestTPCC tpccTableGenerator)

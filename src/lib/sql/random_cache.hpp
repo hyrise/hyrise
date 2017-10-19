@@ -61,7 +61,7 @@ class RandomCache : public AbstractCache<key_t, val_t> {
   }
 
   void clear_and_resize(size_t capacity) {
-    this->clear();
+    clear();
     this->_capacity = capacity;
     _list.shrink_to_fit();
     _list.reserve(capacity);

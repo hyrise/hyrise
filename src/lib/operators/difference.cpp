@@ -24,11 +24,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   auto output = std::make_shared<Table>();
 
   // checking if input meets preconditions
-  DebugAssert((_input_table_left()->col_count() == _input_table_right()->col_count()),
+  DebugAssert((_input_table_left()->column_count() == _input_table_right()->column_count()),
               "Input tables must have same number of columns");
 
   // copy column definition from _input_table_left() to output table
-  for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
     auto& column_type = _input_table_left()->column_type(column_id);
     DebugAssert((column_type == _input_table_right()->column_type(column_id)),
                 "Input tables must have same column order and column types");
@@ -45,7 +45,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     const Chunk& chunk = _input_table_right()->get_chunk(chunk_id);
     // creating a temporary row representation with strings to be filled column wise
     auto string_row_vector = std::vector<std::string>(chunk.size());
-    for (ColumnID column_id{0}; column_id < _input_table_right()->col_count(); column_id++) {
+    for (ColumnID column_id{0}; column_id < _input_table_right()->column_count(); column_id++) {
       const auto base_column = chunk.get_column(column_id);
 
       // filling the row vector with all values from this column
@@ -67,11 +67,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
 
-    for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); column_id++) {
+    for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); column_id++) {
       const auto base_column = in_chunk.get_column(column_id);
       // temporary variables needed to create the reference column
-      const auto referenced_column =
-          std::dynamic_pointer_cast<ReferenceColumn>(_input_table_left()->get_chunk(chunk_id).get_column(column_id));
+      const auto referenced_column = std::dynamic_pointer_cast<const ReferenceColumn>(
+          _input_table_left()->get_chunk(chunk_id).get_column(column_id));
       auto out_column_id = column_id;
       auto out_referenced_table = _input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
@@ -99,7 +99,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk.size(); chunk_offset++) {
       // creating string represantation off the row at chunk_offset
       std::string row_string;
-      for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); column_id++) {
+      for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); column_id++) {
         auto base_column = in_chunk.get_column(column_id);
         base_column->write_string_representation(row_string, chunk_offset);
       }

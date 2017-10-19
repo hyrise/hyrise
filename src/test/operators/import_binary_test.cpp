@@ -5,9 +5,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/import_binary.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
+#include "operators/import_binary.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 

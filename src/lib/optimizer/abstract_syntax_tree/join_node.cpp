@@ -3,12 +3,12 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "common.hpp"
 #include "constant_mappings.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "types.hpp"
@@ -52,7 +52,7 @@ const std::vector<ColumnID>& JoinNode::output_column_id_to_input_column_id() con
 
 const std::vector<std::string>& JoinNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
@@ -61,8 +61,8 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     return {};
   }
 
-  optional<ColumnID> left_column_id;
-  optional<ColumnID> right_column_id;
+  std::optional<ColumnID> left_column_id;
+  std::optional<ColumnID> right_column_id;
 
   // If there is no qualifying table name or this table's alias is used, search both children.
   if (!named_column_reference_without_local_alias->table_name ||
@@ -78,7 +78,7 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 
     // If neither input table knows the table name, return.
     if (!left_knows_table && !right_knows_table) {
-      return nullopt;
+      return std::nullopt;
     }
 
     // There must not be two tables with the same qualifying name.
@@ -96,7 +96,7 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 
   // If neither input table has that column, return.
   if (!left_column_id && !right_column_id) {
-    return nullopt;
+    return std::nullopt;
   }
 
   Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
@@ -127,8 +127,8 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     Assert(_join_column_ids,
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
-    return left_child->get_statistics()->generate_predicated_join_statistics(
-      right_child->get_statistics(), _join_mode, *_join_column_ids, *_scan_type);
+    return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
+                                                                             *_join_column_ids, *_scan_type);
   }
 }
 
@@ -182,9 +182,9 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-const optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() const { return _join_column_ids; }
+const std::optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() const { return _join_column_ids; }
 
-const optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
+const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 

@@ -8,15 +8,15 @@
 
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_operator.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/reference_column.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/get_table.hpp"
+#include "operators/print.hpp"
+#include "operators/table_scan.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

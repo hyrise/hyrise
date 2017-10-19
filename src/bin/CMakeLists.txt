@@ -45,13 +45,17 @@ target_link_libraries(
 add_executable(
     hyriseConsole
 
-    console.cpp
-    console.hpp
+    console/console.cpp
+    console/console.hpp
+    console/pagination.cpp
+    console/pagination.hpp
 )
 target_link_libraries(
     hyriseConsole
     hyrise
     hyriseBenchmarkLib
+    tpcc
+    ncurses
     ${READLINE_LIBRARY}
 )
 target_include_directories(

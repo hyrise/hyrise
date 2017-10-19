@@ -8,7 +8,6 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/dictionary_column.hpp"
@@ -26,9 +25,9 @@ class MultiColumnIndexTest : public BaseTest {
         "string", {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>{dict_col_int, dict_col_str});
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dict_col_int, dict_col_str});
     index_str_int =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>{dict_col_str, dict_col_int});
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dict_col_str, dict_col_int});
   }
 
   template <class Iterator>

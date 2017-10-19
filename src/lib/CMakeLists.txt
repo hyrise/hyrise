@@ -1,9 +1,9 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+    all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.hpp
-    common.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -233,13 +233,11 @@ set(
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    type_cast.cpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
-    utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp
@@ -247,7 +245,8 @@ set(
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
-    utils/static_if.hpp
+    utils/performance_warning.cpp
+    utils/performance_warning.hpp
 )
 
 set(

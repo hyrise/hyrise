@@ -1,6 +1,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -9,16 +10,16 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_operator.hpp"
-#include "../../lib/operators/index_column_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "../../lib/storage/index/group_key/composite_group_key_index.hpp"
-#include "../../lib/storage/index/group_key/group_key_index.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/index_column_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -107,7 +108,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
   tests[ScanType::OpBetween] = {104, 106, 108};
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, ColumnID{0}, test.first, 4,
-                                                  optional<AllTypeVariant>(9));
+                                                  std::optional<AllTypeVariant>(9));
     scan->execute();
 
     auto expected_copy = test.second;
@@ -136,7 +137,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
     auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, ColumnID{1}, ScanType::OpLessThan, 108);
     scan1->execute();
 
-    auto scan2 = std::make_shared<IndexColumnScan>(scan1, ColumnID{0}, test.first, 4, optional<AllTypeVariant>(9));
+    auto scan2 = std::make_shared<IndexColumnScan>(scan1, ColumnID{0}, test.first, 4, std::optional<AllTypeVariant>(9));
     scan2->execute();
 
     auto expected_copy = test.second;

@@ -38,7 +38,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest_BinaryComparableFromChunkOffset_Test;
 
  public:
-  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>>& index_columns);
+  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
 
@@ -80,9 +80,9 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth,
                                      Iterator& it);
 
-  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const;
+  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
 
-  const std::shared_ptr<BaseDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<Node> _root;
 };

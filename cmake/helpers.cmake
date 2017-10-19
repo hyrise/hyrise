@@ -1,4 +1,4 @@
-set(SANITIZER_COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set(SANITIZER_COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 set(SANITIZER_LINK_FLAGS "-fsanitize=address")
 set(COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 

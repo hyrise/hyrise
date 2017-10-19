@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/lexical_cast.hpp>
+#include <string>
+
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
@@ -36,5 +39,7 @@ inline bool is_column_id(const AllParameterVariant& variant) { return (variant.t
 
 // Function to check if AllParameterVariant is a placeholder
 inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.type() == typeid(ValuePlaceholder)); }
+
+std::string to_string(const AllParameterVariant& x);
 
 }  // namespace opossum
