@@ -145,7 +145,6 @@ set(
     planviz/ast_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
-    polymorphic_allocator.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
