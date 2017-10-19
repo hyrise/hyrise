@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <tbb/concurrent_vector.h>
 
 #include <cstdint>
@@ -9,7 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include "polymorphic_allocator.hpp"
 #include "strong_typedef.hpp"
 
 /**
@@ -47,10 +47,15 @@ namespace opossum {
  */
 
 template <typename T>
-using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
 template <typename T>
-using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+
+// We are not using PMR here because of the problems described in #281.
+// Short version: The current TBB breaks with it, because it needs rebind.
+template <typename T>
+using pmr_concurrent_vector = tbb::concurrent_vector<T>;
 
 using ChunkOffset = uint32_t;
 
