@@ -18,7 +18,7 @@ namespace opossum {
 
 std::string JoinConditionDetectionRule::name() const { return "Join Detection Rule"; }
 
-bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
+bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   if (node->type() == ASTNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -48,7 +48,7 @@ bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>
   return _apply_to_children(node);
 }
 
-std::optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionRule::_find_predicate_for_cross_join(
+std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predicate_for_cross_join(
     const std::shared_ptr<JoinNode>& cross_join) {
   Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
 
@@ -111,7 +111,7 @@ std::optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionR
   return std::nullopt;
 }
 
-bool JoinConditionDetectionRule::_is_join_condition(ColumnID left, ColumnID right, size_t left_num_cols,
+bool JoinDetectionRule::_is_join_condition(ColumnID left, ColumnID right, size_t left_num_cols,
                                                     size_t right_num_cols) const {
   auto left_value = static_cast<ColumnID::base_type>(left);
   auto right_value = static_cast<ColumnID::base_type>(right);

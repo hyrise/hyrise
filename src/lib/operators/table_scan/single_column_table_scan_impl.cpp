@@ -18,7 +18,7 @@ SingleColumnTableScanImpl::SingleColumnTableScanImpl(std::shared_ptr<const Table
                                                      const AllTypeVariant& right_value)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type}, _right_value{right_value} {}
 
-void SingleColumnTableScanImpl::handle_value_column(BaseColumn& base_column,
+void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
                                                     std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -30,7 +30,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn& base_column,
   resolve_data_type(left_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
-    auto& left_column = static_cast<ValueColumn<Type>&>(base_column);
+    auto& left_column = static_cast<const ValueColumn<Type>&>(base_column);
 
     auto left_column_iterable = create_iterable_from_column(left_column);
     auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
@@ -38,14 +38,14 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn& base_column,
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         _with_operator(_scan_type, [&](auto comparator) {
-          this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+          _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
     });
   });
 }
 
-void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn& base_column,
+void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
