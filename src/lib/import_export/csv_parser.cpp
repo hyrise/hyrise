@@ -8,12 +8,13 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-
 #include "import_export/csv_converter.hpp"
+
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -93,17 +94,10 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   // read column info
   while ((pos = content.find(delimiter)) != std::string::npos) {
     auto row = content.substr(0, pos);
-    bool is_nullable = false;
 
-    // read PropertyType and check if it is nullable
+    // remove property type
     auto property_type_pos = row.find(separator);
-    auto property_type = row.substr(0, property_type_pos);
-    AbstractCsvConverter::unescape(property_type);
     row.erase(0, property_type_pos + 1);
-
-    if (property_type == CsvConfig::NULLABLE_COLUMN_TYPE) {
-      is_nullable = true;
-    }
 
     // read column name
     auto row_pos = row.find(separator);
@@ -112,9 +106,13 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
     row.erase(0, row_pos + 1);
 
     // read column type
-    row_pos = row.find(separator);
+    row_pos = row.find(delimiter);
     auto column_type = row.substr(0, row_pos);
     AbstractCsvConverter::unescape(column_type);
+    auto type_nullable = _split<std::string>(column_type, '_');
+    column_type = type_nullable[0];
+
+    auto is_nullable = type_nullable.size() > 1 && boost::to_lower_copy(type_nullable[1]) == CsvConfig::NULL_STRING;
 
     content.erase(0, pos + 1);
 
@@ -172,8 +170,8 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
-  
-  for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
+
+  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
     converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(
         table.column_type(column_id), row_count, _csv_config, table.column_is_nullable(column_id)));
   }

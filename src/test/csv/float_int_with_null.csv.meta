@@ -1,5 +1,5 @@
 PropertyType,Key,Value
 ChunkSize,,3
-NullableColumnType,a,float
+ColumnType,a,float_null
 ColumnType,b,int
-NullableColumnType,c,int
+ColumnType,c,int_null

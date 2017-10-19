@@ -39,10 +39,14 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   writer.write_line({"ChunkSize", "", static_cast<int64_t>(table->chunk_size())});
 
   // Column Types
-  for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
-    std::string propertyType =
-        table->column_is_nullable(col_id) ? CsvConfig::NULLABLE_COLUMN_TYPE : CsvConfig::COLUMN_TYPE;
-    writer.write_line({propertyType, table->column_name(col_id), table->column_type(col_id)});
+  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
+    auto type = table->column_type(col_id);
+
+    if (table->column_is_nullable(col_id)) {
+      type += std::string("_") + CsvConfig::NULL_STRING;
+    }
+
+    writer.write_line({"ColumnType", table->column_name(col_id), type});
   }
 }
 

@@ -219,8 +219,8 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
   EXPECT_TRUE(compare_file(meta_filename,
                            "\"PropertyType\",\"Key\",\"Value\"\n"
                            "\"ChunkSize\",\"\",4\n"
-                           "\"NullableColumnType\",\"a\",\"int\"\n"
-                           "\"NullableColumnType\",\"b\",\"float\"\n"));
+                           "\"ColumnType\",\"a\",\"int_null\"\n"
+                           "\"ColumnType\",\"b\",\"float_null\"\n"));
 }
 
 }  // namespace opossum

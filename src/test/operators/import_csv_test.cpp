@@ -4,9 +4,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "operators/import_csv.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "operators/import_csv.hpp"
 
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -203,10 +203,10 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
   expected_table->append({458.7f, 12345, NULL_VALUE});
   expected_table->append({NULL_VALUE, 123, 456});
   expected_table->append({457.7f, 1234, 675});
-  
+
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
-  
+
 TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_null.csv");
   importer->execute();

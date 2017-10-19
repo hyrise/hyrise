@@ -18,9 +18,7 @@ struct CsvConfig {
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;
 
-  static constexpr const char* NULL_STRING = "NULL";
-  static constexpr const char* COLUMN_TYPE = "ColumnType";
-  static constexpr const char* NULLABLE_COLUMN_TYPE = "NullableColumnType";
+  static constexpr const char* NULL_STRING = "null";
 };
 
 }  // namespace opossum
