@@ -10,7 +10,14 @@ Papers that were published before October 2017 were based on the previous versio
 
 *Have a look at our [contributor guidelines](CONTRIBUTING.md)*
 
-The [wiki](https://github.com/hyrise/zweirise/wiki) is a good starting point to get to know Hyrise
+The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
+
+## Native Setup
+You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
+The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
+
+See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang. Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
+Older versions may work, but are neither tested nor supported.
 
 ## Setup using Docker
 To get all dependencies of Hyrise in a docker image, run
@@ -25,13 +32,6 @@ docker-compose run --rm hyrise
 
 Inside of the container, run `./install.sh` to download the required submodules.
 :whale:
-
-## Native Setup
-You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
-
-See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang.
-Older versions may work, but are neither tested nor supported.
 
 ## Building and Tooling
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
