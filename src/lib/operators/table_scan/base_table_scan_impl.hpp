@@ -24,7 +24,7 @@ class BaseTableScanImpl {
 
  protected:
   template <typename Functor>
-  static void _with_operator(const ScanType scan_type, const Functor &func) {
+  static void _with_operator(const ScanType scan_type, const Functor& func) {
     switch (scan_type) {
       case ScanType::OpEquals:
         func(std::equal_to<void>{});
@@ -52,9 +52,11 @@ class BaseTableScanImpl {
 
       case ScanType::OpBetween:
         Fail("This method should only be called when ScanType::OpBetween has been ruled out.");
+        break;
 
       case ScanType::OpLike:
         Fail("This method should only be called when ScanType::OpLike has been ruled out.");
+        break;
 
       default:
         Fail("Unsupported operator.");
@@ -67,8 +69,8 @@ class BaseTableScanImpl {
    */
 
   template <typename UnaryFunctor, typename LeftIterator>
-  void _unary_scan(const UnaryFunctor &func, LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id,
-                   PosList &matches_out) {
+  void _unary_scan(const UnaryFunctor& func, LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id,
+                   PosList& matches_out) {
     for (; left_it != left_end; ++left_it) {
       const auto left = *left_it;
 
@@ -81,8 +83,8 @@ class BaseTableScanImpl {
   }
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _binary_scan(const BinaryFunctor &func, LeftIterator left_it, LeftIterator left_end, RightIterator right_it,
-                    const ChunkID chunk_id, PosList &matches_out) {
+  void _binary_scan(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end, RightIterator right_it,
+                    const ChunkID chunk_id, PosList& matches_out) {
     for (; left_it != left_end; ++left_it, ++right_it) {
       const auto left = *left_it;
       const auto right = *right_it;

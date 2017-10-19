@@ -223,5 +223,4 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
                   load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0), true);
 }
 
-
 }  // namespace opossum

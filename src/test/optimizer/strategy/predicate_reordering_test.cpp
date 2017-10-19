@@ -1,4 +1,5 @@
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,7 +29,7 @@ class TableStatisticsMock : public TableStatistics {
 
   std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
                                                         const AllParameterVariant& value,
-                                                        const optional<AllTypeVariant>& value2) override {
+                                                        const std::optional<AllTypeVariant>& value2) override {
     if (column_id == ColumnID{0}) {
       return std::make_shared<TableStatisticsMock>(500);
     }

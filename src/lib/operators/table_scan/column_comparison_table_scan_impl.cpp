@@ -9,19 +9,18 @@
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/static_if.hpp"
 
 #include "resolve_type.hpp"
 
 namespace opossum {
 
 ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(std::shared_ptr<const Table> in_table,
-                                                             const ColumnID left_column_id, const ScanType &scan_type,
+                                                             const ColumnID left_column_id, const ScanType& scan_type,
                                                              const ColumnID right_column_id)
     : BaseTableScanImpl{in_table, left_column_id, scan_type}, _right_column_id{right_column_id} {}
 
 PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
-  const auto &chunk = _in_table->get_chunk(chunk_id);
+  const auto& chunk = _in_table->get_chunk(chunk_id);
   const auto left_column_type = _in_table->column_type(_left_column_id);
   const auto right_column_type = _in_table->column_type(_right_column_id);
 
@@ -30,8 +29,8 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
 
   auto matches_out = PosList{};
 
-  resolve_data_and_column_type(left_column_type, *left_column, [&](auto left_type, auto &typed_left_column) {
-    resolve_data_and_column_type(right_column_type, *right_column, [&](auto right_type, auto &typed_right_column) {
+  resolve_data_and_column_type(left_column_type, *left_column, [&](auto left_type, auto& typed_left_column) {
+    resolve_data_and_column_type(right_column_type, *right_column, [&](auto right_type, auto& typed_right_column) {
       using LeftColumnType = typename std::decay<decltype(typed_left_column)>::type;
       using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
 
@@ -60,8 +59,9 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
       constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
       constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-      static_if<(neither_is_reference_column || both_are_reference_columns) &&
-                (neither_is_string_column || both_are_string_columns)>([&](auto f) {
+      // clang-format off
+      if constexpr((neither_is_reference_column || both_are_reference_columns) &&
+                   (neither_is_string_column || both_are_string_columns)) {
         auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
         auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
@@ -72,7 +72,10 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
             });
           });
         });
-      }).else_([&](auto f) { Fail("Invalid column combination detected!"); });
+      } else {
+        Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
+      }
+      // clang-format on
     });
   });
 

@@ -10,7 +10,6 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
 #include "../lib/storage/index/group_key/variable_length_key_base.hpp"
 #include "../lib/types.hpp"
 
@@ -35,8 +34,8 @@ class VariableLengthKeyBaseTest : public BaseTest {
 
  protected:
   template <typename T>
-  static VariableLengthKeyBase _create_fitted_key(T &value) {
-    return VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord *>(&value), sizeof(value));
+  static VariableLengthKeyBase _create_fitted_key(T& value) {
+    return VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&value), sizeof(value));
   }
 
  protected:
@@ -138,7 +137,7 @@ TEST_F(VariableLengthKeyBaseTest, OrAssignment) {
 
 TEST_F(VariableLengthKeyBaseTest, OrAssignmentWithKeyLongerThan64Bit) {
   uint64_t memory[2] = {0x0000000000000000u, 0x0000000000000000u};
-  auto key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord *>(&memory), sizeof(memory));
+  auto key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory), sizeof(memory));
 
   key |= 0xFF00FF00F0F0FF00u;
 
@@ -174,7 +173,7 @@ TEST_F(VariableLengthKeyBaseTest, ShiftAssignment) {
 TEST_F(VariableLengthKeyBaseTest, ShiftAndSet) {
   uint64_t memory = 0xFF000000F0F0FF00u;
   // create key pointing to lower half of memory (on little endian architecture)
-  auto key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord *>(&memory), sizeof(uint32_t));
+  auto key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory), sizeof(uint32_t));
 
   uint8_t small_value = 0xFFu;
   key.shift_and_set(small_value, sizeof(uint8_t) * 8);

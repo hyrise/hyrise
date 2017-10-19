@@ -29,7 +29,7 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
 
   PosList scan_chunk(ChunkID chunk_id) override;
 
-  void handle_reference_column(ReferenceColumn &left_column,
+  void handle_reference_column(const ReferenceColumn& left_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  protected:
@@ -37,13 +37,13 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
    * @brief the context used for the columns’ visitor pattern
    */
   struct Context : public ColumnVisitableContext {
-    Context(const ChunkID chunk_id, PosList &matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
+    Context(const ChunkID chunk_id, PosList& matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
-    Context(const ChunkID chunk_id, PosList &matches_out, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
+    Context(const ChunkID chunk_id, PosList& matches_out, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
         : _chunk_id{chunk_id}, _matches_out{matches_out}, _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
 
     const ChunkID _chunk_id;
-    PosList &_matches_out;
+    PosList& _matches_out;
 
     std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
   };

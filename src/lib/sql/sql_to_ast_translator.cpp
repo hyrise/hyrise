@@ -1,6 +1,7 @@
 #include "sql_to_ast_translator.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -150,13 +151,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
       current_result_node = _translate_projection(*insert.values, current_result_node);
     }
 
-    Assert(current_result_node->output_col_count() == target_table->col_count(), "Insert: column mismatch");
+    Assert(current_result_node->output_col_count() == target_table->column_count(), "Insert: column mismatch");
   } else {
     // Certain columns have been specified. In this case we create a new expression list
     // for the Projection, so that it contains as many columns as the target table.
 
     // pre-fill new projection list with NULLs
-    std::vector<std::shared_ptr<Expression>> projections(target_table->col_count(),
+    std::vector<std::shared_ptr<Expression>> projections(target_table->column_count(),
                                                          Expression::create_literal(NULL_VALUE));
 
     ColumnID insert_column_index{0};
@@ -222,7 +223,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
 
   // now update with new values
   for (auto& sql_expr : *update.updates) {
-    const auto column_ref = NamedColumnReference{sql_expr->column, nullopt};
+    const auto column_ref = NamedColumnReference{sql_expr->column, std::nullopt};
     auto column_id = current_values_node->find_column_id_by_named_column_reference(column_ref);
     Assert(column_id, "Update: Could not find column reference");
 
@@ -244,8 +245,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // 3. GROUP BY clause
   // 4. HAVING clause
   // 5. SELECT clause
-  // 6. ORDER BY clause
-  // 7. LIMIT clause
+  // 6. UNION clause
+  // 7. ORDER BY clause
+  // 8. LIMIT clause
 
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
@@ -276,6 +278,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
+
+  Assert(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
@@ -381,7 +385,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
-  auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
+  auto alias = table.alias ? std::optional<std::string>(table.alias) : std::nullopt;
   std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
     case hsql::kTableName:
@@ -406,7 +410,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
 }
 
 AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
-    const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
+    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractASTNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -503,13 +507,20 @@ std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_ag
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
+  /**
+   * This function creates the following node structure:
+   *
+   * input_node -> aggregate_node -> {having_node}* -> projection_node
+   *
+   * The aggregate_node creates aggregate and groupby columns, the having_nodes apply the predicates in the optional
+   * HAVING clause and the projection_node establishes the correct column order (since AggregateNode outputs all groupby
+   * columns first and then all aggregate columns)
+   */
+
   const auto& select_list = *select.selectList;
   const auto* group_by = select.groupBy;
   const auto has_having = (group_by && group_by->having);
 
-  /**
-   * Build Aggregates
-   */
   std::vector<std::shared_ptr<Expression>> projections;
   std::vector<std::shared_ptr<Expression>> aggregate_expressions;
   aggregate_expressions.reserve(select_list.size());
@@ -522,17 +533,17 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
+    std::optional<std::string> alias;
+    if (column_expr->alias) {
+      alias = std::string(column_expr->alias);
+    }
+
     if (column_expr->isType(hsql::kExprFunctionRef)) {
       auto opossum_expr = SQLExpressionTranslator().translate_expression(*column_expr, input_node);
 
-      optional<std::string> alias;
-      if (column_expr->alias) {
-        alias = std::string(column_expr->alias);
-      }
-
       aggregate_expressions.emplace_back(opossum_expr);
 
-      projections.push_back(Expression::create_column(ColumnID{aggregate_offset++}));
+      projections.push_back(Expression::create_column(ColumnID{aggregate_offset++}, alias));
     } else if (column_expr->isType(hsql::kExprColumnRef)) {
       /**
        * This if block is only used to conduct an SQL conformity check, whether column references in the SELECT list of
@@ -541,32 +552,49 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
       Assert(group_by != nullptr,
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
-      auto expr_name = column_expr->getName();
-
       auto is_in_group_by_clause = false;
       for (const auto* groupby_expr : *group_by->columns) {
-        if (strcmp(expr_name, groupby_expr->getName()) == 0) {
+        if ((column_expr->name && groupby_expr->name && strcmp(column_expr->name, groupby_expr->name) == 0) ||
+            (column_expr->alias && groupby_expr->name && strcmp(column_expr->alias, groupby_expr->name) == 0)) {
           is_in_group_by_clause = true;
           break;
         }
       }
 
-      Assert(is_in_group_by_clause,
-             std::string("Column '") + expr_name + "' is specified in SELECT list, but not in GROUP BY clause.");
+      Assert(is_in_group_by_clause, std::string("Column '") + column_expr->getName() +
+                                        "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}));
+      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}, alias));
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }
   }
 
   /**
-   * Build GROUP BY
+   * Collect the ColumnIDs to GROUP BY
    */
   std::vector<ColumnID> groupby_columns;
   if (group_by != nullptr) {
     groupby_columns.reserve(group_by->columns->size());
     for (const auto* groupby_hsql_expr : *group_by->columns) {
+      if (!groupby_hsql_expr->isType(hsql::kExprColumnRef)) {
+        Fail("Grouping on complex expressions is not yet supported.");
+      }
+
+      // Some of the GROUP BY expressions may be aliases that were set in this aggregate node. Because the
+      // ProjectionNode that maps these aliases will only be added later, we will have to search the projections
+      // by hand here in order to find the column ids for GROUP BY.
+      bool found_aliased_column = false;
+      for (const auto& projection : projections) {
+        if (projection->alias() && *projection->alias() == groupby_hsql_expr->name) {
+          Assert(projection->type() == ExpressionType::Column, "Grouping on complex expressions is not yet supported.");
+          groupby_columns.emplace_back(projection->column_id());
+          found_aliased_column = true;
+          break;
+        }
+      }
+      if (found_aliased_column) continue;
+
       groupby_columns.emplace_back(
           SQLExpressionTranslator::get_column_id_for_expression(*groupby_hsql_expr, input_node));
     }
@@ -579,7 +607,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     // retrieve all aggregates in the having clause
     auto having_expressions = _retrieve_having_aggregates(*group_by->having, input_node);
 
-    for (auto having_expr : having_expressions) {
+    for (const auto& having_expr : having_expressions) {
       // see if the having expression is included in the aggregation
       auto result = std::find_if(aggregate_expressions.begin(), aggregate_expressions.end(),
                                  [having_expr](const auto& expr) { return *expr == *having_expr; });
@@ -599,7 +627,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
   if (has_having) {
     auto having_node = _translate_having(*group_by->having, aggregate_node, aggregate_node);
-
     projection_node->set_left_child(having_node);
   } else {
     projection_node->set_left_child(aggregate_node);
@@ -735,7 +762,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    */
   const hsql::Expr* value_ref_hsql_expr = nullptr;
 
-  optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
+  std::optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
   if (scan_type == ScanType::OpBetween) {
     /**

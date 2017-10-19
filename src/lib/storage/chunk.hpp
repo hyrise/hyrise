@@ -56,13 +56,13 @@ class Chunk : private Noncopyable {
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  Chunk(Chunk &&) = default;
-  Chunk &operator=(Chunk &&) = default;
+  Chunk(Chunk&&) = default;
+  Chunk& operator=(Chunk&&) = default;
 
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
@@ -71,14 +71,14 @@ class Chunk : private Noncopyable {
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t col_count() const;
+  uint16_t column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(std::vector<AllTypeVariant> values);
+  void append(const std::vector<AllTypeVariant>& values);
 
   /**
    * Atomically accesses and returns the column at a given position
@@ -90,7 +90,8 @@ class Chunk : private Noncopyable {
    *       However, if you call get_column again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
+  std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
+  std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
 
@@ -123,13 +124,13 @@ class Chunk : private Noncopyable {
   /**
    * Reuse mvcc from other chunk
    */
-  void use_mvcc_columns_from(const Chunk &chunk);
+  void use_mvcc_columns_from(const Chunk& chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
-      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
+      const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) {
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;

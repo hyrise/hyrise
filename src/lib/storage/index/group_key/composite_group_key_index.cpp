@@ -20,14 +20,14 @@
 
 namespace opossum {
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns) {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
   if (IS_DEBUG) {
     auto firstSize = indexed_columns.front()->size();
     [[gnu::unused]] auto haveAllColumnsSameSize =
         std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
-                    [firstSize](const auto &column) { return column->size() == firstSize; });
+                    [firstSize](const auto& column) { return column->size() == firstSize; });
 
     DebugAssert(haveAllColumnsSameSize,
                 "CompositeGroupKey requires same length of all columns that should be indexed.");
@@ -35,8 +35,8 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());
-  for (const auto &column : indexed_columns) {
-    auto dict_column = std::dynamic_pointer_cast<BaseDictionaryColumn>(column);
+  for (const auto& column : indexed_columns) {
+    auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
     DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with DictionaryColumns");
     _indexed_columns.emplace_back(dict_column);
   }
@@ -44,7 +44,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   // retrive amount of memory consumed by each concatenated key
   CompositeKeyLength bytes_per_key = std::accumulate(
       _indexed_columns.begin(), _indexed_columns.end(), 0u,
-      [](auto key_length, const auto &column) { return key_length + column->attribute_vector()->width(); });
+      [](auto key_length, const auto& column) { return key_length + column->attribute_vector()->width(); });
 
   // create concatenated keys and save their positions
   // at this point duplicated keys may be created, they will be handled later
@@ -54,8 +54,8 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   for (ChunkOffset chunkOffset = 0; chunkOffset < column_size; ++chunkOffset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
-    for (const auto &column : _indexed_columns) {
-      const auto &attribute_vector = column->attribute_vector();
+    for (const auto& column : _indexed_columns) {
+      const auto& attribute_vector = column->attribute_vector();
       concatenated_key.shift_and_set(attribute_vector->get(chunkOffset), attribute_vector->width() * CHAR_BIT);
     }
     keys[chunkOffset] = std::move(concatenated_key);
@@ -89,17 +89,17 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
   return _get_position_iterator_for_key(composite_key);
 }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, true);
   return _get_position_iterator_for_key(composite_key);
 }
 
-VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vector<AllTypeVariant> &values,
+VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vector<AllTypeVariant>& values,
                                                                 bool is_upper_bound) const {
   auto result = VariableLengthKey(_keys.key_size());
 
@@ -112,8 +112,8 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // retrieve the partial key for the last value (depending on whether we have a lower- or upper-bound-query)
   // and append it to the previously created partial key to obtain the key containing all provided values
-  const auto &column_for_last_value = _indexed_columns[values.size() - 1];
-  auto &&partial_key = is_upper_bound ? column_for_last_value->upper_bound(values.back())
+  const auto& column_for_last_value = _indexed_columns[values.size() - 1];
+  auto&& partial_key = is_upper_bound ? column_for_last_value->upper_bound(values.back())
                                       : column_for_last_value->lower_bound(values.back());
   auto bits_of_partial_key = column_for_last_value->attribute_vector()->width() * CHAR_BIT;
   result.shift_and_set(partial_key, bits_of_partial_key);
@@ -127,7 +127,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   return result;
 }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey &key) const {
+BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey& key) const {
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
   auto key_iter = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
@@ -145,10 +145,10 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const
   return position_iter;
 }
 
-std::vector<std::shared_ptr<BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
-  auto result = std::vector<std::shared_ptr<BaseColumn>>();
+std::vector<std::shared_ptr<const BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
+  auto result = std::vector<std::shared_ptr<const BaseColumn>>();
   result.reserve(_indexed_columns.size());
-  for (auto &&indexed_column : _indexed_columns) {
+  for (auto&& indexed_column : _indexed_columns) {
     result.emplace_back(indexed_column);
   }
   return result;

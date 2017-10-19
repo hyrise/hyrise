@@ -6,6 +6,7 @@
 #include <fstream>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,7 +19,7 @@
 
 namespace opossum {
 
-ImportBinary::ImportBinary(const std::string& filename, const optional<std::string> tablename)
+ImportBinary::ImportBinary(const std::string& filename, const std::optional<std::string> tablename)
     : _filename(filename), _tablename(tablename) {}
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
@@ -111,7 +112,7 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
   const auto row_count = _read_value<ChunkOffset>(file);
   Chunk chunk{true};
 
-  for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     chunk.add_column(_import_column(file, row_count, table->column_type(column_id)));
   }
   return chunk;

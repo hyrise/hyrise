@@ -14,15 +14,15 @@
 namespace opossum {
 
 SingleColumnTableScanImpl::SingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
-                                                     const ColumnID left_column_id, const ScanType &scan_type,
-                                                     const AllTypeVariant &right_value)
+                                                     const ColumnID left_column_id, const ScanType& scan_type,
+                                                     const AllTypeVariant& right_value)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type}, _right_value{right_value} {}
 
-void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
+void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
                                                     std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  auto &matches_out = context->_matches_out;
-  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  auto& matches_out = context->_matches_out;
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
@@ -30,7 +30,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
   resolve_data_type(left_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
-    auto &left_column = static_cast<ValueColumn<Type> &>(base_column);
+    auto& left_column = static_cast<const ValueColumn<Type>&>(base_column);
 
     auto left_column_iterable = create_iterable_from_column(left_column);
     auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
@@ -38,20 +38,20 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         _with_operator(_scan_type, [&](auto comparator) {
-          this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+          _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
     });
   });
 }
 
-void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
+void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  auto &matches_out = context->_matches_out;
+  auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;
-  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
-  auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  auto& left_column = static_cast<const BaseDictionaryColumn&>(base_column);
 
   /**
    * ValueID value_id; // left value id
@@ -84,12 +84,12 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
    * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
    */
 
-  const auto &attribute_vector = *left_column.attribute_vector();
+  const auto& attribute_vector = *left_column.attribute_vector();
   auto left_iterable = AttributeVectorIterable{attribute_vector};
 
   if (_right_value_matches_all(left_column, search_value_id)) {
     left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      static const auto always_true = [](const auto &) { return true; };
+      static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
 
@@ -111,7 +111,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   });
 }
 
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn &column) {
+ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
     case ScanType::OpNotEquals:
@@ -129,7 +129,7 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn &column,
+bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn& column,
                                                          const ValueID search_value_id) {
   switch (_scan_type) {
     case ScanType::OpEquals:
@@ -152,7 +152,7 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn &column,
+bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn& column,
                                                           const ValueID search_value_id) {
   switch (_scan_type) {
     case ScanType::OpEquals:

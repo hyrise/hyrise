@@ -5,12 +5,12 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/concurrency/transaction_context.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/insert.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "operators/get_table.hpp"
+#include "operators/insert.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

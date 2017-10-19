@@ -20,9 +20,7 @@
 namespace opossum {
 
 struct JoinDetectionTestParam {
-  JoinDetectionTestParam(const std::string& query, const uint8_t number_of_detectable_cross_joins)
-      : query(query), number_of_detectable_cross_joins(number_of_detectable_cross_joins) {}
-
+  const uint32_t line;
   const std::string query;
   const uint8_t number_of_detectable_cross_joins;
 };
@@ -38,7 +36,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _table_node_b = std::make_shared<StoredTableNode>("b");
     _table_node_c = std::make_shared<StoredTableNode>("c");
 
-    _rule = std::make_shared<JoinConditionDetectionRule>();
+    _rule = std::make_shared<JoinDetectionRule>();
   }
 
   uint8_t _count_cross_joins(const std::shared_ptr<AbstractASTNode>& node) {
@@ -61,7 +59,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
   }
 
   std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
-  std::shared_ptr<JoinConditionDetectionRule> _rule;
+  std::shared_ptr<JoinDetectionRule> _rule;
 };
 
 TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
@@ -472,10 +470,13 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
   EXPECT_EQ(before - after, params.number_of_detectable_cross_joins);
 }
 
-const JoinDetectionTestParam test_queries[] = {{"SELECT * FROM a, b WHERE a.a = b.a", 1},
-                                               {"SELECT * FROM a, b, c WHERE a.a = c.a", 1},
-                                               {"SELECT * FROM a, b, c WHERE b.a = c.a", 1}};
+const JoinDetectionTestParam test_queries[] = {{__LINE__, "SELECT * FROM a, b WHERE a.a = b.a", 1},
+                                               {__LINE__, "SELECT * FROM a, b, c WHERE a.a = c.a", 1},
+                                               {__LINE__, "SELECT * FROM a, b, c WHERE b.a = c.a", 1}};
 
-INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries));
+auto formatter = [](const testing::TestParamInfo<struct JoinDetectionTestParam> info) {
+  return std::to_string(info.param.line);
+};
+INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries), formatter);
 
 }  // namespace opossum

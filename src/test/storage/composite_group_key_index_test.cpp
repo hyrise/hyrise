@@ -7,14 +7,12 @@
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
 
-#include "common.hpp"
 #include "types.hpp"
 
 namespace {
@@ -24,13 +22,13 @@ opossum::VariableLengthKey create_key(uint16_t value) {
   return result;
 }
 
-std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore &keys) {
+std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore& keys) {
   auto result = std::vector<opossum::VariableLengthKey>(keys.size());
   std::copy(keys.cbegin(), keys.cend(), result.begin());
   return result;
 }
 
-testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::set<opossum::ChunkOffset> &set) {
+testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::set<opossum::ChunkOffset>& set) {
   if (set.find(value) == set.end()) {
     return testing::AssertionFailure() << testing::PrintToString(set) << " does not contain " << value;
   } else {
@@ -38,10 +36,10 @@ testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::
   }
 }
 
-void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>> &expected,
-                             const std::vector<opossum::ChunkOffset> &actual) {
+void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& expected,
+                             const std::vector<opossum::ChunkOffset>& actual) {
   std::set<opossum::ChunkOffset> distinct_expected_positions = {};
-  for (const auto &expection_for_position : expected) {
+  for (const auto& expection_for_position : expected) {
     distinct_expected_positions.insert(expection_for_position.begin(), expection_for_position.end());
   }
 
@@ -63,10 +61,10 @@ class CompositeGroupKeyIndexTest : public BaseTest {
     _column_str = create_dict_column_by_type<std::string>(
         "string", {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
-    _index_int_str =
-        std::make_shared<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<BaseColumn>>{_column_int, _column_str});
-    _index_str_int =
-        std::make_shared<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<BaseColumn>>{_column_str, _column_int});
+    _index_int_str = std::make_shared<CompositeGroupKeyIndex>(
+        std::vector<std::shared_ptr<const BaseColumn>>{_column_int, _column_str});
+    _index_str_int = std::make_shared<CompositeGroupKeyIndex>(
+        std::vector<std::shared_ptr<const BaseColumn>>{_column_str, _column_int});
 
     _keys_int_str = &(_index_int_str->_keys);
     _keys_str_int = &(_index_str_int->_keys);
@@ -89,14 +87,14 @@ class CompositeGroupKeyIndexTest : public BaseTest {
    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
    * is used as proxy. Since the variables are set in setup(), references are not possible.
    */
-  VariableLengthKeyStore *_keys_int_str;
-  VariableLengthKeyStore *_keys_str_int;
+  VariableLengthKeyStore* _keys_int_str;
+  VariableLengthKeyStore* _keys_str_int;
 
-  std::vector<ChunkOffset> *_offsets_int_str;
-  std::vector<ChunkOffset> *_offsets_str_int;
+  std::vector<ChunkOffset>* _offsets_int_str;
+  std::vector<ChunkOffset>* _offsets_str_int;
 
-  std::vector<ChunkOffset> *_position_list_int_str;
-  std::vector<ChunkOffset> *_position_list_str_int;
+  std::vector<ChunkOffset>* _position_list_int_str;
+  std::vector<ChunkOffset>* _position_list_str_int;
 };
 
 TEST_F(CompositeGroupKeyIndexTest, ConcatenatedKeys) {

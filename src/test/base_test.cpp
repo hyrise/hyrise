@@ -15,22 +15,22 @@
 
 namespace opossum {
 
-void BaseTest::EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive) {
-  EXPECT_TRUE(_table_equal(tleft, tright, order_sensitive));
+void BaseTest::EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
+  EXPECT_TRUE(_table_equal(tleft, tright, order_sensitive, strict_types));
 }
 
-void BaseTest::ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive) {
-  ASSERT_TRUE(_table_equal(tleft, tright, order_sensitive));
+void BaseTest::ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
+  ASSERT_TRUE(_table_equal(tleft, tright, order_sensitive, strict_types));
 }
 
 void BaseTest::EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
-                               bool order_sensitive) {
-  EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive);
+                               bool order_sensitive, bool strict_types) {
+  EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
 void BaseTest::ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
-                               bool order_sensitive) {
-  ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive);
+                               bool order_sensitive, bool strict_types) {
+  ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
 void BaseTest::ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType,
@@ -46,7 +46,7 @@ void BaseTest::ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& no
 
 BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.column_count()));
 
   // set values
   unsigned row_offset = 0;
@@ -56,8 +56,8 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
-      std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
+    for (ColumnID col_id{0}; col_id < t.column_count(); ++col_id) {
+      auto column = chunk.get_column(col_id);
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];
@@ -80,20 +80,38 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   std::cout << "-------------" << std::endl;
 }
 
-::testing::AssertionResult BaseTest::_table_equal(const Table& tleft, const Table& tright, bool order_sensitive) {
+::testing::AssertionResult BaseTest::_table_equal(const Table& tleft, const Table& tright, bool order_sensitive,
+                                                  bool strict_types) {
   Matrix left = _table_to_matrix(tleft);
   Matrix right = _table_to_matrix(tright);
   // compare schema of tables
   //  - column count
-  if (tleft.col_count() != tright.col_count()) {
+  if (tleft.column_count() != tright.column_count()) {
     _print_matrix(left);
     _print_matrix(right);
     return ::testing::AssertionFailure() << "Number of columns is different.";
   }
+
   //  - column names and types
-  for (ColumnID col_id{0}; col_id < tright.col_count(); ++col_id) {
-    if (tleft.column_type(col_id) != tright.column_type(col_id) ||
-        tleft.column_name(col_id) != tright.column_name(col_id)) {
+  std::string left_col_type, right_col_type;
+  for (ColumnID col_id{0}; col_id < tright.column_count(); ++col_id) {
+    left_col_type = tleft.column_type(col_id);
+    right_col_type = tright.column_type(col_id);
+    // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
+    if (!strict_types) {
+      if (left_col_type == "double") {
+        left_col_type = "float";
+      } else if (left_col_type == "long") {
+        left_col_type = "int";
+      }
+
+      if (right_col_type == "double") {
+        right_col_type = "float";
+      } else if (right_col_type == "long") {
+        right_col_type = "int";
+      }
+    }
+    if (left_col_type != right_col_type || tleft.column_name(col_id) != tright.column_name(col_id)) {
       std::cout << "Column with ID " << col_id << " is different" << std::endl;
       std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
       std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;
@@ -125,16 +143,30 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
         auto left_val = type_cast<float>(left[row][col]);
         auto right_val = type_cast<float>(right[row][col]);
 
-        EXPECT_EQ(tright.column_type(col), "float");
+        if (strict_types) {
+          EXPECT_EQ(tright.column_type(col), "float");
+        } else {
+          EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+        }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
       } else if (tleft.column_type(col) == "double") {
         auto left_val = type_cast<double>(left[row][col]);
         auto right_val = type_cast<double>(right[row][col]);
 
-        EXPECT_EQ(tright.column_type(col), "double");
+        if (strict_types) {
+          EXPECT_EQ(tright.column_type(col), "double");
+        } else {
+          EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+        }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
       } else {
-        EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
+        if (!strict_types && (tleft.column_type(col) == "int" || tleft.column_type(col) == "long")) {
+          auto left_val = type_cast<int64_t>(left[row][col]);
+          auto right_val = type_cast<int64_t>(right[row][col]);
+          EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;
+        } else {
+          EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
+        }
       }
     }
 

@@ -48,14 +48,14 @@ class GroupKeyIndex : public BaseIndex {
  public:
   GroupKeyIndex() = delete;
 
-  GroupKeyIndex(const GroupKeyIndex &) = delete;
-  GroupKeyIndex &operator=(const GroupKeyIndex &) = delete;
+  GroupKeyIndex(const GroupKeyIndex&) = delete;
+  GroupKeyIndex& operator=(const GroupKeyIndex&) = delete;
 
-  GroupKeyIndex(GroupKeyIndex &&) = default;
-  GroupKeyIndex &operator=(GroupKeyIndex &&) = default;
+  GroupKeyIndex(GroupKeyIndex&&) = default;
+  GroupKeyIndex& operator=(GroupKeyIndex&&) = default;
 
-  explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
-      : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns[0])) {
+  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns)
+      : _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns[0])) {
     DebugAssert(static_cast<bool>(_index_column), "GroupKeyIndex only works with DictionaryColumns");
     DebugAssert((index_columns.size() == 1), "GroupKeyIndex only works with a single column");
 
@@ -93,14 +93,14 @@ class GroupKeyIndex : public BaseIndex {
   }
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final {
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final {
     DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->lower_bound(*values.begin());
     return _get_postings_iterator_at(value_id);
   };
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final {
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final {
     DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->upper_bound(*values.begin());
@@ -128,13 +128,10 @@ class GroupKeyIndex : public BaseIndex {
     return iter;
   }
 
-  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const {
-    std::vector<std::shared_ptr<BaseColumn>> v = {_index_column};
-    return v;
-  }
+  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const { return {_index_column}; }
 
  private:
-  const std::shared_ptr<BaseDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

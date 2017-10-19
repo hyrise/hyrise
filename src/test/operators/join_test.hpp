@@ -8,12 +8,12 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_join_operator.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -89,8 +89,8 @@ class JoinTest : public BaseTest {
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator> left,
                         const std::shared_ptr<const AbstractOperator> right,
-                        const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode,
-                        const std::string &file_name, size_t chunk_size) {
+                        const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const JoinMode mode,
+                        const std::string& file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";

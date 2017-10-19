@@ -1,7 +1,0 @@
-Things we should explain in the seminar:
-
-Environment
-	- `make` is slow - use `make -j` and only rerun without `-j` if you find errors
-
-Coding
-	- the whole types.hpp thing, at least how it's used

@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,7 +30,7 @@ namespace opossum {
  */
 class ImportBinary : public AbstractReadOnlyOperator {
  public:
-  explicit ImportBinary(const std::string& filename, const optional<std::string> tablename = nullopt);
+  explicit ImportBinary(const std::string& filename, const std::optional<std::string> tablename = std::nullopt);
 
   /*
    * Reads the given binary file. The file must be in the following form:
@@ -54,7 +55,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const final;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + name() + " does not implement recreation.");
     return {};
   }
 
@@ -157,7 +158,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Name of the import file
   const std::string _filename;
   // Name for adding the table to the StorageManager
-  const optional<std::string> _tablename;
+  const std::optional<std::string> _tablename;
 };
 
 }  // namespace opossum

@@ -15,11 +15,13 @@ class BaseValueColumn;
 
 class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType &scan_type);
+  IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType& scan_type);
 
-  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_value_column(const BaseValueColumn& base_column,
+                           std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   /**
@@ -27,17 +29,17 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  bool _matches_all(const BaseValueColumn &column);
+  bool _matches_all(const BaseValueColumn& column);
 
-  bool _matches_none(const BaseValueColumn &column);
+  bool _matches_none(const BaseValueColumn& column);
 
-  void _add_all(Context &context, size_t column_size);
+  void _add_all(Context& context, size_t column_size);
 
   /**@}*/
 
  private:
   template <typename Functor>
-  void _resolve_scan_type(const Functor &func) {
+  void _resolve_scan_type(const Functor& func) {
     switch (_scan_type) {
       case ScanType::OpEquals:
         return func([](const bool is_null) { return is_null; });
@@ -51,8 +53,8 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
   }
 
   template <typename Iterator>
-  void _scan(Iterator left_it, Iterator left_end, Context &context) {
-    auto &matches_out = context._matches_out;
+  void _scan(Iterator left_it, Iterator left_end, Context& context) {
+    auto& matches_out = context._matches_out;
     const auto chunk_id = context._chunk_id;
 
     _resolve_scan_type([&](auto comparator) {

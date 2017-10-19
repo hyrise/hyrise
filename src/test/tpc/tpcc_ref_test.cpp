@@ -1,9 +1,13 @@
 #include <json.hpp>
 
+#undef NDEBUG
+#include <assert.h>
 #include <array>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -23,13 +27,13 @@ namespace opossum {
 
 class TransactionTestImpl {
  public:
-  virtual void run_and_test_transaction_from_json(const nlohmann::json &json_params,
-                                                  const nlohmann::json &json_results) = 0;
+  virtual void run_and_test_transaction_from_json(const nlohmann::json& json_params,
+                                                  const nlohmann::json& json_results) = 0;
 };
 
 class OrderStatusTestImpl : public TransactionTestImpl {
  public:
-  void run_and_test_transaction_from_json(const nlohmann::json &json_params, const nlohmann::json &json_results) {
+  void run_and_test_transaction_from_json(const nlohmann::json& json_params, const nlohmann::json& json_results) {
     tpcc::OrderStatusParams params = json_params;
     tpcc::OrderStatusResult sqlite_results = json_results;
 
@@ -46,8 +50,8 @@ class OrderStatusTestImpl : public TransactionTestImpl {
 
     ASSERT_EQ(sqlite_results.order_lines.size(), our_result.order_lines.size());
     for (size_t l = 0; l < sqlite_results.order_lines.size(); l++) {
-      const auto &our_ol = our_result.order_lines[l];
-      const auto &sqlite_ol = sqlite_results.order_lines[l];
+      const auto& our_ol = our_result.order_lines[l];
+      const auto& sqlite_ol = sqlite_results.order_lines[l];
 
       EXPECT_EQ(sqlite_ol.ol_supply_w_id, our_ol.ol_supply_w_id);
       EXPECT_EQ(sqlite_ol.ol_i_id, our_ol.ol_i_id);
@@ -63,7 +67,7 @@ class OrderStatusTestImpl : public TransactionTestImpl {
 
 class NewOrderTestImpl : public TransactionTestImpl {
  public:
-  void run_and_test_transaction_from_json(const nlohmann::json &json_params, const nlohmann::json &json_results) {
+  void run_and_test_transaction_from_json(const nlohmann::json& json_params, const nlohmann::json& json_results) {
     tpcc::NewOrderParams params = json_params;
     tpcc::NewOrderResult sqlite_results = json_results;
 
@@ -78,8 +82,8 @@ class NewOrderTestImpl : public TransactionTestImpl {
 
     ASSERT_EQ(sqlite_results.order_lines.size(), our_result.order_lines.size());
     for (size_t l = 0; l < sqlite_results.order_lines.size(); l++) {
-      const auto &our_ol = our_result.order_lines[l];
-      const auto &sqlite_ol = sqlite_results.order_lines[l];
+      const auto& our_ol = our_result.order_lines[l];
+      const auto& sqlite_ol = sqlite_results.order_lines[l];
 
       EXPECT_FLOAT_EQ(sqlite_ol.i_price, our_ol.i_price);
       EXPECT_EQ(sqlite_ol.i_name, our_ol.i_name);
@@ -112,7 +116,7 @@ class TpccRefTest : public BaseTest {
 
     CsvParser parser;
 
-    for (const auto &table_name : TABLE_NAMES) {
+    for (const auto& table_name : TABLE_NAMES) {
       auto table = parser.parse(std::string("./") + table_name + ".csv");
       StorageManager::get().add_table(table_name, table);
     }
@@ -125,35 +129,44 @@ class TpccRefTest : public BaseTest {
 };
 
 TEST_F(TpccRefTest, SimulationScenario) {
-  // Load input
-  auto json_simulation_file = std::ifstream("tpcc_test_requests.json");
-  assert(json_simulation_file.is_open());
+  auto simulation_input_async = std::async(std::launch::async, []() {
+    // Load input
+    auto json_simulation_file = std::ifstream("tpcc_test_requests.json");
+    assert(json_simulation_file.is_open());
 
-  auto simulation_input = nlohmann::json{};
-  json_simulation_file >> simulation_input;
+    auto simulation_input = nlohmann::json{};
+    json_simulation_file >> simulation_input;
+    return simulation_input;
+  });
 
-  // Load output
-  auto json_results_file = std::ifstream("tpcc_test_results.json");
-  assert(json_results_file.is_open());
+  auto simulation_results_async = std::async(std::launch::async, []() {
+    // Load output
+    auto json_results_file = std::ifstream("tpcc_test_results.json");
+    assert(json_results_file.is_open());
 
-  auto simulation_results = nlohmann::json{};
-  json_results_file >> simulation_results;
+    auto simulation_results = nlohmann::json{};
+    json_results_file >> simulation_results;
+    return simulation_results;
+  });
+
+  auto simulation_input = simulation_input_async.get();
+  auto simulation_results = simulation_results_async.get();
 
   assert(simulation_results.size() == simulation_input.size());
 
   for (size_t t = 0; t < simulation_input.size(); t++) {
-    const auto &transaction = simulation_input[t];
-    const auto &results = simulation_results[t];
+    const auto& transaction = simulation_input[t];
+    const auto& results = simulation_results[t];
 
-    const auto &transaction_name = transaction["transaction"];
-    const auto &transaction_params = transaction["params"];
+    const auto& transaction_name = transaction["transaction"];
+    const auto& transaction_params = transaction["params"];
 
     std::cout << "Testing: " << transaction_name << ":" << transaction_params << std::endl;
 
     auto iter = _transaction_impls.find(transaction_name);
     assert(iter != _transaction_impls.end());
 
-    auto &impl = *iter->second;
+    auto& impl = *iter->second;
 
     impl.run_and_test_transaction_from_json(transaction_params, results);
   }

@@ -49,10 +49,11 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 }  // namespace opossum
 
 #if IS_DEBUG
+#ifndef __FILENAME__
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+#endif
 #define DebugAssert(expr, msg) \
   opossum::Assert((expr), std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg)  //  NOLINT
 #else
 #define DebugAssert(expr, msg)
 #endif
-

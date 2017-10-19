@@ -45,7 +45,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant>& args) const {
-  Fail("Operator " + this->name() + " does not implement recreation.");
+  Fail("Operator " + name() + " does not implement recreation.");
   return {};
 }
 
@@ -251,7 +251,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        this->_emit_combination(output_cluster, left_row_id, right_row_id);
+        _emit_combination(output_cluster, left_row_id, right_row_id);
       });
     });
   }
@@ -261,7 +261,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      this->_emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+      _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
     });
   }
 
@@ -270,7 +270,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-      this->_emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+      _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
     });
   }
 
@@ -577,7 +577,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _add_output_columns(std::shared_ptr<Table> output_table, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
-    auto column_count = input_table->col_count();
+    auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the column definition
       auto column_name = input_table->column_name(column_id);
@@ -587,7 +587,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // Add the column data (in the form of a poslist)
       // Check whether the referenced column is already a reference column
       const auto base_column = input_table->get_chunk(ChunkID{0}).get_column(column_id);
-      const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(base_column);
+      const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(base_column);
       if (ref_column) {
         // Create a pos_list referencing the original column instead of the reference column
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
@@ -611,7 +611,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       auto b_column = input_table->get_chunk(chunk_id).get_column(column_id);
-      auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(b_column);
+      auto r_column = std::dynamic_pointer_cast<const ReferenceColumn>(b_column);
       input_pos_lists.push_back(r_column->pos_list());
     }
 

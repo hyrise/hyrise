@@ -8,7 +8,6 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/dictionary_column.hpp"
@@ -22,7 +21,7 @@ class GroupKeyIndexTest : public BaseTest {
   void SetUp() override {
     dict_col = BaseTest::create_dict_column_by_type<std::string>(
         "string", {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
-    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col}));
+    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col}));
 
     index_offsets = &(index->_index_offsets);
     index_postings = &(index->_index_postings);
@@ -36,8 +35,8 @@ class GroupKeyIndexTest : public BaseTest {
    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
    * is used as proxy. Since the variables are set in setup() references are not possible.
    */
-  std::vector<std::size_t> *index_offsets;
-  std::vector<ChunkOffset> *index_postings;
+  std::vector<std::size_t>* index_offsets;
+  std::vector<ChunkOffset>* index_postings;
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {

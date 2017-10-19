@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 
-#include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
@@ -13,11 +12,11 @@ namespace opossum {
  */
 class DeleteNode : public AbstractASTNode {
  public:
-  explicit DeleteNode(const std::string &table_name);
+  explicit DeleteNode(const std::string& table_name);
 
   std::string description() const override;
 
-  const std::string &table_name() const;
+  const std::string& table_name() const;
 
  protected:
   const std::string _table_name;

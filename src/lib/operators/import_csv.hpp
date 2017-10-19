@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,7 +27,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param filename    Path to the input file.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
    */
-  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt);
+  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt);
 
   /*
    * @param filename    Path to the input file.
@@ -34,7 +35,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
    */
   explicit ImportCsv(const std::string& filename, const CsvConfig& config,
-                     const optional<std::string> tablename = nullopt);
+                     const std::optional<std::string> tablename = std::nullopt);
 
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
@@ -49,7 +50,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + name() + " does not implement recreation.");
     return {};
   }
 
@@ -60,7 +61,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // Path to the input file
   const std::string _filename;
   // Name for adding the table to the StorageManager
-  const optional<std::string> _tablename;
+  const std::optional<std::string> _tablename;
   // Csv configuration, e.g. delimiter, separator, etc.
   const CsvConfig _config;
 };

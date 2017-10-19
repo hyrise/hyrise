@@ -2,7 +2,7 @@
 
 # Hyrise v2 (Codename OpossumDB)
 
-*Have a look at our [contributor guidelines](https://github.com/hyrise/zweirise/blob/master/CONTRIBUTING.md)*
+*Have a look at our [contributor guidelines](CONTRIBUTING.md)*
 
 The [wiki](https://github.com/hyrise/zweirise/wiki) is a good starting point to get to know Hyrise
 
@@ -14,50 +14,20 @@ docker-compose build
 
 You can start the container via
 ```
-docker-compose run --rm opossum
+docker-compose run --rm hyrise
 ```
+
+Inside of the container, run `./install.sh` to download the required submodules.
 :whale:
 
-In the container, continue with [Building and Tooling](#building-and-tooling).
-
 ## Dependencies
-You can install the dependencies on your own or use the install.sh script which installs all of the following packages.
-The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
+You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
+The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
 
-### Dependencies that can be installed via a package manager
-- autoconf
-- automake
-- build-essential (linux)
-- boost (>= 1.62.0)
-- clang (>= 3.5.0) optional if gcc is installed
-- clang-format (>= 3.8) optional
-- CMake (>= 3.5)
-- gcc (>= 6.1) optional if clang is installed
-- gcovr (>= 3.2) optional
-- libtool
-- llvm (optional for AddressSanitizer)
-- pkg-config
-- python (>= 2.7) optional
-- readline (>= 7)
-- tbb/libtbb-dev
-- xcode-select --install (macOS)
-
-### Dependencies that are integrated in our build process via git submodules
-- benchmark (https://github.com/google/benchmark)
-- googletest (https://github.com/google/googletest)
-- protoc and gRPC (https://github.com/grpc/grpc)
-- sql-parser (https://github.com/hyrise/sql-parser)
-- pgasus (https://github.com/kateyy/pgasus)
-
-The install script builds protoc and gRPC. For manual compilation:
-
-Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true`.
-
-The installation guide on [github](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source)
-
+See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang.
+Older versions may work, but are neither tested nor supported.
 
 ## Building and Tooling
-
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
 Advisable names for this directory would be `cmake-build-{debug,release}`, depending on the build type.
 Within this directory call `cmake ..` to configure the build.
@@ -80,8 +50,8 @@ To configure a build directory for a release build make sure it is empty and cal
 `./scripts/format.sh` (clang-format is used)
 
 ### Test
-Calling `make opossumTest` from the build directory builds all available tests.
-The binary can be executed with `./<YourBuildDirectory>/opossumTest`.
+Calling `make hyriseTest` from the build directory builds all available tests.
+The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
 Note, that the tests/asan/etc need to be executed from the project root in order for table-files to be found.
 
 ### Coverage
@@ -90,12 +60,16 @@ Note, that the tests/asan/etc need to be executed from the project root in order
 *Supports only clang on MacOS and only gcc on linux*
 
 ### AddressSanitizer
-`make opossumAsan` will build Hyrise with enabled AddressSanitizer options and execute all available tests.
-It will fail on the first detected memory error and will print a summary.
+`make hyriseAsan` will build Hyrise with enabled AddressSanitizer and Undefined Behavior options and execute all available tests.
+It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
-The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/opossumAsan`.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseAsan`.
+
+### Compile Times
+When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
+`scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
 
 ## Naming convention for gtest macros:
 
@@ -120,24 +94,24 @@ Contact: firstname.lastname@hpi.de
 
 ## Contributors
 
--	Yannick	Bäumer
--	Timo	Djürken
--	Fabian	Dumke
--	Moritz	Eyssen
--	Martin	Fischer
--	Pedro	Flemming
--	Sven	Ihde
--	Michael	Janke
--	Max	Jendruk
--	Marvin	Keller
--	Sven	Lehmann
--	Jan	Mattfeld
--	Arne	Mayer
--	Torben	Meyer
--	David	Schumann
--	Daniel	Stolpe
--	Jonathan	Striebel
--	Nils	Thamm
--	Carsten	Walther
--	Fabian	Wiebe
--	Tim	Zimmermann
+-	Yannick  Bäumer
+-	Timo     Djürken
+-	Fabian   Dumke
+-	Moritz   Eyssen
+-	Martin   Fischer
+-	Pedro    Flemming
+-	Sven     Ihde
+-	Michael  Janke
+-	Max      Jendruk
+-	Marvin   Keller
+-	Sven     Lehmann
+-	Jan      Mattfeld
+-	Arne     Mayer
+-	Torben   Meyer
+-	David    Schumann
+-	Daniel   Stolpe
+-	Jonathan Striebel
+-	Nils     Thamm
+-	Carsten  Walther
+-	Fabian   Wiebe
+-	Tim      Zimmermann

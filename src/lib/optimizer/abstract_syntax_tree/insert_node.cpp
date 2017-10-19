@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
@@ -22,6 +21,6 @@ std::string InsertNode::description() const {
   return desc.str();
 }
 
-const std::string &InsertNode::table_name() const { return _table_name; }
+const std::string& InsertNode::table_name() const { return _table_name; }
 
 }  // namespace opossum

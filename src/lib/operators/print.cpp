@@ -40,14 +40,14 @@ std::shared_ptr<const Table> Print::_on_execute() {
 
   // print column headers
   _out << "=== Columns" << std::endl;
-  for (ColumnID col{0}; col < _input_table_left()->col_count(); ++col) {
+  for (ColumnID col{0}; col < _input_table_left()->column_count(); ++col) {
     _out << "|" << std::setw(widths[col]) << _input_table_left()->column_name(col) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (ColumnID col{0}; col < _input_table_left()->col_count(); ++col) {
+  for (ColumnID col{0}; col < _input_table_left()->column_count(); ++col) {
     _out << "|" << std::setw(widths[col]) << _input_table_left()->column_type(col) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
@@ -72,7 +72,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     // print the rows in the chunk
     for (size_t row = 0; row < chunk.size(); ++row) {
       _out << "|";
-      for (ColumnID col{0}; col < chunk.col_count(); ++col) {
+      for (ColumnID col{0}; col < chunk.column_count(); ++col) {
         // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
         _out << std::setw(widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
@@ -105,17 +105,17 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
 std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
-  std::vector<uint16_t> widths(t->col_count());
+  std::vector<uint16_t> widths(t->column_count());
   // calculate the length of the column name
-  for (ColumnID col{0}; col < t->col_count(); ++col) {
-    widths[col] = std::max(min, static_cast<uint16_t>(to_string(t->column_name(col)).size()));
+  for (ColumnID col{0}; col < t->column_count(); ++col) {
+    widths[col] = std::max(min, static_cast<uint16_t>(t->column_name(col).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
     auto& chunk = _input_table_left()->get_chunk(chunk_id);
 
-    for (ColumnID col{0}; col < chunk.col_count(); ++col) {
+    for (ColumnID col{0}; col < chunk.column_count(); ++col) {
       for (size_t row = 0; row < chunk.size(); ++row) {
         auto cell_length = static_cast<uint16_t>(to_string((*chunk.get_column(col))[row]).size());
         widths[col] = std::max({min, widths[col], std::min(max, cell_length)});

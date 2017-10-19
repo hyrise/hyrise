@@ -21,37 +21,34 @@
  * Warnings do not print in tests.
  */
 
+namespace opossum {
+
 class PerformanceWarningDisabler;
 
 class PerformanceWarningClass {
-  static bool& disabled() {
-    // hacky hack that allows us to have state in a header file
-    static bool _disabled{false};
-    return _disabled;
-  }
-
  public:
-  explicit PerformanceWarningClass(const std::string &text) {
-    if (PerformanceWarningClass::disabled()) return;
-    std::cout << "[PERF] " << text
-              << "\n\tPerformance can be affected. This warning is only shown once."
-              << std::endl;
+  explicit PerformanceWarningClass(const std::string& text) {
+    if (_disabled) return;
+    std::cout << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once." << std::endl;
   }
 
  protected:
+  static bool _disabled;
+
   static bool disable() {
-    bool previous = PerformanceWarningClass::disabled();
-    PerformanceWarningClass::disabled() = true;
+    bool previous = _disabled;
+    _disabled = true;
     return previous;
   }
 
-  static void enable() { PerformanceWarningClass::disabled() = false; }
+  static void enable() { _disabled = false; }
 
   friend class PerformanceWarningDisabler;
 };
 
 class PerformanceWarningDisabler {
-bool _previously_disabled;
+  bool _previously_disabled;
+
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
   ~PerformanceWarningDisabler() {
@@ -59,11 +56,13 @@ bool _previously_disabled;
   }
 };
 
-#if IS_DEBUG
-#define PerformanceWarning(text)\
-  {\
-    static PerformanceWarningClass warn(std::string(text) + " at " +\
-      std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__)); }  // NOLINT
-#else
-#define PerformanceWarning(text)
+#ifndef __FILENAME__
+#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 #endif
+#define PerformanceWarning(text)                                                                 \
+  {                                                                                              \
+    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILENAME__) + \
+                                        ":" BOOST_PP_STRINGIZE(__LINE__));                       \
+  }  // NOLINT
+
+}  // namespace opossum

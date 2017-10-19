@@ -44,8 +44,8 @@ class BaseIndex : private Noncopyable {
    */
 
   BaseIndex() = default;
-  BaseIndex(BaseIndex &&) = default;
-  BaseIndex &operator=(BaseIndex &&) = default;
+  BaseIndex(BaseIndex&&) = default;
+  BaseIndex& operator=(BaseIndex&&) = default;
   virtual ~BaseIndex() = default;
 
   /**
@@ -58,7 +58,7 @@ class BaseIndex : private Noncopyable {
    * The index is NOT considerd to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<BaseColumn>> &columns) const {
+  bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
     auto index_columns = _get_index_columns();
     if (columns.size() > index_columns.size()) return false;
     if (columns.empty()) return false;
@@ -80,7 +80,7 @@ class BaseIndex : private Noncopyable {
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
-  Iterator lower_bound(const std::vector<AllTypeVariant> &values) const {
+  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const {
     DebugAssert((_get_index_columns().size() >= values.size()),
                 "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
 
@@ -98,7 +98,7 @@ class BaseIndex : private Noncopyable {
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element greater then provided values.
    */
-  Iterator upper_bound(const std::vector<AllTypeVariant> &values) const {
+  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const {
     DebugAssert((_get_index_columns().size() >= values.size()),
                 "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
 
@@ -128,10 +128,10 @@ class BaseIndex : private Noncopyable {
    * Seperate the public interface of the index from the interface for programmers implementing own
    * indices. Each method has to fullfill the contract of the corresponding public methods.
    */
-  virtual Iterator _lower_bound(const std::vector<AllTypeVariant> &) const = 0;
-  virtual Iterator _upper_bound(const std::vector<AllTypeVariant> &) const = 0;
+  virtual Iterator _lower_bound(const std::vector<AllTypeVariant>&) const = 0;
+  virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const = 0;
+  virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
 };
 }  // namespace opossum

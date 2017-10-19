@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
@@ -18,7 +17,7 @@ class InsertNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  const std::string &table_name() const;
+  const std::string& table_name() const;
 
  protected:
   const std::string _table_name;

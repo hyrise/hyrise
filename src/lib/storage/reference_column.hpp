@@ -27,7 +27,7 @@ class ReferenceColumn : public BaseColumn {
 
   const AllTypeVariant operator[](const size_t i) const override;
 
-  void append(const AllTypeVariant &) override;
+  void append(const AllTypeVariant&) override;
 
   // return generated vector of all values
   template <typename T>
@@ -35,10 +35,10 @@ class ReferenceColumn : public BaseColumn {
     pmr_concurrent_vector<T> values(_pos_list->get_allocator());
     values.reserve(_pos_list->size());
 
-    std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
-    std::map<ChunkID, std::shared_ptr<DictionaryColumn<T>>> dict_columns;
+    std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> value_columns;
+    std::map<ChunkID, std::shared_ptr<const DictionaryColumn<T>>> dict_columns;
 
-    for (const RowID &row : *_pos_list) {
+    for (const RowID& row : *_pos_list) {
       auto search = value_columns.find(row.chunk_id);
       if (search != value_columns.end()) {
         values.push_back(search->second->get(row.chunk_offset));
@@ -50,21 +50,21 @@ class ReferenceColumn : public BaseColumn {
         continue;
       }
 
-      auto &chunk = _referenced_table->get_chunk(row.chunk_id);
-      std::shared_ptr<BaseColumn> column = chunk.get_column(_referenced_column_id);
+      auto& chunk = _referenced_table->get_chunk(row.chunk_id);
+      std::shared_ptr<const BaseColumn> column = chunk.get_column(_referenced_column_id);
 
-      if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
+      if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
         value_columns[row.chunk_id] = value_column;
         values.push_back(value_column->get(row.chunk_offset));
         continue;
       }
 
-      if (auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(column)) {
+      if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
         dict_columns[row.chunk_id] = dict_column;
         values.push_back(dict_column->get(row.chunk_offset));
         continue;
       }
-      Fail("column is no dictonary or value column");
+      Fail("column is no dictionary or value column");
     }
 
     return values;
@@ -78,13 +78,13 @@ class ReferenceColumn : public BaseColumn {
   ColumnID referenced_column_id() const;
 
   // visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override;
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   // writes the length and value at the chunk_offset to the end off row_string
-  void write_string_representation(std::string &row_string, const ChunkOffset chunk_offset) const override;
+  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
 
   template <typename ContextClass>
-  void visit_dereferenced(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> ctx) {
+  void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
     /*
     The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
     One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}
@@ -95,21 +95,19 @@ class ReferenceColumn : public BaseColumn {
     std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>, std::hash<decltype(ChunkID().t)>>
         all_chunk_offsets;
 
-    for (auto pos : *(_pos_list)) {
-      auto chunk_info = _referenced_table->locate_row(pos);
-
-      auto iter = all_chunk_offsets.find(chunk_info.first);
+    for (auto row_id : *(_pos_list)) {
+      auto iter = all_chunk_offsets.find(row_id.chunk_id);
       if (iter == all_chunk_offsets.end())
-        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<std::vector<ChunkOffset>>()).first;
+        iter = all_chunk_offsets.emplace(row_id.chunk_id, std::make_shared<std::vector<ChunkOffset>>()).first;
 
-      iter->second->emplace_back(chunk_info.second);
+      iter->second->emplace_back(row_id.chunk_offset);
     }
 
-    for (auto &pair : all_chunk_offsets) {
-      auto &chunk_id = pair.first;
-      auto &chunk_offsets = pair.second;
+    for (auto& pair : all_chunk_offsets) {
+      auto& chunk_id = pair.first;
+      auto& chunk_offsets = pair.second;
 
-      auto &chunk = _referenced_table->get_chunk(chunk_id);
+      auto& chunk = _referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(_referenced_column_id);
 
       auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
@@ -119,7 +117,7 @@ class ReferenceColumn : public BaseColumn {
 
   // copies one of its own values to a different ValueColumn - mainly used for materialization
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
-  void copy_value_to_value_column(BaseColumn &, ChunkOffset) const override;
+  void copy_value_to_value_column(BaseColumn&, ChunkOffset) const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need
