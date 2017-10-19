@@ -1,12 +1,18 @@
-[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/zweirise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/zweirise/)
+[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/hyrise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/blue/organizations/jenkins/Hyrise%2Fhyrise/activity)
 
-# Hyrise v2 (Codename OpossumDB)
+# Welcome to Hyrise
+
+This is the repository for the current Hyrise version, which has been rewritten from scratch. The new code base is easier to setup, to understand, and to contribute to. As of now, not all features of the old version are supported yet - we are working on that.
+
+Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
+
+# Getting started
 
 *Have a look at our [contributor guidelines](CONTRIBUTING.md)*
 
 The [wiki](https://github.com/hyrise/zweirise/wiki) is a good starting point to get to know Hyrise
 
-## Easy start
+## Setup using Docker
 To get all dependencies of Hyrise in a docker image, run
 ```
 docker-compose build
@@ -20,7 +26,7 @@ docker-compose run --rm hyrise
 Inside of the container, run `./install.sh` to download the required submodules.
 :whale:
 
-## Dependencies
+## Native Setup
 You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
 The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
 
