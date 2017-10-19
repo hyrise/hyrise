@@ -361,7 +361,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-    /**
+  /**
   * Determines the smallest value in a sorted materialized table.
   **/
   T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>&  sorted_table) {
@@ -379,15 +379,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Determines the biggest value in a sortd materialized table.
+  * Determines the largest value in a sorted materialized table.
   **/
   T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_max_value which is only " +
-                                           "available in the non-equi case");
+    DebugAssert(_op != ScanType::OpEquals, "The table needs to be sorted for _table_max_value which is only " +
+                                           "the case in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
-    for (size_t r_partition_id = 0; r_partition_id < sorted_table->size(); ++r_partition_id) {
-      auto partition_id = sorted_table->size() - r_partition_id - 1;
+    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
       if (sorted_table->at(partition_id)->size() > 0) {
         return sorted_table->at(partition_id)->back().value;
       }
@@ -425,12 +424,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::pair<TablePosition, bool> _first_value_that_satisfies_reverse(
                                                             std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
                                                             Function condition) {
-    for (size_t r_partition_id = 0; r_partition_id < sorted_table->size(); ++r_partition_id) {
-      auto partition_id = sorted_table->size() - 1 - r_partition_id;
+    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
       auto partition = sorted_table->at(partition_id);
       if (partition->size() > 0 && condition(partition->at(0).value)) {
-        for (size_t r_index = 0; r_index < partition->size(); ++r_index) {
-          size_t index = partition->size() - 1 - r_index;
+        for (size_t index = partition->size() - 1; index < partition->size(); --index) {
           if (condition(partition->at(index).value)) {
             return std::make_pair(TablePosition(partition_id, index + 1), true);
           }
