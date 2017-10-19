@@ -437,12 +437,52 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     return std::make_pair(TablePosition(0, 0), false);
   }
+/*
+  void _outer_non_equi_join(std::unique_ptr<MaterializedColumnList<T>>& outer_table) {
+    auto& left_min_value = _table_min_value(_sorted_right_table);
+    auto& left_max_value = _table_max_value(_sorted_left_table);
+    auto end_of_right_table = _end_of_table(_sorted_right_table);
+
+    if (_op == ScanType::OpLessThan) {
+      // Look for the first rhs value that is bigger than the smallest lhs value.
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value > left_min_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.first));
+      }
+    } else if (_op == ScanType::OpLessThanEquals) {
+      // Look for the first rhs value that is bigger or equal to the smallest lhs value.
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value >= left_min_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.first));
+      }
+    } else if (_op == ScanType::OpGreaterThan) {
+      // Look for the first rhs value that is smaller than the biggest lhs value.
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value < left_max_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, result.first.to(end_of_right_table));
+      }
+    } else if (_op == ScanType::OpGreaterThanEquals) {
+      // Look for the first rhs value that is smaller or equal to the biggest lhs value.
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value <= left_max_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, result.first.to(end_of_right_table));
+      }
+    }
+  }*/
 
   /**
   * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=)
   **/
   void _left_outer_non_equi_join() {
-    auto& left_min_value = _table_min_value(_sorted_right_table);
+    auto& left_min_value = _table_min_value(_sorted_left_table);
     auto& left_max_value = _table_max_value(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
