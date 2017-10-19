@@ -1,4 +1,4 @@
-[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/zweirise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/zweirise/)
+[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/hyrise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/blue/organizations/jenkins/Hyrise%2Fhyrise/activity)
 
 # Welcome to Hyrise
 
