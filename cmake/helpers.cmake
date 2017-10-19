@@ -9,7 +9,7 @@ macro(add_sanitizer_library arg1 arg2 arg3)
     set_target_properties(${arg1} PROPERTIES COMPILE_FLAGS ${SANITIZER_COMPILE_FLAGS})
 endmacro()
 
-macro(add_sanitizer_executable arg1 arg2 arg3)
+macro(add_sanitizers_executable arg1 arg2 arg3)
     add_executable(${arg1} EXCLUDE_FROM_ALL ${arg2})
     target_link_libraries(${arg1} ${arg3} ${SANITIZER_LINK_FLAGS})
     target_include_directories(${arg1} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

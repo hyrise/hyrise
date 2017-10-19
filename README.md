@@ -60,12 +60,12 @@ Note, that the tests/asan/etc need to be executed from the project root in order
 *Supports only clang on MacOS and only gcc on linux*
 
 ### AddressSanitizer
-`make hyriseAsan` will build Hyrise with enabled AddressSanitizer and Undefined Behavior options and execute all available tests.
+`make hyriseSanitizers` will build Hyrise with enabled AddressSanitizer and Undefined Behavior options and execute all available tests.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
-The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseAsan`.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseSanitizers`.
 
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.

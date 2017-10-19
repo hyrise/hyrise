@@ -111,7 +111,6 @@ set(
     ../../third_party/googletest/googletest/src/gtest-all.cc
 )
 add_sanitizer_library(gtestSanitizers "${GTEST_SOURCES}" "")
-set_target_properties(gtestSanitizers PROPERTIES SUFFIX "_sanitizers")
 
 set(
     LIBRARIES_SANITIZERS
@@ -125,8 +124,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
 target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
-add_coverage_executable(hyriseCoverage "${HYRISE_TEST_SOURCES}" "hyriseCoverageLib hyriseBenchmarkCoverageLib ${LIBRARIES}")
-add_sanitizer_executable(hyriseSanitizers "${HYRISE_TEST_SOURCES}" "hyriseSanitizerLib hyriseBenchmarkSanitizerLib ${LIBRARIES_SANITIZERS}")
+add_coverage_executable(hyriseCoverage "${HYRISE_TEST_SOURCES}" "hyriseCoverageLib;hyriseBenchmarkCoverageLib;${LIBRARIES}")
+add_sanitizers_executable(hyriseSanitizers "${HYRISE_TEST_SOURCES}" "hyriseSanitizersLib;hyriseBenchmarkSanitizersLib;${LIBRARIES_SANITIZERS}")
 
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
