@@ -47,7 +47,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const final;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + name() + " does not implement recreation.");
     return {};
   }
 

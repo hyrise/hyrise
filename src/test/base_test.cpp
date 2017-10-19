@@ -46,7 +46,7 @@ void BaseTest::ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& no
 
 BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.column_count()));
 
   // set values
   unsigned row_offset = 0;
@@ -56,7 +56,7 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
+    for (ColumnID col_id{0}; col_id < t.column_count(); ++col_id) {
       auto column = chunk.get_column(col_id);
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
@@ -86,7 +86,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   Matrix right = _table_to_matrix(tright);
   // compare schema of tables
   //  - column count
-  if (tleft.col_count() != tright.col_count()) {
+  if (tleft.column_count() != tright.column_count()) {
     _print_matrix(left);
     _print_matrix(right);
     return ::testing::AssertionFailure() << "Number of columns is different.";
@@ -94,7 +94,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
 
   //  - column names and types
   std::string left_col_type, right_col_type;
-  for (ColumnID col_id{0}; col_id < tright.col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < tright.column_count(); ++col_id) {
     left_col_type = tleft.column_type(col_id);
     right_col_type = tright.column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.

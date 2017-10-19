@@ -262,22 +262,22 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           switch (aggregate.function) {
             case AggregateFunction::Min:
-              this->_aggregate_column<DataType, AggregateFunction::Min>(chunk_id, column_index, *base_column);
+              _aggregate_column<DataType, AggregateFunction::Min>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Max:
-              this->_aggregate_column<DataType, AggregateFunction::Max>(chunk_id, column_index, *base_column);
+              _aggregate_column<DataType, AggregateFunction::Max>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Sum:
-              this->_aggregate_column<DataType, AggregateFunction::Sum>(chunk_id, column_index, *base_column);
+              _aggregate_column<DataType, AggregateFunction::Sum>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Avg:
-              this->_aggregate_column<DataType, AggregateFunction::Avg>(chunk_id, column_index, *base_column);
+              _aggregate_column<DataType, AggregateFunction::Avg>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Count:
-              this->_aggregate_column<DataType, AggregateFunction::Count>(chunk_id, column_index, *base_column);
+              _aggregate_column<DataType, AggregateFunction::Count>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::CountDistinct:
-              this->_aggregate_column<DataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column);
+              _aggregate_column<DataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column);
               break;
           }
         });
@@ -330,7 +330,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     const auto type_string = (column_id == CountStarID) ? std::string{"int"} : input_table->column_type(column_id);
 
     resolve_data_type(type_string, [&, column_index](auto type) {
-      this->_write_aggregate_output(type, column_index, aggregate.function);
+      _write_aggregate_output(type, column_index, aggregate.function);
     });
 
     ++column_index;

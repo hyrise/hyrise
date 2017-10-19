@@ -71,7 +71,7 @@ class Chunk : private Noncopyable {
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t col_count() const;
+  uint16_t column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;

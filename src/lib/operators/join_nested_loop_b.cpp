@@ -53,7 +53,7 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
 void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> input_table,
                                                 std::shared_ptr<PosList> pos_list) {
   // Append each column of the input column to the output
-  for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
+  for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
     // Add the column meta data
     _output->add_column_definition(input_table->column_name(column_id), input_table->column_type(column_id));
 
