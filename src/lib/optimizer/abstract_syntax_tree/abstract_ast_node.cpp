@@ -134,7 +134,9 @@ std::optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_referenc
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(_left_child, "Node has no left child and therefore must override this function OR the function is not supported on this node type.");
+  DebugAssert(_left_child,
+              "Node has no left child and therefore must override this function OR the function is not supported on "
+              "this node type.");
 
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {
@@ -148,7 +150,9 @@ bool AbstractASTNode::knows_table(const std::string& table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
-  DebugAssert(_left_child, "Node has no left child and therefore must override this function OR the function is not supported on this node type.");
+  DebugAssert(_left_child,
+              "Node has no left child and therefore must override this function OR the function is not supported on "
+              "this node type.");
   if (_table_alias) {
     return *_table_alias == table_name;
   } else {
@@ -166,7 +170,9 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
-  DebugAssert(_left_child, "Node has no left child and therefore must override this function OR the function is not supported on this node type.");
+  DebugAssert(_left_child,
+              "Node has no left child and therefore must override this function OR the function is not supported on "
+              "this node type.");
 
   if (!knows_table(table_name)) {
     return {};
