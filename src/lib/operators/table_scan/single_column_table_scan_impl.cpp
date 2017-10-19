@@ -38,7 +38,7 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         _with_operator(_scan_type, [&](auto comparator) {
-          this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+          _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
     });

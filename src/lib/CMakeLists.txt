@@ -237,7 +237,6 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
-    utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp
@@ -245,6 +244,8 @@ set(
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
+    utils/performance_warning.cpp
+    utils/performance_warning.hpp
 )
 
 set(

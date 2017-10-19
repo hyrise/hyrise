@@ -35,8 +35,8 @@ class TableStatisticsJoinTest : public BaseTest {
                                            const ScanType scan_type) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
-    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->col_count(); ++column_1) {
-      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->col_count(); ++column_2) {
+    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
             table_with_statistics.statistics, mode, column_ids, scan_type);
@@ -54,12 +54,12 @@ class TableStatisticsJoinTest : public BaseTest {
    */
   void predict_join_row_counts_and_compare(const TableWithStatistics& table_with_statistics, const JoinMode mode,
                                            const ScanType scan_type, const std::vector<uint32_t> row_counts) {
-    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->col_count(); ++column_1) {
-      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->col_count(); ++column_2) {
+    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
             table_with_statistics.statistics, mode, column_ids, scan_type);
-        auto cached_row_count = row_counts.at(table_with_statistics.table->col_count() * column_1 + column_2);
+        auto cached_row_count = row_counts.at(table_with_statistics.table->column_count() * column_1 + column_2);
         EXPECT_FLOAT_EQ(cached_row_count, join_stats->row_count());
       }
     }

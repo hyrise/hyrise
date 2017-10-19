@@ -33,7 +33,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   // 1. Create insert_table with ReferenceColumns that contain all rows that should be updated
   auto insert_table = std::make_shared<Table>();
 
-  for (ColumnID column_id{0}; column_id < table_to_update->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
     insert_table->add_column_definition(table_to_update->column_name(column_id),
                                         table_to_update->column_type(column_id));
   }
@@ -64,7 +64,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 
     // Add ReferenceColumns with built poslist.
     Chunk chunk{false};
-    for (ColumnID column_id{0}; column_id < table_to_update->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
       chunk.add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
 
@@ -77,7 +77,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto& insert_chunk = insert_table->get_chunk(chunk_id);
     auto& right_chunk = _input_table_right()->get_chunk(chunk_id);
 
-    for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
       auto right_col = right_chunk.get_mutable_column(column_id);
 
       auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk.get_column(column_id));
@@ -118,7 +118,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
-  if (_input_table_left()->col_count() != _input_table_right()->col_count()) return false;
+  if (_input_table_left()->column_count() != _input_table_right()->column_count()) return false;
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 

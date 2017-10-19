@@ -59,7 +59,7 @@ class AbstractBenchmarkTableGenerator {
      * This has to be done after the first column was created and added,
      * because empty Chunks would be pruned right away.
      */
-    bool is_first_column = table->col_count() == 0;
+    bool is_first_column = table->column_count() == 0;
 
     auto data_type_name = opossum::type_string_from_type<T>();
     table->add_column_definition(name, data_type_name);

@@ -147,13 +147,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
       current_result_node = _translate_projection(*insert.values, current_result_node);
     }
 
-    Assert(current_result_node->output_col_count() == target_table->col_count(), "Insert: column mismatch");
+    Assert(current_result_node->output_col_count() == target_table->column_count(), "Insert: column mismatch");
   } else {
     // Certain columns have been specified. In this case we create a new expression list
     // for the Projection, so that it contains as many columns as the target table.
 
     // pre-fill new projection list with NULLs
-    std::vector<std::shared_ptr<Expression>> projections(target_table->col_count(),
+    std::vector<std::shared_ptr<Expression>> projections(target_table->column_count(),
                                                          Expression::create_literal(NULL_VALUE));
 
     ColumnID insert_column_index{0};

@@ -365,13 +365,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> _on_execute() override {
     // Preparing output table by adding columns from left table
 
-    for (ColumnID column_id{0}; column_id < _left_in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
       _output_table->add_column_definition(_left_in_table->column_name(column_id),
                                            _left_in_table->column_type(column_id), true);
     }
 
     // Preparing output table by adding columns from right table
-    for (ColumnID column_id{0}; column_id < _right_in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
       _output_table->add_column_definition(_right_in_table->column_name(column_id),
                                            _right_in_table->column_type(column_id), true);
     }
@@ -489,7 +489,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table, ChunkID chunk_id,
                                   std::shared_ptr<PosList> pos_list, bool null_value = false) {
     // Add columns from left table to output chunk
-    for (ColumnID column_id{0}; column_id < input_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
 
       // Keep it simple for now and handle null_values seperately. We don't have a chunk_id for null values and thus

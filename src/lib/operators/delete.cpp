@@ -107,7 +107,7 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
-    if (chunk.col_count() == 0u) return false;
+    if (chunk.column_count() == 0u) return false;
 
     if (!chunk.references_only_one_table()) return false;
 
