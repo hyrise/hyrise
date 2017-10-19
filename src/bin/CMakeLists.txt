@@ -54,7 +54,6 @@ target_link_libraries(
     hyriseConsole
     hyrise
     hyriseBenchmarkLib
-    tpcc
     ncurses
     ${READLINE_LIBRARY}
 )
