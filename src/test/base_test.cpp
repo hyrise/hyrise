@@ -94,10 +94,10 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
 
   // compare schema of tables
   //  - column count
-  if (tleft.col_count() != tright.col_count()) {
+  if (tleft.column_count() != tright.column_count()) {
     print_tables();
-    return ::testing::AssertionFailure() << "Number of columns is different. " << tleft.col_count()
-                                         << " != " << tright.col_count();
+    return ::testing::AssertionFailure() << "Number of columns is different. " << tleft.column_count()
+                                         << " != " << tright.column_count();
   }
 
   //  - column names and types
