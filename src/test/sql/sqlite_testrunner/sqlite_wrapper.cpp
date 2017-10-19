@@ -135,7 +135,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   return result_table;
 }
 
-void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_create_columns(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count) {
   std::vector<bool> col_nullable(column_count, false);
   std::vector<std::string> col_types(column_count, "");
   std::vector<std::string> col_names(column_count, "");
@@ -187,7 +187,7 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
   }
 }
 
-void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_add_row(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count) {
   std::vector<AllTypeVariant> row;
 
   for (int i = 0; i < column_count; ++i) {

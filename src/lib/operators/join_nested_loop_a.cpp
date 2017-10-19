@@ -97,14 +97,14 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   struct JoinNestedLoopAContext : ColumnVisitableContext {
     JoinNestedLoopAContext() {}
 
-    JoinNestedLoopAContext(std::shared_ptr<const BaseColumn> coleft, std::shared_ptr<const BaseColumn> coright,
-                           ChunkID left_id, ChunkID right_id, std::shared_ptr<PosList> left,
-                           std::shared_ptr<PosList> right, JoinMode mode,
+    JoinNestedLoopAContext(const std::shared_ptr<const BaseColumn>& coleft,
+                           const std::shared_ptr<const BaseColumn>& coright, ChunkID left_id, ChunkID right_id,
+                           const std::shared_ptr<PosList>& left, const std::shared_ptr<PosList>& right, JoinMode mode,
                            std::function<bool(LeftType, RightType)> compare,
-                           std::shared_ptr<std::map<RowID, bool>> null_value_rows_left,
-                           std::shared_ptr<std::map<RowID, bool>> null_value_rows_right,
-                           std::shared_ptr<std::vector<ChunkOffset>> filter_left = nullptr,
-                           std::shared_ptr<std::vector<ChunkOffset>> filter_right = nullptr)
+                           const std::shared_ptr<std::map<RowID, bool>>& null_value_rows_left,
+                           const std::shared_ptr<std::map<RowID, bool>>& null_value_rows_right,
+                           const std::shared_ptr<std::vector<ChunkOffset>>& filter_left = nullptr,
+                           const std::shared_ptr<std::vector<ChunkOffset>>& filter_right = nullptr)
         : column_left(coleft),
           column_right(coright),
           chunk_id_left(left_id),
@@ -136,9 +136,10 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
   // separate constructor for use in ReferenceColumn::visit_dereferenced
   struct JoinNestedLoopALeftContext : public JoinNestedLoopAContext {
-    JoinNestedLoopALeftContext(std::shared_ptr<const BaseColumn> referenced_column, const std::shared_ptr<const Table>,
-                               std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                               std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets) {
+    JoinNestedLoopALeftContext(const std::shared_ptr<const BaseColumn>& referenced_column,
+                               const std::shared_ptr<const Table>&,
+                               const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                               const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets) {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = referenced_column;
@@ -159,9 +160,10 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
   // separate constructor for use in ReferenceColumn::visit_dereferenced
   struct JoinNestedLoopARightContext : public JoinNestedLoopAContext {
-    JoinNestedLoopARightContext(std::shared_ptr<const BaseColumn> referenced_column, const std::shared_ptr<const Table>,
-                                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets) {
+    JoinNestedLoopARightContext(const std::shared_ptr<const BaseColumn>& referenced_column,
+                                const std::shared_ptr<const Table>&,
+                                const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                                const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets) {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = ctx->column_left;
@@ -486,8 +488,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   Additionally, we think that the implementation of null values is not final yet and a proper implementation of null
   values might require changes here.
   */
-  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table, ChunkID chunk_id,
-                                  std::shared_ptr<PosList> pos_list, bool null_value = false) {
+  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table>& input_table,
+                                  ChunkID chunk_id, const std::shared_ptr<PosList>& pos_list, bool null_value = false) {
     // Add columns from left table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
@@ -518,7 +520,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  static void write_poslists(std::shared_ptr<JoinNestedLoopAContext> context, ChunkOffset row_left,
+  static void write_poslists(const std::shared_ptr<JoinNestedLoopAContext>& context, ChunkOffset row_left,
                              ChunkOffset row_right) {
     const auto left_chunk_id = context->chunk_id_left;
     const auto right_chunk_id = context->chunk_id_right;

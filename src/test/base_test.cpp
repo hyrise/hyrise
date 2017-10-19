@@ -23,12 +23,12 @@ void BaseTest::ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool ord
   ASSERT_TRUE(_table_equal(tleft, tright, order_sensitive, strict_types));
 }
 
-void BaseTest::EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
+void BaseTest::EXPECT_TABLE_EQ(const std::shared_ptr<const Table>& tleft, const std::shared_ptr<const Table>& tright,
                                bool order_sensitive, bool strict_types) {
   EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
-void BaseTest::ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
+void BaseTest::ASSERT_TABLE_EQ(const std::shared_ptr<const Table>& tleft, const std::shared_ptr<const Table>& tright,
                                bool order_sensitive, bool strict_types) {
   ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }

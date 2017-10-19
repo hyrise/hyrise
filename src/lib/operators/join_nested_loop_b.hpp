@@ -39,8 +39,9 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   struct JoinContext : ColumnVisitableContext {
-    JoinContext(std::shared_ptr<const BaseColumn> column_left, std::shared_ptr<const BaseColumn> column_right,
-                ChunkID left_chunk_id, ChunkID right_chunk_id, JoinMode mode)
+    JoinContext(const std::shared_ptr<const BaseColumn>& column_left,
+                const std::shared_ptr<const BaseColumn>& column_right, ChunkID left_chunk_id, ChunkID right_chunk_id,
+                JoinMode mode)
         : _column_left{column_left},
           _column_right{column_right},
           _left_chunk_id{left_chunk_id},
@@ -69,33 +70,35 @@ class JoinNestedLoopB : public AbstractJoinOperator {
     void handle_reference_column(const ReferenceColumn& column,
                                  std::shared_ptr<ColumnVisitableContext> context) override;
 
-    void join_value_value(const ValueColumn<T>& left, const ValueColumn<T>& right, std::shared_ptr<JoinContext> context,
-                          bool reverse_order = false);
+    void join_value_value(const ValueColumn<T>& left, const ValueColumn<T>& right,
+                          const std::shared_ptr<JoinContext>& context, bool reverse_order = false);
     void join_value_dictionary(const ValueColumn<T>& left, const DictionaryColumn<T>& right,
-                               std::shared_ptr<JoinContext> context, bool reverse_order = false);
+                               const std::shared_ptr<JoinContext>& context, bool reverse_order = false);
     void join_value_reference(const ValueColumn<T>& left, const ReferenceColumn& right,
-                              std::shared_ptr<JoinContext> context, bool reverse_order = false);
+                              const std::shared_ptr<JoinContext>& context, bool reverse_order = false);
     void join_dictionary_dictionary(const DictionaryColumn<T>& left, const DictionaryColumn<T>& right,
-                                    std::shared_ptr<JoinContext> context, bool reverse_order = false);
+                                    const std::shared_ptr<JoinContext>& context, bool reverse_order = false);
     void join_dictionary_reference(const DictionaryColumn<T>& left, const ReferenceColumn& right,
-                                   std::shared_ptr<JoinContext> context, bool reverse_order = false);
+                                   const std::shared_ptr<JoinContext>& context, bool reverse_order = false);
     void join_reference_reference(const ReferenceColumn& left, const ReferenceColumn& right,
-                                  std::shared_ptr<JoinContext> context, bool reverse_order = false);
+                                  const std::shared_ptr<JoinContext>& context, bool reverse_order = false);
 
    protected:
     JoinNestedLoopB& _join_nested_loop_b;
     std::function<bool(const T&, const T&)> _compare;
     void _match_values(const T& value_left, ChunkOffset left_chunk_offset, const T& value_right,
-                       ChunkOffset right_chunk_offset, std::shared_ptr<JoinContext> context, bool reverse_order);
+                       ChunkOffset right_chunk_offset, const std::shared_ptr<JoinContext>& context, bool reverse_order);
     const T& _resolve_reference(const ReferenceColumn& ref_column, ChunkOffset chunk_offset);
   };
 
-  void _add_outer_join_rows(std::shared_ptr<const Table> outer_side_table, std::shared_ptr<PosList> outer_side_pos_list,
-                            std::set<RowID>& outer_side_matches, std::shared_ptr<PosList> null_side_pos_list);
+  void _add_outer_join_rows(const std::shared_ptr<const Table>& outer_side_table,
+                            const std::shared_ptr<PosList>& outer_side_pos_list, std::set<RowID>& outer_side_matches,
+                            const std::shared_ptr<PosList>& null_side_pos_list);
   void _join_columns(ColumnID left_column_id, ColumnID right_column_id, std::string left_column_type);
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
-                                                 std::shared_ptr<const PosList> pos_list);
-  void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list);
+  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
+                                                 const std::shared_ptr<const PosList>& pos_list);
+  void _append_columns_to_output(const std::shared_ptr<const Table>& input_table,
+                                 const std::shared_ptr<PosList>& pos_list);
 
   // Output fields
   std::shared_ptr<PosList> _pos_list_left;

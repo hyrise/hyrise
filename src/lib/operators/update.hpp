@@ -27,8 +27,8 @@ class Insert;
  */
 class Update : public AbstractReadWriteOperator {
  public:
-  explicit Update(const std::string& table_to_update_name, std::shared_ptr<AbstractOperator> fields_to_update,
-                  std::shared_ptr<AbstractOperator> update_values);
+  explicit Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update,
+                  const std::shared_ptr<AbstractOperator>& update_values);
 
   ~Update();
 

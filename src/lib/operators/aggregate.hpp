@@ -131,8 +131,9 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<
       func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
+  _write_aggregate_values(
+      const std::shared_ptr<ValueColumn<AggregateType>>& column,
+      const std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>& results) {
     DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
     auto& values = column->values();
@@ -180,8 +181,9 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG writes the calculated average from current aggregate and the aggregate counter
   template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
+  _write_aggregate_values(
+      const std::shared_ptr<ValueColumn<AggregateType>>& column,
+      const std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>& results) {
     DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
     auto& values = column->values();
@@ -201,8 +203,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-      _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
+  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
     Fail("Invalid aggregate");
   }
 
@@ -222,14 +224,14 @@ class Aggregate : public AbstractReadOnlyOperator {
 Visitor context for the partitioning/grouping visitor
 */
 struct GroupByContext : ColumnVisitableContext {
-  GroupByContext(std::shared_ptr<const Table> t, ChunkID chunk, ColumnID column,
-                 std::shared_ptr<std::vector<AggregateKey>> keys)
+  GroupByContext(const std::shared_ptr<const Table>& t, ChunkID chunk, ColumnID column,
+                 const std::shared_ptr<std::vector<AggregateKey>>& keys)
       : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  GroupByContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
-                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+  GroupByContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>& referenced_table,
+                 const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                 const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
         column_id(std::static_pointer_cast<GroupByContext>(base_context)->column_id),
@@ -265,9 +267,9 @@ struct AggregateContext : ColumnVisitableContext {
   explicit AggregateContext(std::shared_ptr<GroupByContext> base_context) : groupby_context(base_context) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
-                   std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+  AggregateContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>&,
+                   const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                   const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
     groupby_context->chunk_id = chunk_id;

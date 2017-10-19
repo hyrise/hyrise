@@ -28,7 +28,7 @@ namespace opossum {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
-Worker::Worker(std::weak_ptr<ProcessingUnit> processing_unit, std::shared_ptr<TaskQueue> queue, WorkerID id,
+Worker::Worker(std::weak_ptr<ProcessingUnit> processing_unit, const std::shared_ptr<TaskQueue>& queue, WorkerID id,
                CpuID cpu_id)
     : _processing_unit(processing_unit), _queue(queue), _id(id), _cpu_id(cpu_id) {}
 

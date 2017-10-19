@@ -30,9 +30,9 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
 // This funtion turns a pos list with references to a reference column into a pos list with references
 // to the original columns.
 // It is assumed that either non or all chunks of a table contain reference columns.
-std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<const Table> input_table,
+std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(const std::shared_ptr<const Table>& input_table,
                                                                 ColumnID column_id,
-                                                                std::shared_ptr<const PosList> pos_list) {
+                                                                const std::shared_ptr<const PosList>& pos_list) {
   // Get all the input pos lists so that we only have to pointer cast the columns once
   auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
@@ -50,8 +50,8 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
   return new_pos_list;
 }
 
-void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> input_table,
-                                                std::shared_ptr<PosList> pos_list) {
+void JoinNestedLoopB::_append_columns_to_output(const std::shared_ptr<const Table>& input_table,
+                                                const std::shared_ptr<PosList>& pos_list) {
   // Append each column of the input column to the output
   for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
     // Add the column meta data
@@ -92,10 +92,10 @@ void JoinNestedLoopB::_join_columns(ColumnID left_column_id, ColumnID right_colu
 
 // Adds the rows to the output that didn't match to any other rows in the join phase and
 // fills those rows with null values
-void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_side_table,
-                                           std::shared_ptr<PosList> outer_side_pos_list,
+void JoinNestedLoopB::_add_outer_join_rows(const std::shared_ptr<const Table>& outer_side_table,
+                                           const std::shared_ptr<PosList>& outer_side_pos_list,
                                            std::set<RowID>& outer_side_matches,
-                                           std::shared_ptr<PosList> null_side_pos_list) {
+                                           const std::shared_ptr<PosList>& null_side_pos_list) {
   for (ChunkID chunk_id{0}; chunk_id < outer_side_table->chunk_count(); chunk_id++) {
     for (ChunkOffset chunk_offset = 0; chunk_offset < outer_side_table->get_chunk(chunk_id).size(); chunk_offset++) {
       RowID row_id = RowID{chunk_id, chunk_offset};
@@ -201,7 +201,8 @@ std::shared_ptr<const Table> JoinNestedLoopB::JoinNestedLoopBImpl<T>::_on_execut
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left, ChunkOffset left_chunk_offset,
                                                             const T& value_right, ChunkOffset right_chunk_offset,
-                                                            std::shared_ptr<JoinContext> context, bool reverse_order) {
+                                                            const std::shared_ptr<JoinContext>& context,
+                                                            bool reverse_order) {
   bool values_match = reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right);
   if (values_match) {
     RowID left_row_id = {context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset};
@@ -223,7 +224,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left,
 
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_value(const ValueColumn<T>& left, const ValueColumn<T>& right,
-                                                               std::shared_ptr<JoinContext> context,
+                                                               const std::shared_ptr<JoinContext>& context,
                                                                bool reverse_order) {
   const auto& values_left = left.values();
   const auto& values_right = right.values();
@@ -241,7 +242,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_value(const ValueColumn
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_dictionary(const ValueColumn<T>& left,
                                                                     const DictionaryColumn<T>& right,
-                                                                    std::shared_ptr<JoinContext> context,
+                                                                    const std::shared_ptr<JoinContext>& context,
                                                                     bool reverse_order) {
   const auto& values = left.values();
   const auto& att = right.attribute_vector();
@@ -286,7 +287,7 @@ const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(const Refer
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_reference(const ValueColumn<T>& left,
                                                                    const ReferenceColumn& right,
-                                                                   std::shared_ptr<JoinContext> context,
+                                                                   const std::shared_ptr<JoinContext>& context,
                                                                    bool reverse_order) {
   auto& values = left.values();
   auto& pos_list = right.pos_list();
@@ -304,7 +305,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_reference(const ValueCo
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_dictionary(const DictionaryColumn<T>& left,
                                                                          const DictionaryColumn<T>& right,
-                                                                         std::shared_ptr<JoinContext> context,
+                                                                         const std::shared_ptr<JoinContext>& context,
                                                                          bool reverse_order) {
   const auto& att_left = left.attribute_vector();
   const auto& att_right = right.attribute_vector();
@@ -322,7 +323,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_dictionary(const D
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_reference(const DictionaryColumn<T>& left,
                                                                         const ReferenceColumn& right,
-                                                                        std::shared_ptr<JoinContext> context,
+                                                                        const std::shared_ptr<JoinContext>& context,
                                                                         bool reverse_order) {
   const auto& att_left = left.attribute_vector();
   auto& pos_list = right.pos_list();
@@ -340,7 +341,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_reference(const Di
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_reference_reference(const ReferenceColumn& left,
                                                                        const ReferenceColumn& right,
-                                                                       std::shared_ptr<JoinContext> context,
+                                                                       const std::shared_ptr<JoinContext>& context,
                                                                        bool reverse_order) {
   auto& pos_list_left = left.pos_list();
   auto& pos_list_right = right.pos_list();

@@ -84,7 +84,7 @@ class HashTable : private Noncopyable {
   n: maximum number of times function can be recursively
   called before stopping and declaring presence of cycle
   */
-  void place(std::shared_ptr<HashElement> element, int hash_function, size_t iterations) {
+  void place(const std::shared_ptr<HashElement>& element, int hash_function, size_t iterations) {
     /*
     We were not able to reproduce this case with the current setting (3 hash functions). With 3 hash functions the
     hash table will have a maximum load of 33%, which should be less enough to avoid cycles at all. In theory there

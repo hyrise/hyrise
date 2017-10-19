@@ -21,7 +21,8 @@ class Worker;
  */
 class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit> {
  public:
-  ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator, CpuID cpuID);
+  ProcessingUnit(const std::shared_ptr<TaskQueue>& queue, const std::shared_ptr<UidAllocator>& worker_id_allocator,
+                 CpuID cpuID);
 
   bool shutdown_flag() const { return _shutdown_flag; }
 

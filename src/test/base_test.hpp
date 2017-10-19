@@ -43,9 +43,9 @@ class BaseTest : public ::testing::Test {
   static void ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive = false,
                               bool strict_types = true);
 
-  static void EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
+  static void EXPECT_TABLE_EQ(const std::shared_ptr<const Table>& tleft, const std::shared_ptr<const Table>& tright,
                               bool order_sensitive = false, bool strict_types = true);
-  static void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
+  static void ASSERT_TABLE_EQ(const std::shared_ptr<const Table>& tleft, const std::shared_ptr<const Table>& tright,
                               bool order_sensitive = false, bool strict_types = true);
 
   static void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType,
