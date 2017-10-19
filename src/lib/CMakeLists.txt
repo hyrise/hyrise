@@ -238,6 +238,7 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
+    utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp
