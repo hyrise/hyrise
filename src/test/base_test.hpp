@@ -5,10 +5,11 @@
 #include <utility>
 #include <vector>
 
-#include "../lib/storage/dictionary_compression.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/storage/value_column.hpp"
-#include "../lib/types.hpp"
+#include "operators/abstract_operator.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
+#include "types.hpp"
 
 #include "gtest/gtest.h"
 
