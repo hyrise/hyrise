@@ -1,7 +1,7 @@
 #pragma once
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <boost/math/common_factor_rt.hpp>
+#include <experimental/memory_resource>
 #include <string>
 
 #if HYRISE_NUMA_SUPPORT
@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-class NUMAMemoryResource : public boost::container::pmr::memory_resource {
+class NUMAMemoryResource : public std::experimental::pmr::memory_resource {
  public:
   NUMAMemoryResource(int node_id, const std::string& name);
 

@@ -3,7 +3,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/utils/cuckoo_hashtable.hpp"
+#include "utils/cuckoo_hashtable.hpp"
 
 namespace opossum {
 

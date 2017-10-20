@@ -28,7 +28,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
   _regex = std::regex{regex_string, std::regex_constants::icase};  // case insentivity
 }
 
-void LikeTableScanImpl::handle_value_column(BaseColumn& base_column,
+void LikeTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
                                             std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -47,7 +47,7 @@ void LikeTableScanImpl::handle_value_column(BaseColumn& base_column,
   });
 }
 
-void LikeTableScanImpl::handle_dictionary_column(BaseColumn& base_column,
+void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;

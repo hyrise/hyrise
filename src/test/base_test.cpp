@@ -46,7 +46,7 @@ void BaseTest::ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& no
 
 BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.column_count()));
 
   // set values
   unsigned row_offset = 0;
@@ -56,8 +56,8 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
-      std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
+    for (ColumnID col_id{0}; col_id < t.column_count(); ++col_id) {
+      auto column = chunk.get_column(col_id);
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];
@@ -84,17 +84,25 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
                                                   bool strict_types) {
   Matrix left = _table_to_matrix(tleft);
   Matrix right = _table_to_matrix(tright);
-  // compare schema of tables
-  //  - column count
-  if (tleft.col_count() != tright.col_count()) {
+
+  const auto print_tables = [&]() {
+    std::cout << "== Tables are not equal ==" << std::endl;
     _print_matrix(left);
     _print_matrix(right);
-    return ::testing::AssertionFailure() << "Number of columns is different.";
+    std::cout << "==========================" << std::endl;
+  };
+
+  // compare schema of tables
+  //  - column count
+  if (tleft.column_count() != tright.column_count()) {
+    print_tables();
+    return ::testing::AssertionFailure() << "Number of columns is different. " << tleft.column_count()
+                                         << " != " << tright.column_count();
   }
 
   //  - column names and types
   std::string left_col_type, right_col_type;
-  for (ColumnID col_id{0}; col_id < tright.col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < tright.column_count(); ++col_id) {
     left_col_type = tleft.column_type(col_id);
     right_col_type = tright.column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
@@ -115,6 +123,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
       std::cout << "Column with ID " << col_id << " is different" << std::endl;
       std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
       std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;
+      print_tables();
       return ::testing::AssertionFailure() << "Table schema is different.";
     }
   }
@@ -122,10 +131,9 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   // compare content of tables
   //  - row count for fast failure
   if (tleft.row_count() != tright.row_count()) {
-    _print_matrix(left);
-    _print_matrix(right);
     std::cout << "Got: " << tleft.row_count() << " rows" << std::endl;
     std::cout << "Expected: " << tright.row_count() << " rows" << std::endl;
+    print_tables();
     return ::testing::AssertionFailure() << "Number of rows is different.";
   }
 
@@ -169,6 +177,10 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
         }
       }
     }
+
+  if (::testing::Test::HasFailure()) {
+    print_tables();
+  }
 
   return ::testing::AssertionSuccess();
 }

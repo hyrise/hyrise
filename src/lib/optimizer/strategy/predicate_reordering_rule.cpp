@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "constant_mappings.hpp"
@@ -12,6 +13,8 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
 bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   auto reordered = false;
@@ -27,7 +30,9 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& n
     }
 
     // Sort PredicateNodes in descending order with regards to the expected row_count
-    reordered = _reorder_predicates(predicate_nodes);
+    if (predicate_nodes.size() > 1) {
+      reordered = _reorder_predicates(predicate_nodes);
+    }
     reordered |= _apply_to_children(predicate_nodes.back());
   } else {
     reordered = _apply_to_children(node);
@@ -40,6 +45,7 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   // Store original child and parent
   auto child = predicates.back()->left_child();
   auto parent = predicates.front()->parent();
+  const auto side_of_parent = predicates.front()->get_child_side();
 
   const auto sort_predicate = [&](auto& l, auto& r) {
     return l->derive_statistics_from(child)->row_count() > r->derive_statistics_from(child)->row_count();
@@ -54,7 +60,7 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
 
   // Ensure that nodes are chained correctly
   predicates.back()->set_left_child(child);
-  parent->set_left_child(predicates.front());
+  parent->set_child(side_of_parent, predicates.front());
 
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
     predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);

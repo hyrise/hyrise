@@ -6,7 +6,7 @@
 #if HYRISE_NUMA_SUPPORT
 #define NUMA_MEMORY_RESOURCE_ARENA_SIZE 1LL << 30
 #else
-#include <boost/container/pmr/global_resource.hpp>
+#include <experimental/memory_resource>
 #endif
 
 namespace opossum {
@@ -37,11 +37,11 @@ int NUMAMemoryResource::get_node_id() const { return _mem_source.getPhysicalNode
 NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name) {}
 
 void* NUMAMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
-  return boost::container::pmr::get_default_resource()->allocate(bytes, alignment);
+  return std::experimental::pmr::get_default_resource()->allocate(bytes, alignment);
 }
 
 void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) {
-  boost::container::pmr::get_default_resource()->deallocate(p, bytes, alignment);
+  std::experimental::pmr::get_default_resource()->deallocate(p, bytes, alignment);
 }
 
 bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcept { return true; }
