@@ -30,8 +30,8 @@ uint8_t JoinHash::num_in_tables() const { return 2; }
 uint8_t JoinHash::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode,
-                                           _column_ids, _scan_type);
+  return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+                                    _scan_type);
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
