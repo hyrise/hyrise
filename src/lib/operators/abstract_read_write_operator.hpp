@@ -21,8 +21,8 @@ namespace opossum {
 class AbstractReadWriteOperator : public AbstractOperator,
                                   public std::enable_shared_from_this<AbstractReadWriteOperator> {
  public:
-  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
-                                     const std::shared_ptr<const AbstractOperator> right = nullptr)
+  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                                     const std::shared_ptr<const AbstractOperator>& right = nullptr)
       : AbstractOperator(left, right), _execute_failed{false} {}
 
   void execute() override {

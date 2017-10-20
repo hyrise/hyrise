@@ -8,8 +8,8 @@
 #include "storage/reference_column.hpp"
 
 namespace opossum {
-Product::Product(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right)
+Product::Product(const std::shared_ptr<const AbstractOperator>& left,
+                 const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
 const std::string Product::name() const { return "Product"; }

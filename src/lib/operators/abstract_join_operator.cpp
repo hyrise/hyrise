@@ -8,8 +8,8 @@
 
 namespace opossum {
 
-AbstractJoinOperator::AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
-                                           const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+AbstractJoinOperator::AbstractJoinOperator(const std::shared_ptr<const AbstractOperator>& left,
+                                           const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractReadOnlyOperator(left, right), _mode(mode), _column_ids(column_ids), _scan_type(scan_type) {
   DebugAssert(mode != JoinMode::Cross && mode != JoinMode::Natural,

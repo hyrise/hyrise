@@ -28,8 +28,8 @@ namespace opossum {
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
-JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
-                             const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
+                             const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const std::pair<ColumnID, ColumnID>& column_ids, const ScanType op)
     : AbstractJoinOperator(left, right, mode, column_ids, op) {
   // Validate the parameters

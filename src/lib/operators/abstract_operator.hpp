@@ -28,8 +28,8 @@ class TransactionContext;
 
 class AbstractOperator : private Noncopyable {
  public:
-  AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
-                   const std::shared_ptr<const AbstractOperator> right = nullptr);
+  AbstractOperator(const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                   const std::shared_ptr<const AbstractOperator>& right = nullptr);
 
   virtual ~AbstractOperator() = default;
 

@@ -15,8 +15,8 @@
 
 namespace opossum {
 
-JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator>& left,
+                                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                  const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
   DebugAssert(left != nullptr, "JoinNestedLoopB::JoinNestedLoopB: left input operator is null");

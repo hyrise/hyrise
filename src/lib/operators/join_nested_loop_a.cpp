@@ -17,8 +17,8 @@
 
 namespace opossum {
 
-JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator>& left,
+                                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                  const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
 
@@ -47,8 +47,8 @@ void JoinNestedLoopA::_on_cleanup() { _impl.reset(); }
 template <typename LeftType, typename RightType>
 class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator> left,
-                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator>& left,
+                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                       const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),

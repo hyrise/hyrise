@@ -19,7 +19,7 @@ namespace opossum {
  */
 class Product : public AbstractReadOnlyOperator {
  public:
-  Product(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right);
+  Product(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

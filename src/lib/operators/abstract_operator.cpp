@@ -9,15 +9,15 @@
 
 namespace opossum {
 
-AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator> left,
-                                   const std::shared_ptr<const AbstractOperator> right)
+AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>& left,
+                                   const std::shared_ptr<const AbstractOperator>& right)
     : _input_left(left), _input_right(right) {}
 
 void AbstractOperator::execute() {
   auto start = std::chrono::high_resolution_clock::now();
 
   auto transaction_context = _transaction_context.lock();
-
+  
   if (transaction_context) transaction_context->on_operator_started();
   _output = _on_execute(transaction_context);
   if (transaction_context) transaction_context->on_operator_finished();
