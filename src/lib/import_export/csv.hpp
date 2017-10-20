@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/algorithm/string.hpp>
+
 namespace opossum {
 
 /*

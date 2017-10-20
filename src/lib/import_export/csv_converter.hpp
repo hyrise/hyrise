@@ -4,16 +4,18 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
 #include "csv.hpp"
+
 #include "storage/base_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -64,6 +66,12 @@ class AbstractCsvConverter {
     unescaped_string.shrink_to_fit();
     field = std::move(unescaped_string);
   }
+
+  static std::string unescape_copy(const std::string& field, const CsvConfig = {}) {
+    auto field_copy = field;
+    unescape(field_copy);
+    return field_copy;
+  }
 };
 
 template <typename T>
@@ -73,11 +81,14 @@ class CsvConverter : public AbstractCsvConverter {
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(const std::string& value, ChunkOffset position) override {
-    if (_is_nullable && boost::to_lower_copy(value) == CsvConfig::NULL_STRING) {
-      _parsed_values[position] = T{};
+    if (_is_nullable && value.length() == 0) {
       _null_values[position] = true;
     } else {
-      _parsed_values[position] = _get_conversion_function()(value);
+      Assert(boost::to_lower_copy(value) != CsvConfig::NULL_STRING,
+             "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
+
+      auto unescaped_value = unescape_copy(value);
+      _parsed_values[position] = _get_conversion_function()(unescaped_value);
     }
   }
 

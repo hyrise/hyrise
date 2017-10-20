@@ -8,8 +8,8 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include "import_export/csv_converter.hpp"
 
+#include "import_export/csv_converter.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/table.hpp"
@@ -171,9 +171,19 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
   const auto row_count = field_ends.size() / column_count;
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
 
+  // Check whether quoted and unquoted strings and null are mixed
+  std::vector<bool> string_null_columns(column_count);
+  std::vector<bool> seen_unquoted_nulls(column_count, false);
+  std::vector<bool> seen_unquoted_strings(column_count, false);
+
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(
-        table.column_type(column_id), row_count, _csv_config, table.column_is_nullable(column_id)));
+    const auto is_nullable = table.column_is_nullable(column_id);
+    const auto column_type = table.column_type(column_id);
+
+    converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(column_type, row_count,
+                                                                                           _csv_config, is_nullable));
+
+    string_null_columns[column_id] = is_nullable && column_type == "string";
   }
 
   size_t start = 0;
@@ -187,9 +197,6 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
         // CSV fields not following RFC 4810 might need some preprocessing
         _sanitize_field(field);
       }
-
-      // Unescape to remove enclosing quotes from fields
-      AbstractCsvConverter::unescape(field, _csv_config);
 
       converters[column_id]->insert(field, row_id);
     }

@@ -211,15 +211,21 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_null.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(4);
+  auto expected_table = std::make_shared<Table>(5);
   expected_table->add_column("a", "string", true);
 
   expected_table->append({"xxx"});
   expected_table->append({"www"});
-  expected_table->append({NULL_VALUE});
+  expected_table->append({"null"});
   expected_table->append({"zzz"});
+  expected_table->append({NULL_VALUE});
 
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_bad_null.csv");
+  EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
@@ -240,4 +246,5 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
 
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
+
 }  // namespace opossum

@@ -101,7 +101,8 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     auto row = context->currentRow;
 
     if (column.is_nullable() && column.null_values()[row]) {
-      context->csvWriter.write(NULL_VALUE);
+      // Write an empty field for a null value
+      context->csvWriter.write("");
     } else {
       context->csvWriter.write(column.values()[row]);
     }

@@ -186,8 +186,8 @@ TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
   EXPECT_TRUE(fileExists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "12345,458.7\n"
-                           "123,NULL\n"
-                           "NULL,456.7\n"
+                           "123,\n"
+                           ",456.7\n"
                            "1234,457.7\n"));
 }
 
@@ -203,7 +203,7 @@ TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
   EXPECT_TRUE(compare_file(filename,
                            "\"xxx\"\n"
                            "\"www\"\n"
-                           "NULL\n"
+                           "\n"
                            "\"zzz\"\n"));
 }
 
