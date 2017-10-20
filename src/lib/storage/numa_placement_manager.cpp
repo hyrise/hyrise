@@ -1,10 +1,8 @@
+#if OPOSSUM_NUMA_SUPPORT
+
 #include "numa_placement_manager.hpp"
 
-#if OPOSSUM_NUMA_SUPPORT
 #include <numa.h>
-#endif
-
-#include <boost/container/pmr/memory_resource.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -12,14 +10,14 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <experimental/memory_resource>
 
-#if OPOSSUM_NUMA_SUPPORT
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
-#endif
 
 namespace opossum {
 
+// TODO(normanrz): C++11 singleton http://cppisland.com/?p=501
 std::shared_ptr<NUMAPlacementManager> NUMAPlacementManager::_instance;
 
 const std::shared_ptr<NUMAPlacementManager>& NUMAPlacementManager::get() { return _instance; }
@@ -28,37 +26,35 @@ void NUMAPlacementManager::set(const std::shared_ptr<NUMAPlacementManager>& inst
 
 bool NUMAPlacementManager::is_set() { return !!_instance; }
 
-#if OPOSSUM_NUMA_SUPPORT
 NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology,
                                            const NUMAPlacementManagerOptions options)
     : _topology(topology), _options(options) {
   for (size_t i = 0; i < _topology->nodes().size(); i++) {
     char msource_name[8];
     std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
-    memsources.push_back(NUMAMemoryResource(i, std::string(msource_name)));
+    memory_resources.push_back(NUMAMemoryResource(i, std::string(msource_name)));
   }
 
-  collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval, [](size_t) {
+  _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval, [](size_t) {
     const auto task = std::make_shared<ChunkMetricsCollectionTask>();
+
     task->schedule();
     task->join();
   });
 
-  migration_thread = std::make_unique<PausableLoopThread>(_options.migration_interval, [this](size_t) {
+  _migration_thread = std::make_unique<PausableLoopThread>(_options.migration_interval, [this](size_t) {
     const auto task = std::make_shared<MigrationPreparationTask>(_options);
     task->schedule();
     task->join();
   });
 }
 
-boost::container::pmr::memory_resource* NUMAPlacementManager::get_memsource(int node_id) {
-  if (node_id < 0 || node_id >= static_cast<int>(_topology->nodes().size())) {
-    throw std::range_error("node_id is out of bounds");
-  }
-  return &memsources.at(static_cast<size_t>(node_id));
+const std::experimental::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
+  DebugAssert(node_id > 0 && node_id < static_cast<int>(_topology->nodes().size(), "node_id is out of bounds"));
+  return &memory_resources[static_cast<size_t>(node_id)];
 }
 
-int NUMAPlacementManager::get_node_id_of(void* ptr) {
+static int NUMAPlacementManager::get_node_id_of(void* ptr) {
   int status[1];
   void* addr = {ptr};
   numa_move_pages(0, 1, static_cast<void**>(&addr), NULL, reinterpret_cast<int*>(&status), 0);
@@ -66,30 +62,16 @@ int NUMAPlacementManager::get_node_id_of(void* ptr) {
 }
 
 void NUMAPlacementManager::resume() {
-  collector_thread->resume();
-  migration_thread->resume();
+  _collector_thread->resume();
+  _migration_thread->resume();
 }
 void NUMAPlacementManager::pause() {
-  collector_thread->pause();
-  migration_thread->pause();
+  _collector_thread->pause();
+  _migration_thread->pause();
 }
-
-#else
-
-NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology,
-                                           const NUMAPlacementManagerOptions options)
-    : _topology(topology), _options(options) {}
-
-boost::container::pmr::memory_resource* NUMAPlacementManager::get_memsource(int) {
-  return boost::container::pmr::get_default_resource();
-}
-
-int NUMAPlacementManager::get_node_id_of(void* ptr) { return -1; }
-void NUMAPlacementManager::resume() {}
-void NUMAPlacementManager::pause() {}
-
-#endif
 
 const std::shared_ptr<Topology>& NUMAPlacementManager::topology() const { return _topology; }
 
 }  // namespace opossum
+
+#endif

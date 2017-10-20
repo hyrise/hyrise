@@ -9,17 +9,17 @@
 namespace opossum {
 
 PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep, std::function<void(size_t)> loop_func) {
-  loop_thread = std::thread([&, loop_sleep, loop_func] {
+  _loop_thread = std::thread([&, loop_sleep, loop_func] {
     size_t counter = 0;
-    while (!shutdownFlag) {
+    while (!_shutdown_flag) {
       if (loop_sleep > std::chrono::milliseconds(0)) {
         std::this_thread::sleep_for(loop_sleep);
       }
-      if (shutdownFlag) return;
-      while (isPaused) {
-        std::unique_lock<std::mutex> lk(m);
-        cv.wait(lk, [&] { return !isPaused || shutdownFlag; });
-        if (shutdownFlag) return;
+      if (_shutdown_flag) return;
+      while (_is_paused) {
+        std::unique_lock<std::mutex> lk(_mutex);
+        _cv.wait(lk, [&] { return !_is_paused || _shutdown_flag; });
+        if (_shutdown_flag) return;
         lk.unlock();
       }
       loop_func(counter++);
@@ -27,18 +27,18 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep, std
   });
 }
 
-void PausableLoopThread::pause() { isPaused = true; }
+void PausableLoopThread::pause() { _is_paused = true; }
 
 void PausableLoopThread::resume() {
-  isPaused = false;
-  cv.notify_one();
+  _is_paused = false;
+  _cv.notify_one();
 }
 
 void PausableLoopThread::finish() {
-  isPaused = true;
-  shutdownFlag = true;
-  cv.notify_one();
-  loop_thread.join();
+  _is_paused = true;
+  _shutdown_flag = true;
+  _cv.notify_one();
+  _loop_thread.join();
 }
 
 }  // namespace opossum

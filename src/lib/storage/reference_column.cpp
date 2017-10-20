@@ -63,6 +63,7 @@ void ReferenceColumn::copy_value_to_value_column(BaseColumn&, ChunkOffset) const
 }
 
 std::shared_ptr<BaseColumn> ReferenceColumn::migrate(const PolymorphicAllocator<size_t>&) const {
+  // TODO(normanrz): Comment why
   Fail("Cannot migrate a ReferenceColumn");
   return nullptr;
 }

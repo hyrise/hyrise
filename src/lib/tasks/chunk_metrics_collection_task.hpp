@@ -8,7 +8,7 @@ namespace opossum {
 
 class ChunkMetricsCollectionTask : public AbstractTask {
  public:
-  ChunkMetricsCollectionTask();
+  ChunkMetricsCollectionTask() = default;
 
  protected:
   void _on_execute() override;

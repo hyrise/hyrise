@@ -8,6 +8,7 @@
 
 namespace opossum {
 
+// TODO(normanrz): Class comment what this is good for
 class ProxyChunk {
  public:
   explicit ProxyChunk(const Chunk& chunk);
@@ -23,7 +24,7 @@ class ProxyChunk {
 
  protected:
   const Chunk& _chunk;
-  const uint64_t begin_rdtsc;
+  const uint64_t _begin_rdtsc;
 };
 
 }  // namespace opossum

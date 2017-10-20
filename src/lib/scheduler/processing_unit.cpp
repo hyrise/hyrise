@@ -6,7 +6,7 @@
 #include "uid_allocator.hpp"
 #include "worker.hpp"
 
-#define MAX_WORKERS_PER_CORE 200
+static constexpr MAX_WORKERS_PER_CORE = 200;
 
 namespace opossum {
 

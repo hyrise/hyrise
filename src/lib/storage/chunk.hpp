@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <experimental/memory_resource>
 
 #include "tbb/concurrent_vector.h"
 
@@ -55,6 +56,12 @@ class Chunk : private Noncopyable {
   /**
    * Data structure for storing chunk access times
    */
+  // TODO(normanrz): Comment
+  // * What information does counter give us?
+  // * What does history_sample return?
+  // * What are the entries in the history?
+  // * What is the ring buffer used for?
+  // * What does process process?
   struct AccessCounter {
     friend class Chunk;
 
@@ -167,7 +174,7 @@ class Chunk : private Noncopyable {
     return index;
   }
 
-  void migrate(boost::container::pmr::memory_resource* alloc);
+  void migrate(std::experimental::pmr::memory_resource* alloc);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
 

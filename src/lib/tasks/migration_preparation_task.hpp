@@ -11,12 +11,12 @@ namespace opossum {
 
 class MigrationPreparationTask : public AbstractTask {
  public:
-  explicit MigrationPreparationTask(const NUMAPlacementManagerOptions& options);
+  explicit MigrationPreparationTask(const NUMAPlacementManager::Options& options);
 
  protected:
   void _on_execute() override;
 
-  const NUMAPlacementManagerOptions _options;
+  const NUMAPlacementManager::Options _options;
 };
 }  // namespace opossum
 

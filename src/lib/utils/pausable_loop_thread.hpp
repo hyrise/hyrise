@@ -7,6 +7,7 @@
 
 namespace opossum {
 
+// TODO(normanrz): Comment
 struct PausableLoopThread {
  public:
   explicit PausableLoopThread(std::chrono::milliseconds loop_sleep, std::function<void(size_t)> loop_func);
@@ -17,10 +18,10 @@ struct PausableLoopThread {
   void finish();
 
  private:
-  std::atomic_bool isPaused{true};
-  std::atomic_bool shutdownFlag{false};
-  std::mutex m;
-  std::condition_variable cv;
-  std::thread loop_thread;
+  std::atomic_bool _is_paused{true};
+  std::atomic_bool _shutdown_flag{false};
+  std::mutex _mutex;
+  std::condition_variable _cv;
+  std::thread _loop_thread;
 };
 }  // namespace opossum

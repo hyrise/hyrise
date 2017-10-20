@@ -24,6 +24,7 @@
 
 namespace opossum {
 
+// TODO(normanrz): Remove
 template <class T>
 void print_vector(const std::vector<T>& vec, std::string prefix = "", std::string sep = " ") {
   std::cout << prefix;
@@ -33,20 +34,23 @@ void print_vector(const std::vector<T>& vec, std::string prefix = "", std::strin
   std::cout << std::endl;
 }
 
-struct HotNodeSet {
+// TODO(normanrz): Comment
+// TODO(normanrz): Rename `hot_nodes` to `node_infos` or something
+struct NodeInfoSet {
   double imbalance;
-  std::vector<double> node_hottness;
+  std::vector<double> node_temperature;
   std::vector<NodeID> hot_nodes;
   std::vector<NodeID> cold_nodes;
 };
 
+// TODO(normanrz): Comment
 struct ChunkInfo {
   std::string table_name;
   ChunkID id;
   int node;
   size_t byte_size;
-  double hottness;
-  friend bool operator<(const ChunkInfo& l, const ChunkInfo& r) { return l.hottness < r.hottness; }
+  double temperature;
+  friend bool operator<(const ChunkInfo& l, const ChunkInfo& r) { return l.temperature < r.temperature; }
 };
 
 template <class T>
@@ -92,18 +96,19 @@ double inverted_entropy(const std::vector<double>& node_chunk) {
   return (max_entropy - entropy) / max_entropy;
 }
 
-HotNodeSet find_hot_nodes(const std::vector<double>& node_chunk) {
+// TODO(normanrz): Comment
+NodeInfoSet find_hot_nodes(const std::vector<double>& node_chunk) {
   double avg_tasks = mean(node_chunk);
 
-  std::vector<double> node_hottness(node_chunk.size());
+  std::vector<double> node_temperature(node_chunk.size());
   std::vector<NodeID> hot_nodes;
   std::vector<NodeID> cold_nodes;
 
   for (NodeID i = NodeID(0); static_cast<size_t>(i) < node_chunk.size(); i++) {
     double a = node_chunk[i];
-    double hottness = (a - avg_tasks);
-    node_hottness[i] = a;
-    if (hottness > 0) {
+    double temperature = (a - avg_tasks);
+    node_temperature[i] = a;
+    if (temperature > 0) {
       hot_nodes.push_back(i);
     } else if (node_has_capacity(i)) {
       cold_nodes.push_back(i);
@@ -111,33 +116,23 @@ HotNodeSet find_hot_nodes(const std::vector<double>& node_chunk) {
   }
 
   std::sort(hot_nodes.begin(), hot_nodes.end(),
-            [&node_hottness](const auto& a, const auto& b) { return node_hottness.at(a) < node_hottness.at(b); });
+            [&node_temperature](const auto& a, const auto& b) { return node_temperature.at(a) < node_temperature.at(b); });
   std::sort(cold_nodes.begin(), cold_nodes.end(),
-            [&node_hottness](const auto& a, const auto& b) { return node_hottness.at(a) < node_hottness.at(b); });
+            [&node_temperature](const auto& a, const auto& b) { return node_temperature.at(a) < node_temperature.at(b); });
 
   return {.imbalance = inverted_entropy(node_chunk),
-          .node_hottness = node_hottness,
+          .node_temperature = node_temperature,
           .hot_nodes = hot_nodes,
           .cold_nodes = cold_nodes};
 }
 
-std::vector<double> get_node_hottness(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
-  std::vector<double> node_hottness(node_count);
+// TODO(normanrz): Comment
+std::vector<double> get_node_temperature(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
+  std::vector<double> node_temperature(node_count);
   for (const auto& chunk_info : chunk_infos) {
-    node_hottness.at(chunk_info.node) += chunk_info.hottness;
+    node_temperature.at(chunk_info.node) += chunk_info.temperature;
   }
-  return scale(node_hottness);
-}
-
-bool chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
-  if (chunk.size() != max_chunk_size) return false;
-  if (chunk.has_mvcc_columns()) {
-    auto mvcc_columns = chunk.mvcc_columns();
-    for (const auto begin_cid : mvcc_columns->begin_cids) {
-      if (begin_cid == Chunk::MAX_COMMIT_ID) return false;
-    }
-  }
-  return true;
+  return scale(node_temperature);
 }
 
 int get_node_id(const PolymorphicAllocator<size_t>& alloc) {
@@ -148,24 +143,25 @@ int get_node_id(const PolymorphicAllocator<size_t>& alloc) {
   return -1;
 }
 
+// TODO(normanrz): Comment
 std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, const std::chrono::milliseconds& lookback,
                                        const std::chrono::milliseconds& counter_history_interval) {
   std::vector<ChunkInfo> chunk_infos;
-  double sum_hottness = 0.0;
+  double sum_temperature = 0.0;
   size_t lookback_samples = lookback.count() / counter_history_interval.count();
   for (const auto& table_name : storage_manager.table_names()) {
     const auto& table = *storage_manager.get_table(table_name);
     const auto chunk_count = table.chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto& chunk = table.get_chunk(i);
-      if (chunk_is_completed(chunk, table.chunk_size()) && chunk.has_access_counter()) {
-        const double hottness = static_cast<double>(chunk.access_counter()->history_sample(lookback_samples));
-        sum_hottness += hottness;
+      if (ChunkMigrationTask::chunk_is_completed(chunk, table.chunk_size()) && chunk.has_access_counter()) {
+        const double temperature = static_cast<double>(chunk.access_counter()->history_sample(lookback_samples));
+        sum_temperature += temperature;
         chunk_infos.emplace_back(ChunkInfo{.table_name = table_name,
                                            .id = i,
                                            .node = get_node_id(chunk.get_allocator()),
                                            .byte_size = chunk.byte_size(),
-                                           .hottness = hottness});
+                                           .temperature = temperature});
       }
     }
   }
@@ -173,6 +169,7 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, co
   return chunk_infos;
 }
 
+// TODO(normanrz): Remove
 std::vector<size_t> count_chunks_by_node(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
   std::vector<size_t> result(node_count);
   for (const auto chunk_info : chunk_infos) {
@@ -181,18 +178,20 @@ std::vector<size_t> count_chunks_by_node(const std::vector<ChunkInfo>& chunk_inf
   return result;
 }
 
-MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManagerOptions& options) : _options(options) {}
+MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::Options& options) : _options(options) {}
 
+// TODO(normanrz): Comment
 void MigrationPreparationTask::_on_execute() {
   const auto topology = std::dynamic_pointer_cast<NodeQueueScheduler>(CurrentScheduler::get())->topology();
 
   auto hot_chunks =
       find_hot_chunks(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
-  HotNodeSet hot_nodes = find_hot_nodes(get_node_hottness(hot_chunks, topology->nodes().size()));
+  NodeInfoSet hot_nodes = find_hot_nodes(get_node_temperature(hot_chunks, topology->nodes().size()));
 
+  // TODO(normanrz): Remove
   std::cout << "Imbalance: " << hot_nodes.imbalance << std::endl;
-  print_vector(hot_nodes.node_hottness, "Hotnesses: ");
+  print_vector(hot_nodes.node_temperature, "Hotnesses: ");
   print_vector(count_chunks_by_node(hot_chunks, topology->nodes().size()), "Chunk counts: ");
 
   if (hot_nodes.imbalance > _options.imbalance_threshold && hot_nodes.cold_nodes.size() > 0) {
@@ -212,7 +211,8 @@ void MigrationPreparationTask::_on_execute() {
     for (const auto& migration_chunk : migration_candidates) {
       const auto target_node = hot_nodes.cold_nodes.at(chunk_counter % hot_nodes.cold_nodes.size());
       const auto task =
-          std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, migration_chunk.id, target_node);
+          std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, {migration_chunk.id}, target_node);
+      // TODO(normanrz): Remove
       std::cout << "Migrating " << migration_chunk.table_name << " (" << migration_chunk.id << ") "
                 << migration_chunk.node << " -> " << target_node << std::endl;
       task->schedule(target_node, SchedulePriority::Unstealable);

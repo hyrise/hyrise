@@ -1,21 +1,23 @@
 #pragma once
+#if OPOSSUM_NUMA_SUPPORT
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <chrono>
 #include <memory>
 #include <vector>
+#include <experimental/memory_resource>
 
 #include "polymorphic_allocator.hpp"
 #include "scheduler/topology.hpp"
 
-#if OPOSSUM_NUMA_SUPPORT
 #include "utils/numa_memory_resource.hpp"
 #include "utils/pausable_loop_thread.hpp"
-#endif
 
 namespace opossum {
 
-struct NUMAPlacementManagerOptions {
+class NUMAPlacementManager {}
+
+struct NUMAPlacementManager::Options {
+  // TODO(normanrz): Comment where these numbers come from and what they mean
   std::chrono::milliseconds counter_history_interval = std::chrono::milliseconds(100);
   std::chrono::milliseconds migration_interval = std::chrono::seconds(10);
   std::chrono::milliseconds counter_history_range = std::chrono::seconds(7);
@@ -33,9 +35,9 @@ class NUMAPlacementManager {
   static int get_node_id_of(void* ptr);
 
   explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology,
-                                const NUMAPlacementManagerOptions options = NUMAPlacementManagerOptions());
+                                const NUMAPlacementManager::Options options = NUMAPlacementManager::Options());
 
-  boost::container::pmr::memory_resource* get_memsource(int node_id);
+  const std::experimental::pmr::memory_resource* get_memory_resource(int node_id);
 
   const std::shared_ptr<Topology>& topology() const;
 
@@ -50,12 +52,11 @@ class NUMAPlacementManager {
   static std::shared_ptr<NUMAPlacementManager> _instance;
 
   const std::shared_ptr<Topology> _topology;
-  const NUMAPlacementManagerOptions _options;
+  const NUMAPlacementManager::Options _options;
 
-#if OPOSSUM_NUMA_SUPPORT
-  std::vector<NUMAMemoryResource> memsources;
-  std::unique_ptr<PausableLoopThread> collector_thread;
-  std::unique_ptr<PausableLoopThread> migration_thread;
-#endif
+  std::vector<NUMAMemoryResource> _memory_resources;
+  std::unique_ptr<PausableLoopThread> _collector_thread;
+  std::unique_ptr<PausableLoopThread> _migration_thread;
 };
 }  // namespace opossum
+#endif
