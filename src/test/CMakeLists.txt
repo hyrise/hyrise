@@ -31,6 +31,7 @@ set(
     operators/print_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp
+    operators/recreation_test.cpp
     operators/rollback_records_test.cpp
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
