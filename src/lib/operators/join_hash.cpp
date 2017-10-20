@@ -78,9 +78,9 @@ using Hash = uint32_t;
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-               const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
-               const bool inputs_swapped)
+  JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
+               const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+               const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
