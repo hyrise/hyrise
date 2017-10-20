@@ -1,6 +1,6 @@
 #include "chunk_migration_task.hpp"
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 
 #include <memory>
 #include <iostream>

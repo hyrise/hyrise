@@ -1,4 +1,4 @@
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 
 #include "numa_placement_manager.hpp"
 
