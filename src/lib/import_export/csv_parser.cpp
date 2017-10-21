@@ -171,19 +171,12 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
   const auto row_count = field_ends.size() / column_count;
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
 
-  // Check whether quoted and unquoted strings and null are mixed
-  std::vector<bool> string_null_columns(column_count);
-  std::vector<bool> seen_unquoted_nulls(column_count, false);
-  std::vector<bool> seen_unquoted_strings(column_count, false);
-
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
     const auto is_nullable = table.column_is_nullable(column_id);
     const auto column_type = table.column_type(column_id);
 
     converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(column_type, row_count,
                                                                                            _csv_config, is_nullable));
-
-    string_null_columns[column_id] = is_nullable && column_type == "string";
   }
 
   size_t start = 0;
