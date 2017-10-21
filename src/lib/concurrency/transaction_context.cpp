@@ -21,7 +21,7 @@ TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
                 auto an_operator_failed = false;
                 for (const auto& op : _rw_operators) {
-                  if (op->state() != ReadWriteOperatorState::Failed) {
+                  if (op->state() == ReadWriteOperatorState::Failed) {
                     an_operator_failed = true;
                     break;
                   }
@@ -30,7 +30,7 @@ TransactionContext::~TransactionContext() {
                 const auto is_rolled_back = _phase == TransactionPhase::RolledBack;
                 return (!an_operator_failed || is_rolled_back);
               }()),
-              "A registered operator failed but transaction has been rolled back.");
+              "A registered operator failed but transaction has not been rolled back.");
 
   DebugAssert(([this]() {
                 const auto has_registered_operators = _rw_operators.size() > 0u;
