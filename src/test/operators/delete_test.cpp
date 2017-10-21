@@ -118,6 +118,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 
   // MVCC commit.
   t1_context->commit();
+  t2_context->rollback();
 
   // Get validated table which should have only one row deleted.
   auto t_context = TransactionManager::get().new_transaction_context();
@@ -156,6 +157,8 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   update_op->set_transaction_context(t2_context);
   update_op->execute();
   EXPECT_TRUE(update_op->execute_failed());
+
+  t2_context->rollback();
 }
 
 }  // namespace opossum
