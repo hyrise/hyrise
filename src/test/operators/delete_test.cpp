@@ -40,8 +40,7 @@ class OperatorsDeleteTest : public BaseTest {
 };
 
 void OperatorsDeleteTest::helper(bool commit) {
-  auto transaction_context = std::make_shared<TransactionContext>(1u, 1u);
-  const auto cid = 1u;
+  auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
   auto table_scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::OpGreaterThan, "456.7");
@@ -60,14 +59,15 @@ void OperatorsDeleteTest::helper(bool commit) {
   // Table has three rows initially.
   EXPECT_EQ(_table->approx_valid_row_count(), 3u);
 
-  auto expected_end_cid = cid;
+  auto expected_end_cid = CommitID{0u};
   if (commit) {
-    delete_op->commit_records(cid);
+    transaction_context->commit();
+    expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
     EXPECT_EQ(_table->approx_valid_row_count(), 1u);
   } else {
-    delete_op->rollback_records();
+    transaction_context->rollback();
     expected_end_cid = Chunk::MAX_COMMIT_ID;
 
     // Delete rolled back, three rows left.
