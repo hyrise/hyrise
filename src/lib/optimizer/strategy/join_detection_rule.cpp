@@ -16,6 +16,8 @@
 
 namespace opossum {
 
+std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
+
 bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   if (node->type() == ASTNodeType::Join) {
     // ... "potential"_cross_join_node until this if below

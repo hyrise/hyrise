@@ -109,6 +109,8 @@ set(
     optimizer/abstract_syntax_tree/insert_node.hpp
     optimizer/abstract_syntax_tree/limit_node.cpp
     optimizer/abstract_syntax_tree/limit_node.hpp
+    optimizer/abstract_syntax_tree/mock_table_node.cpp
+    optimizer/abstract_syntax_tree/mock_table_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
@@ -144,7 +146,6 @@ set(
     planviz/ast_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
-    polymorphic_allocator.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
@@ -237,6 +238,7 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
+    utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp

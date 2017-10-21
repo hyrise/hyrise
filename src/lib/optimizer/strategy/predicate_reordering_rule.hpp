@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "abstract_rule.hpp"
@@ -24,6 +25,7 @@ class PredicateNode;
  */
 class PredicateReorderingRule : public AbstractRule {
  public:
+  std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractASTNode>& node) override;
 
  private:
