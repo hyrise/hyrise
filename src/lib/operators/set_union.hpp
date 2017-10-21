@@ -72,9 +72,9 @@ namespace opossum {
  *  RowID{1, 0}
  *
  */
-class UnionUnique : public AbstractReadOnlyOperator {
+class SetUnion : public AbstractReadOnlyOperator {
  public:
-  UnionUnique(const std::shared_ptr<const AbstractOperator>& left,
+  SetUnion(const std::shared_ptr<const AbstractOperator>& left,
               const std::shared_ptr<const AbstractOperator>& right);
 
   uint8_t num_in_tables() const override;
@@ -86,7 +86,13 @@ class UnionUnique : public AbstractReadOnlyOperator {
  private:
   std::shared_ptr<const Table> _on_execute() override;
 
-  // Returning the referenced table from a "verify" function may seem odd, but eliminates the need to compute it twice
-  std::shared_ptr<const Table> _verify_input_and_get_referenced_table() const;
+  /**
+   * Makes sure the input data is valid for this operator (see implementation for details) and initializes
+   * _column_segment_begins and _referenced_tables
+   */
+  void _analyze_input();
+
+  std::vector<ColumnID> _column_segment_begins;
+  std::vector<std::shared_ptr<const Table>> _referenced_tables;
 };
 }  // namespace opossum

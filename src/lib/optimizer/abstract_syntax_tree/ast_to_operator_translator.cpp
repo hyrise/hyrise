@@ -20,7 +20,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "operators/union_unique.hpp"
+#include "operators/set_union.hpp"
 #include "operators/update.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
@@ -311,7 +311,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_union_node
 
   switch (union_node->union_mode()) {
     case UnionMode::Unique:
-      return std::make_shared<UnionUnique>(input_operator_left, input_operator_right);
+      return std::make_shared<SetUnion>(input_operator_left, input_operator_right);
       break;
     default:
       Fail("UnionMode not supported");

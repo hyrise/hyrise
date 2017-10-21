@@ -4,7 +4,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/union_unique.hpp"
+#include "operators/set_union.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -41,7 +41,7 @@ TEST_F(UnionUniqueTest, SelfUnionSimple) {
   ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 4u);
   ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 4u);
 
-  auto union_unique_op = std::make_shared<UnionUnique>(table_scan_a_op, table_scan_a_op);
+  auto union_unique_op = std::make_shared<SetUnion>(table_scan_a_op, table_scan_a_op);
   union_unique_op->execute();
 
   EXPECT_TABLE_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
@@ -57,7 +57,7 @@ TEST_F(UnionUniqueTest, SelfUnionExlusiveRanges) {
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, ScanType::OpLessThan, 10);
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, ScanType::OpGreaterThan, 200);
-  auto union_unique_op = std::make_shared<UnionUnique>(table_scan_a_op, table_scan_b_op);
+  auto union_unique_op = std::make_shared<SetUnion>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
@@ -75,7 +75,7 @@ TEST_F(UnionUniqueTest, SelfUnionOverlappingRanges) {
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, ScanType::OpGreaterThan, 20);
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, ScanType::OpLessThan, 100);
-  auto union_unique_op = std::make_shared<UnionUnique>(table_scan_a_op, table_scan_b_op);
+  auto union_unique_op = std::make_shared<SetUnion>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
@@ -93,7 +93,7 @@ TEST_F(UnionUniqueTest, SelfUnionOverlappingRangesMultipleColumns) {
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, ScanType::OpGreaterThan, 12345);
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{1}, ScanType::OpLessThan, 400.0);
-  auto union_unique_op = std::make_shared<UnionUnique>(table_scan_a_op, table_scan_b_op);
+  auto union_unique_op = std::make_shared<SetUnion>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
