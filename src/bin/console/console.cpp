@@ -227,7 +227,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   // Measure the plan compile time
@@ -488,7 +488,7 @@ int Console::visualize(const std::string& input) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     console.out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   if (mode == "ast" || mode == "astopt") {
