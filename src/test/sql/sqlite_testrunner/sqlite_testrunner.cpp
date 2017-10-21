@@ -13,8 +13,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "concurrency/transaction_manager.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
