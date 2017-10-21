@@ -51,7 +51,9 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
-std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const { return _transaction_context.lock(); }
+std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
+  return _transaction_context.lock();
+}
 
 void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
