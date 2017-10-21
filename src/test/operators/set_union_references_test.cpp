@@ -1,12 +1,13 @@
 #include <memory>
+#include <utility>
 
 #include "base_test.hpp"
 
 #include "operators/get_table.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/set_union_references.hpp"
 #include "operators/join_nested_loop_a.hpp"
 #include "operators/print.hpp"
+#include "operators/set_union_references.hpp"
+#include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -157,17 +158,16 @@ TEST_F(SetUnionTest, MultipleReferencedTables) {
    * Additionally check that Column 0 and 1 have the same pos list and that Column 2 and 3 have the same pos list to
    * make sure we're not creating redundant data.
    */
-  const auto get_pos_list = [](const auto & table, ColumnID column_id) {
+  const auto get_pos_list = [](const auto& table, ColumnID column_id) {
     const auto column = table->get_chunk(ChunkID{0}).get_column(column_id);
     const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
     return ref_column->pos_list();
   };
 
-  const auto &output = union_unique_op->get_output();
+  const auto& output = union_unique_op->get_output();
 
   EXPECT_EQ(get_pos_list(output, ColumnID{0}), get_pos_list(output, ColumnID{1}));
   EXPECT_EQ(get_pos_list(output, ColumnID{2}), get_pos_list(output, ColumnID{3}));
 }
-
 
 }  // namespace opossum

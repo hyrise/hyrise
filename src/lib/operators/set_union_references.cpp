@@ -1,9 +1,9 @@
 #include "set_union_references.hpp"
 
-#include <utility>
+#include <algorithm>
 #include <memory>
 #include <string>
-#include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "storage/chunk.hpp"
@@ -31,20 +31,19 @@ namespace {
 // See doc above
 using ColumnSegmentsRow = std::vector<opossum::RowID>;
 
-bool column_segments_row_cmp(const ColumnSegmentsRow& lhs, ColumnSegmentsRow & rhs) {
+bool column_segments_row_cmp(const ColumnSegmentsRow& lhs, ColumnSegmentsRow& rhs) {
   for (size_t segment_id = 0; segment_id < lhs.size(); ++segment_id) {
     if (lhs[segment_id] < rhs[segment_id]) return true;
     if (rhs[segment_id] < lhs[segment_id]) return false;
   }
   return false;
 }
-
-}
+}  // namespace
 
 namespace opossum {
 
 SetUnionReferences::SetUnionReferences(const std::shared_ptr<const AbstractOperator>& left,
-                         const std::shared_ptr<const AbstractOperator>& right)
+                                       const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
 uint8_t SetUnionReferences::num_in_tables() const { return 2; }
@@ -70,7 +69,7 @@ std::shared_ptr<const Table> SetUnionReferences::_on_execute() {
    */
   const auto add_column_segments_from_input_table = [&](const auto& input_table, auto& out_column_segments) {
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      const auto & chunk = input_table->get_chunk(ChunkID{chunk_id});
+      const auto& chunk = input_table->get_chunk(ChunkID{chunk_id});
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk.size(); ++chunk_offset) {
         ColumnSegmentsRow row;
@@ -104,8 +103,8 @@ std::shared_ptr<const Table> SetUnionReferences::_on_execute() {
   std::vector<ColumnSegmentsRow> merged_rows;
   merged_rows.reserve(_input_table_left()->row_count() + _input_table_right()->row_count());
 
-  std::set_union(column_segments_left.begin(), column_segments_left.end(),
-                 column_segments_right.begin(), column_segments_right.end(), std::back_inserter(merged_rows));
+  std::set_union(column_segments_left.begin(), column_segments_left.end(), column_segments_right.begin(),
+                 column_segments_right.end(), std::back_inserter(merged_rows));
 
   /**
    * Build result table
@@ -131,8 +130,9 @@ std::shared_ptr<const Table> SetUnionReferences::_on_execute() {
        * Create the output columns belonging to this segment
        */
       const auto segment_column_id_begin = _column_segment_begins[segment_id];
-      const auto segment_column_id_end = segment_id >= _column_segment_begins.size() - 1 ?
-                                         _input_table_left()->column_count() : _column_segment_begins[segment_id + 1];
+      const auto segment_column_id_end = segment_id >= _column_segment_begins.size() - 1
+                                             ? _input_table_left()->column_count()
+                                             : _column_segment_begins[segment_id + 1];
       for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
         auto ref_column = std::make_shared<ReferenceColumn>(_referenced_tables[segment_id],
                                                             _referenced_column_ids[column_id], segment_pos_list);
@@ -160,10 +160,10 @@ std::shared_ptr<const Table> SetUnionReferences::_analyze_input() {
    */
   for (ColumnID::base_type column_idx = 0; column_idx < _input_table_left()->column_count(); ++column_idx) {
     Assert(_input_table_left()->column_type(ColumnID{column_idx}) ==
-           _input_table_right()->column_type(ColumnID{column_idx}),
+               _input_table_right()->column_type(ColumnID{column_idx}),
            "Input tables must have the same layout. Column type mismatch.");
     Assert(_input_table_left()->column_name(ColumnID{column_idx}) ==
-           _input_table_right()->column_name(ColumnID{column_idx}),
+               _input_table_right()->column_name(ColumnID{column_idx}),
            "Input tables must have the same layout. Column name mismatch.");
   }
 
@@ -182,14 +182,14 @@ std::shared_ptr<const Table> SetUnionReferences::_analyze_input() {
    * Both tables must contain only ReferenceColumns
    */
   Assert(_input_table_left()->get_type() == TableType::References &&
-         _input_table_right()->get_type() == TableType::References,
+             _input_table_right()->get_type() == TableType::References,
          "SetUnionReferences doesn't support non-reference tables yet");
 
   /**
    * Identify the column segments (verification that this is the same for all chunks happens in the #if IS_DEBUG block
    * below)
    */
-  const auto add_column_segments = [&](const auto & table) {
+  const auto add_column_segments = [&](const auto& table) {
     auto current_pos_list = std::shared_ptr<const PosList>();
     const auto& first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -237,11 +237,11 @@ std::shared_ptr<const Table> SetUnionReferences::_analyze_input() {
    * Make sure all chunks have the same column segments and actually reference the tables and column_ids that the
    * segments in the first chunk of the left input table reference
    */
-  const auto verify_column_segments_in_all_chunks = [&] (const auto & table) {
+  const auto verify_column_segments_in_all_chunks = [&](const auto& table) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto current_pos_list = std::shared_ptr<const PosList>();
       size_t next_segment_id = 0;
-      const auto & chunk = table->get_chunk(chunk_id);
+      const auto& chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
         if (column_id == _column_segment_begins[next_segment_id]) {
           next_segment_id++;
@@ -257,13 +257,15 @@ std::shared_ptr<const Table> SetUnionReferences::_analyze_input() {
         }
 
         Assert(ref_column->referenced_table() == _referenced_tables[next_segment_id - 1],
-               "ReferenceColumn (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) + ") "
-                 "doesn't reference the same table as the column at the same index in the first chunk "
-                 "of the left input table does");
+               "ReferenceColumn (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
+                   ") "
+                   "doesn't reference the same table as the column at the same index in the first chunk "
+                   "of the left input table does");
         Assert(ref_column->referenced_column_id() == _referenced_column_ids[column_id],
-               "ReferenceColumn (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) + ")"
-                 " doesn't reference the same table as the column at the same index in the first chunk "
-                 "of the left input table does");
+               "ReferenceColumn (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
+                   ")"
+                   " doesn't reference the same table as the column at the same index in the first chunk "
+                   "of the left input table does");
         Assert(current_pos_list == pos_list, "Different PosLists in column segment");
       }
     }
