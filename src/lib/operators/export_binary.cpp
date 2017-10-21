@@ -68,8 +68,8 @@ void _export_values(std::ofstream& ofstream, const std::vector<std::string>& val
   _export_string_values(ofstream, values);
 }
 
-template <typename T, typename Alloc>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T, Alloc>& values) {
+template <typename T>
+void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<T>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<T>{values.begin(), values.end()};
   ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
