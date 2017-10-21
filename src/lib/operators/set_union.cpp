@@ -52,8 +52,7 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   /**
    * For each input, create one pos list from all chunks
    */
-
-  const auto add_column_segments_from_input_table = [](const auto& input_table, auto& out_column_segments) {
+  const auto add_column_segments_from_input_table = [&](const auto& input_table, auto& out_column_segments) {
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       const auto & chunk = input_table->get_chunk(ChunkID{chunk_id});
 
@@ -102,35 +101,34 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   for (size_t row_idx = 0; row_idx < merged_rows.size(); ) {
     Chunk out_chunk;
 
-    /**
-     * For each segment, create a pos list and add
-     */
-    for (size_t segment_id = 0; segment_id < _column_segment_begins; segment_id++) {
+    for (size_t segment_id = 0; segment_id < _column_segment_begins.size(); segment_id++) {
+      /**
+       * For each segment, create a pos list
+       */
       auto pos_list = std::make_shared<PosList>();
       pos_list->reserve(num_rows_per_chunk);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < num_rows_per_chunk; ++chunk_offset) {
+        pos_list->emplace_back(merged_rows[row_idx][segment_id]);
+        ++row_idx;
+      }
 
-      std::copy()
+      /**
+       * Create the columns belonging to this segment
+       */
+      const auto segment_column_id_begin = _column_segment_begins[segment_id];
+      const auto segment_column_id_end = segment_id >= _column_segment_begins.size() ?
+                                         _input_table_left()->column_count() : _column_segment_begins[segment_id];
+      for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
+        auto ref_column = std::make_shared<ReferenceColumn>(_referenced_tables[segment_id],
+                                                            _referenced_column_ids[segment_id], pos_list);
+        out_chunk.add_column(ref_column);
+      }
     }
 
+    out_table->add_chunk(std::move(out_chunk));
   }
 
-
-  Chunk result_chunk;
-
-  for (auto column_idx = ColumnID{0}; column_idx < _input_table_left()->col_count(); ++column_idx) {
-    const auto in_column = _input_table_left()->get_chunk(ChunkID{0}).get_column(ColumnID{column_idx});
-    const auto in_ref_column = std::dynamic_pointer_cast<ReferenceColumn>(in_column);
-
-    auto out_column_id = in_ref_column->referenced_column_id();
-    auto out_ref_column = std::make_shared<ReferenceColumn>(referenced_table, out_column_id, out_pos_list);
-
-    result_chunk.add_column(out_ref_column);
-  }
-
-  auto result_table = Table::create_with_layout_from(_input_table_left(), 0);
-  result_table->emplace_chunk(std::move(result_chunk));
-
-  return result_table;
+  return out_table;
 }
 
 void SetUnion::_analyze_input() {
@@ -188,13 +186,14 @@ void SetUnion::_analyze_input() {
   std::unique(_column_segment_begins.begin(), _column_segment_begins.end());
 
   /**
-   * Identify the tables referenced in each column segment
+   * Identify the tables/columns referenced in each column segment
    */
   const auto& first_chunk_left = _input_table_left()->get_chunk(ChunkID{0});
   for (const auto& segment_begin : _column_segment_begins) {
     const auto column = first_chunk_left.get_column(segment_begin);
     const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
     _referenced_tables.emplace_back(ref_column->referenced_table());
+    _referenced_column_ids.emplace_back(ref_column->referenced_column_id());
   }
 
 
@@ -223,6 +222,9 @@ void SetUnion::_analyze_input() {
         }
 
         Assert(ref_column->referenced_table() == _referenced_tables[next_segment_id - 1],
+               "ReferenceColumn doesn't reference the same table as the column at the same index in the first chunk"
+                 "of the left input table does");
+        Assert(ref_column->referenced_column_id() == _referenced_column_ids[next_segment_id - 1],
                "ReferenceColumn doesn't reference the same table as the column at the same index in the first chunk"
                  "of the left input table does");
         Assert(current_pos_list == pos_list, "Different PosLists in column segment");

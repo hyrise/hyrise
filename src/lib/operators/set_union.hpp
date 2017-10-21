@@ -94,5 +94,6 @@ class SetUnion : public AbstractReadOnlyOperator {
 
   std::vector<ColumnID> _column_segment_begins;
   std::vector<std::shared_ptr<const Table>> _referenced_tables;
+  std::vector<ColumnID> _referenced_column_ids;
 };
 }  // namespace opossum
