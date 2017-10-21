@@ -31,7 +31,6 @@ void AbstractOperator::execute() {
 
 // returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  DebugAssert(_output, "Either execute() wasn't called or the Operator doesn't produce an output");
   DebugAssert(
       [&]() {
         if (_output == nullptr) return true;

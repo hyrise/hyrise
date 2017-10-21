@@ -310,7 +310,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_union_node
   const auto input_operator_right = translate_node(node->right_child());
 
   switch (union_node->union_mode()) {
-    case UnionMode::SetUnion:
+    case UnionMode::SetUnionReferences:
       return std::make_shared<SetUnionReferences>(input_operator_left, input_operator_right);
       break;
     default:
