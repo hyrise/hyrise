@@ -16,9 +16,11 @@ AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>
 void AbstractOperator::execute() {
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (_transaction_context) _transaction_context->on_operator_started();
-  _output = _on_execute(_transaction_context);
-  if (_transaction_context) _transaction_context->on_operator_finished();
+  auto transaction_context = this->transaction_context();
+
+  if (transaction_context) transaction_context->on_operator_started();
+  _output = _on_execute(transaction_context);
+  if (transaction_context) transaction_context->on_operator_finished();
 
   // release any temporary data if possible
   _on_cleanup();
@@ -49,13 +51,13 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
-std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const { return _transaction_context; }
+std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const { return _transaction_context.lock(); }
 
-void AbstractOperator::set_transaction_context(std::shared_ptr<TransactionContext> transaction_context) {
+void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
 }
 
-void AbstractOperator::set_transaction_context_recursively(std::shared_ptr<TransactionContext> transaction_context) {
+void AbstractOperator::set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context) {
   set_transaction_context(transaction_context);
 
   if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);

@@ -16,7 +16,7 @@ std::shared_ptr<AbstractOperator> AbstractReadWriteOperator::recreate(
 }
 
 void AbstractReadWriteOperator::execute() {
-  Assert(static_cast<bool>(_transaction_context),
+  Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
 
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
