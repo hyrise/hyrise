@@ -45,12 +45,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
 
   const auto _in_table = _input_table_left();
-  auto output = std::make_shared<Table>();
-
-  // Save column structure.
-  for (ColumnID column_id{0}; column_id < _in_table->column_count(); ++column_id) {
-    output->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
-  }
+  auto output = Table::create_with_layout_from(_in_table);
 
   const auto our_tid = transaction_context->transaction_id();
   const auto our_lcid = transaction_context->last_commit_id();

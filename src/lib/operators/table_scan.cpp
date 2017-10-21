@@ -91,7 +91,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   _in_table = _input_table_left();
 
   _init_scan();
-  _init_output_table();
+
+  _output_table = Table::create_with_layout_from(_in_table);
 
   std::mutex output_mutex;
 
@@ -204,14 +205,6 @@ void TableScan::_init_scan() {
     const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
     _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _scan_type, right_column_id);
-  }
-}
-
-void TableScan::_init_output_table() {
-  _output_table = std::make_shared<Table>();
-
-  for (ColumnID column_id{0}; column_id < _in_table->column_count(); ++column_id) {
-    _output_table->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 }
 

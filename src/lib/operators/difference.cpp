@@ -21,20 +21,19 @@ uint8_t Difference::num_in_tables() const { return 2; }
 uint8_t Difference::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> Difference::_on_execute() {
-  auto output = std::make_shared<Table>();
+  auto output = Table::create_with_layout_from(_input_table_left());
 
   // checking if input meets preconditions
   DebugAssert((_input_table_left()->column_count() == _input_table_right()->column_count()),
               "Input tables must have same number of columns");
 
-  // copy column definition from _input_table_left() to output table
+#if IS_DEBUG
+  // Assert column definitions in both inputs are the same
   for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    auto& column_type = _input_table_left()->column_type(column_id);
-    DebugAssert((column_type == _input_table_right()->column_type(column_id)),
+    DebugAssert(_input_table_left()->column_type(column_id) == _input_table_right()->column_type(column_id),
                 "Input tables must have same column order and column types");
-    // add column definition to output table
-    output->add_column_definition(_input_table_left()->column_name(column_id), column_type);
   }
+#endif
 
   // 1. We create a set of all right input rows as concatenated strings.
 

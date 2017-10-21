@@ -19,7 +19,6 @@ enum class ASTNodeType {
   Insert,
   Join,
   Limit,
-  Mock,
   Predicate,
   Projection,
   Root,

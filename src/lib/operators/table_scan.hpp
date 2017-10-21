@@ -41,7 +41,6 @@ class TableScan : public AbstractReadOnlyOperator {
   void _on_cleanup() override;
 
   void _init_scan();
-  void _init_output_table();
 
   // TODO(anyone): This is only a very temporary solution! Whoever reads this first must replace it.
   std::shared_ptr<const Table> __on_execute_between();

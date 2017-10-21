@@ -21,12 +21,12 @@ std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<cons
                                                       const uint32_t chunk_size) {
   auto new_table = std::make_shared<Table>(chunk_size);
 
-  for (ColumnID::base_type column_idx = 0; column_idx < in_table->col_count(); ++column_idx) {
+  for (ColumnID::base_type column_idx = 0; column_idx < in_table->column_count(); ++column_idx) {
     const auto type = in_table->column_type(ColumnID{column_idx});
     const auto name = in_table->column_name(ColumnID{column_idx});
     const auto is_nullable = in_table->column_is_nullable(ColumnID{column_idx});
 
-    new_table->add_column(name, type, is_nullable);
+    new_table->add_column_definition(name, type, is_nullable);
   }
 
   return new_table;
@@ -147,19 +147,19 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_
 
 TableType Table::get_type() const {
   // Cannot answer this if the table has no content
-  Assert(!_chunks.empty() && col_count() > 0, "Table has no content, can't specify type");
+  Assert(!_chunks.empty() && column_count() > 0, "Table has no content, can't specify type");
 
   // We assume if one column is a reference column, all are.
   const auto column = _chunks[0].get_column(ColumnID{0});
-  const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
+  const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
 
   if (ref_column != nullptr) {
 // In debug mode we're pedantic and check whether all columns in all chunks are Reference Columns
 #if IS_DEBUG
-    for (ChunkID::base_type chunk_idx = 0; chunk_idx < chunk_count(); ++chunk_idx) {
-      for (ColumnID::base_type column_idx = 0; column_idx < col_count(); ++column_idx) {
+    for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
+      for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
         const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
-        const auto ref_column2 = std::dynamic_pointer_cast<ReferenceColumn>(column);
+        const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
         DebugAssert(ref_column2 != nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
       }
     }
@@ -168,15 +168,15 @@ TableType Table::get_type() const {
   } else {
 // In debug mode we're pedantic and check whether all columns in all chunks are Value/Dict Columns
 #if IS_DEBUG
-    for (ChunkID::base_type chunk_idx = 0; chunk_idx < chunk_count(); ++chunk_idx) {
-      for (ColumnID::base_type column_idx = 0; column_idx < col_count(); ++column_idx) {
+    for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
+      for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
         const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
-        const auto ref_column2 = std::dynamic_pointer_cast<ReferenceColumn>(column);
+        const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
         DebugAssert(ref_column2 == nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
       }
     }
 #endif
-    return TableType::Values;
+    return TableType::Data;
   }
 }
 

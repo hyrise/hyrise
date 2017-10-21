@@ -29,11 +29,7 @@ size_t Limit::num_rows() const { return _num_rows; }
 std::shared_ptr<const Table> Limit::_on_execute() {
   const auto input_table = _input_table_left();
 
-  // Create output table and column layout.
-  auto output_table = std::make_shared<Table>();
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
-    output_table->add_column_definition(input_table->column_name(column_id), input_table->column_type(column_id));
-  }
+  auto output_table = Table::create_with_layout_from(input_table);
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < _num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
