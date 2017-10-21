@@ -36,7 +36,7 @@ class Table : private Noncopyable {
   Table& operator=(Table&&) = default;
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t col_count() const;
+  uint16_t column_count() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -102,6 +102,8 @@ class Table : private Noncopyable {
   template <typename T>
   T get_value(const ColumnID column_id, const size_t row_number) const {
     PerformanceWarning("get_value() used");
+
+    Assert(column_id < column_count(), "column_id invalid");
 
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {

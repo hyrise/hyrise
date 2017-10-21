@@ -58,7 +58,7 @@ class BaseIndex : private Noncopyable {
    * The index is NOT considerd to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
+  bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
     auto index_columns = _get_index_columns();
     if (columns.size() > index_columns.size()) return false;
     if (columns.empty()) return false;
@@ -132,6 +132,6 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const = 0;
+  virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
 };
 }  // namespace opossum

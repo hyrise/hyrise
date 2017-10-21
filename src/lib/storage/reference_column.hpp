@@ -32,11 +32,11 @@ class ReferenceColumn : public BaseColumn {
   // return generated vector of all values
   template <typename T>
   const pmr_concurrent_vector<T> materialize_values() const {
-    pmr_concurrent_vector<T> values(_pos_list->get_allocator());
+    pmr_concurrent_vector<T> values;
     values.reserve(_pos_list->size());
 
-    std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
-    std::map<ChunkID, std::shared_ptr<DictionaryColumn<T>>> dict_columns;
+    std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> value_columns;
+    std::map<ChunkID, std::shared_ptr<const DictionaryColumn<T>>> dict_columns;
 
     for (const RowID& row : *_pos_list) {
       auto search = value_columns.find(row.chunk_id);
@@ -51,20 +51,20 @@ class ReferenceColumn : public BaseColumn {
       }
 
       auto& chunk = _referenced_table->get_chunk(row.chunk_id);
-      std::shared_ptr<BaseColumn> column = chunk.get_column(_referenced_column_id);
+      std::shared_ptr<const BaseColumn> column = chunk.get_column(_referenced_column_id);
 
-      if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
+      if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
         value_columns[row.chunk_id] = value_column;
         values.push_back(value_column->get(row.chunk_offset));
         continue;
       }
 
-      if (auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(column)) {
+      if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
         dict_columns[row.chunk_id] = dict_column;
         values.push_back(dict_column->get(row.chunk_offset));
         continue;
       }
-      Fail("column is no dictonary or value column");
+      Fail("column is no dictionary or value column");
     }
 
     return values;
@@ -78,13 +78,13 @@ class ReferenceColumn : public BaseColumn {
   ColumnID referenced_column_id() const;
 
   // visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override;
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   // writes the length and value at the chunk_offset to the end off row_string
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
 
   template <typename ContextClass>
-  void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) {
+  void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
     /*
     The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
     One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}

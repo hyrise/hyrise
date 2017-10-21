@@ -68,8 +68,8 @@ void _export_values(std::ofstream& ofstream, const std::vector<std::string>& val
   _export_string_values(ofstream, values);
 }
 
-template <typename T, typename Alloc>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T, Alloc>& values) {
+template <typename T>
+void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<T>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<T>{values.begin(), values.end()};
   ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
@@ -118,13 +118,13 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   _export_value(ofstream, static_cast<ChunkOffset>(table->chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
-  _export_value(ofstream, static_cast<ColumnID>(table->col_count()));
+  _export_value(ofstream, static_cast<ColumnID>(table->column_count()));
 
-  std::vector<std::string> column_types(table->col_count());
-  std::vector<std::string> column_names(table->col_count());
+  std::vector<std::string> column_types(table->column_count());
+  std::vector<std::string> column_names(table->column_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     column_types[column_id] = table->column_type(column_id);
     column_names[column_id] = table->column_name(column_id);
   }
@@ -140,17 +140,17 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));
 
   // Iterating over all columns of this chunk and exporting them
-  for (ColumnID col_id{0}; col_id < chunk.col_count(); col_id++) {
+  for (ColumnID col_id{0}; col_id < chunk.column_count(); col_id++) {
     auto visitor = make_unique_by_column_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
     chunk.get_column(col_id)->visit(*visitor, context);
   }
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(BaseColumn& base_column,
+void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(const BaseValueColumn& base_column,
                                                                std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<ValueColumn<T>&>(base_column);
+  const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
   _export_value(context->ofstream, BinaryColumnType::value_column);
   _export_values(context->ofstream, column.values());
@@ -158,7 +158,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(BaseColumn& base_
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_reference_column(
-    ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -174,7 +174,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_reference_column(
 // handle_reference_column implementation for string columns
 template <>
 void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
-    ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -200,9 +200,9 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
-    BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const BaseDictionaryColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
+  const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
 
   _export_value(context->ofstream, BinaryColumnType::dictionary_column);
   _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(column.attribute_vector()->width()));

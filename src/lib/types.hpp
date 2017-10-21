@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -9,7 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include "polymorphic_allocator.hpp"
 #include "strong_typedef.hpp"
 
 /**
@@ -47,10 +47,28 @@ namespace opossum {
  */
 
 template <typename T>
-using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
 template <typename T>
-using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+
+// We are not using PMR here because of the problems described in #281.
+// Short version: The current TBB breaks with it, because it needs rebind.
+// Once that works, replace the class below with
+// using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
+template <typename T>
+class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
+ public:
+  pmr_concurrent_vector(PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, alloc) {}  // NOLINT
+  pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, T{}, alloc) {}  // NOLINT
+  pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {}) : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}  // NOLINT
+  pmr_concurrent_vector(tbb::concurrent_vector<T> other) : tbb::concurrent_vector<T>(other) {}  // NOLINT
+
+  PolymorphicAllocator<T>& get_allocator() { return _alloc; }
+
+ protected:
+  PolymorphicAllocator<T> _alloc;
+};
 
 using ChunkOffset = uint32_t;
 

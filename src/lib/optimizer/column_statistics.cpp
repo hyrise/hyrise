@@ -89,12 +89,12 @@ void ColumnStatistics<ColumnType>::_initialize_min_max() const {
 
   auto aggregate_table = aggregate->get_output();
 
-  auto min_column =
-      std::static_pointer_cast<ValueColumn<ColumnType>>(aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+  auto min_column = std::static_pointer_cast<const ValueColumn<ColumnType>>(
+      aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
   _min = min_column->values()[0];
 
-  auto max_column =
-      std::static_pointer_cast<ValueColumn<ColumnType>>(aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{1}));
+  auto max_column = std::static_pointer_cast<const ValueColumn<ColumnType>>(
+      aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{1}));
   _max = max_column->values()[0];
 }
 

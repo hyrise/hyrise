@@ -6,15 +6,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_read_only_operator.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/print.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -204,17 +204,17 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
 TEST_F(OperatorsProjectionTest, ValueColumnCount) {
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, _a_b_expr);
   projection_1->execute();
-  EXPECT_EQ(projection_1->get_output()->col_count(), (u_int)2);
+  EXPECT_EQ(projection_1->get_output()->column_count(), (u_int)2);
   EXPECT_EQ(projection_1->get_output()->row_count(), (u_int)3);
 
   auto projection_2 = std::make_shared<opossum::Projection>(_table_wrapper, _b_expr);
   projection_2->execute();
-  EXPECT_EQ(projection_2->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_2->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_2->get_output()->row_count(), (u_int)3);
 
   auto projection_3 = std::make_shared<opossum::Projection>(_table_wrapper, _a_expr);
   projection_3->execute();
-  EXPECT_EQ(projection_3->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_3->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_3->get_output()->row_count(), (u_int)3);
 }
 
@@ -225,17 +225,17 @@ TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
 
   auto projection_1 = std::make_shared<opossum::Projection>(scan, _a_b_expr);
   projection_1->execute();
-  EXPECT_EQ(projection_1->get_output()->col_count(), (u_int)2);
+  EXPECT_EQ(projection_1->get_output()->column_count(), (u_int)2);
   EXPECT_EQ(projection_1->get_output()->row_count(), (u_int)1);
 
   auto projection_2 = std::make_shared<opossum::Projection>(scan, _a_expr);
   projection_2->execute();
-  EXPECT_EQ(projection_2->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_2->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_2->get_output()->row_count(), (u_int)1);
 
   auto projection_3 = std::make_shared<opossum::Projection>(scan, _b_expr);
   projection_3->execute();
-  EXPECT_EQ(projection_3->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection_3->get_output()->column_count(), (u_int)1);
   EXPECT_EQ(projection_3->get_output()->row_count(), (u_int)1);
 }
 

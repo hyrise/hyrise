@@ -5,15 +5,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/concurrency/transaction_manager.hpp"
-#include "../../lib/operators/commit_records.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/update.hpp"
-#include "../../lib/operators/validate.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "concurrency/transaction_manager.hpp"
+#include "operators/commit_records.hpp"
+#include "operators/get_table.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/update.hpp"
+#include "operators/validate.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
