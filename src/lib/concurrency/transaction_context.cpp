@@ -31,10 +31,11 @@ TransactionContext::~TransactionContext() {
     return (!an_operator_failed || is_rolled_back);
   }()), "A registered operator failed but transaction has been rolled back.");
 
-  const auto has_registered_operators = _rw_operators.size() > 0u;
-  const auto committed_or_rolled_back = _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
-  DebugAssert(!has_registered_operators || committed_or_rolled_back,
-              "Has registered operators but has neither been committed nor rolled back.");
+  DebugAssert(([this]() {
+    const auto has_registered_operators = _rw_operators.size() > 0u;
+    const auto committed_or_rolled_back = _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
+    return !has_registered_operators || committed_or_rolled_back;
+  }()), "Has registered operators but has neither been committed nor rolled back.");
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
