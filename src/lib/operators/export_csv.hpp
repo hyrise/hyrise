@@ -64,24 +64,24 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *  a,b,c
    *  1,"Hallo Welt",3.5
    *  102,"Du sagtest:""Hi!""",4.0
-   *  NULL,"Kekse",5.0
+   *  ,"Kekse",5.0
    *
    *  example.csv.meta:
    *
    *  "PropertyType","Key","Value"
    *  "ChunkSize",,100
-   *  "NullableColumnType","a","int"
+   *  "ColumnType","a","int_null"
    *  "ColumnType","b","string"
    *  "ColumnType","c","float"
    *
    *  which resembles the following table of meta data:
    *
-   *  PropertyType       | Key | Value
-   *  ---------------------------------
-   *  ChunkSize          |     | 100
-   *  NullableColumnType |  a  | int
-   *  ColumnType         |  b  | string
-   *  ColumnType         |  c  | float
+   *  PropertyType  | Key | Value
+   *  ------------------------------
+   *  ChunkSize     |     | 100
+   *  ColumnType    |  a  | int_null
+   *  ColumnType    |  b  | string
+   *  ColumnType    |  c  | float
    *
    *  Returns the input table
    */
