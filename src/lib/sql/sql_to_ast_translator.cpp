@@ -257,6 +257,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   DebugAssert(select.selectList != nullptr, "SELECT list needs to exist");
   DebugAssert(!select.selectList->empty(), "SELECT list needs to have entries");
 
+  current_result_node = _validate_if_active(current_result_node);
+
   // If the query has a GROUP BY clause or if it has aggregates, we do not need a top-level projection
   // because all elements must either be aggregate functions or columns of the GROUP BY clause,
   // so the Aggregate operator will handle them.
@@ -282,8 +284,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
-
-  current_result_node = _validate_if_active(current_result_node);
 
   // TODO(anybody): Translate TOP.
   if (select.limit != nullptr) {
@@ -838,10 +838,36 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_if_active(
     const std::shared_ptr<AbstractASTNode>& input_node) {
   if (!_validate) return input_node;
+  if (_is_validated(input_node)) return input_node;
 
   auto validate_node = std::make_shared<ValidateNode>();
   validate_node->set_left_child(input_node);
   return validate_node;
+}
+
+bool SQLToASTTranslator::_is_validated(const std::shared_ptr<AbstractASTNode>& input_node) {
+  const auto left_child = input_node->left_child();
+  const auto right_child = input_node->right_child();
+
+  if (input_node->type() == ASTNodeType::Validate) {
+    return true;
+  }
+
+  if (!left_child && !right_child) {
+    return false;
+  }
+
+  auto is_validated = true;
+
+  if (left_child) {
+    is_validated &= _is_validated(left_child);
+  }
+
+  if (right_child) {
+    is_validated &= _is_validated(right_child);
+  }
+
+  return is_validated;
 }
 
 }  // namespace opossum

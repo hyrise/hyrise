@@ -65,9 +65,10 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
     // If the columns in this chunk reference a column, build a poslist for a reference column.
     if (ref_col_in) {
-      // TODO(mjendruk): Fix this!
-      DebugAssert(chunk_in.references_only_one_table(),
-                  "Input to Validate contains a Chunk referencing more than one table.");
+      if (!chunk_in.references_only_one_table()) {
+        // TODO(anyone): Implement validation of tables referencing multiple tables (i.e. coming from joins).
+        return _in_table;
+      }
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();

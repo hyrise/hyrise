@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_manager.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -84,6 +85,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
 
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
     }
+    tx_context->commit();
 
     auto result_table = plan.tree_roots().back()->get_output();
     auto sqlite_result_table = _sqlite->execute_query(query);
