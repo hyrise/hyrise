@@ -58,35 +58,24 @@ To configure a build directory for a release build make sure it is empty and cal
 ### Test
 Calling `make hyriseTest` from the build directory builds all available tests.
 The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
-Note, that the tests/asan/etc need to be executed from the project root in order for table-files to be found.
+Note, that the tests/sanitizers/etc need to be executed from the project root in order for table files to be found.
 
 ### Coverage
 `./scripts/coverage.sh <build dir>` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
 *Supports only clang on MacOS and only gcc on linux*
 
-### AddressSanitizer
-`make hyriseAsan` will build Hyrise with enabled AddressSanitizer and Undefined Behavior options and execute all available tests.
+### Address/UndefinedBehavior Sanitizers
+`make hyriseSanitizers` will build Hyrise's tests with enabled AddressSanitizer and Undefined Behavior options. Execute `./<YourBuildDirectory>/hyriseSanitizers` from the project root to run the tests with enabled sanitization.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
-The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseAsan`.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseSanitizers`.
 
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
-
-## Naming convention for gtest macros:
-
-TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
-same for fixtures Test_F()
-
-If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
-
-- Testing the storage module: `./build/test --gtest_filter="Storage*"`
-- Testing the table class: `./build/test --gtest_filter="StorageTableTest*"`
-- Testing the RowCount test: `./build/test --gtest_filter="StorageTableTest.RowCount"`
 
 ## Maintainers
 
