@@ -2,8 +2,8 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <memory>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -34,12 +34,12 @@ void ChunkMigrationTask::_on_execute() {
 
     // TODO(normanrz): Remove debug output
     std::cout << "Starting migration " << _table_name << " " << chunk_id << std::endl;
-    chunk.migrate(NUMAPlacementManager::get()->get_memsource(_target_node_id));
+    chunk.migrate(NUMAPlacementManager::get()->get_memory_resource(_target_node_id));
     std::cout << "Completed migration " << _table_name << " " << chunk_id << std::endl;
   }
 }
 
-static bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
+bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
   if (chunk.size() != max_chunk_size) return false;
 
   if (chunk.has_mvcc_columns()) {

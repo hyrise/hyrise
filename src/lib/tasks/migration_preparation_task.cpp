@@ -1,6 +1,6 @@
 #include "migration_preparation_task.hpp"
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 
 #include <numa.h>
 #include <algorithm>
@@ -115,15 +115,17 @@ NodeInfoSet find_hot_nodes(const std::vector<double>& node_chunk) {
     }
   }
 
-  std::sort(hot_nodes.begin(), hot_nodes.end(),
-            [&node_temperature](const auto& a, const auto& b) { return node_temperature.at(a) < node_temperature.at(b); });
-  std::sort(cold_nodes.begin(), cold_nodes.end(),
-            [&node_temperature](const auto& a, const auto& b) { return node_temperature.at(a) < node_temperature.at(b); });
+  std::sort(hot_nodes.begin(), hot_nodes.end(), [&node_temperature](const auto& a, const auto& b) {
+    return node_temperature.at(a) < node_temperature.at(b);
+  });
+  std::sort(cold_nodes.begin(), cold_nodes.end(), [&node_temperature](const auto& a, const auto& b) {
+    return node_temperature.at(a) < node_temperature.at(b);
+  });
 
-  return {.imbalance = inverted_entropy(node_chunk),
-          .node_temperature = node_temperature,
-          .hot_nodes = hot_nodes,
-          .cold_nodes = cold_nodes};
+  return {/* .imbalance = */ inverted_entropy(node_chunk),
+          /* .node_temperature = */ node_temperature,
+          /* .hot_nodes = */ hot_nodes,
+          /* .cold_nodes = */ cold_nodes};
 }
 
 // TODO(normanrz): Comment
@@ -157,11 +159,11 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, co
       if (ChunkMigrationTask::chunk_is_completed(chunk, table.chunk_size()) && chunk.has_access_counter()) {
         const double temperature = static_cast<double>(chunk.access_counter()->history_sample(lookback_samples));
         sum_temperature += temperature;
-        chunk_infos.emplace_back(ChunkInfo{.table_name = table_name,
-                                           .id = i,
-                                           .node = get_node_id(chunk.get_allocator()),
-                                           .byte_size = chunk.byte_size(),
-                                           .temperature = temperature});
+        chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,
+                                           /* .id = */ i,
+                                           /* .node = */ get_node_id(chunk.get_allocator()),
+                                           /* .byte_size = */ chunk.byte_size(),
+                                           /* .temperature = */ temperature});
       }
     }
   }
@@ -210,8 +212,8 @@ void MigrationPreparationTask::_on_execute() {
 
     for (const auto& migration_chunk : migration_candidates) {
       const auto target_node = hot_nodes.cold_nodes.at(chunk_counter % hot_nodes.cold_nodes.size());
-      const auto task =
-          std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, {migration_chunk.id}, target_node);
+      const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
+                                                             std::vector<ChunkID>({migration_chunk.id}), target_node);
       // TODO(normanrz): Remove
       std::cout << "Migrating " << migration_chunk.table_name << " (" << migration_chunk.id << ") "
                 << migration_chunk.node << " -> " << target_node << std::endl;

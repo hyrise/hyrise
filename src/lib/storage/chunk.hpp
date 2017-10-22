@@ -2,12 +2,12 @@
 
 // the linter wants this to be above everything else
 #include <shared_mutex>
+#include <experimental/memory_resource>
 
 #include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
-#include <experimental/memory_resource>
 
 #include "tbb/concurrent_vector.h"
 

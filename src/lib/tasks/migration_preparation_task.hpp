@@ -1,6 +1,6 @@
 #pragma once
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 
 #include <chrono>
 
