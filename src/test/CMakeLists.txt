@@ -36,7 +36,7 @@ set(
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp
     operators/union_all_test.cpp
-    operators/set_union_references_test.cpp
+        operators/set_union_test.cpp
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
