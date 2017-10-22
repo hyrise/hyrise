@@ -65,9 +65,9 @@ namespace opossum {
  *    RowID{1, 0}
  *
  */
-class SetUnionReferences : public AbstractReadOnlyOperator {
+class SetUnion : public AbstractReadOnlyOperator {
  public:
-  SetUnionReferences(const std::shared_ptr<const AbstractOperator>& left,
+  SetUnion(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right);
 
   uint8_t num_in_tables() const override;

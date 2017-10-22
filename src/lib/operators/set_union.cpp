@@ -1,4 +1,4 @@
-#include "set_union_references.hpp"
+#include "set_union.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -42,23 +42,23 @@ bool column_segments_row_cmp(const ColumnSegmentsRow& lhs, ColumnSegmentsRow& rh
 
 namespace opossum {
 
-SetUnionReferences::SetUnionReferences(const std::shared_ptr<const AbstractOperator>& left,
+SetUnion::SetUnion(const std::shared_ptr<const AbstractOperator>& left,
                                        const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
-uint8_t SetUnionReferences::num_in_tables() const { return 2; }
+uint8_t SetUnion::num_in_tables() const { return 2; }
 
-uint8_t SetUnionReferences::num_out_tables() const { return 1; }
+uint8_t SetUnion::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> SetUnionReferences::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<SetUnionReferences>(input_left()->recreate(args), input_right()->recreate(args));
+std::shared_ptr<AbstractOperator> SetUnion::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<SetUnion>(input_left()->recreate(args), input_right()->recreate(args));
 }
 
-const std::string SetUnionReferences::name() const { return "SetUnionReferences"; }
+const std::string SetUnion::name() const { return "SetUnion"; }
 
-const std::string SetUnionReferences::description() const { return "SetUnionReferences"; }
+const std::string SetUnion::description() const { return "SetUnion"; }
 
-std::shared_ptr<const Table> SetUnionReferences::_on_execute() {
+std::shared_ptr<const Table> SetUnion::_on_execute() {
   const auto early_result = _analyze_input();
   if (early_result) {
     return early_result;
@@ -146,7 +146,7 @@ std::shared_ptr<const Table> SetUnionReferences::_on_execute() {
   return out_table;
 }
 
-std::shared_ptr<const Table> SetUnionReferences::_analyze_input() {
+std::shared_ptr<const Table> SetUnion::_analyze_input() {
   Assert(_input_table_left()->column_count() == _input_table_right()->column_count(),
          "Input tables must have the same layout. Column count mismatch.");
 
@@ -183,7 +183,7 @@ std::shared_ptr<const Table> SetUnionReferences::_analyze_input() {
    */
   Assert(_input_table_left()->get_type() == TableType::References &&
              _input_table_right()->get_type() == TableType::References,
-         "SetUnionReferences doesn't support non-reference tables yet");
+         "SetUnion doesn't support non-reference tables yet");
 
   /**
    * Identify the column segments (verification that this is the same for all chunks happens in the #if IS_DEBUG block
