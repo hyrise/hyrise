@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "chunk_migration_task.hpp"
-#include "polymorphic_allocator.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"

@@ -2,8 +2,8 @@
 
 #include "numa_placement_manager.hpp"
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <numa.h>
+#include <boost/container/pmr/memory_resource.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -11,7 +11,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-
 
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"

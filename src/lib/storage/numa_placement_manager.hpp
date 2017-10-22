@@ -8,9 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "polymorphic_allocator.hpp"
 #include "scheduler/topology.hpp"
-
 #include "utils/numa_memory_resource.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
