@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "types.hpp"
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
+#include "types.hpp"
 
 #include "storage/dictionary_column.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"

@@ -2,10 +2,8 @@
 
 #include "numa_placement_manager.hpp"
 
+#include <boost/container/pmr/memory_resource.hpp>
 #include <numa.h>
-
-// the linter wants this to be above everything else
-#include <experimental/memory_resource>
 
 #include <algorithm>
 #include <chrono>
@@ -13,6 +11,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+
 
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
@@ -51,7 +50,7 @@ NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topol
   });
 }
 
-std::experimental::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
+boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
   DebugAssert(node_id >= 0 && node_id < static_cast<int>(_topology->nodes().size()), "node_id is out of bounds");
   return &_memory_resources[static_cast<size_t>(node_id)];
 }

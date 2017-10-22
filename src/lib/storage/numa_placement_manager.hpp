@@ -2,8 +2,7 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-// the linter wants this to be above everything else
-#include <experimental/memory_resource>
+#include <boost/container/pmr/memory_resource.hpp>
 
 #include <chrono>
 #include <memory>
@@ -37,7 +36,7 @@ class NUMAPlacementManager {
 
   explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology, const Options options);
 
-  std::experimental::pmr::memory_resource* get_memory_resource(int node_id);
+  boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
   const std::shared_ptr<Topology>& topology() const;
 

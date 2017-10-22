@@ -157,7 +157,7 @@ bool Chunk::references_only_one_table() const {
   return true;
 }
 
-void Chunk::migrate(std::experimental::pmr::memory_resource* memsource) {
+void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
   if (_indices.size() > 0) {
     Fail("Cannot copy Chunk with Indices.");
   }

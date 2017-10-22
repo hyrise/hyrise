@@ -1,15 +1,15 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>
+#include <boost/container/pmr/memory_resource.hpp>
+
 // the linter wants this to be above everything else
 #include <shared_mutex>
-#include <experimental/memory_resource>
 
 #include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "tbb/concurrent_vector.h"
 
 #include "copyable_atomic.hpp"
 #include "scoped_locking_ptr.hpp"
@@ -174,7 +174,7 @@ class Chunk : private Noncopyable {
     return index;
   }
 
-  void migrate(std::experimental::pmr::memory_resource* alloc);
+  void migrate(boost::container::pmr::memory_resource* alloc);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
 
