@@ -8,6 +8,7 @@
 #include "operators/print.hpp"
 #include "operators/set_union.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -18,13 +19,15 @@ class SetUnionTest : public BaseTest {
     _table_10_ints = load_table("src/test/tables/10_ints.tbl", 3);
     StorageManager::get().add_table("10_ints", _table_10_ints);
 
-    StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 3));
+    _table_int_float4 = load_table("src/test/tables/int_float4.tbl", 3);
+    StorageManager::get().add_table("int_float4", _table_int_float4);
     StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl", 2));
   }
 
   void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<Table> _table_10_ints;
+  std::shared_ptr<Table> _table_int_float4;
 };
 
 TEST_F(SetUnionTest, SelfUnionSimple) {
@@ -169,5 +172,115 @@ TEST_F(SetUnionTest, MultipleReferencedTables) {
   EXPECT_EQ(get_pos_list(output, ColumnID{0}), get_pos_list(output, ColumnID{1}));
   EXPECT_EQ(get_pos_list(output, ColumnID{2}), get_pos_list(output, ColumnID{3}));
 }
+
+TEST_F(SetUnionTest, MultipleShuffledPosList) {
+  /**
+   * Test SetUnion on Tables with multiple shuffled poslists and columns sharing poslists
+   *
+   * TODO(anybody) this test is an atrocity, look how complicated it is to build Reference Tables!
+   */
+  // Left input table, chunk 0, pos_list 0
+  auto pos_list_left_0_0 = std::make_shared<PosList>();
+  pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, 2});
+  pos_list_left_0_0->emplace_back(RowID{ChunkID{0}, 1});
+  pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, 2});
+
+  // Left input table, chunk 1, pos_list 0
+  auto pos_list_left_1_0 = std::make_shared<PosList>();
+  pos_list_left_1_0->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_left_1_0->emplace_back(RowID{ChunkID{0}, 1});
+
+  // Left input table, chunk 0, pos_list 1
+  auto pos_list_left_0_1 = std::make_shared<PosList>();
+  pos_list_left_0_1->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, 1});
+  pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, 1});
+
+  // Left input table, chunk 1, pos_list 1
+  auto pos_list_left_1_1 = std::make_shared<PosList>();
+  pos_list_left_1_1->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_left_1_1->emplace_back(RowID{ChunkID{2}, 0});
+  
+  // Right input table, chunk 0, pos_list 0
+  auto pos_list_right_0_0 = std::make_shared<PosList>();
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, 2});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, 0});
+
+  // Right input table, chunk 1, pos_list 0
+  auto pos_list_right_1_0 = std::make_shared<PosList>();
+  pos_list_right_1_0->emplace_back(RowID{ChunkID{0}, 0});
+  pos_list_right_1_0->emplace_back(RowID{ChunkID{2}, 0});
+
+  // Right input table, chunk 0, pos_list 1
+  auto pos_list_right_0_1 = std::make_shared<PosList>();
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{0}, 0});
+
+  // Right input table, chunk 1, pos_list 1
+  auto pos_list_right_1_1 = std::make_shared<PosList>();
+  pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
+
+  auto column_left_0_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_left_0_0);
+  auto column_left_1_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_left_1_0);
+  auto column_left_0_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_left_0_0);
+  auto column_left_1_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_left_1_0);
+  auto column_left_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_left_0_1);
+  auto column_left_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_left_1_1);
+
+  auto column_right_0_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_right_0_0);
+  auto column_right_1_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_right_1_0);
+  auto column_right_0_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_right_0_0);
+  auto column_right_1_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_right_1_0);
+  auto column_right_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
+  auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
+
+  auto table_left = std::make_shared<Table>();
+  table_left->add_column_definition("a", "int");
+  table_left->add_column_definition("b", "float");
+  table_left->add_column_definition("c", "int");
+  
+  Chunk chunk_left_0;
+  chunk_left_0.add_column(column_left_0_0);
+  chunk_left_0.add_column(column_left_0_1);
+  chunk_left_0.add_column(column_left_0_2);
+  table_left->emplace_chunk(std::move(chunk_left_0));
+
+  Chunk chunk_left_1;
+  chunk_left_1.add_column(column_left_1_0);
+  chunk_left_1.add_column(column_left_1_1);
+  chunk_left_1.add_column(column_left_1_2);
+  table_left->emplace_chunk(std::move(chunk_left_1));
+
+  auto table_right = std::make_shared<Table>();
+  table_right->add_column_definition("a", "int");
+  table_right->add_column_definition("b", "float");
+  table_right->add_column_definition("c", "int");
+
+  Chunk chunk_right_0;
+  chunk_right_0.add_column(column_right_0_0);
+  chunk_right_0.add_column(column_right_0_1);
+  chunk_right_0.add_column(column_right_0_2);
+  table_right->emplace_chunk(std::move(chunk_right_0));
+
+  Chunk chunk_right_1;
+  chunk_right_1.add_column(column_right_1_0);
+  chunk_right_1.add_column(column_right_1_1);
+  chunk_right_1.add_column(column_right_1_2);
+  table_right->emplace_chunk(std::move(chunk_right_1));
+
+  auto table_wrapper_left_op = std::make_shared<TableWrapper>(table_left);
+  auto table_wrapper_right_op = std::make_shared<TableWrapper>(table_right);
+  auto set_union_op = std::make_shared<SetUnion>(table_wrapper_left_op, table_wrapper_right_op);
+
+  _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
+
+  EXPECT_TABLE_EQ(set_union_op->get_output(), load_table("src/test/tables/set_union_multiple_shuffled_pos_list.tbl", 0));
+}
+
 
 }  // namespace opossum
