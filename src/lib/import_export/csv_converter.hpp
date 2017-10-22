@@ -71,9 +71,9 @@ class AbstractCsvConverter {
     field = std::move(unescaped_string);
   }
 
-  static std::string unescape_copy(const std::string& field, const CsvConfig = {}) {
+  static std::string unescape_copy(const std::string& field, const CsvConfig& config = {}) {
     auto field_copy = field;
-    unescape(field_copy);
+    unescape(field_copy, config);
     return field_copy;
   }
 };
@@ -91,7 +91,7 @@ class CsvConverter : public AbstractCsvConverter {
       Assert(boost::to_lower_copy(value) != CsvConfig::NULL_STRING,
              "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
 
-      auto unescaped_value = unescape_copy(value);
+      auto unescaped_value = unescape_copy(value, _config);
       _parsed_values[position] = _get_conversion_function()(unescaped_value);
     }
   }
