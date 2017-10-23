@@ -87,13 +87,22 @@ class CsvConverter : public AbstractCsvConverter {
   void insert(const std::string& value, ChunkOffset position) override {
     if (_is_nullable && value.length() == 0) {
       _null_values[position] = true;
-    } else {
-      Assert(boost::to_lower_copy(value) != CsvConfig::NULL_STRING,
-             "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
-
-      auto unescaped_value = unescape_copy(value, _config);
-      _parsed_values[position] = _get_conversion_function()(unescaped_value);
+      return;
     }
+    Assert(boost::to_lower_copy(value) != CsvConfig::NULL_STRING,
+           "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
+
+    if constexpr(std::is_same_v<T, std::string>) {
+      unescape(value, _config);
+    } else {
+      if (_config.reject_quoted_nonstrings) {
+        Assert(value == unescape_copy(value, _config), "Unexpected quoted string " + value + " encountered in non-string column");
+      } else {
+        unescape(value, _config);
+      }
+    }
+
+    _parsed_values[position] = _get_conversion_function()(value);
   }
 
   std::unique_ptr<BaseColumn> finish() override {
