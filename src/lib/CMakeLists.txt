@@ -265,20 +265,5 @@ endif()
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
 
-# Configure the lib used for sanitizers
-add_library(hyriseSanitizersLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
-target_link_libraries(
-    hyriseSanitizersLib
-    ${LIBRARIES}
-    -fsanitize=address,undefined -fno-sanitize-recover=all
-)
-set_target_properties(hyriseSanitizersLib PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
-
-# Configure the lib used for coverage
-add_library(hyriseCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
-target_link_libraries(
-    hyriseCoverageLib
-    ${LIBRARIES}
-    --coverage
-)
-set_target_properties(hyriseCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+add_sanitizer_library(hyriseSanitizersLib "${SOURCES}" "${LIBRARIES}")
+add_coverage_library(hyriseCoverageLib "${SOURCES}" "${LIBRARIES}")
