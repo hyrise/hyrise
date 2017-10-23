@@ -30,7 +30,7 @@ class BaseCsvConverter {
   virtual ~BaseCsvConverter() = default;
 
   // Converts value to the underlying data type and saves it at the given position.
-  virtual void insert(const std::string& value, ChunkOffset position) = 0;
+  virtual void insert(std::string& value, ChunkOffset position) = 0;
 
   // Returns the Column which contains the previously converted values.
   // After the call of finish, no other operation should be called.
@@ -84,7 +84,7 @@ class CsvConverter : public BaseCsvConverter {
   explicit CsvConverter(ChunkOffset size, const CsvConfig& config = {}, bool is_nullable = false)
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
-  void insert(const std::string& value, ChunkOffset position) override {
+  void insert(std::string& value, ChunkOffset position) override {
     if (_is_nullable && value.length() == 0) {
       _null_values[position] = true;
       return;
