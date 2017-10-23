@@ -20,6 +20,7 @@ add_executable(
 target_link_libraries(
     hyriseBenchmark
     hyrise
+    hyriseBenchmarkLib
     benchmark
 )
 
@@ -38,6 +39,6 @@ add_executable(
 target_link_libraries(
     hyriseBenchmarkTPCC
     hyrise
+    hyriseBenchmarkLib
     benchmark
-    tpcc
 )
