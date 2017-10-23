@@ -4,8 +4,8 @@
 
 #include "benchmark/benchmark.h"
 
-#include "operators/table_wrapper.hpp"
 #include "operators/set_union.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -13,15 +13,14 @@
 namespace {
 
 std::shared_ptr<opossum::PosList> generate_pos_list(opossum::ChunkID referenced_table_chunk_count,
-                                            float referenced_table_chunk_size,
-                                            float pos_list_size) {
+                                                    float referenced_table_chunk_size, float pos_list_size) {
   std::random_device _random_device;
   std::default_random_engine _random_engine;
 
-  std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(0,
-                                                                          static_cast<opossum::ChunkID::base_type>(referenced_table_chunk_count - 1));
-  std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(opossum::ChunkOffset{0},
-                                                                       static_cast<opossum::ChunkOffset>(referenced_table_chunk_size - 1));
+  std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
+      0, static_cast<opossum::ChunkID::base_type>(referenced_table_chunk_count - 1));
+  std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(
+      opossum::ChunkOffset{0}, static_cast<opossum::ChunkOffset>(referenced_table_chunk_size - 1));
 
   auto pos_list = std::make_shared<opossum::PosList>();
   pos_list->reserve(pos_list_size);
@@ -35,7 +34,6 @@ std::shared_ptr<opossum::PosList> generate_pos_list(opossum::ChunkID referenced_
 
   return pos_list;
 }
-
 }
 
 namespace opossum {
@@ -51,9 +49,7 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
 
     for (auto column_idx = 0; column_idx < num_table_columns; ++column_idx) {
       // Create a pos list 60% of the length of the referenced table
-      auto pos_list = generate_pos_list(ChunkID{10},
-                                        num_table_rows * 0.1f,
-                                        num_table_rows * 0.6f);
+      auto pos_list = generate_pos_list(ChunkID{10}, num_table_rows * 0.1f, num_table_rows * 0.6f);
 
       /**
        * Each row references its own table, that doesn't actually contain data. But SetUnion won't care, it just
@@ -73,7 +69,6 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
 
  protected:
   std::shared_ptr<TableWrapper> _reference_table_wrapper;
-
 };
 
 BENCHMARK_DEFINE_F(SetUnionBenchmarkFixture, Benchmark)(::benchmark::State& state) {
@@ -102,7 +97,7 @@ class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
 };
 
 BENCHMARK_DEFINE_F(SetUnionBaseLineBenchmarkFixture, Benchmark)(::benchmark::State& state) {
-  while(state.KeepRunning()) {
+  while (state.KeepRunning()) {
     // Create copies, this would need to be done the SetUnion Operator as well
     auto left = *_pos_list_left;
     auto right = *_pos_list_right;
@@ -116,5 +111,4 @@ BENCHMARK_DEFINE_F(SetUnionBaseLineBenchmarkFixture, Benchmark)(::benchmark::Sta
   }
 }
 BENCHMARK_REGISTER_F(SetUnionBaseLineBenchmarkFixture, Benchmark)->Range(100, 100 * 1000 * 1000);
-
 }

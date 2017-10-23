@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
-#include <numeric>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,9 +33,7 @@ namespace {
 // See doc above
 using MultiPosList = std::vector<opossum::PosList>;
 
-enum class InputSide : uint8_t {
-  Left, Right
-};
+enum class InputSide : uint8_t { Left, Right };
 
 struct VirtualPosListEntry {
   InputSide side;
@@ -45,11 +43,11 @@ struct VirtualPosListEntry {
 using VirtualPosList = std::vector<VirtualPosListEntry>;
 
 struct MultiPosListContext {
-  MultiPosList &left;
-  MultiPosList &right;
+  MultiPosList& left;
+  MultiPosList& right;
   bool operator()(const VirtualPosListEntry& lhs, const VirtualPosListEntry& rhs) const {
-    const auto & lhs_mpl = lhs.side == InputSide::Left ? left : right;
-    const auto & rhs_mpl = rhs.side == InputSide::Left ? left : right;
+    const auto& lhs_mpl = lhs.side == InputSide::Left ? left : right;
+    const auto& rhs_mpl = rhs.side == InputSide::Left ? left : right;
 
     for (size_t segment_id = 0; segment_id < left.size(); ++segment_id) {
       if (lhs_mpl[segment_id][lhs.index] < rhs_mpl[segment_id][rhs.index]) return true;
@@ -60,7 +58,7 @@ struct MultiPosListContext {
 };
 
 struct VirtualPosListContext {
-  MultiPosList &multi_pos_list;
+  MultiPosList& multi_pos_list;
   bool operator()(const VirtualPosListEntry& lhs, const VirtualPosListEntry& rhs) const {
     for (size_t segment_id = 0; segment_id < multi_pos_list.size(); ++segment_id) {
       const auto& segment_pos_list = multi_pos_list[segment_id];
@@ -101,7 +99,7 @@ struct VirtualPosListContext {
 namespace opossum {
 
 SetUnion::SetUnion(const std::shared_ptr<const AbstractOperator>& left,
-                                       const std::shared_ptr<const AbstractOperator>& right)
+                   const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
 uint8_t SetUnion::num_in_tables() const { return 2; }
@@ -122,13 +120,12 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
     return early_result;
   }
 
-  auto input_build_begin = std::chrono::high_resolution_clock::now();
   /**
    * For each input, create a MultiPosList
    */
   const auto build_multi_pos_list = [&](const auto& input_table, auto& multi_pos_list) {
     multi_pos_list.resize(_column_segment_begins.size());
-    for (auto & pos_list : multi_pos_list) {
+    for (auto& pos_list : multi_pos_list) {
       pos_list.reserve(input_table->row_count());
     }
 
@@ -153,16 +150,10 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   build_multi_pos_list(_input_table_left(), multi_pos_list_left);
   build_multi_pos_list(_input_table_right(), multi_pos_list_right);
 
-  auto input_build_begin2 = std::chrono::high_resolution_clock::now();
-//  std::cout << "MultiPosListLeft:" << std::endl;
-//  print_multi_pos_list(multi_pos_list_left);
-//  std::cout << "MultiPosListRight:" << std::endl;
-//  print_multi_pos_list(multi_pos_list_right);
-
   /**
    * Init the virtual pos lists
    */
-  const auto init_virtual_pos_list = [] (const auto &table, InputSide side) {
+  const auto init_virtual_pos_list = [](const auto& table, InputSide side) {
     VirtualPosList virtual_pos_list;
     virtual_pos_list.reserve(table->row_count());
 
@@ -182,16 +173,8 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
    */
   MultiPosListContext context{multi_pos_list_left, multi_pos_list_right};
 
-  auto sort_begin = std::chrono::high_resolution_clock::now();
   std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), VirtualPosListContext{multi_pos_list_left});
   std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), VirtualPosListContext{multi_pos_list_right});
-
-  auto sort_end = std::chrono::high_resolution_clock::now();
-//  std::cout << "VirtualPosListLeft" << std::endl;
-//  print_virtual_pos_list(virtual_pos_list_left, context);
-//
-//  std::cout << "VirtualPosListRight" << std::endl;
-//  print_virtual_pos_list(virtual_pos_list_right, context);
 
   VirtualPosList merged_rows;
   // Min of both row counts is safe to reserve
@@ -199,11 +182,6 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
 
   std::set_union(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), virtual_pos_list_right.begin(),
                  virtual_pos_list_right.end(), std::back_inserter(merged_rows), context);
-  auto union_end = std::chrono::high_resolution_clock::now();
-
-
-//  std::cout << "VirtualPosListMerged" << std::endl;
-//  print_virtual_pos_list(merged_rows, context);
 
   /**
    * Build result table
@@ -249,13 +227,6 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
 
     out_table->emplace_chunk(std::move(out_chunk));
   }
-
-  auto generation_end = std::chrono::high_resolution_clock::now();
-  std::cout << "Input0: " << std::chrono::duration_cast<std::chrono::milliseconds>(input_build_begin2 - input_build_begin).count() << std::endl;
-  std::cout << "Input1: " << std::chrono::duration_cast<std::chrono::milliseconds>(sort_begin - input_build_begin2).count() << std::endl;
-  std::cout << "Sort: " << std::chrono::duration_cast<std::chrono::milliseconds>(sort_end - sort_begin).count() << std::endl;
-  std::cout << "Union: " << std::chrono::duration_cast<std::chrono::milliseconds>(union_end - sort_end).count() << std::endl;
-  std::cout << "Generation: " << std::chrono::duration_cast<std::chrono::milliseconds>(generation_end - union_end).count() << std::endl;
 
   return out_table;
 }

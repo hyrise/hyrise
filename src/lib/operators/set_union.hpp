@@ -67,8 +67,7 @@ namespace opossum {
  */
 class SetUnion : public AbstractReadOnlyOperator {
  public:
-  SetUnion(const std::shared_ptr<const AbstractOperator>& left,
-                     const std::shared_ptr<const AbstractOperator>& right);
+  SetUnion(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right);
 
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;

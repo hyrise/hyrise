@@ -200,7 +200,7 @@ TEST_F(SetUnionTest, MultipleShuffledPosList) {
   auto pos_list_left_1_1 = std::make_shared<PosList>();
   pos_list_left_1_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_left_1_1->emplace_back(RowID{ChunkID{2}, 0});
-  
+
   // Right input table, chunk 0, pos_list 0
   auto pos_list_right_0_0 = std::make_shared<PosList>();
   pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
@@ -243,7 +243,7 @@ TEST_F(SetUnionTest, MultipleShuffledPosList) {
   table_left->add_column_definition("a", "int");
   table_left->add_column_definition("b", "float");
   table_left->add_column_definition("c", "int");
-  
+
   Chunk chunk_left_0;
   chunk_left_0.add_column(column_left_0_0);
   chunk_left_0.add_column(column_left_0_1);
@@ -279,8 +279,8 @@ TEST_F(SetUnionTest, MultipleShuffledPosList) {
 
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
-  EXPECT_TABLE_EQ(set_union_op->get_output(), load_table("src/test/tables/set_union_multiple_shuffled_pos_list.tbl", 0));
+  EXPECT_TABLE_EQ(set_union_op->get_output(),
+                  load_table("src/test/tables/set_union_multiple_shuffled_pos_list.tbl", 0));
 }
-
 
 }  // namespace opossum
