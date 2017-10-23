@@ -9,6 +9,8 @@
 
 #include "operators/abstract_operator.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

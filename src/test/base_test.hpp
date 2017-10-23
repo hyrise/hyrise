@@ -5,13 +5,11 @@
 #include <utility>
 #include <vector>
 
-#include "operators/abstract_operator.hpp"
+#include "gtest/gtest.h"
 #include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
-
-#include "gtest/gtest.h"
 
 namespace opossum {
 

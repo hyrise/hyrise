@@ -4,14 +4,12 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
-#include "csv.hpp"
 
+#include "csv.hpp"
 #include "storage/base_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"

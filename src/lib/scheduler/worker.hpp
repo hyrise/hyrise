@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "processing_unit.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

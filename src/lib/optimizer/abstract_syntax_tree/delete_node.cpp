@@ -5,7 +5,6 @@
 #include <sstream>
 #include <string>
 
-#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

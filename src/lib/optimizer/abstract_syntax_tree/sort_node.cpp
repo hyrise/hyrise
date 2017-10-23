@@ -1,12 +1,10 @@
 #include "sort_node.hpp"
 
-#include <boost/lexical_cast.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "constant_mappings.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
@@ -21,7 +19,7 @@ std::string SortNode::description() const {
   std::ostringstream s;
 
   auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << boost::lexical_cast<std::string>(definition.column_id);
+    s << std::to_string(definition.column_id);
     s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
   };
 

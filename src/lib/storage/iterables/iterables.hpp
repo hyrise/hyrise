@@ -1,10 +1,8 @@
 #pragma once
 
 #include "base_iterators.hpp"
-
-#include "utils/assert.hpp"
-
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

@@ -1,12 +1,10 @@
-#include <initializer_list>
+#include "union_all.hpp"
+
 #include <memory>
-#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "storage/reference_column.hpp"
-#include "union_all.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
