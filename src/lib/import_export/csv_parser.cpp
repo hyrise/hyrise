@@ -147,7 +147,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     if (elem == _csv_config.quote) {
       bool quote_is_escaped = false;
       if (_csv_config.quote != _csv_config.escape) {
-        quote_is_escaped = pos != 0 && csv_content.at(pos-1) == _csv_config.escape;
+        quote_is_escaped = pos != 0 && csv_content.at(pos - 1) == _csv_config.escape;
       }
       if (!quote_is_escaped) {
         in_quotes = !in_quotes;
@@ -184,8 +184,8 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
     const auto is_nullable = table.column_is_nullable(column_id);
     const auto column_type = table.column_type(column_id);
 
-    converters.emplace_back(make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count,
-                                                                                       _csv_config, is_nullable));
+    converters.emplace_back(
+        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _csv_config, is_nullable));
   }
 
   size_t start = 0;
