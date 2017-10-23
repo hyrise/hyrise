@@ -22,12 +22,12 @@ namespace opossum {
 /*
  * CsvConverter is a helper class that creates a ValueColumn by converting the given null terminated strings and placing
  * them at the given position.
- * The base class AbstractCsvConverter allows us to handle different types of ColumnCreators uniformly.
+ * The base class BaseCsvConverter allows us to handle different types of ColumnCreators uniformly.
  */
 
-class AbstractCsvConverter {
+class BaseCsvConverter {
  public:
-  virtual ~AbstractCsvConverter() = default;
+  virtual ~BaseCsvConverter() = default;
 
   // Converts value to the underlying data type and saves it at the given position.
   virtual void insert(const std::string& value, ChunkOffset position) = 0;
@@ -79,7 +79,7 @@ class AbstractCsvConverter {
 };
 
 template <typename T>
-class CsvConverter : public AbstractCsvConverter {
+class CsvConverter : public BaseCsvConverter {
  public:
   explicit CsvConverter(ChunkOffset size, const CsvConfig& config = {}, bool is_nullable = false)
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
