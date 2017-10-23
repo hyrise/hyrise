@@ -48,18 +48,22 @@ class AbstractCsvConverter {
     std::string unescaped_string;
     unescaped_string.reserve(field.size());
 
-    // last_char holds the value that the last lambda call visited. It can have any start value except for config.escape
-    char last_char = 0;
+    // 'escaped' holds the information whether the previous character was the config.escape character
+    bool escaped = false;
     // The start and end ranges leave out the surrounding quotes.
-    // Since config.escape and config.quote are the same characters, we can remove the quote instead of the escape
-    // character.
     std::copy_if(field.begin() + 1, field.end() - 1, std::back_inserter(unescaped_string),
-                 [&last_char, &config](const char c) {
-                   bool do_copy = last_char != config.escape || c != config.quote;
-                   // Set last_char to zero if the current character should not be copied
-                   // This is necessary because config.escape and config.quote are the same characters
-                   // and therefore a sequence of three quotes would trigger the condition above twice.
-                   last_char = do_copy ? c : 0;
+                 [&escaped, &config](const char c) {
+                   bool do_copy = true;
+
+                   // If escape character is found the first time, don't copy,
+                   // and set 'escaped' to true for the next character
+                   if (c == config.escape && !escaped) {
+                     do_copy = false;
+                     escaped = true;
+                   } else {
+                     escaped = false;
+                   }
+
                    return do_copy;
                  });
 
@@ -67,9 +71,9 @@ class AbstractCsvConverter {
     field = std::move(unescaped_string);
   }
 
-  static std::string unescape_copy(const std::string& field, const CsvConfig = {}) {
+  static std::string unescape_copy(const std::string& field, const CsvConfig& config = {}) {
     auto field_copy = field;
-    unescape(field_copy);
+    unescape(field_copy, config);
     return field_copy;
   }
 };
@@ -87,7 +91,7 @@ class CsvConverter : public AbstractCsvConverter {
       Assert(boost::to_lower_copy(value) != CsvConfig::NULL_STRING,
              "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
 
-      auto unescaped_value = unescape_copy(value);
+      auto unescaped_value = unescape_copy(value, _config);
       _parsed_values[position] = _get_conversion_function()(unescaped_value);
     }
   }
@@ -136,11 +140,7 @@ inline std::function<double(const std::string&)> CsvConverter<double>::_get_conv
 
 template <>
 inline std::function<std::string(const std::string&)> CsvConverter<std::string>::_get_conversion_function() {
-  return [this](const std::string& str) {
-    std::string copy = str;
-    unescape(copy, _config);
-    return copy;
-  };
+  return [](const std::string& str) { return str; };
 }
 
 }  // namespace opossum
