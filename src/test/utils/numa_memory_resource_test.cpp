@@ -6,7 +6,7 @@
 #include <numa.h>
 #endif
 
-#include "polymorphic_allocator.hpp"
+#include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
 namespace opossum {

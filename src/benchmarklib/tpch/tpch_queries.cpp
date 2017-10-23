@@ -87,7 +87,7 @@ const char* const tpch_query_2 =
  *  1. Random values are hardcoded
  *  2. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
- *  3. Be aware that we ignore the column ordering here
+ *  3. Be aware that we ignore the column ordering here.
  */
 const char* const tpch_query_3 =
     R"(SELECT l_orderkey, SUM(l_extendedprice*(1.0-l_discount)) as revenue, o_orderdate, o_shippriority

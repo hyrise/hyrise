@@ -34,6 +34,17 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 
+### Naming convention for gtest macros:
+
+TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
+same for fixtures Test_F()
+
+If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
+
+- Testing the storage module: `./build/hyriseTest --gtest_filter="Storage*"`
+- Testing the table class: `./build/hyriseTest --gtest_filter="StorageTableTest*"`
+- Testing the RowCount test: `./build/hyriseTest --gtest_filter="StorageTableTest.RowCount"`
+
 ## Performance Warnings
 - Sometimes, we have convenience functions, such as BaseColumn::operator[], or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
 
