@@ -275,7 +275,7 @@ void TableStatistics::_reset_table_ptr() {
 }
 
 float TableStatistics::_calculate_added_null_values_for_outer_join(
-    const float row_count, const std::shared_ptr<BaseColumnStatistics> col_stats,
+    const float row_count, const std::shared_ptr<BaseColumnStatistics>& col_stats,
     const float predicate_column_distinct_count) const {
   float null_value_no = col_stats->null_value_ratio() * row_count;
   if (col_stats->distinct_count() != 0.f) {

@@ -34,8 +34,8 @@ namespace opossum {
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
-JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
-                             const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
+                             const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const std::pair<ColumnID, ColumnID>& column_ids, const ScanType op)
     : AbstractJoinOperator(left, right, mode, column_ids, op) {
   // Validate the parameters
@@ -403,8 +403,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(std::shared_ptr<Table> output_table, std::shared_ptr<const Table> input_table,
-                           std::shared_ptr<const PosList> pos_list) {
+  void _add_output_columns(const std::shared_ptr<Table>& output_table, const std::shared_ptr<const Table>& input_table,
+                           const std::shared_ptr<const PosList>& pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the column definition
@@ -433,8 +433,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
   * This is done because there should not be any reference columns referencing reference columns.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
-                                                 std::shared_ptr<const PosList> pos_list) {
+  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
+                                                 const std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {

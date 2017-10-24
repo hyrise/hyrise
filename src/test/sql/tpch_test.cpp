@@ -68,7 +68,7 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     return tasks.back();
   }
 
-  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
+  void execute_and_check(const std::string query, const std::shared_ptr<Table>& expected_result,
                          bool order_sensitive = false) {
     auto result_unoptimized = schedule_query_and_return_task(query, false)->get_operator()->get_output();
     EXPECT_TABLE_EQ(result_unoptimized, expected_result, order_sensitive);

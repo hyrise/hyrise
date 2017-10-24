@@ -59,7 +59,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  SortImpl(const std::shared_ptr<const Table> table_in, const ColumnID column_id,
+  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
         _column_id(column_id),

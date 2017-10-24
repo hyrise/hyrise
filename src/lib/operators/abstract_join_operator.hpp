@@ -22,8 +22,8 @@ namespace opossum {
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
-                       const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  AbstractJoinOperator(const std::shared_ptr<const AbstractOperator>& left,
+                       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                        const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type);
 
   JoinMode mode() const;

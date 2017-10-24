@@ -26,8 +26,8 @@ static const uint8_t INVALID_INDEX = 255u;
 
 Node4::Node4(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>>& children) {
   std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<Node>>& lhs,
-               const std::pair<uint8_t, std::shared_ptr<Node>>& rhs) { return lhs.first < rhs.first; });
+            [](const std::pair<uint8_t, const std::shared_ptr<Node>>& lhs,
+               const std::pair<uint8_t, const std::shared_ptr<Node>>& rhs) { return lhs.first < rhs.first; });
   _partial_keys.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;
@@ -110,8 +110,8 @@ BaseIndex::Iterator Node4::end() const {
 
 Node16::Node16(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>>& children) {
   std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<Node>>& lhs,
-               const std::pair<uint8_t, std::shared_ptr<Node>>& rhs) { return lhs.first < rhs.first; });
+            [](const std::pair<uint8_t, const std::shared_ptr<Node>>& lhs,
+               const std::pair<uint8_t, const std::shared_ptr<Node>>& rhs) { return lhs.first < rhs.first; });
   _partial_keys.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;

@@ -22,8 +22,8 @@
 
 namespace opossum {
 
-JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
+                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
   DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
@@ -84,9 +84,9 @@ using Hash = uint32_t;
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
-               const bool inputs_swapped)
+  JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
+               const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+               const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
@@ -141,7 +141,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   };
 
   template <typename T>
-  std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
+  std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                    std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                    bool keep_nulls = false) {
     // list of all elements that will be partitioned
@@ -244,8 +244,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   template <typename T>
-  RadixContainer<T> _partition_radix_parallel(std::shared_ptr<Partition<T>> materialized,
-                                              std::shared_ptr<std::vector<size_t>> chunk_offsets,
+  RadixContainer<T> _partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
+                                              const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                               std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                               bool keep_nulls = false) {
     // fan-out
@@ -476,8 +476,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   /*
   Copy the column meta-data from input to output table.
   */
-  static void _copy_table_metadata(const std::shared_ptr<const Table> in_table,
-                                   const std::shared_ptr<Table> out_table) {
+  static void _copy_table_metadata(const std::shared_ptr<const Table>& in_table,
+                                   const std::shared_ptr<Table>& out_table) {
     for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
       // TODO(anyone): Refine since not all column are nullable
       out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id), true);
@@ -622,7 +622,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return _output_table;
   }
 
-  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
+  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table>& input_table,
                                   std::shared_ptr<PosList> pos_list, bool is_ref_column) {
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {

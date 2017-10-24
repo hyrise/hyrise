@@ -73,7 +73,7 @@ class Console {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(std::shared_ptr<const Table> table, uint32_t flags = 0);
+  void out(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).

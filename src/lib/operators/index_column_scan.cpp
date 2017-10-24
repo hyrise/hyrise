@@ -57,14 +57,14 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         _casted_value2(value2 ? std::optional<T>(type_cast<T>(*value2)) : std::optional<T>(std::nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID>& mo,
-                std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
+    ScanContext(const std::shared_ptr<const Table>& t, ChunkID c, std::vector<RowID>& mo,
+                const std::shared_ptr<std::vector<ChunkOffset>>& co = nullptr)
         : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
-    ScanContext(std::shared_ptr<const BaseColumn>, const std::shared_ptr<const Table> referenced_table,
-                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+    ScanContext(const std::shared_ptr<const BaseColumn>&, const std::shared_ptr<const Table>& referenced_table,
+                const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
         : table_in(referenced_table),
           chunk_id(chunk_id),
           matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
@@ -365,7 +365,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     }
   }
 
-  std::vector<ChunkOffset> get_pos_list_from_index(std::shared_ptr<BaseIndex> index, T search_value,
+  std::vector<ChunkOffset> get_pos_list_from_index(const std::shared_ptr<BaseIndex>& index, T search_value,
                                                    std::optional<T> search_value_2) {
     BaseIndex::Iterator lower_bound, upper_bound;
 

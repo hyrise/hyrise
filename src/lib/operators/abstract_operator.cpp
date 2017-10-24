@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator> left,
-                                   const std::shared_ptr<const AbstractOperator> right)
+AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>& left,
+                                   const std::shared_ptr<const AbstractOperator>& right)
     : _input_left(left), _input_right(right) {}
 
 void AbstractOperator::execute() {

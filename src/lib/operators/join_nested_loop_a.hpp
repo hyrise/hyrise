@@ -26,8 +26,8 @@ namespace opossum {
  */
 class JoinNestedLoopA : public AbstractJoinOperator {
  public:
-  JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
-                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  JoinNestedLoopA(const std::shared_ptr<const AbstractOperator>& left,
+                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                   const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type);
 
   const std::string name() const override;

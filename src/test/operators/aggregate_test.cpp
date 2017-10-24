@@ -86,7 +86,7 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_null_dict->execute();
   }
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition>& aggregates,
+  void test_output(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_references = true) {
     // load expected results from file

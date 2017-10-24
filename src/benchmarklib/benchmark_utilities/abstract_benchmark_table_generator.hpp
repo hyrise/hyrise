@@ -51,8 +51,8 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
+  void add_column(const std::shared_ptr<opossum::Table>& table, std::string name,
+                  const std::shared_ptr<std::vector<size_t>>& cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
     /**
      * We have to add Chunks when we add the first column.
@@ -161,8 +161,8 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
+  void add_column(const std::shared_ptr<opossum::Table>& table, std::string name,
+                  const std::shared_ptr<std::vector<size_t>>& cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };

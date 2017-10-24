@@ -38,12 +38,12 @@ class SQLiteWrapper {
   /*
    * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
    */
-  void _create_columns(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count);
+  void _create_columns(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
 
   /*
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
-  void _add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count);
+  void _add_row(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
 
   sqlite3* _db;
 };

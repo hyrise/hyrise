@@ -25,6 +25,15 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use forward declarations whenever possible to reduce compile time
 - We mostly use structs for PODS (plain old data structures). If it has methods, chances are that it is a class.
 
+## Using smart pointers and references
+- If an object is stored in a smart pointer, pass that pointer around as a const reference, e.g., `const std::shared_ptr<Table> &`. It should not be necessary for a method to accept a smart pointer by-copy.
+  - the exception to this rule is when the called function does something that removes this instance "up in the stack"
+- If an object is located on the stack pass it by-reference
+  - as a default, use a const reference to ensure read-only access, e.g., `const Chunk &`
+  - otherwise use a regular reference, e.g., `Chunk &`
+- Neither smart pointers nor the objects they point to may be stored as a reference. As an example: In a method `MyClass::set_table(const std::shared_ptr<Table>& table)`, you can freely use the reference, because the caller will take care of the shared pointer. Once you store `table` in `MyClass`, you must store it as an `std::shared_ptr<Table>`. This is so that the pointer remains valid even if `set_table` and the methods above it are no longer on the stack.
+- Pass objects of primitive types by-value, e.g., `int` or `ChunkID`
+
 ## Naming Conventions
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp
 - Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`

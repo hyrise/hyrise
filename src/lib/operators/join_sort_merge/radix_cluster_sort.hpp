@@ -36,7 +36,7 @@ namespace opossum {
 template <typename T>
 class RadixClusterSort {
  public:
-  RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
+  RadixClusterSort(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right,
                    const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
