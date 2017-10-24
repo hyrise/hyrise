@@ -1,7 +1,5 @@
 #include "performance_warning.hpp"
 
-#include <iostream>
-
 namespace opossum {
 
 bool PerformanceWarningClass::_disabled = []() {

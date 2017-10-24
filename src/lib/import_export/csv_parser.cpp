@@ -14,6 +14,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -94,22 +95,28 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   while ((pos = content.find(delimiter)) != std::string::npos) {
     auto row = content.substr(0, pos);
 
-    // skip field
-    row.erase(0, row.find(separator) + 1);
+    // remove property type
+    auto property_type_pos = row.find(separator);
+    row.erase(0, property_type_pos + 1);
 
     // read column name
     auto row_pos = row.find(separator);
     auto column_name = row.substr(0, row_pos);
-    AbstractCsvConverter::unescape(column_name);
+    BaseCsvConverter::unescape(column_name);
     row.erase(0, row_pos + 1);
 
     // read column type
-    row_pos = row.find(separator);
+    row_pos = row.find(delimiter);
     auto column_type = row.substr(0, row_pos);
-    AbstractCsvConverter::unescape(column_type);
+    BaseCsvConverter::unescape(column_type);
+    auto type_nullable = _split<std::string>(column_type, '_');
+    column_type = type_nullable[0];
+
+    auto is_nullable = type_nullable.size() > 1 && boost::to_lower_copy(type_nullable[1]) == CsvConfig::NULL_STRING;
 
     content.erase(0, pos + 1);
-    table->add_column_definition(column_name, column_type);
+
+    table->add_column_definition(column_name, column_type, is_nullable);
   }
 
   return table;
@@ -136,7 +143,16 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     from = pos + 1;
     const char elem = csv_content.at(pos);
 
-    if (elem == _csv_config.quote) in_quotes = !in_quotes;
+    // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string (i.e. escaped)
+    if (elem == _csv_config.quote) {
+      bool quote_is_escaped = false;
+      if (_csv_config.quote != _csv_config.escape) {
+        quote_is_escaped = pos != 0 && csv_content.at(pos - 1) == _csv_config.escape;
+      }
+      if (!quote_is_escaped) {
+        in_quotes = !in_quotes;
+      }
+    }
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _csv_config.delimiter && !in_quotes) {
@@ -162,10 +178,14 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
-  std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
+  std::vector<std::unique_ptr<BaseCsvConverter>> converters;
+
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id),
-                                                                                           row_count, _csv_config));
+    const auto is_nullable = table.column_is_nullable(column_id);
+    const auto column_type = table.column_type(column_id);
+
+    converters.emplace_back(
+        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _csv_config, is_nullable));
   }
 
   size_t start = 0;
@@ -179,9 +199,6 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
         // CSV fields not following RFC 4810 might need some preprocessing
         _sanitize_field(field);
       }
-
-      // Unescape to remove enclosing quotes from fields
-      AbstractCsvConverter::unescape(field, _csv_config);
 
       converters[column_id]->insert(field, row_id);
     }

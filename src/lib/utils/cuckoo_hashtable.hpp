@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "murmur_hash.hpp"
-
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

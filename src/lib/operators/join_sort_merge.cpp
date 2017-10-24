@@ -4,13 +4,19 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 

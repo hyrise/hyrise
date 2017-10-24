@@ -3,19 +3,13 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
-
 #include "resolve_type.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
 #include "types.hpp"
 
 namespace opossum {

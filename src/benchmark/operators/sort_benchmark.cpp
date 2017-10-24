@@ -3,8 +3,6 @@
 #include "benchmark/benchmark.h"
 
 #include "../base_fixture.hpp"
-#include "../table_generator.hpp"
-
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 

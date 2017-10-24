@@ -1,35 +1,13 @@
 #pragma once
 
-#include <algorithm>
-#include <atomic>
-#include <functional>
-#include <iterator>
-#include <map>
 #include <memory>
-#include <numeric>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
-#ifdef WITH_PAPI
-#include <papi.h>
-#endif
-
 #include "abstract_join_operator.hpp"
-
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
-
-#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/cuckoo_hashtable.hpp"
-#include "utils/murmur_hash.hpp"
 
 namespace opossum {
 

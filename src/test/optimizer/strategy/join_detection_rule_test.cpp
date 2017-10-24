@@ -16,6 +16,7 @@
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

@@ -3,15 +3,23 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
-
-#include "resolve_type.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/index/base_index.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

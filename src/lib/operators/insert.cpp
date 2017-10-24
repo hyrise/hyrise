@@ -6,13 +6,12 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_dictionary_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
-#include "utils/assert.hpp"
-
-#include "resolve_type.hpp"
 #include "type_cast.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

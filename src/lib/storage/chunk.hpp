@@ -8,12 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
+#include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
 #include "scoped_locking_ptr.hpp"
-
-#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {

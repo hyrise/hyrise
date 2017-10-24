@@ -1,9 +1,8 @@
 #include "composite_group_key_index.hpp"
 
+#include <algorithm>
 #include <climits>
 #include <cstdint>
-
-#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -11,12 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include "variable_length_key_proxy.hpp"
-
 #include "storage/base_attribute_vector.hpp"
 #include "storage/base_dictionary_column.hpp"
-
 #include "utils/assert.hpp"
+#include "variable_length_key_proxy.hpp"
 
 namespace opossum {
 

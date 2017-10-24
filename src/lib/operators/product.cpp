@@ -1,10 +1,11 @@
+#include "product.hpp"
+
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "product.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {

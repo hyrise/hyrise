@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <set>
 #include <string>
@@ -8,11 +7,8 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "abstract_operator.hpp"
-#include "product.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
 

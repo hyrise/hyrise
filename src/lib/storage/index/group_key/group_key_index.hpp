@@ -1,6 +1,5 @@
 #pragma once
 
-#include <exception>
 #include <memory>
 #include <numeric>
 #include <utility>
@@ -9,7 +8,6 @@
 #include "storage/base_attribute_vector.hpp"
 #include "storage/base_dictionary_column.hpp"
 #include "storage/index/base_index.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

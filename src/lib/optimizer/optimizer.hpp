@@ -3,12 +3,10 @@
 #include <memory>
 #include <vector>
 
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-
 namespace opossum {
 
 class AbstractRule;
-class ASTRootNode;
+class AbstractASTNode;
 
 /**
  * Applies (currently: all) optimization rules to an AST.

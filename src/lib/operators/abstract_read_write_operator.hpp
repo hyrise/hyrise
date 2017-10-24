@@ -5,13 +5,12 @@
 #include <vector>
 
 #include "abstract_operator.hpp"
-
 #include "concurrency/transaction_context.hpp"
-#include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class Table;
 
 /**
  * AbstractReadWriteOperator is the superclass for all operators that need write access to tables.

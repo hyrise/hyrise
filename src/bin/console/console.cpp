@@ -21,7 +21,6 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
 #include "planviz/ast_visualizer.hpp"
@@ -227,7 +226,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   // Measure the plan compile time
@@ -488,7 +487,7 @@ int Console::visualize(const std::string& input) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     console.out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   if (mode == "ast" || mode == "astopt") {

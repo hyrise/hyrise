@@ -1,19 +1,11 @@
 #pragma once
 
-#include <bitset>
-#include <functional>
-#include <map>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
-#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -1,13 +1,11 @@
 #pragma once
 
 #include <boost/iterator/iterator_facade.hpp>
-
 #include <utility>
 #include <vector>
 
 #include "chunk_offset_mapping.hpp"
 #include "column_value.hpp"
-
 #include "types.hpp"
 
 namespace opossum {

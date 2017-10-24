@@ -1,15 +1,10 @@
 #include <memory>
-#include <string>
 #include <vector>
 
-#include "benchmark/benchmark.h"
-
 #include "../base_fixture.hpp"
-#include "../table_generator.hpp"
-
+#include "benchmark/benchmark.h"
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
