@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "optimizer/expression.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

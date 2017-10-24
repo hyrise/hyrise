@@ -3,12 +3,9 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "all_parameter_variant.hpp"
-#include "all_type_variant.hpp"
 #include "types.hpp"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"

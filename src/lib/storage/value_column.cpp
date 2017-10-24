@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "column_visitable.hpp"
-
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

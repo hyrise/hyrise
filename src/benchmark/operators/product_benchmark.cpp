@@ -4,7 +4,6 @@
 
 #include "../base_fixture.hpp"
 #include "../table_generator.hpp"
-
 #include "operators/product.hpp"
 #include "operators/table_wrapper.hpp"
 

@@ -6,11 +6,9 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
-#include "utils/assert.hpp"
-
 #include "all_parameter_variant.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
