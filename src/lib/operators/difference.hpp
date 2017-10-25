@@ -22,11 +22,6 @@ class Difference : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
-
  protected:
   void initialize_chunk(const size_t chunk_id);
   std::shared_ptr<const Table> _on_execute() override;
