@@ -2,7 +2,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.hpp"
+#include "../benchmark_basic_fixture.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 
