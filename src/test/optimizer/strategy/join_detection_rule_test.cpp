@@ -16,6 +16,7 @@
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -36,7 +37,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _table_node_b = std::make_shared<StoredTableNode>("b");
     _table_node_c = std::make_shared<StoredTableNode>("c");
 
-    _rule = std::make_shared<JoinConditionDetectionRule>();
+    _rule = std::make_shared<JoinDetectionRule>();
   }
 
   uint8_t _count_cross_joins(const std::shared_ptr<AbstractASTNode>& node) {
@@ -59,7 +60,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
   }
 
   std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
-  std::shared_ptr<JoinConditionDetectionRule> _rule;
+  std::shared_ptr<JoinDetectionRule> _rule;
 };
 
 TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {

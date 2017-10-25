@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,14 +17,22 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
-    : _table(table), _row_count(table->row_count()), _column_statistics(table->col_count()) {}
+    : _table(table), _row_count(table->row_count()), _column_statistics(table->column_count()) {}
+
+TableStatistics::TableStatistics(float row_count,
+                                 const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics)
+    : _row_count(row_count), _column_statistics(column_statistics) {}
 
 float TableStatistics::row_count() const { return _row_count; }
+
+const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::column_statistics() const {
+  return _column_statistics;
+}
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant& value,
-                                                                       const optional<AllTypeVariant>& value2) {
+                                                                       const std::optional<AllTypeVariant>& value2) {
   auto _row_count = row_count();
   if (_row_count == 0) {
     return shared_from_this();

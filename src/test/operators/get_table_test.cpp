@@ -3,9 +3,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "operators/get_table.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 // The fixture for testing class GetTable.

@@ -2,13 +2,12 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "optimizer/expression.hpp"
-
-#include "common.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -118,7 +117,7 @@ const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id(
   return _output_column_id_to_input_column_id;
 }
 
-optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child(), "AggregateNode needs a child.");
 
@@ -131,7 +130,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
    * Search for NamedColumnReference in Aggregate columns ALIASes, if the named_column_reference has no table.
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
-  optional<ColumnID> column_id_aggregate;
+  std::optional<ColumnID> column_id_aggregate;
   if (!named_column_reference_without_local_alias->table_name) {
     for (auto aggregate_idx = 0u; aggregate_idx < _aggregate_expressions.size(); aggregate_idx++) {
       const auto& aggregate_expression = _aggregate_expressions[aggregate_idx];
@@ -152,7 +151,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
    * These columns have been created by another node. Since Aggregates can only have a single child node,
    * we just have to check the left_child for the NamedColumnReference.
    */
-  optional<ColumnID> column_id_groupby;
+  std::optional<ColumnID> column_id_groupby;
   const auto column_id_child =
       left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
   if (column_id_child) {
@@ -180,7 +179,8 @@ ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expre
   return *column_id;
 }
 
-optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
+std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
+    const std::shared_ptr<Expression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
@@ -211,7 +211,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
   }
 
   // Return unset optional if expression was not found.
-  return nullopt;
+  return std::nullopt;
 }
 
 std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {

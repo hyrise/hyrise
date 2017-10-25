@@ -66,7 +66,8 @@ class Projection : public AbstractReadOnlyOperator {
                             std::shared_ptr<const Table> input_table_left) {
     // check whether term is a just a simple column and bypass this column
     if (expression->type() == ExpressionType::Column) {
-      auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(expression->column_id());
+      // we have to use get_mutable_column here because we cannot add a const column to the chunk
+      auto bypassed_column = input_table_left->get_chunk(chunk_id).get_mutable_column(expression->column_id());
       return chunk.add_column(bypassed_column);
     }
 
@@ -114,14 +115,14 @@ class Projection : public AbstractReadOnlyOperator {
     if (expression->type() == ExpressionType::Column) {
       auto column = table->get_chunk(chunk_id).get_column(expression->column_id());
 
-      if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
+      if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
         // values are copied
         return value_column->values();
       }
-      if (auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(column)) {
+      if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
         return dict_column->materialize_values();
       }
-      if (auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column)) {
+      if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
         return ref_column->template materialize_values<T>();  // Clang needs the template prefix
       }
 

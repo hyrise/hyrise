@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -30,7 +29,7 @@ class Insert : public AbstractReadWriteOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + name() + " does not implement recreation.");
     return {};
   }
 

@@ -5,12 +5,11 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "common.hpp"
-#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+class Table;
 class TransactionContext;
 
 // AbstractOperator is the abstract super class for all operators.

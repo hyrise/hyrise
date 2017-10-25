@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 namespace opossum {
 
@@ -11,6 +12,8 @@ class AbstractASTNode;
 
 class AbstractRule {
  public:
+  virtual std::string name() const = 0;
+
   /**
    * This function applies the concrete Optimizer Rule to an AST.
    * apply_to() is intended to be called recursively by the concrete rule.

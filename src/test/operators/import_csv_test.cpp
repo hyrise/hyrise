@@ -4,9 +4,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
 #include "operators/import_csv.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -189,6 +189,82 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   expected_table->append({"zz\nz"});
 
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_with_null.csv");
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(3);
+  expected_table->add_column("a", "float", true);
+  expected_table->add_column("b", "int", false);
+  expected_table->add_column("c", "int", true);
+
+  expected_table->append({458.7f, 12345, NULL_VALUE});
+  expected_table->append({NULL_VALUE, 123, 456});
+  expected_table->append({457.7f, 1234, 675});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_null.csv");
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "string", true);
+
+  expected_table->append({"xxx"});
+  expected_table->append({"www"});
+  expected_table->append({"null"});
+  expected_table->append({"zzz"});
+  expected_table->append({NULL_VALUE});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_bad_null.csv");
+  EXPECT_THROW(importer->execute(), std::exception);
+}
+
+TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
+  auto config = CsvConfig{};
+  config.reject_quoted_nonstrings = false;
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv", config);
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "string");
+  expected_table->add_column("b", "int");
+  expected_table->add_column("c", "float");
+  expected_table->add_column("d", "double");
+  expected_table->add_column("e", "string");
+  expected_table->add_column("f", "int");
+  expected_table->add_column("g", "float");
+  expected_table->add_column("h", "double");
+  expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
+  expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
+  auto config = CsvConfig{};
+  config.escape = '\\';
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_double_escape.csv", config);
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "string");
+  expected_table->append({"xxx\\\"xyz\\\""});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/quoted_int.csv");
+  EXPECT_THROW(importer->execute(), std::exception);
 }
 
 }  // namespace opossum

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
@@ -34,7 +34,7 @@ class StoredTableNode : public AbstractASTNode {
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
-  optional<ColumnID> find_column_id_by_named_column_reference(
+  std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
 
  protected:

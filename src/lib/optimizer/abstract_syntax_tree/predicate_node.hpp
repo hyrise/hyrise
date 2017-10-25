@@ -1,15 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "abstract_ast_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "common.hpp"
-#include "optimizer/expression.hpp"
 
 namespace opossum {
 
@@ -26,14 +24,14 @@ class TableStatistics;
 class PredicateNode : public AbstractASTNode {
  public:
   PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
-                const optional<AllTypeVariant>& value2 = nullopt);
+                const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 
   const ColumnID column_id() const;
   ScanType scan_type() const;
   const AllParameterVariant& value() const;
-  const optional<AllTypeVariant>& value2() const;
+  const std::optional<AllTypeVariant>& value2() const;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractASTNode>& left_child,
@@ -43,7 +41,7 @@ class PredicateNode : public AbstractASTNode {
   const ColumnID _column_id;
   const ScanType _scan_type;
   const AllParameterVariant _value;
-  const optional<AllTypeVariant> _value2;
+  const std::optional<AllTypeVariant> _value2;
 };
 
 }  // namespace opossum

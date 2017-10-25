@@ -5,9 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/heap/fibonacci_heap.hpp"
-
 #include "abstract_cache.hpp"
+#include "boost/heap/fibonacci_heap.hpp"
 
 namespace opossum {
 
@@ -110,7 +109,7 @@ class LRUKCache : public AbstractCache<key_t, val_t> {
   }
 
   void clear_and_resize(size_t capacity) {
-    this->clear();
+    clear();
     this->_capacity = capacity;
   }
 

@@ -1,5 +1,5 @@
 # Contribution Guidelines
-Do not commit/push directly to the master or develop branch. Instead, create a feature branch/fork and file a merge request.
+Do not commit/push directly to the master branch. Instead, create a feature branch/fork and file a merge request.
 
 # Coding Style
 Avoid exception handling. Because Hyrise is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
@@ -17,7 +17,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 
 - When overriding a `virtual` method, avoid repeating `virtual` and always use `override` or `final`
 - Use const (including cbegin() and cend()) whenever possible
-- Use [u]int(8|16|32|64)_t instead of `int`, long, uint` etc.
+- Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
 - Include in this order: header for implementation file, c system, c++ system, other
 - Use smart pointers over c-style pointers
 - Use `IS_DEBUG` macro for non-essential checks
@@ -34,6 +34,17 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 
+### Naming convention for gtest macros:
+
+TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
+same for fixtures Test_F()
+
+If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
+
+- Testing the storage module: `./build/hyriseTest --gtest_filter="Storage*"`
+- Testing the table class: `./build/hyriseTest --gtest_filter="StorageTableTest*"`
+- Testing the RowCount test: `./build/hyriseTest --gtest_filter="StorageTableTest.RowCount"`
+
 ## Performance Warnings
 - Sometimes, we have convenience functions, such as BaseColumn::operator[], or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
 
@@ -42,8 +53,11 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - More complex documentation, such as an explanation of an algorithm that profits from images, can be put in the Wiki. Please make sure to link the Wiki page in the code - otherwise, no one will find it.
 
 # Review
-- Things to look for:
+
+**Things to look for:**
+
 	- Guidelines (see above)
 	- Is the copy constructor deleted where it makes sense?
 	- Is the destructor virtual for base classes?
 	- Are unnecessary copies of heavy elements made? (prefer vector& over vector, but not int& over int)
+	- Did the author update documentation and dependencies (Wiki, README.md, DEPENDENCIES.md, Dockerfile, install.sh, Jenkinsfile)

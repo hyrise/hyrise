@@ -54,7 +54,7 @@ node {
         stage("clang-debug:test") {
           sh "./clang-debug/hyriseTest"
         }
-      }, clangDebugAsan: {
+      }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
         sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/hyriseSanitizers"
@@ -73,7 +73,7 @@ node {
         stage("TPCC Test") {
             sh "./scripts/test_tpcc.sh clang-release"
         }
-      }, clangReleaseAsan: {
+      }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/hyriseSanitizers"

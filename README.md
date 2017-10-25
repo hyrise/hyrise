@@ -1,13 +1,26 @@
-[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/zweirise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/zweirise/)
+[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/hyrise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/blue/organizations/jenkins/Hyrise%2Fhyrise/activity)
 [![Coverage Status](https://ares.epic.hpi.uni-potsdam.de/jenkins_coverage_badge)](https://ares.epic.hpi.uni-potsdam.de/jenkins_coverage_badge)
 
-# Hyrise v2 (Codename OpossumDB)
+# Welcome to Hyrise
 
-*Have a look at our [contributor guidelines](https://github.com/hyrise/zweirise/blob/master/CONTRIBUTING.md)*
+This is the repository for the current Hyrise version, which has been rewritten from scratch. The new code base is easier to setup, to understand, and to contribute to. As of now, not all features of the old version are supported yet - we are working on that.
 
-The [wiki](https://github.com/hyrise/zweirise/wiki) is a good starting point to get to know Hyrise
+Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
 
-## Easy start
+# Getting started
+
+*Have a look at our [contributor guidelines](CONTRIBUTING.md)*
+
+The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
+
+## Native Setup
+You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
+The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
+
+See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang. Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
+Older versions may work, but are neither tested nor supported.
+
+## Setup using Docker
 To get all dependencies of Hyrise in a docker image, run
 ```
 docker-compose build
@@ -17,48 +30,11 @@ You can start the container via
 ```
 docker-compose run --rm hyrise
 ```
+
+Inside of the container, run `./install.sh` to download the required submodules.
 :whale:
 
-In the container, continue with [Building and Tooling](#building-and-tooling).
-
-## Dependencies
-You can install the dependencies on your own or use the install.sh script which installs all of the following packages.
-The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
-
-### Dependencies that can be installed via a package manager
-- autoconf
-- automake
-- build-essential (linux)
-- boost (>= 1.62.0)
-- clang (>= 3.5.0) optional if gcc is installed
-- clang-format (>= 3.8) optional
-- CMake (>= 3.5)
-- gcc (>= 6.1) optional if clang is installed
-- gcovr (>= 3.2) optional
-- libtool
-- llvm (optional for AddressSanitizer)
-- pkg-config
-- python (>= 2.7) optional
-- readline (>= 7)
-- tbb/libtbb-dev
-- xcode-select --install (macOS)
-
-### Dependencies that are integrated in our build process via git submodules
-- benchmark (https://github.com/google/benchmark)
-- googletest (https://github.com/google/googletest)
-- protoc and gRPC (https://github.com/grpc/grpc)
-- sql-parser (https://github.com/hyrise/sql-parser)
-- pgasus (https://github.com/kateyy/pgasus)
-
-The install script builds protoc and gRPC. For manual compilation:
-
-Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true`.
-
-The installation guide on [github](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source)
-
-
 ## Building and Tooling
-
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
 Advisable names for this directory would be `cmake-build-{debug,release}`, depending on the build type.
 Within this directory call `cmake ..` to configure the build.
@@ -83,35 +59,24 @@ To configure a build directory for a release build make sure it is empty and cal
 ### Test
 Calling `make hyriseTest` from the build directory builds all available tests.
 The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
-Note, that the tests/asan/etc need to be executed from the project root in order for table-files to be found.
+Note, that the tests/sanitizers/etc need to be executed from the project root in order for table files to be found.
 
 ### Coverage
 `./scripts/coverage.sh <build dir>` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
 *Supports only clang on MacOS and only gcc on linux*
 
-### AddressSanitizer
-`make hyriseAsan` will build Hyrise with enabled AddressSanitizer options and execute all available tests.
-It will fail on the first detected memory error and will print a summary.
+### Address/UndefinedBehavior Sanitizers
+`make hyriseSanitizers` will build Hyrise's tests with enabled AddressSanitizer and Undefined Behavior options. Execute `./<YourBuildDirectory>/hyriseSanitizers` from the project root to run the tests with enabled sanitization.
+It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
-The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseAsan`.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseSanitizers`.
 
 ### Compile Times
-When trying to optimize the time spend building the project, it is often helpful to have an idea how much time is spent where.
+When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
-
-## Naming convention for gtest macros:
-
-TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
-same for fixtures Test_F()
-
-If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
-
-- Testing the storage module: `./build/test --gtest_filter="Storage*"`
-- Testing the table class: `./build/test --gtest_filter="StorageTableTest*"`
-- Testing the RowCount test: `./build/test --gtest_filter="StorageTableTest.RowCount"`
 
 ## Maintainers
 
@@ -125,24 +90,24 @@ Contact: firstname.lastname@hpi.de
 
 ## Contributors
 
--	Yannick	Bäumer
--	Timo	Djürken
--	Fabian	Dumke
--	Moritz	Eyssen
--	Martin	Fischer
--	Pedro	Flemming
--	Sven	Ihde
--	Michael	Janke
--	Max	Jendruk
--	Marvin	Keller
--	Sven	Lehmann
--	Jan	Mattfeld
--	Arne	Mayer
--	Torben	Meyer
--	David	Schumann
--	Daniel	Stolpe
--	Jonathan	Striebel
--	Nils	Thamm
--	Carsten	Walther
--	Fabian	Wiebe
--	Tim	Zimmermann
+-	Yannick  Bäumer
+-	Timo     Djürken
+-	Fabian   Dumke
+-	Moritz   Eyssen
+-	Martin   Fischer
+-	Pedro    Flemming
+-	Sven     Ihde
+-	Michael  Janke
+-	Max      Jendruk
+-	Marvin   Keller
+-	Sven     Lehmann
+-	Jan      Mattfeld
+-	Arne     Mayer
+-	Torben   Meyer
+-	David    Schumann
+-	Daniel   Stolpe
+-	Jonathan Striebel
+-	Nils     Thamm
+-	Carsten  Walther
+-	Fabian   Wiebe
+-	Tim      Zimmermann

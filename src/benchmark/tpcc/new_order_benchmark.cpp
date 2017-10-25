@@ -1,14 +1,7 @@
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "benchmark/benchmark.h"
-
-#include "tpcc_base_fixture.hpp"
-
-#include "tpcc/constants.hpp"
 #include "tpcc/new_order.hpp"
+#include "benchmark/benchmark.h"
+#include "tpcc/constants.hpp"
+#include "tpcc_base_fixture.hpp"
 
 namespace opossum {
 

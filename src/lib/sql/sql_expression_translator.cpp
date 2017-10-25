@@ -2,10 +2,9 @@
 
 #include <algorithm>
 #include <cctype>
-#include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "constant_mappings.hpp"
@@ -19,7 +18,7 @@ namespace opossum {
 std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
     const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
-  auto alias = expr.alias != nullptr ? optional<std::string>(expr.alias) : nullopt;
+  auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
   std::shared_ptr<Expression> node;
   std::shared_ptr<Expression> left;
@@ -43,7 +42,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       DebugAssert(input_node != nullptr, "Input node needs to be set");
       DebugAssert(expr.name != nullptr, "hsql::Expr::name needs to be set");
 
-      auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
+      auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
       NamedColumnReference named_column_reference{name, table_name};
       auto column_id = input_node->get_column_id_by_named_column_reference(named_column_reference);
       node = Expression::create_column(column_id, alias);
@@ -97,7 +96,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
       break;
     case hsql::kExprStar: {
-      const auto table_name = expr.table != nullptr ? optional<std::string>(expr.table) : nullopt;
+      const auto table_name = expr.table != nullptr ? std::optional<std::string>(expr.table) : std::nullopt;
       node = Expression::create_select_star(table_name);
       break;
     }
@@ -127,7 +126,7 @@ NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_col
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
   return NamedColumnReference{hsql_expr.name,
-                              hsql_expr.table == nullptr ? nullopt : optional<std::string>(hsql_expr.table)};
+                              hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
 }
 
 ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr& hsql_expr,

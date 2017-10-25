@@ -1,11 +1,11 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "common.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -38,8 +38,10 @@ struct ColumnID;
  * have to deal with ColumnID re-mappings for now. Projections, Aggregates, etc. amidst Joins and Predicates
  * should be rare anyway.
  */
-class JoinConditionDetectionRule : public AbstractRule {
+class JoinDetectionRule : public AbstractRule {
  protected:
+  std::string name() const override;
+
   bool apply_to(const std::shared_ptr<AbstractASTNode>& node) override;
 
  private:
@@ -49,7 +51,7 @@ class JoinConditionDetectionRule : public AbstractRule {
     ColumnID right_column_id;
   };
 
-  optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);
+  std::optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);
 
   /**
    * Used to check whether a Predicate working on the ColumnIDs left and right could be used as a JoinCondition

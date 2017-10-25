@@ -6,13 +6,19 @@
 #include <utility>
 #include <vector>
 
-#include "product.hpp"
-
-#include "storage/column_visitable.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/cuckoo_hashtable.hpp"
+#include "utils/murmur_hash.hpp"
 
 namespace opossum {
 
@@ -205,7 +211,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         values from different inputs (important for Multi Joins).
         For performance reasons this if statement is around the for loop.
         */
-        if (auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column)) {
+        if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
           // hash and add to the other elements
           ChunkOffset offset = 0;
           for (auto&& elem : materialized) {
@@ -472,7 +478,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   static void _copy_table_metadata(const std::shared_ptr<const Table> in_table,
                                    const std::shared_ptr<Table> out_table) {
-    for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
       // TODO(anyone): Refine since not all column are nullable
       out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id), true);
     }
@@ -582,11 +588,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
     */
     auto ref_col_left =
-        std::dynamic_pointer_cast<ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
             ? true
             : false;
     auto ref_col_right =
-        std::dynamic_pointer_cast<ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
             ? true
             : false;
 
@@ -619,19 +625,19 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
                                   std::shared_ptr<PosList> pos_list, bool is_ref_column) {
     // Add columns from input table to output chunk
-    for (ColumnID column_id{0}; column_id < input_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
 
       if (is_ref_column) {
         auto ref_col =
-            std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
+            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
 
         // Get all the input pos lists so that we only have to pointer cast the columns once
         auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
           // This works because we assume that the columns have to be either all ReferenceColumns or none.
           auto ref_column =
-              std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));
+              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));
           input_pos_lists.push_back(ref_column->pos_list());
         }
 

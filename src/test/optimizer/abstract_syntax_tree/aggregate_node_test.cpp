@@ -45,15 +45,15 @@ class AggregateNodeTest : public BaseTest {
 };
 
 TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", nullopt}), 0);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", std::nullopt}), 0);
   EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", {"t_a"}}), 0);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", nullopt}), nullopt);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", nullopt}), 1);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", std::nullopt}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", std::nullopt}), 1);
   EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 1);
 
-  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"some_sum", nullopt}), 3);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"some_sum", std::nullopt}), 3);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
 }
 
 TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
@@ -92,7 +92,7 @@ TEST_F(AggregateNodeTest, ColumnIdForExpression) {
                 AggregateFunction::Sum,
                 {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{1}),
                                                     Expression::create_column(ColumnID{2}))})),
-            nullopt);
+            std::nullopt);
 
   // TODO(mp): This expression is currently not found because the alias is missing.
   // This has to be fixed once expressions do not have an alias anymore.
@@ -100,7 +100,7 @@ TEST_F(AggregateNodeTest, ColumnIdForExpression) {
                 AggregateFunction::Sum,
                 {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
                                                     Expression::create_column(ColumnID{2}))})),
-            nullopt);
+            std::nullopt);
 }
 
 TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
@@ -112,10 +112,11 @@ TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
 
   EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a"}), ColumnID{0});
   EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
-  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), nullopt);
-  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", nullopt}), ColumnID{3});
+  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", std::nullopt}),
+            ColumnID{3});
   EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", {"foo"}}), ColumnID{3});
-  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), nullopt);
+  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
 }
 
 }  // namespace opossum

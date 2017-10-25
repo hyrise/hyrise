@@ -21,8 +21,8 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "pagination.hpp"
 #include "planviz/ast_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
@@ -226,7 +226,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   // Measure the plan compile time
@@ -262,7 +262,7 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
   out("===\n");
-  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
+  out(std::to_string(row_count) + " rows total (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   return ReturnCode::Ok;
@@ -328,9 +328,18 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table) {
-  Print::print(table, 0, _out);
-  Print::print(table, 0, _log);
+void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+  int size_y, size_x;
+  rl_get_screen_size(&size_y, &size_x);
+
+  // Paginate only if table has more rows that fit in the terminal
+  if (table->row_count() < static_cast<uint64_t>(size_y) - 1) {
+    Print::print(table, flags, _out);
+  } else {
+    std::stringstream stream;
+    Print::print(table, flags, stream);
+    Pagination(stream).display();
+  }
 }
 
 // Command functions
@@ -449,13 +458,7 @@ int Console::print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto print = std::make_shared<Print>(gt, std::cout, PrintMvcc);
-  try {
-    print->execute();
-  } catch (const std::exception& exception) {
-    console.out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
+  console.out(gt->get_output(), PrintMvcc);
 
   return ReturnCode::Ok;
 }
@@ -484,7 +487,7 @@ int Console::visualize(const std::string& input) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     console.out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   if (mode == "ast" || mode == "astopt") {

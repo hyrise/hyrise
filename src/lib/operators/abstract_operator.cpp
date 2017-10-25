@@ -5,6 +5,7 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -33,6 +34,7 @@ void AbstractOperator::execute() {
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
   DebugAssert(
       [&]() {
+        if (_output == nullptr) return true;
         if (_output->chunk_count() <= ChunkID{1}) return true;
         for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
           if (_output->get_chunk(chunk_id).size() < 1) return true;

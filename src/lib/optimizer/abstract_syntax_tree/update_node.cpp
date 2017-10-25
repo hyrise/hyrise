@@ -1,16 +1,15 @@
 #include "update_node.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "common.hpp"
-#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class Expression;
 
 UpdateNode::UpdateNode(const std::string& table_name,
                        const std::vector<std::shared_ptr<Expression>>& column_expressions)

@@ -23,11 +23,11 @@ target_link_libraries(
 
 # Configure tpccTableGenerator
 add_executable(tpccTableGenerator tpcc_table_generator.cpp)
-target_link_libraries(tpccTableGenerator hyrise tpcc)
+target_link_libraries(tpccTableGenerator hyrise hyriseBenchmarkLib)
 
 # Configure tpchTableGenerator
 add_executable(tpchTableGenerator tpch_table_generator.cpp)
-target_link_libraries(tpchTableGenerator hyrise tpch)
+target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
 
 # Configure client
 add_executable(
@@ -45,13 +45,16 @@ target_link_libraries(
 add_executable(
     hyriseConsole
 
-    console.cpp
-    console.hpp
+    console/console.cpp
+    console/console.hpp
+    console/pagination.cpp
+    console/pagination.hpp
 )
 target_link_libraries(
     hyriseConsole
     hyrise
-    tpcc
+    hyriseBenchmarkLib
+    ncurses
     ${READLINE_LIBRARY}
 )
 target_include_directories(

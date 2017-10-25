@@ -6,10 +6,9 @@
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
 #include <boost/lexical_cast.hpp>
-
 #include <string>
 
-#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
@@ -54,7 +53,5 @@ std::enable_if_t<std::is_integral<T>::value, T> type_cast(const AllTypeVariant& 
     return boost::numeric_cast<T>(boost::lexical_cast<double>(value));
   }
 }
-
-std::string to_string(const AllParameterVariant& x);
 
 }  // namespace opossum

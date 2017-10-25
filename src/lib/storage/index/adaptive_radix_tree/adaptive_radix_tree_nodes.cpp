@@ -7,9 +7,7 @@
 #include <vector>
 
 #include "adaptive_radix_tree_index.hpp"
-
 #include "storage/index/base_index.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

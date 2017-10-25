@@ -9,10 +9,10 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

@@ -3,26 +3,24 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "table_scan/column_comparison_table_scan_impl.hpp"
-#include "table_scan/is_null_table_scan_impl.hpp"
-#include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_column_table_scan_impl.hpp"
-
+#include "all_parameter_variant.hpp"
+#include "constant_mappings.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
-
-#include "all_parameter_variant.hpp"
-#include "constant_mappings.hpp"
+#include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/is_null_table_scan_impl.hpp"
+#include "table_scan/like_table_scan_impl.hpp"
+#include "table_scan/single_column_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -31,7 +29,7 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
                      const ScanType scan_type, const AllParameterVariant right_parameter,
-                     const optional<AllTypeVariant> right_value2)
+                     const std::optional<AllTypeVariant> right_value2)
     : AbstractReadOnlyOperator{in},
       _left_column_id{left_column_id},
       _scan_type{scan_type},
@@ -46,7 +44,7 @@ ScanType TableScan::scan_type() const { return _scan_type; }
 
 const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
 
-const optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
+const std::optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
@@ -119,7 +117,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
-        for (ColumnID column_id{0u}; column_id < _in_table->col_count(); ++column_id) {
+        for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
           auto column_in = chunk_in.get_column(column_id);
 
           auto ref_column_in = std::dynamic_pointer_cast<const ReferenceColumn>(column_in);
@@ -146,7 +144,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           chunk_out.add_column(ref_column_out);
         }
       } else {
-        for (ColumnID column_id{0u}; column_id < _in_table->col_count(); ++column_id) {
+        for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
           auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
           chunk_out.add_column(ref_column_out);
         }
@@ -176,7 +174,7 @@ void TableScan::_init_scan() {
   _is_reference_table = [&]() {
     // We assume if one column is a reference column, all are.
     const auto column = first_chunk.get_column(_left_column_id);
-    const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
+    const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
     return ref_column != nullptr;
   }();
 
@@ -217,7 +215,7 @@ void TableScan::_init_scan() {
 void TableScan::_init_output_table() {
   _output_table = std::make_shared<Table>();
 
-  for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < _in_table->column_count(); ++column_id) {
     _output_table->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 }

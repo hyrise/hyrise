@@ -1,26 +1,22 @@
+#pragma once
 
 #include <functional>
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-
-#include "resolve_type.hpp"
-#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -45,7 +41,7 @@ class AggregateResult {
  public:
   AggregateResult() {}
 
-  optional<AggregateType> current_aggregate;
+  std::optional<AggregateType> current_aggregate;
   size_t aggregate_count = 0;
   std::set<DataType> distinct_values;
 };
@@ -65,11 +61,11 @@ constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
  */
 struct AggregateDefinition {
   AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const optional<std::string>& alias = nullopt);
+                      const std::optional<std::string>& alias = std::nullopt);
 
   ColumnID column_id;
   AggregateFunction function;
-  optional<std::string> alias;
+  std::optional<std::string> alias;
 };
 
 /**
@@ -200,8 +196,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
+      _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
     Fail("Invalid aggregate");
   }
 
@@ -248,7 +244,7 @@ the AggregateVisitor. It is a separate class because methods cannot be partially
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
 template <typename ColumnType, typename AggregateType>
-using AggregateFunctor = std::function<optional<AggregateType>(ColumnType, optional<AggregateType>)>;
+using AggregateFunctor = std::function<std::optional<AggregateType>(ColumnType, std::optional<AggregateType>)>;
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {

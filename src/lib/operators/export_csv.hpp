@@ -5,10 +5,8 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "import_export/csv_writer.hpp"
 #include "storage/column_visitable.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -43,7 +41,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
 
   /*
    * Executes the export process.
-   * During this process, two files are created: <table_name>.csv and <table_name>.meta.csv
+   * During this process, two files are created: <table_name>.csv and <table_name>.csv.meta
    * Currently, they are both csv files with a comma (,) as delimiter
    * and a quotation mark (") as quotation mark. As escape character, also a quotation mark is used (").
    * This definition is in line with RFC 4180
@@ -55,6 +53,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *  -------------------------------------------
    *    1     | Hallo Welt            |  3.5
    *   102    | Du: sagtest: "Hi!"    |  4.0
+   *   NULL   | Kekse                 |  5.0
    *
    * The generated files will look the following:
    *
@@ -63,23 +62,24 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *  a,b,c
    *  1,"Hallo Welt",3.5
    *  102,"Du sagtest:""Hi!""",4.0
+   *  ,"Kekse",5.0
    *
-   *  example.meta.csv:
+   *  example.csv.meta:
    *
-   *  PropertyType,Key,Value
-   *  Chunk Size,,100
-   *  Column Type,a,int
-   *  Column Type,b,string
-   *  Column Type,c,float
+   *  "PropertyType","Key","Value"
+   *  "ChunkSize",,100
+   *  "ColumnType","a","int_null"
+   *  "ColumnType","b","string"
+   *  "ColumnType","c","float"
    *
    *  which resembles the following table of meta data:
    *
    *  PropertyType  | Key | Value
-   *  ---------------------------
+   *  ------------------------------
    *  ChunkSize     |     | 100
-   *  ColumnType    | a   | int
-   *  ColumnType    | b   | string
-   *  ColumnType    | c   | float
+   *  ColumnType    |  a  | int_null
+   *  ColumnType    |  b  | string
+   *  ColumnType    |  c  | float
    *
    *  Returns the input table
    */
@@ -101,7 +101,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + name() + " does not implement recreation.");
     return {};
   }
 

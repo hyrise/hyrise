@@ -8,19 +8,17 @@
 #include <vector>
 
 #include "adaptive_radix_tree_nodes.hpp"
-
 #include "storage/base_attribute_vector.hpp"
 #include "storage/base_column.hpp"
 #include "storage/base_dictionary_column.hpp"
 #include "storage/index/base_index.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>>& index_columns)
-    : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns.front())) {
+AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
+    : _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns.front())) {
   DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
   DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
@@ -117,9 +115,8 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 }
 
-std::vector<std::shared_ptr<BaseColumn>> AdaptiveRadixTreeIndex::_get_index_columns() const {
-  std::vector<std::shared_ptr<BaseColumn>> v = {_index_column};
-  return v;
+std::vector<std::shared_ptr<const BaseColumn>> AdaptiveRadixTreeIndex::_get_index_columns() const {
+  return {_index_column};
 }
 
 AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _parts(sizeof(value)) {

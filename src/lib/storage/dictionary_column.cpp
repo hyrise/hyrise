@@ -7,11 +7,10 @@
 
 #include "base_attribute_vector.hpp"
 #include "column_visitable.hpp"
-#include "value_column.hpp"
-
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "value_column.hpp"
 
 namespace opossum {
 
@@ -41,7 +40,7 @@ const T DictionaryColumn<T>::get(const size_t i) const {
 
   const auto value_id = _attribute_vector->get(i);
 
-  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + to_string(i) + " is null.");
+  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(i) + " is null.");
 
   return (*_dictionary)[value_id];
 }
@@ -121,7 +120,7 @@ size_t DictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) {
+void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 

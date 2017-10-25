@@ -1,11 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "tbb/concurrent_vector.h"
 
 #include "base_value_column.hpp"
 
@@ -49,7 +48,7 @@ class ValueColumn : public BaseValueColumn {
   size_t size() const override;
 
   // visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override;
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   // writes the length and value at the chunk_offset to the end off row_string
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
@@ -63,7 +62,7 @@ class ValueColumn : public BaseValueColumn {
 
  protected:
   pmr_concurrent_vector<T> _values;
-  optional<pmr_concurrent_vector<bool>> _null_values;
+  std::optional<pmr_concurrent_vector<bool>> _null_values;
   // While a ValueColumn knows if it is nullable or not by looking at this optional, a DictionaryColumn does not.
   // For this reason, we need to store the nullable information separately in the table's definition.
 };

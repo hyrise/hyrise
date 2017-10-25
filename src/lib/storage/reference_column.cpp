@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "column_visitable.hpp"
-
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -16,7 +15,7 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
     : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
   if (IS_DEBUG) {
     auto referenced_column = _referenced_table->get_chunk(ChunkID{0}).get_column(referenced_column_id);
-    auto reference_col = std::dynamic_pointer_cast<ReferenceColumn>(referenced_column);
+    auto reference_col = std::dynamic_pointer_cast<const ReferenceColumn>(referenced_column);
 
     DebugAssert(!(reference_col), "referenced_column must not be a ReferenceColumn");
   }
@@ -42,7 +41,7 @@ ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_colu
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
-void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) {
+void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_reference_column(*this, std::move(context));
 }
 

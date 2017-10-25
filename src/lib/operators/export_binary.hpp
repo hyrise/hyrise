@@ -5,15 +5,11 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "import_export/binary.hpp"
-#include "storage/base_column.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/fitted_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -47,7 +43,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const final;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + name() + " does not implement recreation.");
     return {};
   }
 
@@ -121,7 +117,8 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final;
+  void handle_value_column(const BaseValueColumn& base_column,
+                           std::shared_ptr<ColumnVisitableContext> base_context) final;
 
   /**
    * Reference Columns are dumped with the following layout, which is similar to value columns:
@@ -142,7 +139,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_reference_column(ReferenceColumn& ref_column,
+  void handle_reference_column(const ReferenceColumn& ref_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
   /**
    * Dictionary Columns are dumped with the following layout:
@@ -166,7 +163,8 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   // Chooses the right FittedAttributeVector depending on the attribute_vector_width and exports it.

@@ -32,13 +32,13 @@ class JoinNodeTest : public BaseTest {
 };
 
 TEST_F(JoinNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_join_node->get_column_id_by_named_column_reference({"a", nullopt}), 0);
+  EXPECT_EQ(_join_node->get_column_id_by_named_column_reference({"a", std::nullopt}), 0);
   EXPECT_EQ(_join_node->get_column_id_by_named_column_reference({"a", {"t_a"}}), 0);
-  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"x", {"t_a"}}), nullopt);
+  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"x", {"t_a"}}), std::nullopt);
   EXPECT_EQ(_join_node->get_column_id_by_named_column_reference({"x", {"t_b"}}), 3);
-  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"x", {"t_a"}}), nullopt);
-  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"z", nullopt}), nullopt);
-  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"z", {"t_z"}}), nullopt);
+  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"x", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"z", std::nullopt}), std::nullopt);
+  EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"z", {"t_z"}}), std::nullopt);
 }
 
 TEST_F(JoinNodeTest, AliasedSubqueryTest) {
@@ -51,8 +51,8 @@ TEST_F(JoinNodeTest, AliasedSubqueryTest) {
 
   EXPECT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"a"}), ColumnID{0});
   EXPECT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
-  EXPECT_EQ(join_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), nullopt);
-  EXPECT_EQ(join_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), nullopt);
+  EXPECT_EQ(join_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(join_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), std::nullopt);
   EXPECT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"x", {"foo"}}), ColumnID{3});
 }
 

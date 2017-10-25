@@ -4,7 +4,6 @@
 #include <utility>
 
 #include "iterables.hpp"
-
 #include "types.hpp"
 
 namespace opossum {

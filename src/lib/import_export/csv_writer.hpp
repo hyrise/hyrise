@@ -25,7 +25,7 @@ class CsvWriter {
       _stream << _config.separator;
     }
     _write_value(value);
-    ++this->_current_col_count;
+    ++_current_col_count;
   }
 
   /*

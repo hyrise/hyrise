@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -9,11 +8,10 @@
 
 #include "base_column.hpp"
 #include "chunk.hpp"
-
-#include "common.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -33,7 +31,7 @@ class Table : private Noncopyable {
   Table& operator=(Table&&) = default;
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t col_count() const;
+  uint16_t column_count() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -98,6 +96,10 @@ class Table : private Noncopyable {
   // If you want to write efficient operators, back off!
   template <typename T>
   T get_value(const ColumnID column_id, const size_t row_number) const {
+    PerformanceWarning("get_value() used");
+
+    Assert(column_id < column_count(), "column_id invalid");
+
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
       size_t current_size = chunk.size();

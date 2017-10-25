@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/expression.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -136,7 +137,7 @@ TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
 
   ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b"}), ColumnID{1});
   ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b", {"foo"}}), ColumnID{1});
-  ASSERT_EQ(predicate_node->find_column_id_by_named_column_reference({"b", {"a"}}), nullopt);
+  ASSERT_EQ(predicate_node->find_column_id_by_named_column_reference({"b", {"a"}}), std::nullopt);
 }
 
 }  // namespace opossum

@@ -1,13 +1,14 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <thread>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "../../storage/base_attribute_vector.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -86,8 +87,8 @@ class ColumnMaterializer : public ColumnVisitable {
   /**
   * ColumnVisitable implementation to materialize and sort a value column.
   **/
-  void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
-    auto& value_column = static_cast<ValueColumn<T>&>(column);
+  void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
+    auto& value_column = static_cast<const ValueColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto output = std::make_shared<MaterializedColumn<T>>();
     output->reserve(value_column.values().size());
@@ -112,8 +113,9 @@ class ColumnMaterializer : public ColumnVisitable {
   /**
   * ColumnVisitable implementaion to materialize and sort a dictionary column.
   **/
-  void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
-    auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
+  void handle_dictionary_column(const BaseDictionaryColumn& column,
+                                std::shared_ptr<ColumnVisitableContext> context) override {
+    auto& dictionary_column = dynamic_cast<const DictionaryColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto output = std::make_shared<MaterializedColumn<T>>();
     output->reserve(column.size());
@@ -166,7 +168,8 @@ class ColumnMaterializer : public ColumnVisitable {
   /**
   * Sorts the contents of a reference column into a sorted chunk
   **/
-  void handle_reference_column(ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> context) override {
+  void handle_reference_column(const ReferenceColumn& ref_column,
+                               std::shared_ptr<ColumnVisitableContext> context) override {
     auto referenced_table = ref_column.referenced_table();
     auto referenced_column_id = ref_column.referenced_column_id();
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
@@ -175,12 +178,12 @@ class ColumnMaterializer : public ColumnVisitable {
     output->reserve(ref_column.size());
 
     // Retrieve the columns from the referenced table so they only have to be cast once
-    auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
-    auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
+    auto v_columns = std::vector<std::shared_ptr<const ValueColumn<T>>>(referenced_table->chunk_count());
+    auto d_columns = std::vector<std::shared_ptr<const DictionaryColumn<T>>>(referenced_table->chunk_count());
     for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
+      v_columns[chunk_id] = std::dynamic_pointer_cast<const ValueColumn<T>>(
           referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
-      d_columns[chunk_id] = std::dynamic_pointer_cast<DictionaryColumn<T>>(
+      d_columns[chunk_id] = std::dynamic_pointer_cast<const DictionaryColumn<T>>(
           referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
     }
 

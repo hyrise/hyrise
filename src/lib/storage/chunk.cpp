@@ -1,4 +1,3 @@
-#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -9,9 +8,8 @@
 
 #include "base_column.hpp"
 #include "chunk.hpp"
-#include "index/group_key/group_key_index.hpp"
+#include "index/base_index.hpp"
 #include "reference_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -43,13 +41,14 @@ void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column)
   std::atomic_store(&_columns.at(column_id), column);
 }
 
-void Chunk::append(std::vector<AllTypeVariant> values) {
+void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
-  DebugAssert((_columns.size() == values.size()), ("append: number of columns (" + to_string(_columns.size()) +
-                                                   ") does not match value list (" + to_string(values.size()) + ")"));
+  DebugAssert((_columns.size() == values.size()),
+              ("append: number of columns (" + std::to_string(_columns.size()) + ") does not match value list (" +
+               std::to_string(values.size()) + ")"));
 
   auto column_it = _columns.cbegin();
   auto value_it = values.begin();
@@ -58,11 +57,15 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const {
+std::shared_ptr<BaseColumn> Chunk::get_mutable_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
-uint16_t Chunk::col_count() const { return _columns.size(); }
+std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
+  return std::atomic_load(&_columns.at(column_id));
+}
+
+uint16_t Chunk::column_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
   if (_columns.empty()) return 0;
@@ -110,7 +113,7 @@ void Chunk::shrink_mvcc_columns() {
 }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
-    const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
+    const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
                [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
@@ -118,14 +121,14 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
 }
 
 bool Chunk::references_only_one_table() const {
-  if (this->col_count() == 0) return false;
+  if (column_count() == 0) return false;
 
-  auto first_column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(ColumnID{0}));
+  auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(ColumnID{0}));
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (ColumnID i{1}; i < this->col_count(); ++i) {
-    const auto column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(i));
+  for (ColumnID i{1}; i < column_count(); ++i) {
+    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(i));
 
     if (column == nullptr) return false;
 

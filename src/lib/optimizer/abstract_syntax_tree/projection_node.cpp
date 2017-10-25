@@ -2,13 +2,12 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "optimizer/expression.hpp"
-
-#include "common.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -80,13 +79,13 @@ const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   /**
    * The result variable. We make sure the optional is only set once to detect ambiguity in column
    * references.
    */
-  optional<ColumnID> result_column_id;
+  std::optional<ColumnID> result_column_id;
 
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {
