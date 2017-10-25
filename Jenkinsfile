@@ -79,7 +79,7 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/hyriseSanitizers"
         }
-      }, clangReleaseSanitizers: {
+      }, clangReleaseSanitizersWoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-no-numa && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release-no-numa/hyriseSanitizers"
