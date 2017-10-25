@@ -25,7 +25,7 @@ namespace opossum {
 
 class SQLiteTestRunner : public testing::TestWithParam<std::string> {
  protected:
-  void _set_up() {
+  void SetUp() override {
     StorageManager::get().reset();
     _sqlite.reset(new SQLiteWrapper());
 
@@ -74,8 +74,6 @@ std::vector<std::string> read_queries_from_file() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   std::string query = GetParam();
-
-  _set_up();
 
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString(query, &parse_result);
