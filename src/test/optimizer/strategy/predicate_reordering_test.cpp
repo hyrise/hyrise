@@ -13,6 +13,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/column_statistics.hpp"
+#include "optimizer/expression.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"

@@ -6,9 +6,6 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
-
-#include "tpcc_base_fixture.hpp"
-
 #include "concurrency/transaction_manager.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/commit_records.hpp"
@@ -20,10 +17,9 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "scheduler/operator_task.hpp"
-
 #include "tpcc/constants.hpp"
 #include "tpcc/helper.hpp"
-
+#include "tpcc_base_fixture.hpp"
 #include "types.hpp"
 
 namespace opossum {

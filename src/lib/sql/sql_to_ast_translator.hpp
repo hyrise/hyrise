@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/noncopyable.hpp>
-
 #include <memory>
 #include <optional>
 #include <string>
@@ -54,7 +52,7 @@ class AggregateNode;
  * hsql::SQLParser::parseSQLString(params.query, &parse_result);
  * auto result_nodes = SQLToASTTranslator::get().translate_parse_result(parse_result);
  */
-class SQLToASTTranslator final : public boost::noncopyable {
+class SQLToASTTranslator final : public Noncopyable {
  public:
   static SQLToASTTranslator& get();
 

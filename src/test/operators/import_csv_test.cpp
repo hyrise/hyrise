@@ -229,7 +229,9 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 }
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv");
+  auto config = CsvConfig{};
+  config.reject_quoted_nonstrings = false;
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv", config);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -258,6 +260,11 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   expected_table->append({"xxx\\\"xyz\\\""});
 
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/quoted_int.csv");
+  EXPECT_THROW(importer->execute(), std::exception);
 }
 
 }  // namespace opossum

@@ -5,10 +5,8 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "import_export/csv_writer.hpp"
 #include "storage/column_visitable.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {

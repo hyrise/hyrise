@@ -1,18 +1,15 @@
 #include "expression.hpp"
 
 #include <iomanip>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
-
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 

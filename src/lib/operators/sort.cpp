@@ -10,6 +10,8 @@
 #include "storage/iterables/chunk_offset_mapping.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 

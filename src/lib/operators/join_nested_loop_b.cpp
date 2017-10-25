@@ -1,6 +1,5 @@
 #include "join_nested_loop_b.hpp"
 
-#include <exception>
 #include <memory>
 #include <set>
 #include <stdexcept>
@@ -8,9 +7,11 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_attribute_vector.hpp"
-
 #include "resolve_type.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

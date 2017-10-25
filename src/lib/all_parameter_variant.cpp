@@ -1,5 +1,6 @@
 #include "all_parameter_variant.hpp"
 
+#include <boost/lexical_cast.hpp>
 #include <string>
 
 namespace opossum {
