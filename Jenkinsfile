@@ -44,13 +44,13 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/hyriseTest"
         }
-      }, clangDebug: {
+      }, clangDebugBuildOnly: {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
         }
       }
 
-      parallel clangDebug: {
+      parallel clangDebugRun: {
         stage("clang-debug:test") {
           sh "./clang-debug/hyriseTest"
         }
