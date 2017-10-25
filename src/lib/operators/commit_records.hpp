@@ -20,11 +20,6 @@ class CommitRecords : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
-
   void commit_records(const CommitID cid) override;
   void rollback_records() override;
 

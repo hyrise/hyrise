@@ -23,7 +23,7 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
  public:
   ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator, CpuID cpuID);
 
-  bool shutdown_flag() const { return _shutdown_flag; }
+  bool shutdown_flag() const;
 
   /**
    * In order to be allowed to pull new Tasks, a Worker must be the active worker, i.e. call this method with its id
@@ -53,14 +53,14 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
    * Increments the local counter of finished tasks to allow the Scheduler to determine whether all tasks finished.
    * Typically called by Workers
    */
-  void on_worker_finished_task() { _num_finished_tasks++; }
+  void on_worker_finished_task();
 
   /**
    * To be called by the Scheduler
    */
   void join();
   void shutdown();
-  uint64_t num_finished_tasks() const { return _num_finished_tasks; }
+  uint64_t num_finished_tasks() const;
 
  private:
   std::shared_ptr<TaskQueue> _queue;

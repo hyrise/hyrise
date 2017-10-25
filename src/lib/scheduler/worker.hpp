@@ -40,7 +40,21 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
  protected:
   template <typename TaskType>
-  void _wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& task);
+  void _wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
+    /**
+     * This method blocks the calling thread (worker) until all tasks have been completed.
+     * It hands off the active worker token so that another worker can execute tasks while the calling worker is blocked.
+     */
+    auto processing_unit = _processing_unit.lock();
+    DebugAssert(static_cast<bool>(processing_unit), "Bug: Locking the processing unit failed");
+
+    processing_unit->yield_active_worker_token(_id);
+    processing_unit->wake_or_create_worker();
+
+    for (auto& task : tasks) {
+      task->_join_without_replacement_worker();
+    }
+  }
 
  private:
   /**
@@ -54,22 +68,5 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   WorkerID _id;
   CpuID _cpu_id;
 };
-
-template <typename TaskType>
-void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-  /**
-   * This method blocks the calling thread (worker) until all tasks have been completed.
-   * It hands off the active worker token so that another worker can execute tasks while the calling worker is blocked.
-   */
-  auto processing_unit = _processing_unit.lock();
-  DebugAssert(static_cast<bool>(processing_unit), "Bug: Locking the processing unit failed");
-
-  processing_unit->yield_active_worker_token(_id);
-  processing_unit->wake_or_create_worker();
-
-  for (auto& task : tasks) {
-    task->_join_without_replacement_worker();
-  }
-}
 
 }  // namespace opossum

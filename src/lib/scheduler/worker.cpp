@@ -115,4 +115,5 @@ void Worker::_set_affinity() {
   }
 #endif
 }
+
 }  // namespace opossum

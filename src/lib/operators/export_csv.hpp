@@ -100,11 +100,6 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
-
  private:
   // Name of the output file
   const std::string _filename;
