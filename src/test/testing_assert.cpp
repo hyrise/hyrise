@@ -118,42 +118,52 @@ namespace opossum {
     std::sort(right.begin(), right.end());
   }
 
+  bool has_failed = false;
   for (unsigned row = 0; row < left.size(); row++)
     for (ColumnID col{0}; col < left[row].size(); col++) {
       if (is_null(left[row][col]) || is_null(right[row][col])) {
         EXPECT_TRUE(is_null(left[row][col]) && is_null(right[row][col]));
+        has_failed = true;
       } else if (tleft.column_type(col) == "float") {
         auto left_val = type_cast<float>(left[row][col]);
         auto right_val = type_cast<float>(right[row][col]);
 
         if (strict_types) {
           EXPECT_EQ(tright.column_type(col), "float");
+          has_failed = true;
         } else {
           EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+          has_failed = true;
         }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        has_failed = true;
       } else if (tleft.column_type(col) == "double") {
         auto left_val = type_cast<double>(left[row][col]);
         auto right_val = type_cast<double>(right[row][col]);
 
         if (strict_types) {
           EXPECT_EQ(tright.column_type(col), "double");
+          has_failed = true;
         } else {
           EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+          has_failed = true;
         }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        has_failed = true;
       } else {
         if (!strict_types && (tleft.column_type(col) == "int" || tleft.column_type(col) == "long")) {
           auto left_val = type_cast<int64_t>(left[row][col]);
           auto right_val = type_cast<int64_t>(right[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;
+          has_failed = true;
         } else {
           EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
+          has_failed = true;
         }
       }
     }
 
-  if (::testing::Test::HasFailure()) {
+  if (has_failed) {
     print_tables();
   }
 
