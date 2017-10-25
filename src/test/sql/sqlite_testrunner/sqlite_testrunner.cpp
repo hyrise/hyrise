@@ -56,7 +56,7 @@ class SQLiteTestRunner : public testing::TestWithParam<std::string> {
   std::unique_ptr<SQLiteWrapper> _sqlite;
 };
 
-std::vector<std::string> ReadTestCasesFromFile() {
+std::vector<std::string> read_queries_from_file() {
   std::vector<std::string> queries;
 
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
@@ -118,7 +118,7 @@ auto formatter = [](const testing::TestParamInfo<std::string>) {
   static int test = 1;
   return std::to_string(test++);
 };
-INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(ReadTestCasesFromFile()),
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()),
                         formatter);
 
 }  // namespace opossum
