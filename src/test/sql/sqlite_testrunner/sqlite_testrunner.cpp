@@ -27,7 +27,7 @@ class SQLiteTestRunner : public testing::TestWithParam<std::string> {
  protected:
   void _set_up() {
     StorageManager::get().reset();
-    _sqlite.reset(new SQLiteWrapper());
+    _sqlite.reset({});
 
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
