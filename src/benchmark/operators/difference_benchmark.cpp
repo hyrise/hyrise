@@ -4,11 +4,8 @@
 
 #include "../base_fixture.hpp"
 #include "../table_generator.hpp"
-
 #include "operators/difference.hpp"
 #include "operators/table_wrapper.hpp"
-
-#include "types.hpp"
 
 namespace opossum {
 

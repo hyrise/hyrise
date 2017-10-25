@@ -145,14 +145,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   friend std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 };
 
-inline std::ostream& operator<<(std::ostream& os, TableStatistics& obj) {
-  os << "Table Stats " << std::endl;
-  os << " row count: " << obj._row_count;
-  for (const auto& statistics : obj._column_statistics) {
-    if (statistics) os << std::endl << " " << *statistics;
-  }
-  return os;
-}
+std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 
 // default selectivity factors for assumption of uniform distribution
 constexpr float DEFAULT_SELECTIVITY = 0.5f;

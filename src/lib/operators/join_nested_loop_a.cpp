@@ -7,12 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "product.hpp"
-
+#include "resolve_type.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
-
-#include "resolve_type.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "type_comparison.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

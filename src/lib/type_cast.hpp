@@ -6,10 +6,9 @@
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
 #include <boost/lexical_cast.hpp>
-
 #include <string>
 
-#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 

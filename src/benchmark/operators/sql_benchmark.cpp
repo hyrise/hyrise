@@ -1,10 +1,9 @@
 #include <memory>
 #include <string>
 
+#include "../base_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
-
-#include "../base_fixture.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "sql/sql_query_operator.hpp"
 #include "sql/sql_to_ast_translator.hpp"

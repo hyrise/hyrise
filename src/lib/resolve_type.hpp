@@ -3,18 +3,16 @@
 #include <boost/hana/equal.hpp>
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/size.hpp>
-
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "utils/assert.hpp"
-
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

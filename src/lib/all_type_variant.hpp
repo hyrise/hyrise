@@ -1,19 +1,15 @@
 #pragma once
 
 #include <boost/hana/ext/boost/mpl/vector.hpp>
-#include <boost/hana/pair.hpp>
 #include <boost/hana/prepend.hpp>
-#include <boost/hana/second.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
 #include <boost/mpl/push_front.hpp>
-#include <boost/variant.hpp>
-
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
-
+#include <boost/variant.hpp>
 #include <cstdint>
 #include <string>
 #include <vector>

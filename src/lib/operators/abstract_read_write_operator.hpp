@@ -5,13 +5,12 @@
 #include <vector>
 
 #include "abstract_operator.hpp"
-
 #include "concurrency/transaction_context.hpp"
-#include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class Table;
 
 /**
  * AbstractReadWriteOperator is the superclass for all operators that need write access to tables.
@@ -25,22 +24,14 @@ class AbstractReadWriteOperator : public AbstractOperator,
                                      const std::shared_ptr<const AbstractOperator> right = nullptr)
       : AbstractOperator(left, right), _execute_failed{false} {}
 
-  void execute() override {
-    auto transaction_context = _transaction_context.lock();
-    DebugAssert(static_cast<bool>(transaction_context), "Probably a bug.");
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const final;
 
-    transaction_context->on_operator_started();
-    _output = _on_execute(transaction_context);
-    transaction_context->on_operator_finished();
-  }
+  void execute() override;
 
   /**
    * Commits the operator and triggers any potential work following commits.
    */
-  void commit(const CommitID cid) {
-    commit_records(cid);
-    finish_commit();
-  }
+  void commit(const CommitID cid);
 
   /**
    * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
@@ -65,7 +56,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
   /**
    * Returns true if a previous call to _on_execute produced an error.
    */
-  bool execute_failed() const { return _execute_failed; }
+  bool execute_failed() const;
 
   uint8_t num_out_tables() const override { return 0; };
 

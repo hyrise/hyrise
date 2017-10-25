@@ -19,6 +19,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use const (including cbegin() and cend()) whenever possible
 - Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
 - Include in this order: header for implementation file, c system, c++ system, other
+- If your templated methods/classes are used outside of your file, they have to be in the header. But if you only use them internally, you should place them in the cpp file.
 - Use smart pointers over c-style pointers
 - Use `IS_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`

@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "iterables.hpp"
-
 #include "storage/value_column.hpp"
 
 namespace opossum {

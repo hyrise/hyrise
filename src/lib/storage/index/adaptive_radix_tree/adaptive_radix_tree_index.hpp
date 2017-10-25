@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "storage/index/base_index.hpp"
-
 #include "types.hpp"
 
 namespace opossum {

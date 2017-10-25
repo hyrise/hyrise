@@ -1,7 +1,5 @@
 #include "table_generator.hpp"
 
-#include <assert.h>
-#include <fstream>
 #include <memory>
 #include <random>
 #include <string>
