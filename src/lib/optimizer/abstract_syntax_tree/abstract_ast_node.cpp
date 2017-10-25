@@ -1,8 +1,6 @@
 #include "abstract_ast_node.hpp"
 
 #include <algorithm>
-#include <iomanip>
-#include <iostream>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -10,11 +8,12 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class TableStatistics;
 
 AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 

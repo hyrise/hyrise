@@ -1,3 +1,4 @@
+#pragma once
 
 #include <functional>
 #include <limits>
@@ -10,18 +11,12 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-
-#include "resolve_type.hpp"
-#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

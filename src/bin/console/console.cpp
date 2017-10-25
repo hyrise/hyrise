@@ -21,7 +21,6 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
 #include "planviz/ast_visualizer.hpp"

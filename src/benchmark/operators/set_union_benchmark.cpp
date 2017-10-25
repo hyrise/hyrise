@@ -84,6 +84,10 @@ BENCHMARK_REGISTER_F(SetUnionBenchmarkFixture, Benchmark)->Ranges({{100, 100 * 1
  */
 class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
  public:
+  ~SetUnionBaseLineBenchmarkFixture() {
+    std::cout << "~SetUnionBaseLineBenchmarkFixture()" << std::endl;
+  }
+
   void SetUp(::benchmark::State& state) override {
     auto num_table_rows = state.range(0);
 

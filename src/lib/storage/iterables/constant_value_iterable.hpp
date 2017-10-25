@@ -1,8 +1,7 @@
 #pragma once
 
-#include "iterables.hpp"
-
 #include "all_type_variant.hpp"
+#include "iterables.hpp"
 #include "type_cast.hpp"
 
 namespace opossum {

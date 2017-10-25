@@ -8,22 +8,19 @@
 #include <utility>
 #include <vector>
 
-#include "table_scan/column_comparison_table_scan_impl.hpp"
-#include "table_scan/is_null_table_scan_impl.hpp"
-#include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_column_table_scan_impl.hpp"
-
+#include "all_parameter_variant.hpp"
+#include "constant_mappings.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
-
-#include "all_parameter_variant.hpp"
-#include "constant_mappings.hpp"
+#include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/is_null_table_scan_impl.hpp"
+#include "table_scan/like_table_scan_impl.hpp"
+#include "table_scan/single_column_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

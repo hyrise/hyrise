@@ -7,7 +7,6 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {

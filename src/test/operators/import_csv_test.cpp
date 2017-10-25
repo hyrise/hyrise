@@ -229,7 +229,9 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 }
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv");
+  auto config = CsvConfig{};
+  config.reject_quoted_nonstrings = false;
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv", config);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -245,6 +247,24 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
 
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
+  auto config = CsvConfig{};
+  config.escape = '\\';
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_double_escape.csv", config);
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "string");
+  expected_table->append({"xxx\\\"xyz\\\""});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/quoted_int.csv");
+  EXPECT_THROW(importer->execute(), std::exception);
 }
 
 }  // namespace opossum

@@ -1,3 +1,5 @@
+#include "difference.hpp"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -5,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "difference.hpp"
 #include "storage/reference_column.hpp"
 #include "utils/assert.hpp"
 

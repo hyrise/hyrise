@@ -3,13 +3,11 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "abstract_ast_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "optimizer/expression.hpp"
 
 namespace opossum {
 

@@ -10,7 +10,11 @@
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
+#include "type_comparison.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -329,9 +333,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     // Output column for COUNT(*). "int" type is chosen arbitrarily.
     const auto type_string = (column_id == CountStarID) ? std::string{"int"} : input_table->column_type(column_id);
 
-    resolve_data_type(type_string, [&, column_index](auto type) {
-      _write_aggregate_output(type, column_index, aggregate.function);
-    });
+    resolve_data_type(
+        type_string, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
 
     ++column_index;
   }
