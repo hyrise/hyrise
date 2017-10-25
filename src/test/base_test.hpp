@@ -5,8 +5,11 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.hpp"
 #include "gtest/gtest.h"
+#include "operators/abstract_operator.hpp"
 #include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 #include "testing_assert.hpp"
@@ -18,7 +21,9 @@ namespace opossum {
 class AbstractASTNode;
 class Table;
 
-class BaseTest : public ::testing::Test {
+template <typename ParamType>
+class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
+                                                  ::testing::TestWithParam<ParamType>>::type {
  protected:
   // creates a dictionary column with the given type and values
   template <class T>
@@ -29,7 +34,12 @@ class BaseTest : public ::testing::Test {
   }
 
  public:
-  ~BaseTest() override;
+  ~BaseTestWithParam() override {
+    StorageManager::reset();
+    TransactionManager::reset();
+  }
 };
+
+using BaseTest = BaseTestWithParam<void>;
 
 }  // namespace opossum
