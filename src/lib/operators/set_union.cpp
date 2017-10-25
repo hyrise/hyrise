@@ -14,25 +14,35 @@
 #include "types.hpp"
 
 /**
- * ### About ColumnSegments
+ * ### SetUnion implementation
+ * The SetUnion Operator turns each input table into a ReferenceMatrix.
+ * The rows in the ReferenceMatrices need to be sorted in order for them to be merged, that is,
+ * performing the SetUnion  operation.
+ * Since sorting a multi-column matrix by rows would require a lot of value-copying, for each ReferenceMatrix, a
+ * VirtualPosList is created.
+ * Each element of this VirtualPosList references a row in a ReferenceMatrix by index. This way, if two values need to
+ * be swapped while sorting, only two indices need to swapped instead of a RowIDs for each column in the
+ * ReferenceMatrices.
+ * The VirtualPosLists are sorted and then merged keeping only one element if both contain an element.
+ * From the merged VirtualPosList the result table is created.
  *
- * All neighbouring columns that use the same PosLists are said to belong to the same ColumnSegment. Just scanning a
- * table results in a table with just one ColumnSegment, joining tables will result in a table with multiple
- * ColumnSegments.
  *
- * The ColumnSegmentsRow is a vector that contains a RowID for each ColumnSegment of a Row. Using
- * column_segments_row_cmp we can std::sort() and std::set_union() the references in the input tables and thus
- * perform a set union on the input tables.
+ * ### About ReferenceMatrices
+ * The ReferenceMatrix consists of N rows and C columns of RowIDs.
+ * N is the same number as the number of rows in the input table.
+ * Each of the C column can represent 1..S columns in the input table. All rows represented by a ReferenceMatrix-Column
+ * contain the same PosList in each Chunk.
  *
- * TODO(anybody): If both input tables reference just one table, all ColumnSegmentsRows will just contains one
- * RowID and thus, for performance improvements, could be replaced with just a RowID. This remains to be evaluated.
+ * The ReferenceMatrix of a StoredTable will only contain one column, the ReferenceMatrix of the result of a 3 way Join
+ * will contain 3 columns
  */
 
 namespace {
 
 // See doc above
-using MultiPosList = std::vector<opossum::PosList>;
+using ReferenceMatrix = std::vector<opossum::PosList>;
 
+// In the merged VirtualPosList, we need to identify which input side a row comes from, in order to build the output
 enum class InputSide : uint8_t { Left, Right };
 
 struct VirtualPosListEntry {
@@ -42,9 +52,12 @@ struct VirtualPosListEntry {
 
 using VirtualPosList = std::vector<VirtualPosListEntry>;
 
-struct MultiPosListContext {
-  MultiPosList& left;
-  MultiPosList& right;
+/**
+ * Comparator for performing the std::set_union() of two virtual pos lists
+ */
+struct VirtualPosListEntryUnionContext {
+  ReferenceMatrix& left;
+  ReferenceMatrix& right;
   bool operator()(const VirtualPosListEntry& lhs, const VirtualPosListEntry& rhs) const {
     const auto& lhs_mpl = lhs.side == InputSide::Left ? left : right;
     const auto& rhs_mpl = rhs.side == InputSide::Left ? left : right;
@@ -57,8 +70,11 @@ struct MultiPosListContext {
   }
 };
 
-struct VirtualPosListContext {
-  MultiPosList& multi_pos_list;
+/**
+ * Comparator for performing the std::sort() of a virtual pos list
+ */
+struct VirtualPosListCmpContext {
+  ReferenceMatrix& multi_pos_list;
   bool operator()(const VirtualPosListEntry& lhs, const VirtualPosListEntry& rhs) const {
     for (size_t segment_id = 0; segment_id < multi_pos_list.size(); ++segment_id) {
       const auto& segment_pos_list = multi_pos_list[segment_id];
@@ -71,28 +87,6 @@ struct VirtualPosListContext {
     return false;
   }
 };
-
-//void print_multi_pos_list(const MultiPosList& mpl) {
-//  std::cout << "MultiPosList " << mpl.size() << "x" << mpl[0].size() << std::endl;
-//  for (size_t y = 0; y < mpl[0].size(); y++) {
-//    for (size_t x = 0; x < mpl.size(); x++) {
-//      std::cout << mpl[x][y].chunk_id << ":" << mpl[x][y].chunk_offset;
-//      if (x + 1 < mpl.size()) std::cout << ",";
-//    }
-//    std::cout << std::endl;
-//  }
-//}
-//
-//void print_virtual_pos_list(const VirtualPosList& vpl, const MultiPosListContext& context) {
-//  for (size_t y = 0; y < vpl.size(); y++) {
-//    std::cout << vpl[y].index << " " << (vpl[y].side == InputSide::Left ?"l":"r") << "|";
-////
-////    for (size_t segment_id = 0; segment_id < context.left.size(); ++segment_id) {
-////      std::cout <<
-////    }
-//    std::cout << std::endl;
-//  }
-//}
 
 }  // namespace
 
@@ -121,7 +115,7 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   }
 
   /**
-   * For each input, create a MultiPosList
+   * For each input, create a ReferenceMatrix
    */
   const auto build_multi_pos_list = [&](const auto& input_table, auto& multi_pos_list) {
     multi_pos_list.resize(_column_segment_begins.size());
@@ -144,8 +138,8 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
     }
   };
 
-  MultiPosList multi_pos_list_left;
-  MultiPosList multi_pos_list_right;
+  ReferenceMatrix multi_pos_list_left;
+  ReferenceMatrix multi_pos_list_right;
 
   build_multi_pos_list(_input_table_left(), multi_pos_list_left);
   build_multi_pos_list(_input_table_right(), multi_pos_list_right);
@@ -171,10 +165,10 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
    * This is where the magic happens:
    * Compute the actual union by sorting the virtual pos lists and then merging them using std::set_union
    */
-  MultiPosListContext context{multi_pos_list_left, multi_pos_list_right};
+  VirtualPosListEntryUnionContext context{multi_pos_list_left, multi_pos_list_right};
 
-  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), VirtualPosListContext{multi_pos_list_left});
-  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), VirtualPosListContext{multi_pos_list_right});
+  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), VirtualPosListCmpContext{multi_pos_list_left});
+  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), VirtualPosListCmpContext{multi_pos_list_right});
 
   VirtualPosList merged_rows;
   // Min of both row counts is safe to reserve
