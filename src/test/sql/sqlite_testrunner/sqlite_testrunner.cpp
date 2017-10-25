@@ -90,7 +90,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     auto result_table = plan.tree_roots().back()->get_output();
     auto sqlite_result_table = _sqlite->execute_query(query);
 
-    if(result_table->row_count() == 0 || sqlite_result_table->row_count() == 0) {
+    if (result_table->row_count() == 0 || sqlite_result_table->row_count() == 0) {
       // The problem is that we can only infer columns from sqlite if they have at least one row.
       EXPECT_TRUE(false) << "The SQLiteTestRunner cannot handle queries without results";
       continue;
