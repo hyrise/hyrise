@@ -14,5 +14,8 @@ int main(int argc, char** argv) {
 
   opossum::PerformanceWarningDisabler pwd;
   ::testing::InitGoogleTest(&argc, argv);
+
+  ::testing::
+
   return RUN_ALL_TESTS();
 }
