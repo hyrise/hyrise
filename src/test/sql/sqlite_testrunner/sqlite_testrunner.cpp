@@ -23,7 +23,7 @@
 
 namespace opossum {
 
-class SQLiteTestRunner : public BaseTest {
+class SQLiteTestRunner : public testing::TestWithParam<std::string> {
  protected:
   void _set_up() {
     StorageManager::get().reset();
@@ -56,56 +56,69 @@ class SQLiteTestRunner : public BaseTest {
   std::unique_ptr<SQLiteWrapper> _sqlite;
 };
 
-TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
+std::vector<std::string> ReadTestCasesFromFile() {
+  std::vector<std::string> queries;
+
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   std::string query;
   while (std::getline(file, query)) {
     if (query.empty() || query.substr(0, 2) == "--") {
       continue;
     }
-
-    _set_up();
-
-    hsql::SQLParserResult parse_result;
-    hsql::SQLParser::parseSQLString(query, &parse_result);
-
-    EXPECT_TRUE(parse_result.isValid()) << "Query not valid: " << query;
-    if (!parse_result.isValid()) {
-      continue;
-    }
-
-    auto plan = SQLPlanner::plan(parse_result);
-
-    auto tx_context = TransactionManager::get().new_transaction_context();
-    for (const auto& root : plan.tree_roots()) {
-      auto tasks = OperatorTask::make_tasks_from_operator(root);
-
-      for (auto& task : tasks) {
-        task->get_operator()->set_transaction_context(tx_context);
-      }
-
-      CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-    }
-
-    auto result_table = plan.tree_roots().back()->get_output();
-    auto sqlite_result_table = _sqlite->execute_query(query);
-
-    if (result_table->row_count() == 0 || sqlite_result_table->row_count() == 0) {
-      // The problem is that we can only infer columns from sqlite if they have at least one row.
-      EXPECT_TRUE(false) << "The SQLiteTestRunner cannot handle queries without results";
-      continue;
-    }
-
-    bool order_sensitive = false;
-
-    if (parse_result.getStatement(0)->is(hsql::kStmtSelect)) {
-      auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatement(0));
-      order_sensitive = (select_statement->order != nullptr);
-    }
-
-    EXPECT_TRUE(check_table_equal(*result_table, *sqlite_result_table, order_sensitive, false)) << "Query failed: "
-                                                                                                << query;
+    queries.emplace_back(std::move(query));
   }
+
+  return queries;
 }
+
+TEST_P(SQLiteTestRunner, CompareToSQLite) {
+  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
+  std::string query = GetParam();
+
+  _set_up();
+
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parseSQLString(query, &parse_result);
+
+  ASSERT_TRUE(parse_result.isValid()) << "Query not valid: " << query;
+
+  auto plan = SQLPlanner::plan(parse_result);
+
+  auto tx_context = TransactionManager::get().new_transaction_context();
+  for (const auto& root : plan.tree_roots()) {
+    auto tasks = OperatorTask::make_tasks_from_operator(root);
+
+    for (auto& task : tasks) {
+      task->get_operator()->set_transaction_context(tx_context);
+    }
+
+    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  }
+
+  auto result_table = plan.tree_roots().back()->get_output();
+  auto sqlite_result_table = _sqlite->execute_query(query);
+
+  // The problem is that we can only infer columns from sqlite if they have at least one row.
+  ASSERT_TRUE(result_table->row_count() > 0 && sqlite_result_table->row_count() > 0)
+      << "The SQLiteTestRunner cannot handle queries without results";
+
+  bool order_sensitive = false;
+
+  if (parse_result.getStatement(0)->is(hsql::kStmtSelect)) {
+    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatement(0));
+    order_sensitive = (select_statement->order != nullptr);
+  }
+
+  ASSERT_TRUE(check_table_equal(*result_table, *sqlite_result_table, order_sensitive, false)) << "Query failed: "
+                                                                                              << query;
+}
+
+auto formatter = [](const testing::TestParamInfo<std::string>) {
+  // stupid, but otherwise Wextra complains about the unused macro parameter
+  static int test = 1;
+  return std::to_string(test++);
+};
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(ReadTestCasesFromFile()),
+                        formatter);
 
 }  // namespace opossum
