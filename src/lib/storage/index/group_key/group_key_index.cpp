@@ -1,5 +1,8 @@
 #include "group_key_index.hpp"
 
+#include <memory>
+#include <vector>
+
 namespace opossum {
 
 GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns)
