@@ -136,7 +136,7 @@ class Chunk : private Noncopyable {
     return index;
   }
 
-  bool references_only_one_table() const;
+  bool references_exactly_one_table() const;
 
  protected:
   PolymorphicAllocator<Chunk> _alloc;
