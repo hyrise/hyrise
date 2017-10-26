@@ -24,5 +24,5 @@ else
         color="red"
     fi
 
-    curl -o coverage_badge.svg https://img.shields.io/badge/Coverage-"${coverage_percent}"-"${color}".svg
+    curl -g -o coverage_badge.svg https://img.shields.io/badge/Coverage-"${coverage_percent}"-"${color}".svg
 fi
