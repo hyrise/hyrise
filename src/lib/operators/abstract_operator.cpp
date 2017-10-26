@@ -30,9 +30,12 @@ void AbstractOperator::execute() {
       return;
     }
     transaction_context->on_operator_started();
+    _output = _on_execute(transaction_context);
+    transaction_context->on_operator_finished();
   }
-  _output = _on_execute(transaction_context);
-  if (transaction_context) transaction_context->on_operator_finished();
+  else {
+    _output = _on_execute(transaction_context);
+  }
 
   // release any temporary data if possible
   _on_cleanup();
