@@ -11,13 +11,6 @@ node {
 
     try {
       stage("Setup") {
-          script {
-            coveragePercentage = sh script: "echo 1", returnStdout: true
-            githubNotify context: 'Coverage', description: "bla $coveragePercentage",  status: 'SUCCESS'
-          }
-
-
-
         checkout([
              $class: 'GitSCM',
              branches: scm.branches,
@@ -98,6 +91,7 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./scripts/coverage.sh gcc-release-coverage true"
           archive 'coverage_badge.svg'
+          archive 'coverage_percent.txt'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
@@ -106,6 +100,10 @@ node {
             reportFiles: 'index.html',
             reportName: "RCov Report"
           ])
+          script {
+            coveragePercent = sh script: "cat coverage_percent.txt", returnStdout: true
+            githubNotify context: 'Coverage', description: "Coverage $coveragePercentage, ",  status: 'SUCCESS'
+          }
         }
       }
 
