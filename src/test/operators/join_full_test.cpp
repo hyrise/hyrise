@@ -218,16 +218,6 @@ TYPED_TEST(JoinFullTest, OuterJoin) {
       ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
 }
 
-// This is not implemented yet.
-TYPED_TEST(JoinFullTest, DISABLED_NaturalJoin) {
-  this->_table_wrapper_a->execute();
-  this->_table_wrapper_b->execute();
-
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Natural, "src/test/tables/joinoperators/int_natural_join.tbl", 1);
-}
-
 TYPED_TEST(JoinFullTest, SelfJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_a, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
