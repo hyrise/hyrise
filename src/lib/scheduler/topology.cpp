@@ -88,4 +88,8 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
 #endif
 }
 
+const std::vector<TopologyNode>& Topology::nodes() { return _nodes; }
+
+size_t Topology::num_cpus() const { return _num_cpus; }
+
 }  // namespace opossum

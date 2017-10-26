@@ -1,6 +1,5 @@
 set(
     SHARED_SOURCES
-    base_test.cpp
     base_test.hpp
     gtest_case_template.cpp
     gtest_main.cpp

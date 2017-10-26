@@ -1,7 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "../base_fixture.hpp"
+#include "../benchmark_basic_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"

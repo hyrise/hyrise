@@ -60,7 +60,7 @@ class AbstractOperator : private Noncopyable {
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const = 0;
+  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
