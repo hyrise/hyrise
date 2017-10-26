@@ -1,5 +1,6 @@
 #include "transaction_context.hpp"
 
+#include <future>
 #include <memory>
 
 #include "commit_context.hpp"
@@ -71,7 +72,7 @@ bool TransactionContext::rollback() {
   return true;
 }
 
-bool TransactionContext::commit(std::function<void(TransactionID)> callback) {
+bool TransactionContext::commit_async(std::function<void(TransactionID)> callback) {
   const auto success = _prepare_commit();
 
   if (!success) return false;
@@ -82,6 +83,18 @@ bool TransactionContext::commit(std::function<void(TransactionID)> callback) {
 
   _mark_as_pending_and_try_commit(callback);
 
+  return true;
+}
+
+bool TransactionContext::commit() {
+  auto committed = std::promise<void>{};
+  const auto committed_future = committed.get_future();
+  const auto callback = [&committed](TransactionID) { committed.set_value(); };
+
+  const auto success = commit_async(callback);
+  if (!success) return false;
+
+  committed_future.wait();
   return true;
 }
 

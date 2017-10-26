@@ -90,8 +90,8 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
   auto context_2_committed = false;
   auto callback_2 = [&context_2_committed](TransactionID) { context_2_committed = true; };
 
-  context_2->commit(callback_2);
-  context_1->commit(callback_1);
+  context_2->commit_async(callback_2);
+  context_1->commit_async(callback_1);
 
   EXPECT_TRUE(context_1_committed);
   EXPECT_TRUE(context_2_committed);
