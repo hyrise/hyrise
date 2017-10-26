@@ -24,5 +24,7 @@ else
         color="red"
     fi
 
-    curl -g -o coverage_badge.svg https://img.shields.io/badge/Coverage-"${coverage_percent}"-"${color}".svg
+    url="https://img.shields.io/badge/Coverage-$coverage_percent-$color.svg"
+    echo $url
+    curl -g -o coverage_badge.svg $url
 fi
