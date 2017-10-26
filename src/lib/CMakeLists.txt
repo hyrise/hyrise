@@ -264,7 +264,7 @@ set(
     ${TBB_LIBRARY}
 )
 
-if(${NUMA_FOUND})
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
