@@ -6,7 +6,7 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude="(.*types*.|src/test*.|.*\.pb\.|third_party|src/benchmark*)" --html --html-details -o coverage/index.html > coverage_output.txt
+./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude="(.*types*.|.*test*.|.*\.pb\.|third_party/*|src/benchmark*)" --html --html-details -o coverage/index.html > coverage_output.txt
 
 # without coverage badge generation
 if [ -z "$2" ]
