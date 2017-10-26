@@ -11,6 +11,12 @@ node {
 
     try {
       stage("Setup") {
+          coveragePercentage = sh "cat coverage_output.txt | grep lines: | sed -e 's/lines: //; s/% .*$//"
+          coveragePercentage = sh "echo 1"
+          githubNotify context: 'Coverage', description: "bla $coveragePercentage",  status: 'SUCCESS'
+
+
+
         checkout([
              $class: 'GitSCM',
              branches: scm.branches,
