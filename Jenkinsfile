@@ -13,8 +13,8 @@ node {
       stage("Setup") {
           script {
             coveragePercentage = sh "echo 1"
+            githubNotify context: 'Coverage', description: "bla $coveragePercentage",  status: 'SUCCESS'
           }
-          githubNotify context: 'Coverage', description: "bla $coveragePercentage",  status: 'SUCCESS'
 
 
 
