@@ -55,7 +55,7 @@ class BaseIndex : private Noncopyable {
    * For example:
    * We have an index on columns DAB.
    * The index is considered to be applicable for columns D, DA and DAB.
-   * The index is NOT considerd to be applicable for columns A, DABC, BAD etc.
+   * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
   bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;

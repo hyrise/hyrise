@@ -51,7 +51,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Chunksize             | ChunkOffset                           |   4
+   * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
@@ -59,7 +59,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
    * @param table The table that is to be exported
-   * @param ofstream The outputstream for exporting
+   * @param ofstream The output stream for exporting
    */
   static void _write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
 
@@ -75,7 +75,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * of the column, such as ReferenceColumn, DictionaryColumn, ValueColumn).
    *
    * @param table The table we are currently exporting
-   * @param ofstream The outputstream to write to
+   * @param ofstream The output stream to write to
    * @param chunkId The id of the chunk that is to be worked on now
    *
    */

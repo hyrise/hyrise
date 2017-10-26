@@ -83,7 +83,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   // there should not be a third chunk (at least that's the current impl)
   EXPECT_TRUE(output_str.find("Chunk 3") == std::string::npos);
 
-  // remov spaces
+  // remove spaces
   output_str.erase(remove_if(output_str.begin(), output_str.end(), isspace), output_str.end());
 
   EXPECT_TRUE(output_str.find("|2|a|") != std::string::npos);

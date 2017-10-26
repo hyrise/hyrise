@@ -92,7 +92,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
    * This method is used in sub classes in their _on_execute() method.
    *
    * If the execution fails, because for example some records have already been locked,
-   * mark_as_failed() is called to signal to AbstractReadWriteOperator that the exeuction failed.
+   * mark_as_failed() is called to signal to AbstractReadWriteOperator that the execution failed.
    */
   void _mark_as_failed();
 

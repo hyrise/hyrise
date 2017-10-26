@@ -19,7 +19,7 @@ using Iterator = std::vector<ChunkOffset>::const_iterator;
  * This file declares the Node-types needed for the Adaptive-Radix-Tree (ART)
  * In order to store its partial keys, the ART uses 4 different node-types, which can hold up to 4, 16, 48 and 256
  * partial keys respectively.
- * Each node has an array wich contains pointers to its children and (if needed) an index array in order to map
+ * Each node has an array which contains pointers to its children and (if needed) an index array in order to map
  * partial keys to positions in the array of the child-pointers
  *
  */
@@ -72,7 +72,7 @@ class Node4 final : public Node {
 
 /**
  *
- * Node16 has two arrays of lenght 16, very similar to Node4:
+ * Node16 has two arrays of length 16, very similar to Node4:
  *  - _partial_keys stores the contained partial_keys of its children
  *  - _children stores pointers to the children
  *
@@ -106,10 +106,10 @@ class Node16 final : public Node {
 /**
  *
  * Node48 has two arrays:
- *  - _index_to_child of length 256 that can be directly adressed
+ *  - _index_to_child of length 256 that can be directly addressed
  *  - _children of length 48 stores pointers to the children
  *
- * _index_to_child[partial_key] stores the index for the child in _childen
+ * _index_to_child[partial_key] stores the index for the child in _children
  *
  * The default value of the _index_to_child array is 255u. This is safe as the maximum value set in _index_to_child
  * will
@@ -138,7 +138,7 @@ class Node48 final : public Node {
 
 /**
  *
- * Node256 has only one array: _children; which stores pointers to the children and can be directly adressed.
+ * Node256 has only one array: _children; which stores pointers to the children and can be directly addressed.
  *
  */
 class Node256 final : public Node {

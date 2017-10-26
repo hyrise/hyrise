@@ -84,7 +84,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
     }
 
-    // Definining all possible operators here might appear odd. Chances are, however, that we will not
+    // Defining all possible operators here might appear odd. Chances are, however, that we will not
     // have a similar comparison anywhere else. Index scans, for example, would not use an adaptable binary
     // predicate, but will have to use different methods (lower_range, upper_range, ...) based on the
     // chosen operator. For now, we can save us some dark template magic by using the switch below.

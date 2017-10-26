@@ -105,7 +105,7 @@ class Chunk : private Noncopyable {
   SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
 
   /**
-   * Compacts the internal represantion of
+   * Compacts the internal representation of
    * the mvcc columns in order to reduce fragmentation
    * Locks mvcc columns exclusively in order to do so
    */

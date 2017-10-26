@@ -80,7 +80,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
   _pos_list_right = std::make_shared<PosList>();
 }
 
-// This funtion turns a pos list with references to a reference column into a pos list with references
+// This function turns a pos list with references to a reference column into a pos list with references
 // to the original columns.
 // It is assumed that either non or all chunks of a table contain reference columns.
 std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<const Table> input_table,

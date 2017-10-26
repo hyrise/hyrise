@@ -43,7 +43,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     Assert(value_column != nullptr, "Column is either already compressed or type mismatches.");
 
     // See: https://goo.gl/MCM5rr
-    // Create dictionary (enforce unqiueness and sorting)
+    // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
     auto dictionary = pmr_vector<T>{values.cbegin(), values.cend()};
 

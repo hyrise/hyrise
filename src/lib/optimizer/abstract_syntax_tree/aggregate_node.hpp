@@ -45,7 +45,7 @@ class AggregateNode : public AbstractASTNode {
    * Since we're using a TableScan added AFTER the actual aggregate to implement HAVING, in a query like
    * `SELECT MAX(a) FROM t1 GROUP BY b HAVING MAX(a) > 10`
    * we need get the column that contains the `MAX(a)` in the table produced by the Aggregate. This is what this
-   * funciton is used for.
+   * function is used for.
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
