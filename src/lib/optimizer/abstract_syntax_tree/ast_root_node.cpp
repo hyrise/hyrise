@@ -8,6 +8,6 @@ namespace opossum {
 
 ASTRootNode::ASTRootNode() : AbstractASTNode(ASTNodeType::Root) {}
 
-std::string ASTRootNode::description() const { return "ASTRootNode"; }
+std::string ASTRootNode::description() const { return "[ASTRootNode]"; }
 
 }  // namespace opossum

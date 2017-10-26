@@ -11,7 +11,7 @@ namespace opossum {
 
 DummyTableNode::DummyTableNode() : AbstractASTNode(ASTNodeType::DummyTable) {}
 
-std::string DummyTableNode::description() const { return "DummyTable"; }
+std::string DummyTableNode::description() const { return "[DummyTable]"; }
 
 void DummyTableNode::_on_child_changed() { Fail("DummyTableNode cannot have children."); }
 

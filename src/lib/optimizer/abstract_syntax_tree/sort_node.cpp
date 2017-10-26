@@ -18,12 +18,12 @@ SortNode::SortNode(const std::vector<OrderByDefinition>& order_by_definitions)
 std::string SortNode::description() const {
   std::ostringstream s;
 
+  s << "[Sort] ";
+
   auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << std::to_string(definition.column_id);
+    s << get_verbose_column_name(definition.column_id);
     s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
   };
-
-  s << "Sort: ";
 
   auto it = _order_by_definitions.begin();
   if (it != _order_by_definitions.end()) {
