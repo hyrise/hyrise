@@ -11,7 +11,7 @@ set(
     HYRISE_TEST_SOURCES
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
-    concurrency/transaction_manager_test.cpp
+    concurrency/transaction_context_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     operators/aggregate_test.cpp
@@ -32,7 +32,6 @@ set(
     operators/print_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp
-    operators/rollback_records_test.cpp
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp

@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
@@ -35,6 +36,10 @@ const std::string Validate::name() const { return "Validate"; }
 uint8_t Validate::num_in_tables() const { return 1; }
 
 uint8_t Validate::num_out_tables() const { return 1; }
+
+std::shared_ptr<AbstractOperator> Validate::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Validate>(_input_left->recreate(args));
+}
 
 std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");

@@ -3,8 +3,6 @@
 #include <memory>
 
 #include "commit_context.hpp"
-#include "operators/commit_records.hpp"
-#include "scheduler/operator_task.hpp"
 #include "transaction_context.hpp"
 #include "utils/assert.hpp"
 
@@ -33,55 +31,14 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
   return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
-void TransactionManager::rollback(TransactionContext& context) {
-  DebugAssert((context._phase == TransactionPhase::Active), "TransactionContext can only be rolled back when active.");
-
-  context._phase = TransactionPhase::RolledBack;
-}
-
-void TransactionManager::fail(TransactionContext& context) {
-  DebugAssert((context._phase == TransactionPhase::Active), "TransactionContext can only fail when active.");
-
-  context._phase = TransactionPhase::Failed;
-}
-
-void TransactionManager::prepare_commit(TransactionContext& context) {
-  DebugAssert((context._phase == TransactionPhase::Active),
-              "TransactionContext can only be prepared for committing when active.");
-
-  context._commit_context = _new_commit_context();
-  context._phase = TransactionPhase::Committing;
-}
-
-void TransactionManager::commit(TransactionContext& context, std::function<void(TransactionID)> callback) {
-  DebugAssert((context._phase == TransactionPhase::Committing),
-              "TransactionContext can only be committed after prepare_commit has been called.");
-
-  auto commit_context = context._commit_context;
-
-  commit_context->make_pending(context.transaction_id(), callback);
-  _increment_last_commit_id(commit_context);
-
-  // TODO(EVERYONE): update _phase when transaction actually committed?
-  context._phase = TransactionPhase::Committed;
-}
-
 void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn) {
   auto transaction_context = new_transaction_context();
 
   fn(transaction_context);
 
-  // Commit
-  TransactionManager::get().prepare_commit(*transaction_context);
+  if (transaction_context->aborted()) return;
 
-  auto commit = std::make_shared<CommitRecords>();
-  commit->set_transaction_context(transaction_context);
-
-  auto commit_task = std::make_shared<OperatorTask>(commit);
-  commit_task->schedule();
-  commit_task->join();
-
-  TransactionManager::get().commit(*transaction_context);
+  transaction_context->commit();
 }
 
 /**
@@ -124,7 +81,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   return next_context;
 }
 
-void TransactionManager::_increment_last_commit_id(std::shared_ptr<CommitContext> context) {
+void TransactionManager::_try_increment_last_commit_id(std::shared_ptr<CommitContext> context) {
   auto current_context = context;
 
   while (current_context->is_pending()) {

@@ -8,7 +8,6 @@
 #include "benchmark/benchmark.h"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/aggregate.hpp"
-#include "operators/commit_records.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
@@ -284,11 +283,6 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_projection, t_updated_rows, t_update};
   }
-
-  inline std::vector<std::shared_ptr<OperatorTask>> commit() {
-    auto commit = std::make_shared<CommitRecords>();
-    return {std::make_shared<OperatorTask>(commit)};
-  }
 };
 
 BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
@@ -333,10 +327,7 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     tpcc::execute_tasks_with_context(tasks, t_context);
 
     // Commit transaction.
-    TransactionManager::get().prepare_commit(*t_context);
-    tasks = commit();
-    tpcc::execute_tasks_with_context(tasks, t_context);
-    TransactionManager::get().commit(*t_context);
+    t_context->commit();
   }
 }
 

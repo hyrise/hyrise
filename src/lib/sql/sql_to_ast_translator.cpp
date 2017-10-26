@@ -22,6 +22,7 @@
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/union_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
+#include "optimizer/abstract_syntax_tree/validate_node.hpp"
 #include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -87,11 +88,6 @@ JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   auto it = join_type_to_mode.find(join_type);
   DebugAssert(it != join_type_to_mode.end(), "Unable to handle join type.");
   return it->second;
-}
-
-SQLToASTTranslator& SQLToASTTranslator::get() {
-  static SQLToASTTranslator instance;
-  return instance;
 }
 
 std::vector<std::shared_ptr<AbstractASTNode>> SQLToASTTranslator::translate_parse_result(
@@ -390,7 +386,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
   std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
     case hsql::kTableName:
-      node = std::make_shared<StoredTableNode>(table.name);
+      node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
       break;
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
@@ -845,6 +841,15 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
   }
 
   return {};
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_if_active(
+    const std::shared_ptr<AbstractASTNode>& input_node) {
+  if (!_validate) return input_node;
+
+  auto validate_node = std::make_shared<ValidateNode>();
+  validate_node->set_left_child(input_node);
+  return validate_node;
 }
 
 }  // namespace opossum

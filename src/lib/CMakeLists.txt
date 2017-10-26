@@ -41,8 +41,6 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/commit_records.cpp
-    operators/commit_records.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -81,8 +79,6 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
-    operators/rollback_records.cpp
-    operators/rollback_records.hpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp
@@ -135,6 +131,8 @@ set(
     optimizer/abstract_syntax_tree/union_node.hpp
     optimizer/abstract_syntax_tree/update_node.cpp
     optimizer/abstract_syntax_tree/update_node.hpp
+    optimizer/abstract_syntax_tree/validate_node.cpp
+    optimizer/abstract_syntax_tree/validate_node.hpp
     optimizer/base_column_statistics.cpp
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp

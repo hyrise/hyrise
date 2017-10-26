@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "storage/dictionary_compression.hpp"
@@ -29,10 +30,12 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   gt->execute();
 
   auto ins = std::make_shared<Insert>(table_name, gt);
-  auto context = std::make_shared<TransactionContext>(1, 1);
+  auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
 
   ins->execute();
+
+  context->commit();
 
   // Check that row has been inserted.
   EXPECT_EQ(t->get_chunk(ChunkID{0}).size(), 6u);
@@ -61,9 +64,10 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = std::make_shared<TransactionContext>(1, 1);
+  auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 4u);
   EXPECT_EQ(t->get_chunk(ChunkID{3}).size(), 1u);
@@ -86,9 +90,10 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = std::make_shared<TransactionContext>(1, 1);
+  auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
   EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 1u);
@@ -112,9 +117,10 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = std::make_shared<TransactionContext>(1, 1);
+  auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
+  context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
   EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 2u);
