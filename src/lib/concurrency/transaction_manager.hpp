@@ -78,7 +78,7 @@ class TransactionManager : private Noncopyable {
   TransactionManager& operator=(TransactionManager&&) = delete;
 
   std::shared_ptr<CommitContext> _new_commit_context();
-  void _increment_last_commit_id(std::shared_ptr<CommitContext> context);
+  void _try_increment_last_commit_id(std::shared_ptr<CommitContext> context);
 
  private:
   std::atomic<TransactionID> _next_transaction_id;

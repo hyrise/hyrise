@@ -81,7 +81,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   return next_context;
 }
 
-void TransactionManager::_increment_last_commit_id(std::shared_ptr<CommitContext> context) {
+void TransactionManager::_try_increment_last_commit_id(std::shared_ptr<CommitContext> context) {
   auto current_context = context;
 
   while (current_context->is_pending()) {

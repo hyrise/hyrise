@@ -163,7 +163,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
     if (callback) callback(transaction_id);
   });
 
-  TransactionManager::get()._increment_last_commit_id(_commit_context);
+  TransactionManager::get()._try_increment_last_commit_id(_commit_context);
 }
 
 void TransactionContext::on_operator_started() { ++_num_active_operators; }
