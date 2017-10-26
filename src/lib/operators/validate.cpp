@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
