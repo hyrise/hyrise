@@ -20,7 +20,12 @@ void AbstractOperator::execute() {
 
   auto transaction_context = this->transaction_context();
 
-  if (transaction_context) transaction_context->on_operator_started();
+  if (transaction_context) {
+    if (transaction_context->aborted()) {
+      return;
+    }
+    transaction_context->on_operator_started();
+  }
   _output = _on_execute(transaction_context);
   if (transaction_context) transaction_context->on_operator_finished();
 
