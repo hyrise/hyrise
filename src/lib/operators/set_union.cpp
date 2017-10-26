@@ -120,7 +120,6 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   ReferenceMatrix reference_matrix_left;
   ReferenceMatrix reference_matrix_right;
 
-
   build_reference_matrix(_input_table_left(), reference_matrix_left);
   build_reference_matrix(_input_table_right(), reference_matrix_right);
 

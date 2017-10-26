@@ -22,7 +22,8 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * Generate a random pos_list of length std::floor(pos_list_size) with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine & random_engine ,float referenced_table_chunk_size, float pos_list_size) {
+std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine& random_engine,
+                                                    float referenced_table_chunk_size, float pos_list_size) {
   std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
       0, static_cast<opossum::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
   std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(
@@ -46,11 +47,7 @@ namespace opossum {
 
 class SetUnionBenchmarkFixture : public benchmark::Fixture {
  public:
-  SetUnionBenchmarkFixture():
-    _random_device(),
-    _random_engine(_random_device()) {
-
-  }
+  SetUnionBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
 
   void SetUp(::benchmark::State& state) override {
     const auto num_rows = state.range(0);
@@ -125,10 +122,7 @@ BENCHMARK_REGISTER_F(SetUnionBenchmarkFixture, Benchmark)->Ranges({{100, 5 * 100
  */
 class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
  public:
-  SetUnionBaseLineBenchmarkFixture():
-    _random_device(),
-    _random_engine(_random_device()) {
-  }
+  SetUnionBaseLineBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
 
   void SetUp(::benchmark::State& state) override {
     auto num_table_rows = state.range(0);
