@@ -14,7 +14,7 @@ if [ -z "$2" ]
     cat coverage_output.txt
 else
     coverage_percent=$(cat coverage_output.txt | grep lines: | sed -e 's/lines: //; s/% .*$//')
-    echo $coverage_percent
+    echo $coverage_percent > coverage_percent.txt
     if (( $(bc <<< "$coverage_percent >= 90") ))
     then
         color="brightgreen"
