@@ -42,55 +42,6 @@
 
 namespace opossum {
 
-<<<<<<< HEAD
-// singleton
-ASTToOperatorTranslator& ASTToOperatorTranslator::get() {
-  static ASTToOperatorTranslator instance;
-  return instance;
-}
-
-ASTToOperatorTranslator::ASTToOperatorTranslator() {
-  /**
-   * Build a mapping from an ASTNodeType to a function that takes an ASTNode of such type and translates it into a set
-   * of operators and returns the root of them. We prefer this over a virtual AbstractASTNode::translate() call in order
-   * to keep the translation code in one place, i.e., this file.
-   */
-
-  // SQL operators
-  _operator_factory[ASTNodeType::StoredTable] =
-      std::bind(&ASTToOperatorTranslator::_translate_stored_table_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Predicate] =
-      std::bind(&ASTToOperatorTranslator::_translate_predicate_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Projection] =
-      std::bind(&ASTToOperatorTranslator::_translate_projection_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Sort] =
-      std::bind(&ASTToOperatorTranslator::_translate_sort_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Join] =
-      std::bind(&ASTToOperatorTranslator::_translate_join_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Aggregate] =
-      std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Limit] =
-      std::bind(&ASTToOperatorTranslator::_translate_limit_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Insert] =
-      std::bind(&ASTToOperatorTranslator::_translate_insert_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Delete] =
-      std::bind(&ASTToOperatorTranslator::_translate_delete_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::DummyTable] =
-      std::bind(&ASTToOperatorTranslator::_translate_dummy_table_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Update] =
-      std::bind(&ASTToOperatorTranslator::_translate_update_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::Union] =
-      std::bind(&ASTToOperatorTranslator::_translate_union_node, this, std::placeholders::_1);
-
-  // Maintenance operators
-  _operator_factory[ASTNodeType::ShowTables] =
-      std::bind(&ASTToOperatorTranslator::_translate_show_tables_node, this, std::placeholders::_1);
-  _operator_factory[ASTNodeType::ShowColumns] =
-      std::bind(&ASTToOperatorTranslator::_translate_show_columns_node, this, std::placeholders::_1);
-}
-
-=======
->>>>>>> e3a2834c08cb97f088877060bdd85a50437dbb00
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
     const std::shared_ptr<AbstractASTNode>& node) const {
   return _translate_by_node_type(node->type(), node);
@@ -376,6 +327,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_by_node_ty
       return _translate_update_node(node);
     case ASTNodeType::Validate:
       return _translate_validate_node(node);
+    case ASTNodeType::Union:
+      return _translate_union_node(node);
 
     // Maintenance operators
     case ASTNodeType::ShowTables:
