@@ -91,8 +91,8 @@ set(
     operators/table_wrapper.hpp
     operators/union_all.cpp
     operators/union_all.hpp
-        operators/set_union.cpp
-        operators/set_union.hpp
+    operators/set_union.cpp
+    operators/set_union.hpp
     operators/update.cpp
     operators/update.hpp
     operators/validate.cpp
