@@ -49,7 +49,7 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
 
     for (auto column_idx = 0; column_idx < num_table_columns; ++column_idx) {
       // Create a pos list 60% of the length of the referenced table
-      auto pos_list = generate_pos_list(ChunkID{10}, num_table_rows * 0.1f, num_table_rows * 0.6f);
+      auto pos_list = generate_pos_list(ChunkID{10}, num_table_rows * 0.2f, num_table_rows);
 
       /**
        * Each row references its own table, that doesn't actually contain data. But SetUnion won't care, it just
@@ -91,8 +91,8 @@ class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
   void SetUp(::benchmark::State& state) override {
     auto num_table_rows = state.range(0);
 
-    _pos_list_left = generate_pos_list(ChunkID{10}, num_table_rows * 0.1f, num_table_rows * 0.6f);
-    _pos_list_right = generate_pos_list(ChunkID{10}, num_table_rows * 0.1f, num_table_rows * 0.6f);
+    _pos_list_left = generate_pos_list(ChunkID{10}, num_table_rows * 0.2f, num_table_rows);
+    _pos_list_right = generate_pos_list(ChunkID{10}, num_table_rows * 0.2f, num_table_rows);
   }
 
  protected:

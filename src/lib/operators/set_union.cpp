@@ -14,56 +14,45 @@
 #include "types.hpp"
 
 /**
- * ### About ColumnSegments
+ * ### SetUnion implementation
+ * The SetUnion Operator turns each input table into a ReferenceMatrix.
+ * The rows in the ReferenceMatrices need to be sorted in order for them to be merged, that is,
+ * performing the SetUnion  operation.
+ * Since sorting a multi-column matrix by rows would require a lot of value-copying, for each ReferenceMatrix, a
+ * VirtualPosList is created.
+ * Each element of this VirtualPosList references a row in a ReferenceMatrix by index. This way, if two values need to
+ * be swapped while sorting, only two indices need to swapped instead of a RowIDs for each column in the
+ * ReferenceMatrices.
+ * The VirtualPosLists are sorted and then merged keeping only one element if both contain an element.
+ * From the merged VirtualPosList the result table is created.
  *
- * All neighbouring columns that use the same PosLists are said to belong to the same ColumnSegment. Just scanning a
- * table results in a table with just one ColumnSegment, joining tables will result in a table with multiple
- * ColumnSegments.
  *
- * The ColumnSegmentsRow is a vector that contains a RowID for each ColumnSegment of a Row. Using
- * column_segments_row_cmp we can std::sort() and std::set_union() the references in the input tables and thus
- * perform a set union on the input tables.
+ * ### About ReferenceMatrices
+ * The ReferenceMatrix consists of N rows and C columns of RowIDs.
+ * N is the same number as the number of rows in the input table.
+ * Each of the C column can represent 1..S columns in the input table. All rows represented by a ReferenceMatrix-Column
+ * contain the same PosList in each Chunk.
  *
- * TODO(anybody): If both input tables reference just one table, all ColumnSegmentsRows will just contains one
- * RowID and thus, for performance improvements, could be replaced with just a RowID. This remains to be evaluated.
+ * The ReferenceMatrix of a StoredTable will only contain one column, the ReferenceMatrix of the result of a 3 way Join
+ * will contain 3 columns
  */
 
 namespace {
 
 // See doc above
-using MultiPosList = std::vector<opossum::PosList>;
+using ReferenceMatrix = std::vector<opossum::PosList>;
 
-enum class InputSide : uint8_t { Left, Right };
-
-struct VirtualPosListEntry {
-  InputSide side;
-  size_t index;
-};
-
-using VirtualPosList = std::vector<VirtualPosListEntry>;
-
-struct MultiPosListContext {
-  MultiPosList& left;
-  MultiPosList& right;
-  bool operator()(const VirtualPosListEntry& lhs, const VirtualPosListEntry& rhs) const {
-    const auto& lhs_mpl = lhs.side == InputSide::Left ? left : right;
-    const auto& rhs_mpl = rhs.side == InputSide::Left ? left : right;
-
-    for (size_t segment_id = 0; segment_id < left.size(); ++segment_id) {
-      if (lhs_mpl[segment_id][lhs.index] < rhs_mpl[segment_id][rhs.index]) return true;
-      if (rhs_mpl[segment_id][rhs.index] < lhs_mpl[segment_id][lhs.index]) return false;
-    }
-    return false;
-  }
-};
-
-struct VirtualPosListContext {
-  MultiPosList& multi_pos_list;
-  bool operator()(const VirtualPosListEntry& lhs, const VirtualPosListEntry& rhs) const {
-    for (size_t segment_id = 0; segment_id < multi_pos_list.size(); ++segment_id) {
-      const auto& segment_pos_list = multi_pos_list[segment_id];
-      const auto left_row_id = segment_pos_list[lhs.index];
-      const auto right_row_id = segment_pos_list[rhs.index];
+using VirtualPosList = std::vector<size_t>;
+/**
+ * Comparator for performing the std::sort() of a virtual pos list
+ */
+struct VirtualPosListCmpContext {
+  ReferenceMatrix& reference_matrix;
+  bool operator()(size_t lhs, size_t rhs) const {
+    for (size_t column_idx = 0; column_idx < reference_matrix.size(); ++column_idx) {
+      const auto& reference_matrix_column = reference_matrix[column_idx];
+      const auto left_row_id = reference_matrix_column[lhs];
+      const auto right_row_id = reference_matrix_column[rhs];
 
       if (left_row_id < right_row_id) return true;
       if (right_row_id < left_row_id) return false;
@@ -71,28 +60,6 @@ struct VirtualPosListContext {
     return false;
   }
 };
-
-//void print_multi_pos_list(const MultiPosList& mpl) {
-//  std::cout << "MultiPosList " << mpl.size() << "x" << mpl[0].size() << std::endl;
-//  for (size_t y = 0; y < mpl[0].size(); y++) {
-//    for (size_t x = 0; x < mpl.size(); x++) {
-//      std::cout << mpl[x][y].chunk_id << ":" << mpl[x][y].chunk_offset;
-//      if (x + 1 < mpl.size()) std::cout << ",";
-//    }
-//    std::cout << std::endl;
-//  }
-//}
-//
-//void print_virtual_pos_list(const VirtualPosList& vpl, const MultiPosListContext& context) {
-//  for (size_t y = 0; y < vpl.size(); y++) {
-//    std::cout << vpl[y].index << " " << (vpl[y].side == InputSide::Left ?"l":"r") << "|";
-////
-////    for (size_t segment_id = 0; segment_id < context.left.size(); ++segment_id) {
-////      std::cout <<
-////    }
-//    std::cout << std::endl;
-//  }
-//}
 
 }  // namespace
 
@@ -121,11 +88,11 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   }
 
   /**
-   * For each input, create a MultiPosList
+   * For each input, create a ReferenceMatrix
    */
-  const auto build_multi_pos_list = [&](const auto& input_table, auto& multi_pos_list) {
-    multi_pos_list.resize(_column_segment_begins.size());
-    for (auto& pos_list : multi_pos_list) {
+  const auto build_reference_matrix = [&](const auto& input_table, auto& reference_matrix) {
+    reference_matrix.resize(_column_segment_begins.size());
+    for (auto& pos_list : reference_matrix) {
       pos_list.reserve(input_table->row_count());
     }
 
@@ -137,95 +104,120 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
         const auto column = chunk.get_column(column_id);
         const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
 
-        auto& out_pos_list = multi_pos_list[segment_id];
+        auto& out_pos_list = reference_matrix[segment_id];
         auto in_pos_list = ref_column->pos_list();
         std::copy(in_pos_list->begin(), in_pos_list->end(), std::back_inserter(out_pos_list));
       }
     }
   };
 
-  MultiPosList multi_pos_list_left;
-  MultiPosList multi_pos_list_right;
+  ReferenceMatrix reference_matrix_left;
+  ReferenceMatrix reference_matrix_right;
 
-  build_multi_pos_list(_input_table_left(), multi_pos_list_left);
-  build_multi_pos_list(_input_table_right(), multi_pos_list_right);
+  build_reference_matrix(_input_table_left(), reference_matrix_left);
+  build_reference_matrix(_input_table_right(), reference_matrix_right);
 
   /**
    * Init the virtual pos lists
    */
-  const auto init_virtual_pos_list = [](const auto& table, InputSide side) {
-    VirtualPosList virtual_pos_list;
-    virtual_pos_list.reserve(table->row_count());
-
-    for (size_t row_idx = 0; row_idx < table->row_count(); ++row_idx) {
-      virtual_pos_list.emplace_back(VirtualPosListEntry{side, row_idx});
-    }
-
-    return virtual_pos_list;
-  };
-
-  auto virtual_pos_list_left = init_virtual_pos_list(_input_table_left(), InputSide::Left);
-  auto virtual_pos_list_right = init_virtual_pos_list(_input_table_right(), InputSide::Right);
+  VirtualPosList virtual_pos_list_left(_input_table_left()->row_count(), 0u);
+  std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0u);
+  VirtualPosList virtual_pos_list_right(_input_table_right()->row_count(), 0u);
+  std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0u);
 
   /**
-   * This is where the magic happens:
-   * Compute the actual union by sorting the virtual pos lists and then merging them using std::set_union
+   * Sort the virtual pos lists, so we can merge them
    */
-  MultiPosListContext context{multi_pos_list_left, multi_pos_list_right};
-
-  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), VirtualPosListContext{multi_pos_list_left});
-  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), VirtualPosListContext{multi_pos_list_right});
-
-  VirtualPosList merged_rows;
-  // Min of both row counts is safe to reserve
-  merged_rows.reserve(std::min(_input_table_left()->row_count(), _input_table_right()->row_count()));
-
-  std::set_union(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), virtual_pos_list_right.begin(),
-                 virtual_pos_list_right.end(), std::back_inserter(merged_rows), context);
+  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), VirtualPosListCmpContext{reference_matrix_left});
+  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), VirtualPosListCmpContext{reference_matrix_right});
 
   /**
    * Build result table
    */
+  auto left_idx = size_t{0};
+  auto right_idx = size_t{0};
+  const auto num_left = virtual_pos_list_left.size();
+  const auto num_right = virtual_pos_list_right.size();
+
   const auto out_chunk_size = std::max(_input_table_left()->chunk_size(), _input_table_right()->chunk_size());
-  // Actual number of rows per chunk, whereas out_chunk_size might be 0 to indicate "unlimited"
-  const auto num_rows_per_chunk = out_chunk_size == 0 ? merged_rows.size() : out_chunk_size;
+
   auto out_table = Table::create_with_layout_from(_input_table_left(), out_chunk_size);
-  for (size_t row_idx = 0; row_idx < merged_rows.size(); row_idx += num_rows_per_chunk) {
-    Chunk out_chunk;
 
-    for (size_t segment_id = 0; segment_id < _column_segment_begins.size(); segment_id++) {
-      /**
-       * For each segment, create a pos list
-       */
-      auto segment_pos_list = std::make_shared<PosList>();
-      segment_pos_list->reserve(num_rows_per_chunk);
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < num_rows_per_chunk; ++chunk_offset) {
-        auto& virtual_pos_list_entry = merged_rows[row_idx + chunk_offset];
-        RowID row_id;
-        if (virtual_pos_list_entry.side == InputSide::Left) {
-          row_id = multi_pos_list_left[segment_id][virtual_pos_list_entry.index];
-        } else {
-          row_id = multi_pos_list_right[segment_id][virtual_pos_list_entry.index];
-        }
+  std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
+  std::generate(pos_lists.begin(), pos_lists.end(), [&]{ return std::make_shared<PosList>(); });
 
-        segment_pos_list->emplace_back(row_id);
-      }
+  const auto emit_row = [&] (const ReferenceMatrix& reference_matrix, size_t row_idx) {
+    for (size_t pos_list_idx = 0; pos_list_idx < pos_lists.size(); ++pos_list_idx) {
+      pos_lists[pos_list_idx]->emplace_back(reference_matrix[pos_list_idx][row_idx]);
+    }
+  };
 
-      /**
-       * Create the output columns belonging to this segment
-       */
-      const auto segment_column_id_begin = _column_segment_begins[segment_id];
-      const auto segment_column_id_end = segment_id >= _column_segment_begins.size() - 1
-                                             ? _input_table_left()->column_count()
-                                             : _column_segment_begins[segment_id + 1];
+  const auto emit_chunk = [&] () {
+    Chunk chunk;
+
+    for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
+      const auto segment_column_id_begin = _column_segment_begins[pos_lists_idx];
+      const auto segment_column_id_end = pos_lists_idx >= _column_segment_begins.size() - 1
+                                         ? _input_table_left()->column_count()
+                                         : _column_segment_begins[pos_lists_idx + 1];
       for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
-        auto ref_column = std::make_shared<ReferenceColumn>(_referenced_tables[segment_id],
-                                                            _referenced_column_ids[column_id], segment_pos_list);
-        out_chunk.add_column(ref_column);
+        auto ref_column = std::make_shared<ReferenceColumn>(_referenced_tables[pos_lists_idx],
+                                                            _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
+        chunk.add_column(ref_column);
       }
     }
 
-    out_table->emplace_chunk(std::move(out_chunk));
+    out_table->emplace_chunk(std::move(chunk));
+  };
+
+  const auto cmp = [](const auto &matrix_a, const auto idx_a, const auto &matrix_b, const auto idx_b) {
+    for (size_t column_idx = 0; column_idx < matrix_a.size(); ++column_idx) {
+      if (matrix_a[column_idx][idx_a] < matrix_b[column_idx][idx_b]) return true;
+      if (matrix_b[column_idx][idx_b] < matrix_a[column_idx][idx_a]) return false;
+    }
+    return false;
+  };
+
+  size_t chunk_row_idx = 0;
+  for (; left_idx < num_left || right_idx < num_right;) {
+    /**
+     * Begin derived from std::union()
+     */
+    if (left_idx == num_left) {
+      emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
+      ++right_idx;
+    } else if (right_idx == num_right) {
+      emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
+      ++left_idx;
+    } else if(cmp(reference_matrix_right, virtual_pos_list_right[right_idx], reference_matrix_left, virtual_pos_list_left[left_idx])) {
+      emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
+      ++right_idx;
+    } else {
+      emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
+
+      if (!cmp(reference_matrix_left, virtual_pos_list_left[left_idx], reference_matrix_right, virtual_pos_list_right[right_idx])) {
+        ++right_idx;
+      }
+      ++left_idx;
+    }
+    ++chunk_row_idx;
+    /**
+     * End derived from std::union()
+     */
+
+    /**
+     * Emit a completed chunk
+     */
+    if (chunk_row_idx == out_chunk_size && out_chunk_size != 0) {
+      emit_chunk();
+
+      chunk_row_idx = 0;
+      std::generate(pos_lists.begin(), pos_lists.end(), [&]{ return std::make_shared<PosList>(); });
+    }
+  }
+
+  if (chunk_row_idx != 0) {
+    emit_chunk();
   }
 
   return out_table;
