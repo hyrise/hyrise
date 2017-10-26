@@ -18,8 +18,8 @@ namespace opossum {
 class BaseIndex;
 class BaseColumn;
 
-enum class ChunkMvccMode {
-  UseMvccColumns, NoMvccColumns
+enum class ChunkUseMvcc {
+  Yes, No
 };
 
 /**
@@ -58,10 +58,10 @@ class Chunk : private Noncopyable {
 
  public:
   // Use the default allocator
-  explicit Chunk(ChunkMvccMode mvcc_mode = ChunkMvccMode::NoMvccColumns);
+  explicit Chunk(ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No);
 
   // Use the specified allocator
-  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, ChunkMvccMode mvcc_mode = ChunkMvccMode::NoMvccColumns);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
