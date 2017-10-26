@@ -7,7 +7,6 @@
 
 #include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/noncopyable.hpp>
-
 #include <memory>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
@@ -15,7 +15,7 @@ class TransactionContext;
  * Translates an AST (Abstract Syntax Tree), represented by its root node, into an Operator tree for the execution
  * engine, which in return is represented by its root Operator.
  */
-class ASTToOperatorTranslator final : public boost::noncopyable {
+class ASTToOperatorTranslator final : private Noncopyable {
  public:
   ASTToOperatorTranslator() = default;
 

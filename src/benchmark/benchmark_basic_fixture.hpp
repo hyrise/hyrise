@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
-
 #include "types.hpp"
 
 namespace opossum {

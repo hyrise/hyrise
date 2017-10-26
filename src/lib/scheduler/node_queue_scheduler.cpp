@@ -30,7 +30,7 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  _processing_units.reserve(_topology->numCpus());
+  _processing_units.reserve(_topology->num_cpus());
   _queues.reserve(_topology->nodes().size());
 
   for (NodeID q{0}; q < _topology->nodes().size(); q++) {

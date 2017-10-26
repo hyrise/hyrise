@@ -301,4 +301,13 @@ void TableStatistics::_adjust_null_value_ratio_for_outer_join(
   }
 }
 
+std::ostream& operator<<(std::ostream& os, TableStatistics& obj) {
+  os << "Table Stats " << std::endl;
+  os << " row count: " << obj._row_count;
+  for (const auto& statistics : obj._column_statistics) {
+    if (statistics) os << std::endl << " " << *statistics;
+  }
+  return os;
+}
+
 }  // namespace opossum

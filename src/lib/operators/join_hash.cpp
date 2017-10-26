@@ -6,13 +6,19 @@
 #include <utility>
 #include <vector>
 
-#include "product.hpp"
-
-#include "storage/column_visitable.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/cuckoo_hashtable.hpp"
+#include "utils/murmur_hash.hpp"
 
 namespace opossum {
 

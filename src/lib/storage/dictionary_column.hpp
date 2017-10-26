@@ -5,11 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
-#include "base_dictionary_column.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_dictionary_column.hpp"
 #include "types.hpp"
 
 namespace opossum {

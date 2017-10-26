@@ -1,12 +1,10 @@
 #include "transaction_context.hpp"
 
 #include <memory>
-#include <stdexcept>
 
 #include "commit_context.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "transaction_manager.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {

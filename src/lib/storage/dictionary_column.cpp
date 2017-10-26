@@ -7,11 +7,10 @@
 
 #include "base_attribute_vector.hpp"
 #include "column_visitable.hpp"
-#include "value_column.hpp"
-
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "value_column.hpp"
 
 namespace opossum {
 

@@ -58,6 +58,10 @@ SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;
 SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;
 
+-- Join, GROUP BY, Having, ...
+SELECT c_custkey, c_name, COUNT(o_orderkey) FROM customer JOIN orders ON c_custkey = o_custkey GROUP BY c_custkey, c_name HAVING COUNT(orders.o_orderkey) >= 1;
+SELECT c_custkey, c_name, COUNT(o_orderkey) FROM customer JOIN ( SELECT * FROM orders JOIN lineitem ON o_orderkey = l_orderkey ) AS orderitems ON customer.c_custkey = orderitems.o_custkey GROUP BY c_custkey, c_name HAVING COUNT(orderitems.o_orderkey) >= 1;
+
 -- COUNT(*)
 SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM int_int3;
@@ -112,7 +116,3 @@ INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; S
 
 -- INSERT ... INTO ... (with regular queries)
 INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3; INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13; INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6; SELECT * FROM int_int_for_insert_1;
-
--- TODO: Fails
--- SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey) FROM customer JOIN orders ON c_custkey = o_custkey GROUP BY customer.c_custkey, customer.c_name HAVING COUNT(orders.o_orderkey) >= 100;
--- SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey) FROM customer JOIN ( SELECT * FROM orders JOIN lineitem ON o_orderkey = l_orderkey ) AS orderitems ON customer.c_custkey = orderitems.o_custkey GROUP BY customer.c_custkey, customer.c_name HAVING COUNT(orderitems.o_orderkey) >= 100;

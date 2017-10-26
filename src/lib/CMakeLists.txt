@@ -13,6 +13,7 @@ set(
     constant_mappings.cpp
     constant_mappings.hpp
     import_export/binary.hpp
+    import_export/csv_converter.cpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
     import_export/csv_parser.cpp
@@ -34,6 +35,7 @@ set(
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
     operators/abstract_operator.hpp
+    operators/abstract_read_only_operator.cpp
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
@@ -127,6 +129,7 @@ set(
     optimizer/abstract_syntax_tree/update_node.hpp
     optimizer/abstract_syntax_tree/validate_node.cpp
     optimizer/abstract_syntax_tree/validate_node.hpp
+    optimizer/base_column_statistics.cpp
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
@@ -196,9 +199,11 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/base_index.cpp
     storage/index/base_index.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
+    storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
@@ -257,7 +262,7 @@ set(
     ${TBB_LIBRARY}
 )
 
-if(${NUMA_FOUND})
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 

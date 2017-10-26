@@ -1,8 +1,6 @@
 #include <iostream>
 
-#include "operators/export_csv.hpp"
 #include "storage/storage_manager.hpp"
-
 #include "tpch/tpch_table_generator.hpp"
 
 int main() {

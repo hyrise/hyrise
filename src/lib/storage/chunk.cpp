@@ -1,4 +1,3 @@
-#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -11,7 +10,6 @@
 #include "chunk.hpp"
 #include "index/base_index.hpp"
 #include "reference_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
