@@ -6,10 +6,12 @@ RUN apt-get update \
     && apt-get install -y \
         bash-completion \
         build-essential \
+        bc \
         ccache \
         clang-5.0 \
         clang-format-3.8 \
         cmake \
+        curl \
         gcovr \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \

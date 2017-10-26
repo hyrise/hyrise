@@ -89,7 +89,8 @@ node {
       }, coverage: {
         stage("Coverage") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./scripts/coverage.sh gcc-release-coverage"
+          sh "./scripts/coverage.sh gcc-release-coverage true"
+          archive 'coverage_badge.svg'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
