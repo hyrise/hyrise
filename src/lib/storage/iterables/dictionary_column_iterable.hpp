@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "iterables.hpp"
-
 #include "storage/base_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 

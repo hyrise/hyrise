@@ -19,7 +19,15 @@ namespace opossum {
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
     : _table(table), _row_count(table->row_count()), _column_statistics(table->column_count()) {}
 
+TableStatistics::TableStatistics(float row_count,
+                                 const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics)
+    : _row_count(row_count), _column_statistics(column_statistics) {}
+
 float TableStatistics::row_count() const { return _row_count; }
+
+const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::column_statistics() const {
+  return _column_statistics;
+}
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
@@ -291,6 +299,15 @@ void TableStatistics::_adjust_null_value_ratio_for_outer_join(
     float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
     (*col_itr)->set_null_value_ratio(right_null_value_ratio);
   }
+}
+
+std::ostream& operator<<(std::ostream& os, TableStatistics& obj) {
+  os << "Table Stats " << std::endl;
+  os << " row count: " << obj._row_count;
+  for (const auto& statistics : obj._column_statistics) {
+    if (statistics) os << std::endl << " " << *statistics;
+  }
+  return os;
 }
 
 }  // namespace opossum

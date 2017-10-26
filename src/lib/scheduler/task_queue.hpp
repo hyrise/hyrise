@@ -1,9 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-
 #include <tbb/concurrent_queue.h>
-
 #include <array>
 #include <atomic>
 #include <memory>

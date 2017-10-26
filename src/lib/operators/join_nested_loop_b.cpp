@@ -1,6 +1,5 @@
 #include "join_nested_loop_b.hpp"
 
-#include <exception>
 #include <memory>
 #include <set>
 #include <stdexcept>
@@ -8,12 +7,66 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_attribute_vector.hpp"
-
 #include "resolve_type.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+struct JoinNestedLoopB::JoinContext : ColumnVisitableContext {
+  JoinContext(std::shared_ptr<const BaseColumn> column_left, std::shared_ptr<const BaseColumn> column_right,
+              ChunkID left_chunk_id, ChunkID right_chunk_id, JoinMode mode)
+      : _column_left{column_left},
+        _column_right{column_right},
+        _left_chunk_id{left_chunk_id},
+        _right_chunk_id{right_chunk_id},
+        _mode{mode} {};
+
+  std::shared_ptr<const BaseColumn> _column_left;
+  std::shared_ptr<const BaseColumn> _column_right;
+  ChunkID _left_chunk_id;
+  ChunkID _right_chunk_id;
+  JoinMode _mode;
+};
+
+template <typename T>
+class JoinNestedLoopB::JoinNestedLoopBImpl : public AbstractJoinOperator::AbstractJoinOperatorImpl,
+                                             public ColumnVisitable {
+ public:
+  JoinNestedLoopBImpl<T>(JoinNestedLoopB& join_nested_loop_b);
+
+  // AbstractOperatorImpl implementation
+  std::shared_ptr<const Table> _on_execute() override;
+
+  // ColumnVisitable implementation
+  void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+  void handle_dictionary_column(const BaseDictionaryColumn& column,
+                                std::shared_ptr<ColumnVisitableContext> context) override;
+  void handle_reference_column(const ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+
+  void join_value_value(const ValueColumn<T>& left, const ValueColumn<T>& right, std::shared_ptr<JoinContext> context,
+                        bool reverse_order = false);
+  void join_value_dictionary(const ValueColumn<T>& left, const DictionaryColumn<T>& right,
+                             std::shared_ptr<JoinContext> context, bool reverse_order = false);
+  void join_value_reference(const ValueColumn<T>& left, const ReferenceColumn& right,
+                            std::shared_ptr<JoinContext> context, bool reverse_order = false);
+  void join_dictionary_dictionary(const DictionaryColumn<T>& left, const DictionaryColumn<T>& right,
+                                  std::shared_ptr<JoinContext> context, bool reverse_order = false);
+  void join_dictionary_reference(const DictionaryColumn<T>& left, const ReferenceColumn& right,
+                                 std::shared_ptr<JoinContext> context, bool reverse_order = false);
+  void join_reference_reference(const ReferenceColumn& left, const ReferenceColumn& right,
+                                std::shared_ptr<JoinContext> context, bool reverse_order = false);
+
+ protected:
+  JoinNestedLoopB& _join_nested_loop_b;
+  std::function<bool(const T&, const T&)> _compare;
+  void _match_values(const T& value_left, ChunkOffset left_chunk_offset, const T& value_right,
+                     ChunkOffset right_chunk_offset, std::shared_ptr<JoinContext> context, bool reverse_order);
+  const T& _resolve_reference(const ReferenceColumn& ref_column, ChunkOffset chunk_offset);
+};
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,

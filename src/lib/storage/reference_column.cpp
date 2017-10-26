@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "column_visitable.hpp"
-
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

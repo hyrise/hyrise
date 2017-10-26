@@ -7,16 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
-
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -53,11 +50,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // This operator has one table as output.
   uint8_t num_out_tables() const final;
-
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
 
  private:
   /*

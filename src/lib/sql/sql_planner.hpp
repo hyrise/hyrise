@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/noncopyable.hpp>
-
 #include "SQLParserResult.h"
 #include "operators/abstract_operator.hpp"
 #include "sql_query_plan.hpp"
@@ -16,7 +14,7 @@ namespace opossum {
  * - translate AST to operators
  * - wrap operators in SQLQueryPlan
  */
-class SQLPlanner final : public boost::noncopyable {
+class SQLPlanner final : public Noncopyable {
  public:
   static SQLQueryPlan plan(const hsql::SQLParserResult& result);
 };

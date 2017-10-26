@@ -1,11 +1,10 @@
 #include "variable_length_key_base.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
 #include <cstring>
-
-#include <algorithm>
 #include <iomanip>
 #include <ostream>
 #include <type_traits>

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -20,7 +19,6 @@ class TableWrapper : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

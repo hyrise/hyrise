@@ -1,21 +1,11 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "product.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
