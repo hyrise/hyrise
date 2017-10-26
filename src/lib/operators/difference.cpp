@@ -21,6 +21,10 @@ uint8_t Difference::num_in_tables() const { return 2; }
 
 uint8_t Difference::num_out_tables() const { return 1; }
 
+std::shared_ptr<AbstractOperator> Difference::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Difference>(_input_left->recreate(args), _input_right->recreate(args));
+}
+
 std::shared_ptr<const Table> Difference::_on_execute() {
   auto output = std::make_shared<Table>();
 
