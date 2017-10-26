@@ -32,8 +32,7 @@ void AbstractOperator::execute() {
     transaction_context->on_operator_started();
     _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
-  }
-  else {
+  } else {
     _output = _on_execute(transaction_context);
   }
 
