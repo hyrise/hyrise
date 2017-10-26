@@ -191,7 +191,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsq
   if (del.expr) {
     current_result_node = _translate_where(*del.expr, current_result_node);
   }
-  current_result_node = _validate_if_active(current_result_node);
 
   auto delete_node = std::make_shared<DeleteNode>(del.tableName);
   delete_node->set_left_child(current_result_node);
@@ -204,7 +203,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
   if (update.where) {
     current_values_node = _translate_where(*update.where, current_values_node);
   }
-  current_values_node = _validate_if_active(current_values_node);
 
   // The update operator wants ReferenceColumns on its left side
   // TODO(anyone): fix this
@@ -256,8 +254,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // TODO(torpedro): Handle DISTINCT.
   DebugAssert(select.selectList != nullptr, "SELECT list needs to exist");
   DebugAssert(!select.selectList->empty(), "SELECT list needs to have entries");
-
-  current_result_node = _validate_if_active(current_result_node);
 
   // If the query has a GROUP BY clause or if it has aggregates, we do not need a top-level projection
   // because all elements must either be aggregate functions or columns of the GROUP BY clause,
@@ -389,7 +385,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
   std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
     case hsql::kTableName:
-      node = std::make_shared<StoredTableNode>(table.name);
+      node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
       break;
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
@@ -838,36 +834,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_if_active(
     const std::shared_ptr<AbstractASTNode>& input_node) {
   if (!_validate) return input_node;
-  if (_is_validated(input_node)) return input_node;
 
   auto validate_node = std::make_shared<ValidateNode>();
   validate_node->set_left_child(input_node);
   return validate_node;
-}
-
-bool SQLToASTTranslator::_is_validated(const std::shared_ptr<AbstractASTNode>& input_node) {
-  const auto left_child = input_node->left_child();
-  const auto right_child = input_node->right_child();
-
-  if (input_node->type() == ASTNodeType::Validate) {
-    return true;
-  }
-
-  if (!left_child && !right_child) {
-    return false;
-  }
-
-  auto is_validated = true;
-
-  if (left_child) {
-    is_validated &= _is_validated(left_child);
-  }
-
-  if (right_child) {
-    is_validated &= _is_validated(right_child);
-  }
-
-  return is_validated;
 }
 
 }  // namespace opossum
