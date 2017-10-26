@@ -61,7 +61,7 @@ class Chunk : private Noncopyable {
   explicit Chunk(ChunkMvccMode mvcc_mode = ChunkMvccMode::NoMvccColumns);
 
   // Use the specified allocator
-  Chunk(const PolymorphicAllocator<Chunk>& alloc, ChunkMvccMode mvcc_mode = ChunkMvccMode::NoMvccColumns);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, ChunkMvccMode mvcc_mode = ChunkMvccMode::NoMvccColumns);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
