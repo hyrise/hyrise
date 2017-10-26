@@ -1,8 +1,8 @@
 add_executable(
     hyriseBenchmark
 
-    base_fixture.cpp
-    base_fixture.hpp
+    benchmark_basic_fixture.cpp
+    benchmark_basic_fixture.hpp
     benchmark_main.cpp
     benchmark_template.cpp
     operators/aggregate_benchmark.cpp

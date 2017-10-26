@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size, const bool compress) {
+std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, const bool compress) {
   std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = chunk_size > 0 ? chunk_size : _num_rows;

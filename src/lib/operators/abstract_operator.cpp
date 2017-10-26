@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
@@ -47,6 +48,11 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 }
 
 const std::string AbstractOperator::description() const { return name(); }
+
+std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
+  Fail("Operator " + name() + " does not implement recreation.");
+  return {};
+}
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
 

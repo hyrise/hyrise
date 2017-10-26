@@ -33,10 +33,6 @@ class Update : public AbstractReadWriteOperator {
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

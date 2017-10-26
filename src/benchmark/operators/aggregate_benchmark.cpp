@@ -1,7 +1,7 @@
 #include <memory>
 #include <vector>
 
-#include "../base_fixture.hpp"
+#include "../benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
