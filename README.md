@@ -1,5 +1,5 @@
 [![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/hyrise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/blue/organizations/jenkins/Hyrise%2Fhyrise/activity)
-[![Coverage Status](https://ares.epic.hpi.uni-potsdam.de/jenkins_coverage_badge)](https://ares.epic.hpi.uni-potsdam.de/jenkins_coverage_badge)
+[![Coverage Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage_badge.svg)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/RCov_Report/)
 
 # Welcome to Hyrise
 
