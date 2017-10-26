@@ -5,8 +5,6 @@ node {
   // create ccache volume on host using:
   // mkdir /mnt/ccache; mount -t tmpfs -o size=10G none /mnt/ccache
 
-  githubNotify context: 'Notification key', description: 'This is a shorted example',  status: 'SUCCESS'
-
   oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\"") {
 
     try {
