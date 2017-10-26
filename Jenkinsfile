@@ -101,8 +101,8 @@ node {
             reportName: "RCov Report"
           ])
           script {
-            coveragePercent = sh script: "cat coverage_percent.txt", returnStdout: true
-            githubNotify context: 'Coverage', description: "Coverage $coveragePercentage, ",  status: 'SUCCESS'
+            coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS'
           }
         }
       }
