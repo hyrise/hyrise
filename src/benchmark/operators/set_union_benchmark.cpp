@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <random>
 #include <utility>
@@ -42,7 +43,7 @@ std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk
 
   return pos_list;
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -146,4 +147,4 @@ BENCHMARK_DEFINE_F(SetUnionBaseLineBenchmarkFixture, Benchmark)(::benchmark::Sta
   }
 }
 BENCHMARK_REGISTER_F(SetUnionBaseLineBenchmarkFixture, Benchmark)->Range(100, 5 * 1000 * 1000);
-}
+}  // namespace opossum
