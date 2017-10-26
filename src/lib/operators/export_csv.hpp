@@ -15,8 +15,8 @@ class ReferenceColumn;
 
 /*
  * With the ExportCsv operator, selected tables of a database
- * can be exported to csv files. A valid input can herefore be
- * either a table in the storagemanager or a result of a different operator.
+ * can be exported to csv files. A valid input can either be
+ * a table from the storage manager or a result of a different operator.
  *
  * Additionally to the main csv file, which contains the contents of the table,
  * a meta file is generated. This meta file contains further information,

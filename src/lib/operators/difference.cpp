@@ -58,7 +58,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     right_input_row_set.insert(string_row_vector.begin(), string_row_vector.end());
   }
 
-  // 2. Now we check for each chunk of the left input wich rows can be added to the output
+  // 2. Now we check for each chunk of the left input which rows can be added to the output
 
   // Iterating over all chunks and for each chunk over all columns
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); chunk_id++) {
@@ -98,7 +98,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // for all offsets check if the row can be added to the output
     for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk.size(); chunk_offset++) {
-      // creating string represantation off the row at chunk_offset
+      // creating string representation off the row at chunk_offset
       std::string row_string;
       for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); column_id++) {
         auto base_column = in_chunk.get_column(column_id);

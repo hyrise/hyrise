@@ -140,7 +140,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
         _column_id(column_id),
         _order_by_mode(order_by_mode),
         _output_chunk_size(output_chunk_size) {
-    // initialize a structure wich can be sorted by std::sort
+    // initialize a structure which can be sorted by std::sort
     _row_id_value_vector = std::make_shared<std::vector<RowIDValuePair>>();
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }

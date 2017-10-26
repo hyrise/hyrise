@@ -111,7 +111,7 @@ class ColumnMaterializer : public ColumnVisitable {
   }
 
   /**
-  * ColumnVisitable implementaion to materialize and sort a dictionary column.
+  * ColumnVisitable implementation to materialize and sort a dictionary column.
   **/
   void handle_dictionary_column(const BaseDictionaryColumn& column,
                                 std::shared_ptr<ColumnVisitableContext> context) override {

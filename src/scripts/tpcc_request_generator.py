@@ -49,9 +49,9 @@ def decode_c_last(abc):
     b = int((abc - a * 100) / 10)
     c = int(abc - a * 100 - b * 10)
 
-    syllabels = ("BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING")
+    syllables = ("BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING")
 
-    return syllabels[a] + syllabels[b] + syllabels[c]
+    return syllables[a] + syllables[b] + syllables[c]
 
 
 def generate_new_order():

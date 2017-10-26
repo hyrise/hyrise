@@ -60,7 +60,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Chunksize             | ChunkOffset                           |   4
+   * Chunk size             | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
@@ -113,7 +113,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   /*
    * Imports a serialized DictionaryColumn from the given file.
-   * The file must contain data in the folowing format:
+   * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------

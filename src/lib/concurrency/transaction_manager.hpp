@@ -25,7 +25,7 @@
  * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
  * IDs and ensures all transactions are committed in the correct order. It also holds a global last commit ID, which is
  * the commit ID of the last transaction that has been committed. When a new transaction context is created, it retains
- * a copy of the current last commit ID, which represents a snaphot of the database. The last commit ID together with
+ * a copy of the current last commit ID, which represents a snapshot of the database. The last commit ID together with
  * the MVCC columns is used to filter out any changes made after the creation transaction context.
  *
  * TransactionContext contains data used by a transaction, mainly its ID, the last commit ID explained above, and,

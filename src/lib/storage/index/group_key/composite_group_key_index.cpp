@@ -38,7 +38,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     _indexed_columns.emplace_back(dict_column);
   }
 
-  // retrive amount of memory consumed by each concatenated key
+  // retrieve amount of memory consumed by each concatenated key
   CompositeKeyLength bytes_per_key = std::accumulate(
       _indexed_columns.begin(), _indexed_columns.end(), 0u,
       [](auto key_length, const auto& column) { return key_length + column->attribute_vector()->width(); });

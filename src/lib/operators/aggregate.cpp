@@ -418,7 +418,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         /**
          * Special COUNT(*) implementation.
          * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID.
-         * We then basically go through the _keys_per_chunk map and count the occurences of each group key.
+         * We then basically go through the _keys_per_chunk map and count the occurrences of each group key.
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
@@ -440,7 +440,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           auto& results = *ctx->results;
 
-          // count occurences for each group key
+          // count occurrences for each group key
           for (const auto& hash_key : *hash_keys) {
             ++results[hash_key].aggregate_count;
           }

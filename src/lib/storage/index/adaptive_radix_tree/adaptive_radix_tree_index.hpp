@@ -21,7 +21,7 @@ class BaseDictionaryColumn;
  * is compared.
  * In order to store the partial keys, it uses 4 different node-types, which can hold up to 4, 16, 48 and 256 partial
  * keys respectively.
- * Each node has an array wich contains pointers to its children and (if needed) an index array in order to map
+ * Each node has an array which contains pointers to its children and (if needed) an index array in order to map
  * partial keys to positions in the array of the child-pointers
  *
  * The full specification of an ART can be found in the following paper: https://db.in.tum.de/~leis/papers/ART.pdf
@@ -49,7 +49,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
    *All keys in the ART have to be binary comparable in the sense that if the most significant differing bit between
    *BinaryComparable a and BinaryComparable b is greater for a <=> a > b.
    *This is true for unsigned values (like the ValueID), but signed values, chars and strings have to be transformed
-   *in order to fullfill this property. The BinaryComparable class works as a common interface for those values.
+   *in order to fulfill this property. The BinaryComparable class works as a common interface for those values.
    *The ART compares keys byte-wise, therefore we save the bytes of a BinaryComparable in a vector.
    */
 

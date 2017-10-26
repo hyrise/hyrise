@@ -119,7 +119,7 @@ void AbstractTask::_on_predecessor_done() {
   if (new_predecessor_count == 0) {
     if (CurrentScheduler::is_set()) {
       auto worker = Worker::get_this_thread_worker();
-      DebugAssert(static_cast<bool>(worker), "No worder");
+      DebugAssert(static_cast<bool>(worker), "No worker");
 
       worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {

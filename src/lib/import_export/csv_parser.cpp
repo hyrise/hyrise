@@ -34,7 +34,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
 
   std::string_view content_view{content.c_str(), content.size()};
 
-  // Save chunks in list to avoid memory relocations
+  // Save chunks in list to avoid memory relocation
   std::list<Chunk> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;

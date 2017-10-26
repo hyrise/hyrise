@@ -7,7 +7,7 @@ namespace opossum {
 class VariableLengthKey;
 
 /**
- * Proxy for VariableLengthKey mimicing const VariableLengthKey &. The proxy is neccessary in order to directly read the
+ * Proxy for VariableLengthKey mimicking const VariableLengthKey &. The proxy is necessary in order to directly read the
  * data hold by VariableLengthKeyStore.
  */
 class VariableLengthKeyConstProxy {
@@ -24,7 +24,7 @@ class VariableLengthKeyConstProxy {
   virtual ~VariableLengthKeyConstProxy() = default;
 
   /**
-   * Implicitely convert proxy into VariableLengthKey in order to allow easy usage of VariableLengthKeyStore.
+   * Implicitly convert proxy into VariableLengthKey in order to allow easy usage of VariableLengthKeyStore.
    */
   operator VariableLengthKey() const;  // NOLINT(runtime/explicit)
 
@@ -47,11 +47,11 @@ class VariableLengthKeyConstProxy {
 };
 
 /**
- * Proxy for VariableLengthKey mimicing VariableLengthKey &. The proxy is neccessary in order to directly manipulate the
+ * Proxy for VariableLengthKey mimicking VariableLengthKey &. The proxy is necessary in order to directly manipulate the
  * data held by the VariableLengthKeyStore.
  * Although both proxy classes are mostly used by-value, inheriting from VariableLengthKeyConstProxy is possible, since
  * no virtual functions are used and no members are provided, so that object slicing does not harm. Additionally,
- * inheritence allows the use of mutable proxy if const proxy is expected without further effort.
+ * inheritance allows the use of mutable proxy if const proxy is expected without further effort.
  */
 class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
   friend class VariableLengthKey;
