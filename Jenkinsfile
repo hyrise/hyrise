@@ -100,7 +100,7 @@ node {
           ])
           script {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS'
+            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
           }
         }
       }
