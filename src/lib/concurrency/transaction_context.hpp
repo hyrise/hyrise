@@ -12,17 +12,47 @@ namespace opossum {
 class AbstractReadWriteOperator;
 class CommitContext;
 
-enum class TransactionPhase { Active, Failed, RolledBack, Committing, Committed };
+/**
+ * @brief Overview of the different transaction phases
+ *
+ *  +--------+
+ *  | Active |
+ *  +--------+
+ *      |
+ *   Execute operators ---------------+
+ *      |                             |
+ *      | IF (an operator failed)     | ELSE
+ *      |                             |
+ *  +---------+                    +------------+
+ *  | Aborted |                    | Committing |
+ *  +---------+                    +------------+
+ *      |                             |
+ *   Rollback operators             Commit operators
+ *      |                             |
+ *  +------------+                  Wait for all previous
+ *  | RolledBack |                  transaction to be committed
+ *  +------------+                    |
+ *                                 +-----------+
+ *                                 | Committed |
+ *                                 +-----------+
+ */
+enum class TransactionPhase {
+  Active,      // Transaction has just been created. Operators may be executed.
+  Aborted,     // One of the operators failed. Transaction needs to be rolled back.
+  RolledBack,  // Transaction has been rolled back.
+  Committing,  // Commit ID has been assigned. Operators may commit records.
+  Committed    // Transaction has been committed.
+};
 
 /**
  * @brief Representation of a transaction
  */
-class TransactionContext {
+class TransactionContext : public std::enable_shared_from_this<TransactionContext> {
   friend class TransactionManager;
 
  public:
   TransactionContext(const TransactionID transaction_id, const CommitID last_commit_id);
-  ~TransactionContext() = default;
+  ~TransactionContext();
 
   /**
    * The transaction id used among others to lock records in tables.
@@ -46,9 +76,38 @@ class TransactionContext {
   TransactionPhase phase() const;
 
   /**
+   * Returns true if rollback has been called.
+   */
+  bool aborted() const;
+
+  /**
    * Currently only used for tests
    */
   std::shared_ptr<CommitContext> commit_context();
+
+  /**
+   * Aborts and rolls back the transaction.
+   *
+   * @returns false if called a second time
+   */
+  bool rollback();
+
+  /**
+   * Commits the transaction.
+   *
+   * @param callback called when transaction is actually committed
+   * @return false if called a second time
+   */
+  bool commit_async(std::function<void(TransactionID)> callback);
+
+  /**
+   * Commits the transaction.
+   *
+   * Blocks until transaction is actually committed.
+   *
+   * @return false if called a second time
+   */
+  bool commit();
 
   /**
    * Add an operator to the list of read-write operators.
@@ -56,15 +115,64 @@ class TransactionContext {
    */
   void register_rw_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
 
-  std::vector<std::shared_ptr<AbstractReadWriteOperator>> get_rw_operators() const { return _rw_operators; }
-
   /**
-   * Update the counter of active operators
+   * @defgroup Update the counter of active operators
+   * @{
    */
   void on_operator_started();
   void on_operator_finished();
+  /**@}*/
 
-  void wait_for_active_operators_to_finish() const;
+ private:
+  /**
+   * @defgroup Lifetime management
+   * @{
+   */
+
+  /**
+   * Sets the transaction phase to Aborted.
+   * Should be called if an operator fails.
+   *
+   * @returns false if called a second time.
+   */
+  bool _abort();
+
+  /**
+   * Sets the transaction phase to RolledBack.
+   */
+  void _mark_as_rolled_back();
+
+  /**
+   * Sets transaction phase to Committing.
+   * Creates a new commit context and assigns a new commit id.
+   * All operators within this context must be finished and
+   * none of the registered operators should have failed when
+   * calling this function.
+   *
+   * @return false if called a second time.
+   */
+  bool _prepare_commit();
+
+  /**
+   * Sets transaction phase to Pending.
+   * Tries to commit transaction and all following
+   * transactions also marked as “pending”. If there are
+   * uncommitted transaction with a smaller commit id, it
+   * will be committed after those.
+   *
+   * @param callback called when transaction is committed
+   */
+  void _mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback);
+
+  /**@}*/
+
+  void _wait_for_active_operators_to_finish() const;
+
+  /**
+   * Throws an exception if the transition fails and
+   * has not been already in phase to_phase or end_phase.
+   */
+  bool _transition(TransactionPhase from_phase, TransactionPhase to_phase, TransactionPhase end_phase);
 
  private:
   const TransactionID _transaction_id;
