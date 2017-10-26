@@ -45,13 +45,6 @@ const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { re
 void OperatorTask::_on_execute() {
   auto context = _op->transaction_context();
 
-  /**
-   * Do not execute Operators if transaction has been aborted.
-   * Not doing so is crucial in order to make sure no other
-   * tasks of the Transaction run while the Rollback happens.
-   */
-  if (context && context->aborted()) return;
-
   _op->execute();
 
   /**

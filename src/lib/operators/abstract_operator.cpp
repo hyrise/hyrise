@@ -21,6 +21,11 @@ void AbstractOperator::execute() {
   auto transaction_context = this->transaction_context();
 
   if (transaction_context) {
+    /**
+     * Do not execute Operators if transaction has been aborted.
+     * Not doing so is crucial in order to make sure no other
+     * tasks of the Transaction run while the Rollback happens.
+     */
     if (transaction_context->aborted()) {
       return;
     }
