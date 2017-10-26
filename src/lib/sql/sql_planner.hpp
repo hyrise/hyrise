@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SQLParserResult.h"
+
 #include "operators/abstract_operator.hpp"
 #include "sql_query_plan.hpp"
 
@@ -16,7 +17,7 @@ namespace opossum {
  */
 class SQLPlanner final : public Noncopyable {
  public:
-  static SQLQueryPlan plan(const hsql::SQLParserResult& result);
+  static SQLQueryPlan plan(const hsql::SQLParserResult& result, bool validate = true);
 };
 
 }  // namespace opossum

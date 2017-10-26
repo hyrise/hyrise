@@ -87,7 +87,9 @@ node {
       }, coverage: {
         stage("Coverage") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./scripts/coverage.sh gcc-release-coverage"
+          sh "./scripts/coverage.sh gcc-release-coverage true"
+          archive 'coverage_badge.svg'
+          archive 'coverage_percent.txt'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
@@ -96,6 +98,10 @@ node {
             reportFiles: 'index.html',
             reportName: "RCov Report"
           ])
+          script {
+            coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS'
+          }
         }
       }
 

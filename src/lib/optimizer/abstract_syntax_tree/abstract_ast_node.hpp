@@ -27,6 +27,7 @@ enum class ASTNodeType {
   Sort,
   StoredTable,
   Update,
+  Validate,
   Mock
 };
 

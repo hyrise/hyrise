@@ -7,15 +7,15 @@
 
 namespace opossum {
 
-SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result) {
+SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result, bool validate) {
   // Translate to AST
-  auto result_nodes = SQLToASTTranslator::get().translate_parse_result(result);
+  auto result_nodes = SQLToASTTranslator{validate}.translate_parse_result(result);
 
-  SQLQueryPlan plan;
+  SQLQueryPlan plan{};
 
   for (const auto& node : result_nodes) {
     auto optimized = Optimizer::get().optimize(node);
-    auto op = ASTToOperatorTranslator::get().translate_node(optimized);
+    auto op = ASTToOperatorTranslator{}.translate_node(optimized);
 
     plan.add_tree_by_root(op);
   }

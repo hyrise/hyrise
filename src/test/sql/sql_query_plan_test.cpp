@@ -33,18 +33,18 @@ class SQLQueryPlanTest : public BaseTest {
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   std::string query1 = "SELECT a FROM table_a;";
 
-  SQLQueryOperator op(query1, false);
+  SQLQueryOperator op(query1, false, false);
   op.execute();
 
   // Get the query plan.
   const SQLQueryPlan& plan1 = op.get_query_plan();
-  auto tasks = plan1.tasks();
+  auto tasks = plan1.create_tasks();
   ASSERT_EQ(2u, tasks.size());
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
 
   const SQLQueryPlan plan2 = plan1.recreate();
-  auto cloned_tasks = plan2.tasks();
+  auto cloned_tasks = plan2.create_tasks();
   ASSERT_EQ(2u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", cloned_tasks[1]->get_operator()->name());
@@ -68,22 +68,22 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   std::string query1 = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9;";
 
   // Generate query plan.
-  SQLQueryOperator op(query1, false);
+  SQLQueryOperator op(query1, false, false);
   op.execute();
 
   // Get the query plan template.
   const SQLQueryPlan& tmpl = op.get_query_plan();
-  auto tmpl_tasks = tmpl.tasks();
+  auto tmpl_tasks = tmpl.create_tasks();
 
   // Get a copy and schedule all tasks.
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
 
-  auto cloned_tasks = tmpl.recreate().tasks();
+  auto cloned_tasks = tmpl.recreate().create_tasks();
   for (auto task : cloned_tasks) {
     task->schedule();
   }
 
-  auto cloned_tasks2 = tmpl.recreate().tasks();
+  auto cloned_tasks2 = tmpl.recreate().create_tasks();
   for (auto task : cloned_tasks2) {
     task->schedule();
   }

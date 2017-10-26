@@ -56,6 +56,9 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
 
+  // Calls set_transaction_context on itself and both input operators recursively
+  void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
+
   // Returns a new instance of the same operator with the same configuration.
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
@@ -97,6 +100,7 @@ class AbstractOperator : private Noncopyable {
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
+  // Weak pointer breaks cyclical dependency between operators and context
   std::weak_ptr<TransactionContext> _transaction_context;
 
   PerformanceData _performance_data;

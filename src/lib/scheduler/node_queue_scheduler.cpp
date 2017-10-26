@@ -92,7 +92,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
    * Add task to the queue of the preferred node.
    */
   DebugAssert((!_shut_down), "Can't schedule more tasks after the NodeQueueScheduler was shut down");
-  DebugAssert((task->is_scheduled()), "Don't call NodeQueueScheduler::schedule(), call schedule() on the Task");
+  DebugAssert((task->is_scheduled()), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(task_counter);

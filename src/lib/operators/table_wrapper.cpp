@@ -10,7 +10,7 @@ TableWrapper::TableWrapper(const std::shared_ptr<const Table> table) : _table(ta
 
 const std::string TableWrapper::name() const { return "TableWrapper"; }
 
-uint8_t TableWrapper::num_in_tables() const { return 1; }
+uint8_t TableWrapper::num_in_tables() const { return 0; }
 
 uint8_t TableWrapper::num_out_tables() const { return 1; }
 
