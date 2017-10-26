@@ -20,6 +20,7 @@ if (CMAKE_CXX_COMPILER_LAUNCHER)
         string(LENGTH "" SOURCE_PATH_SIZE)
     endif()
 endif()
+MESSAGE(STATUS "SOURCE_PATH_SIZE ${SOURCE_PATH_SIZE}")
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 # Global flags and include directories
