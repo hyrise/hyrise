@@ -31,8 +31,12 @@ SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> SQLQueryOperator::_parse_t
 SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_prepared_stmts(1024);
 SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_query_plan_cache(0);
 
-SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
-    : _query(query), _schedule_plan(schedule_plan), _parse_tree_cache_hit(false), _query_plan_cache_hit(false) {
+SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan, bool validate)
+    : _query(query),
+      _schedule_plan(schedule_plan),
+      _validate(validate),
+      _parse_tree_cache_hit(false),
+      _query_plan_cache_hit(false) {
   _result_op = std::make_shared<SQLResultOperator>();
   _result_task = std::make_shared<OperatorTask>(_result_op);
 }
@@ -58,7 +62,7 @@ std::shared_ptr<const Table> SQLQueryOperator::_on_execute(std::shared_ptr<Trans
   // Schedule all tasks in query plan.
   if (_schedule_plan) {
     // Add the result task to the end of the query plan.
-    std::vector<std::shared_ptr<OperatorTask>> tasks = _plan.tasks();
+    std::vector<std::shared_ptr<OperatorTask>> tasks = _plan.create_tasks();
     if (tasks.size() > 0) {
       _result_op->set_input_operator(tasks.back()->get_operator());
       tasks.back()->set_as_predecessor_of(_result_task);
@@ -122,7 +126,7 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
 // Translates the query that is supposed to be prepared and saves it
 // in the prepared statement cache by its name.
 void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
-  std::shared_ptr<SQLQueryOperator> op = std::make_shared<SQLQueryOperator>(prepare_stmt.query, false);
+  std::shared_ptr<SQLQueryOperator> op = std::make_shared<SQLQueryOperator>(prepare_stmt.query, false, _validate);
   op->execute();
 
   // Get the plan and cache it.
@@ -155,8 +159,8 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
 // Translate the statement and append the result plan
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
-  auto result_node = SQLToASTTranslator::get().translate_statement(stmt);
-  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
+  auto result_node = SQLToASTTranslator{_validate}.translate_statement(stmt);
+  auto result_operator = ASTToOperatorTranslator{}.translate_node(result_node);
 
   SQLQueryPlan query_plan;
   query_plan.add_tree_by_root(result_operator);
@@ -186,7 +190,7 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
 }
 
 std::shared_ptr<AbstractOperator> SQLQueryOperator::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<SQLQueryOperator>(_query, _schedule_plan);
+  return std::make_shared<SQLQueryOperator>(_query, _schedule_plan, _validate);
 }
 
 // Static.
