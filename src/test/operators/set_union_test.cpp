@@ -9,6 +9,7 @@
 #include "operators/set_union.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -164,7 +165,7 @@ TEST_F(SetUnionTest, MultipleReferencedTables) {
   const auto get_pos_list = [](const auto& table, ColumnID column_id) {
     const auto column = table->get_chunk(ChunkID{0}).get_column(column_id);
     const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-    return ref_column->pos_list();
+    return *ref_column->pos_list();
   };
 
   const auto& output = union_unique_op->get_output();

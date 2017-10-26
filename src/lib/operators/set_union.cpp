@@ -23,8 +23,7 @@
  * Each element of this VirtualPosList references a row in a ReferenceMatrix by index. This way, if two values need to
  * be swapped while sorting, only two indices need to swapped instead of a RowIDs for each column in the
  * ReferenceMatrices.
- * The VirtualPosLists are sorted and then merged keeping only one element if both contain an element.
- * From the merged VirtualPosList the result table is created.
+ * Using a implementation derived from std::set_union, the two virtual pos lists are merged into the result table.
  *
  *
  * ### About ReferenceMatrices
@@ -35,6 +34,13 @@
  *
  * The ReferenceMatrix of a StoredTable will only contain one column, the ReferenceMatrix of the result of a 3 way Join
  * will contain 3 columns
+ *
+ *
+ * ### TODO(anybody) for performance improvements
+ * Instead of using a ReferenceMatrix, consider using a linked list of RowIDs for each row. Since most of the sorting
+ *      will depend on the leftmost column, this way most of the time no remote memory would need to be accessed
+ *
+ * The sorting, which is the most expensive part of this operator, could probably be parallelized.
  */
 
 namespace {
@@ -43,14 +49,14 @@ namespace {
 using ReferenceMatrix = std::vector<opossum::PosList>;
 
 using VirtualPosList = std::vector<size_t>;
+
 /**
  * Comparator for performing the std::sort() of a virtual pos list
  */
 struct VirtualPosListCmpContext {
   ReferenceMatrix& reference_matrix;
   bool operator()(size_t lhs, size_t rhs) const {
-    for (size_t column_idx = 0; column_idx < reference_matrix.size(); ++column_idx) {
-      const auto& reference_matrix_column = reference_matrix[column_idx];
+    for (const auto& reference_matrix_column : reference_matrix) {
       const auto left_row_id = reference_matrix_column[lhs];
       const auto right_row_id = reference_matrix_column[rhs];
 
@@ -128,8 +134,10 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   /**
    * Sort the virtual pos lists, so we can merge them
    */
-  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), VirtualPosListCmpContext{reference_matrix_left});
-  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), VirtualPosListCmpContext{reference_matrix_right});
+  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
+            VirtualPosListCmpContext{reference_matrix_left});
+  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
+            VirtualPosListCmpContext{reference_matrix_right});
 
   /**
    * Build result table
@@ -139,30 +147,33 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
   const auto num_left = virtual_pos_list_left.size();
   const auto num_right = virtual_pos_list_right.size();
 
+  // Somewhat random way to decide on a chunk size.
   const auto out_chunk_size = std::max(_input_table_left()->chunk_size(), _input_table_right()->chunk_size());
 
   auto out_table = Table::create_with_layout_from(_input_table_left(), out_chunk_size);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
-  std::generate(pos_lists.begin(), pos_lists.end(), [&]{ return std::make_shared<PosList>(); });
+  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
 
-  const auto emit_row = [&] (const ReferenceMatrix& reference_matrix, size_t row_idx) {
+  // Adds one row to the pos_lists currently being filled
+  const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
     for (size_t pos_list_idx = 0; pos_list_idx < pos_lists.size(); ++pos_list_idx) {
       pos_lists[pos_list_idx]->emplace_back(reference_matrix[pos_list_idx][row_idx]);
     }
   };
 
-  const auto emit_chunk = [&] () {
+  // Turn 'pos_lists' into a new chunk and append it to the table
+  const auto emit_chunk = [&]() {
     Chunk chunk;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_column_id_begin = _column_segment_begins[pos_lists_idx];
       const auto segment_column_id_end = pos_lists_idx >= _column_segment_begins.size() - 1
-                                         ? _input_table_left()->column_count()
-                                         : _column_segment_begins[pos_lists_idx + 1];
+                                             ? _input_table_left()->column_count()
+                                             : _column_segment_begins[pos_lists_idx + 1];
       for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
-        auto ref_column = std::make_shared<ReferenceColumn>(_referenced_tables[pos_lists_idx],
-                                                            _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
+        auto ref_column = std::make_shared<ReferenceColumn>(
+            _referenced_tables[pos_lists_idx], _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
         chunk.add_column(ref_column);
       }
     }
@@ -170,7 +181,8 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
     out_table->emplace_chunk(std::move(chunk));
   };
 
-  const auto cmp = [](const auto &matrix_a, const auto idx_a, const auto &matrix_b, const auto idx_b) {
+  // Comparator of two ReferenceMatrix rows
+  const auto cmp = [](const auto& matrix_a, const auto idx_a, const auto& matrix_b, const auto idx_b) {
     for (size_t column_idx = 0; column_idx < matrix_a.size(); ++column_idx) {
       if (matrix_a[column_idx][idx_a] < matrix_b[column_idx][idx_b]) return true;
       if (matrix_b[column_idx][idx_b] < matrix_a[column_idx][idx_a]) return false;
@@ -189,13 +201,15 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
     } else if (right_idx == num_right) {
       emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
       ++left_idx;
-    } else if(cmp(reference_matrix_right, virtual_pos_list_right[right_idx], reference_matrix_left, virtual_pos_list_left[left_idx])) {
+    } else if (cmp(reference_matrix_right, virtual_pos_list_right[right_idx], reference_matrix_left,
+                   virtual_pos_list_left[left_idx])) {
       emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
       ++right_idx;
     } else {
       emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
 
-      if (!cmp(reference_matrix_left, virtual_pos_list_left[left_idx], reference_matrix_right, virtual_pos_list_right[right_idx])) {
+      if (!cmp(reference_matrix_left, virtual_pos_list_left[left_idx], reference_matrix_right,
+               virtual_pos_list_right[right_idx])) {
         ++right_idx;
       }
       ++left_idx;
@@ -212,7 +226,7 @@ std::shared_ptr<const Table> SetUnion::_on_execute() {
       emit_chunk();
 
       chunk_row_idx = 0;
-      std::generate(pos_lists.begin(), pos_lists.end(), [&]{ return std::make_shared<PosList>(); });
+      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
     }
   }
 

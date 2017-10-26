@@ -205,7 +205,7 @@ void JoinNode::_on_child_changed() {
 
   _output_column_names.insert(_output_column_names.end(), left_names.begin(), left_names.end());
   _output_column_names.insert(_output_column_names.end(), right_names.begin(), right_names.end());
-  
+
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
    */

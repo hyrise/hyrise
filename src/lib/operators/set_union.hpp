@@ -21,6 +21,7 @@ namespace opossum {
  *          - this means: if the first column of `left` references table "a" and ColumnID 3, the first column of `right`
  *                        has to reference "a".3 as well.
  *
+ *
  * ## Example
  *  Table T0
  *    == Columns ==
@@ -87,8 +88,13 @@ class SetUnion : public AbstractReadOnlyOperator {
    */
   std::shared_ptr<const Table> _analyze_input();
 
+  // In the input tables, the column indices in which a different pos_list is used than in the column left of it
   std::vector<ColumnID> _column_segment_begins;
+
+  // For each column segment, the table its pos_list references
   std::vector<std::shared_ptr<const Table>> _referenced_tables;
+
+  // For each column_idx in the input tables, specifies the referenced column in the referenced table
   std::vector<ColumnID> _referenced_column_ids;
 };
 }  // namespace opossum

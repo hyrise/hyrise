@@ -11,10 +11,6 @@ namespace pmr {
 
 class default_resource_impl : public memory_resource {
  public:
-  virtual ~default_resource_impl() {
-    std::cout << "boost::container::pmr::default_resource_impl::~default_resource_impl()";
-  }
-
   virtual void* do_allocate(std::size_t bytes, std::size_t alignment) { return std::malloc(bytes); }
 
   virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { std::free(p); }
@@ -33,7 +29,6 @@ memory_resource* set_default_resource(memory_resource* r) BOOST_NOEXCEPT {
   // Do nothing
   return get_default_resource();
 }
-
 
 }  // namespace pmr
 }  // namespace container
