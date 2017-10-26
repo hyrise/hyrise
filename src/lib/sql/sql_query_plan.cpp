@@ -42,7 +42,7 @@ void SQLQueryPlan::append_plan(const SQLQueryPlan& other_plan) {
 
 void SQLQueryPlan::clear() { _roots.clear(); }
 
-std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::tasks() const {
+std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::create_tasks() const {
   std::vector<std::shared_ptr<OperatorTask>> tasks;
 
   for (const auto& root : _roots) {
@@ -66,6 +66,12 @@ SQLQueryPlan SQLQueryPlan::recreate(const std::vector<AllParameterVariant>& argu
   }
 
   return new_plan;
+}
+
+void SQLQueryPlan::set_transaction_context(std::shared_ptr<TransactionContext> context) {
+  for (const auto& root : _roots) {
+    root->set_transaction_context_recursively(context);
+  }
 }
 
 void SQLQueryPlan::set_num_parameters(uint16_t num_parameters) { _num_parameters = num_parameters; }

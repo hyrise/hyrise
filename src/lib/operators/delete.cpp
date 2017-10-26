@@ -13,6 +13,10 @@ namespace opossum {
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
     : AbstractReadWriteOperator{values_to_delete}, _table_name{table_name} {}
 
+const std::string Delete::name() const { return "Delete"; }
+
+uint8_t Delete::num_in_tables() const { return 1u; }
+
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
@@ -37,11 +41,12 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
       auto expected = 0u;
       // Actual row lock for delete happens here
-      _execute_failed = !referenced_chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(
-          expected, _transaction_id);
+      const auto success =
+          referenced_chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
-      if (_execute_failed) {
+      if (!success) {
+        _mark_as_failed();
         return nullptr;
       }
     }
@@ -50,7 +55,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   return nullptr;
 }
 
-void Delete::commit_records(const CommitID cid) {
+void Delete::_on_commit_records(const CommitID cid) {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
@@ -61,12 +66,12 @@ void Delete::commit_records(const CommitID cid) {
   }
 }
 
-void Delete::finish_commit() {
+void Delete::_finish_commit() {
   const auto num_rows_deleted = _input_table_left()->row_count();
   _table->inc_invalid_row_count(num_rows_deleted);
 }
 
-void Delete::rollback_records() {
+void Delete::_on_rollback_records() {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
@@ -83,10 +88,6 @@ void Delete::rollback_records() {
     }
   }
 }
-
-const std::string Delete::name() const { return "Delete"; }
-
-uint8_t Delete::num_in_tables() const { return 1u; }
 
 /**
  * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn

@@ -50,13 +50,13 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
       throw std::runtime_error("Query is not valid.");
     }
 
-    auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+    auto result_node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
 
     if (optimize) {
       result_node = Optimizer::get().optimize(result_node);
     }
 
-    return ASTToOperatorTranslator::get().translate_node(result_node);
+    return ASTToOperatorTranslator{}.translate_node(result_node);
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query, bool optimize) {

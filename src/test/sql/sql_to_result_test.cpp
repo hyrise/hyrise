@@ -62,12 +62,9 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 
   auto tx_context = TransactionManager::get().new_transaction_context();
 
+  plan.set_transaction_context(tx_context);
   for (const auto& root : plan.tree_roots()) {
     auto tasks = OperatorTask::make_tasks_from_operator(root);
-
-    for (auto& task : tasks) {
-      task->get_operator()->set_transaction_context(tx_context);
-    }
 
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
     result_operator = tasks.back()->get_operator();

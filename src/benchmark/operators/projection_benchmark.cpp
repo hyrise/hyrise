@@ -3,7 +3,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.hpp"
+#include "../benchmark_basic_fixture.hpp"
 #include "../table_generator.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"

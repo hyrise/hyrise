@@ -13,6 +13,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -77,15 +78,14 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     auto plan = SQLPlanner::plan(parse_result);
 
     auto tx_context = TransactionManager::get().new_transaction_context();
+
+    plan.set_transaction_context(tx_context);
     for (const auto& root : plan.tree_roots()) {
       auto tasks = OperatorTask::make_tasks_from_operator(root);
 
-      for (auto& task : tasks) {
-        task->get_operator()->set_transaction_context(tx_context);
-      }
-
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
     }
+    tx_context->commit();
 
     auto result_table = plan.tree_roots().back()->get_output();
     auto sqlite_result_table = _sqlite->execute_query(query);

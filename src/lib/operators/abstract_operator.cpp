@@ -18,7 +18,7 @@ AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>
 void AbstractOperator::execute() {
   auto start = std::chrono::high_resolution_clock::now();
 
-  auto transaction_context = _transaction_context.lock();
+  auto transaction_context = this->transaction_context();
 
   if (transaction_context) transaction_context->on_operator_started();
   _output = _on_execute(transaction_context);
@@ -64,6 +64,13 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
 
 void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
+}
+
+void AbstractOperator::set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context) {
+  set_transaction_context(transaction_context);
+
+  if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);
+  if (_input_right != nullptr) mutable_input_right()->set_transaction_context_recursively(transaction_context);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {

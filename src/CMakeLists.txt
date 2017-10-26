@@ -4,10 +4,12 @@ else()
     add_definitions(-DIS_DEBUG=0)
 endif()
 
-if (${NUMA_FOUND})
+option(DISABLE_NUMA_SUPPORT "Build without NUMA support" OFF)
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
 else()
     add_definitions(-DHYRISE_NUMA_SUPPORT=0)
+    MESSAGE(STATUS "Building without NUMA support")
 endif()
 
 # This will be used by the DebugAssert macro to output
