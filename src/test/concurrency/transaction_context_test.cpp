@@ -51,13 +51,15 @@ class CommitFuncOp : public AbstractReadWriteOperator {
 };
 
 TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions) {
+  const auto empty_callback = [](TransactionID) {};
+
   auto context_1 = manager().new_transaction_context();
   auto context_2 = manager().new_transaction_context();
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
   auto try_commit_context_2 = [&]() {
-    context_2->commit();
+    context_2->commit_async(empty_callback);
 
     EXPECT_EQ(prev_last_commit_id, manager().last_commit_id());
   };
@@ -75,7 +77,7 @@ TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions
    * - context_1 commits, followed by context_2
    *
    */
-  context_1->commit();
+  context_1->commit_async(empty_callback);
 
   EXPECT_EQ(context_2->commit_id(), manager().last_commit_id());
 }
