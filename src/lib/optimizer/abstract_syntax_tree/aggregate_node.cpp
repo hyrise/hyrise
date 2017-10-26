@@ -93,7 +93,7 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   }
 
   const auto group_by_column_id = column_id - _aggregate_expressions.size();
-  DebugAssert (group_by_column_id < _groupby_column_ids.size(), "ColumnID out of range");
+  DebugAssert(group_by_column_id < _groupby_column_ids.size(), "ColumnID out of range");
 
   return left_child()->get_verbose_column_name(_groupby_column_ids[group_by_column_id]);
 }

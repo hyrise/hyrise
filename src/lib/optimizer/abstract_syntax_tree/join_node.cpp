@@ -42,7 +42,7 @@ std::string JoinNode::description() const {
     desc << " " << get_verbose_column_name(_join_column_ids->first);
     desc << " " << scan_type_to_string.left.at(*_scan_type);
     desc << " " << get_verbose_column_name(ColumnID{
-    static_cast<ColumnID::base_type>(left_child()->output_col_count() + _join_column_ids->second)});
+                       static_cast<ColumnID::base_type>(left_child()->output_col_count() + _join_column_ids->second)});
   }
 
   return desc.str();
@@ -197,9 +197,8 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
     return left_child()->get_verbose_column_name(column_id);
   }
   return right_child()->get_verbose_column_name(
-  ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_col_count())});
+      ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_col_count())});
 }
-
 
 void JoinNode::_on_child_changed() {
   // Only set output information if both children have already been set.

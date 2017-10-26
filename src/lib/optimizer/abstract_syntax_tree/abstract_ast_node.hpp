@@ -225,7 +225,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::vector<std::string> get_verbose_column_names() const;
   // @}
 
-
  protected:
   virtual void _on_child_changed() {}
 
