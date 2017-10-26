@@ -32,6 +32,10 @@
  *
  * ---> But similar things could happen anytime you call, e.g. StorageManager::get() before calling
  * get_default_memory_resource() <---
+ *
+ *
+ * NOTE: One might think that Tests suffer from the same problem, since they both come from google - but they don't
+ * seem to be keeping the fixtures around and instead create and destroy them when running the tests.
  */
 int main(int argc, char** argv) {
   // BENCHMARK_MAIN begin
