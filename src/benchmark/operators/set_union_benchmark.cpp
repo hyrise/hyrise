@@ -22,10 +22,7 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * Generate a random pos_list of length std::floor(pos_list_size) with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, float pos_list_size) {
-  std::random_device _random_device;
-  std::default_random_engine _random_engine;
-
+std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine & random_engine ,float referenced_table_chunk_size, float pos_list_size) {
   std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
       0, static_cast<opossum::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
   std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(
@@ -35,8 +32,8 @@ std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk
   pos_list->reserve(pos_list_size);
 
   for (size_t pos_list_idx = 0; pos_list_idx < pos_list_size; ++pos_list_idx) {
-    const auto chunk_id = opossum::ChunkID{chunk_id_distribution(_random_engine)};
-    const auto chunk_offset = chunk_offset_distribution(_random_engine);
+    const auto chunk_id = opossum::ChunkID{chunk_id_distribution(random_engine)};
+    const auto chunk_offset = chunk_offset_distribution(random_engine);
 
     pos_list->emplace_back(opossum::RowID{chunk_id, chunk_offset});
   }
@@ -49,6 +46,12 @@ namespace opossum {
 
 class SetUnionBenchmarkFixture : public benchmark::Fixture {
  public:
+  SetUnionBenchmarkFixture():
+    _random_device(),
+    _random_engine(_random_device()) {
+
+  }
+
   void SetUp(::benchmark::State& state) override {
     const auto num_rows = state.range(0);
     const auto num_columns = state.range(1);
@@ -72,6 +75,8 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
   }
 
  protected:
+  std::random_device _random_device;
+  mutable std::default_random_engine _random_engine;
   std::shared_ptr<TableWrapper> _table_wrapper_left;
   std::shared_ptr<TableWrapper> _table_wrapper_right;
   std::shared_ptr<Table> _referenced_table;
@@ -84,7 +89,7 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
       table->add_column_definition("c" + std::to_string(column_idx), "int");
     }
 
-    for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+    for (size_t row_idx = 0; row_idx < num_rows;) {
       const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
       Chunk chunk;
@@ -94,7 +99,7 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
          * of (num_rows * 0.2f) * REFERENCED_TABLE_CHUNK_COUNT rows - i.e. twice as many rows as the referencing table
          * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
          */
-        auto pos_list = generate_pos_list(num_rows * 0.2f, num_rows);
+        auto pos_list = generate_pos_list(_random_engine, num_rows * 0.2f, num_rows_per_chunk);
         chunk.add_column(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
       }
       table->emplace_chunk(std::move(chunk));
@@ -120,14 +125,21 @@ BENCHMARK_REGISTER_F(SetUnionBenchmarkFixture, Benchmark)->Ranges({{100, 5 * 100
  */
 class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
  public:
+  SetUnionBaseLineBenchmarkFixture():
+    _random_device(),
+    _random_engine(_random_device()) {
+  }
+
   void SetUp(::benchmark::State& state) override {
     auto num_table_rows = state.range(0);
 
-    _pos_list_left = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
-    _pos_list_right = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
+    _pos_list_left = generate_pos_list(_random_engine, num_table_rows * 0.2f, num_table_rows);
+    _pos_list_right = generate_pos_list(_random_engine, num_table_rows * 0.2f, num_table_rows);
   }
 
  protected:
+  std::random_device _random_device;
+  std::default_random_engine _random_engine;
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;
 };
