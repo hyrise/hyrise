@@ -32,15 +32,17 @@ JoinNode::JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID>
 }
 
 std::string JoinNode::description() const {
+  Assert(left_child() && right_child(), "Can't generate description if children aren't set");
+
   std::ostringstream desc;
 
-  desc << "Join";
-  desc << " [" << join_mode_to_string.at(_join_mode) << "]";
+  desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
 
   if (_join_column_ids && _scan_type) {
-    desc << " [" << (*_join_column_ids).first;
+    desc << " " << get_verbose_column_name(_join_column_ids->first);
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << (*_join_column_ids).second << "]";
+    desc << " " << get_verbose_column_name(ColumnID{
+                       static_cast<ColumnID::base_type>(left_child()->output_col_count() + _join_column_ids->second)});
   }
 
   return desc.str();
@@ -187,6 +189,16 @@ const std::optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() 
 const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
+
+std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
+  Assert(left_child() && right_child(), "Can't generate column names without children being set");
+
+  if (column_id < left_child()->output_col_count()) {
+    return left_child()->get_verbose_column_name(column_id);
+  }
+  return right_child()->get_verbose_column_name(
+      ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_col_count())});
+}
 
 void JoinNode::_on_child_changed() {
   // Only set output information if both children have already been set.

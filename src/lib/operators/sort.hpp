@@ -29,15 +29,13 @@ class Sort : public AbstractReadOnlyOperator {
   OrderByMode order_by_mode() const;
 
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
 
-  // The operator is seperated in three different classes. SortImpl is the common templated implementation of the
+  // The operator is separated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
   // task during the Sort process, as described later on.
   template <typename SortColumnType>

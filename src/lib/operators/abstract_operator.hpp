@@ -47,12 +47,6 @@ class AbstractOperator : private Noncopyable {
   virtual const std::string name() const = 0;
   virtual const std::string description() const;
 
-  // returns the number of input tables, range of values is [0, 2]
-  virtual uint8_t num_in_tables() const = 0;
-
-  // returns the number of output tables, range of values is [0, 1]
-  virtual uint8_t num_out_tables() const = 0;
-
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
 
@@ -63,7 +57,7 @@ class AbstractOperator : private Noncopyable {
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const;
+  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;

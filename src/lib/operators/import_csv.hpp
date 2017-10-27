@@ -42,12 +42,6 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // Name of the operator is "ImportCSV"
   const std::string name() const override;
 
-  // This operator has no input
-  uint8_t num_in_tables() const override;
-
-  // This operator has one table as output.
-  uint8_t num_out_tables() const override;
-
  protected:
   // Returns the table that was created from the csv file.
   std::shared_ptr<const Table> _on_execute() override;

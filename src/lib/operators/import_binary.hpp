@@ -45,12 +45,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Returns the name of the operator
   const std::string name() const final;
 
-  // This operator has no inputs.
-  uint8_t num_in_tables() const final;
-
-  // This operator has one table as output.
-  uint8_t num_out_tables() const final;
-
  private:
   /*
    * Reads the header from the given file.
@@ -60,7 +54,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Chunksize             | ChunkOffset                           |   4
+   * Chunk size             | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
@@ -113,7 +107,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   /*
    * Imports a serialized DictionaryColumn from the given file.
-   * The file must contain data in the folowing format:
+   * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------

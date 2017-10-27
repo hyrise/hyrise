@@ -29,10 +29,6 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-uint8_t Sort::num_in_tables() const { return 1; }
-
-uint8_t Sort::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
 }
@@ -135,7 +131,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
         _column_id(column_id),
         _order_by_mode(order_by_mode),
         _output_chunk_size(output_chunk_size) {
-    // initialize a structure wich can be sorted by std::sort
+    // initialize a structure which can be sorted by std::sort
     _row_id_value_vector = std::make_shared<std::vector<RowIDValuePair>>();
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }

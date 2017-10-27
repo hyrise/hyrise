@@ -3,7 +3,7 @@
 namespace opossum {
 
 bool PerformanceWarningClass::_disabled = []() {
-// static initalizer hack to print some warnings in various binaries
+// static initializer hack to print some warnings in various binaries
 
 #if !IS_DEBUG && !defined(WITH_LTO)
   PerformanceWarning("Hyrise was built without Link-Time Optimization - update to cmake >= 3.9");

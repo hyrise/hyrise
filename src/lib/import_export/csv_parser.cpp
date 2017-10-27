@@ -34,7 +34,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
 
   std::string_view content_view{content.c_str(), content.size()};
 
-  // Save chunks in list to avoid memory relocations
+  // Save chunks in list to avoid memory relocation
   std::list<Chunk> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;
@@ -189,7 +189,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
   }
 
   size_t start = 0;
-  for (ChunkOffset row_id = 0; row_id < row_count; ++row_id) {
+  for (size_t row_id = 0; row_id < row_count; ++row_id) {
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       const auto end = field_ends.at(row_id * column_count + column_id);
       auto field = std::string{csv_chunk.substr(start, end - start)};
@@ -200,7 +200,12 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
         _sanitize_field(field);
       }
 
-      converters[column_id]->insert(field, row_id);
+      try {
+        converters[column_id]->insert(field, row_id);
+      } catch (const std::exception& exception) {
+        std::cerr << "Exception while parsing CSV, row " << row_id << ", column " << column_id << "." << std::endl;
+        throw;
+      }
     }
   }
 

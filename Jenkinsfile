@@ -5,7 +5,7 @@ node {
   // create ccache volume on host using:
   // mkdir /mnt/ccache; mount -t tmpfs -o size=10G none /mnt/ccache
 
-  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\"") {
+  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\" -e \"CCACHE_SLOPPINESS=file_macro\"") {
 
     try {
       stage("Setup") {
@@ -89,6 +89,7 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./scripts/coverage.sh gcc-release-coverage true"
           archive 'coverage_badge.svg'
+          archive 'coverage_percent.txt'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
@@ -97,6 +98,10 @@ node {
             reportFiles: 'index.html',
             reportName: "RCov Report"
           ])
+          script {
+            coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+          }
         }
       }
 

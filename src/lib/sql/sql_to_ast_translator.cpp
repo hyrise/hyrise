@@ -189,6 +189,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsql::DeleteStatement& del) {
   std::shared_ptr<AbstractASTNode> current_result_node = std::make_shared<StoredTableNode>(del.tableName);
+  current_result_node = _validate_if_active(current_result_node);
   if (del.expr) {
     current_result_node = _translate_where(*del.expr, current_result_node);
   }

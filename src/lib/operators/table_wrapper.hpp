@@ -17,8 +17,7 @@ class TableWrapper : public AbstractReadOnlyOperator {
   explicit TableWrapper(const std::shared_ptr<const Table> table);
 
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

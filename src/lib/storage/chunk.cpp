@@ -45,7 +45,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
-  // The added values, i.e., a new row, must have the same number of attribues as the table.
+  // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),
               ("append: number of columns (" + std::to_string(_columns.size()) + ") does not match value list (" +
                std::to_string(values.size()) + ")"));
@@ -118,16 +118,16 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
   return result;
 }
 
-bool Chunk::references_only_one_table() const {
+bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
   auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(ColumnID{0}));
+  if (first_column == nullptr) return false;
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
   for (ColumnID i{1}; i < column_count(); ++i) {
     const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(i));
-
     if (column == nullptr) return false;
 
     if (first_referenced_table != column->referenced_table()) return false;

@@ -25,10 +25,6 @@ JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> l
 
 const std::string JoinNestedLoopA::name() const { return "JoinNestedLoopA"; }
 
-uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
-
-uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode,
                                            _column_ids, _scan_type);
@@ -92,7 +88,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   virtual ~JoinNestedLoopAImpl() = default;
   /*
   We need to use the Visitor Pattern to identify column types. We therefor store information about the join in this
-  context. Below we have two childs of JoinNestedLoopAContext for BuilderLeft and BuilderRight.
+  context. Below we have two children of JoinNestedLoopAContext for BuilderLeft and BuilderRight.
   Both have a common constructor interface, but differ in the way they initialize their members.
   */
   struct JoinNestedLoopAContext : ColumnVisitableContext {
@@ -433,7 +429,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     The map that we are iterating through contains one pair for all rows from either Left or Right indicating whether
     a join with a NULL value is necessary.
 
-    We are going to create a new Chunk for each of these rows, because this is the simpliest solution. The difficulty
+    We are going to create a new Chunk for each of these rows, because this is the simplest solution. The difficulty
     lies in resolving chunks with reference columns. We would need to somehow split the remaining rows into groups of
     reference columns and value/dictionary columns rows.
     An improvement would be to group the missing rows by chunk_id and create a new Chunk per group.
@@ -493,7 +489,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
 
-      // Keep it simple for now and handle null_values seperately. We don't have a chunk_id for null values and thus
+      // Keep it simple for now and handle null_values separately. We don't have a chunk_id for null values and thus
       // don't want to risk finding a ReferenceColumn for a random chunk_id.
       if (null_value) {
         column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);

@@ -16,10 +16,6 @@ UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
 
 const std::string UnionAll::name() const { return "UnionAll"; }
 
-uint8_t UnionAll::num_in_tables() const { return 2; }
-
-uint8_t UnionAll::num_out_tables() const { return 1; }
-
 std::shared_ptr<const Table> UnionAll::_on_execute() {
   auto output = Table::create_with_layout_from(_input_table_left());
 

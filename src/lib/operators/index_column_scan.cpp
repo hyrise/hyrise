@@ -30,10 +30,6 @@ IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, con
 
 const std::string IndexColumnScan::name() const { return "IndexColumnScan"; }
 
-uint8_t IndexColumnScan::num_in_tables() const { return 1; }
-
-uint8_t IndexColumnScan::num_out_tables() const { return 1; }
-
 std::shared_ptr<const Table> IndexColumnScan::_on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, IndexColumnScanImpl>(
       _input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
@@ -84,7 +80,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
     }
 
-    // Definining all possible operators here might appear odd. Chances are, however, that we will not
+    // Defining all possible operators here might appear odd. Chances are, however, that we will not
     // have a similar comparison anywhere else. Index scans, for example, would not use an adaptable binary
     // predicate, but will have to use different methods (lower_range, upper_range, ...) based on the
     // chosen operator. For now, we can save us some dark template magic by using the switch below.

@@ -21,6 +21,7 @@ class MockTableNode : public AbstractASTNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::string description() const override;
+  std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
   void _on_child_changed() override;

@@ -105,7 +105,7 @@ class Chunk : private Noncopyable {
   SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
 
   /**
-   * Compacts the internal represantion of
+   * Compacts the internal representation of
    * the mvcc columns in order to reduce fragmentation
    * Locks mvcc columns exclusively in order to do so
    */
@@ -136,7 +136,7 @@ class Chunk : private Noncopyable {
     return index;
   }
 
-  bool references_only_one_table() const;
+  bool references_exactly_one_table() const;
 
  protected:
   PolymorphicAllocator<Chunk> _alloc;

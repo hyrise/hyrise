@@ -83,7 +83,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   // there should not be a third chunk (at least that's the current impl)
   EXPECT_TRUE(output_str.find("Chunk 3") == std::string::npos);
 
-  // remov spaces
+  // remove spaces
   output_str.erase(remove_if(output_str.begin(), output_str.end(), isspace), output_str.end());
 
   EXPECT_TRUE(output_str.find("|2|a|") != std::string::npos);
@@ -115,18 +115,6 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   print_lengths = pr_wrap->test_column_string_widths(min, max);
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
-}
-
-TEST_F(OperatorsPrintTest, NumInputTables) {
-  auto pr = std::make_shared<opossum::Print>(gt, output);
-
-  EXPECT_EQ(pr->num_in_tables(), 1);
-}
-
-TEST_F(OperatorsPrintTest, NumOutputTables) {
-  auto pr = std::make_shared<opossum::Print>(gt, output);
-
-  EXPECT_EQ(pr->num_out_tables(), 1);
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {

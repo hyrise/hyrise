@@ -6,7 +6,7 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude="(.*types*.|.*test*.|.*\.pb\.|third_party)" --html --html-details -o coverage/index.html > coverage_output.txt
+./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr -s -p -r . --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches --html --html-details -o coverage/index.html > coverage_output.txt
 
 # without coverage badge generation
 if [ -z "$2" ]
@@ -14,7 +14,7 @@ if [ -z "$2" ]
     cat coverage_output.txt
 else
     coverage_percent=$(cat coverage_output.txt | grep lines: | sed -e 's/lines: //; s/% .*$//')
-    echo $coverage_percent
+    echo $coverage_percent > coverage_percent.txt
     if (( $(bc <<< "$coverage_percent >= 90") ))
     then
         color="brightgreen"

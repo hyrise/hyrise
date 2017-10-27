@@ -36,10 +36,6 @@ const std::vector<ColumnID>& Aggregate::groupby_column_ids() const { return _gro
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 
-uint8_t Aggregate::num_in_tables() const { return 1; }
-
-uint8_t Aggregate::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Aggregate>(_input_left->recreate(args), _aggregates, _groupby_column_ids);
 }
@@ -418,7 +414,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         /**
          * Special COUNT(*) implementation.
          * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID.
-         * We then basically go through the _keys_per_chunk map and count the occurences of each group key.
+         * We then basically go through the _keys_per_chunk map and count the occurrences of each group key.
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
@@ -440,7 +436,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           auto& results = *ctx->results;
 
-          // count occurences for each group key
+          // count occurrences for each group key
           for (const auto& hash_key : *hash_keys) {
             ++results[hash_key].aggregate_count;
           }

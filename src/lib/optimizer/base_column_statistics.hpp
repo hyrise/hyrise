@@ -73,7 +73,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   /**
-   * Gets distict count of column.
+   * Gets distinct count of column.
    * See _distinct_count declaration in column_statistics.hpp for explanation of float type.
    */
   virtual float distinct_count() const = 0;

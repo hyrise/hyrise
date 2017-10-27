@@ -50,8 +50,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant>& args) const {
-  Fail("Operator " + name() + " does not implement recreation.");
-  return {};
+  return std::make_shared<JoinSortMerge>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+                                         _scan_type);
 }
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
@@ -70,10 +70,6 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
 void JoinSortMerge::_on_cleanup() { _impl.reset(); }
 
 const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
-
-uint8_t JoinSortMerge::num_in_tables() const { return 2u; }
-
-uint8_t JoinSortMerge::num_out_tables() const { return 1u; }
 
 /**
 ** Start of implementation.

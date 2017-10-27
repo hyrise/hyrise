@@ -63,10 +63,6 @@ const std::string TableScan::description() const {
   return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
 }
 
-uint8_t TableScan::num_in_tables() const { return 1; }
-
-uint8_t TableScan::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
   // Replace value in the new operator, if it’s a parameter and an argument is available.
   if (is_placeholder(_right_parameter)) {
@@ -107,7 +103,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
        * directly use the matches to construct the reference columns of the output. If it is a reference column,
        * we need to resolve the row IDs so that they reference the physical data columns (value, dictionary) instead,
-       * since we don’t allow multi-level referencing. To save time and space, we want to share positions lists
+       * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
        * between columns as much as possible. Position lists can be shared between two columns iff
        * (a) they point to the same table and
        * (b) the reference columns of the input table point to the same positions in the same order

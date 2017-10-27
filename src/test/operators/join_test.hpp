@@ -20,7 +20,7 @@ namespace opossum {
 /*
 This is the basic and typed JoinTest class.
 It contains all tables that are currently used for join tests.
-The actual testcases are split into EquiOnly and FullJoin tests.
+The actual test cases are split into EquiOnly and FullJoin tests.
 */
 
 class JoinTest : public BaseTest {

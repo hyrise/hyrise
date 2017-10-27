@@ -31,7 +31,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
-- Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
+- Private / protected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 

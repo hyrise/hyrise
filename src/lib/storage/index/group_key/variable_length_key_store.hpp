@@ -121,7 +121,7 @@ class VariableLengthKeyStore {
 
     /**
      * Creates new instance copying the other iterator iff the other proxy type is convertible into the own type.
-     * This is required since a mutable constructor can be used everytime when a const iterator is expected.
+     * This is required since a mutable constructor can be used every time when a const iterator is expected.
      */
     template <typename OtherProxy,
               typename = typename std::enable_if<std::is_convertible<OtherProxy, Proxy>::value>::type>

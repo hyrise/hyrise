@@ -99,7 +99,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnSelectivityResult _create_column_stats_for_not_equals_predicate(ColumnType value);
 
   /**
-   * Calcute min and max values from table.
+   * Calculate min and max values from table.
    */
   void _initialize_min_max() const;
 
