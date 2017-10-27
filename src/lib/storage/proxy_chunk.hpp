@@ -8,7 +8,10 @@
 
 namespace opossum {
 
-// TODO(normanrz): Class comment what this is good for
+// The ProxyChunk class wraps chunk objects and implements the RAII pattern
+// to track the time a particular chunk has been in scope. These times are
+// measured using the RDTSC instructions and are stored in the Chunk's
+// AccessCounter.
 class ProxyChunk {
  public:
   explicit ProxyChunk(const Chunk& chunk);

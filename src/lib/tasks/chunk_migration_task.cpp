@@ -29,7 +29,9 @@ void ChunkMigrationTask::_on_execute() {
 
     auto& chunk = table->get_chunk(chunk_id);
 
-    // TODO(normanrz): Comment Why?
+    // Only completed chunks are supported for migration, because they
+    // are largely immutable. Currently there is no concurrency control
+    // in place that would allow the safe migration of mutable chunks.
     DebugAssert(chunk_is_completed(chunk, table->chunk_size()), "Chunk is not completed and thus can’t be migrated.");
 
     // TODO(normanrz): Remove debug output

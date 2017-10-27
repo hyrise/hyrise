@@ -34,7 +34,6 @@ void print_vector(const std::vector<T>& vec, std::string prefix = "", std::strin
 }
 
 // TODO(normanrz): Comment
-// TODO(normanrz): Rename `hot_nodes` to `node_infos` or something
 struct NodeInfoSet {
   double imbalance;
   std::vector<double> node_temperature;
@@ -188,17 +187,17 @@ void MigrationPreparationTask::_on_execute() {
   auto hot_chunks =
       find_hot_chunks(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
-  NodeInfoSet hot_nodes = find_hot_nodes(get_node_temperature(hot_chunks, topology->nodes().size()));
+  NodeInfoSet node_infos = find_hot_nodes(get_node_temperature(hot_chunks, topology->nodes().size()));
 
   // TODO(normanrz): Remove
-  std::cout << "Imbalance: " << hot_nodes.imbalance << std::endl;
-  print_vector(hot_nodes.node_temperature, "Hotnesses: ");
+  std::cout << "Imbalance: " << node_infos.imbalance << std::endl;
+  print_vector(node_infos.node_temperature, "Hotnesses: ");
   print_vector(count_chunks_by_node(hot_chunks, topology->nodes().size()), "Chunk counts: ");
 
-  if (hot_nodes.imbalance > _options.imbalance_threshold && hot_nodes.cold_nodes.size() > 0) {
+  if (node_infos.imbalance > _options.imbalance_threshold && node_infos.cold_nodes.size() > 0) {
     std::vector<ChunkInfo> migration_candidates;
     for (const auto& hot_chunk : hot_chunks) {
-      if (hot_chunk.node < 0 || contains(hot_nodes.hot_nodes, static_cast<NodeID>(hot_chunk.node))) {
+      if (hot_chunk.node < 0 || contains(node_infos.hot_nodes, static_cast<NodeID>(hot_chunk.node))) {
         migration_candidates.push_back(hot_chunk);
       }
       if (migration_candidates.size() >= _options.migration_count) {
@@ -210,7 +209,7 @@ void MigrationPreparationTask::_on_execute() {
     jobs.reserve(migration_candidates.size());
 
     for (const auto& migration_chunk : migration_candidates) {
-      const auto target_node = hot_nodes.cold_nodes.at(chunk_counter % hot_nodes.cold_nodes.size());
+      const auto target_node = node_infos.cold_nodes.at(chunk_counter % node_infos.cold_nodes.size());
       const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
                                                              std::vector<ChunkID>({migration_chunk.id}), target_node);
       // TODO(normanrz): Remove

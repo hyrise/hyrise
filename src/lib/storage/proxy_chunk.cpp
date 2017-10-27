@@ -2,7 +2,9 @@
 
 #include "chunk.hpp"
 
-// TODO(normanrz): rdtsc is fine. Why not rdtscp?
+// Hyrise only supports x86-64 CPUs, therefore relying on RDTSC is fine.
+// Although RDTSCP would provide more accurate cycles counts, the precision
+// is not required for the chunk access tracking.
 uint64_t rdtsc() {
   unsigned int lo, hi;
   __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
