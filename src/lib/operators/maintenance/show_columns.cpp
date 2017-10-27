@@ -16,10 +16,6 @@ namespace opossum {
 
 ShowColumns::ShowColumns(const std::string& table_name) : _table_name(table_name) {}
 
-uint8_t ShowColumns::num_in_tables() const { return 0; }
-
-uint8_t ShowColumns::num_out_tables() const { return 1; }
-
 const std::string ShowColumns::name() const { return "ShowColumns"; }
 
 std::shared_ptr<AbstractOperator> ShowColumns::recreate(const std::vector<AllParameterVariant>& args) const {

@@ -23,8 +23,6 @@ Update::~Update() = default;
 
 const std::string Update::name() const { return "Update"; }
 
-uint8_t Update::num_in_tables() const { return 1; }
-
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert((_execution_input_valid(context)), "Input to Update isn't valid");
 

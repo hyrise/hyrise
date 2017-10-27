@@ -15,10 +15,6 @@ Product::Product(const std::shared_ptr<const AbstractOperator> left,
 
 const std::string Product::name() const { return "Product"; }
 
-uint8_t Product::num_in_tables() const { return 2; }
-
-uint8_t Product::num_out_tables() const { return 1; }
-
 std::shared_ptr<const Table> Product::_on_execute() {
   auto output = std::make_shared<Table>();
 

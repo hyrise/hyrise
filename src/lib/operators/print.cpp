@@ -19,10 +19,6 @@ Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out
 
 const std::string Print::name() const { return "Print"; }
 
-uint8_t Print::num_in_tables() const { return 1; }
-
-uint8_t Print::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> Print::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Print>(_input_left->recreate(args), _out);
 }

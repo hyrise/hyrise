@@ -15,8 +15,6 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 
 const std::string Delete::name() const { return "Delete"; }
 
-uint8_t Delete::num_in_tables() const { return 1u; }
-
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
