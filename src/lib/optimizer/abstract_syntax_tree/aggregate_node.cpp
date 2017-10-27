@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "optimizer/expression.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -33,8 +32,16 @@ const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return 
 std::string AggregateNode::description() const {
   std::ostringstream s;
 
+  s << "[Aggregate] ";
+
+  std::vector<std::string> verbose_column_names;
+  if (left_child()) {
+    verbose_column_names = left_child()->get_verbose_column_names();
+  }
+
   auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
-    s << aggregate_expr->to_string();
+    s << aggregate_expr->to_string(verbose_column_names);
+
     if (aggregate_expr->alias()) {
       s << " AS \"" << (*aggregate_expr->alias()) << "\"";
     }
@@ -54,20 +61,41 @@ std::string AggregateNode::description() const {
   if (!_groupby_column_ids.empty()) {
     s << " GROUP BY [";
 
-    auto group_by_it = _groupby_column_ids.begin();
-    if (group_by_it != _groupby_column_ids.end()) {
-      s << *group_by_it;
-      ++group_by_it;
+    for (size_t group_by_idx = 0; group_by_idx < _groupby_column_ids.size(); ++group_by_idx) {
+      if (left_child()) {
+        s << left_child()->get_verbose_column_name(_groupby_column_ids[group_by_idx]);
+        if (group_by_idx + 1 < _groupby_column_ids.size()) {
+          s << ", ";
+        }
+      }
     }
-
-    for (; group_by_it != _groupby_column_ids.end(); ++group_by_it) {
-      s << ", " << *group_by_it;
-    }
-
     s << "]";
   }
 
   return s.str();
+}
+
+std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
+  DebugAssert(left_child(), "Need input to generate name");
+
+  if (column_id < _aggregate_expressions.size()) {
+    const auto& aggregate_expression = _aggregate_expressions[column_id];
+
+    if (aggregate_expression->alias()) {
+      return *aggregate_expression->alias();
+    }
+
+    if (left_child()) {
+      return aggregate_expression->to_string(left_child()->get_verbose_column_names());
+    } else {
+      return aggregate_expression->to_string();
+    }
+  }
+
+  const auto group_by_column_id = column_id - _aggregate_expressions.size();
+  DebugAssert(group_by_column_id < _groupby_column_ids.size(), "ColumnID out of range");
+
+  return left_child()->get_verbose_column_name(_groupby_column_ids[group_by_column_id]);
 }
 
 void AggregateNode::_on_child_changed() {

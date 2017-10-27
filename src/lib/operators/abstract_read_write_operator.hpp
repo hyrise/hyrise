@@ -13,61 +13,49 @@
 
 namespace opossum {
 
+enum class ReadWriteOperatorState {
+  Pending,     // The operator has been instantiated.
+  Executed,    // Execution succeeded.
+  Failed,      // Execution failed.
+  RolledBack,  // Changes have been rolled back.
+  Committed    // Changes have been committed.
+};
+
 /**
- * AbstractReadWriteOperator is the superclass for all operators that need write access to tables.
- * It mainly provides the commit_records and rollback_records methods, which are used by the CommitRecords
- * and RollbackRecords operators, respectively.
+ * AbstractReadWriteOperator is the superclass of all operators that need write access to tables.
+ * It mainly provides the commit_records and rollback_records methods,
+ * which are used to commit and rollback changes respectively.
  */
 class AbstractReadWriteOperator : public AbstractOperator,
                                   public std::enable_shared_from_this<AbstractReadWriteOperator> {
  public:
   explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
-                                     const std::shared_ptr<const AbstractOperator> right = nullptr)
-      : AbstractOperator(left, right), _execute_failed{false} {}
+                                     const std::shared_ptr<const AbstractOperator> right = nullptr);
 
-  void execute() override {
-    auto transaction_context = _transaction_context.lock();
-    DebugAssert(static_cast<bool>(transaction_context), "Probably a bug.");
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const final;
 
-    transaction_context->on_operator_started();
-    _output = _on_execute(transaction_context);
-    transaction_context->on_operator_finished();
-  }
+  void execute() override;
 
   /**
    * Commits the operator and triggers any potential work following commits.
    */
-  void commit(const CommitID cid) {
-    commit_records(cid);
-    finish_commit();
-  }
-
-  /**
-   * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
-   * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
-   * Unlike _on_execute, where failures are expected, the commit operation cannot fail.
-   */
-  virtual void commit_records(const CommitID cid) {}
-
-  /**
-   * Called immediately after commit_records().
-   * This is the place to do any work after modifying operators were successful, e.g. updating statistics.
-   */
-  virtual void finish_commit() {}
+  void commit_records(const CommitID cid);
 
   /**
    * Rolls back the operator by unlocking all modified rows. No other action is necessary since commit_records should
    * have never been called and the modifications were not made visible in the first place.
    * Like commit, the rollback operation cannot fail.
    */
-  virtual void rollback_records() {}
+  void rollback_records();
 
   /**
    * Returns true if a previous call to _on_execute produced an error.
    */
-  bool execute_failed() const { return _execute_failed; }
+  bool execute_failed() const;
 
-  uint8_t num_out_tables() const override { return 0; };
+  ReadWriteOperatorState state() const;
+
+  uint8_t num_out_tables() const override;
 
  protected:
   /**
@@ -82,8 +70,34 @@ class AbstractReadWriteOperator : public AbstractOperator,
    */
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override = 0;
 
- protected:
-  bool _execute_failed;
+  /**
+   * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
+   * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
+   * Unlike _on_execute, where failures are expected, the commit operation cannot fail.
+   */
+  virtual void _on_commit_records(const CommitID cid) = 0;
+
+  /**
+   * Called immediately after commit_records().
+   * This is the place to do any work after modifying operators were successful, e.g. updating statistics.
+   */
+  virtual void _finish_commit() {}
+
+  /**
+   * Called by rollback_records.
+   */
+  virtual void _on_rollback_records() = 0;
+
+  /**
+   * This method is used in sub classes in their _on_execute() method.
+   *
+   * If the execution fails, because for example some records have already been locked,
+   * mark_as_failed() is called to signal to AbstractReadWriteOperator that the execution failed.
+   */
+  void _mark_as_failed();
+
+ private:
+  ReadWriteOperatorState _state;
 };
 
 }  // namespace opossum

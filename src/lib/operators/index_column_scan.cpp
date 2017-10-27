@@ -3,15 +3,23 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
-
-#include "resolve_type.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/index/base_index.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 
@@ -76,7 +84,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
     }
 
-    // Definining all possible operators here might appear odd. Chances are, however, that we will not
+    // Defining all possible operators here might appear odd. Chances are, however, that we will not
     // have a similar comparison anywhere else. Index scans, for example, would not use an adaptable binary
     // predicate, but will have to use different methods (lower_range, upper_range, ...) based on the
     // chosen operator. For now, we can save us some dark template magic by using the switch below.

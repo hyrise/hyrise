@@ -1,10 +1,8 @@
 #include <memory>
 
-#include "benchmark/benchmark.h"
-
-#include "../base_fixture.hpp"
+#include "../benchmark_basic_fixture.hpp"
 #include "../table_generator.hpp"
-
+#include "benchmark/benchmark.h"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 

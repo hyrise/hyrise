@@ -3,8 +3,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -221,7 +219,7 @@ class RadixClusterSort {
   }
 
   /**
-  * Performs least significant bit radix clusterering which is used in the equi join case.
+  * Performs least significant bit radix clustering which is used in the equi join case.
   * Note: if we used the most significant bits, we could also use this for non-equi joins.
   * Then, however we would have to deal with skewed clusters. Other ideas:
   * - hand select the clustering bits based on statistics.
@@ -336,7 +334,7 @@ class RadixClusterSort {
     }
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
-    // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
+    // an more efficient algorithm, if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output_left);
     _sort_clusters(output_right);
 

@@ -9,7 +9,6 @@
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "scheduler/job_task.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {

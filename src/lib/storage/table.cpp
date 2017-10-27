@@ -1,7 +1,6 @@
 #include "table.hpp"
 
 #include <algorithm>
-#include <iomanip>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -9,11 +8,10 @@
 #include <utility>
 #include <vector>
 
-#include "value_column.hpp"
-
 #include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "value_column.hpp"
 
 namespace opossum {
 

@@ -7,7 +7,6 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -48,11 +47,6 @@ class ImportCsv : public AbstractReadOnlyOperator {
 
   // This operator has one table as output.
   uint8_t num_out_tables() const override;
-
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
 
  protected:
   // Returns the table that was created from the csv file.

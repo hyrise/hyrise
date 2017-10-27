@@ -6,8 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "base_value_column.hpp"
 
 namespace opossum {

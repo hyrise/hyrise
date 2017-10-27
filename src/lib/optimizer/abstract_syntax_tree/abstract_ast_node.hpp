@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "types.hpp"
+
 namespace opossum {
 
 struct ColumnID;
@@ -27,6 +29,7 @@ enum class ASTNodeType {
   Sort,
   StoredTable,
   Update,
+  Validate,
   Mock
 };
 
@@ -198,8 +201,29 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   void set_alias(const std::optional<std::string>& table_alias);
 
+  // @{
+  /**
+   * Functions for debugging purposes.
+   */
+
+  /**
+   * Prints this node and all its descendants formatted as a tree
+   */
   void print(std::ostream& out = std::cout, std::vector<bool> levels = {}) const;
+
+  /**
+   * Returns a string describing this node, but nothing about its children.
+   */
   virtual std::string description() const = 0;
+
+  /**
+   * Generate a name for a column that contains all aliases it went through as well as the name of the table that it
+   * originally came from, if any
+   */
+  virtual std::string get_verbose_column_name(ColumnID column_id) const;
+
+  std::vector<std::string> get_verbose_column_names() const;
+  // @}
 
  protected:
   virtual void _on_child_changed() {}
@@ -213,7 +237,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::optional<std::string> _table_alias;
 
   // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
-  // only operatore on the column name. If an alias for this subtree is set, but this reference does not match
+  // only operate on the column name. If an alias for this subtree is set, but this reference does not match
   // it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 

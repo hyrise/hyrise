@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -34,14 +33,16 @@ class Update : public AbstractReadWriteOperator {
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
+
+  // Commit happens in Insert and Delete operators
+  void _on_commit_records(const CommitID cid) override {}
+
+  // Rollback happens in Insert and Delete operators
+  void _on_rollback_records() override {}
 
  protected:
   const std::string _table_to_update_name;

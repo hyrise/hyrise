@@ -1,10 +1,9 @@
 #include <memory>
 #include <string>
 
+#include "../benchmark_basic_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
-
-#include "../base_fixture.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "sql/sql_query_operator.hpp"
 #include "sql/sql_to_ast_translator.hpp"
@@ -39,8 +38,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
-      ASTToOperatorTranslator::get().translate_node(result_node);
+      auto result_node = SQLToASTTranslator{false}.translate_parse_result(result)[0];
+      ASTToOperatorTranslator{}.translate_node(result_node);
     }
   }
 
@@ -57,8 +56,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
-      auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
-      ASTToOperatorTranslator::get().translate_node(result_node);
+      auto result_node = SQLToASTTranslator{false}.translate_parse_result(result)[0];
+      ASTToOperatorTranslator{}.translate_node(result_node);
     }
   }
 

@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+class Table;
 class TransactionContext;
 
 // AbstractOperator is the abstract super class for all operators.
@@ -56,11 +56,14 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
 
+  // Calls set_transaction_context on itself and both input operators recursively
+  void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
+
   // Returns a new instance of the same operator with the same configuration.
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const = 0;
+  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
@@ -97,6 +100,7 @@ class AbstractOperator : private Noncopyable {
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
+  // Weak pointer breaks cyclical dependency between operators and context
   std::weak_ptr<TransactionContext> _transaction_context;
 
   PerformanceData _performance_data;

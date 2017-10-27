@@ -73,7 +73,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   /**
-   * Gets distict count of column.
+   * Gets distinct count of column.
    * See _distinct_count declaration in column_statistics.hpp for explanation of float type.
    */
   virtual float distinct_count() const = 0;
@@ -86,12 +86,12 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
   /**
    * Adjust null value ratio of a column after a left/right/full outer join.
    */
-  void set_null_value_ratio(const float null_value_ratio) { _non_null_value_ratio = 1.f - null_value_ratio; }
+  void set_null_value_ratio(const float null_value_ratio);
 
   /**
    * Gets null value ratio of a column for calculation of null values for left/right/full outer join.
    */
-  float null_value_ratio() const { return 1.f - _non_null_value_ratio; }
+  float null_value_ratio() const;
 
  protected:
   // Column statistics uses the non-null value ratio for calculation of selectivity.
@@ -127,6 +127,6 @@ struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
   std::shared_ptr<BaseColumnStatistics> second_column_statistics;
 };
 
-inline std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj) { return obj._print_to_stream(os); }
+std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj);
 
 }  // namespace opossum

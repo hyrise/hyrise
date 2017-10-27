@@ -17,11 +17,11 @@
 #include <vector>
 
 #include "SQLParser.h"
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
 #include "planviz/ast_visualizer.hpp"
@@ -90,19 +90,23 @@ Console::Console()
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Register default commands to Console
-  register_command("exit", exit);
-  register_command("quit", exit);
-  register_command("help", help);
-  register_command("generate", generate_tpcc);
-  register_command("load", load_table);
-  register_command("script", exec_script);
-  register_command("print", print_table);
-  register_command("visualize", visualize);
+  register_command("exit", std::bind(&Console::exit, this, std::placeholders::_1));
+  register_command("quit", std::bind(&Console::exit, this, std::placeholders::_1));
+  register_command("help", std::bind(&Console::help, this, std::placeholders::_1));
+  register_command("generate", std::bind(&Console::generate_tpcc, this, std::placeholders::_1));
+  register_command("load", std::bind(&Console::load_table, this, std::placeholders::_1));
+  register_command("script", std::bind(&Console::exec_script, this, std::placeholders::_1));
+  register_command("print", std::bind(&Console::print_table, this, std::placeholders::_1));
+  register_command("visualize", std::bind(&Console::visualize, this, std::placeholders::_1));
+  register_command("begin", std::bind(&Console::begin_transaction, this, std::placeholders::_1));
+  register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
+  register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
+  register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
-  for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
+  for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
 }
@@ -245,10 +249,21 @@ int Console::_eval_sql(const std::string& sql) {
   done = std::chrono::high_resolution_clock::now();
   auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
+  const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
+  auto transaction_context =
+      auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
+
+  plan.set_transaction_context(transaction_context);
+
   // Measure the query plan execution time
   started = std::chrono::high_resolution_clock::now();
 
-  if (_execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
+  if (_execute_plan(plan) == ReturnCode::Error) {
+    transaction_context->rollback();
+    out("Execution failed and the transaction has been rolled back.");
+    _explicitly_created_transaction_context = nullptr;
+    return ReturnCode::Error;
+  }
 
   // Measure the query plan execution time
   done = std::chrono::high_resolution_clock::now();
@@ -266,18 +281,24 @@ int Console::_eval_sql(const std::string& sql) {
   out(std::to_string(row_count) + " rows total (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
+  if (transaction_context->aborted()) {
+    out("An operator failed and the transaction has been rolled back.");
+    _explicitly_created_transaction_context = nullptr;
+    return ReturnCode::Error;
+  }
+
+  // Commit
+  if (auto_commit) {
+    transaction_context->commit();
+  }
+
   return ReturnCode::Ok;
 }
 
 int Console::_execute_plan(const SQLQueryPlan& plan) {
   try {
-    // Get Transaction context
-    static auto tx_context = TransactionManager::get().new_transaction_context();
-
-    for (const auto& task : plan.tasks()) {
-      auto op = task->get_operator();
-      op->set_transaction_context(tx_context);
-      op->execute();
+    for (const auto& task : plan.create_tasks()) {
+      task->schedule();
     }
   } catch (const std::exception& exception) {
     out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
@@ -348,31 +369,31 @@ void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
 int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::help(const std::string&) {
-  auto& console = Console::get();
-  console.out("HYRISE SQL Interface\n\n");
-  console.out("Available commands:\n");
-  console.out(
-      "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  console.out(
-      "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
-  console.out("  print TABLENAME         - Fully prints the given table\n");
-  console.out("  visualize [options] SQL - Visualizes a SQL query\n");
-  console.out("             noexec          - without executing the query\n");
-  console.out("             ast             - print the raw abstract syntax tree\n");
-  console.out("             astopt          - print the optimized abstract syntax tree\n");
-  console.out("  quit                    - Exit the HYRISE Console\n");
-  console.out("  help                    - Show this message\n\n");
-  console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
-  console.out("Example:\n");
-  console.out("SELECT * FROM DISTRICT\n");
+  out("HYRISE SQL Interface\n\n");
+  out("Available commands:\n");
+  out("  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  out("  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME         - Fully print the given table (including MVCC columns)\n");
+  out("  visualize [options] SQL - Visualize a SQL query\n");
+  out("             noexec          - without executing the query\n");
+  out("             ast             - print the raw abstract syntax tree\n");
+  out("             astopt          - print the optimized abstract syntax tree\n");
+  out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
+  out("  rollback             - Roll back a manually created transaction\n");
+  out("  commit               - Commit a manually created transaction\n");
+  out("  txinfo               - Print information on the current transaction\n");
+  out("  quit                    - Exit the HYRISE Console\n");
+  out("  help                    - Show this message\n\n");
+  out("After TPC-C tables are generated, SQL queries can be executed.\n");
+  out("Example:\n");
+  out("SELECT * FROM DISTRICT\n");
   return Console::ReturnCode::Ok;
 }
 
 int Console::generate_tpcc(const std::string& tablename) {
-  auto& console = Console::get();
   if (tablename.empty() || "ALL" == tablename) {
-    console.out("Generating TPCC tables (this might take a while) ...\n");
+    out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
@@ -380,10 +401,10 @@ int Console::generate_tpcc(const std::string& tablename) {
     return Console::ReturnCode::Ok;
   }
 
-  console.out("Generating TPCC table: \"" + tablename + "\" ...\n");
+  out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr) {
-    console.out("Error: No TPCC table named \"" + tablename + "\" available.\n");
+    out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;
   }
 
@@ -392,15 +413,14 @@ int Console::generate_tpcc(const std::string& tablename) {
 }
 
 int Console::load_table(const std::string& args) {
-  auto& console = Console::get();
   std::string input = args;
   boost::algorithm::trim<std::string>(input);
   std::vector<std::string> arguments;
   boost::algorithm::split(arguments, input, boost::is_space());
 
   if (arguments.size() != 2) {
-    console.out("Usage:\n");
-    console.out("  load FILEPATH TABLENAME\n");
+    out("Usage:\n");
+    out("  load FILEPATH TABLENAME\n");
     return ReturnCode::Error;
   }
 
@@ -411,13 +431,13 @@ int Console::load_table(const std::string& args) {
   boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
   const std::string& extension = file_parts.back();
 
-  console.out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+  out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
   if (extension == "csv") {
     auto importer = std::make_shared<ImportCsv>(filepath, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
-      console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+      out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else if (extension == "tbl") {
@@ -425,11 +445,11 @@ int Console::load_table(const std::string& args) {
       auto table = opossum::load_table(filepath, 0);
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
-      console.out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
+      out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
-    console.out("Error: Unsupported file extension '" + extension + "'\n");
+    out("Error: Unsupported file extension '" + extension + "'\n");
     return ReturnCode::Error;
   }
 
@@ -437,15 +457,14 @@ int Console::load_table(const std::string& args) {
 }
 
 int Console::print_table(const std::string& args) {
-  auto& console = Console::get();
   std::string input = args;
   boost::algorithm::trim<std::string>(input);
   std::vector<std::string> arguments;
   boost::algorithm::split(arguments, input, boost::is_space());
 
   if (arguments.size() != 1) {
-    console.out("Usage:\n");
-    console.out("  print TABLENAME\n");
+    out("Usage:\n");
+    out("  print TABLENAME\n");
     return ReturnCode::Error;
   }
 
@@ -455,11 +474,11 @@ int Console::print_table(const std::string& args) {
   try {
     gt->execute();
   } catch (const std::exception& exception) {
-    console.out("Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
+    out("Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
-  console.out(gt->get_output(), PrintMvcc);
+  out(gt->get_output(), PrintMvcc);
 
   return ReturnCode::Ok;
 }
@@ -474,26 +493,25 @@ int Console::visualize(const std::string& input) {
   sql = input.substr(mode.size(), input.size());
   // Removes mode from sql string. If no mode is set, does nothing.
 
-  auto& console = Console::get();
   SQLQueryPlan plan;
   hsql::SQLParserResult parse_result;
 
   try {
     hsql::SQLParser::parse(sql, &parse_result);
   } catch (const std::exception& exception) {
-    console.out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
+    out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
-    console.out("Error: SQL query not valid.\n");
+    out("Error: SQL query not valid.\n");
     return ReturnCode::Error;
   }
 
   if (mode == "ast" || mode == "astopt") {
     try {
-      auto ast_roots = SQLToASTTranslator::get().translate_parse_result(parse_result);
+      auto ast_roots = SQLToASTTranslator{}.translate_parse_result(parse_result);
 
       if (mode == "astopt") {
         for (auto& root : ast_roots) {
@@ -505,7 +523,7 @@ int Console::visualize(const std::string& input) {
       img_filename = mode + ".png";
       ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
     } catch (const std::exception& exception) {
-      console.out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
+      out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
@@ -513,12 +531,32 @@ int Console::visualize(const std::string& input) {
     try {
       plan = SQLPlanner::plan(parse_result);
     } catch (const std::exception& exception) {
-      console.out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+      out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
 
     if (mode != "noexec") {
-      if (console._execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
+      const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
+      auto transaction_context =
+          auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
+
+      plan.set_transaction_context(transaction_context);
+
+      if (_execute_plan(plan) == ReturnCode::Error) {
+        transaction_context->rollback();
+        _explicitly_created_transaction_context = nullptr;
+        return ReturnCode::Error;
+      }
+
+      if (transaction_context->aborted()) {
+        out("An operator failed and the transaction has been rolled back.");
+        _explicitly_created_transaction_context = nullptr;
+        return ReturnCode::Error;
+      }
+
+      if (auto_commit) {
+        transaction_context->commit();
+      }
     }
 
     dot_filename = ".queryplan.dot";
@@ -530,7 +568,7 @@ int Console::visualize(const std::string& input) {
   if (ret != 0) {
     std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
     msg += img_filename + "\n";
-    console.out(msg);
+    out(msg);
 
     return ReturnCode::Ok;
   }
@@ -543,28 +581,27 @@ int Console::visualize(const std::string& input) {
 }
 
 int Console::exec_script(const std::string& script_file) {
-  auto& console = Console::get();
   auto filepath = script_file;
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
   if (!script.good()) {
-    console.out("Error: Script file '" + filepath + "' does not exist.\n");
+    out("Error: Script file '" + filepath + "' does not exist.\n");
     return ReturnCode::Error;
   }
 
-  console.out("Executing script file: " + filepath + "\n");
-  console._verbose = true;
+  out("Executing script file: " + filepath + "\n");
+  _verbose = true;
   std::string command;
   int retCode = ReturnCode::Ok;
   while (std::getline(script, command)) {
-    retCode = console._eval(command);
+    retCode = _eval(command);
     if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit) {
       break;
     }
   }
-  console.out("Executing script file done\n");
-  console._verbose = false;
+  out("Executing script file done\n");
+  _verbose = false;
   return retCode;
 }
 
@@ -579,6 +616,63 @@ void Console::handle_signal(int sig) {
     // Restore program state stored in jmp_env set with sigsetjmp(2)
     siglongjmp(jmp_env, 1);
   }
+}
+
+int Console::begin_transaction(const std::string& input) {
+  if (_explicitly_created_transaction_context != nullptr) {
+    const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+    out("There is already an active transaction (" + transaction_id + "). ");
+    out("Type `rollback` or `commit` before beginning a new transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  _explicitly_created_transaction_context = TransactionManager::get().new_transaction_context();
+
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  out("New transaction (" + transaction_id + ") started.\n");
+  return ReturnCode::Ok;
+}
+
+int Console::rollback_transaction(const std::string& input) {
+  if (_explicitly_created_transaction_context == nullptr) {
+    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  _explicitly_created_transaction_context->rollback();
+
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  out("Transaction (" + transaction_id + ") has been rolled back.\n");
+
+  _explicitly_created_transaction_context = nullptr;
+  return ReturnCode::Ok;
+}
+
+int Console::commit_transaction(const std::string& input) {
+  if (_explicitly_created_transaction_context == nullptr) {
+    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  _explicitly_created_transaction_context->commit();
+
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  out("Transaction (" + transaction_id + ") has been committed.\n");
+
+  _explicitly_created_transaction_context = nullptr;
+  return ReturnCode::Ok;
+}
+
+int Console::print_transaction_info(const std::string& input) {
+  if (_explicitly_created_transaction_context == nullptr) {
+    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  const auto last_commit_id = std::to_string(_explicitly_created_transaction_context->last_commit_id());
+  out("Active transaction: { transaction id = " + transaction_id + ", last commit id = " + last_commit_id + " }\n");
+  return ReturnCode::Ok;
 }
 
 // GNU readline interface to our commands

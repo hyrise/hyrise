@@ -23,7 +23,7 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
   _output_column_id_to_input_column_id.resize(output_col_count(), INVALID_COLUMN_ID);
 }
 
-std::string StoredTableNode::description() const { return "Table: " + _table_name; }
+std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
 
 const std::vector<ColumnID>& StoredTableNode::output_column_id_to_input_column_id() const {
   return _output_column_id_to_input_column_id;
@@ -83,6 +83,13 @@ std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std
   }
 
   return column_ids;
+}
+
+std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
+  if (_table_alias) {
+    return "(" + _table_name + " AS " + *_table_alias + ")." + output_column_names()[column_id];
+  }
+  return _table_name + "." + output_column_names()[column_id];
 }
 
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }

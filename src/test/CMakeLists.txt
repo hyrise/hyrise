@@ -1,16 +1,17 @@
 set(
     SHARED_SOURCES
-    base_test.cpp
     base_test.hpp
     gtest_case_template.cpp
     gtest_main.cpp
+    testing_assert.cpp
+    testing_assert.hpp
 )
 
 set(
     HYRISE_TEST_SOURCES
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
-    concurrency/transaction_manager_test.cpp
+    concurrency/transaction_context_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     operators/aggregate_test.cpp
@@ -31,7 +32,7 @@ set(
     operators/print_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp
-    operators/rollback_records_test.cpp
+    operators/recreation_test.cpp
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp
@@ -108,9 +109,7 @@ set(
     GTEST_SOURCES
     ../../third_party/googletest/googletest/src/gtest-all.cc
 )
-add_library(gtestSanitizers EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
-set_target_properties(gtestSanitizers PROPERTIES SUFFIX "_sanitizers")
-set_target_properties(gtestSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+add_sanitizer_library(gtestSanitizers "${GTEST_SOURCES}" "")
 
 set(
     LIBRARIES_SANITIZERS
@@ -122,19 +121,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
-# Configure hyriseCoverageApp
-add_executable(hyriseCoverage EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseCoverage hyriseCoverageLib ${LIBRARIES} --coverage)
-set_target_properties(hyriseCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
-
-# Configure hyriseSanitizersApp
-add_executable(hyriseSanitizers EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_SANITIZERS} -fsanitize=address)
-set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+add_coverage_executable(hyriseCoverage "${HYRISE_TEST_SOURCES}" "hyriseCoverageLib;hyriseBenchmarkCoverageLib;${LIBRARIES}")
+add_sanitizers_executable(hyriseSanitizers "${HYRISE_TEST_SOURCES}" "hyriseSanitizersLib;hyriseBenchmarkSanitizersLib;${LIBRARIES_SANITIZERS}")
 
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
-target_link_libraries(hyriseTestTPCC hyrise ${LIBRARIES} tpcc)
+target_link_libraries(hyriseTestTPCC hyrise hyriseBenchmarkLib ${LIBRARIES})
 add_dependencies(hyriseTestTPCC tpccTableGenerator)

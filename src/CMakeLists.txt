@@ -4,10 +4,12 @@ else()
     add_definitions(-DIS_DEBUG=0)
 endif()
 
-if (${NUMA_FOUND})
+option(DISABLE_NUMA_SUPPORT "Build without NUMA support" OFF)
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
 else()
     add_definitions(-DHYRISE_NUMA_SUPPORT=0)
+    MESSAGE(STATUS "Building without NUMA support")
 endif()
 
 # This will be used by the DebugAssert macro to output
@@ -29,7 +31,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
-    ${PROJECT_SOURCE_DIR}/src/benchmark-libs/
+    ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
 
     ${TBB_INCLUDE_DIR}
@@ -40,7 +42,7 @@ if (${NUMA_FOUND})
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
 
-add_subdirectory(benchmark-libs)
+add_subdirectory(benchmarklib)
 add_subdirectory(benchmark)
 add_subdirectory(bin)
 add_subdirectory(lib)

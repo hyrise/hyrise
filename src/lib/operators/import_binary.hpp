@@ -7,16 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
-
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -54,11 +51,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // This operator has one table as output.
   uint8_t num_out_tables() const final;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
-
  private:
   /*
    * Reads the header from the given file.
@@ -68,7 +60,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Chunksize             | ChunkOffset                           |   4
+   * Chunk size             | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
@@ -121,7 +113,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   /*
    * Imports a serialized DictionaryColumn from the given file.
-   * The file must contain data in the folowing format:
+   * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------

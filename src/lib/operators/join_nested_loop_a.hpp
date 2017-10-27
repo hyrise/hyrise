@@ -1,19 +1,11 @@
 #pragma once
 
-#include <bitset>
-#include <functional>
-#include <map>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
-#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -41,7 +33,7 @@ class JoinNestedLoopA : public AbstractJoinOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

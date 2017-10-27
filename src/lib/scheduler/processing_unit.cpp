@@ -79,4 +79,11 @@ void ProcessingUnit::shutdown() {
   }
   _hibernation_cv.notify_all();
 }
+
+bool ProcessingUnit::shutdown_flag() const { return _shutdown_flag; }
+
+void ProcessingUnit::on_worker_finished_task() { _num_finished_tasks++; }
+
+uint64_t ProcessingUnit::num_finished_tasks() const { return _num_finished_tasks; }
+
 }  // namespace opossum

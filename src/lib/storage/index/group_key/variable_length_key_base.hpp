@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-
 #include <ostream>
 
 namespace opossum {
@@ -28,7 +27,7 @@ class VariableLengthKeyBase {
   VariableLengthKeyBase(VariableLengthKeyWord* data, CompositeKeyLength size);
 
   /**
-   * Performs an 'or'-assignment on the eight (at most) least significant bytes. If more bits have to be set, shifitng
+   * Performs an 'or'-assignment on the eight (at most) least significant bytes. If more bits have to be set, shifting
    * has to
    * be performed.
    */

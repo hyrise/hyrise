@@ -39,8 +39,8 @@ testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::
 void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& expected,
                              const std::vector<opossum::ChunkOffset>& actual) {
   std::set<opossum::ChunkOffset> distinct_expected_positions = {};
-  for (const auto& expection_for_position : expected) {
-    distinct_expected_positions.insert(expection_for_position.begin(), expection_for_position.end());
+  for (const auto& expectation_for_position : expected) {
+    distinct_expected_positions.insert(expectation_for_position.begin(), expectation_for_position.end());
   }
 
   auto distinct_actual_positions = std::set<opossum::ChunkOffset>(actual.begin(), actual.end());

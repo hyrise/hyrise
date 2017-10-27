@@ -1,21 +1,11 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "product.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -38,7 +28,7 @@ class JoinSortMerge : public AbstractJoinOperator {
 
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;

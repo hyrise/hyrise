@@ -1,4 +1,4 @@
-#include "base_test.hpp"
+#include "testing_assert.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -6,60 +6,32 @@
 #include <utility>
 #include <vector>
 
-#include "concurrency/transaction_manager.hpp"
+#include "all_type_variant.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "type_cast.hpp"
-#include "utils/load_table.hpp"
+#include "storage/value_column.hpp"
 
-namespace opossum {
+namespace {
 
-void BaseTest::EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
-  EXPECT_TRUE(_table_equal(tleft, tright, order_sensitive, strict_types));
-}
+using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
 
-void BaseTest::ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
-  ASSERT_TRUE(_table_equal(tleft, tright, order_sensitive, strict_types));
-}
-
-void BaseTest::EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
-                               bool order_sensitive, bool strict_types) {
-  EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
-}
-
-void BaseTest::ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
-                               bool order_sensitive, bool strict_types) {
-  ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
-}
-
-void BaseTest::ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType,
-                                      ColumnID left_column_id, ColumnID right_column_id) {
-  ASSERT_EQ(node->type(), ASTNodeType::Join);  // Can't cast otherwise
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(join_node->join_column_ids(), std::make_pair(left_column_id, right_column_id));
-}
-
-void BaseTest::ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node) {}
-
-BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
+Matrix _table_to_matrix(const opossum::Table& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.column_count()));
+  Matrix matrix(t.row_count(), std::vector<opossum::AllTypeVariant>(t.column_count()));
 
   // set values
   unsigned row_offset = 0;
-  for (ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
-    const Chunk& chunk = t.get_chunk(chunk_id);
+  for (opossum::ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
+    const opossum::Chunk& chunk = t.get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (ColumnID col_id{0}; col_id < t.column_count(); ++col_id) {
-      auto column = chunk.get_column(col_id);
+    for (opossum::ColumnID col_id{0}; col_id < t.column_count(); ++col_id) {
+      const auto column = chunk.get_column(col_id);
 
-      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (opossum::ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];
       }
     }
@@ -69,19 +41,22 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table& t) {
   return matrix;
 }
 
-void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
+void _print_matrix(const Matrix& m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
-    for (ColumnID col{0}; col < m[row].size(); col++) {
+    for (opossum::ColumnID col{0}; col < m[row].size(); col++) {
       std::cout << std::setw(8) << m[row][col] << " ";
     }
     std::cout << std::endl;
   }
   std::cout << "-------------" << std::endl;
 }
+}  // namespace
 
-::testing::AssertionResult BaseTest::_table_equal(const Table& tleft, const Table& tright, bool order_sensitive,
-                                                  bool strict_types) {
+namespace opossum {
+
+::testing::AssertionResult check_table_equal(const Table& tleft, const Table& tright, bool order_sensitive,
+                                             bool strict_types) {
   Matrix left = _table_to_matrix(tleft);
   Matrix right = _table_to_matrix(tright);
 
@@ -185,13 +160,32 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   return ::testing::AssertionSuccess();
 }
 
-std::shared_ptr<Table> BaseTest::load_table(const std::string& file_name, size_t chunk_size) {
-  return opossum::load_table(file_name, chunk_size);
+void EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
+  EXPECT_TRUE(check_table_equal(tleft, tright, order_sensitive, strict_types));
 }
 
-BaseTest::~BaseTest() {
-  StorageManager::reset();
-  TransactionManager::reset();
+void ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
+  ASSERT_TRUE(check_table_equal(tleft, tright, order_sensitive, strict_types));
 }
 
+void EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright, bool order_sensitive,
+                     bool strict_types) {
+  EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
+}
+
+void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright, bool order_sensitive,
+                     bool strict_types) {
+  ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
+}
+
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,
+                            ColumnID right_column_id) {
+  ASSERT_EQ(node->type(), ASTNodeType::Join);  // Can't cast otherwise
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+  ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
+  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->join_column_ids(), std::make_pair(left_column_id, right_column_id));
+}
+
+void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node) {}
 }  // namespace opossum

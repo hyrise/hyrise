@@ -4,13 +4,19 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 
@@ -44,8 +50,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant>& args) const {
-  Fail("Operator " + name() + " does not implement recreation.");
-  return {};
+  return std::make_shared<JoinSortMerge>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+                                         _scan_type);
 }
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
@@ -259,18 +265,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
-    });
+    left_range.for_every_row_id(
+        _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
   }
 
   /**
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
   void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
-    right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-      _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
-    });
+    right_range.for_every_row_id(
+        _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
   }
 
   /**

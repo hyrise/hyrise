@@ -3,9 +3,8 @@
 #include <algorithm>
 #include <ostream>
 
-#include "variable_length_key.hpp"
-
 #include "utils/assert.hpp"
+#include "variable_length_key.hpp"
 
 namespace opossum {
 

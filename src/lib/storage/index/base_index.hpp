@@ -55,19 +55,10 @@ class BaseIndex : private Noncopyable {
    * For example:
    * We have an index on columns DAB.
    * The index is considered to be applicable for columns D, DA and DAB.
-   * The index is NOT considerd to be applicable for columns A, DABC, BAD etc.
+   * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
-    auto index_columns = _get_index_columns();
-    if (columns.size() > index_columns.size()) return false;
-    if (columns.empty()) return false;
-
-    for (size_t i = 0; i < columns.size(); ++i) {
-      if (columns[i] != index_columns[i]) return false;
-    }
-    return true;
-  }
+  bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
@@ -80,12 +71,7 @@ class BaseIndex : private Noncopyable {
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
-  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const {
-    DebugAssert((_get_index_columns().size() >= values.size()),
-                "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
-
-    return _lower_bound(values);
-  }
+  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const;
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
@@ -98,12 +84,7 @@ class BaseIndex : private Noncopyable {
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element greater then provided values.
    */
-  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const {
-    DebugAssert((_get_index_columns().size() >= values.size()),
-                "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
-
-    return _upper_bound(values);
-  }
+  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
 
   /**
    * Returns an Iterator to the position of the smallest indexed element. This is useful for range queries
@@ -112,7 +93,7 @@ class BaseIndex : private Noncopyable {
    * Calls _cbegin() of the most derived class.
    * @return an Iterator on the position of first element of the Index.
    */
-  Iterator cbegin() const { return _cbegin(); }
+  Iterator cbegin() const;
 
   /**
    * Returns an Iterator past the position of the greatest indexed element. This is useful for open
@@ -121,7 +102,7 @@ class BaseIndex : private Noncopyable {
    * Calls _cend() of the most derived class.
    * @return an Iterator on the end of the index (one after the last element).
    */
-  Iterator cend() const { return _cend(); }
+  Iterator cend() const;
 
  protected:
   /**

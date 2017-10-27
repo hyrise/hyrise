@@ -5,15 +5,11 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "import_export/binary.hpp"
-#include "storage/base_column.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/fitted_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -46,11 +42,6 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   uint8_t num_out_tables() const final;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
-
  private:
   // Path of the binary file
   const std::string _filename;
@@ -60,7 +51,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Chunksize             | ChunkOffset                           |   4
+   * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
@@ -68,7 +59,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
    * @param table The table that is to be exported
-   * @param ofstream The outputstream for exporting
+   * @param ofstream The output stream for exporting
    */
   static void _write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
 
@@ -84,7 +75,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * of the column, such as ReferenceColumn, DictionaryColumn, ValueColumn).
    *
    * @param table The table we are currently exporting
-   * @param ofstream The outputstream to write to
+   * @param ofstream The output stream to write to
    * @param chunkId The id of the chunk that is to be worked on now
    *
    */

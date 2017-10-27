@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -12,7 +11,6 @@
 #include "chunk.hpp"
 #include "index/base_index.hpp"
 #include "reference_column.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -39,7 +37,7 @@ Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<Acc
 
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns, const bool has_access_counter)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
-  if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
+  if (has_mvcc_columns) _mvcc_columns = std::allocate_shared<MvccColumns>(alloc);
   if (has_access_counter) _access_counter = std::allocate_shared<AccessCounter>(alloc, alloc);
 }
 
@@ -61,7 +59,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
-  // The added values, i.e., a new row, must have the same number of attribues as the table.
+  // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),
               ("append: number of columns (" + std::to_string(_columns.size()) + ") does not match value list (" +
                std::to_string(values.size()) + ")"));
@@ -90,18 +88,16 @@ uint32_t Chunk::size() const {
 }
 
 void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
-  _mvcc_columns->tids.grow_to_at_least(size() + delta);
-  _mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
+  auto mvcc_columns = this->mvcc_columns();
+
+  mvcc_columns->tids.grow_to_at_least(size() + delta);
+  mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
+  mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
 }
 
 void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
-  _mvcc_columns = std::make_unique<MvccColumns>();
-
-  auto mvcc_columns = chunk.mvcc_columns();
-  _mvcc_columns->begin_cids = mvcc_columns->begin_cids;
-  _mvcc_columns->end_cids = mvcc_columns->end_cids;
-  _mvcc_columns->tids.grow_by(_mvcc_columns->tids.size());
+  Assert(chunk.has_mvcc_columns(), "Passed chunk needs to have mvcc columns.");
+  _mvcc_columns = chunk._mvcc_columns;
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }

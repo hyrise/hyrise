@@ -19,6 +19,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use const (including cbegin() and cend()) whenever possible
 - Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
 - Include in this order: header for implementation file, c system, c++ system, other
+- If your templated methods/classes are used outside of your file, they have to be in the header. But if you only use them internally, you should place them in the cpp file.
 - Use smart pointers over c-style pointers
 - Use `IS_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
@@ -30,7 +31,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
-- Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
+- Private / protected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 

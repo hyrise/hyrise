@@ -5,7 +5,6 @@
 #include <sstream>
 #include <string>
 
-#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -15,7 +14,7 @@ DeleteNode::DeleteNode(const std::string& table_name) : AbstractASTNode(ASTNodeT
 std::string DeleteNode::description() const {
   std::ostringstream desc;
 
-  desc << "Delete from " << _table_name;
+  desc << "[Delete] Table: '" << _table_name << "'";
 
   return desc.str();
 }

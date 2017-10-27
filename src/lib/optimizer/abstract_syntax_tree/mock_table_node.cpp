@@ -26,7 +26,15 @@ const std::vector<ColumnID>& MockTableNode::output_column_id_to_input_column_id(
 
 const std::vector<std::string>& MockTableNode::output_column_names() const { return _output_column_names; }
 
+std::string MockTableNode::get_verbose_column_name(ColumnID column_id) const {
+  // Aliasing a MockTableNode doesn't really make sense, but let's stay covered
+  if (_table_alias) {
+    return *_table_alias + "." + output_column_names()[column_id];
+  }
+  return output_column_names()[column_id];
+}
+
 void MockTableNode::_on_child_changed() { Fail("MockTableNode cannot have children."); }
 
-std::string MockTableNode::description() const { return "MockTable"; }
+std::string MockTableNode::description() const { return "[MockTable]"; }
 }  // namespace opossum

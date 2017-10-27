@@ -1,8 +1,6 @@
 #include "abstract_ast_node.hpp"
 
 #include <algorithm>
-#include <iomanip>
-#include <iostream>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -10,11 +8,12 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class TableStatistics;
 
 AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
@@ -243,6 +242,39 @@ void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
   }
 
   levels.pop_back();
+}
+
+std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
+  Assert(!_right_child, "Nodes with both children need to override get_verbose_column_name()");
+
+  /**
+   *  A AbstractASTNode without a left child should generally be a StoredTableNode, which overrides this function. But
+   *  since get_verbose_column_name() is just a convenience function we don't want to force anyone to override this
+   *  function when experimenting with nodes. Thus we handle the case of no left child here as well.
+   */
+  if (!_left_child) {
+    if (_table_alias) {
+      return *_table_alias + "." + output_column_names()[column_id];
+    }
+
+    return output_column_names()[column_id];
+  }
+
+  const auto verbose_name = _left_child->get_verbose_column_name(column_id);
+
+  if (_table_alias) {
+    return *_table_alias + "." + verbose_name;
+  }
+
+  return verbose_name;
+}
+
+std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
+  std::vector<std::string> verbose_names(output_col_count());
+  for (auto column_id = ColumnID{0}; column_id < output_col_count(); ++column_id) {
+    verbose_names[column_id] = get_verbose_column_name(column_id);
+  }
+  return verbose_names;
 }
 
 std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {

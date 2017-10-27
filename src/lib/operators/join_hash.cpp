@@ -6,13 +6,19 @@
 #include <utility>
 #include <vector>
 
-#include "product.hpp"
-
-#include "storage/column_visitable.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/cuckoo_hashtable.hpp"
+#include "utils/murmur_hash.hpp"
 
 namespace opossum {
 
@@ -28,6 +34,11 @@ const std::string JoinHash::name() const { return "JoinHash"; }
 uint8_t JoinHash::num_in_tables() const { return 2; }
 
 uint8_t JoinHash::num_out_tables() const { return 1; }
+
+std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+                                    _scan_type);
+}
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;

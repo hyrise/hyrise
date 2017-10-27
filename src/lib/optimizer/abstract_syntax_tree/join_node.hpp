@@ -3,12 +3,9 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "all_parameter_variant.hpp"
-#include "all_type_variant.hpp"
 #include "types.hpp"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
@@ -42,6 +39,8 @@ class JoinNode : public AbstractASTNode {
 
   std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
+
+  std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
   void _on_child_changed() override;

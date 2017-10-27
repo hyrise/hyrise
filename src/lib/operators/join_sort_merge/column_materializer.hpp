@@ -1,13 +1,14 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <thread>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "../../storage/base_attribute_vector.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -110,7 +111,7 @@ class ColumnMaterializer : public ColumnVisitable {
   }
 
   /**
-  * ColumnVisitable implementaion to materialize and sort a dictionary column.
+  * ColumnVisitable implementation to materialize and sort a dictionary column.
   **/
   void handle_dictionary_column(const BaseDictionaryColumn& column,
                                 std::shared_ptr<ColumnVisitableContext> context) override {

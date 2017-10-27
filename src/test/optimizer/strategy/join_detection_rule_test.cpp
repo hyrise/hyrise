@@ -16,6 +16,7 @@
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -91,7 +92,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
 
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  // Verfication of the new JOIN
+  // Verification of the new JOIN
   ASSERT_INNER_JOIN_NODE(output, ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::StoredTable);
@@ -139,7 +140,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
 
-  // Verfication of the new JOIN
+  // Verification of the new JOIN
   ASSERT_INNER_JOIN_NODE(output->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
   EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::StoredTable);
@@ -308,7 +309,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   const auto first_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
   EXPECT_EQ(first_join_node->join_mode(), JoinMode::Cross);
 
-  // Verfication of the new JOIN
+  // Verification of the new JOIN
   ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
@@ -363,7 +364,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
 
-  // Verfication of the new JOIN
+  // Verification of the new JOIN
   ASSERT_INNER_JOIN_NODE(output->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
   EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
@@ -461,7 +462,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
 
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString(params.query, &parse_result);
-  auto node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+  auto node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
 
   auto before = _count_cross_joins(node);
   auto output = StrategyBaseTest::apply_rule(_rule, node);

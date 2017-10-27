@@ -13,6 +13,7 @@ set(
     constant_mappings.cpp
     constant_mappings.hpp
     import_export/binary.hpp
+    import_export/csv_converter.cpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
     import_export/csv_parser.cpp
@@ -34,12 +35,12 @@ set(
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
     operators/abstract_operator.hpp
+    operators/abstract_read_only_operator.cpp
     operators/abstract_read_only_operator.hpp
+    operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/commit_records.cpp
-    operators/commit_records.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -78,8 +79,6 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
-    operators/rollback_records.cpp
-    operators/rollback_records.hpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp
@@ -128,6 +127,9 @@ set(
     optimizer/abstract_syntax_tree/stored_table_node.hpp
     optimizer/abstract_syntax_tree/update_node.cpp
     optimizer/abstract_syntax_tree/update_node.hpp
+    optimizer/abstract_syntax_tree/validate_node.cpp
+    optimizer/abstract_syntax_tree/validate_node.hpp
+    optimizer/base_column_statistics.cpp
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
@@ -197,9 +199,11 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/base_index.cpp
     storage/index/base_index.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
+    storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
@@ -270,7 +274,7 @@ set(
     ${TBB_LIBRARY}
 )
 
-if(${NUMA_FOUND})
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
@@ -278,20 +282,5 @@ endif()
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
 
-# Configure the lib used for sanitizers
-add_library(hyriseSanitizersLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
-target_link_libraries(
-    hyriseSanitizersLib
-    ${LIBRARIES}
-    -fsanitize=address,undefined -fno-sanitize-recover=all
-)
-set_target_properties(hyriseSanitizersLib PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
-
-# Configure the lib used for coverage
-add_library(hyriseCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
-target_link_libraries(
-    hyriseCoverageLib
-    ${LIBRARIES}
-    --coverage
-)
-set_target_properties(hyriseCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+add_sanitizer_library(hyriseSanitizersLib "${SOURCES}" "${LIBRARIES}")
+add_coverage_library(hyriseCoverageLib "${SOURCES}" "${LIBRARIES}")

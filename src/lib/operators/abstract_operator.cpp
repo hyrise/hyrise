@@ -3,8 +3,10 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -16,7 +18,7 @@ AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>
 void AbstractOperator::execute() {
   auto start = std::chrono::high_resolution_clock::now();
 
-  auto transaction_context = _transaction_context.lock();
+  auto transaction_context = this->transaction_context();
 
   if (transaction_context) transaction_context->on_operator_started();
   _output = _on_execute(transaction_context);
@@ -47,6 +49,11 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 
 const std::string AbstractOperator::description() const { return name(); }
 
+std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
+  Fail("Operator " + name() + " does not implement recreation.");
+  return {};
+}
+
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
@@ -57,6 +64,13 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
 
 void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
+}
+
+void AbstractOperator::set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context) {
+  set_transaction_context(transaction_context);
+
+  if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);
+  if (_input_right != nullptr) mutable_input_right()->set_transaction_context_recursively(transaction_context);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {

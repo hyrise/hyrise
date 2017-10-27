@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -24,25 +23,19 @@ class Insert : public AbstractReadWriteOperator {
  public:
   explicit Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
 
-  void commit_records(const CommitID cid) override;
-  void rollback_records() override;
-
   const std::string name() const override;
   uint8_t num_in_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + name() + " does not implement recreation.");
-    return {};
-  }
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
-
- protected:
-  PosList _inserted_rows;
+  void _on_commit_records(const CommitID cid) override;
+  void _on_rollback_records() override;
 
  private:
   const std::string _target_table_name;
   std::shared_ptr<Table> _target_table;
+
+  PosList _inserted_rows;
 };
 
 }  // namespace opossum

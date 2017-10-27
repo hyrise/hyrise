@@ -30,8 +30,8 @@ class Pagination {
 
   /*
    * Prints the help screen, which shows all available commands.
-   * The help screen is displayed on a seperate ncurses window. When the help screen is closed (by pressing 'q'),
-   * the seperate window gets destroyed, and the previous contend is restored, showing the table as before.
+   * The help screen is displayed on a separate ncurses window. When the help screen is closed (by pressing 'q'),
+   * the separate window gets destroyed, and the previous contend is restored, showing the table as before.
    */
   void _print_help_screen();
 

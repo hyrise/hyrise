@@ -5,9 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/heap/fibonacci_heap.hpp"
-
 #include "abstract_cache.hpp"
+#include "boost/heap/fibonacci_heap.hpp"
 
 namespace opossum {
 

@@ -1,9 +1,8 @@
 #include "composite_group_key_index.hpp"
 
+#include <algorithm>
 #include <climits>
 #include <cstdint>
-
-#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -11,12 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include "variable_length_key_proxy.hpp"
-
 #include "storage/base_attribute_vector.hpp"
 #include "storage/base_dictionary_column.hpp"
-
 #include "utils/assert.hpp"
+#include "variable_length_key_proxy.hpp"
 
 namespace opossum {
 
@@ -41,7 +38,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     _indexed_columns.emplace_back(dict_column);
   }
 
-  // retrive amount of memory consumed by each concatenated key
+  // retrieve amount of memory consumed by each concatenated key
   CompositeKeyLength bytes_per_key = std::accumulate(
       _indexed_columns.begin(), _indexed_columns.end(), 0u,
       [](auto key_length, const auto& column) { return key_length + column->attribute_vector()->width(); });

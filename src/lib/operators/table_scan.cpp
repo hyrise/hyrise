@@ -8,23 +8,20 @@
 #include <utility>
 #include <vector>
 
-#include "table_scan/column_comparison_table_scan_impl.hpp"
-#include "table_scan/is_null_table_scan_impl.hpp"
-#include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_column_table_scan_impl.hpp"
-
+#include "all_parameter_variant.hpp"
+#include "constant_mappings.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
-
-#include "all_parameter_variant.hpp"
-#include "constant_mappings.hpp"
+#include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/is_null_table_scan_impl.hpp"
+#include "table_scan/like_table_scan_impl.hpp"
+#include "table_scan/single_column_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -111,7 +108,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
        * directly use the matches to construct the reference columns of the output. If it is a reference column,
        * we need to resolve the row IDs so that they reference the physical data columns (value, dictionary) instead,
-       * since we don’t allow multi-level referencing. To save time and space, we want to share positions lists
+       * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
        * between columns as much as possible. Position lists can be shared between two columns iff
        * (a) they point to the same table and
        * (b) the reference columns of the input table point to the same positions in the same order

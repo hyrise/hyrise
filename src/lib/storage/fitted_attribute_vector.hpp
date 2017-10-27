@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_attribute_vector.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

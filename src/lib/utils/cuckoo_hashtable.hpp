@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "murmur_hash.hpp"
-
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -96,7 +95,7 @@ class HashTable : private Noncopyable {
     /*
     Check if another element is already present at the position.
     If yes, we need to insert the older one in another hash table.
-    If no, we can simply add the ned eleemnt.
+    If no, we can simply add the new element.
     */
     auto position = hash(hash_function, element->value);
     auto& hashtable = _hashtables[hash_function];

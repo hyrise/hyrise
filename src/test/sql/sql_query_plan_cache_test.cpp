@@ -38,7 +38,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   EXPECT_FALSE(cache.has(Q2));
 
   // Execute a query and cache its plan.
-  SQLQueryOperator op(Q1, false);
+  SQLQueryOperator op(Q1, false, false);
   op.execute();
   cache.set(Q1, op.get_query_plan());
 
@@ -47,8 +47,8 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 
   // Retrieve and execute the cached plan.
   const SQLQueryPlan cached_plan = cache.get(Q1);
-  auto task_list1 = cached_plan.recreate().tasks();
-  auto task_list2 = cached_plan.recreate().tasks();
+  auto task_list1 = cached_plan.recreate().create_tasks();
+  auto task_list2 = cached_plan.recreate().create_tasks();
 
   for (auto task : task_list1) task->execute();
   for (auto task : task_list2) task->execute();

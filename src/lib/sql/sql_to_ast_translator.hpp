@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/noncopyable.hpp>
-
 #include <memory>
 #include <optional>
 #include <string>
@@ -54,9 +52,12 @@ class AggregateNode;
  * hsql::SQLParser::parseSQLString(params.query, &parse_result);
  * auto result_nodes = SQLToASTTranslator::get().translate_parse_result(parse_result);
  */
-class SQLToASTTranslator final : public boost::noncopyable {
+class SQLToASTTranslator final : public Noncopyable {
  public:
-  static SQLToASTTranslator& get();
+  /**
+   * @param validate If set to false, does not add validate nodes to the resulting tree.
+   */
+  constexpr SQLToASTTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractASTNode>> translate_parse_result(const hsql::SQLParserResult& result);
@@ -110,11 +111,13 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> _translate_show(const hsql::ShowStatement& show_statement);
 
+  std::shared_ptr<AbstractASTNode> _validate_if_active(const std::shared_ptr<AbstractASTNode>& input_node);
+
   std::vector<std::shared_ptr<Expression>> _retrieve_having_aggregates(
       const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node);
 
  private:
-  SQLToASTTranslator() = default;
+  const bool _validate;
 };
 
 }  // namespace opossum

@@ -7,9 +7,7 @@
 #include <vector>
 
 #include "adaptive_radix_tree_index.hpp"
-
 #include "storage/index/base_index.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -183,7 +181,7 @@ BaseIndex::Iterator Node16::begin() const { return _children[0]->begin(); }
 
 /**
  * _end searches the child with the largest partial key == the last child in the _children array.
- * As the _partial_keys array is filled with 255u per default, we expect the largest child at the index right infront
+ * As the _partial_keys array is filled with 255u per default, we expect the largest child at the index right in front
  * of the first entry with 255u. But 255u can also be a valid partial_key: In this case the _children array contains a
  * pointer at this index as a means to differentiate the two cases.
  */
@@ -203,9 +201,9 @@ BaseIndex::Iterator Node16::end() const {
 /**
  *
  * Node48 has two arrays:
- *  - _index_to_child of length 256 that can be directly adressed
+ *  - _index_to_child of length 256 that can be directly addressed
  *  - _children of length 48 stores pointers to the children
- * _index_to_child[partial_key] stores the index for the child in _childen
+ * _index_to_child[partial_key] stores the index for the child in _children
  * default value of the _index_to_child array is 255u. This is safe as the maximum value set in _index_to_child will be
  * 47 as this is the maximum index for _children.
  */
@@ -303,7 +301,7 @@ BaseIndex::Iterator Node48::end() const {
 
 /**
  *
- * Node256 has only one array: _children; which stores pointers to the children and can be directly adressed.
+ * Node256 has only one array: _children; which stores pointers to the children and can be directly addressed.
  *
  */
 
