@@ -21,6 +21,15 @@ class TableStatistics;
 // A table is partitioned horizontally into a number of chunks
 class Table : private Noncopyable {
  public:
+  // Creates a new table that has the same layout (column-{types, names}) as the input table
+  static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table>& in_table,
+                                                        const uint32_t chunk_size = 0);
+
+  /**
+   * @returns whether both tables contain the same columns (in name and type) in the same order
+   */
+  static bool layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b);
+
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size. A table holds always at least one chunk
@@ -123,6 +132,13 @@ class Table : private Noncopyable {
   void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
 
   std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
+
+  /**
+   * Determines whether this table consists solely of ReferenceColumns, in which case it is a TableType::References,
+   * or contains Dictionary/ValueColumns, which makes it a TableType::Data.
+   * A table containing both ReferenceColumns and Dictionary/ValueColumns is invalid.
+   */
+  TableType get_type() const;
 
  protected:
   // 0 means that the chunk has an unlimited size.

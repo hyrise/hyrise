@@ -10,51 +10,54 @@
 
 namespace opossum {
 
-// ValueColumn is a specific column type that stores all its values in a vector
+// ValueColumn is a specific column type that stores all its values in a vector.
 template <typename T>
 class ValueColumn : public BaseValueColumn {
  public:
   explicit ValueColumn(bool nullable = false);
   explicit ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable = false);
 
-  // Create a ValueColumn with the given values
+  // Create a ValueColumn with the given values.
   explicit ValueColumn(pmr_concurrent_vector<T>&& values);
   explicit ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values);
 
-  // return the value at a certain position. If you want to write efficient operators, back off!
+  // Return the value at a certain position. If you want to write efficient operators, back off!
+  // Use values() and null_values() to get the vectors and check the content yourself.
   const AllTypeVariant operator[](const size_t i) const override;
 
+  // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const size_t i) const;
 
-  // add a value to the end
+  // Add a value to the end of the column.
   void append(const AllTypeVariant& val) override;
 
-  // returns all values
+  // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
+  // access more than a single value anyway.
+  // e.g. auto& values = col.values(); and then: values.at(i); in your loop.
   const pmr_concurrent_vector<T>& values() const;
   pmr_concurrent_vector<T>& values();
 
-  // returns if columns supports null values
+  // Return whether column supports null values.
   bool is_nullable() const final;
 
-  /**
-   * @brief Returns null array
-   *
-   * Throws exception if is_nullable() returns false
-   */
+  // Return null value vector that indicates whether a value is null with true at position i.
+  // Throws exception if is_nullable() returns false
+  // This is the preferred method to check a for a null value at a certain index.
+  // Usually you need to access more than a single value anyway.
   const pmr_concurrent_vector<bool>& null_values() const final;
   pmr_concurrent_vector<bool>& null_values() final;
 
-  // return the number of entries
+  // Return the number of entries in the column.
   size_t size() const override;
 
-  // visitor pattern, see base_column.hpp
+  // Visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
-  // writes the length and value at the chunk_offset to the end off row_string
+  // Write the length and value at the chunk_offset to the end of row_string.
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
 
-  // copies one of its own values to a different ValueColumn - mainly used for materialization
-  // we cannot always use the materialize method below because sort results might come from different BaseColumns
+  // Copy own value to a different ValueColumn - mainly used for materialization.
+  // We cannot always use the materialize method below because sort results might come from different BaseColumns.
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
   const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(

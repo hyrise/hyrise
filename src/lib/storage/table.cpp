@@ -15,6 +15,38 @@
 
 namespace opossum {
 
+std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<const Table>& in_table,
+                                                      const uint32_t chunk_size) {
+  auto new_table = std::make_shared<Table>(chunk_size);
+
+  for (ColumnID::base_type column_idx = 0; column_idx < in_table->column_count(); ++column_idx) {
+    const auto type = in_table->column_type(ColumnID{column_idx});
+    const auto name = in_table->column_name(ColumnID{column_idx});
+    const auto is_nullable = in_table->column_is_nullable(ColumnID{column_idx});
+
+    new_table->add_column_definition(name, type, is_nullable);
+  }
+
+  return new_table;
+}
+
+bool Table::layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b) {
+  if (table_a->column_count() != table_b->column_count()) {
+    return false;
+  }
+
+  for (auto column_id = ColumnID{0}; column_id < table_a->column_count(); ++column_id) {
+    if (table_a->column_type(column_id) != table_b->column_type(column_id)) {
+      return false;
+    }
+    if (table_a->column_name(column_id) != table_b->column_name(column_id)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
@@ -137,5 +169,40 @@ void Table::emplace_chunk(Chunk chunk) {
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
+
+TableType Table::get_type() const {
+  // Cannot answer this if the table has no content
+  Assert(!_chunks.empty() && column_count() > 0, "Table has no content, can't specify type");
+
+  // We assume if one column is a reference column, all are.
+  const auto column = _chunks[0].get_column(ColumnID{0});
+  const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
+
+  if (ref_column != nullptr) {
+// In debug mode we're pedantic and check whether all columns in all chunks are Reference Columns
+#if IS_DEBUG
+    for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
+      for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
+        const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
+        const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
+        DebugAssert(ref_column2 != nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
+      }
+    }
+#endif
+    return TableType::References;
+  } else {
+// In debug mode we're pedantic and check whether all columns in all chunks are Value/Dict Columns
+#if IS_DEBUG
+    for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
+      for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
+        const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
+        const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
+        DebugAssert(ref_column2 == nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
+      }
+    }
+#endif
+    return TableType::Data;
+  }
+}
 
 }  // namespace opossum
