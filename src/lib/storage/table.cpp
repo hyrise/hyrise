@@ -30,7 +30,7 @@ std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<cons
   return new_table;
 }
 
-bool Table::layouts_equal(const std::shared_ptr<const Table> &table_a, const std::shared_ptr<const Table> &table_b) {
+bool Table::layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b) {
   if (table_a->column_count() != table_b->column_count()) {
     return false;
   }

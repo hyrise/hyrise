@@ -6,9 +6,9 @@
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
 #include "operators/print.hpp"
-#include "operators/union_positions.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_positions.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -156,7 +156,8 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   _execute_all({get_table_a_op, get_table_b_op, get_table_c_op, get_table_d_op, join_a, join_b, table_scan_a_op,
                 table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float4_int_int_union_positions.tbl", 0));
+  EXPECT_TABLE_EQ(union_unique_op->get_output(),
+                  load_table("src/test/tables/int_float4_int_int_union_positions.tbl", 0));
 
   /**
    * Additionally check that Column 0 and 1 have the same pos list and that Column 2 and 3 have the same pos list to

@@ -5,8 +5,8 @@
 
 #include "benchmark/benchmark.h"
 
-#include "operators/union_positions.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_positions.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -108,7 +108,8 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
   }
 };
 
-BENCHMARK_DEFINE_F(UnionPositionsBenchmarkFixture, Benchmark)UnionPositionsBenchmarkFixture(::benchmark::State& state) {
+BENCHMARK_DEFINE_F(UnionPositionsBenchmarkFixture, Benchmark)
+UnionPositionsBenchmarkFixture(::benchmark::State& state) {
   while (state.KeepRunning()) {
     auto set_union = std::make_shared<UnionPositions>(_table_wrapper_left, _table_wrapper_right);
     set_union->execute();

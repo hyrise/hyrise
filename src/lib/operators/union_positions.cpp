@@ -56,7 +56,7 @@
 namespace opossum {
 
 UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
-                   const std::shared_ptr<const AbstractOperator>& right)
+                               const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
 std::shared_ptr<AbstractOperator> UnionPositions::recreate(const std::vector<AllParameterVariant>& args) const {
@@ -153,15 +153,15 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     } else if (right_idx == num_rows_right) {
       emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
       ++left_idx;
-    } else if (_cmp_reference_matrix_rows(reference_matrix_right, virtual_pos_list_right[right_idx], reference_matrix_left,
-                   virtual_pos_list_left[left_idx])) {
+    } else if (_cmp_reference_matrix_rows(reference_matrix_right, virtual_pos_list_right[right_idx],
+                                          reference_matrix_left, virtual_pos_list_left[left_idx])) {
       emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
       ++right_idx;
     } else {
       emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
 
       if (!_cmp_reference_matrix_rows(reference_matrix_left, virtual_pos_list_left[left_idx], reference_matrix_right,
-               virtual_pos_list_right[right_idx])) {
+                                      virtual_pos_list_right[right_idx])) {
         ++right_idx;
       }
       ++left_idx;
@@ -307,7 +307,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   return nullptr;
 }
 
-UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(const std::shared_ptr<const Table>& input_table) const {
+UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
+    const std::shared_ptr<const Table>& input_table) const {
   ReferenceMatrix reference_matrix;
   reference_matrix.resize(_column_segment_offsets.size());
   for (auto& pos_list : reference_matrix) {
@@ -331,13 +332,13 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(const st
 }
 
 bool UnionPositions::_cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a,
-                                const ReferenceMatrix& matrix_b, size_t row_idx_b) const {
+                                                const ReferenceMatrix& matrix_b, size_t row_idx_b) const {
   for (size_t column_idx = 0; column_idx < matrix_a.size(); ++column_idx) {
     if (matrix_a[column_idx][row_idx_a] < matrix_b[column_idx][row_idx_b]) return true;
     if (matrix_b[column_idx][row_idx_b] < matrix_a[column_idx][row_idx_a]) return false;
   }
   return false;
-};
+}
 
 bool UnionPositions::VirtualPosListCmpContext::operator()(size_t lhs, size_t rhs) const {
   for (const auto& reference_matrix_column : reference_matrix) {

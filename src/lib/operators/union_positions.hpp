@@ -68,7 +68,8 @@ namespace opossum {
  */
 class UnionPositions : public AbstractReadOnlyOperator {
  public:
-  UnionPositions(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right);
+  UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
+                 const std::shared_ptr<const AbstractOperator>& right);
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
   const std::string name() const override;
@@ -102,8 +103,8 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _prepare_operator();
 
   UnionPositions::ReferenceMatrix _build_reference_matrix(const std::shared_ptr<const Table>& input_table) const;
-  bool _cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a,
-                                  const ReferenceMatrix& matrix_b, size_t row_idx_b) const;
+  bool _cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a, const ReferenceMatrix& matrix_b,
+                                  size_t row_idx_b) const;
 
   // See the "About ColumnSegments" doc in the cpp
   std::vector<ColumnID> _column_segment_offsets;
