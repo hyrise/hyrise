@@ -60,8 +60,6 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<Abstr
 
 const std::string Insert::name() const { return "Insert"; }
 
-uint8_t Insert::num_in_tables() const { return 1; }
-
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   context->register_rw_operator(shared_from_this());
 

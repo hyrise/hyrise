@@ -34,7 +34,6 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   explicit CommitFuncOp(std::function<void()> func) : _func{func} {}
 
   const std::string name() const override { return "CommitOp"; }
-  uint8_t num_in_tables() const override { return 0u; }
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {

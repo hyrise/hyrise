@@ -98,10 +98,6 @@ ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator> in, con
 
 const std::string ExportBinary::name() const { return "ExportBinary"; }
 
-uint8_t ExportBinary::num_in_tables() const { return 1; }
-
-uint8_t ExportBinary::num_out_tables() const { return 1; }
-
 std::shared_ptr<const Table> ExportBinary::_on_execute() {
   std::ofstream ofstream;
   ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);

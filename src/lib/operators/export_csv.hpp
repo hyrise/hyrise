@@ -90,16 +90,6 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   const std::string name() const override;
 
-  /*
-   * This operator allows one table as input
-   */
-  uint8_t num_in_tables() const override;
-
-  /*
-   * This operator has one table as output.
-   */
-  uint8_t num_out_tables() const override;
-
  private:
   // Name of the output file
   const std::string _filename;

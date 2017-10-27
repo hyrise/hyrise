@@ -21,8 +21,6 @@ class Product : public AbstractReadOnlyOperator {
   Product(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right);
 
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
 
  protected:
   void add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right);

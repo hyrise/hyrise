@@ -14,10 +14,6 @@
 
 namespace opossum {
 
-uint8_t ShowTables::num_in_tables() const { return 0; }
-
-uint8_t ShowTables::num_out_tables() const { return 1; }
-
 const std::string ShowTables::name() const { return "ShowTables"; }
 
 std::shared_ptr<AbstractOperator> ShowTables::recreate(const std::vector<AllParameterVariant>& args) const {

@@ -43,10 +43,6 @@ SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan,
 
 const std::string SQLQueryOperator::name() const { return "SQLQueryOperator"; }
 
-uint8_t SQLQueryOperator::num_in_tables() const { return 0; }
-
-uint8_t SQLQueryOperator::num_out_tables() const { return 0; }
-
 const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const { return _result_task; }
 
 const SQLQueryPlan& SQLQueryOperator::get_query_plan() const { return _plan; }
