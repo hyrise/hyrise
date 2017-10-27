@@ -33,7 +33,7 @@ void ChunkMigrationTask::_on_execute() {
     // in place that would allow the safe migration of mutable chunks.
     DebugAssert(chunk_is_completed(chunk, table->chunk_size()), "Chunk is not completed and thus can’t be migrated.");
 
-    chunk.migrate(NUMAPlacementManager::get()->get_memory_resource(_target_node_id));
+    chunk.migrate(NUMAPlacementManager::get().get_memory_resource(_target_node_id));
   }
 }
 

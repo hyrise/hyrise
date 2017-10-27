@@ -27,12 +27,8 @@ class NUMAPlacementManager {
     double imbalance_threshold = 0.1;
   };
 
-  static const std::shared_ptr<NUMAPlacementManager>& get();
-  static void set(const std::shared_ptr<NUMAPlacementManager>& instance);
-  static bool is_set();
+  static NUMAPlacementManager& get();
   static int get_node_id_of(void* ptr);
-
-  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology, const Options options);
 
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
@@ -42,11 +38,10 @@ class NUMAPlacementManager {
   void pause();
 
   NUMAPlacementManager(NUMAPlacementManager const&) = delete;
-  NUMAPlacementManager& operator=(const NUMAPlacementManager&) = delete;
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
-  static std::shared_ptr<NUMAPlacementManager> _instance;
+  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology, const Options options);
 
   const std::shared_ptr<Topology> _topology;
   const Options _options;
@@ -54,6 +49,8 @@ class NUMAPlacementManager {
   std::vector<NUMAMemoryResource> _memory_resources;
   std::unique_ptr<PausableLoopThread> _collector_thread;
   std::unique_ptr<PausableLoopThread> _migration_thread;
+
+  NUMAPlacementManager& operator=(const NUMAPlacementManager&) = default;
 };
 }  // namespace opossum
 #endif

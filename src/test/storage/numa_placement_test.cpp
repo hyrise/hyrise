@@ -26,16 +26,9 @@ namespace opossum {
 class NUMAPlacementTest : public BaseTest {
  protected:
   void SetUp() override {
-    const auto topology = Topology::create_numa_topology();
-    NUMAPlacementManager::set(std::make_shared<NUMAPlacementManager>(topology, NUMAPlacementManager::Options()));
-
     auto& sm = StorageManager::get();
     auto table = create_table(10, 1000);
     sm.add_table("table", table);
-  }
-
-  void TearDown() override {
-    // NUMAPlacementManager::set(nullptr);
   }
 
   std::vector<size_t> count_chunks_by_node(const std::shared_ptr<Table>& table, size_t node_count) {
@@ -54,7 +47,7 @@ class NUMAPlacementTest : public BaseTest {
     table->add_column("a", "int", false);
 
     for (size_t i = 0; i < num_chunks; i++) {
-      const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get()->get_memory_resource(0));
+      const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));
       auto chunk = Chunk(alloc, true, true);
       auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
       auto& values = value_column->values();
@@ -71,7 +64,7 @@ class NUMAPlacementTest : public BaseTest {
 };
 
 TEST_F(NUMAPlacementTest, ChunkMigration) {
-  const auto& topology = NUMAPlacementManager::get()->topology();
+  const auto& topology = NUMAPlacementManager::get().topology();
   const auto& table = StorageManager::get().get_table("table");
   for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
     auto& chunk = table->get_chunk(i);

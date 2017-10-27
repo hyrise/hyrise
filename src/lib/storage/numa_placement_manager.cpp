@@ -18,14 +18,11 @@
 
 namespace opossum {
 
-// TODO(normanrz): C++11 singleton http://cppisland.com/?p=501
-std::shared_ptr<NUMAPlacementManager> NUMAPlacementManager::_instance;
-
-const std::shared_ptr<NUMAPlacementManager>& NUMAPlacementManager::get() { return _instance; }
-
-void NUMAPlacementManager::set(const std::shared_ptr<NUMAPlacementManager>& instance) { _instance = instance; }
-
-bool NUMAPlacementManager::is_set() { return !!_instance; }
+// singleton
+NUMAPlacementManager& NUMAPlacementManager::get() {
+  static NUMAPlacementManager instance(Topology::create_numa_topology(), NUMAPlacementManager::Options());
+  return instance;
+}
 
 NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology,
                                            const NUMAPlacementManager::Options options)

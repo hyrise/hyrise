@@ -170,7 +170,7 @@ MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::O
 // This task first collects temperature metrics of chunks and NUMA nodes,
 // identifies chunks that are candidates for migration and schedules migration tasks.
 void MigrationPreparationTask::_on_execute() {
-  const auto topology = NUMAPlacementManager::get()->topology();
+  const auto topology = NUMAPlacementManager::get().topology();
 
   // Collect chunk and NUMA node temperature metrics
   auto hot_chunks =
