@@ -108,8 +108,7 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
   }
 };
 
-BENCHMARK_DEFINE_F(UnionPositionsBenchmarkFixture, Benchmark)
-UnionPositionsBenchmarkFixture(::benchmark::State& state) {
+BENCHMARK_DEFINE_F(UnionPositionsBenchmarkFixture, Benchmark)(::benchmark::State& state) {
   while (state.KeepRunning()) {
     auto set_union = std::make_shared<UnionPositions>(_table_wrapper_left, _table_wrapper_right);
     set_union->execute();
