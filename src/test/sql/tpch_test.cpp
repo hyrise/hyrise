@@ -19,7 +19,6 @@
 namespace opossum {
 
 class TPCHTest : public ::testing::TestWithParam<size_t> {
-
  public:
   static void SetUpTestCase() {
     std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 2);
