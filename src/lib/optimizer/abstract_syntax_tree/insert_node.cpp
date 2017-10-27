@@ -21,6 +21,8 @@ std::string InsertNode::description() const {
   return desc.str();
 }
 
+bool InsertNode::is_read_only() const { return true; }
+
 const std::string& InsertNode::table_name() const { return _table_name; }
 
 }  // namespace opossum

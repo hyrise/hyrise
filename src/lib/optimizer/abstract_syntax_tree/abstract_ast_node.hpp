@@ -60,6 +60,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual bool is_optimizable() const;
 
   /**
+   * Returns whether this subtree is read only
+   */
+  virtual bool is_read_only() const;
+
+  /**
    * @pre this has a parent
    * @return whether this is its parents left or right child.
    */

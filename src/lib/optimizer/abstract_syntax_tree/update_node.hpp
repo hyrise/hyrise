@@ -18,6 +18,8 @@ class UpdateNode : public AbstractASTNode {
 
   std::string description() const override;
 
+  bool is_read_only() const override;
+
   const std::string& table_name() const;
 
   const std::vector<std::shared_ptr<Expression>>& column_expressions() const;

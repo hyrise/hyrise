@@ -19,6 +19,8 @@ AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
 bool AbstractASTNode::is_optimizable() const { return true; }
 
+bool AbstractASTNode::is_read_only() const { return true; }
+
 ASTChildSide AbstractASTNode::get_child_side() const {
   auto parent = this->parent();
   Assert(parent, "get_child_side() can only be called on node with a parent");

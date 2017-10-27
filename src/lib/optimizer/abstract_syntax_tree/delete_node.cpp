@@ -19,6 +19,8 @@ std::string DeleteNode::description() const {
   return desc.str();
 }
 
+bool DeleteNode::is_read_only() const { return true; }
+
 const std::string& DeleteNode::table_name() const { return _table_name; }
 
 }  // namespace opossum

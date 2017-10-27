@@ -16,6 +16,8 @@ class DeleteNode : public AbstractASTNode {
 
   std::string description() const override;
 
+  bool is_read_only() const override;
+
   const std::string& table_name() const;
 
  protected:
