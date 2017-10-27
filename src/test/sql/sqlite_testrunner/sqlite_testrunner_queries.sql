@@ -94,13 +94,11 @@ SELECT * FROM customer;
 SELECT c_custkey, c_name FROM customer;
 
 -- DELETE
--- TODO(MD): this will only work once SELECT automatically validates (#188)
--- DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1;
--- DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2;
+DELETE FROM int_for_delete_1; INSERT INTO int_for_delete_1 VALUES (2); SELECT * FROM int_for_delete_1;
+DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2;
 
 -- Update
--- TODO(md): see DELETE
--- UPDATE int_int_for_update SET a = a + 1 WHERE b > 10; SELECT * FROM int_int_for_update;
+UPDATE int_int_for_update SET a = a + 1 WHERE b > 10; SELECT * FROM int_int_for_update;
 
 -- INSERT
 INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;
