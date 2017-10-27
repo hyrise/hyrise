@@ -29,11 +29,22 @@
  * ### About ReferenceMatrices
  * The ReferenceMatrix consists of N rows and C columns of RowIDs.
  * N is the same number as the number of rows in the input table.
- * Each of the C column can represent 1..S columns in the input table. All rows represented by a ReferenceMatrix-Column
- * contain the same PosList in each Chunk.
+ * Each of the C column can represent 1..S columns in the input table and is called a ColumnSegmnent, see below.
+ *
+ *
+ * ### About ColumnSegments
+ * For each ColumnID in which one (or both) of the InputTables has a different PosList than in the Column left of it,
+ * a entry into _column_segment_offsets is made.
  *
  * The ReferenceMatrix of a StoredTable will only contain one column, the ReferenceMatrix of the result of a 3 way Join
- * will contain 3 columns
+ * will contain 3 columns.
+ *
+ * Example:
+ *      TableA                                         TableA
+ *      a        | b        | c        | d             a        | b        | c        | d
+ *      PosList0 | PosList0 | PosList0 | PosList1      PosList2 | PosList2 | PosList3 | PosList4
+ *
+ *      _column_segment_offsets = {0, 2, 3}
  *
  *
  * ### TODO(anybody) for potential performance improvements

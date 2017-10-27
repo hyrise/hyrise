@@ -90,8 +90,11 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   /**
-   * Makes sure the input data is valid for this operator (see implementation for details) and initializes
-   * _column_segment_begins, _referenced_tables and _referenced_column_ids
+   * Validates the input AND initializes some utility data it uses (_column_segment_offsets, _referenced_tables,
+   * _referenced_column_ids).
+   *
+   * We can't really split this up into one validate and one prepare step, since some of the validation depends on
+   * the utility data being initialized.
    *
    * @returns the result table of the operator if one or both of the inputs was empty and we don't actually need to
    *    execute the operatopr. nullptr otherwise.
@@ -102,7 +105,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
   bool _cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a,
                                   const ReferenceMatrix& matrix_b, size_t row_idx_b) const;
 
-  // In the input tables, the column indices in which a different pos_list is used than in the column left of it
+  // See the "About ColumnSegments" doc in the cpp
   std::vector<ColumnID> _column_segment_offsets;
 
   // For each column segment, the table its pos_list references

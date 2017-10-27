@@ -2,6 +2,7 @@
 
 #include <tbb/concurrent_vector.h>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/operators.hpp>
 
 #include <cstdint>
 #include <iostream>
