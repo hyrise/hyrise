@@ -178,7 +178,7 @@ class Chunk : private Noncopyable {
     return index;
   }
 
-  void migrate(boost::container::pmr::memory_resource* alloc);
+  void migrate(boost::container::pmr::memory_resource* memory_source);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
 

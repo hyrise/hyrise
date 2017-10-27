@@ -9,7 +9,8 @@ namespace opossum {
 
 // This class spawns a thread that executes a procedure in a loop.
 // Between each iteration there is a user-definable sleep period.
-// The loop can be paused, resumed and finished.
+// The loop can be paused, resumed and finished. The loop starts in
+// paused state.
 struct PausableLoopThread {
  public:
   explicit PausableLoopThread(std::chrono::milliseconds loop_sleep, std::function<void(size_t)> loop_func);

@@ -32,7 +32,7 @@ Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(),
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter,
              const bool has_mvcc_columns)
     : _alloc(alloc), _access_counter(access_counter) {
-  if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
+  if (has_mvcc_columns) _mvcc_columns = std::allocate_shared<MvccColumns>(alloc);
 }
 
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns, const bool has_access_counter)
@@ -153,12 +153,13 @@ bool Chunk::references_exactly_one_table() const {
   return true;
 }
 
-void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
+void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
+  // Migrating chunks with indices is not implemented yet.
   if (_indices.size() > 0) {
-    Fail("Cannot copy Chunk with Indices.");
+    Fail("Cannot migrate Chunk with Indices.");
   }
 
-  _alloc = PolymorphicAllocator<size_t>(memsource);
+  _alloc = PolymorphicAllocator<size_t>(memory_source);
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
   for (size_t i = 0; i < _columns.size(); i++) {
     new_columns.push_back(_columns.at(i)->copy_using_allocator(_alloc));

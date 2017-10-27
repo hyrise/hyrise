@@ -12,12 +12,12 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep, std
   _loop_thread = std::thread([&, loop_sleep, loop_func] {
     size_t counter = 0;
     while (!_shutdown_flag) {
+      std::unique_lock<std::mutex> lk(_mutex);
       if (loop_sleep > std::chrono::milliseconds(0)) {
-        std::this_thread::sleep_for(loop_sleep);
+        _cv.wait_for(lk, loop_sleep, [&] { return static_cast<bool>(_shutdown_flag); });
       }
       if (_shutdown_flag) return;
       while (_is_paused) {
-        std::unique_lock<std::mutex> lk(_mutex);
         _cv.wait(lk, [&] { return !_is_paused || _shutdown_flag; });
         if (_shutdown_flag) return;
         lk.unlock();

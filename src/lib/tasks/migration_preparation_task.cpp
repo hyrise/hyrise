@@ -139,14 +139,6 @@ std::vector<double> get_node_temperature(const std::vector<ChunkInfo>& chunk_inf
   return scale(node_temperature);
 }
 
-int get_node_id(const PolymorphicAllocator<size_t>& alloc) {
-  const auto memsource = dynamic_cast<NUMAMemoryResource*>(alloc.resource());
-  if (memsource) {
-    return memsource->get_node_id();
-  }
-  return -1;
-}
-
 // Calculates chunk temperature metrics for all full chunks in all tables
 // that are stored in the supplied StorageManager.
 std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, const std::chrono::milliseconds& lookback,
@@ -164,7 +156,7 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, co
         sum_temperature += temperature;
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,
                                            /* .id = */ i,
-                                           /* .node = */ get_node_id(chunk.get_allocator()),
+                                           /* .node = */ MigrationPreparationTask::get_node_id(chunk.get_allocator()),
                                            /* .byte_size = */ chunk.byte_size(),
                                            /* .temperature = */ temperature});
       }
@@ -188,7 +180,7 @@ MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::O
 // This task first collects temperature metrics of chunks and NUMA nodes,
 // identifies chunks that are candidates for migration and schedules migration tasks.
 void MigrationPreparationTask::_on_execute() {
-  const auto topology = std::dynamic_pointer_cast<NodeQueueScheduler>(CurrentScheduler::get())->topology();
+  const auto topology = NUMAPlacementManager::get()->topology();
 
   // Collect chunk and NUMA node temperature metrics
   auto hot_chunks =
@@ -232,6 +224,15 @@ void MigrationPreparationTask::_on_execute() {
 
     CurrentScheduler::wait_for_tasks(jobs);
   }
+  std::cout << "Waiting" << std::endl;
+}
+
+int MigrationPreparationTask::get_node_id(const PolymorphicAllocator<size_t>& alloc) {
+  const auto memory_source = dynamic_cast<NUMAMemoryResource*>(alloc.resource());
+  if (memory_source) {
+    return memory_source->get_node_id();
+  }
+  return -1;
 }
 
 }  // namespace opossum

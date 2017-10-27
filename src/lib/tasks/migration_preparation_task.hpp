@@ -13,6 +13,8 @@ class MigrationPreparationTask : public AbstractTask {
  public:
   explicit MigrationPreparationTask(const NUMAPlacementManager::Options& options);
 
+  static int get_node_id(const PolymorphicAllocator<size_t>& alloc);
+
  protected:
   void _on_execute() override;
 
