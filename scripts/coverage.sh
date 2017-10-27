@@ -6,13 +6,12 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr $1 -s -r . --exclude="(.*types*.|.*test*.|third_party/*|src/benchmark*)" --html --html-details -o coverage/index.html > coverage_output.txt
+./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr $1 --verbose -s -r . --exclude="(.*types*.|.*test*.|third_party/*|src/benchmark*)" --html --html-details -o coverage/index.html > coverage_output.txt
+cat coverage_output.txt
 
 # without coverage badge generation
-if [ -z "$2" ]
-  then
-    cat coverage_output.txt
-else
+if [ ! -z "$2" ]
+then
     coverage_percent=$(cat coverage_output.txt | grep lines: | sed -e 's/lines: //; s/% .*$//')
     echo $coverage_percent > coverage_percent.txt
     if (( $(bc <<< "$coverage_percent >= 90") ))
