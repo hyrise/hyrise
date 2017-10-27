@@ -22,19 +22,10 @@ std::shared_ptr<AbstractOperator> Difference::recreate(const std::vector<AllPara
 }
 
 std::shared_ptr<const Table> Difference::_on_execute() {
-  auto output = Table::create_with_layout_from(_input_table_left());
-
-  // checking if input meets preconditions
-  DebugAssert((_input_table_left()->column_count() == _input_table_right()->column_count()),
+  DebugAssert(Table::layouts_equal(_input_table_left(), _input_table_right()),
               "Input tables must have same number of columns");
 
-#if IS_DEBUG
-  // Assert column definitions in both inputs are the same
-  for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    DebugAssert(_input_table_left()->column_type(column_id) == _input_table_right()->column_type(column_id),
-                "Input tables must have same column order and column types");
-  }
-#endif
+  auto output = Table::create_with_layout_from(_input_table_left());
 
   // 1. We create a set of all right input rows as concatenated strings.
 

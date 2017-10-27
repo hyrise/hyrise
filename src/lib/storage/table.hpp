@@ -24,6 +24,11 @@ class Table : private Noncopyable {
   static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table>& in_table,
                                                         const uint32_t chunk_size = 0);
 
+  /**
+   * @returns whether both tables contain the same columns (in name and type) in the same order
+   */
+  static bool layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b);
+
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size. A table holds always at least one chunk

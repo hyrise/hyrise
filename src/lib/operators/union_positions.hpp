@@ -96,7 +96,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
    * @returns the result table of the operator if one or both of the inputs was empty and we don't actually need to
    *    execute the operatopr. nullptr otherwise.
    */
-  std::shared_ptr<const Table> _analyze_input();
+  std::shared_ptr<const Table> _prepare_operator();
 
   UnionPositions::ReferenceMatrix _build_reference_matrix(const std::shared_ptr<const Table>& input_table) const;
   bool _cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a,

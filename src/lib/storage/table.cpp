@@ -30,6 +30,23 @@ std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<cons
   return new_table;
 }
 
+bool Table::layouts_equal(const std::shared_ptr<const Table> &table_a, const std::shared_ptr<const Table> &table_b) {
+  if (table_a->column_count() != table_b->column_count()) {
+    return false;
+  }
+
+  for (auto column_id = ColumnID{0}; column_id < table_a->column_count(); ++column_id) {
+    if (table_a->column_type(column_id) != table_b->column_type(column_id)) {
+      return false;
+    }
+    if (table_a->column_name(column_id) != table_b->column_name(column_id)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }

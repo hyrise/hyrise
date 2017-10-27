@@ -55,7 +55,7 @@ std::shared_ptr<AbstractOperator> UnionPositions::recreate(const std::vector<All
 const std::string UnionPositions::name() const { return "UnionPositions"; }
 
 std::shared_ptr<const Table> UnionPositions::_on_execute() {
-  const auto early_result = _analyze_input();
+  const auto early_result = _prepare_operator();
   if (early_result) {
     return early_result;
   }
@@ -178,25 +178,13 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   return out_table;
 }
 
-std::shared_ptr<const Table> UnionPositions::_analyze_input() {
-  Assert(_input_table_left()->column_count() == _input_table_right()->column_count(),
-         "Input tables must have the same layout. Column count mismatch.");
+std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
+  DebugAssert(Table::layouts_equal(_input_table_left(), _input_table_right()),
+              "Input tables don't have the same layout");
 
   // Later code relies on input tables containing columns
   if (_input_table_left()->column_count() == 0) {
     return _input_table_left();
-  }
-
-  /**
-   * Check the column layout (column names and column types)
-   */
-  for (ColumnID::base_type column_idx = 0; column_idx < _input_table_left()->column_count(); ++column_idx) {
-    Assert(_input_table_left()->column_type(ColumnID{column_idx}) ==
-               _input_table_right()->column_type(ColumnID{column_idx}),
-           "Input tables must have the same layout. Column type mismatch.");
-    Assert(_input_table_left()->column_name(ColumnID{column_idx}) ==
-               _input_table_right()->column_name(ColumnID{column_idx}),
-           "Input tables must have the same layout. Column name mismatch.");
   }
 
   /**
