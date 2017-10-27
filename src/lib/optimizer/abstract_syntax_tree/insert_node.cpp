@@ -16,7 +16,7 @@ InsertNode::InsertNode(const std::string table_name) : AbstractASTNode(ASTNodeTy
 std::string InsertNode::description() const {
   std::ostringstream desc;
 
-  desc << "Insert into " << _table_name;
+  desc << "[Insert] Into table '" << _table_name << "'";
 
   return desc.str();
 }

@@ -19,10 +19,18 @@ ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<Expression>>& c
 std::string ProjectionNode::description() const {
   std::ostringstream desc;
 
-  desc << "Projection: ";
+  desc << "[Projection] ";
 
-  for (const auto& column : output_column_names()) {
-    desc << " " << column;
+  std::vector<std::string> verbose_column_names;
+  if (left_child()) {
+    verbose_column_names = left_child()->get_verbose_column_names();
+  }
+
+  for (size_t column_idx = 0; column_idx < _column_expressions.size(); ++column_idx) {
+    desc << _column_expressions[column_idx]->to_string(verbose_column_names);
+    if (column_idx + 1 < _column_expressions.size()) {
+      desc << ", ";
+    }
   }
 
   return desc.str();
@@ -175,6 +183,23 @@ std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std:
   }
 
   return output_column_ids_for_table;
+}
+
+std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
+  DebugAssert(left_child(), "Need input to generate name");
+  DebugAssert(column_id < _column_expressions.size(), "ColumnID out of range");
+
+  const auto& column_expression = _column_expressions[column_id];
+
+  if (column_expression->alias()) {
+    return *column_expression->alias();
+  }
+
+  if (left_child()) {
+    return column_expression->to_string(left_child()->output_column_names());
+  } else {
+    return column_expression->to_string();
+  }
 }
 
 }  // namespace opossum

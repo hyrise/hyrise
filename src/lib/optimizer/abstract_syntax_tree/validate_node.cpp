@@ -6,6 +6,6 @@ namespace opossum {
 
 ValidateNode::ValidateNode() : AbstractASTNode(ASTNodeType::Validate) {}
 
-std::string ValidateNode::description() const { return "Validate"; }
+std::string ValidateNode::description() const { return "[Validate]"; }
 
 }  // namespace opossum
