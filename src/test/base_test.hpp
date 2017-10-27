@@ -33,6 +33,12 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     return DictionaryCompression::compress_column(type, value_column);
   }
 
+  void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
+    for (auto& op : operators) {
+      op->execute();
+    }
+  }
+
  public:
   ~BaseTestWithParam() override {
     StorageManager::reset();

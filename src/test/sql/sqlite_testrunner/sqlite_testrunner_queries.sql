@@ -8,6 +8,9 @@ SELECT * FROM int_float WHERE 1234 <= a;
 SELECT * FROM int_float WHERE a >= 1234 AND b < 457.9
 SELECT * FROM int_string2 WHERE a BETWEEN 122 AND 124
 SELECT * FROM int_int_int WHERE a BETWEEN b AND 10
+SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0
+SELECT * FROM int_float4 WHERE a > 12345 OR (a <= 123 AND b > 400.0)
+SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0 OR (b > 457.0 AND b < 458.0)
 
 -- Projection
 SELECT a FROM int_float;
@@ -114,3 +117,6 @@ INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; S
 
 -- INSERT ... INTO ... (with regular queries)
 INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3; INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13; INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6; SELECT * FROM int_int_for_insert_1;
+
+-- TODO: Fails
+-- SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING b > 457 OR b = 1234 OR b = 12345;
