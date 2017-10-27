@@ -23,16 +23,6 @@
 
 namespace opossum {
 
-// TODO(normanrz): Remove
-template <class T>
-void print_vector(const std::vector<T>& vec, std::string prefix = "", std::string sep = " ") {
-  std::cout << prefix;
-  for (const auto& a : vec) {
-    std::cout << sep << a;
-  }
-  std::cout << std::endl;
-}
-
 // Stores information about the current state of the NUMA nodes,
 // including an imbalance metric, the temperature metrics for each node,
 // and a classification of hot and cold nodes.
@@ -188,11 +178,6 @@ void MigrationPreparationTask::_on_execute() {
   size_t chunk_counter = 0;
   NodeInfoSet node_info = compute_node_info(get_node_temperature(hot_chunks, topology->nodes().size()));
 
-  // TODO(normanrz): Remove
-  std::cout << "Imbalance: " << node_info.imbalance << std::endl;
-  print_vector(node_info.node_temperature, "Hotnesses: ");
-  print_vector(count_chunks_by_node(hot_chunks, topology->nodes().size()), "Chunk counts: ");
-
   // Migrations are only considered when the imbalance between the NUMA nodes is high enough.
   if (node_info.imbalance > _options.imbalance_threshold && node_info.cold_nodes.size() > 0) {
     // Identify migration candidates (chunks)
@@ -214,9 +199,7 @@ void MigrationPreparationTask::_on_execute() {
       const auto target_node = node_info.cold_nodes.at(chunk_counter % node_info.cold_nodes.size());
       const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
                                                              std::vector<ChunkID>({migration_chunk.id}), target_node);
-      // TODO(normanrz): Remove
-      std::cout << "Migrating " << migration_chunk.table_name << " (" << migration_chunk.id << ") "
-                << migration_chunk.node << " -> " << target_node << std::endl;
+
       task->schedule(target_node, SchedulePriority::Unstealable);
       jobs.push_back(task);
       chunk_counter++;
@@ -224,7 +207,6 @@ void MigrationPreparationTask::_on_execute() {
 
     CurrentScheduler::wait_for_tasks(jobs);
   }
-  std::cout << "Waiting" << std::endl;
 }
 
 int MigrationPreparationTask::get_node_id(const PolymorphicAllocator<size_t>& alloc) {

@@ -92,6 +92,7 @@ TEST_F(NUMAPlacementTest, ChunkMigration) {
   }
 
   if (topology->nodes().size() > 1) {
+    // At least one chunk has been migrated away from node 1.
     EXPECT_LT(count_chunks_by_node(table, topology->nodes().size())[0], size_t(10));
   }
 }

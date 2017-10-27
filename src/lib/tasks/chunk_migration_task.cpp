@@ -2,7 +2,6 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,10 +33,7 @@ void ChunkMigrationTask::_on_execute() {
     // in place that would allow the safe migration of mutable chunks.
     DebugAssert(chunk_is_completed(chunk, table->chunk_size()), "Chunk is not completed and thus can’t be migrated.");
 
-    // TODO(normanrz): Remove debug output
-    std::cout << "Starting migration " << _table_name << " " << chunk_id << std::endl;
     chunk.migrate(NUMAPlacementManager::get()->get_memory_resource(_target_node_id));
-    std::cout << "Completed migration " << _table_name << " " << chunk_id << std::endl;
   }
 }
 
