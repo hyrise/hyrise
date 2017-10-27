@@ -125,7 +125,11 @@ class Table : private Noncopyable {
 
   std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
 
-  // Determines whether this table consists solely
+  /**
+   * Determines whether this table consists solely of ReferenceColumns, in which case it is a TableType::References,
+   * or contains Dictionary/ValueColumns, which makes it a TableType::Data.
+   * A table containing both ReferenceColumns and Dictionary/ValueColumns is invalid.
+   */
   TableType get_type() const;
 
  protected:

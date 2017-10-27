@@ -70,11 +70,8 @@ class SetUnion : public AbstractReadOnlyOperator {
  public:
   SetUnion(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right);
 
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
   const std::string name() const override;
-  const std::string description() const override;
 
  private:
   std::shared_ptr<const Table> _on_execute() override;
@@ -89,7 +86,7 @@ class SetUnion : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _analyze_input();
 
   // In the input tables, the column indices in which a different pos_list is used than in the column left of it
-  std::vector<ColumnID> _column_segment_begins;
+  std::vector<ColumnID> _column_segment_offsets;
 
   // For each column segment, the table its pos_list references
   std::vector<std::shared_ptr<const Table>> _referenced_tables;
