@@ -37,15 +37,11 @@ NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topol
   }
 
   _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval, [](size_t) {
-    const auto task = std::make_shared<ChunkMetricsCollectionTask>();
-    task->schedule();
-    task->join();
+    ChunkMetricsCollectionTask().execute();
   });
 
   _migration_thread = std::make_unique<PausableLoopThread>(_options.migration_interval, [this](size_t) {
-    const auto task = std::make_shared<MigrationPreparationTask>(_options);
-    task->schedule();
-    task->join();
+    MigrationPreparationTask(_options).execute();
   });
 }
 
