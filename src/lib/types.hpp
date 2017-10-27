@@ -2,6 +2,7 @@
 
 #include <tbb/concurrent_vector.h>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/operators.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -60,10 +61,10 @@ template <typename T>
 class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
  public:
   pmr_concurrent_vector(PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, alloc) {}  // NOLINT
-  pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {}) // NOLINT
+  pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})                             // NOLINT
       : pmr_concurrent_vector(0, T{}, alloc) {}
   pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})
-      : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}                                     // NOLINT
+      : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
   pmr_concurrent_vector(tbb::concurrent_vector<T> other) : tbb::concurrent_vector<T>(other) {}  // NOLINT
 
   PolymorphicAllocator<T>& get_allocator() { return _alloc; }
@@ -207,9 +208,13 @@ enum class ExpressionType {
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
+enum class UnionMode { Positions };
+
 enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
+
+enum class TableType { References, Data };
 
 class Noncopyable {
  protected:

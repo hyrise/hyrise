@@ -87,6 +87,8 @@ set(
     operators/table_wrapper.hpp
     operators/union_all.cpp
     operators/union_all.hpp
+    operators/union_positions.cpp
+    operators/union_positions.hpp
     operators/update.cpp
     operators/update.hpp
     operators/validate.cpp
@@ -127,6 +129,8 @@ set(
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node.cpp
     optimizer/abstract_syntax_tree/stored_table_node.hpp
+    optimizer/abstract_syntax_tree/union_node.cpp
+    optimizer/abstract_syntax_tree/union_node.hpp
     optimizer/abstract_syntax_tree/update_node.cpp
     optimizer/abstract_syntax_tree/update_node.hpp
     optimizer/abstract_syntax_tree/validate_node.cpp

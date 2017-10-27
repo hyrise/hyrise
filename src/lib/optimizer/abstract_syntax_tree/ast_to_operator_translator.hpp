@@ -37,6 +37,7 @@ class ASTToOperatorTranslator final : private Noncopyable {
   std::shared_ptr<AbstractOperator> _translate_delete_node(const std::shared_ptr<AbstractASTNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_dummy_table_node(const std::shared_ptr<AbstractASTNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_update_node(const std::shared_ptr<AbstractASTNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_union_node(const std::shared_ptr<AbstractASTNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractASTNode>& node) const;
 
   // Maintenance operators
