@@ -248,18 +248,6 @@ TEST_F(OperatorsProjectionTest, Literals) {
   EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
-TEST_F(OperatorsProjectionTest, NumInputTables) {
-  auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, _a_b_expr);
-
-  EXPECT_EQ(projection_1->num_in_tables(), 1);
-}
-
-TEST_F(OperatorsProjectionTest, NumOutputTables) {
-  auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, _a_b_expr);
-
-  EXPECT_EQ(projection_1->num_out_tables(), 1);
-}
-
 TEST_F(OperatorsProjectionTest, OperatorName) {
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, _a_b_expr);
 

@@ -443,19 +443,6 @@ TEST_F(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
 }
 
-TEST_F(OperatorsTableScanTest, NumInputTables) {
-  auto scan_1 = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
-  scan_1->execute();
-
-  EXPECT_EQ(scan_1->num_in_tables(), 1);
-}
-
-TEST_F(OperatorsTableScanTest, NumOutputTables) {
-  auto scan_1 = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
-
-  EXPECT_EQ(scan_1->num_out_tables(), 1);
-}
-
 TEST_F(OperatorsTableScanTest, OperatorName) {
   auto scan_1 = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
 

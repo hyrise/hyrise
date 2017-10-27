@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <iostream>
 
 namespace boost {
 namespace container {
@@ -10,8 +11,6 @@ namespace pmr {
 
 class default_resource_impl : public memory_resource {
  public:
-  virtual ~default_resource_impl() {}
-
   virtual void* do_allocate(std::size_t bytes, std::size_t alignment) { return std::malloc(bytes); }
 
   virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { std::free(p); }

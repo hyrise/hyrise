@@ -17,29 +17,15 @@ Difference::Difference(const std::shared_ptr<const AbstractOperator> left_in,
 
 const std::string Difference::name() const { return "Difference"; }
 
-uint8_t Difference::num_in_tables() const { return 2; }
-
-uint8_t Difference::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> Difference::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Difference>(_input_left->recreate(args), _input_right->recreate(args));
 }
 
 std::shared_ptr<const Table> Difference::_on_execute() {
-  auto output = std::make_shared<Table>();
-
-  // checking if input meets preconditions
-  DebugAssert((_input_table_left()->column_count() == _input_table_right()->column_count()),
+  DebugAssert(Table::layouts_equal(_input_table_left(), _input_table_right()),
               "Input tables must have same number of columns");
 
-  // copy column definition from _input_table_left() to output table
-  for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    auto& column_type = _input_table_left()->column_type(column_id);
-    DebugAssert((column_type == _input_table_right()->column_type(column_id)),
-                "Input tables must have same column order and column types");
-    // add column definition to output table
-    output->add_column_definition(_input_table_left()->column_name(column_id), column_type);
-  }
+  auto output = Table::create_with_layout_from(_input_table_left());
 
   // 1. We create a set of all right input rows as concatenated strings.
 

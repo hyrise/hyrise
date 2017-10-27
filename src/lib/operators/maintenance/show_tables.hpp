@@ -12,8 +12,6 @@ namespace opossum {
 class ShowTables : public AbstractReadOnlyOperator {
  public:
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 

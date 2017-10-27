@@ -32,7 +32,6 @@ class Update : public AbstractReadWriteOperator {
   ~Update();
 
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

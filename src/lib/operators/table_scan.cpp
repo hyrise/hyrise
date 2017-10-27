@@ -63,10 +63,6 @@ const std::string TableScan::description() const {
   return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
 }
 
-uint8_t TableScan::num_in_tables() const { return 1; }
-
-uint8_t TableScan::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
   // Replace value in the new operator, if it’s a parameter and an argument is available.
   if (is_placeholder(_right_parameter)) {
@@ -88,7 +84,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   _in_table = _input_table_left();
 
   _init_scan();
-  _init_output_table();
+
+  _output_table = Table::create_with_layout_from(_in_table);
 
   std::mutex output_mutex;
 
@@ -112,7 +109,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        * (b) the reference columns of the input table point to the same positions in the same order
        *     (i.e. they share their position list).
        */
-      if (_is_reference_table) {
+      if (_in_table->get_type() == TableType::References) {
         const auto& chunk_in = _in_table->get_chunk(chunk_id);
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
@@ -169,14 +166,6 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
-  const auto& first_chunk = _in_table->get_chunk(ChunkID{0u});
-
-  _is_reference_table = [&]() {
-    // We assume if one column is a reference column, all are.
-    const auto column = first_chunk.get_column(_left_column_id);
-    const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-    return ref_column != nullptr;
-  }();
 
   if (_scan_type == ScanType::OpLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
@@ -209,14 +198,6 @@ void TableScan::_init_scan() {
     const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
     _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _scan_type, right_column_id);
-  }
-}
-
-void TableScan::_init_output_table() {
-  _output_table = std::make_shared<Table>();
-
-  for (ColumnID column_id{0}; column_id < _in_table->column_count(); ++column_id) {
-    _output_table->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 }
 

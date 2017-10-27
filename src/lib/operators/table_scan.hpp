@@ -29,8 +29,6 @@ class TableScan : public AbstractReadOnlyOperator {
 
   const std::string name() const override;
   const std::string description() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
@@ -39,7 +37,6 @@ class TableScan : public AbstractReadOnlyOperator {
   void _on_cleanup() override;
 
   void _init_scan();
-  void _init_output_table();
 
   // TODO(anyone): This is only a very temporary solution! Whoever reads this first must replace it.
   std::shared_ptr<const Table> __on_execute_between();
@@ -51,7 +48,6 @@ class TableScan : public AbstractReadOnlyOperator {
   const std::optional<AllTypeVariant> _right_value2;
 
   std::shared_ptr<const Table> _in_table;
-  bool _is_reference_table;
   std::unique_ptr<BaseTableScanImpl> _impl;
   std::shared_ptr<Table> _output_table;
 };

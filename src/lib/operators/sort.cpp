@@ -29,10 +29,6 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-uint8_t Sort::num_in_tables() const { return 1; }
-
-uint8_t Sort::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
 }
@@ -58,12 +54,7 @@ class Sort::SortImplMaterializeOutput {
 
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
-    auto output = std::make_shared<Table>(_output_chunk_size);
-
-    for (ColumnID column_id{0}; column_id < _table_in->column_count(); column_id++) {
-      output->add_column_definition(_table_in->column_name(column_id), _table_in->column_type(column_id),
-                                    _table_in->column_is_nullable(column_id));
-    }
+    auto output = Table::create_with_layout_from(_table_in, _output_chunk_size);
 
     // After we created the output table and initialized the column structure, we can start adding values. Because the
     // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are

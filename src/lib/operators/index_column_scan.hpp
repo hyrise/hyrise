@@ -33,8 +33,6 @@ class IndexColumnScan : public AbstractReadOnlyOperator {
                   const AllTypeVariant value, const std::optional<AllTypeVariant> value2 = std::nullopt);
 
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

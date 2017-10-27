@@ -15,8 +15,6 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 
 const std::string Delete::name() const { return "Delete"; }
 
-uint8_t Delete::num_in_tables() const { return 1u; }
-
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
@@ -109,7 +107,7 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (chunk.column_count() == 0u) return false;
 
-    if (!chunk.references_only_one_table()) return false;
+    if (!chunk.references_exactly_one_table()) return false;
 
     const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk.get_column(ColumnID{0}));
 

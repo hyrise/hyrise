@@ -14,6 +14,7 @@ src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input2.tbl groupby_int_2g
 src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl groupby_int_1gb_1agg_null
 
 src/test/tables/int.tbl int_for_delete_1
+src/test/tables/int.tbl int_for_delete_2
 src/test/tables/int_int3_limit_1.tbl int_int_for_insert_1
 src/test/tables/int_int3_limit_1.tbl int_int_for_insert_2
 src/test/tables/int_int3_updated.tbl int_int_for_update

@@ -193,10 +193,6 @@ std::shared_ptr<const Table> JoinNestedLoopB::_on_execute() {
 
 const std::string JoinNestedLoopB::name() const { return "JoinNestedLoopB"; }
 
-uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
-
-uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
-
 std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _mode,
                                            _column_ids, _scan_type);
