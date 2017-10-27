@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 if [ -z "$1" ]
   then
@@ -6,7 +7,11 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches --html --html-details -o coverage/index.html > coverage_output.txt
+./$1/hyriseCoverage
+rm -fr coverage; mkdir coverage
+# call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
 if [ ! -z "$2" ]
