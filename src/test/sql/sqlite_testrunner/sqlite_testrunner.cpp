@@ -87,6 +87,11 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     }
     tx_context->commit();
 
+    if (plan.tree_roots().size() == 0) {
+      // This was not a SELECT query.
+      return;
+    }
+
     auto result_table = plan.tree_roots().back()->get_output();
     auto sqlite_result_table = _sqlite->execute_query(query);
 

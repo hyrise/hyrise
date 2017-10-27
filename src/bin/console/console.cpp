@@ -269,7 +269,7 @@ int Console::_eval_sql(const std::string& sql) {
   done = std::chrono::high_resolution_clock::now();
   auto execution_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
-  auto table = plan.tree_roots().back()->get_output();
+  auto table = plan.tree_roots().size() > 0 ? plan.tree_roots().back()->get_output() : nullptr;
 
   auto row_count = table ? table->row_count() : 0;
 

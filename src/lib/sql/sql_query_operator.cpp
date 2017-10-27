@@ -156,6 +156,10 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
   auto result_node = SQLToASTTranslator{_validate}.translate_statement(stmt);
+
+  // Do not add nodes that were created for statements that are already executed (e.g., CREATE)
+  if (result_node->type() == ASTNodeType::Empty) return;
+
   auto result_operator = ASTToOperatorTranslator{}.translate_node(result_node);
 
   SQLQueryPlan query_plan;

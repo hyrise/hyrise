@@ -11,6 +11,7 @@
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/delete_node.hpp"
 #include "optimizer/abstract_syntax_tree/dummy_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/empty_node.hpp"
 #include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
@@ -96,6 +97,10 @@ std::vector<std::shared_ptr<AbstractASTNode>> SQLToASTTranslator::translate_pars
 
   for (const hsql::SQLStatement* stmt : statements) {
     auto result_node = translate_statement(*stmt);
+
+    // Do not add nodes that were created for statements that are already executed (e.g., CREATE)
+    if (result_node->type() == ASTNodeType::Empty) continue;
+
     result_nodes.push_back(result_node);
   }
 
@@ -105,19 +110,23 @@ std::vector<std::shared_ptr<AbstractASTNode>> SQLToASTTranslator::translate_pars
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
-      return _translate_select((const hsql::SelectStatement&)statement);
+      return _translate_select(static_cast<const hsql::SelectStatement&>(statement));
     case hsql::kStmtInsert:
-      return _translate_insert((const hsql::InsertStatement&)statement);
+      return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
     case hsql::kStmtDelete:
-      return _translate_delete((const hsql::DeleteStatement&)statement);
+      return _translate_delete(static_cast<const hsql::DeleteStatement&>(statement));
     case hsql::kStmtUpdate:
-      return _translate_update((const hsql::UpdateStatement&)statement);
+      return _translate_update(static_cast<const hsql::UpdateStatement&>(statement));
     case hsql::kStmtShow:
-      return _translate_show((const hsql::ShowStatement&)statement);
+      return _translate_show(static_cast<const hsql::ShowStatement&>(statement));
+    case hsql::kStmtCreate:
+      return _translate_create(static_cast<const hsql::CreateStatement&>(statement));
+    case hsql::kStmtDrop:
+      return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
     default:
       Fail("SQL statement type not supported");
-      return {};
   }
+  return {};
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsql::InsertStatement& insert) {
@@ -386,7 +395,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
   std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
     case hsql::kTableName:
-      node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+      if (StorageManager::get().has_table(table.name)) {
+        node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+      } else if (StorageManager::get().has_view(table.name)) {
+        node = StorageManager::get().get_view(table.name);
+        Assert(!_validate || node->is_validated(), "Trying to add non-validated view to validated query");
+      } else {
+        Fail(std::string("Did not find a table or view with name ") + table.name);
+      }
       break;
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
@@ -827,6 +843,48 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
       return std::make_shared<ShowColumnsNode>(std::string(show_statement.name));
     default:
       Fail("hsql::ShowType is not supported.");
+  }
+
+  return {};
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
+  switch (create_statement.type) {
+    case hsql::CreateType::kCreateView: {
+      auto view = _translate_select((const hsql::SelectStatement&)*create_statement.select);
+      if (create_statement.viewColumns) {
+        std::vector<std::shared_ptr<Expression>> projections;
+        ColumnID column_id{0};
+        Assert(create_statement.viewColumns->size() == view->output_col_count(),
+               "Number of Columns in CREATE VIEW does not match SELECT statement");
+        for (const auto& alias : *create_statement.viewColumns) {
+          // rename columns so they match the view definition
+          projections.push_back(Expression::create_column(column_id, alias));
+          ++column_id;
+        }
+        auto projection_node = std::make_shared<ProjectionNode>(projections);
+        projection_node->set_left_child(view);
+        view = projection_node;
+      }
+
+      StorageManager::get().add_view(create_statement.tableName, view);
+      return std::make_shared<EmptyNode>();
+    }
+    default:
+      Fail("hsql::CreateType is not supported.");
+  }
+
+  return {};
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
+  switch (drop_statement.type) {
+    case hsql::DropType::kDropView: {
+      StorageManager::get().drop_view(drop_statement.name);
+      return std::make_shared<EmptyNode>();
+    }
+    default:
+      Fail("hsql::DropType is not supported.");
   }
 
   return {};

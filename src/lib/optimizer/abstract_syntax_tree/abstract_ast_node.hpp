@@ -18,6 +18,7 @@ enum class ASTNodeType {
   Aggregate,
   Delete,
   DummyTable,
+  Empty,
   Insert,
   Join,
   Limit,
@@ -63,6 +64,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Returns whether this subtree is read only
    */
   virtual bool is_read_only() const;
+
+  /**
+   * Returns whether all tables in this subtree were validated
+   */
+  bool is_validated() const;
 
   /**
    * @pre this has a parent

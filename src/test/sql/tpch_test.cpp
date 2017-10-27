@@ -108,7 +108,7 @@ INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
   // 11, /* Enable once we support IN */
   // 12, /* Enable once we support nested expressions in Join Condition */
   // 13, /* Enable once we support Case */
-  // 14, /* We do not support Views yet */
+  // 14, /* Enable once we support Subselects in WHERE condition */
   // 15, /* Enable once we support Subselects in WHERE condition */
   // 16, /* Enable once we support Subselects in WHERE condition */
   // 17, /* Enable once we support Subselects in WHERE condition */

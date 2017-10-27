@@ -21,6 +21,17 @@ bool AbstractASTNode::is_optimizable() const { return true; }
 
 bool AbstractASTNode::is_read_only() const { return true; }
 
+bool AbstractASTNode::is_validated() const {
+  if (type() == ASTNodeType::Validate) return true;
+
+  if (!left_child() && !right_child()) return false;
+
+  auto children_validated = true;
+  if (left_child()) children_validated &= left_child()->is_validated();
+  if (right_child()) children_validated &= right_child()->is_validated();
+  return children_validated;
+}
+
 ASTChildSide AbstractASTNode::get_child_side() const {
   auto parent = this->parent();
   Assert(parent, "get_child_side() can only be called on node with a parent");

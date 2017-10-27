@@ -54,7 +54,14 @@ class SQLToASTTranslatorTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    return SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
+    auto asts = SQLToASTTranslator{false}.translate_parse_result(parse_result);
+
+    if (asts.size() == 0) {
+      // This is a query without a result (e.g., CREATE/DROP)
+      return nullptr;
+    }
+
+    return asts[0];
   }
 };
 
@@ -471,6 +478,38 @@ TEST_F(SQLToASTTranslatorTest, Update) {
   EXPECT_FLOAT_EQ(boost::get<float>(expressions[1]->value()), 3.2);
   EXPECT_TRUE(expressions[1]->alias());
   EXPECT_EQ(*expressions[1]->alias(), "b");
+}
+
+TEST_F(SQLToASTTranslatorTest, CreateView) {
+  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM table_a WHERE a = 'b';";
+  auto result_node = compile_query(query);
+
+  auto view_from_sm = StorageManager::get().get_view("my_first_view");
+
+  EXPECT_EQ(view_from_sm->type(), ASTNodeType::Projection);
+  EXPECT_FALSE(view_from_sm->right_child());
+
+  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(view_from_sm->left_child());
+  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_FALSE(ts_node_1->right_child());
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
+}
+
+TEST_F(SQLToASTTranslatorTest, CreateAliasView) {
+  const auto query = "CREATE VIEW my_second_view (c, d) AS SELECT * FROM table_a WHERE a = 'b';";
+  auto result_node = compile_query(query);
+
+  auto view_from_sm = StorageManager::get().get_view("my_second_view");
+
+  EXPECT_EQ(view_from_sm->output_column_names(), std::vector<std::string>({"c", "d"}));
+}
+
+TEST_F(SQLToASTTranslatorTest, DropView) {
+  compile_query("CREATE VIEW my_third_view AS SELECT * FROM table_a WHERE a = 'b';");
+  compile_query("DROP VIEW my_third_view");
+  EXPECT_THROW(compile_query("DROP VIEW my_third_view"), std::exception);
 }
 
 }  // namespace opossum
