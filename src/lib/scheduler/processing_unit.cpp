@@ -6,6 +6,9 @@
 #include "uid_allocator.hpp"
 #include "worker.hpp"
 
+// It is important to limit the number of workers per core to avoid
+// resource depletion. This number is an arbitrary pick, but has been reached
+// and exceeded in experiments.
 static constexpr size_t MAX_WORKERS_PER_CORE = 200;
 
 namespace opossum {

@@ -54,13 +54,15 @@ class Chunk : private Noncopyable {
 
   /**
    * Data structure for storing chunk access times
+   *
+   * The chunk access times are tracked using ProxyChunk objects
+   * that measure the cycles they were in scope using the RDTSC instructions.
+   * The access times are added to a counter. The ChunkMetricCollection tasks
+   * is regularly scheduled by the NUMAPlacementManager. This tasks takes a snapshot
+   * of the current counter values and places them in a history. The history is
+   * stored in a ring buffer, so that only a limited number of history items are
+   * preserved.
    */
-  // TODO(normanrz): Comment
-  // * What information does counter give us?
-  // * What does history_sample return?
-  // * What are the entries in the history?
-  // * What is the ring buffer used for?
-  // * What does process process?
   struct AccessCounter {
     friend class Chunk;
 
@@ -70,11 +72,11 @@ class Chunk : private Noncopyable {
     void increment() { _counter++; }
     void increment(uint64_t value) { _counter.fetch_add(value); }
 
+    // Takes a snapshot of the current counter and adds it to the history
     void process() { _history.push_back(_counter); }
 
-    pmr_ring_buffer<uint64_t>& history() { return _history; }
-    const pmr_ring_buffer<uint64_t>& history() const { return _history; }
-
+    // Returns the access time of the chunk during the specified number of
+    // recent history sample iterations.
     uint64_t history_sample(size_t lookback) const;
 
     uint64_t counter() const { return _counter; }

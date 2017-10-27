@@ -189,9 +189,10 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> DictionaryColumn<T>::mate
   return materialized_vector;
 }
 
+// Copies a DictionaryColumn using a new allocator. This is useful for placing the DictionaryColumn on a new NUMA node.
 template <typename T>
-std::shared_ptr<BaseColumn> DictionaryColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const {
-  const auto new_attribute_vector = _attribute_vector->migrate(alloc);
+std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   const pmr_vector<T> new_dictionary(*_dictionary, alloc);
   return std::allocate_shared<DictionaryColumn<T>>(
       alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);

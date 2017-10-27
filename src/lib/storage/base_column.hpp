@@ -42,6 +42,7 @@ class BaseColumn : private Noncopyable {
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   virtual void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const = 0;
 
-  virtual std::shared_ptr<BaseColumn> migrate(const PolymorphicAllocator<size_t>& alloc) const = 0;
+  // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
+  virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 }  // namespace opossum

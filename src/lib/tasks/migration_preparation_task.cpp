@@ -33,7 +33,9 @@ void print_vector(const std::vector<T>& vec, std::string prefix = "", std::strin
   std::cout << std::endl;
 }
 
-// TODO(normanrz): Comment
+// Stores information about the current state of the NUMA nodes,
+// including an imbalance metric, the temperature metrics for each node,
+// and a classification of hot and cold nodes.
 struct NodeInfoSet {
   double imbalance;
   std::vector<double> node_temperature;
@@ -41,7 +43,7 @@ struct NodeInfoSet {
   std::vector<NodeID> cold_nodes;
 };
 
-// TODO(normanrz): Comment
+// Contains temperature information about a particular Chunk.
 struct ChunkInfo {
   std::string table_name;
   ChunkID id;
@@ -76,6 +78,7 @@ std::vector<double> scale(const std::vector<double>& container) {
   return result;
 }
 
+// Determines whether a NUMA node has enough capacity by specifying a relative threshold.
 bool node_has_capacity(size_t node_id, double threshold = 0.8) {
   size_t total_capacity = numa_node_size(node_id, NULL);
   int64_t dummy;
@@ -85,6 +88,7 @@ bool node_has_capacity(size_t node_id, double threshold = 0.8) {
 
 double safe_log2(double x) { return x == 0 ? 0 : std::log2(x); }
 
+// The inverted Shannon entropy is used as a metric for imbalance between the NUMA nodes.
 double inverted_entropy(const std::vector<double>& node_chunk) {
   double max_entropy =
       std::pow(-1.0 * node_chunk.size() * (1.0 / node_chunk.size() * std::log2(1.0 / node_chunk.size())), 4);
@@ -94,8 +98,8 @@ double inverted_entropy(const std::vector<double>& node_chunk) {
   return (max_entropy - entropy) / max_entropy;
 }
 
-// TODO(normanrz): Comment
-NodeInfoSet find_hot_nodes(const std::vector<double>& node_chunk) {
+// Returns a NodeInfoSet struct that contains the current state of the NUMA nodes
+NodeInfoSet compute_node_info(const std::vector<double>& node_chunk) {
   double avg_tasks = mean(node_chunk);
 
   std::vector<double> node_temperature(node_chunk.size());
@@ -126,7 +130,7 @@ NodeInfoSet find_hot_nodes(const std::vector<double>& node_chunk) {
           /* .cold_nodes = */ cold_nodes};
 }
 
-// TODO(normanrz): Comment
+// Computes the temperature of a NUMA node based on the Chunks that reside on that node.
 std::vector<double> get_node_temperature(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
   std::vector<double> node_temperature(node_count);
   for (const auto& chunk_info : chunk_infos) {
@@ -143,7 +147,8 @@ int get_node_id(const PolymorphicAllocator<size_t>& alloc) {
   return -1;
 }
 
-// TODO(normanrz): Comment
+// Calculates chunk temperature metrics for all full chunks in all tables
+// that are stored in the supplied StorageManager.
 std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, const std::chrono::milliseconds& lookback,
                                        const std::chrono::milliseconds& counter_history_interval) {
   std::vector<ChunkInfo> chunk_infos;
@@ -180,24 +185,28 @@ std::vector<size_t> count_chunks_by_node(const std::vector<ChunkInfo>& chunk_inf
 
 MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::Options& options) : _options(options) {}
 
-// TODO(normanrz): Comment
+// This task first collects temperature metrics of chunks and NUMA nodes,
+// identifies chunks that are candidates for migration and schedules migration tasks.
 void MigrationPreparationTask::_on_execute() {
   const auto topology = std::dynamic_pointer_cast<NodeQueueScheduler>(CurrentScheduler::get())->topology();
 
+  // Collect chunk and NUMA node temperature metrics
   auto hot_chunks =
       find_hot_chunks(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
-  NodeInfoSet node_infos = find_hot_nodes(get_node_temperature(hot_chunks, topology->nodes().size()));
+  NodeInfoSet node_info = compute_node_info(get_node_temperature(hot_chunks, topology->nodes().size()));
 
   // TODO(normanrz): Remove
-  std::cout << "Imbalance: " << node_infos.imbalance << std::endl;
-  print_vector(node_infos.node_temperature, "Hotnesses: ");
+  std::cout << "Imbalance: " << node_info.imbalance << std::endl;
+  print_vector(node_info.node_temperature, "Hotnesses: ");
   print_vector(count_chunks_by_node(hot_chunks, topology->nodes().size()), "Chunk counts: ");
 
-  if (node_infos.imbalance > _options.imbalance_threshold && node_infos.cold_nodes.size() > 0) {
+  // Migrations are only considered when the imbalance between the NUMA nodes is high enough.
+  if (node_info.imbalance > _options.imbalance_threshold && node_info.cold_nodes.size() > 0) {
+    // Identify migration candidates (chunks)
     std::vector<ChunkInfo> migration_candidates;
     for (const auto& hot_chunk : hot_chunks) {
-      if (hot_chunk.node < 0 || contains(node_infos.hot_nodes, static_cast<NodeID>(hot_chunk.node))) {
+      if (hot_chunk.node < 0 || contains(node_info.hot_nodes, static_cast<NodeID>(hot_chunk.node))) {
         migration_candidates.push_back(hot_chunk);
       }
       if (migration_candidates.size() >= _options.migration_count) {
@@ -205,11 +214,12 @@ void MigrationPreparationTask::_on_execute() {
       }
     }
 
+    // Schedule chunk migration tasks
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(migration_candidates.size());
 
     for (const auto& migration_chunk : migration_candidates) {
-      const auto target_node = node_infos.cold_nodes.at(chunk_counter % node_infos.cold_nodes.size());
+      const auto target_node = node_info.cold_nodes.at(chunk_counter % node_info.cold_nodes.size());
       const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
                                                              std::vector<ChunkID>({migration_chunk.id}), target_node);
       // TODO(normanrz): Remove

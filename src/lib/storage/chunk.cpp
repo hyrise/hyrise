@@ -18,10 +18,10 @@ namespace opossum {
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
 uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
-  if (history().size() < 2 || lookback == 0) return 0;
-  const auto last = history().back();
-  const auto prelast_index = std::max(0l, static_cast<int64_t>(history().size()) - static_cast<int64_t>(lookback));
-  const auto prelast = history().at(prelast_index);
+  if (_history.size() < 2 || lookback == 0) return 0;
+  const auto last = _history.back();
+  const auto prelast_index = std::max(0l, static_cast<int64_t>(_history.size()) - static_cast<int64_t>(lookback));
+  const auto prelast = _history.at(prelast_index);
   return last - prelast;
 }
 
@@ -161,7 +161,7 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
   _alloc = PolymorphicAllocator<size_t>(memsource);
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
   for (size_t i = 0; i < _columns.size(); i++) {
-    new_columns.push_back(_columns.at(i)->migrate(_alloc));
+    new_columns.push_back(_columns.at(i)->copy_using_allocator(_alloc));
   }
   _columns = std::move(new_columns);
 }

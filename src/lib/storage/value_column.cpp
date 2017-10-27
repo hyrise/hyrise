@@ -192,8 +192,9 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materiali
   return materialized_vector;
 }
 
+// Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
 template <typename T>
-std::shared_ptr<BaseColumn> ValueColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);
   if (is_nullable()) {
     pmr_concurrent_vector<bool> new_null_values(_null_values.value(), alloc);
