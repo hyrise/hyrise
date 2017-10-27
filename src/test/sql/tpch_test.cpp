@@ -19,8 +19,9 @@
 namespace opossum {
 
 class TPCHTest : public ::testing::TestWithParam<size_t> {
- protected:
-  void SetUp() override {
+
+ public:
+  static void SetUpTestCase() {
     std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 2);
     std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 2);
     std::shared_ptr<Table> nation = load_table("src/test/tables/tpch/nation.tbl", 2);
@@ -39,6 +40,7 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     StorageManager::get().add_table("supplier", std::move(supplier));
   }
 
+ protected:
   std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
