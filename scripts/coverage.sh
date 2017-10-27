@@ -6,7 +6,7 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr --gcov-executable="gcov -s `pwd`" -s -p -r . --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches --html --html-details -o coverage/index.html > coverage_output.txt
+./$1/hyriseCoverage && rm -fr coverage; mkdir coverage && gcovr --gcov-executable="gcov -s `pwd`" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
 # without coverage badge generation
