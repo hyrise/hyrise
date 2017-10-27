@@ -9,7 +9,7 @@ add_executable(
     operators/difference_benchmark.cpp
     operators/product_benchmark.cpp
     operators/projection_benchmark.cpp
-    operators/set_union_benchmark.cpp
+    operators/union_positions_benchmark.cpp
     operators/sort_benchmark.cpp
     operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp

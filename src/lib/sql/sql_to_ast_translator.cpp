@@ -437,7 +437,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_where(
    * If the expression is a nested expression, recursively resolve
    */
   if (expr.opType == hsql::kOpOr) {
-    auto union_unique_node = std::make_shared<UnionNode>(UnionMode::SetUnion);
+    auto union_unique_node = std::make_shared<UnionNode>(UnionMode::Positions);
     union_unique_node->set_left_child(_translate_where(*expr.expr, input_node));
     union_unique_node->set_right_child(_translate_where(*expr.expr2, input_node));
     return union_unique_node;
@@ -461,7 +461,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   if (expr.opType == hsql::kOpOr) {
-    auto union_unique_node = std::make_shared<UnionNode>(UnionMode::SetUnion);
+    auto union_unique_node = std::make_shared<UnionNode>(UnionMode::Positions);
     union_unique_node->set_left_child(_translate_having(*expr.expr, aggregate_node, input_node));
     union_unique_node->set_right_child(_translate_having(*expr.expr2, aggregate_node, input_node));
     return union_unique_node;

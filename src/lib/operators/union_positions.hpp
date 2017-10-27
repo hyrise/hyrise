@@ -66,14 +66,27 @@ namespace opossum {
  *    RowID{1, 0}
  *
  */
-class SetUnion : public AbstractReadOnlyOperator {
+class UnionPositions : public AbstractReadOnlyOperator {
  public:
-  SetUnion(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right);
+  UnionPositions(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right);
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
   const std::string name() const override;
 
  private:
+  // See docs at the top of the cpp
+  using ReferenceMatrix = std::vector<opossum::PosList>;
+  using VirtualPosList = std::vector<size_t>;
+
+  /**
+   * Comparator for performing the std::sort() of a virtual pos list.
+   * Needs to know about the ReferenceMatrix that the VirtualPosList references and is thus dubbed a "Context".
+   */
+  struct VirtualPosListCmpContext {
+    ReferenceMatrix& reference_matrix;
+    bool operator()(size_t lhs, size_t rhs) const;
+  };
+
   std::shared_ptr<const Table> _on_execute() override;
 
   /**
@@ -84,6 +97,10 @@ class SetUnion : public AbstractReadOnlyOperator {
    *    execute the operatopr. nullptr otherwise.
    */
   std::shared_ptr<const Table> _analyze_input();
+
+  UnionPositions::ReferenceMatrix _build_reference_matrix(const std::shared_ptr<const Table>& input_table) const;
+  bool _cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a,
+                                  const ReferenceMatrix& matrix_b, size_t row_idx_b) const;
 
   // In the input tables, the column indices in which a different pos_list is used than in the column left of it
   std::vector<ColumnID> _column_segment_offsets;

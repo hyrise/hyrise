@@ -5,7 +5,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "operators/set_union.hpp"
+#include "operators/union_positions.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
@@ -45,16 +45,16 @@ std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine& 
 
 namespace opossum {
 
-class SetUnionBenchmarkFixture : public benchmark::Fixture {
+class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
  public:
-  SetUnionBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
+  UnionPositionsBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
 
   void SetUp(::benchmark::State& state) override {
     const auto num_rows = state.range(0);
     const auto num_columns = state.range(1);
 
     /**
-     * Create the referenced table, that doesn't actually contain any data - but SetUnion won't care, it just
+     * Create the referenced table, that doesn't actually contain any data - but UnionPositions won't care, it just
      * operates on RowIDs
      */
     _referenced_table = std::make_shared<Table>();
@@ -108,21 +108,21 @@ class SetUnionBenchmarkFixture : public benchmark::Fixture {
   }
 };
 
-BENCHMARK_DEFINE_F(SetUnionBenchmarkFixture, Benchmark)(::benchmark::State& state) {
+BENCHMARK_DEFINE_F(UnionPositionsBenchmarkFixture, Benchmark)UnionPositionsBenchmarkFixture(::benchmark::State& state) {
   while (state.KeepRunning()) {
-    auto set_union = std::make_shared<SetUnion>(_table_wrapper_left, _table_wrapper_right);
+    auto set_union = std::make_shared<UnionPositions>(_table_wrapper_left, _table_wrapper_right);
     set_union->execute();
   }
 }
-BENCHMARK_REGISTER_F(SetUnionBenchmarkFixture, Benchmark)->Ranges({{100, 5 * 1000 * 1000}, {1, 4}});
+BENCHMARK_REGISTER_F(UnionPositionsBenchmarkFixture, Benchmark)->Ranges({{100, 5 * 1000 * 1000}, {1, 4}});
 
 /**
- * Measure what sorting and merging two pos lists would cost - that's the core of the SetUnion implementation and sets
- * a performance base line for what SetUnion could achieve in an overhead-free implementation.
+ * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
+ * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
  */
-class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
+class UnionPositionsBaseLineBenchmarkFixture : public benchmark::Fixture {
  public:
-  SetUnionBaseLineBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
+  UnionPositionsBaseLineBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
 
   void SetUp(::benchmark::State& state) override {
     auto num_table_rows = state.range(0);
@@ -138,9 +138,9 @@ class SetUnionBaseLineBenchmarkFixture : public benchmark::Fixture {
   std::shared_ptr<PosList> _pos_list_right;
 };
 
-BENCHMARK_DEFINE_F(SetUnionBaseLineBenchmarkFixture, Benchmark)(::benchmark::State& state) {
+BENCHMARK_DEFINE_F(UnionPositionsBaseLineBenchmarkFixture, Benchmark)(::benchmark::State& state) {
   while (state.KeepRunning()) {
-    // Create copies, this would need to be done the SetUnion Operator as well
+    // Create copies, this would need to be done the UnionPositions Operator as well
     auto left = *_pos_list_left;
     auto right = *_pos_list_right;
 
@@ -152,5 +152,5 @@ BENCHMARK_DEFINE_F(SetUnionBaseLineBenchmarkFixture, Benchmark)(::benchmark::Sta
     std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
   }
 }
-BENCHMARK_REGISTER_F(SetUnionBaseLineBenchmarkFixture, Benchmark)->Range(100, 5 * 1000 * 1000);
+BENCHMARK_REGISTER_F(UnionPositionsBaseLineBenchmarkFixture, Benchmark)->Range(100, 5 * 1000 * 1000);
 }  // namespace opossum

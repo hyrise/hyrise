@@ -113,7 +113,7 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
 };
 
-const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::SetUnion, "SetUnion"}};
+const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({
