@@ -6,6 +6,6 @@ namespace opossum {
 
 ShowTablesNode::ShowTablesNode() : AbstractNonOptimizableASTNode(ASTNodeType::ShowTables) {}
 
-std::string ShowTablesNode::description() const { return "ShowTables"; }
+std::string ShowTablesNode::description() const { return "[ShowTables]"; }
 
 }  // namespace opossum

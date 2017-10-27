@@ -18,7 +18,7 @@ UpdateNode::UpdateNode(const std::string& table_name,
 std::string UpdateNode::description() const {
   std::ostringstream desc;
 
-  desc << "Update " << _table_name;
+  desc << "[Update] Table: '" << _table_name << "'";
 
   return desc.str();
 }
