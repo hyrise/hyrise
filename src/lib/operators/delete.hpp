@@ -21,7 +21,6 @@ class Delete : public AbstractReadWriteOperator {
   explicit Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete);
 
   const std::string name() const override;
-  uint8_t num_in_tables() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

@@ -20,9 +20,21 @@ void AbstractOperator::execute() {
 
   auto transaction_context = this->transaction_context();
 
-  if (transaction_context) transaction_context->on_operator_started();
-  _output = _on_execute(transaction_context);
-  if (transaction_context) transaction_context->on_operator_finished();
+  if (transaction_context) {
+    /**
+     * Do not execute Operators if transaction has been aborted.
+     * Not doing so is crucial in order to make sure no other
+     * tasks of the Transaction run while the Rollback happens.
+     */
+    if (transaction_context->aborted()) {
+      return;
+    }
+    transaction_context->on_operator_started();
+    _output = _on_execute(transaction_context);
+    transaction_context->on_operator_finished();
+  } else {
+    _output = _on_execute(transaction_context);
+  }
 
   // release any temporary data if possible
   _on_cleanup();

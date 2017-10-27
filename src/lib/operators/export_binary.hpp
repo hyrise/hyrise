@@ -32,16 +32,6 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   const std::string name() const final;
 
-  /**
-   * This operator allows one table as input
-   */
-  uint8_t num_in_tables() const final;
-
-  /**
-   * This operator has one table as output.
-   */
-  uint8_t num_out_tables() const final;
-
  private:
   // Path of the binary file
   const std::string _filename;

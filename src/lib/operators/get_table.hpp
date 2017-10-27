@@ -15,8 +15,6 @@ class GetTable : public AbstractReadOnlyOperator {
 
   const std::string name() const override;
   const std::string description() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
 
   const std::string& table_name() const;
 

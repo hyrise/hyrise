@@ -117,18 +117,6 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
 
-TEST_F(OperatorsPrintTest, NumInputTables) {
-  auto pr = std::make_shared<opossum::Print>(gt, output);
-
-  EXPECT_EQ(pr->num_in_tables(), 1);
-}
-
-TEST_F(OperatorsPrintTest, NumOutputTables) {
-  auto pr = std::make_shared<opossum::Print>(gt, output);
-
-  EXPECT_EQ(pr->num_out_tables(), 1);
-}
-
 TEST_F(OperatorsPrintTest, OperatorName) {
   auto pr = std::make_shared<opossum::Print>(gt, output);
 

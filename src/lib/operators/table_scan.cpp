@@ -63,10 +63,6 @@ const std::string TableScan::description() const {
   return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
 }
 
-uint8_t TableScan::num_in_tables() const { return 1; }
-
-uint8_t TableScan::num_out_tables() const { return 1; }
-
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
   // Replace value in the new operator, if it’s a parameter and an argument is available.
   if (is_placeholder(_right_parameter)) {

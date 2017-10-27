@@ -71,10 +71,6 @@ void JoinSortMerge::_on_cleanup() { _impl.reset(); }
 
 const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
 
-uint8_t JoinSortMerge::num_in_tables() const { return 2u; }
-
-uint8_t JoinSortMerge::num_out_tables() const { return 1u; }
-
 /**
 ** Start of implementation.
 **/

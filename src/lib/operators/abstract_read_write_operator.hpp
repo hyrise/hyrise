@@ -55,8 +55,6 @@ class AbstractReadWriteOperator : public AbstractOperator,
 
   ReadWriteOperatorState state() const;
 
-  uint8_t num_out_tables() const override;
-
  protected:
   /**
    * Executes the operator. The context parameter is used to lock the rows that should be modified.

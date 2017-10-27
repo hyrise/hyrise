@@ -19,8 +19,6 @@ ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std
     : AbstractReadOnlyOperator(in), _filename(filename) {}
 
 const std::string ExportCsv::name() const { return "ExportCSV"; }
-uint8_t ExportCsv::num_in_tables() const { return 1; }
-uint8_t ExportCsv::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> ExportCsv::_on_execute() {
   CsvConfig config{};
