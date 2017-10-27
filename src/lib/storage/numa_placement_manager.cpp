@@ -36,13 +36,11 @@ NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topol
     _memory_resources.push_back(NUMAMemoryResource(i, std::string(msource_name)));
   }
 
-  _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval, [](size_t) {
-    ChunkMetricsCollectionTask().execute();
-  });
+  _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval,
+                                                           [](size_t) { ChunkMetricsCollectionTask().execute(); });
 
-  _migration_thread = std::make_unique<PausableLoopThread>(_options.migration_interval, [this](size_t) {
-    MigrationPreparationTask(_options).execute();
-  });
+  _migration_thread = std::make_unique<PausableLoopThread>(
+      _options.migration_interval, [this](size_t) { MigrationPreparationTask(_options).execute(); });
 }
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
