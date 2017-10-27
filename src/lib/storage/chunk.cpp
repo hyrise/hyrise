@@ -133,16 +133,16 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
   return result;
 }
 
-bool Chunk::references_only_one_table() const {
+bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
   auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(ColumnID{0}));
+  if (first_column == nullptr) return false;
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
   for (ColumnID i{1}; i < column_count(); ++i) {
     const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(i));
-
     if (column == nullptr) return false;
 
     if (first_referenced_table != column->referenced_table()) return false;

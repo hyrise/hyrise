@@ -24,10 +24,6 @@ ImportBinary::ImportBinary(const std::string& filename, const std::optional<std:
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
-uint8_t ImportBinary::num_in_tables() const { return 0; }
-
-uint8_t ImportBinary::num_out_tables() const { return 1; }
-
 template <typename T>
 pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<T> values(count);

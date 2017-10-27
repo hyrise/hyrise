@@ -45,12 +45,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Returns the name of the operator
   const std::string name() const final;
 
-  // This operator has no inputs.
-  uint8_t num_in_tables() const final;
-
-  // This operator has one table as output.
-  uint8_t num_out_tables() const final;
-
  private:
   /*
    * Reads the header from the given file.

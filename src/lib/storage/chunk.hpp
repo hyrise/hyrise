@@ -180,7 +180,7 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
 
-  bool references_only_one_table() const;
+  bool references_exactly_one_table() const;
 
   size_t byte_size() const { return 0; }
 

@@ -55,12 +55,12 @@ void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const Abst
   }
   file << "]" << std::endl;
 
-  if (op->num_in_tables() >= 1) {
+  if (op->input_left() != nullptr) {
     _visualize_dataflow(op->input_left(), op, file);
     _visualize_subtree(op->input_left(), file);
   }
 
-  if (op->num_in_tables() == 2) {
+  if (op->input_right() != nullptr) {
     _visualize_dataflow(op->input_right(), op, file);
     _visualize_subtree(op->input_right(), file);
   }
