@@ -17,63 +17,98 @@ class TableStatistics;
 
 AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
-bool AbstractASTNode::is_optimizable() const { return true; }
-
-ASTChildSide AbstractASTNode::get_child_side() const {
-  auto parent = this->parent();
-  Assert(parent, "get_child_side() can only be called on node with a parent");
-  return parent->left_child() == shared_from_this() ? ASTChildSide::Left : ASTChildSide::Right;
+bool AbstractASTNode::is_optimizable() const {
+  return false;
 }
 
-std::shared_ptr<AbstractASTNode> AbstractASTNode::parent() const { return _parent.lock(); }
+std::vector<std::shared_ptr<AbstractASTNode>> AbstractASTNode::parents() const {
+  std::vector<std::shared_ptr<AbstractASTNode>> parents;
+  parents.reserve(_parents.size());
 
-void AbstractASTNode::clear_parent() {
-  // _parent is a weak_ptr that we need to lock
-  auto parent_ptr = parent();
-  if (!parent_ptr) return;
-
-  if (parent_ptr->_left_child.get() == this) {
-    parent_ptr->set_left_child(nullptr);
-  } else if (parent_ptr->_right_child.get() == this) {
-    parent_ptr->set_right_child(nullptr);
-  } else {
-    Fail("Invalid AST: ASTNode is not child of his parent.");
+  for (const auto& parent_weak_ptr : _parents) {
+    const auto parent = parent_weak_ptr.lock();
+    DebugAssert(parent, "Failed to lock parent");
+    parents.emplace_back(parent);
   }
-  _parent = {};
+
+  return parents;
 }
 
-const std::shared_ptr<AbstractASTNode>& AbstractASTNode::left_child() const { return _left_child; }
+void AbstractASTNode::remove_parent(const std::shared_ptr<AbstractASTNode> &parent) {
+  const auto child_side = get_child_side(parent);
+  parent->set_child(child_side, nullptr);
+}
+
+void AbstractASTNode::clear_parents() {
+  /**
+   * Calls remove_parent() which will do another scan of the _parents vector - even though we already know
+   * the index in this loop . To fend of code duplication, do it anyway.
+   */
+  for (auto &parent_weak_ptr : _parents) {
+    auto parent = parent_weak_ptr.lock();
+    DebugAssert(parent, "Failed to lock parent");
+    remove_parent(parent);
+  }
+}
+
+ASTChildSide AbstractASTNode::get_child_side(const std::shared_ptr<AbstractASTNode> & parent) const {
+  if (parent->_children[0].get() == this) {
+    return ASTChildSide::Left;
+  } else if (parent->_children[1].get() == this) {
+    return ASTChildSide::Right;
+  } else {
+    Fail("Specified parent node is not actually a parent node of this node.");
+    return ASTChildSide::Left; // Make compilers happy
+  }
+}
+
+std::vector<ASTChildSide> AbstractASTNode::get_child_sides() const {
+  std::vector<ASTChildSide> child_sides;
+  child_sides.reserve(_parents.size());
+
+  for (const auto& parent_weak_ptr : _parents) {
+    const auto parent = parent_weak_ptr.lock();
+    DebugAssert(parent, "Failed to lock parent");
+    child_sides.emplace_back(get_child_side(parent));
+  }
+
+  return child_sides;
+}
+
+std::shared_ptr<AbstractASTNode> AbstractASTNode::left_child() const { return _children[0]; }
 
 void AbstractASTNode::set_left_child(const std::shared_ptr<AbstractASTNode>& left) {
-  if (left == _left_child) return;
-
-  DebugAssert(left || !_right_child, "Node can't have right child and no left child");
-
-  _left_child = left;
-  if (left) left->_parent = shared_from_this();
-
-  _on_child_changed();
+  set_child(ASTChildSide::Left, left);
 }
 
-const std::shared_ptr<AbstractASTNode>& AbstractASTNode::right_child() const { return _right_child; }
+std::shared_ptr<AbstractASTNode> AbstractASTNode::right_child() const { return _children[1]; }
 
 void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode>& right) {
-  if (right == _right_child) return;
-
-  DebugAssert(_left_child != nullptr, "Cannot set right child without having a left child.");
-
-  _right_child = right;
-  if (right) right->_parent = shared_from_this();
-
-  _on_child_changed();
+  set_child(ASTChildSide::Right, right);
 }
 
 void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child) {
-  if (side == ASTChildSide::Left) {
-    set_left_child(child);
-  } else {
-    set_right_child(child);
+  const auto child_index = static_cast<int>(side);
+  auto &current_child = _children[child_index];
+
+  if (current_child == child) {
+    return;
   }
+
+  // Untie from previous child
+  if (current_child) {
+    current_child->_remove_parent_raw(shared_from_this());
+  }
+
+  /**
+   * Tie in the new child
+   */
+  current_child = child;
+  if (current_child) {
+    current_child->_add_parent_raw(shared_from_this());
+  }
+
+  _on_child_changed();
 }
 
 ASTNodeType AbstractASTNode::type() const { return _type; }
@@ -90,10 +125,10 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::get_statistics() {
 
 std::shared_ptr<TableStatistics> AbstractASTNode::derive_statistics_from(
     const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
-  DebugAssert(static_cast<bool>(_left_child),
+  DebugAssert(left_child,
               "Default implementation of derive_statistics_from() requires a left child, override in concrete node "
               "implementation for different behavior");
-  DebugAssert(!static_cast<bool>(_right_child),
+  DebugAssert(!right_child,
               "Default implementation of derive_statistics_from() cannot have a right_child");
 
   return left_child->get_statistics();
@@ -104,8 +139,8 @@ const std::vector<std::string>& AbstractASTNode::output_column_names() const {
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->output_column_names();
+  DebugAssert(left_child() && !right_child(), "Node has no or two inputs and therefore needs to override this function.");
+  return left_child()->output_column_names();
 }
 
 const std::vector<ColumnID>& AbstractASTNode::output_column_id_to_input_column_id() const {
@@ -113,11 +148,11 @@ const std::vector<ColumnID>& AbstractASTNode::output_column_id_to_input_column_i
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->output_column_id_to_input_column_id();
+  DebugAssert(left_child() && !right_child(), "Node has no or two inputs and therefore needs to override this function.");
+  return left_child()->output_column_id_to_input_column_id();
 }
 
-size_t AbstractASTNode::output_col_count() const { return output_column_names().size(); }
+size_t AbstractASTNode::output_column_count() const { return output_column_names().size(); }
 
 ColumnID AbstractASTNode::get_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
@@ -133,15 +168,14 @@ std::optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_referenc
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(_left_child,
-              "Node has no left child and therefore must override this function OR the function is not supported on "
-              "this node type.");
+  DebugAssert(left_child() && !right_child(),
+              "Node has no or two inputs and therefore needs to override this function");
 
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {
     return {};
   } else {
-    return _left_child->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+    return left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
   }
 }
 
@@ -149,18 +183,17 @@ bool AbstractASTNode::knows_table(const std::string& table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
-  DebugAssert(_left_child,
-              "Node has no left child and therefore must override this function OR the function is not supported on "
-              "this node type.");
+  DebugAssert(left_child() && !right_child(),
+              "Node has no or two inputs and therefore needs to override this function");
   if (_table_alias) {
     return *_table_alias == table_name;
   } else {
-    return _left_child->knows_table(table_name);
+    return left_child()->knows_table(table_name);
   }
 }
 
 std::vector<ColumnID> AbstractASTNode::get_output_column_ids() const {
-  std::vector<ColumnID> column_ids(output_col_count());
+  std::vector<ColumnID> column_ids(output_column_count());
   std::iota(column_ids.begin(), column_ids.end(), 0);
   return column_ids;
 }
@@ -169,9 +202,8 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
-  DebugAssert(_left_child,
-              "Node has no left child and therefore must override this function OR the function is not supported on "
-              "this node type.");
+  DebugAssert(left_child() && !right_child(),
+              "Node has no or two inputs and therefore needs to override this function.");
 
   if (!knows_table(table_name)) {
     return {};
@@ -181,37 +213,56 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
     return get_output_column_ids();
   }
 
-  return _left_child->get_output_column_ids_for_table(table_name);
+  return left_child()->get_output_column_ids_for_table(table_name);
 }
 
 void AbstractASTNode::remove_from_tree() {
-  Assert(!_right_child, "Can't remove a node with two children");
+  Assert(left_child() && !right_child(), "Can only rermove nodes that only have a left child");
 
-  auto parent = _parent.lock();
+  /**
+   * Back up parents and in which child side they hold this node
+   */
+  auto parents = this->parents();
+  auto child_sides = this->get_child_sides();
 
-  if (parent) {
-    parent->set_left_child(_left_child);  // Note: It's totally fine for _left_child to be a nullptr
-  } else if (_left_child) {
-    _left_child->clear_parent();
+  // This will call get_child_side() again, but let's avoid code duplication
+  clear_parents();
+
+  /**
+   * Hold left_child ptr in extra variable and untie it from this node
+   */
+  auto left_child = this->left_child();
+  set_left_child(nullptr);
+
+  /**
+   * Tie this nodes previous parents with this nodes previous left child
+   */
+  if (left_child) {
+    for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
+      parents[parent_idx]->set_child(child_sides[parent_idx], left_child);
+    }
   }
 }
 
 void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace) {
-  Assert(!_left_child && !_right_child && !parent(),
-         "Can't put a Node that's already part of a tree into another tree. Call remove_from_tree() first");
+  DebugAssert(_parents.empty(), "Node can't have parents");
+  DebugAssert(!left_child() && !right_child(), "Node can't have children");
 
-  set_left_child(node_to_replace->left_child());
-  set_right_child(node_to_replace->right_child());
+  const auto parents = node_to_replace->parents();
+  const auto child_sides = node_to_replace->get_child_sides();
+  auto left_child = node_to_replace->left_child();
+  auto right_child = node_to_replace->right_child();
 
-  auto parent = node_to_replace->parent();
-  if (parent) {
-    if (parent->left_child() == node_to_replace) {
-      parent->set_left_child(shared_from_this());
-    } else {
-      Assert(parent->right_child() == shared_from_this(), "Invalid binary tree");
-      parent->set_right_child(shared_from_this());
-    }
+  node_to_replace->clear_parents();
+  node_to_replace->set_left_child(nullptr);
+  node_to_replace->set_right_child(nullptr);
+
+  for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
+    parents[parent_idx]->set_child(child_sides[parent_idx], shared_from_this());
   }
+
+  set_left_child(left_child);
+  set_right_child(right_child);
 }
 
 void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
@@ -245,14 +296,15 @@ void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
 }
 
 std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
-  Assert(!_right_child, "Nodes with both children need to override get_verbose_column_name()");
+  DebugAssert(!right_child(),
+              "Node with right child needs to override this function.");
 
   /**
    *  A AbstractASTNode without a left child should generally be a StoredTableNode, which overrides this function. But
    *  since get_verbose_column_name() is just a convenience function we don't want to force anyone to override this
    *  function when experimenting with nodes. Thus we handle the case of no left child here as well.
    */
-  if (!_left_child) {
+  if (!left_child()) {
     if (_table_alias) {
       return *_table_alias + "." + output_column_names()[column_id];
     }
@@ -260,7 +312,7 @@ std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
     return output_column_names()[column_id];
   }
 
-  const auto verbose_name = _left_child->get_verbose_column_name(column_id);
+  const auto verbose_name = left_child()->get_verbose_column_name(column_id);
 
   if (_table_alias) {
     return *_table_alias + "." + verbose_name;
@@ -270,8 +322,8 @@ std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
 }
 
 std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
-  std::vector<std::string> verbose_names(output_col_count());
-  for (auto column_id = ColumnID{0}; column_id < output_col_count(); ++column_id) {
+  std::vector<std::string> verbose_names(output_column_count());
+  for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
     verbose_names[column_id] = get_verbose_column_name(column_id);
   }
   return verbose_names;
@@ -289,6 +341,29 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
     }
   }
   return reference;
+}
+
+void AbstractASTNode::_remove_parent_raw(const std::shared_ptr<AbstractASTNode> &parent) {
+  const auto iter = std::find_if(_parents.begin(), _parents.end(), [&] (const auto & rhs) {
+    return parent == rhs.lock();
+  });
+  DebugAssert(iter != _parents.end(), "Specified parent node is not actually a parent node of this node.");
+
+  /**
+   * TODO(anybody) This is actually a O(n) operation, could be O(1) by just swapping the last element into the deleted
+   * element.
+   */
+  _parents.erase(iter);
+}
+
+void AbstractASTNode::_add_parent_raw(const std::shared_ptr<AbstractASTNode> &parent) {
+#if IS_DEBUG
+  const auto iter = std::find_if(_parents.begin(), _parents.end(), [&] (const auto & rhs) {
+    return parent == rhs.lock();
+  });
+  DebugAssert(iter == _parents.end(), "Specified new parent node is already a parent node.");
+#endif
+  _parents.emplace_back(parent);
 }
 
 std::string NamedColumnReference::as_string() const {

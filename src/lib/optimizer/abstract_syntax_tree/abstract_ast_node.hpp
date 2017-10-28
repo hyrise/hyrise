@@ -56,32 +56,43 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   explicit AbstractASTNode(ASTNodeType node_type);
 
   /**
-   * Returns whether this node shall be considered by the optimizer or not.
+   * @returns whether the Optimizer should consider this node
    */
   virtual bool is_optimizable() const;
+
+  // @{
+  /**
+   * Set and get the parents/children of this node.
+   *
+   * The _parents are implicitly set in set_left_child/set_right_child.
+   * For removing parents use remove_parent() or clear_parent().
+   *
+   * set_child() is a shorthand for set_left_child() or set_right_child(), useful if the side is a runtime value
+   */
+
+  /**
+   * Locks all parents and returns them as shared_ptrs
+   */
+  std::vector<std::shared_ptr<AbstractASTNode>> parents() const;
+
+  void remove_parent(const std::shared_ptr<AbstractASTNode> &parent);
+  void clear_parents();
 
   /**
    * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
-  ASTChildSide get_child_side() const;
+  ASTChildSide get_child_side(const std::shared_ptr<AbstractASTNode> & parent) const;
 
-  // @{
   /**
-   * Set and get the parent/children of this node.
-   *
-   * The _parent is implicitly set in set_left_child/set_right_child.
-   * For un-setting _parent use clear_parent().
-   *
-   * set_child() is a shorthand for set_left_child() or set_right_child(), useful if the side is a runtime value
+   * @returns {get_child_side(parents()[0], ..., get_child_side(parents()[n-1])}
    */
-  std::shared_ptr<AbstractASTNode> parent() const;
-  void clear_parent();
+  std::vector<ASTChildSide> get_child_sides() const;
 
-  const std::shared_ptr<AbstractASTNode>& left_child() const;
+  std::shared_ptr<AbstractASTNode> left_child() const;
   void set_left_child(const std::shared_ptr<AbstractASTNode>& left);
 
-  const std::shared_ptr<AbstractASTNode>& right_child() const;
+  std::shared_ptr<AbstractASTNode> right_child() const;
   void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
 
   void set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child);
@@ -118,7 +129,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   virtual const std::vector<ColumnID>& output_column_id_to_input_column_id() const;
 
-  size_t output_col_count() const;
+  size_t output_column_count() const;
 
   // @{
   /**
@@ -168,7 +179,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
    * on this.
    *
-   * Returns all ColumnIDs of this node, i.e., a vector with [0, output_col_count)
+   * Returns all ColumnIDs of this node, i.e., a vector with [0, output_column_count)
    */
   virtual std::vector<ColumnID> get_output_column_ids() const;
 
@@ -184,15 +195,16 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const;
 
   /**
-   * If a node only has a left child, it is possible to remove this node from the tree, connecting this
-   * node's child with this node's parent.
-   * Fails if this node has two children
+   * Makes this nodes parents point to this node's left child
+   * Unties this node's child from this node
+   *
+   * @pre this has no right child
    */
   void remove_from_tree();
 
   /**
    * Replaces @param node_to_replace with this node.
-   * Fails if this node was already part of a tree, i.e. has a parent or children
+   * @pre this has neither parent nor children
    */
   void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
 
@@ -223,6 +235,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   virtual std::string get_verbose_column_name(ColumnID column_id) const;
 
+  /**
+   * @returns {get_verbose_column_name(0), ..., get_verbose_column_name(n-1)}
+   */
   std::vector<std::string> get_verbose_column_names() const;
   // @}
 
@@ -243,11 +258,19 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
-  std::weak_ptr<AbstractASTNode> _parent;
-  std::shared_ptr<AbstractASTNode> _left_child;
-  std::shared_ptr<AbstractASTNode> _right_child;
+  std::vector<std::weak_ptr<AbstractASTNode>> _parents;
+  std::array<std::shared_ptr<AbstractASTNode>, 2> _children;
 
   std::shared_ptr<TableStatistics> _statistics;
+
+  // @{
+  /**
+   * Add or remove a parent without manipulating this parents child ptr. For internal usage in set_left_child(),
+   * set_right_child(), remove_parent
+   */
+  void _remove_parent_raw(const std::shared_ptr<AbstractASTNode> &parent);
+  void _add_parent_raw(const std::shared_ptr<AbstractASTNode> &parent);
+  // @}
 };
 
 }  // namespace opossum

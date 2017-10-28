@@ -90,7 +90,12 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(cross_join_node);
 
+  predicate_node->print();
+
+  // Apply rule
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  output->print();
 
   // Verification of the new JOIN
   ASSERT_INNER_JOIN_NODE(output, ScanType::OpEquals, ColumnID{0}, ColumnID{0});

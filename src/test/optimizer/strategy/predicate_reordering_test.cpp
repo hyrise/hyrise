@@ -21,7 +21,7 @@
 
 #include "utils/assert.hpp"
 
-#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 
 namespace opossum {
 
@@ -259,8 +259,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);
   auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
   auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 30);
-  auto table_0 = std::make_shared<MockTableNode>(table_statistics);
-  auto table_1 = std::make_shared<MockTableNode>(table_statistics);
+  auto table_0 = std::make_shared<MockNode>(table_statistics);
+  auto table_1 = std::make_shared<MockNode>(table_statistics);
 
   predicate_1->set_left_child(table_0);
   predicate_0->set_left_child(predicate_1);

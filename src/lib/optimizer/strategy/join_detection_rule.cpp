@@ -54,8 +54,18 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
 
   // Go up in AST to find corresponding PredicateNode
   std::shared_ptr<AbstractASTNode> node = cross_join;
-  while (node->parent() != nullptr) {
-    node = node->parent();
+  while (true) {
+    const auto parents = node->parents();
+
+    /**
+     * Can't deal with the parents.size() > 0 case - would need to check that a potential predicate exists in all
+     * parents and this is too much work considering the JoinDetectionRule will be removed soon-ish (TM)
+     */
+    if (parents.empty() || parents.size() > 1) {
+      break;
+    }
+
+    node = parents[0];
 
     /**
      * TODO(anyone)
@@ -90,8 +100,8 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
        */
       const auto predicate_left_column_id = predicate_node->column_id();
       const auto predicate_right_column_id = boost::get<ColumnID>(predicate_node->value());
-      const auto cross_left_num_cols = cross_join->left_child()->output_col_count();
-      const auto cross_right_num_cols = cross_join->right_child()->output_col_count();
+      const auto cross_left_num_cols = cross_join->left_child()->output_column_count();
+      const auto cross_right_num_cols = cross_join->right_child()->output_column_count();
 
       if (_is_join_condition(predicate_left_column_id, predicate_right_column_id, cross_left_num_cols,
                              cross_right_num_cols)) {

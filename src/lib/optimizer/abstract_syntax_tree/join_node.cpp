@@ -42,7 +42,7 @@ std::string JoinNode::description() const {
     desc << " " << get_verbose_column_name(_join_column_ids->first);
     desc << " " << scan_type_to_string.left.at(*_scan_type);
     desc << " " << get_verbose_column_name(ColumnID{
-                       static_cast<ColumnID::base_type>(left_child()->output_col_count() + _join_column_ids->second)});
+                       static_cast<ColumnID::base_type>(left_child()->output_column_count() + _join_column_ids->second)});
   }
 
   return desc.str();
@@ -112,7 +112,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     output_column_id = *left_column_id;
   } else {
     input_column_id = *right_column_id;
-    output_column_id = left_child()->output_col_count() + *right_column_id;
+    output_column_id = left_child()->output_column_count() + *right_column_id;
   }
 
   DebugAssert(_output_column_id_to_input_column_id[output_column_id] == input_column_id,
@@ -177,7 +177,7 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   const auto input_column_ids_for_table = right_child()->get_output_column_ids_for_table(table_name);
   std::vector<ColumnID> output_column_ids_for_table;
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto idx = left_child()->output_col_count() + input_column_id;
+    const auto idx = left_child()->output_column_count() + input_column_id;
     output_column_ids_for_table.emplace_back(static_cast<ColumnID::base_type>(idx));
   }
 
@@ -193,11 +193,11 @@ JoinMode JoinNode::join_mode() const { return _join_mode; }
 std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
   Assert(left_child() && right_child(), "Can't generate column names without children being set");
 
-  if (column_id < left_child()->output_col_count()) {
+  if (column_id < left_child()->output_column_count()) {
     return left_child()->get_verbose_column_name(column_id);
   }
   return right_child()->get_verbose_column_name(
-      ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_col_count())});
+      ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_column_count())});
 }
 
 void JoinNode::_on_child_changed() {
@@ -221,8 +221,8 @@ void JoinNode::_on_child_changed() {
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
    */
-  const auto num_left_columns = left_child()->output_col_count();
-  const auto num_right_columns = right_child()->output_col_count();
+  const auto num_left_columns = left_child()->output_column_count();
+  const auto num_right_columns = right_child()->output_column_count();
 
   _output_column_id_to_input_column_id.clear();
   _output_column_id_to_input_column_id.resize(num_left_columns + num_right_columns);

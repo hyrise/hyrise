@@ -44,8 +44,8 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& n
 bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
   // Store original child and parent
   auto child = predicates.back()->left_child();
-  auto parent = predicates.front()->parent();
-  const auto side_of_parent = predicates.front()->get_child_side();
+  const auto parents = predicates.front()->parents();
+  const auto child_sides = predicates.front()->get_child_sides();
 
   const auto sort_predicate = [&](auto& l, auto& r) {
     return l->derive_statistics_from(child)->row_count() > r->derive_statistics_from(child)->row_count();
@@ -60,7 +60,10 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
 
   // Ensure that nodes are chained correctly
   predicates.back()->set_left_child(child);
-  parent->set_child(side_of_parent, predicates.front());
+
+  for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
+    parents[parent_idx]->set_child(child_sides[parent_idx], predicates.front());
+  }
 
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
     predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);

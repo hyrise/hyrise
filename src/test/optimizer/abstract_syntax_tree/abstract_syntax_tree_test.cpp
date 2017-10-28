@@ -25,49 +25,49 @@ class AbstractSyntaxTreeTest : public BaseTest {
   void TearDown() override { StorageManager::get().reset(); }
 };
 
-TEST_F(AbstractSyntaxTreeTest, ParentTest) {
+TEST_F(AbstractSyntaxTreeTest, SimpleParentTest) {
   const auto table_node = std::make_shared<StoredTableNode>("a");
 
   ASSERT_EQ(table_node->left_child(), nullptr);
   ASSERT_EQ(table_node->right_child(), nullptr);
-  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_TRUE(table_node->parents().empty());
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
   const auto& expressions = Expression::create_columns(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parent(), projection_node);
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node);
   ASSERT_EQ(projection_node->right_child(), nullptr);
-  ASSERT_EQ(projection_node->parent(), nullptr);
+  ASSERT_TRUE(projection_node->parents().empty());
 }
 
-TEST_F(AbstractSyntaxTreeTest, ClearParentTest) {
+TEST_F(AbstractSyntaxTreeTest, SimpleClearParentsTest) {
   const auto table_node = std::make_shared<StoredTableNode>("a");
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 
-  table_node->clear_parent();
+  table_node->clear_parents();
 
-  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_TRUE(table_node->parents().empty());
   ASSERT_EQ(predicate_node->left_child(), nullptr);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 }
 
 TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
@@ -75,33 +75,33 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
 
   ASSERT_EQ(table_node->left_child(), nullptr);
   ASSERT_EQ(table_node->right_child(), nullptr);
-  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_TRUE(table_node->parents().empty());
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 
   const auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, "b");
   predicate_node_2->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parent(), predicate_node_2);
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node_2});
   ASSERT_EQ(predicate_node_2->left_child(), predicate_node);
   ASSERT_EQ(predicate_node_2->right_child(), nullptr);
-  ASSERT_EQ(predicate_node_2->parent(), nullptr);
+  ASSERT_TRUE(predicate_node_2->parents().empty());
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
   const auto& expressions = Expression::create_columns(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
-  ASSERT_EQ(predicate_node_2->parent(), projection_node);
+  ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node_2);
   ASSERT_EQ(projection_node->right_child(), nullptr);
-  ASSERT_EQ(projection_node->parent(), nullptr);
+  ASSERT_TRUE(projection_node->parents().empty());
 }
 
 TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
@@ -110,7 +110,7 @@ TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
 
   ASSERT_EQ(join_node->left_child(), nullptr);
   ASSERT_EQ(join_node->right_child(), nullptr);
-  ASSERT_EQ(join_node->parent(), nullptr);
+  ASSERT_TRUE(join_node->parents().empty());
 
   const auto table_a_node = std::make_shared<StoredTableNode>("a");
   const auto table_b_node = std::make_shared<StoredTableNode>("b");
@@ -120,10 +120,10 @@ TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
 
   ASSERT_EQ(join_node->left_child(), table_a_node);
   ASSERT_EQ(join_node->right_child(), table_b_node);
-  ASSERT_EQ(join_node->parent(), nullptr);
+  ASSERT_TRUE(join_node->parents().empty());
 
-  ASSERT_EQ(table_a_node->parent(), join_node);
-  ASSERT_EQ(table_b_node->parent(), join_node);
+  ASSERT_EQ(table_a_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{join_node});
+  ASSERT_EQ(table_b_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{join_node});
 }
 
 TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
