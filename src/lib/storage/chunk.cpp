@@ -32,13 +32,13 @@ Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(),
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter,
              const bool has_mvcc_columns)
     : _alloc(alloc), _access_counter(access_counter) {
-  if (has_mvcc_columns) _mvcc_columns = std::allocate_shared<MvccColumns>(alloc);
+  if (has_mvcc_columns) _mvcc_columns = std::make_shared<MvccColumns>();
 }
 
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns, const bool has_access_counter)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
-  if (has_mvcc_columns) _mvcc_columns = std::allocate_shared<MvccColumns>(alloc);
-  if (has_access_counter) _access_counter = std::allocate_shared<AccessCounter>(alloc, alloc);
+  if (has_mvcc_columns) _mvcc_columns = std::make_shared<MvccColumns>();
+  if (has_access_counter) _access_counter = std::make_shared<AccessCounter>(alloc);
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
