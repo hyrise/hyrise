@@ -95,6 +95,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::shared_ptr<AbstractASTNode> right_child() const;
   void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
 
+  std::shared_ptr<AbstractASTNode> child(ASTChildSide side) const;
+
   void set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child);
   // @}
 

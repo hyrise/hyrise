@@ -40,12 +40,9 @@ void AbstractASTNode::remove_parent(const std::shared_ptr<AbstractASTNode> &pare
 }
 
 void AbstractASTNode::clear_parents() {
-  /**
-   * Calls remove_parent() which will do another scan of the _parents vector - even though we already know
-   * the index in this loop . To fend of code duplication, do it anyway.
-   */
-  for (auto &parent_weak_ptr : _parents) {
-    auto parent = parent_weak_ptr.lock();
+  // Don't use for-each loop here, as remove_parent manipulates the _parents vector
+  while (!_parents.empty()) {
+    auto parent = _parents.front().lock();
     DebugAssert(parent, "Failed to lock parent");
     remove_parent(parent);
   }
@@ -87,7 +84,15 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode>& ri
   set_child(ASTChildSide::Right, right);
 }
 
+std::shared_ptr<AbstractASTNode> AbstractASTNode::child(ASTChildSide side) const {
+  const auto child_index = static_cast<int>(side);
+  return _children[child_index];
+}
+
 void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child) {
+  /**
+   *  We need a reference to current_child, so not calling this->child(side)
+   */
   const auto child_index = static_cast<int>(side);
   auto &current_child = _children[child_index];
 

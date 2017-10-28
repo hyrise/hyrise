@@ -15,6 +15,7 @@ namespace opossum {
  */
 class MockNode : public AbstractASTNode {
  public:
+  MockNode();
   explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
 
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
@@ -22,9 +23,6 @@ class MockNode : public AbstractASTNode {
 
   std::string description() const override;
   std::string get_verbose_column_name(ColumnID column_id) const override;
-
- protected:
-  void _on_child_changed() override;
 
  private:
   std::vector<std::string> _output_column_names;

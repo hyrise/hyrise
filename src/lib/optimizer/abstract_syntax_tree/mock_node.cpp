@@ -9,6 +9,9 @@
 
 namespace opossum {
 
+MockNode::MockNode() : AbstractASTNode(ASTNodeType::Mock) {
+}
+
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractASTNode(ASTNodeType::Mock) {
   set_statistics(statistics);
 
@@ -33,8 +36,6 @@ std::string MockNode::get_verbose_column_name(ColumnID column_id) const {
   }
   return output_column_names()[column_id];
 }
-
-void MockNode::_on_child_changed() { Fail("MockNode cannot have children."); }
 
 std::string MockNode::description() const { return "[MockTable]"; }
 }  // namespace opossum
