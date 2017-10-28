@@ -119,6 +119,7 @@ TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
   // Initially all chunks should reside on node 0
   EXPECT_EQ(count_chunks_by_node(table)[0], _chunk_count);
 
+  // Set mocked chunk access times
   for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
     auto& chunk = table->get_chunk(i);
     for (size_t j = 0; j < 100; j++) {
@@ -132,7 +133,7 @@ TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
 
   // Simulate chunk accesses, ChunkMetricsCollectionTask should pick
   // those up
-  for (size_t j = 0; j < 150; j++) {
+  for (size_t j = 0; j < 120; j++) {
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
       auto& chunk = table->get_chunk(i);
       chunk.access_counter()->increment(100);
