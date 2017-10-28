@@ -55,6 +55,11 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
     return false;
   }
 
+  // Untie predicates from AST, so we can freely retie them
+  for (auto& predicate : predicates) {
+    predicate->remove_from_tree();
+  }
+
   // Sort in descending order
   std::sort(predicates.begin(), predicates.end(), sort_predicate);
 

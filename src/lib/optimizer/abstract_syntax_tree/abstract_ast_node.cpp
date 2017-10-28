@@ -17,7 +17,7 @@ class TableStatistics;
 
 AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
-bool AbstractASTNode::is_optimizable() const { return false; }
+bool AbstractASTNode::is_optimizable() const { return true; }
 
 std::vector<std::shared_ptr<AbstractASTNode>> AbstractASTNode::parents() const {
   std::vector<std::shared_ptr<AbstractASTNode>> parents;
@@ -111,7 +111,9 @@ void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<Abstrac
     current_child->_add_parent_raw(shared_from_this());
   }
 
-  _on_child_changed();
+  for (auto& parent : parents()) {
+    parent->_child_changed();
+  }
 }
 
 ASTNodeType AbstractASTNode::type() const { return _type; }
@@ -354,8 +356,7 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
 void AbstractASTNode::_child_changed() {
   _statistics.reset();
   _on_child_changed();
-  const auto parents = this->parents();
-  for (auto& parent : parents) {
+  for (auto& parent : parents()) {
     parent->_child_changed();
   }
 }

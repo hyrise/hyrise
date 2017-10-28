@@ -193,6 +193,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
 
   // Setup first AST
+  // predicate_node_1 -> predicate_node_0 -> stored_table_node
   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpLessThan, 20);
   predicate_node_0->set_left_child(stored_table_node);
 
@@ -204,6 +205,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second AST
+  // predicate_node_3 -> predicate_node_2 -> stored_table_node
   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
   predicate_node_2->set_left_child(stored_table_node);
 
