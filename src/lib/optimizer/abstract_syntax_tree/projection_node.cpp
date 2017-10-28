@@ -41,51 +41,27 @@ const std::vector<std::shared_ptr<Expression>>& ProjectionNode::column_expressio
 }
 
 void ProjectionNode::_on_child_changed() {
-  /**
-   * Populates `_output_column_names` and `_output_column_id_to_input_column_id`.
-   */
+  DebugAssert(!right_child(), "Projection can't have a right child");
 
   _output_column_names.clear();
   _output_column_id_to_input_column_id.clear();
-
-  _output_column_names.reserve(_column_expressions.size());
-  _output_column_id_to_input_column_id.reserve(_column_expressions.size());
-
-  for (const auto& expression : _column_expressions) {
-    // If the expression defines an alias, use it as the output column name.
-    // If it does not, we have to handle it differently, depending on the type of the expression.
-    if (expression->alias()) {
-      _output_column_names.emplace_back(*expression->alias());
-    }
-
-    if (expression->type() == ExpressionType::Column) {
-      DebugAssert(left_child(), "ProjectionNode needs a child.");
-
-      _output_column_id_to_input_column_id.emplace_back(expression->column_id());
-
-      if (!expression->alias()) {
-        const auto& column_name = left_child()->output_column_names()[expression->column_id()];
-        _output_column_names.emplace_back(column_name);
-      }
-
-    } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
-
-      if (!expression->alias()) {
-        _output_column_names.emplace_back(expression->to_string(left_child()->output_column_names()));
-      }
-
-    } else {
-      Fail("Only column references, arithmetic expressions, and literals supported for now.");
-    }
-  }
 }
 
 const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id() const {
+  if (_output_column_id_to_input_column_id.empty()) {
+    _update_output();
+  }
+
   return _output_column_id_to_input_column_id;
 }
 
-const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
+const std::vector<std::string>& ProjectionNode::output_column_names() const {
+  if (_output_column_names.empty()) {
+    _update_output();
+  }
+
+  return _output_column_names;
+}
 
 std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
@@ -171,13 +147,15 @@ std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std:
 
   std::vector<ColumnID> output_column_ids_for_table;
 
-  for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(_output_column_id_to_input_column_id.begin(),
-                                _output_column_id_to_input_column_id.end(), input_column_id);
+  const auto & output_column_id_to_input_column_id = this->output_column_id_to_input_column_id();
 
-    if (iter != _output_column_id_to_input_column_id.end()) {
+  for (const auto input_column_id : input_column_ids_for_table) {
+    const auto iter = std::find(output_column_id_to_input_column_id.begin(),
+                                output_column_id_to_input_column_id.end(), input_column_id);
+
+    if (iter != output_column_id_to_input_column_id.end()) {
       const auto column_id =
-          ColumnID{static_cast<ColumnID::base_type>(std::distance(_output_column_id_to_input_column_id.begin(), iter))};
+          ColumnID{static_cast<ColumnID::base_type>(std::distance(output_column_id_to_input_column_id.begin(), iter))};
       output_column_ids_for_table.emplace_back(column_id);
     }
   }
@@ -199,6 +177,51 @@ std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
     return column_expression->to_string(left_child()->output_column_names());
   } else {
     return column_expression->to_string();
+  }
+}
+
+void ProjectionNode::_update_output() const {
+  /**
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
+   * re-computed on request. This allows ASTs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * allows easier manipulation in the optimizer.
+   */
+
+  DebugAssert(_output_column_id_to_input_column_id.empty(), "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(_output_column_names.empty(), "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(left_child(), "Can't set output without input");
+
+  _output_column_names.reserve(_column_expressions.size());
+  _output_column_id_to_input_column_id.reserve(_column_expressions.size());
+
+  for (const auto& expression : _column_expressions) {
+    // If the expression defines an alias, use it as the output column name.
+    // If it does not, we have to handle it differently, depending on the type of the expression.
+    if (expression->alias()) {
+      _output_column_names.emplace_back(*expression->alias());
+    }
+
+    if (expression->type() == ExpressionType::Column) {
+      DebugAssert(left_child(), "ProjectionNode needs a child.");
+
+      _output_column_id_to_input_column_id.emplace_back(expression->column_id());
+
+      if (!expression->alias()) {
+        Assert(expression->column_id() < left_child()->output_column_names().size(), "ColumnID out of range");
+        const auto& column_name = left_child()->output_column_names()[expression->column_id()];
+        _output_column_names.emplace_back(column_name);
+      }
+
+    } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
+      _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
+
+      if (!expression->alias()) {
+        _output_column_names.emplace_back(expression->to_string(left_child()->output_column_names()));
+      }
+
+    } else {
+      Fail("Only column references, arithmetic expressions, and literals supported for now.");
+    }
   }
 }
 

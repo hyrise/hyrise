@@ -27,7 +27,6 @@ class MockNode : public AbstractASTNode {
   void _on_child_changed() override;
 
  private:
-  std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
 }  // namespace opossum

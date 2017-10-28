@@ -64,8 +64,9 @@ class AggregateNode : public AbstractASTNode {
   std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
   std::vector<ColumnID> _groupby_column_ids;
 
-  std::vector<ColumnID> _output_column_id_to_input_column_id;
-  std::vector<std::string> _output_column_names;
+  mutable std::vector<std::string> _output_column_names;
+
+  void _update_output() const;
 };
 
 }  // namespace opossum

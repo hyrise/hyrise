@@ -242,19 +242,29 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   // @}
 
  protected:
+  /**
+   * In derived nodes, clear all data that depends on children and only set it lazily on request (see, e.g.
+   * output_column_names())
+   */
   virtual void _on_child_changed() {}
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
 
-  // Each subtree can be a subselect. A subselect can be given an alias:
-  // SELECT y.* FROM (SELECT * FROM x) AS y
-  // The alias applies to all nodes above the node where it is set until a new alias is set
+  /**
+   * Each subtree can be a subselect. A subselect can be given an alias:
+   * SELECT y.* FROM (SELECT * FROM x) AS y
+   * The alias applies to all nodes above the node where it is set until a new alias is set
+   */
   std::optional<std::string> _table_alias;
 
-  // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
-  // only operate on the column name. If an alias for this subtree is set, but this reference does not match
-  // it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
+  mutable std::vector<ColumnID> _output_column_id_to_input_column_id;
+
+  /**
+   * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
+   * only operate on the column name. If an alias for this subtree is set, but this reference does not match
+   * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
+   */
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
@@ -262,6 +272,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::array<std::shared_ptr<AbstractASTNode>, 2> _children;
 
   std::shared_ptr<TableStatistics> _statistics;
+
+  /**
+   * Reset statistics, call _on_child_changed() for node specific behaviour and call _child_changed() on parents
+   */
+  void _child_changed();
 
   // @{
   /**

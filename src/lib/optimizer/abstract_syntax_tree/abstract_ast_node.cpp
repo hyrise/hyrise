@@ -149,7 +149,12 @@ const std::vector<ColumnID>& AbstractASTNode::output_column_id_to_input_column_i
    * Examples include Projections, Aggregates, and Joins.
    */
   DebugAssert(left_child() && !right_child(), "Node has no or two inputs and therefore needs to override this function.");
-  return left_child()->output_column_id_to_input_column_id();
+
+  if (_output_column_id_to_input_column_id.empty()) {
+    _output_column_id_to_input_column_id.resize(output_column_count());
+    std::iota(_output_column_id_to_input_column_id.begin(), _output_column_id_to_input_column_id.end(), ColumnID{0});
+  }
+  return _output_column_id_to_input_column_id;
 }
 
 size_t AbstractASTNode::output_column_count() const { return output_column_names().size(); }
@@ -341,6 +346,15 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
     }
   }
   return reference;
+}
+
+void AbstractASTNode::_child_changed() {
+  _statistics.reset();
+  _on_child_changed();
+  const auto parents = this->parents();
+  for (auto& parent : parents) {
+    parent->_child_changed();
+  }
 }
 
 void AbstractASTNode::_remove_parent_raw(const std::shared_ptr<AbstractASTNode> &parent) {

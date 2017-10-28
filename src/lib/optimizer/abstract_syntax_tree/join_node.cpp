@@ -49,10 +49,20 @@ std::string JoinNode::description() const {
 }
 
 const std::vector<ColumnID>& JoinNode::output_column_id_to_input_column_id() const {
+  if (_output_column_id_to_input_column_id.empty()) {
+    _update_output();
+  }
+
   return _output_column_id_to_input_column_id;
 }
 
-const std::vector<std::string>& JoinNode::output_column_names() const { return _output_column_names; }
+const std::vector<std::string>& JoinNode::output_column_names() const {
+  if (_output_column_names.empty()) {
+    _update_output();
+  }
+
+  return _output_column_names;
+}
 
 std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
@@ -115,7 +125,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     output_column_id = left_child()->output_column_count() + *right_column_id;
   }
 
-  DebugAssert(_output_column_id_to_input_column_id[output_column_id] == input_column_id,
+  DebugAssert(output_column_id_to_input_column_id()[output_column_id] == input_column_id,
               "ColumnID should be in output.");
 
   return output_column_id;
@@ -201,10 +211,19 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
 }
 
 void JoinNode::_on_child_changed() {
-  // Only set output information if both children have already been set.
-  if (!left_child() || !right_child()) {
-    return;
-  }
+  _output_column_names.clear();
+  _output_column_id_to_input_column_id.clear();
+}
+
+
+void JoinNode::_update_output() const {
+  /**
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
+   * re-computed on request. This allows ASTs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * allows easier manipulation in the optimizer.
+   */
+
+  DebugAssert(left_child() && right_child(), "Need both inputs to compute output");
 
   /**
    * Collect the output column names of the children on the fly, because the children might change.
@@ -212,7 +231,6 @@ void JoinNode::_on_child_changed() {
   const auto& left_names = left_child()->output_column_names();
   const auto& right_names = right_child()->output_column_names();
 
-  _output_column_names.clear();
   _output_column_names.reserve(left_names.size() + right_names.size());
 
   _output_column_names.insert(_output_column_names.end(), left_names.begin(), left_names.end());
@@ -224,7 +242,6 @@ void JoinNode::_on_child_changed() {
   const auto num_left_columns = left_child()->output_column_count();
   const auto num_right_columns = right_child()->output_column_count();
 
-  _output_column_id_to_input_column_id.clear();
   _output_column_id_to_input_column_id.resize(num_left_columns + num_right_columns);
 
   auto begin = _output_column_id_to_input_column_id.begin();

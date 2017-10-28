@@ -45,7 +45,6 @@ class StoredTableNode : public AbstractASTNode {
  private:
   const std::string _table_name;
 
-  std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
 
