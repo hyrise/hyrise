@@ -20,13 +20,17 @@ namespace opossum {
 
 // singleton
 NUMAPlacementManager& NUMAPlacementManager::get() {
-  static NUMAPlacementManager instance(Topology::create_numa_topology(), NUMAPlacementManager::Options());
+  static NUMAPlacementManager instance;
   return instance;
 }
 
-NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology,
-                                           const NUMAPlacementManager::Options options)
-    : _topology(topology), _options(options) {
+void NUMAPlacementManager::reset(const Options options, const std::shared_ptr<Topology> topology) {
+  get() = NUMAPlacementManager(options, topology);
+}
+
+NUMAPlacementManager::NUMAPlacementManager(const NUMAPlacementManager::Options options,
+                                           const std::shared_ptr<Topology> topology)
+    : _options(options), _topology(topology) {
   for (size_t i = 0; i < _topology->nodes().size(); i++) {
     char msource_name[26];
     std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
@@ -60,6 +64,8 @@ void NUMAPlacementManager::pause() {
   _collector_thread->pause();
   _migration_thread->pause();
 }
+
+const NUMAPlacementManager::Options& NUMAPlacementManager::options() const { return _options; }
 
 const std::shared_ptr<Topology>& NUMAPlacementManager::topology() const { return _topology; }
 

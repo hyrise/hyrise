@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -26,13 +27,27 @@ namespace opossum {
 class NUMAPlacementTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto& sm = StorageManager::get();
-    auto table = create_table(10, 1000);
-    sm.add_table("table", table);
+    // Set options with very short cycle times
+    auto options = NUMAPlacementManager::Options();
+    options.counter_history_interval = std::chrono::milliseconds(1);
+    options.counter_history_range = std::chrono::milliseconds(70);
+    options.migration_interval = std::chrono::milliseconds(100);
+
+    // Reset NUMAPlacementManager before creating any tables.
+    NUMAPlacementManager::reset(options);
+
+    const auto table = create_table(_chunk_count, 1000);
+    StorageManager::get().add_table("table", table);
+
+    _node_count = NUMAPlacementManager::get().topology()->nodes().size();
   }
 
-  std::vector<size_t> count_chunks_by_node(const std::shared_ptr<Table>& table, size_t node_count) {
-    std::vector<size_t> result(node_count);
+  void TearDown() override { StorageManager::get().drop_table("table"); }
+
+  // Returns a vector that contains the counts of chunks per node.
+  // The index of the vector represents the NodeID.
+  std::vector<size_t> count_chunks_by_node(const std::shared_ptr<Table>& table) {
+    std::vector<size_t> result(_node_count);
     const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto& chunk = table->get_chunk(i);
@@ -42,6 +57,7 @@ class NUMAPlacementTest : public BaseTest {
     return result;
   }
 
+  // Creates a table with a single column and increasing integers modulo 1000.
   std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
     auto table = std::make_shared<Table>(num_rows_per_chunk);
     table->add_column("a", "int", false);
@@ -61,11 +77,18 @@ class NUMAPlacementTest : public BaseTest {
     DictionaryCompression::compress_table(*table);
     return table;
   }
+
+  size_t _node_count;
+  static constexpr size_t _chunk_count = 10;
 };
 
+// Tests the chunk migration algorithm without the integrated loop
+// of NUMAPlacementManager.
 TEST_F(NUMAPlacementTest, ChunkMigration) {
-  const auto& topology = NUMAPlacementManager::get().topology();
   const auto& table = StorageManager::get().get_table("table");
+  const auto& options = NUMAPlacementManager::get().options();
+
+  // Set mocked chunk access times
   for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
     auto& chunk = table->get_chunk(i);
     for (size_t j = 0; j < 100; j++) {
@@ -74,20 +97,58 @@ TEST_F(NUMAPlacementTest, ChunkMigration) {
     }
   }
 
-  EXPECT_EQ(count_chunks_by_node(table, topology->nodes().size())[0], size_t(10));
+  // Initially all chunks should reside on node 0
+  EXPECT_EQ(count_chunks_by_node(table)[0], _chunk_count);
 
-  auto options = NUMAPlacementManager::Options();
-  options.counter_history_interval = std::chrono::seconds(1);
-  options.counter_history_range = std::chrono::seconds(2);
-
+  // Run two migrations
   for (size_t i = 0; i < 2; i++) {
     MigrationPreparationTask(options).execute();
   }
 
-  if (topology->nodes().size() > 1) {
-    // At least one chunk has been migrated away from node 1.
-    EXPECT_LT(count_chunks_by_node(table, topology->nodes().size())[0], size_t(10));
+  if (_node_count > 1) {
+    // At least one chunk has been migrated away from node 0.
+    EXPECT_LT(count_chunks_by_node(table)[0], _chunk_count);
   }
+}
+
+// Tests the integrated loop of NUMAPlacementManager.
+TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
+  const auto& table = StorageManager::get().get_table("table");
+  const auto& options = NUMAPlacementManager::get().options();
+
+  // Initially all chunks should reside on node 0
+  EXPECT_EQ(count_chunks_by_node(table)[0], _chunk_count);
+
+  for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
+    auto& chunk = table->get_chunk(i);
+    for (size_t j = 0; j < 100; j++) {
+      chunk.access_counter()->increment(100);
+      chunk.access_counter()->process();
+    }
+  }
+
+  // Start the loop
+  NUMAPlacementManager::get().resume();
+
+  // Simulate chunk accesses, ChunkMetricsCollectionTask should pick
+  // those up
+  for (size_t j = 0; j < 150; j++) {
+    for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
+      auto& chunk = table->get_chunk(i);
+      chunk.access_counter()->increment(100);
+    }
+    std::this_thread::sleep_for(options.counter_history_interval);
+  }
+
+  // MigrationPreparationTask and chunk migration should have run at least once by now
+
+  if (_node_count > 1) {
+    // At least one chunk has been migrated away from node 1.
+    EXPECT_LT(count_chunks_by_node(table)[0], _chunk_count);
+  }
+
+  // Stop the loop
+  NUMAPlacementManager::get().pause();
 }
 
 }  // namespace opossum

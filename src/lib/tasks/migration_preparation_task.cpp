@@ -55,6 +55,7 @@ double mean(const std::vector<double>& container) {
   return sum / count;
 }
 
+// Scales the values of the vector, so that the vector has a sum of 1.0
 std::vector<double> scale(const std::vector<double>& container) {
   if (container.empty()) return {};
   double sum = std::accumulate(container.cbegin(), container.cend(), 1.0);
@@ -156,14 +157,6 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, co
   return chunk_infos;
 }
 
-// TODO(normanrz): Remove
-std::vector<size_t> count_chunks_by_node(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
-  std::vector<size_t> result(node_count);
-  for (const auto chunk_info : chunk_infos) {
-    result.at(chunk_info.node)++;
-  }
-  return result;
-}
 
 MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::Options& options) : _options(options) {}
 
