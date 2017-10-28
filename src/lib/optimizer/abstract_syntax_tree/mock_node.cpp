@@ -9,8 +9,7 @@
 
 namespace opossum {
 
-MockNode::MockNode() : AbstractASTNode(ASTNodeType::Mock) {
-}
+MockNode::MockNode() : AbstractASTNode(ASTNodeType::Mock) {}
 
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractASTNode(ASTNodeType::Mock) {
   set_statistics(statistics);

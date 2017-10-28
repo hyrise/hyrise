@@ -1,10 +1,12 @@
 #include "union_node.hpp"
 
 #include <numeric>
+#include <memory>
 #include <string>
+#include <vector>
 
-#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -39,13 +41,13 @@ const std::vector<ColumnID>& UnionNode::output_column_id_to_input_column_id() co
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
-const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
+    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
-  return nullptr; // Return something
+  return nullptr;  // Return something
 }
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
-  const NamedColumnReference& named_column_reference) const {
+    const NamedColumnReference& named_column_reference) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
@@ -58,10 +60,10 @@ std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
     return {};
   } else {
     const auto column_id_in_left =
-      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
 #if IS_DEBUG
     const auto column_id_in_right =
-      right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
     DebugAssert(column_id_in_left == column_id_in_right, "Input layouts don't match");
 #endif
     return column_id_in_left;
@@ -69,7 +71,7 @@ std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
 }
 
 bool UnionNode::knows_table(const std::string& table_name) const {
-  return false; // knows_table() is not a concept that applies to Unions
+  return false;  // knows_table() is not a concept that applies to Unions
 }
 
 std::vector<ColumnID> UnionNode::get_output_column_ids_for_table(const std::string& table_name) const {

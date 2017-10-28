@@ -41,8 +41,8 @@ std::string JoinNode::description() const {
   if (_join_column_ids && _scan_type) {
     desc << " " << get_verbose_column_name(_join_column_ids->first);
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << get_verbose_column_name(ColumnID{
-                       static_cast<ColumnID::base_type>(left_child()->output_column_count() + _join_column_ids->second)});
+    desc << " " << get_verbose_column_name(ColumnID{static_cast<ColumnID::base_type>(
+                       left_child()->output_column_count() + _join_column_ids->second)});
   }
 
   return desc.str();
@@ -214,7 +214,6 @@ void JoinNode::_on_child_changed() {
   _output_column_names.clear();
   _output_column_id_to_input_column_id.clear();
 }
-
 
 void JoinNode::_update_output() const {
   /**

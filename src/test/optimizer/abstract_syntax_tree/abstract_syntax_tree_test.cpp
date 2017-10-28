@@ -27,7 +27,7 @@ class AbstractSyntaxTreeTest : public BaseTest {
      * Init complex graph. This one is hard to visualize in ASCII. I suggest drawing it from the initialization below,
      * in case you need to visualize it
      */
-    for (auto & node : _nodes) {
+    for (auto& node : _nodes) {
       node = std::make_shared<MockNode>();
     }
 
@@ -42,7 +42,6 @@ class AbstractSyntaxTreeTest : public BaseTest {
     _nodes[3]->set_right_child(_nodes[7]);
     _nodes[1]->set_left_child(_nodes[2]);
     _nodes[0]->set_left_child(_nodes[1]);
-
   }
 
   void TearDown() override { StorageManager::get().reset(); }

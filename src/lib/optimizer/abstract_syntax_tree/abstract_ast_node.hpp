@@ -75,14 +75,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   std::vector<std::shared_ptr<AbstractASTNode>> parents() const;
 
-  void remove_parent(const std::shared_ptr<AbstractASTNode> &parent);
+  void remove_parent(const std::shared_ptr<AbstractASTNode>& parent);
   void clear_parents();
 
   /**
    * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
-  ASTChildSide get_child_side(const std::shared_ptr<AbstractASTNode> & parent) const;
+  ASTChildSide get_child_side(const std::shared_ptr<AbstractASTNode>& parent) const;
 
   /**
    * @returns {get_child_side(parents()[0], ..., get_child_side(parents()[n-1])}
@@ -285,8 +285,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Add or remove a parent without manipulating this parents child ptr. For internal usage in set_left_child(),
    * set_right_child(), remove_parent
    */
-  void _remove_parent_raw(const std::shared_ptr<AbstractASTNode> &parent);
-  void _add_parent_raw(const std::shared_ptr<AbstractASTNode> &parent);
+  void _remove_parent_raw(const std::shared_ptr<AbstractASTNode>& parent);
+  void _add_parent_raw(const std::shared_ptr<AbstractASTNode>& parent);
   // @}
 };
 

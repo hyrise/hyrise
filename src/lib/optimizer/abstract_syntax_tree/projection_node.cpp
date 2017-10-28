@@ -147,11 +147,11 @@ std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std:
 
   std::vector<ColumnID> output_column_ids_for_table;
 
-  const auto & output_column_id_to_input_column_id = this->output_column_id_to_input_column_id();
+  const auto& output_column_id_to_input_column_id = this->output_column_id_to_input_column_id();
 
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(output_column_id_to_input_column_id.begin(),
-                                output_column_id_to_input_column_id.end(), input_column_id);
+    const auto iter = std::find(output_column_id_to_input_column_id.begin(), output_column_id_to_input_column_id.end(),
+                                input_column_id);
 
     if (iter != output_column_id_to_input_column_id.end()) {
       const auto column_id =
@@ -187,7 +187,8 @@ void ProjectionNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(_output_column_id_to_input_column_id.empty(), "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(_output_column_id_to_input_column_id.empty(),
+              "No need to update, _update_output() shouldn't get called.");
   DebugAssert(_output_column_names.empty(), "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 

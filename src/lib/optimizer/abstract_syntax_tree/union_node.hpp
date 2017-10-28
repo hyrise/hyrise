@@ -1,6 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "types.hpp"
@@ -21,10 +23,11 @@ class UnionNode : public AbstractASTNode {
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const override;
+      const std::shared_ptr<AbstractASTNode>& left_child,
+      const std::shared_ptr<AbstractASTNode>& right_child) const override;
 
   std::optional<ColumnID> find_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const override;
+      const NamedColumnReference& named_column_reference) const override;
 
   bool knows_table(const std::string& table_name) const override;
 
