@@ -119,15 +119,6 @@ TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
   // Initially all chunks should reside on node 0
   EXPECT_EQ(count_chunks_by_node(table)[0], _chunk_count);
 
-  // Set mocked chunk access times
-  for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
-    auto& chunk = table->get_chunk(i);
-    for (size_t j = 0; j < 100; j++) {
-      chunk.access_counter()->increment(100);
-      chunk.access_counter()->process();
-    }
-  }
-
   // Start the loop
   NUMAPlacementManager::get().resume();
 
