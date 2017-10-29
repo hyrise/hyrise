@@ -10,6 +10,7 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/type_utils.hpp"
 
 namespace opossum {
 
@@ -66,6 +67,12 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode>& ri
   if (right) right->_parent = shared_from_this();
 
   _on_child_changed();
+}
+
+void AbstractASTNode::set_children(const std::shared_ptr<AbstractASTNode>& left,
+                                   const std::shared_ptr<AbstractASTNode>& right) {
+  set_left_child(left);
+  set_right_child(right);
 }
 
 void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child) {
@@ -216,6 +223,47 @@ void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode>& no
 
 void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
+ColumnOrigins AbstractASTNode::get_column_origins() const {
+  ColumnOrigins column_origins(output_col_count());
+
+  for (size_t column_idx = 0; column_idx < column_origins.size(); ++column_idx) {
+    column_origins[column_idx] = get_column_origin(make_column_id(column_idx));
+  }
+
+  return column_origins;
+}
+
+ColumnOrigin AbstractASTNode::get_column_origin(ColumnID column_id) const {
+  DebugAssert(column_id < output_column_id_to_input_column_id().size(), "ColumnID out of range");
+
+  const auto input_column_id = output_column_id_to_input_column_id()[column_id];
+  if (input_column_id == INVALID_COLUMN_ID) {
+    return {shared_from_this(), column_id};
+  }
+
+  DebugAssert(left_child(), "Must have left child to determine column origin");
+  return left_child()->get_column_origin(input_column_id);
+}
+
+void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins &prev_column_origins) {
+  const auto post_ordering_column_origins = get_column_origins();
+  const auto column_id_mapping = ast_generate_column_id_mapping(prev_column_origins,
+                                                                get_column_origins());
+
+  auto parent = _parent.lock();
+  if (parent) {
+    parent->map_column_ids(column_id_mapping, get_child_side());
+  }
+}
+
+void AbstractASTNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
+                                     const std::optional<ASTChildSide> &caller_child_side) {
+  auto parent = _parent.lock();
+  if (parent) {
+    parent->map_column_ids(column_id_mapping, get_child_side());
+  }
+}
+
 void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
@@ -277,7 +325,7 @@ std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference &reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
@@ -289,13 +337,6 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
     }
   }
   return reference;
-}
-
-std::string NamedColumnReference::as_string() const {
-  std::stringstream ss;
-  if (table_name) ss << *table_name << ".";
-  ss << column_name;
-  return ss.str();
 }
 
 }  // namespace opossum

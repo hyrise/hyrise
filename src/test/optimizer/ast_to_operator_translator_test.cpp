@@ -92,7 +92,7 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
+  auto sort_node = std::make_shared<SortNode>(OrderByDefinitions{{ColumnID{0}, OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator{}.translate_node(sort_node);
 

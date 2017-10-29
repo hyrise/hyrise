@@ -9,7 +9,16 @@
 
 namespace opossum {
 
-MockTableNode::MockTableNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractASTNode(ASTNodeType::Mock) {
+MockTableNode::MockTableNode(const std::string& name, size_t column_count)
+: AbstractASTNode(ASTNodeType::Mock), _name(name) {
+  for (size_t column_idx = 0; column_idx < column_count; ++column_idx) {
+    _output_column_names.emplace_back("MockCol" + std::to_string(column_idx));
+  }
+
+  _output_column_id_to_input_column_id.resize(output_col_count(), INVALID_COLUMN_ID);
+}
+
+MockTableNode::MockTableNode(const std::shared_ptr<TableStatistics>& statistics, const std::string& name) : AbstractASTNode(ASTNodeType::Mock), _name(name) {
   set_statistics(statistics);
 
   for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();

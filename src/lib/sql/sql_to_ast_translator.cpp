@@ -688,7 +688,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
     return input_node;
   }
 
-  std::vector<OrderByDefinition> order_by_definitions;
+  OrderByDefinitions order_by_definitions;
   order_by_definitions.reserve(order_list.size());
 
   for (const auto& order_description : order_list) {

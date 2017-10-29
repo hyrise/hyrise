@@ -13,6 +13,7 @@
 #include "optimizer/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/type_utils.hpp"
 
 namespace opossum {
 
@@ -230,6 +231,53 @@ void JoinNode::_on_child_changed() {
   auto begin = _output_column_id_to_input_column_id.begin();
   std::iota(begin, begin + num_left_columns, 0);
   std::iota(begin + num_left_columns, _output_column_id_to_input_column_id.end(), 0);
+}
+
+ColumnOrigin JoinNode::get_column_origin(ColumnID column_id) const {
+  DebugAssert(left_child() && right_child(), "Need both children to determine column origin");
+  if (static_cast<size_t>(column_id) >= left_child()->output_col_count()) {
+    const auto right_column_id = make_column_id(column_id - left_child()->output_col_count());
+    DebugAssert(static_cast<size_t>(right_column_id) < right_child()->output_col_count(), "ColumnID out of range");
+    return right_child()->get_column_origin(right_column_id);
+  }
+  return left_child()->get_column_origin(column_id);
+}
+
+void JoinNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
+                              const std::optional<ASTChildSide> &caller_child_side) {
+  DebugAssert(left_child() && right_child(), "Children need to be set for this operation");
+  DebugAssert(caller_child_side, "JoinNode needs to know which childs column_id_mapping changed");
+
+  ColumnIDMapping join_column_id_mapping(output_col_count(), INVALID_COLUMN_ID);
+
+  if (caller_child_side == ASTChildSide::Left) {
+    if (_join_column_ids) {
+      _join_column_ids->first = column_id_mapping[_join_column_ids->first];
+    }
+
+    std::copy(column_id_mapping.begin(), column_id_mapping.end(), join_column_id_mapping.begin());
+    std::iota(join_column_id_mapping.begin() + left_child()->output_col_count(),
+              join_column_id_mapping.end(),
+              make_column_id(left_child()->output_col_count()));
+  } else {
+    if (_join_column_ids) {
+      _join_column_ids->second = column_id_mapping[_join_column_ids->second];
+    }
+    std::iota(join_column_id_mapping.begin(),
+              join_column_id_mapping.begin() + left_child()->output_col_count(),
+              ColumnID{0});
+    const auto left_column_count = left_child()->output_col_count();
+    const auto join_column_count = output_col_count();
+
+    for (size_t join_column_idx = left_column_count; join_column_idx < join_column_count; ++join_column_idx) {
+      join_column_id_mapping[join_column_idx] = column_id_mapping[join_column_idx - left_column_count] + left_column_count;
+    }
+  }
+
+  auto parent = this->parent();
+  if (parent) {
+    parent->map_column_ids(join_column_id_mapping, get_child_side());
+  }
 }
 
 }  // namespace opossum

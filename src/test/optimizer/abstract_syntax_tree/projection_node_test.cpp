@@ -5,6 +5,8 @@
 
 #include "base_test.hpp"
 
+#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
@@ -67,6 +69,39 @@ TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", {"foo"}}), 2);
   EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}),
             std::nullopt);
+}
+
+TEST_F(ProjectionNodeTest, MapColumnIDs) {
+  /**
+   * Test that
+   *    - ColumnIDs are updated in the _column_expressions
+   *    - The column order in parent nodes stays the same
+   */
+
+  /**
+   *    Predicate(c = 5)
+   *         |
+   *    Projection(b,c,a)
+   *        |
+   *      Mock
+   */
+
+  auto mock = std::make_shared<MockTableNode>("a", 4);
+  auto projection = std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{1}, ColumnID{2}, ColumnID{0}}));
+  auto predicate = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, 5);
+
+  projection->set_left_child(mock);
+  predicate->set_left_child(projection);
+
+  // Previous order: {a,b,c,d} - New order: {c,a,b,d}
+  auto column_id_mapping = ColumnIDMapping({ColumnID{1}, ColumnID{2}, ColumnID{0}, ColumnID{3}});
+
+  projection->map_column_ids(column_id_mapping);
+
+  EXPECT_EQ(predicate->column_id(), ColumnID{1});
+  EXPECT_EQ(projection->column_expressions().at(0)->column_id(), ColumnID{2});
+  EXPECT_EQ(projection->column_expressions().at(1)->column_id(), ColumnID{0});
+  EXPECT_EQ(projection->column_expressions().at(2)->column_id(), ColumnID{1});
 }
 
 }  // namespace opossum

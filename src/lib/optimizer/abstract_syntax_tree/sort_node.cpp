@@ -12,7 +12,7 @@ namespace opossum {
 OrderByDefinition::OrderByDefinition(const ColumnID column_id, const OrderByMode order_by_mode)
     : column_id(column_id), order_by_mode(order_by_mode) {}
 
-SortNode::SortNode(const std::vector<OrderByDefinition>& order_by_definitions)
+SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
     : AbstractASTNode(ASTNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
 std::string SortNode::description() const {
@@ -39,6 +39,18 @@ std::string SortNode::description() const {
   return s.str();
 }
 
-const std::vector<OrderByDefinition>& SortNode::order_by_definitions() const { return _order_by_definitions; }
+const OrderByDefinitions& SortNode::order_by_definitions() const { return _order_by_definitions; }
+
+void SortNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
+                              const std::optional<ASTChildSide> &caller_child_side) {
+  for (auto& order_by_definition : _order_by_definitions) {
+    order_by_definition.column_id = column_id_mapping[order_by_definition.column_id];
+  }
+
+  auto parent = this->parent();
+  if (parent) {
+    parent->map_column_ids(column_id_mapping, get_child_side());
+  }
+}
 
 }  // namespace opossum

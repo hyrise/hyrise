@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "optimizer/abstract_syntax_tree/ast_types.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -153,6 +154,12 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
   std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
+
+  /**
+   * When optimizer rules change column orders, this function is used to adapt the Expressions of AST nodes to the new
+   * column order
+   */
+  void map_column_ids(const ColumnIDMapping &column_id_mapping);
 
   bool operator==(const Expression& rhs) const;
 

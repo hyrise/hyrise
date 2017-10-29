@@ -7,41 +7,14 @@
 #include <vector>
 
 #include "types.hpp"
+#include "ast_types.hpp"
+#include "ast_utils.hpp"
 
 namespace opossum {
 
 struct ColumnID;
 class Expression;
 class TableStatistics;
-
-enum class ASTNodeType {
-  Aggregate,
-  Delete,
-  DummyTable,
-  Insert,
-  Join,
-  Limit,
-  Predicate,
-  Projection,
-  Root,
-  ShowColumns,
-  ShowTables,
-  Sort,
-  StoredTable,
-  Update,
-  Union,
-  Validate,
-  Mock
-};
-
-enum class ASTChildSide { Left, Right };
-
-struct NamedColumnReference {
-  std::string column_name;
-  std::optional<std::string> table_name = std::nullopt;
-
-  std::string as_string() const;
-};
 
 /**
  * Base class for a Node in the Abstract Syntax Tree on which the Query Optimization is performed on.
@@ -84,6 +57,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   const std::shared_ptr<AbstractASTNode>& right_child() const;
   void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
 
+  void set_children(const std::shared_ptr<AbstractASTNode>& left, const std::shared_ptr<AbstractASTNode>& right);
   void set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child);
   // @}
 
@@ -201,6 +175,58 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
    */
   void set_alias(const std::optional<std::string>& table_alias);
+
+  // @{
+  /**
+   * Altering the order of Columns in a subtree.
+   *
+   * The order of Columns in a subtree might change, e.g., as the result of Join Re-Ordering. In this call all nodes
+   * above the root of the JoinTree need to adapt the ColumnIDs they refer to. Think, e.g. the ColumnIDs of a SortNode.
+   *
+   * In order to this:
+   *    1. Obtain the ColumnOrigins of the *old* root by calling get_column_origins() on it.
+   *    2. Hook in the *new* root.
+   *    3. Call dispatch_column_id_mapping() on the *new* root, passing the ColumnOrigins you obtained in step 1.
+   *
+   * dispatch_column_id_mapping() will
+   *    1. Generate a ColumnIDMapping
+   *    2. Pass this ColumnIDMapping upwards in the tree by calling map_column_ids()
+   *    3. Stop when either the root of the AST is reached OR a Aggregate- or ProjectionNode is reached
+   */
+
+  /**
+   * @returns {get_column_origin(ColumnID{0}), ..., get_column_origin(ColumnID{n-1})}
+   */
+  ColumnOrigins get_column_origins() const;
+
+  /**
+   * For all columns that this node outputs, find the node that originally "created" it, and the ColumnID it is in that
+   * node.
+   * Columns are "created" by Unions, Projections, Aggregates, StoredTables or MockTables, all other nodes just forward
+   * them.
+   *
+   * JoinNode needs to override get_column_origin() - all other nodes will default to forwarding this request to their
+   * left input, *if the column wasn't created by this node*
+   */
+  virtual ColumnOrigin get_column_origin(ColumnID column_id) const;
+
+  /**
+   * See "Altering the order of Columns in a subtree" comment above.
+   *
+   * NOTE: Call this on the node whose Column order changed, NOT on its parent.
+   */
+  void dispatch_column_id_mapping(const ColumnOrigins &prev_column_origins);
+
+  /**
+   * Overriden by Nodes who need to update ColumnIDs.
+   * Overrides need to call map_column_ids() on their parents if the node doesn't define a new Column order (as
+   * Projections and Aggregates do).
+   * NOTE: Can't be protected because derived Nodes need to call this on AbstractASTNode objects, which C++ wouldn't
+   *    allow
+   */
+  virtual void map_column_ids(const ColumnIDMapping &column_id_mapping,
+                              const std::optional<ASTChildSide> &caller_child_side = std::nullopt);
+  // @}
 
   // @{
   /**
