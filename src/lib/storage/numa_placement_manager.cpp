@@ -41,7 +41,7 @@ NUMAPlacementManager::NUMAPlacementManager(const NUMAPlacementManager::Options o
                                                            [](size_t) { ChunkMetricsCollectionTask().execute(); });
 
   _migration_thread = std::make_unique<PausableLoopThread>(
-      _options.migration_interval, [this](size_t) { MigrationPreparationTask(_options).execute(); });
+      _options.migration_interval, [options](size_t) { MigrationPreparationTask(options).execute(); });
 }
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {

@@ -133,7 +133,7 @@ TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
 
   // Simulate chunk accesses, ChunkMetricsCollectionTask should pick
   // those up
-  for (size_t j = 0; j < 120; j++) {
+  for (size_t j = 0; j < 150; j++) {
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
       auto& chunk = table->get_chunk(i);
       chunk.access_counter()->increment(100);
