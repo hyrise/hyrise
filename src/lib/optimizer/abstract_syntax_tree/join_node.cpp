@@ -210,9 +210,7 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
       ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_column_count())});
 }
 
-void JoinNode::_on_child_changed() {
-  _output_column_names.clear();
-}
+void JoinNode::_on_child_changed() { _output_column_names.clear(); }
 
 void JoinNode::_update_output() const {
   /**

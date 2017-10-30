@@ -149,12 +149,12 @@ std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std:
   const auto& output_column_ids_to_input_column_ids = this->output_column_ids_to_input_column_ids();
 
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(output_column_ids_to_input_column_ids.begin(), output_column_ids_to_input_column_ids.end(),
-                                input_column_id);
+    const auto iter = std::find(output_column_ids_to_input_column_ids.begin(),
+                                output_column_ids_to_input_column_ids.end(), input_column_id);
 
     if (iter != output_column_ids_to_input_column_ids.end()) {
-      const auto column_id =
-          ColumnID{static_cast<ColumnID::base_type>(std::distance(output_column_ids_to_input_column_ids.begin(), iter))};
+      const auto column_id = ColumnID{
+          static_cast<ColumnID::base_type>(std::distance(output_column_ids_to_input_column_ids.begin(), iter))};
       output_column_ids_for_table.emplace_back(column_id);
     }
   }
