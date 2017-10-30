@@ -37,4 +37,9 @@ std::string MockTableNode::get_verbose_column_name(ColumnID column_id) const {
 void MockTableNode::_on_child_changed() { Fail("MockTableNode cannot have children."); }
 
 std::string MockTableNode::description() const { return "[MockTable]"; }
+
+std::shared_ptr<AbstractASTNode> MockTableNode::clone_subtree() const {
+  return _clone_without_subclass_members<decltype(*this)>();
+}
+
 }  // namespace opossum

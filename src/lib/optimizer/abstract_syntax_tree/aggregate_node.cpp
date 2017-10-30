@@ -270,4 +270,12 @@ std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::
   return output_column_ids_for_table;
 }
 
+std::shared_ptr<AbstractASTNode> AggregateNode::clone_subtree() const {
+  auto clone = _clone_without_subclass_members<decltype(*this)>();
+  for (auto& expression : clone->_aggregate_expressions) {
+    expression = std::make_shared<Expression>(*expression);
+  }
+  return clone;
+}
+
 }  // namespace opossum

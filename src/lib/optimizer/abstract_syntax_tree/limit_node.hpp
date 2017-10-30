@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
@@ -16,6 +17,8 @@ class LimitNode : public AbstractASTNode {
   std::string description() const override;
 
   size_t num_rows() const;
+
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
 
  private:
   const size_t _num_rows;

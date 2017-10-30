@@ -60,4 +60,8 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
 }
 
+std::shared_ptr<AbstractASTNode> PredicateNode::clone_subtree() const {
+  return _clone_without_subclass_members<decltype(*this)>();
+}
+
 }  // namespace opossum

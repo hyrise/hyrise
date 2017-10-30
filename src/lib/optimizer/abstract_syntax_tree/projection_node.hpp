@@ -33,11 +33,13 @@ class ProjectionNode : public AbstractASTNode {
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
+
  protected:
   void _on_child_changed() override;
 
  private:
-  const std::vector<std::shared_ptr<Expression>> _column_expressions;
+  std::vector<std::shared_ptr<Expression>> _column_expressions;
   std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };

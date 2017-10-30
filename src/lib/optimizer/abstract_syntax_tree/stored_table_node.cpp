@@ -94,4 +94,8 @@ std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
 
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }
 
+std::shared_ptr<AbstractASTNode> StoredTableNode::clone_subtree() const {
+  return _clone_without_subclass_members<decltype(*this)>();
+}
+
 }  // namespace opossum

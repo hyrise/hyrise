@@ -75,7 +75,7 @@ std::shared_ptr<AbstractASTNode> StorageManager::get_view(const std::string& nam
   auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
-  return iter->second;
+  return iter->second->clone_subtree();
 }
 
 bool StorageManager::has_view(const std::string& name) const { return _views.count(name); }

@@ -57,6 +57,8 @@ class AggregateNode : public AbstractASTNode {
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
+
  protected:
   void _on_child_changed() override;
 

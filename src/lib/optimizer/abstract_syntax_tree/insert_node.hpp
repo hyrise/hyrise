@@ -21,6 +21,8 @@ class InsertNode : public AbstractASTNode {
 
   const std::string& table_name() const;
 
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
+
  protected:
   const std::string _table_name;
 };

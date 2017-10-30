@@ -202,4 +202,12 @@ std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
   }
 }
 
+std::shared_ptr<AbstractASTNode> ProjectionNode::clone_subtree() const {
+  auto clone = _clone_without_subclass_members<decltype(*this)>();
+  for (auto& expression : clone->_column_expressions) {
+    expression = std::make_shared<Expression>(*expression);
+  }
+  return clone;
+}
+
 }  // namespace opossum

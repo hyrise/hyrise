@@ -24,9 +24,11 @@ class UpdateNode : public AbstractASTNode {
 
   const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
+
  protected:
   const std::string _table_name;
-  const std::vector<std::shared_ptr<Expression>> _column_expressions;
+  std::vector<std::shared_ptr<Expression>> _column_expressions;
 };
 
 }  // namespace opossum
