@@ -32,12 +32,12 @@ const std::vector<std::string>& UnionNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<ColumnID>& UnionNode::output_column_id_to_input_column_id() const {
-  if (_output_column_id_to_input_column_id.empty()) {
-    _output_column_id_to_input_column_id.resize(output_column_count());
-    std::iota(_output_column_id_to_input_column_id.begin(), _output_column_id_to_input_column_id.end(), ColumnID{0});
+const std::vector<ColumnID>& UnionNode::output_column_ids_to_input_column_ids() const {
+  if (_output_column_ids_to_input_column_ids.empty()) {
+    _output_column_ids_to_input_column_ids.resize(output_column_count());
+    std::iota(_output_column_ids_to_input_column_ids.begin(), _output_column_ids_to_input_column_ids.end(), ColumnID{0});
   }
-  return _output_column_id_to_input_column_id;
+  return _output_column_ids_to_input_column_ids;
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(

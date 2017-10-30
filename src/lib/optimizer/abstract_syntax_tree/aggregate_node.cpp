@@ -102,7 +102,6 @@ void AggregateNode::_on_child_changed() {
   DebugAssert(!right_child(), "AggregateNode can't have a right child.");
 
   _output_column_names.clear();
-  _output_column_id_to_input_column_id.clear();
 }
 
 const std::vector<std::string>& AggregateNode::output_column_names() const {
@@ -113,11 +112,11 @@ const std::vector<std::string>& AggregateNode::output_column_names() const {
   return _output_column_names;
 }
 
-const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id() const {
-  if (_output_column_id_to_input_column_id.empty()) {
+const std::vector<ColumnID>& AggregateNode::output_column_ids_to_input_column_ids() const {
+  if (_output_column_ids_to_input_column_ids.empty()) {
     _update_output();
   }
-  return _output_column_id_to_input_column_id;
+  return _output_column_ids_to_input_column_ids;
 }
 
 std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
@@ -251,13 +250,13 @@ void AggregateNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(_output_column_id_to_input_column_id.empty(),
+  DebugAssert(_output_column_ids_to_input_column_ids.empty(),
               "No need to update, _update_output() shouldn't get called.");
   DebugAssert(_output_column_names.empty(), "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 
   _output_column_names.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
-  _output_column_id_to_input_column_id.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+  _output_column_ids_to_input_column_ids.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
 
   /**
    * Set output column ids and names.
@@ -266,7 +265,7 @@ void AggregateNode::_update_output() const {
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
   for (const auto groupby_column_id : _groupby_column_ids) {
-    _output_column_id_to_input_column_id.emplace_back(groupby_column_id);
+    _output_column_ids_to_input_column_ids.emplace_back(groupby_column_id);
     _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
   }
 
@@ -288,7 +287,7 @@ void AggregateNode::_update_output() const {
     }
 
     _output_column_names.emplace_back(column_name);
-    _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
+    _output_column_ids_to_input_column_ids.emplace_back(INVALID_COLUMN_ID);
   }
 }
 

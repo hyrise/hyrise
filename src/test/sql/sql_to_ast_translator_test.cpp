@@ -63,7 +63,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   auto result_node = compile_query(query);
 
   std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
-  EXPECT_EQ(expected_columns, result_node->output_column_id_to_input_column_id());
+  EXPECT_EQ(expected_columns, result_node->output_column_ids_to_input_column_ids());
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
 

@@ -196,7 +196,7 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTree) {
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceInTree) {
   auto new_node = std::make_shared<MockNode>();
 
-  new_node->replace_in_tree(_nodes[5]);
+  _nodes[5]->replace_with(new_node);
 
   ASSERT_AST_TIE(_nodes[2], ASTChildSide::Left, new_node);
   ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, new_node);

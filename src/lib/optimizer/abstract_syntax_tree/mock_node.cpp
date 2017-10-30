@@ -19,11 +19,11 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : Abstrac
     _output_column_names.emplace_back("MockCol" + std::to_string(column_statistics_idx));
   }
 
-  _output_column_id_to_input_column_id.resize(output_column_count(), INVALID_COLUMN_ID);
+  _output_column_ids_to_input_column_ids.resize(output_column_count(), INVALID_COLUMN_ID);
 }
 
-const std::vector<ColumnID>& MockNode::output_column_id_to_input_column_id() const {
-  return _output_column_id_to_input_column_id;
+const std::vector<ColumnID>& MockNode::output_column_ids_to_input_column_ids() const {
+  return _output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& MockNode::output_column_names() const { return _output_column_names; }

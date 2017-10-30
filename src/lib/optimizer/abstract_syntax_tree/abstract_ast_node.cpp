@@ -88,11 +88,8 @@ std::shared_ptr<AbstractASTNode> AbstractASTNode::child(ASTChildSide side) const
 }
 
 void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child) {
-  /**
-   *  We need a reference to current_child, so not calling this->child(side)
-   */
-  const auto child_index = static_cast<int>(side);
-  auto& current_child = _children[child_index];
+  // We need a reference to _children[child_index], so not calling this->child(side)
+  auto& current_child = _children[static_cast<int>(side)];
 
   if (current_child == child) {
     return;
@@ -100,7 +97,7 @@ void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<Abstrac
 
   // Untie from previous child
   if (current_child) {
-    current_child->_remove_parent_raw(shared_from_this());
+    current_child->_remove_parent_pointer(shared_from_this());
   }
 
   /**
@@ -108,7 +105,7 @@ void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<Abstrac
    */
   current_child = child;
   if (current_child) {
-    current_child->_add_parent_raw(shared_from_this());
+    current_child->_add_parent_pointer(shared_from_this());
   }
 
   for (auto& parent : parents()) {
@@ -148,7 +145,7 @@ const std::vector<std::string>& AbstractASTNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<ColumnID>& AbstractASTNode::output_column_id_to_input_column_id() const {
+const std::vector<ColumnID>& AbstractASTNode::output_column_ids_to_input_column_ids() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
@@ -156,11 +153,11 @@ const std::vector<ColumnID>& AbstractASTNode::output_column_id_to_input_column_i
   DebugAssert(left_child() && !right_child(),
               "Node has no or two inputs and therefore needs to override this function.");
 
-  if (_output_column_id_to_input_column_id.empty()) {
-    _output_column_id_to_input_column_id.resize(output_column_count());
-    std::iota(_output_column_id_to_input_column_id.begin(), _output_column_id_to_input_column_id.end(), ColumnID{0});
+  if (_output_column_ids_to_input_column_ids.empty()) {
+    _output_column_ids_to_input_column_ids.resize(output_column_count());
+    std::iota(_output_column_ids_to_input_column_ids.begin(), _output_column_ids_to_input_column_ids.end(), ColumnID{0});
   }
-  return _output_column_id_to_input_column_id;
+  return _output_column_ids_to_input_column_ids;
 }
 
 size_t AbstractASTNode::output_column_count() const { return output_column_names().size(); }
@@ -228,7 +225,7 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
 }
 
 void AbstractASTNode::remove_from_tree() {
-  Assert(left_child() && !right_child(), "Can only remove nodes that only have a left child");
+  Assert(!right_child(), "Can only remove nodes that only have a left child or no children");
 
   /**
    * Back up parents and in which child side they hold this node
@@ -236,44 +233,47 @@ void AbstractASTNode::remove_from_tree() {
   auto parents = this->parents();
   auto child_sides = this->get_child_sides();
 
-  // This will call get_child_side() again, but let's avoid code duplication
-  clear_parents();
-
   /**
-   * Hold left_child ptr in extra variable and untie it from this node
+   * Hold left_child ptr in extra variable to keep the ref count up and untie it from this node.
+   * left_child might be nullptr
    */
   auto left_child = this->left_child();
   set_left_child(nullptr);
 
   /**
    * Tie this nodes previous parents with this nodes previous left child
+   * If left_child is nullptr, still call set_child so this node will get untied from the AST.
    */
-  if (left_child) {
-    for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-      parents[parent_idx]->set_child(child_sides[parent_idx], left_child);
-    }
+  for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
+    parents[parent_idx]->set_child(child_sides[parent_idx], left_child);
   }
 }
 
-void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace) {
-  DebugAssert(_parents.empty(), "Node can't have parents");
-  DebugAssert(!left_child() && !right_child(), "Node can't have children");
+void AbstractASTNode::replace_with(const std::shared_ptr<AbstractASTNode>& replacement_node) {
+  DebugAssert(replacement_node->_parents.empty(), "Node can't have parents");
+  DebugAssert(!replacement_node->left_child() && !replacement_node->right_child(), "Node can't have children");
 
-  const auto parents = node_to_replace->parents();
-  const auto child_sides = node_to_replace->get_child_sides();
-  auto left_child = node_to_replace->left_child();
-  auto right_child = node_to_replace->right_child();
+  const auto parents = this->parents();
+  const auto child_sides = this->get_child_sides();
 
-  node_to_replace->clear_parents();
-  node_to_replace->set_left_child(nullptr);
-  node_to_replace->set_right_child(nullptr);
+  /**
+   * Tie the replacement_node with this nodes children
+   */
+  replacement_node->set_left_child(left_child());
+  replacement_node->set_right_child(right_child());
 
+  /**
+   * Tie the replacement_node with this nodes parents. This will effectively perform clear_parents() on this node.
+   */
   for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-    parents[parent_idx]->set_child(child_sides[parent_idx], shared_from_this());
+    parents[parent_idx]->set_child(child_sides[parent_idx], replacement_node);
   }
 
-  set_left_child(left_child);
-  set_right_child(right_child);
+  /**
+   * Untie this node from the AST
+   */
+  set_left_child(nullptr);
+  set_right_child(nullptr);
 }
 
 void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
@@ -355,13 +355,15 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
 
 void AbstractASTNode::_child_changed() {
   _statistics.reset();
+  _output_column_ids_to_input_column_ids.clear();
+
   _on_child_changed();
   for (auto& parent : parents()) {
     parent->_child_changed();
   }
 }
 
-void AbstractASTNode::_remove_parent_raw(const std::shared_ptr<AbstractASTNode>& parent) {
+void AbstractASTNode::_remove_parent_pointer(const std::shared_ptr<AbstractASTNode>& parent) {
   const auto iter =
       std::find_if(_parents.begin(), _parents.end(), [&](const auto& rhs) { return parent == rhs.lock(); });
   DebugAssert(iter != _parents.end(), "Specified parent node is not actually a parent node of this node.");
@@ -373,7 +375,7 @@ void AbstractASTNode::_remove_parent_raw(const std::shared_ptr<AbstractASTNode>&
   _parents.erase(iter);
 }
 
-void AbstractASTNode::_add_parent_raw(const std::shared_ptr<AbstractASTNode>& parent) {
+void AbstractASTNode::_add_parent_pointer(const std::shared_ptr<AbstractASTNode>& parent) {
 #if IS_DEBUG
   const auto iter =
       std::find_if(_parents.begin(), _parents.end(), [&](const auto& rhs) { return parent == rhs.lock(); });

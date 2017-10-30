@@ -37,7 +37,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
         /**
          * Place the conditional join where the cross join was and remove the predicate node
          */
-        new_join_node->replace_in_tree(cross_join_node);
+        cross_join_node->replace_with(new_join_node);
         predicate_node->remove_from_tree();
 
         return true;

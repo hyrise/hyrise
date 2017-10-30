@@ -48,12 +48,12 @@ std::string JoinNode::description() const {
   return desc.str();
 }
 
-const std::vector<ColumnID>& JoinNode::output_column_id_to_input_column_id() const {
-  if (_output_column_id_to_input_column_id.empty()) {
+const std::vector<ColumnID>& JoinNode::output_column_ids_to_input_column_ids() const {
+  if (_output_column_ids_to_input_column_ids.empty()) {
     _update_output();
   }
 
-  return _output_column_id_to_input_column_id;
+  return _output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& JoinNode::output_column_names() const {
@@ -125,7 +125,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     output_column_id = left_child()->output_column_count() + *right_column_id;
   }
 
-  DebugAssert(output_column_id_to_input_column_id()[output_column_id] == input_column_id,
+  DebugAssert(output_column_ids_to_input_column_ids()[output_column_id] == input_column_id,
               "ColumnID should be in output.");
 
   return output_column_id;
@@ -177,7 +177,7 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   Assert(left_knows_table ^ right_knows_table, "Table name " + table_name + " is ambiguous.");
 
   if (left_knows_table) {
-    // The ColumnIDs of the left table appear first in `_output_column_id_to_input_column_id`.
+    // The ColumnIDs of the left table appear first in `_output_column_ids_to_input_column_ids`.
     // That means they are at the same position in our output, so we can return them directly.
     return left_child()->get_output_column_ids_for_table(table_name);
   }
@@ -212,7 +212,6 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
 
 void JoinNode::_on_child_changed() {
   _output_column_names.clear();
-  _output_column_id_to_input_column_id.clear();
 }
 
 void JoinNode::_update_output() const {
@@ -241,11 +240,11 @@ void JoinNode::_update_output() const {
   const auto num_left_columns = left_child()->output_column_count();
   const auto num_right_columns = right_child()->output_column_count();
 
-  _output_column_id_to_input_column_id.resize(num_left_columns + num_right_columns);
+  _output_column_ids_to_input_column_ids.resize(num_left_columns + num_right_columns);
 
-  auto begin = _output_column_id_to_input_column_id.begin();
+  auto begin = _output_column_ids_to_input_column_ids.begin();
   std::iota(begin, begin + num_left_columns, 0);
-  std::iota(begin + num_left_columns, _output_column_id_to_input_column_id.end(), 0);
+  std::iota(begin + num_left_columns, _output_column_ids_to_input_column_ids.end(), 0);
 }
 
 }  // namespace opossum

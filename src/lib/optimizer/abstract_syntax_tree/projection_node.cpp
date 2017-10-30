@@ -44,15 +44,14 @@ void ProjectionNode::_on_child_changed() {
   DebugAssert(!right_child(), "Projection can't have a right child");
 
   _output_column_names.clear();
-  _output_column_id_to_input_column_id.clear();
 }
 
-const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id() const {
-  if (_output_column_id_to_input_column_id.empty()) {
+const std::vector<ColumnID>& ProjectionNode::output_column_ids_to_input_column_ids() const {
+  if (_output_column_ids_to_input_column_ids.empty()) {
     _update_output();
   }
 
-  return _output_column_id_to_input_column_id;
+  return _output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const {
@@ -147,15 +146,15 @@ std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std:
 
   std::vector<ColumnID> output_column_ids_for_table;
 
-  const auto& output_column_id_to_input_column_id = this->output_column_id_to_input_column_id();
+  const auto& output_column_ids_to_input_column_ids = this->output_column_ids_to_input_column_ids();
 
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(output_column_id_to_input_column_id.begin(), output_column_id_to_input_column_id.end(),
+    const auto iter = std::find(output_column_ids_to_input_column_ids.begin(), output_column_ids_to_input_column_ids.end(),
                                 input_column_id);
 
-    if (iter != output_column_id_to_input_column_id.end()) {
+    if (iter != output_column_ids_to_input_column_ids.end()) {
       const auto column_id =
-          ColumnID{static_cast<ColumnID::base_type>(std::distance(output_column_id_to_input_column_id.begin(), iter))};
+          ColumnID{static_cast<ColumnID::base_type>(std::distance(output_column_ids_to_input_column_ids.begin(), iter))};
       output_column_ids_for_table.emplace_back(column_id);
     }
   }
@@ -187,13 +186,13 @@ void ProjectionNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(_output_column_id_to_input_column_id.empty(),
+  DebugAssert(_output_column_ids_to_input_column_ids.empty(),
               "No need to update, _update_output() shouldn't get called.");
   DebugAssert(_output_column_names.empty(), "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 
   _output_column_names.reserve(_column_expressions.size());
-  _output_column_id_to_input_column_id.reserve(_column_expressions.size());
+  _output_column_ids_to_input_column_ids.reserve(_column_expressions.size());
 
   for (const auto& expression : _column_expressions) {
     // If the expression defines an alias, use it as the output column name.
@@ -205,7 +204,7 @@ void ProjectionNode::_update_output() const {
     if (expression->type() == ExpressionType::Column) {
       DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-      _output_column_id_to_input_column_id.emplace_back(expression->column_id());
+      _output_column_ids_to_input_column_ids.emplace_back(expression->column_id());
 
       if (!expression->alias()) {
         Assert(expression->column_id() < left_child()->output_column_names().size(), "ColumnID out of range");
@@ -214,7 +213,7 @@ void ProjectionNode::_update_output() const {
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
+      _output_column_ids_to_input_column_ids.emplace_back(INVALID_COLUMN_ID);
 
       if (!expression->alias()) {
         _output_column_names.emplace_back(expression->to_string(left_child()->output_column_names()));

@@ -129,7 +129,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Every node will output a list of column and all nodes except StoredTableNode take a list of columns as input from
    * their predecessor.
    */
-  virtual const std::vector<ColumnID>& output_column_id_to_input_column_id() const;
+  virtual const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const;
 
   size_t output_column_count() const;
 
@@ -205,10 +205,10 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   void remove_from_tree();
 
   /**
-   * Replaces @param node_to_replace with this node.
-   * @pre this has neither parent nor children
+   * Replaces 'this' node with @param replacement_node node.
+   * @pre replacement_node has neither parent nor children
    */
-  void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
+  void replace_with(const std::shared_ptr<AbstractASTNode>& replacement_node);
 
   /**
    * Sets the table alias for this subtree, see _table_alias for details.
@@ -260,7 +260,15 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   std::optional<std::string> _table_alias;
 
-  mutable std::vector<ColumnID> _output_column_id_to_input_column_id;
+  /**
+   * For each column in the input node holds
+   *    - the ColumnID of this column in the output of this node
+   *    - INVALID_COLUMN_ID, if the column was created by this node.
+   *
+   * mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides,
+   * invalidated by clear()-ing the vector whenever a child changed.
+   */
+  mutable std::vector<ColumnID> _output_column_ids_to_input_column_ids;
 
   /**
    * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
@@ -285,8 +293,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Add or remove a parent without manipulating this parents child ptr. For internal usage in set_left_child(),
    * set_right_child(), remove_parent
    */
-  void _remove_parent_raw(const std::shared_ptr<AbstractASTNode>& parent);
-  void _add_parent_raw(const std::shared_ptr<AbstractASTNode>& parent);
+  void _remove_parent_pointer(const std::shared_ptr<AbstractASTNode>& parent);
+  void _add_parent_pointer(const std::shared_ptr<AbstractASTNode>& parent);
   // @}
 };
 

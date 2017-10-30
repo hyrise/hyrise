@@ -20,13 +20,13 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
 
-  _output_column_id_to_input_column_id.resize(output_column_count(), INVALID_COLUMN_ID);
+  _output_column_ids_to_input_column_ids.resize(output_column_count(), INVALID_COLUMN_ID);
 }
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
 
-const std::vector<ColumnID>& StoredTableNode::output_column_id_to_input_column_id() const {
-  return _output_column_id_to_input_column_id;
+const std::vector<ColumnID>& StoredTableNode::output_column_ids_to_input_column_ids() const {
+  return _output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& StoredTableNode::output_column_names() const { return _output_column_names; }
