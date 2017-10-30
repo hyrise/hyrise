@@ -185,24 +185,76 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTree) {
   EXPECT_EQ(_nodes[2]->left_child(), nullptr);
   EXPECT_EQ(_nodes[2]->right_child(), nullptr);
 
+  // Make sure _node[1], _node[3] and _node[4] are the only parents _nodes[5] has
+  EXPECT_EQ(_nodes[5]->parents().size(), 3u);
   ASSERT_AST_TIE(_nodes[1], ASTChildSide::Left, _nodes[5]);
-
-  // Those ties should continue to exist
-  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Right, _nodes[3]);
   ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, _nodes[5]);
   ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, _nodes[5]);
+
+  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Right, _nodes[3]);
 }
 
-TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceInTree) {
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTreeLeaf) {
+  _nodes[6]->remove_from_tree();
+  _nodes[7]->remove_from_tree();
+
+  EXPECT_TRUE(_nodes[6]->parents().empty());
+  EXPECT_TRUE(_nodes[7]->parents().empty());
+  EXPECT_EQ(_nodes[6]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_child(), nullptr);
+  EXPECT_EQ(_nodes[7]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_child(), nullptr);
+  EXPECT_EQ(_nodes[5]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[3]->right_child(), nullptr);
+  EXPECT_EQ(_nodes[4]->right_child(), nullptr);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWith) {
   auto new_node = std::make_shared<MockNode>();
 
   _nodes[5]->replace_with(new_node);
 
+  // Make sure _nodes[5] is untied from the AST
+  EXPECT_TRUE(_nodes[5]->parents().empty());
+  EXPECT_EQ(_nodes[5]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[5]->right_child(), nullptr);
+
+  // Make sure new_node is the only parent of _nodes[6]
+  EXPECT_EQ(_nodes[6]->parents().size(), 1u);
+  ASSERT_AST_TIE(new_node, ASTChildSide::Left, _nodes[6]);
+
+  // Make sure new_node, _nodes[3] and _nodes[4] are the only parents of _nodes[7]
+  EXPECT_EQ(_nodes[7]->parents().size(), 3u);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(new_node, ASTChildSide::Right, _nodes[7]);
+
+  // Make sure _nodes[5] former parents point to new_node.
   ASSERT_AST_TIE(_nodes[2], ASTChildSide::Left, new_node);
   ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, new_node);
   ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, new_node);
-  ASSERT_AST_TIE(new_node, ASTChildSide::Left, _nodes[6]);
-  ASSERT_AST_TIE(new_node, ASTChildSide::Right, _nodes[7]);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWithLeaf) {
+  auto new_node_a = std::make_shared<MockNode>();
+  auto new_node_b = std::make_shared<MockNode>();
+
+  _nodes[6]->replace_with(new_node_a);
+  _nodes[7]->replace_with(new_node_b);
+
+  // Make sure _nodes[6] is untied from the AST
+  EXPECT_TRUE(_nodes[6]->parents().empty());
+  EXPECT_EQ(_nodes[6]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_child(), nullptr);
+
+  // Make sure _nodes[7] is untied from the AST
+  EXPECT_TRUE(_nodes[7]->parents().empty());
+  EXPECT_EQ(_nodes[7]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_child(), nullptr);
+
+  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Left, new_node_a);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, new_node_b);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, new_node_b);
 }
 
 }  // namespace opossum
