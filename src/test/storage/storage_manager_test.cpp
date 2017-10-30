@@ -22,8 +22,8 @@ class StorageManagerTest : public BaseTest {
     auto v1 = std::make_shared<StoredTableNode>("first_table");
     auto v2 = std::make_shared<StoredTableNode>("second_table");
 
-    sm.add_view("first_view", v1);
-    sm.add_view("second_view", v2);
+    sm.add_view("first_view", std::move(v1));
+    sm.add_view("second_view", std::move(v2));
   }
 };
 
