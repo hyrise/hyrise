@@ -37,8 +37,6 @@ class ReferenceColumnTest : public ::testing::Test {
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
 
     DictionaryCompression::compress_chunks(*_test_table_dict, {ChunkID{0}, ChunkID{1}});
-
-    StorageManager::get().add_table("test_table_dict", _test_table_dict);
   }
 
  public:

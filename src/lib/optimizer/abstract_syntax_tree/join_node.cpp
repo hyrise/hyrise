@@ -232,4 +232,8 @@ void JoinNode::_on_child_changed() {
   std::iota(begin + num_left_columns, _output_column_id_to_input_column_id.end(), 0);
 }
 
+std::shared_ptr<AbstractASTNode> JoinNode::clone_subtree() const {
+  return _clone_without_subclass_members<decltype(*this)>();
+}
+
 }  // namespace opossum

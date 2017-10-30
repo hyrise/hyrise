@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -25,6 +26,8 @@ class DummyTableNode : public AbstractASTNode {
       const NamedColumnReference& named_column_reference) const override;
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
+
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
 
  protected:
   void _on_child_changed() override;

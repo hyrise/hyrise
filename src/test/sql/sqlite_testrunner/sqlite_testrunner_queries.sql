@@ -118,5 +118,10 @@ INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; S
 -- INSERT ... INTO ... (with regular queries)
 INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3; INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13; INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6; SELECT * FROM int_int_for_insert_1;
 
+-- VIEWS
+CREATE VIEW count_view AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT * FROM count_view;
+SELECT * FROM count_view WHERE a > 10;
+
 -- TODO: Fails
 -- SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING b > 457 OR b = 1234 OR b = 12345;

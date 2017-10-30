@@ -37,6 +37,8 @@ class PredicateNode : public AbstractASTNode {
       const std::shared_ptr<AbstractASTNode>& left_child,
       const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
 
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
+
  private:
   const ColumnID _column_id;
   const ScanType _scan_type;

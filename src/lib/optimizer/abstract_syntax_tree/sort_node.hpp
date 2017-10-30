@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,8 @@ class SortNode : public AbstractASTNode {
   std::string description() const override;
 
   const std::vector<OrderByDefinition>& order_by_definitions() const;
+
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
 
  private:
   const std::vector<OrderByDefinition> _order_by_definitions;

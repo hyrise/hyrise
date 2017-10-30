@@ -8,20 +8,15 @@
 namespace opossum {
 
 /**
- * This node type represents limiting a result to a certain number of rows (LIMIT operator).
+ * This node is returned by the SQLToASTTranslator for everything that doesn't have a return value (i.e., CREATE)
  */
-class LimitNode : public AbstractASTNode {
+class EmptyNode : public AbstractASTNode {
  public:
-  explicit LimitNode(const size_t num_rows);
+  EmptyNode();
 
   std::string description() const override;
 
-  size_t num_rows() const;
-
   std::shared_ptr<AbstractASTNode> clone_subtree() const override;
-
- private:
-  const size_t _num_rows;
 };
 
 }  // namespace opossum

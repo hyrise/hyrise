@@ -1,9 +1,10 @@
 #include "union_node.hpp"
 
+#include <memory>
 #include <string>
 
-#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,6 +23,10 @@ std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
   Assert(left_column_name == right_column_name, "Input column names don't match");
 
   return left_column_name;
+}
+
+std::shared_ptr<AbstractASTNode> UnionNode::clone_subtree() const {
+  return _clone_without_subclass_members<decltype(*this)>();
 }
 
 }  // namespace opossum

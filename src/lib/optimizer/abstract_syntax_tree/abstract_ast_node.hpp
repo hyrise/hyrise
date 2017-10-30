@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "types.hpp"
@@ -18,6 +19,7 @@ enum class ASTNodeType {
   Aggregate,
   Delete,
   DummyTable,
+  Empty,
   Insert,
   Join,
   Limit,
@@ -59,6 +61,16 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Returns whether this node shall be considered by the optimizer or not.
    */
   virtual bool is_optimizable() const;
+
+  /**
+   * Returns whether this subtree is read only. Defaults to true - if a node makes modications, it has to override this
+   */
+  virtual bool subtree_is_read_only() const;
+
+  /**
+   * Returns whether all tables in this subtree were validated
+   */
+  bool subtree_is_validated() const;
 
   /**
    * @pre this has a parent
@@ -226,6 +238,10 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::vector<std::string> get_verbose_column_names() const;
   // @}
 
+  // Returns a deep copy of this subtree. If your subclass holds any shared_ptr or other members whose copy
+  // constructor does not give you a real copy, you have to override this
+  virtual std::shared_ptr<AbstractASTNode> clone_subtree() const = 0;
+
  protected:
   virtual void _on_child_changed() {}
 
@@ -241,6 +257,24 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   // only operate on the column name. If an alias for this subtree is set, but this reference does not match
   // it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+
+  // A helper method that can be used by all subclasses to do most of the work needed for clone_subtree. This sets the
+  // parent<->children relation - all that's left to do in the subclasses is to deep-copy all members that are not
+  // deep copied by default (i.e., you will have to copy shared_ptrs by hand, but strings not)
+  template <typename Subclass>
+  std::shared_ptr<std::decay_t<Subclass>> _clone_without_subclass_members() const {
+    auto clone = std::make_shared<std::decay_t<Subclass>>(*static_cast<const std::decay_t<Subclass>*>(this));
+    if (left_child()) {
+      clone->_left_child = left_child()->clone_subtree();
+      clone->_left_child->_parent = clone;
+    }
+    if (right_child()) {
+      clone->_right_child = right_child()->clone_subtree();
+      clone->_right_child->_parent = clone;
+    }
+    clone->_statistics = nullptr;
+    return clone;
+  }
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

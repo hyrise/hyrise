@@ -1,5 +1,6 @@
 #include "sort_node.hpp"
 
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -40,5 +41,9 @@ std::string SortNode::description() const {
 }
 
 const std::vector<OrderByDefinition>& SortNode::order_by_definitions() const { return _order_by_definitions; }
+
+std::shared_ptr<AbstractASTNode> SortNode::clone_subtree() const {
+  return _clone_without_subclass_members<decltype(*this)>();
+}
 
 }  // namespace opossum

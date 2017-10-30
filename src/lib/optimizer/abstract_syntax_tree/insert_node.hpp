@@ -17,7 +17,11 @@ class InsertNode : public AbstractASTNode {
 
   std::string description() const override;
 
+  bool subtree_is_read_only() const override;
+
   const std::string& table_name() const;
+
+  std::shared_ptr<AbstractASTNode> clone_subtree() const override;
 
  protected:
   const std::string _table_name;

@@ -107,6 +107,8 @@ set(
     optimizer/abstract_syntax_tree/delete_node.hpp
     optimizer/abstract_syntax_tree/dummy_table_node.cpp
     optimizer/abstract_syntax_tree/dummy_table_node.hpp
+    optimizer/abstract_syntax_tree/empty_node.cpp
+    optimizer/abstract_syntax_tree/empty_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/abstract_syntax_tree/insert_node.cpp
