@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -43,4 +44,4 @@ class AbstractASTNode;
 using ColumnOrigin = std::pair<std::shared_ptr<const AbstractASTNode>, ColumnID>;
 using ColumnOrigins = std::vector<ColumnOrigin>;
 using ColumnIDMapping = std::vector<ColumnID>;
-}
+}  // namespace opossum

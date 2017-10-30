@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <memory>
+
+#include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/ast_utils.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"

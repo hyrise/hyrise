@@ -43,7 +43,6 @@ set(
     operators/validate_visibility_test.cpp
     optimizer/abstract_syntax_tree/abstract_syntax_tree_test.cpp
     optimizer/abstract_syntax_tree/aggregate_node_test.cpp
-    optimizer/abstract_syntax_tree/ast_utils_test.cpp
     optimizer/abstract_syntax_tree/join_node_test.cpp
     optimizer/abstract_syntax_tree/map_column_id_test.cpp
     optimizer/abstract_syntax_tree/predicate_node_test.cpp

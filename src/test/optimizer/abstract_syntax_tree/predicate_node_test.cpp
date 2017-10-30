@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/mock_table_node.hpp"

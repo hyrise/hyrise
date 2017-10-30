@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <type_traits>
 
 #include "types.hpp"
@@ -21,4 +22,4 @@ typename std::enable_if<std::is_integral<T>::value, ColumnID>::type make_column_
               "Value out of range for ColumnID");
   return ColumnID{static_cast<ColumnID::base_type>(value)};
 }
-}
+}  // namespace opossum

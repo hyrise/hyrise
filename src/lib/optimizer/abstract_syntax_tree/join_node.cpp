@@ -1,5 +1,6 @@
 #include "join_node.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <numeric>
