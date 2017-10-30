@@ -879,7 +879,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_create(const hsq
         view = projection_node;
       }
 
-      StorageManager::get().add_view(create_statement.tableName, view);
+      StorageManager::get().add_view(create_statement.tableName, std::move(view));
       return std::make_shared<EmptyNode>();
     }
     default:
