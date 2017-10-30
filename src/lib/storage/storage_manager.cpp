@@ -61,7 +61,7 @@ void StorageManager::add_view(const std::string& name, std::shared_ptr<AbstractA
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
-  Assert(view->is_read_only(), "Views can only hold read-only SELECTs");
+  DebugAssert(view->subtree_is_read_only(), "Views can only hold read-only SELECTs");
 
   _views.insert(std::make_pair(name, std::move(view)));
 }

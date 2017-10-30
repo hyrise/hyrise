@@ -62,14 +62,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual bool is_optimizable() const;
 
   /**
-   * Returns whether this subtree is read only
+   * Returns whether this subtree is read only. Defaults to true - if a node makes modications, it has to override this
    */
-  virtual bool is_read_only() const;
+  virtual bool subtree_is_read_only() const;
 
   /**
    * Returns whether all tables in this subtree were validated
    */
-  bool is_validated() const;
+  bool subtree_is_validated() const;
 
   /**
    * @pre this has a parent

@@ -400,7 +400,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
         node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
       } else if (StorageManager::get().has_view(table.name)) {
         node = StorageManager::get().get_view(table.name);
-        Assert(!_validate || node->is_validated(), "Trying to add non-validated view to validated query");
+        Assert(!_validate || node->subtree_is_validated(), "Trying to add non-validated view to validated query");
       } else {
         Fail(std::string("Did not find a table or view with name ") + table.name);
       }

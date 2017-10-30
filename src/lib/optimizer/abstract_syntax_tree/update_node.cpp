@@ -23,7 +23,7 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
-bool UpdateNode::is_read_only() const { return false; }
+bool UpdateNode::subtree_is_read_only() const { return false; }
 
 const std::vector<std::shared_ptr<Expression>>& UpdateNode::column_expressions() const { return _column_expressions; }
 

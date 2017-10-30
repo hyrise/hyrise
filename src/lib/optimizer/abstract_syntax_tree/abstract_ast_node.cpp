@@ -19,16 +19,21 @@ AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
 bool AbstractASTNode::is_optimizable() const { return true; }
 
-bool AbstractASTNode::is_read_only() const { return true; }
+bool AbstractASTNode::subtree_is_read_only() const {
+  auto read_only = true;
+  if (left_child()) read_only &= left_child()->subtree_is_read_only();
+  if (right_child()) read_only &= right_child()->subtree_is_read_only();
+  return read_only;
+}
 
-bool AbstractASTNode::is_validated() const {
+bool AbstractASTNode::subtree_is_validated() const {
   if (type() == ASTNodeType::Validate) return true;
 
   if (!left_child() && !right_child()) return false;
 
   auto children_validated = true;
-  if (left_child()) children_validated &= left_child()->is_validated();
-  if (right_child()) children_validated &= right_child()->is_validated();
+  if (left_child()) children_validated &= left_child()->subtree_is_validated();
+  if (right_child()) children_validated &= right_child()->subtree_is_validated();
   return children_validated;
 }
 

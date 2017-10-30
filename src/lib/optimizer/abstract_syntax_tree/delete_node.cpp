@@ -19,7 +19,7 @@ std::string DeleteNode::description() const {
   return desc.str();
 }
 
-bool DeleteNode::is_read_only() const { return true; }
+bool DeleteNode::subtree_is_read_only() const { return false; }
 
 const std::string& DeleteNode::table_name() const { return _table_name; }
 
