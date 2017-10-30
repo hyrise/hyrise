@@ -228,7 +228,7 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
 }
 
 void AbstractASTNode::remove_from_tree() {
-  Assert(left_child() && !right_child(), "Can only rermove nodes that only have a left child");
+  Assert(left_child() && !right_child(), "Can only remove nodes that only have a left child");
 
   /**
    * Back up parents and in which child side they hold this node
