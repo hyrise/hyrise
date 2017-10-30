@@ -61,7 +61,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    Chunk chunk{false};
+    Chunk chunk{ChunkUseMvcc::No};
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
       chunk.add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
