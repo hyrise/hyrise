@@ -39,7 +39,7 @@ class ProjectionNode : public AbstractASTNode {
  private:
   const std::vector<std::shared_ptr<Expression>> _column_expressions;
 
-  mutable std::vector<std::string> _output_column_names;
+  mutable std::optional<std::vector<std::string>> _output_column_names;
 
   void _update_output() const;
 };

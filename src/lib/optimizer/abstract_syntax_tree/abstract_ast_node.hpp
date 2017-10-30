@@ -265,10 +265,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *    - the ColumnID of this column in the output of this node
    *    - INVALID_COLUMN_ID, if the column was created by this node.
    *
-   * mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides,
-   * invalidated by clear()-ing the vector whenever a child changed.
+   * mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides
    */
-  mutable std::vector<ColumnID> _output_column_ids_to_input_column_ids;
+  mutable std::optional<std::vector<ColumnID>> _output_column_ids_to_input_column_ids;
 
   /**
    * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we

@@ -64,7 +64,7 @@ class AggregateNode : public AbstractASTNode {
   std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
   std::vector<ColumnID> _groupby_column_ids;
 
-  mutable std::vector<std::string> _output_column_names;
+  mutable std::optional<std::vector<std::string>> _output_column_names;
 
   void _update_output() const;
 };

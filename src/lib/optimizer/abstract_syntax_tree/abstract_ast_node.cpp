@@ -153,12 +153,12 @@ const std::vector<ColumnID>& AbstractASTNode::output_column_ids_to_input_column_
   DebugAssert(left_child() && !right_child(),
               "Node has no or two inputs and therefore needs to override this function.");
 
-  if (_output_column_ids_to_input_column_ids.empty()) {
-    _output_column_ids_to_input_column_ids.resize(output_column_count());
-    std::iota(_output_column_ids_to_input_column_ids.begin(), _output_column_ids_to_input_column_ids.end(),
+  if (!_output_column_ids_to_input_column_ids) {
+    _output_column_ids_to_input_column_ids.emplace(output_column_count());
+    std::iota(_output_column_ids_to_input_column_ids->begin(), _output_column_ids_to_input_column_ids->end(),
               ColumnID{0});
   }
-  return _output_column_ids_to_input_column_ids;
+  return *_output_column_ids_to_input_column_ids;
 }
 
 size_t AbstractASTNode::output_column_count() const { return output_column_names().size(); }
@@ -356,7 +356,7 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
 
 void AbstractASTNode::_child_changed() {
   _statistics.reset();
-  _output_column_ids_to_input_column_ids.clear();
+  _output_column_ids_to_input_column_ids.reset();
 
   _on_child_changed();
   for (auto& parent : parents()) {

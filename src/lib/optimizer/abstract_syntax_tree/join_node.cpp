@@ -49,19 +49,19 @@ std::string JoinNode::description() const {
 }
 
 const std::vector<ColumnID>& JoinNode::output_column_ids_to_input_column_ids() const {
-  if (_output_column_ids_to_input_column_ids.empty()) {
+  if (!_output_column_ids_to_input_column_ids) {
     _update_output();
   }
 
-  return _output_column_ids_to_input_column_ids;
+  return *_output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& JoinNode::output_column_names() const {
-  if (_output_column_names.empty()) {
+  if (!_output_column_names) {
     _update_output();
   }
 
-  return _output_column_names;
+  return *_output_column_names;
 }
 
 std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
@@ -210,7 +210,7 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
       ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_column_count())});
 }
 
-void JoinNode::_on_child_changed() { _output_column_names.clear(); }
+void JoinNode::_on_child_changed() { _output_column_names.reset(); }
 
 void JoinNode::_update_output() const {
   /**
@@ -227,10 +227,11 @@ void JoinNode::_update_output() const {
   const auto& left_names = left_child()->output_column_names();
   const auto& right_names = right_child()->output_column_names();
 
-  _output_column_names.reserve(left_names.size() + right_names.size());
+  _output_column_names.emplace();
+  _output_column_names->reserve(left_names.size() + right_names.size());
 
-  _output_column_names.insert(_output_column_names.end(), left_names.begin(), left_names.end());
-  _output_column_names.insert(_output_column_names.end(), right_names.begin(), right_names.end());
+  _output_column_names->insert(_output_column_names->end(), left_names.begin(), left_names.end());
+  _output_column_names->insert(_output_column_names->end(), right_names.begin(), right_names.end());
 
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
@@ -238,11 +239,11 @@ void JoinNode::_update_output() const {
   const auto num_left_columns = left_child()->output_column_count();
   const auto num_right_columns = right_child()->output_column_count();
 
-  _output_column_ids_to_input_column_ids.resize(num_left_columns + num_right_columns);
+  _output_column_ids_to_input_column_ids.emplace(num_left_columns + num_right_columns);
 
-  auto begin = _output_column_ids_to_input_column_ids.begin();
+  auto begin = _output_column_ids_to_input_column_ids->begin();
   std::iota(begin, begin + num_left_columns, 0);
-  std::iota(begin + num_left_columns, _output_column_ids_to_input_column_ids.end(), 0);
+  std::iota(begin + num_left_columns, _output_column_ids_to_input_column_ids->end(), 0);
 }
 
 }  // namespace opossum

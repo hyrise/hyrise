@@ -43,23 +43,23 @@ const std::vector<std::shared_ptr<Expression>>& ProjectionNode::column_expressio
 void ProjectionNode::_on_child_changed() {
   DebugAssert(!right_child(), "Projection can't have a right child");
 
-  _output_column_names.clear();
+  _output_column_names.reset();
 }
 
 const std::vector<ColumnID>& ProjectionNode::output_column_ids_to_input_column_ids() const {
-  if (_output_column_ids_to_input_column_ids.empty()) {
+  if (!_output_column_ids_to_input_column_ids) {
     _update_output();
   }
 
-  return _output_column_ids_to_input_column_ids;
+  return *_output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const {
-  if (_output_column_names.empty()) {
+  if (!_output_column_names) {
     _update_output();
   }
 
-  return _output_column_names;
+  return *_output_column_names;
 }
 
 std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
@@ -186,37 +186,40 @@ void ProjectionNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(_output_column_ids_to_input_column_ids.empty(),
+  DebugAssert(!_output_column_ids_to_input_column_ids,
               "No need to update, _update_output() shouldn't get called.");
-  DebugAssert(_output_column_names.empty(), "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 
-  _output_column_names.reserve(_column_expressions.size());
-  _output_column_ids_to_input_column_ids.reserve(_column_expressions.size());
+  _output_column_names.emplace();
+  _output_column_names->reserve(_column_expressions.size());
+
+  _output_column_ids_to_input_column_ids.emplace();
+  _output_column_ids_to_input_column_ids->reserve(_column_expressions.size());
 
   for (const auto& expression : _column_expressions) {
     // If the expression defines an alias, use it as the output column name.
     // If it does not, we have to handle it differently, depending on the type of the expression.
     if (expression->alias()) {
-      _output_column_names.emplace_back(*expression->alias());
+      _output_column_names->emplace_back(*expression->alias());
     }
 
     if (expression->type() == ExpressionType::Column) {
       DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-      _output_column_ids_to_input_column_ids.emplace_back(expression->column_id());
+      _output_column_ids_to_input_column_ids->emplace_back(expression->column_id());
 
       if (!expression->alias()) {
         Assert(expression->column_id() < left_child()->output_column_names().size(), "ColumnID out of range");
         const auto& column_name = left_child()->output_column_names()[expression->column_id()];
-        _output_column_names.emplace_back(column_name);
+        _output_column_names->emplace_back(column_name);
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_ids_to_input_column_ids.emplace_back(INVALID_COLUMN_ID);
+      _output_column_ids_to_input_column_ids->emplace_back(INVALID_COLUMN_ID);
 
       if (!expression->alias()) {
-        _output_column_names.emplace_back(expression->to_string(left_child()->output_column_names()));
+        _output_column_names->emplace_back(expression->to_string(left_child()->output_column_names()));
       }
 
     } else {
