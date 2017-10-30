@@ -26,9 +26,9 @@ const std::vector<std::shared_ptr<Expression>>& UpdateNode::column_expressions()
 
 const std::string& UpdateNode::table_name() const { return _table_name; }
 
-void UpdateNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
-                                const std::optional<ASTChildSide> &caller_child_side) {
-  for (const auto & column_expression : _column_expressions) {
+void UpdateNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
+                                const std::optional<ASTChildSide>& caller_child_side) {
+  for (const auto& column_expression : _column_expressions) {
     column_expression->map_column_ids(column_id_mapping);
   }
 }

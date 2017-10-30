@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "types.hpp"
 #include "ast_types.hpp"
 #include "ast_utils.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -215,7 +215,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * NOTE: Call this on the node whose Column order changed, NOT on its parent.
    */
-  void dispatch_column_id_mapping(const ColumnOrigins &prev_column_origins);
+  void dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins);
 
   /**
    * Overriden by Nodes who need to update ColumnIDs.
@@ -224,8 +224,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * NOTE: Can't be protected because derived Nodes need to call this on AbstractASTNode objects, which C++ wouldn't
    *    allow
    */
-  virtual void map_column_ids(const ColumnIDMapping &column_id_mapping,
-                              const std::optional<ASTChildSide> &caller_child_side = std::nullopt);
+  virtual void map_column_ids(const ColumnIDMapping& column_id_mapping,
+                              const std::optional<ASTChildSide>& caller_child_side = std::nullopt);
   // @}
 
   // @{

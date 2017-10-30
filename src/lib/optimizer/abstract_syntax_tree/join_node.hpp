@@ -44,8 +44,8 @@ class JoinNode : public AbstractASTNode {
 
   ColumnOrigin get_column_origin(ColumnID column_id) const override;
 
-  void map_column_ids(const ColumnIDMapping &column_id_mapping,
-                      const std::optional<ASTChildSide> &caller_child_side) override;
+  void map_column_ids(const ColumnIDMapping& column_id_mapping,
+                      const std::optional<ASTChildSide>& caller_child_side) override;
 
  protected:
   void _on_child_changed() override;

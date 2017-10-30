@@ -81,9 +81,9 @@ void ProjectionNode::_on_child_changed() {
   }
 }
 
-void ProjectionNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
-                                    const std::optional<ASTChildSide> &caller_child_side) {
-  for (const auto & column_expression : _column_expressions) {
+void ProjectionNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
+                                    const std::optional<ASTChildSide>& caller_child_side) {
+  for (const auto& column_expression : _column_expressions) {
     column_expression->map_column_ids(column_id_mapping);
   }
 }

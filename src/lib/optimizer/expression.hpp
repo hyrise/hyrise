@@ -159,7 +159,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * When optimizer rules change column orders, this function is used to adapt the Expressions of AST nodes to the new
    * column order
    */
-  void map_column_ids(const ColumnIDMapping &column_id_mapping);
+  void map_column_ids(const ColumnIDMapping& column_id_mapping);
 
   bool operator==(const Expression& rhs) const;
 

@@ -140,17 +140,16 @@ void AggregateNode::_on_child_changed() {
   }
 }
 
-void AggregateNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
-                                   const std::optional<ASTChildSide> &caller_child_side) {
-  for (const auto & aggregate_expression : _aggregate_expressions) {
+void AggregateNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
+                                   const std::optional<ASTChildSide>& caller_child_side) {
+  for (const auto& aggregate_expression : _aggregate_expressions) {
     aggregate_expression->map_column_ids(column_id_mapping);
   }
 
-  for (auto & group_by_column : _groupby_column_ids) {
+  for (auto& group_by_column : _groupby_column_ids) {
     group_by_column = column_id_mapping[group_by_column];
   }
 }
-
 
 const std::vector<std::string>& AggregateNode::output_column_names() const { return _output_column_names; }
 

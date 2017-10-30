@@ -87,7 +87,8 @@ TEST_F(MapColumnIDTest, GetColumnOriginsMultipleJoinsAndProjection) {
   join_1->set_children(_table_d, _table_e);
   auto join_2 = std::make_shared<JoinNode>(JoinMode::Cross);
   join_2->set_children(join_0, join_1);
-  auto projection = std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{1}, ColumnID{4}, ColumnID{2}, ColumnID{7}, ColumnID{6}}));
+  auto projection = std::make_shared<ProjectionNode>(
+      Expression::create_columns({ColumnID{1}, ColumnID{4}, ColumnID{2}, ColumnID{7}, ColumnID{6}}));
   projection->set_left_child(join_2);
 
   const auto projection_column_origins = projection->get_column_origins();
@@ -177,7 +178,8 @@ TEST_F(MapColumnIDTest, ColumnOrderChangeComplex) {
    *   A        B              C         D
    */
   auto predicate = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpEquals, ColumnID{1});
-  auto projection = std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{10}, ColumnID{9}, ColumnID{1}, ColumnID{7}, ColumnID{5}}));
+  auto projection = std::make_shared<ProjectionNode>(
+      Expression::create_columns({ColumnID{10}, ColumnID{9}, ColumnID{1}, ColumnID{7}, ColumnID{5}}));
   auto join_plan_a = std::make_shared<JoinNode>(JoinMode::Cross);
   auto join_0 = std::make_shared<JoinNode>(JoinMode::Cross);
   auto join_1 = std::make_shared<JoinNode>(JoinMode::Cross);

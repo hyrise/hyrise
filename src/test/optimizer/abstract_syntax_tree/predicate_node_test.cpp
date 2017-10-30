@@ -5,9 +5,7 @@
 
 namespace opossum {
 
-class PredicateNodeTest : public ::testing::Test {
-
-};
+class PredicateNodeTest : public ::testing::Test {};
 
 TEST_F(PredicateNodeTest, MapColumnIDs) {
   /**

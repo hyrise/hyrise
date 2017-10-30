@@ -5,9 +5,7 @@
 
 namespace opossum {
 
-class SortNodeTest : public ::testing::Test {
-
-};
+class SortNodeTest : public ::testing::Test {};
 
 TEST_F(SortNodeTest, MapColumnIDs) {
   /**
@@ -24,7 +22,8 @@ TEST_F(SortNodeTest, MapColumnIDs) {
    *      Mock
    */
   auto mock = std::make_shared<MockTableNode>("a", 4);
-  auto sort_1 = std::make_shared<SortNode>(OrderByDefinitions{{ColumnID{0}, OrderByMode::Ascending}, {ColumnID{2}, OrderByMode::Descending}});
+  auto sort_1 = std::make_shared<SortNode>(
+      OrderByDefinitions{{ColumnID{0}, OrderByMode::Ascending}, {ColumnID{2}, OrderByMode::Descending}});
   auto sort_0 = std::make_shared<SortNode>(OrderByDefinitions{{ColumnID{1}, OrderByMode::Descending}});
 
   sort_1->set_left_child(sort_0);

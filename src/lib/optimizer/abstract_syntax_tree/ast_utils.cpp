@@ -12,9 +12,8 @@
 
 namespace opossum {
 
-
-ColumnIDMapping ast_generate_column_id_mapping(const ColumnOrigins &column_origins_a,
-                                               const ColumnOrigins &column_origins_b) {
+ColumnIDMapping ast_generate_column_id_mapping(const ColumnOrigins& column_origins_a,
+                                               const ColumnOrigins& column_origins_b) {
   DebugAssert(column_origins_a.size() == column_origins_b.size(), "Params must be shuffled set of each other");
 
   ColumnIDMapping output_mapping(column_origins_a.size(), INVALID_COLUMN_ID);

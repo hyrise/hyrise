@@ -41,8 +41,8 @@ std::string SortNode::description() const {
 
 const OrderByDefinitions& SortNode::order_by_definitions() const { return _order_by_definitions; }
 
-void SortNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
-                              const std::optional<ASTChildSide> &caller_child_side) {
+void SortNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
+                              const std::optional<ASTChildSide>& caller_child_side) {
   for (auto& order_by_definition : _order_by_definitions) {
     order_by_definition.column_id = column_id_mapping[order_by_definition.column_id];
   }

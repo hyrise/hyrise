@@ -7,7 +7,6 @@
 
 namespace opossum {
 
-class ASTUtilsTest : public ::testing::Test {
-};
+class ASTUtilsTest : public ::testing::Test {};
 
 }  // namespace opossum

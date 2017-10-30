@@ -87,7 +87,8 @@ TEST_F(ProjectionNodeTest, MapColumnIDs) {
    */
 
   auto mock = std::make_shared<MockTableNode>("a", 4);
-  auto projection = std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{1}, ColumnID{2}, ColumnID{0}}));
+  auto projection =
+      std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{1}, ColumnID{2}, ColumnID{0}}));
   auto predicate = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, 5);
 
   projection->set_left_child(mock);

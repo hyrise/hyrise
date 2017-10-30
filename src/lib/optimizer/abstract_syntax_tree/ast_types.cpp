@@ -10,5 +10,4 @@ std::string NamedColumnReference::as_string() const {
   ss << column_name;
   return ss.str();
 }
-
 }

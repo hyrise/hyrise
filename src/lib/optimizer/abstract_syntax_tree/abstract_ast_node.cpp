@@ -245,10 +245,9 @@ ColumnOrigin AbstractASTNode::get_column_origin(ColumnID column_id) const {
   return left_child()->get_column_origin(input_column_id);
 }
 
-void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins &prev_column_origins) {
+void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins) {
   const auto post_ordering_column_origins = get_column_origins();
-  const auto column_id_mapping = ast_generate_column_id_mapping(prev_column_origins,
-                                                                get_column_origins());
+  const auto column_id_mapping = ast_generate_column_id_mapping(prev_column_origins, get_column_origins());
 
   auto parent = _parent.lock();
   if (parent) {
@@ -256,8 +255,8 @@ void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins &prev_colum
   }
 }
 
-void AbstractASTNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
-                                     const std::optional<ASTChildSide> &caller_child_side) {
+void AbstractASTNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
+                                     const std::optional<ASTChildSide>& caller_child_side) {
   auto parent = _parent.lock();
   if (parent) {
     parent->map_column_ids(column_id_mapping, get_child_side());
@@ -325,7 +324,7 @@ std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference &reference) const {
+std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

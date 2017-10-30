@@ -243,8 +243,8 @@ ColumnOrigin JoinNode::get_column_origin(ColumnID column_id) const {
   return left_child()->get_column_origin(column_id);
 }
 
-void JoinNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
-                              const std::optional<ASTChildSide> &caller_child_side) {
+void JoinNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
+                              const std::optional<ASTChildSide>& caller_child_side) {
   DebugAssert(left_child() && right_child(), "Children need to be set for this operation");
   DebugAssert(caller_child_side, "JoinNode needs to know which childs column_id_mapping changed");
 
@@ -256,21 +256,20 @@ void JoinNode::map_column_ids(const ColumnIDMapping &column_id_mapping,
     }
 
     std::copy(column_id_mapping.begin(), column_id_mapping.end(), join_column_id_mapping.begin());
-    std::iota(join_column_id_mapping.begin() + left_child()->output_col_count(),
-              join_column_id_mapping.end(),
+    std::iota(join_column_id_mapping.begin() + left_child()->output_col_count(), join_column_id_mapping.end(),
               make_column_id(left_child()->output_col_count()));
   } else {
     if (_join_column_ids) {
       _join_column_ids->second = column_id_mapping[_join_column_ids->second];
     }
-    std::iota(join_column_id_mapping.begin(),
-              join_column_id_mapping.begin() + left_child()->output_col_count(),
+    std::iota(join_column_id_mapping.begin(), join_column_id_mapping.begin() + left_child()->output_col_count(),
               ColumnID{0});
     const auto left_column_count = left_child()->output_col_count();
     const auto join_column_count = output_col_count();
 
     for (size_t join_column_idx = left_column_count; join_column_idx < join_column_count; ++join_column_idx) {
-      join_column_id_mapping[join_column_idx] = column_id_mapping[join_column_idx - left_column_count] + left_column_count;
+      join_column_id_mapping[join_column_idx] =
+          column_id_mapping[join_column_idx - left_column_count] + left_column_count;
     }
   }
 

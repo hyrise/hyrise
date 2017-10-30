@@ -1,14 +1,12 @@
 #include "gtest/gtest.h"
 
-#include "optimizer/expression.hpp"
 #include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
+#include "optimizer/expression.hpp"
 
 namespace opossum {
 
-class UpdateNodeTest : public ::testing::Test {
-
-};
+class UpdateNodeTest : public ::testing::Test {};
 
 TEST_F(UpdateNodeTest, MapColumnIDs) {
   /**
@@ -22,7 +20,8 @@ TEST_F(UpdateNodeTest, MapColumnIDs) {
    *      Mock
    */
   auto mock = std::make_shared<MockTableNode>("a", 4);
-  auto update = std::make_shared<UpdateNode>("a", std::vector<std::shared_ptr<Expression>>({Expression::create_column(ColumnID{0})}));
+  auto update = std::make_shared<UpdateNode>(
+      "a", std::vector<std::shared_ptr<Expression>>({Expression::create_column(ColumnID{0})}));
 
   update->set_left_child(mock);
 
