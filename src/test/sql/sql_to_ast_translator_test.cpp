@@ -512,4 +512,13 @@ TEST_F(SQLToASTTranslatorTest, DropView) {
   EXPECT_THROW(compile_query("DROP VIEW my_third_view"), std::exception);
 }
 
+TEST_F(SQLToASTTranslatorTest, ViewsDoNotGetModified) {
+  compile_query("CREATE VIEW my_fourth_view AS SELECT * FROM table_a WHERE a = 'b';");
+  auto view_from_sm = StorageManager::get().get_view("my_fourth_view");
+  view_from_sm->left_child()->clear_parent();
+
+  view_from_sm = StorageManager::get().get_view("my_fourth_view");
+  EXPECT_NE(view_from_sm->left_child(), nullptr);
+}
+
 }  // namespace opossum
