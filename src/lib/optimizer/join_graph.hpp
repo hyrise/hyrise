@@ -2,12 +2,17 @@
 
 #include <limits>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+/**
+ * A connection between two JoinGraph-Vertices.
+ */
 struct JoinEdge {
   JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, const std::pair<ColumnID, ColumnID>& column_ids,
            JoinMode join_mode, ScanType scan_type);
@@ -18,6 +23,14 @@ struct JoinEdge {
   ScanType scan_type;
 };
 
+/**
+ * Describes a set of AST subtrees (called "vertices") and the predicates (called "edges") they are connected with.
+ * JoinGraphs are the core data structure worked on during JoinOrdering.
+ * A JoinGraph is a unordered representation of a JoinPlan, i.e. a AST subtree that consists of Joins,
+ * ColumnToColumn-Predicates and Leafs (which are all other kind of nodes).
+ *
+ * See the tests for examples.
+ */
 class JoinGraph final {
  public:
   using Vertices = std::vector<std::shared_ptr<AbstractASTNode>>;
@@ -58,4 +71,4 @@ class JoinGraph final {
   Vertices _vertices;
   Edges _edges;
 };
-}
+}  // namespace opossum

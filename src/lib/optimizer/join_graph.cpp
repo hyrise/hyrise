@@ -1,6 +1,8 @@
 #include "join_graph.hpp"
 
 #include <utility>
+#include <memory>
+#include <vector>
 
 #include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
@@ -62,7 +64,6 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
 
   Assert(node->num_parents() <= 1, "Nodes with multiple parents not supported when building JoinGraph");
 
-
   if (node->type() != ASTNodeType::Join && node->type() != ASTNodeType::Predicate) {
     o_vertices.emplace_back(node);
     return;
@@ -73,7 +74,7 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
    */
   auto left_column_id = INVALID_COLUMN_ID;
   auto right_column_id = INVALID_COLUMN_ID;
-  auto scan_type = ScanType::OpEquals; // just to init this to something sane, gets assigned below.
+  auto scan_type = ScanType::OpEquals;  // just to init this to something sane, gets assigned below.
 
   if (node->type() == ASTNodeType::Join) {
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
@@ -116,7 +117,6 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
 
   _traverse_ast_for_join_graph(node->left_child(), o_vertices, o_edges);
 
-
   /**
    * This is where the magic happens.
    *
@@ -139,15 +139,15 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
 
     // Search the for the VertexID/ColumnID of the left side of the join expression in the left subtree
     left_operand_vertex_and_column =
-    _find_vertex_and_column_id(o_vertices, left_column_id, first_left_vertex_offset, first_right_vertex_offset);
+        _find_vertex_and_column_id(o_vertices, left_column_id, first_left_vertex_offset, first_right_vertex_offset);
 
     // ...and for the right one in the right subtree.
     right_operand_vertex_and_column = _find_vertex_and_column_id(o_vertices, right_column_id, first_right_vertex_offset,
-                                                              make_join_vertex_id(o_vertices.size()));
+                                                                 make_join_vertex_id(o_vertices.size()));
   } else {
     // Search the for the VertexID/ColumnID of the left side of the predicate expression in the subtree
-    left_operand_vertex_and_column =
-    _find_vertex_and_column_id(o_vertices, left_column_id, first_left_vertex_offset, make_join_vertex_id(o_vertices.size()));
+    left_operand_vertex_and_column = _find_vertex_and_column_id(o_vertices, left_column_id, first_left_vertex_offset,
+                                                                make_join_vertex_id(o_vertices.size()));
 
     // ...and for the right one
     right_operand_vertex_and_column = _find_vertex_and_column_id(o_vertices, right_column_id, first_left_vertex_offset,
@@ -178,4 +178,4 @@ std::pair<JoinVertexID, ColumnID> JoinGraph::_find_vertex_and_column_id(
   Fail("Couldn't find column_id in vertex range.");
   return std::make_pair(INVALID_JOIN_VERTEX_ID, INVALID_COLUMN_ID);
 }
-}
+}  // namespace opossum

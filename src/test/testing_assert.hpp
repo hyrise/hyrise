@@ -47,5 +47,4 @@ bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::sh
 #define EXPECT_JOIN_EDGE(join_graph, node_a, node_b, column_id_a, column_id_b, scan_type) \
   EXPECT_TRUE(opossum::check_join_edge(join_graph, node_a, node_b, column_id_a, column_id_b, scan_type))
 
-#define EXPECT_JOIN_VERTICES(vertices_a, vertices_b) \
-  EXPECT_EQ(vertices_a, vertices_b)
+#define EXPECT_JOIN_VERTICES(vertices_a, vertices_b) EXPECT_EQ(vertices_a, vertices_b)

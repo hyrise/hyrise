@@ -1,7 +1,9 @@
-#include "base_test.hpp"
-
 #include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
 
+#include "gtest/gtest.h"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
@@ -9,11 +11,12 @@
 #include "optimizer/expression.hpp"
 #include "optimizer/join_graph.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
 
 namespace opossum {
 
-class JoinGraphTest : public BaseTest {
+class JoinGraphTest : public ::testing::Test {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int.tbl", 0));
@@ -21,9 +24,7 @@ class JoinGraphTest : public BaseTest {
     StorageManager::get().add_table("table_c", load_table("src/test/tables/int_int_int.tbl", 0));
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 };
 
 TEST_F(JoinGraphTest, SearchJoinGraphSimple) {
@@ -42,7 +43,8 @@ TEST_F(JoinGraphTest, SearchJoinGraphSimple) {
 
   const auto join_graph = JoinGraph::build_join_graph(join_node);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(), std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node}));
+  EXPECT_JOIN_VERTICES(join_graph->vertices(),
+                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 1u);
   EXPECT_JOIN_EDGE(join_graph, table_a_node, table_b_node, ColumnID{0}, ColumnID{1}, ScanType::OpEquals);
@@ -89,7 +91,8 @@ TEST_F(JoinGraphTest, SearchJoinGraphMedium) {
   // Searching from join_a should yield a non-empty join graph
   const auto join_graph_b = JoinGraph::build_join_graph(join_a_node);
 
-  EXPECT_JOIN_VERTICES(join_graph_b->vertices(), std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, predicate_node}));
+  EXPECT_JOIN_VERTICES(join_graph_b->vertices(),
+                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, predicate_node}));
 
   EXPECT_EQ(join_graph_b->edges().size(), 2u);
   EXPECT_JOIN_EDGE(join_graph_b, table_a_node, predicate_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
@@ -140,7 +143,8 @@ TEST_F(JoinGraphTest, SearchJoinGraphLarge) {
   const auto join_graph = JoinGraph::build_join_graph(join_a_node);
 
   EXPECT_JOIN_VERTICES(join_graph->vertices(),
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_0_node, table_b_0_node, table_c_0_node, table_b_1_node, cross_join_node}));
+                       std::vector<std::shared_ptr<AbstractASTNode>>(
+                           {table_a_0_node, table_b_0_node, table_c_0_node, table_b_1_node, cross_join_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 4u);
   EXPECT_JOIN_EDGE(join_graph, table_a_0_node, cross_join_node, ColumnID{0}, ColumnID{2}, ScanType::OpGreaterThan);
@@ -174,9 +178,9 @@ TEST_F(JoinGraphTest, SearchJoinGraphMediumWithPredicates) {
    */
   auto projection_node = std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{0}}));
   auto join_a_node =
-  std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{3}), ScanType::OpGreaterThan);
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{3}), ScanType::OpGreaterThan);
   auto join_b_node =
-  std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{2}), ScanType::OpEquals);
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{2}), ScanType::OpEquals);
   auto table_a_node = std::make_shared<StoredTableNode>("table_a");
   auto table_b_node = std::make_shared<StoredTableNode>("table_b");
   auto table_c_node = std::make_shared<StoredTableNode>("table_c");
@@ -202,5 +206,4 @@ TEST_F(JoinGraphTest, SearchJoinGraphMediumWithPredicates) {
   EXPECT_JOIN_EDGE(join_graph_b, table_b_node, predicate_b_node, ColumnID{0}, ColumnID{2}, ScanType::OpEquals);
   EXPECT_JOIN_EDGE(join_graph_b, table_b_node, predicate_b_node, ColumnID{0}, ColumnID{0}, ScanType::OpGreaterThan);
 }
-
-}
+}  // namespace opossum
