@@ -52,7 +52,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   void clear_parents();
 
   /**
-   * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
   ASTChildSide get_child_side(const std::shared_ptr<AbstractASTNode>& parent) const;
@@ -180,7 +179,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   /**
    * Replaces 'this' node with @param replacement_node node.
-   * @pre replacement_node has neither parent nor children
+   * @pre replacement_node has neither parents nor children
    */
   void replace_with(const std::shared_ptr<AbstractASTNode>& replacement_node);
 
@@ -227,7 +226,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * See "Altering the order of Columns in a subtree" comment above.
    *
-   * NOTE: Call this on the node whose Column order changed, NOT on its parent.
+   * NOTE: Call this on the node whose Column order changed, NOT on its parents.
    */
   void dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins);
 
@@ -301,7 +300,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
-  // Calls map_column_ids() on this nodes parent, if one exists.
+  // Calls map_column_ids() on this nodes parents, if any exist.
   void _propagate_column_id_mapping_to_parents(const ColumnIDMapping& column_id_mapping);
 
  private:
