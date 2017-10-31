@@ -99,51 +99,24 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
 }
 
 void AggregateNode::_on_child_changed() {
-  DebugAssert(left_child(), "AggregateNode needs a child.");
+  DebugAssert(!right_child(), "AggregateNode can't have a right child.");
 
-  _output_column_names.clear();
-  _output_column_id_to_input_column_id.clear();
-
-  _output_column_names.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
-  _output_column_id_to_input_column_id.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
-
-  /**
-   * Set output column ids and names.
-   *
-   * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
-   * so we first handle those, and afterwards add the column information for the aggregate functions.
-   */
-  for (const auto groupby_column_id : _groupby_column_ids) {
-    _output_column_id_to_input_column_id.emplace_back(groupby_column_id);
-    _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
-  }
-
-  for (const auto& aggregate_expression : _aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression must be a function.");
-
-    std::string column_name;
-
-    if (aggregate_expression->alias()) {
-      column_name = *aggregate_expression->alias();
-    } else {
-      /**
-       * If the aggregate function has no alias defined in the query, we simply parse the expression back to a string.
-       * SQL in the standard does not specify a name to be given.
-       * This might result in multiple output columns with the same name, but we accept that.
-       * Other DBs behave similarly (e.g. MySQL).
-       */
-      column_name = aggregate_expression->to_string(left_child()->output_column_names());
-    }
-
-    _output_column_names.emplace_back(column_name);
-    _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
-  }
+  _output_column_names.reset();
 }
 
-const std::vector<std::string>& AggregateNode::output_column_names() const { return _output_column_names; }
+const std::vector<std::string>& AggregateNode::output_column_names() const {
+  Assert(left_child(), "Child not set, can't know output column names without it");
+  if (!_output_column_names) {
+    _update_output();
+  }
+  return *_output_column_names;
+}
 
-const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id() const {
-  return _output_column_id_to_input_column_id;
+const std::vector<ColumnID>& AggregateNode::output_column_ids_to_input_column_ids() const {
+  if (!_output_column_ids_to_input_column_ids) {
+    _update_output();
+  }
+  return *_output_column_ids_to_input_column_ids;
 }
 
 std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
@@ -268,6 +241,57 @@ std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::
   }
 
   return output_column_ids_for_table;
+}
+
+void AggregateNode::_update_output() const {
+  /**
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
+   * re-computed on request. This allows ASTs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * allows easier manipulation in the optimizer.
+   */
+
+  DebugAssert(!_output_column_ids_to_input_column_ids,
+              "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(left_child(), "Can't set output without input");
+
+  _output_column_names.emplace();
+  _output_column_names->reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+
+  _output_column_ids_to_input_column_ids.emplace();
+  _output_column_ids_to_input_column_ids->reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+
+  /**
+   * Set output column ids and names.
+   *
+   * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
+   * so we first handle those, and afterwards add the column information for the aggregate functions.
+   */
+  for (const auto groupby_column_id : _groupby_column_ids) {
+    _output_column_ids_to_input_column_ids->emplace_back(groupby_column_id);
+    _output_column_names->emplace_back(left_child()->output_column_names()[groupby_column_id]);
+  }
+
+  for (const auto& aggregate_expression : _aggregate_expressions) {
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression must be a function.");
+
+    std::string column_name;
+
+    if (aggregate_expression->alias()) {
+      column_name = *aggregate_expression->alias();
+    } else {
+      /**
+       * If the aggregate function has no alias defined in the query, we simply parse the expression back to a string.
+       * SQL in the standard does not specify a name to be given.
+       * This might result in multiple output columns with the same name, but we accept that.
+       * Other DBs behave similarly (e.g. MySQL).
+       */
+      column_name = aggregate_expression->to_string(left_child()->output_column_names());
+    }
+
+    _output_column_names->emplace_back(column_name);
+    _output_column_ids_to_input_column_ids->emplace_back(INVALID_COLUMN_ID);
+  }
 }
 
 }  // namespace opossum
