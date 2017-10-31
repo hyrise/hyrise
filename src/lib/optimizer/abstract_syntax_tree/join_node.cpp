@@ -274,10 +274,7 @@ void JoinNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
     }
   }
 
-  auto parent = this->parent();
-  if (parent) {
-    parent->map_column_ids(join_column_id_mapping, get_child_side());
-  }
+  _propagate_column_id_mapping_to_parent(join_column_id_mapping);
 }
 
 }  // namespace opossum

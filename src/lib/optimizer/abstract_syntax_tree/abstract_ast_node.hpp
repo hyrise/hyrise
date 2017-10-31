@@ -184,8 +184,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * above the root of the JoinTree need to adapt the ColumnIDs they refer to. Think, e.g. the ColumnIDs of a SortNode.
    *
    * In order to this:
-   *    1. Obtain the ColumnOrigins of the *old* root by calling get_column_origins() on it.
-   *    2. Hook in the *new* root.
+   *    1. Obtain the ColumnOrigins of the *old* subtree-root by calling get_column_origins() on it.
+   *    2. Hook in the *new* subtree-root.
    *    3. Call dispatch_column_id_mapping() on the *new* root, passing the ColumnOrigins you obtained in step 1.
    *
    * dispatch_column_id_mapping() will
@@ -218,7 +218,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   void dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins);
 
   /**
-   * Overriden by Nodes who need to update ColumnIDs.
+   * Overridden by Nodes who need to update ColumnIDs.
    * Overrides need to call map_column_ids() on their parents if the node doesn't define a new Column order (as
    * Projections and Aggregates do).
    * NOTE: Can't be protected because derived Nodes need to call this on AbstractASTNode objects, which C++ wouldn't
@@ -267,6 +267,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   // only operate on the column name. If an alias for this subtree is set, but this reference does not match
   // it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+
+  // Calls map_column_ids() on this nodes parent, if one exists.
+  void _propagate_column_id_mapping_to_parent(const ColumnIDMapping& column_id_mapping);
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

@@ -9,8 +9,8 @@
 /**
  * This file contains functions that operate on AbstractSyntaxTrees, but, in order to keep the interface of
  * AbstractASTNode clean, are not part of the class.
- * This is intended for functionality that is *read-only* and operates on the interface of AbstractASTNode without
- * needing to know of derived node types.
+ * This is intended for functionality that operates on the public interface of AbstractASTNode without
+ * needing to know of derived node types or operates on multiple AST node types.
  */
 
 namespace opossum {

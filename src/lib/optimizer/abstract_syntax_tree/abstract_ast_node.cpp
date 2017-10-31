@@ -241,26 +241,31 @@ ColumnOrigin AbstractASTNode::get_column_origin(ColumnID column_id) const {
     return {shared_from_this(), column_id};
   }
 
-  DebugAssert(left_child(), "Must have left child to determine column origin");
+  DebugAssert(left_child() && !right_child(), "Must have left child and no right child to determine column origin.");
   return left_child()->get_column_origin(input_column_id);
 }
 
 void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins) {
+  /**
+   * Obtain the current column origins of this node's subtree and generate a mapping from the previous column order
+   * defined by `prev_column_origins`.
+   * Then, propagate this mapping to the parent.
+   */
+
   const auto post_ordering_column_origins = get_column_origins();
   const auto column_id_mapping = ast_generate_column_id_mapping(prev_column_origins, get_column_origins());
 
-  auto parent = _parent.lock();
-  if (parent) {
-    parent->map_column_ids(column_id_mapping, get_child_side());
-  }
+  _propagate_column_id_mapping_to_parent(column_id_mapping);
 }
 
 void AbstractASTNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
                                      const std::optional<ASTChildSide>& caller_child_side) {
-  auto parent = _parent.lock();
-  if (parent) {
-    parent->map_column_ids(column_id_mapping, get_child_side());
-  }
+  /**
+   * By default, simply forward to parents.
+   * Derived AST node types need to override this if they want to react on column order changes
+   */
+
+  _propagate_column_id_mapping_to_parent(column_id_mapping);
 }
 
 void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
@@ -336,6 +341,13 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
     }
   }
   return reference;
+}
+
+void AbstractASTNode::_propagate_column_id_mapping_to_parent(const ColumnIDMapping& column_id_mapping) {
+  auto parent = _parent.lock();
+  if (parent) {
+    parent->map_column_ids(column_id_mapping, get_child_side());
+  }
 }
 
 }  // namespace opossum

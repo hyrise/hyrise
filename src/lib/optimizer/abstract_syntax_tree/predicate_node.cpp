@@ -68,10 +68,7 @@ void PredicateNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
     _value = column_id_mapping[boost::get<ColumnID>(_value)];
   }
 
-  auto parent = this->parent();
-  if (parent) {
-    parent->map_column_ids(column_id_mapping, get_child_side());
-  }
+  _propagate_column_id_mapping_to_parent(column_id_mapping);
 }
 
 }  // namespace opossum

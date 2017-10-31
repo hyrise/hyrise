@@ -47,10 +47,7 @@ void SortNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
     order_by_definition.column_id = column_id_mapping[order_by_definition.column_id];
   }
 
-  auto parent = this->parent();
-  if (parent) {
-    parent->map_column_ids(column_id_mapping, get_child_side());
-  }
+  _propagate_column_id_mapping_to_parent(column_id_mapping);
 }
 
 }  // namespace opossum

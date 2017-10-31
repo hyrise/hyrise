@@ -31,6 +31,7 @@ void UpdateNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
   for (const auto& column_expression : _column_expressions) {
     column_expression->map_column_ids(column_id_mapping);
   }
+  _propagate_column_id_mapping_to_parent(column_id_mapping);
 }
 
 }  // namespace opossum
