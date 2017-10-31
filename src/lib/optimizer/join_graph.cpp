@@ -5,6 +5,7 @@
 #include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/type_utils.hpp"
@@ -12,12 +13,8 @@
 namespace opossum {
 
 JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices,
-         const std::pair<ColumnID, ColumnID>& column_ids,
-         JoinMode join_mode,
-         ScanType scan_type):
-  vertex_indices(vertex_indices),
-  column_ids(column_ids), join_mode(join_mode), scan_type(scan_type)
-{
+                   const std::pair<ColumnID, ColumnID>& column_ids, JoinMode join_mode, ScanType scan_type)
+    : vertex_indices(vertex_indices), column_ids(column_ids), join_mode(join_mode), scan_type(scan_type) {
   DebugAssert(join_mode == JoinMode::Inner, "Only inner join edges supported atm.");
 }
 
@@ -46,16 +43,15 @@ void JoinGraph::print(std::ostream& out) const {
   out << "==== Edges ====" << std::endl;
   for (const auto& edge : _edges) {
     std::cout << edge.vertex_indices.first << " <-- " << edge.column_ids.first << " "
-              << scan_type_to_string.left.at(edge.scan_type) << " " << edge.column_ids.second
-              << " --> " << edge.vertex_indices.second << std::endl;
+              << scan_type_to_string.left.at(edge.scan_type) << " " << edge.column_ids.second << " --> "
+              << edge.vertex_indices.second << std::endl;
   }
 
   out << "===================" << std::endl;
 }
 
 void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNode>& node,
-                                             JoinGraph::Vertices& o_vertices,
-                                             JoinGraph::Edges& o_edges) {
+                                             JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges) {
   /**
    * Early return to make it possible to call search_join_graph() on both children without having to check whether they
    * are nullptr.
@@ -66,34 +62,60 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
 
   Assert(node->num_parents() <= 1, "Nodes with multiple parents not supported when building JoinGraph");
 
-  // Everything that is not a Join becomes a vertex
-  if (node->type() != ASTNodeType::Join) {
+
+  if (node->type() != ASTNodeType::Join && node->type() != ASTNodeType::Predicate) {
     o_vertices.emplace_back(node);
     return;
   }
-
-  const auto join_node = std::static_pointer_cast<JoinNode>(node);
-
-  // Every non-inner join becomes a vertex for now
-  if (join_node->join_mode() != JoinMode::Inner) {
-    o_vertices.emplace_back(node);
-    return;
-  }
-
-  Assert(join_node->scan_type(), "Need scan type for now, since only inner joins are supported");
-  Assert(join_node->join_column_ids(), "Need join columns for now, since only inner joins are supported");
 
   /**
-   * Process children on the left side
+   * Properties of the edge we're building - these get filled out below from the Join/Predicate definition.
    */
-  const auto left_vertex_offset = make_join_vertex_id(o_vertices.size());
+  auto left_column_id = INVALID_COLUMN_ID;
+  auto right_column_id = INVALID_COLUMN_ID;
+  auto scan_type = ScanType::OpEquals; // just to init this to something sane, gets assigned below.
+
+  if (node->type() == ASTNodeType::Join) {
+    const auto join_node = std::static_pointer_cast<JoinNode>(node);
+
+    // A non-inner join becomes a vertex
+    if (join_node->join_mode() != JoinMode::Inner) {
+      o_vertices.emplace_back(node);
+      return;
+    }
+
+    Assert(join_node->scan_type(), "Need scan type for now, since only inner joins are supported");
+    Assert(join_node->join_column_ids(), "Need join columns for now, since only inner joins are supported");
+
+    left_column_id = join_node->join_column_ids()->first;
+    right_column_id = join_node->join_column_ids()->second;
+    scan_type = *join_node->scan_type();
+  } else if (node->type() == ASTNodeType::Predicate) {
+    const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
+
+    // A non-column-to-column Predicate becomes a vertex
+    if (predicate_node->value().type() != typeid(ColumnID)) {
+      o_vertices.emplace_back(node);
+      return;
+    }
+
+    left_column_id = predicate_node->column_id();
+    right_column_id = boost::get<ColumnID>(predicate_node->value());
+    scan_type = predicate_node->scan_type();
+  } else {
+    // Everything that is not a Join or a Predicate becomes a vertex
+    o_vertices.emplace_back(node);
+    return;
+  }
+
+  std::pair<JoinVertexID, ColumnID> left_operand_vertex_and_column;
+  std::pair<JoinVertexID, ColumnID> right_operand_vertex_and_column;
+
+  // The first vertex in o_vertices that belongs to the left subtree.
+  const auto first_left_vertex_offset = make_join_vertex_id(o_vertices.size());
+
   _traverse_ast_for_join_graph(node->left_child(), o_vertices, o_edges);
 
-  /**
-   * Process children on the right side
-   */
-  const auto right_vertex_offset = make_join_vertex_id(o_vertices.size());
-  _traverse_ast_for_join_graph(node->right_child(), o_vertices, o_edges);
 
   /**
    * This is where the magic happens.
@@ -110,27 +132,42 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
    * Now, if the join_column_ids.left is "4" it is actually referring to vertex "c" (with JoinVertexID "2") and
    * ColumnID "0".
    */
-  auto left_column_id = join_node->join_column_ids()->first;
-  auto right_column_id = join_node->join_column_ids()->second;
+  if (node->type() == ASTNodeType::Join) {
+    // The first vertex in o_vertices that belongs to the right subtree.
+    const auto first_right_vertex_offset = make_join_vertex_id(o_vertices.size());
+    _traverse_ast_for_join_graph(node->right_child(), o_vertices, o_edges);
 
-  // Search the for the VertexID/ColumnID of the left side of the join expression in the left subtree
-  const auto find_left_result = _find_vertex_and_column_id(o_vertices, left_column_id, left_vertex_offset, right_vertex_offset);
+    // Search the for the VertexID/ColumnID of the left side of the join expression in the left subtree
+    left_operand_vertex_and_column =
+    _find_vertex_and_column_id(o_vertices, left_column_id, first_left_vertex_offset, first_right_vertex_offset);
 
-  // ...and for the right one in the right subtree.
-  const auto find_right_result = _find_vertex_and_column_id(o_vertices, right_column_id, right_vertex_offset, make_join_vertex_id(o_vertices.size()));
+    // ...and for the right one in the right subtree.
+    right_operand_vertex_and_column = _find_vertex_and_column_id(o_vertices, right_column_id, first_right_vertex_offset,
+                                                              make_join_vertex_id(o_vertices.size()));
+  } else {
+    // Search the for the VertexID/ColumnID of the left side of the predicate expression in the subtree
+    left_operand_vertex_and_column =
+    _find_vertex_and_column_id(o_vertices, left_column_id, first_left_vertex_offset, make_join_vertex_id(o_vertices.size()));
+
+    // ...and for the right one
+    right_operand_vertex_and_column = _find_vertex_and_column_id(o_vertices, right_column_id, first_left_vertex_offset,
+                                                                 make_join_vertex_id(o_vertices.size()));
+  }
 
   /**
    * Build the Edge object
    */
-  const auto vertex_ids = std::make_pair(find_left_result.first, find_right_result.first);
-  const auto column_ids = std::make_pair(find_left_result.second, find_right_result.second);
+  const auto vertex_ids = std::make_pair(left_operand_vertex_and_column.first, right_operand_vertex_and_column.first);
+  const auto column_ids = std::make_pair(left_operand_vertex_and_column.second, right_operand_vertex_and_column.second);
 
-  JoinEdge edge(vertex_ids, column_ids, join_node->join_mode(), *join_node->scan_type());
+  JoinEdge edge(vertex_ids, column_ids, JoinMode::Inner, scan_type);
 
   o_edges.emplace_back(edge);
 }
 
-std::pair<JoinVertexID, ColumnID> JoinGraph::_find_vertex_and_column_id(const std::vector<std::shared_ptr<AbstractASTNode>> & vertices, ColumnID column_id, JoinVertexID vertex_range_begin, JoinVertexID vertex_range_end) {
+std::pair<JoinVertexID, ColumnID> JoinGraph::_find_vertex_and_column_id(
+    const std::vector<std::shared_ptr<AbstractASTNode>>& vertices, ColumnID column_id, JoinVertexID vertex_range_begin,
+    JoinVertexID vertex_range_end) {
   for (auto vertex_idx = vertex_range_begin; vertex_idx < vertex_range_end; ++vertex_idx) {
     const auto& vertex = vertices[vertex_idx];
     if (column_id < vertex->output_column_count()) {

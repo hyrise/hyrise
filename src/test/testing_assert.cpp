@@ -9,6 +9,7 @@
 #include "all_type_variant.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/join_graph.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -198,6 +199,31 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
     }
     if (parent == parent2 && parent2->child(child_side) == child) {
       return true;
+    }
+  }
+
+  return false;
+}
+
+bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
+                     const std::shared_ptr<AbstractASTNode>& node_b, ColumnID column_id_a, ColumnID column_id_b,
+                     ScanType scan_type) {
+  for (const auto& edge : join_graph->edges()) {
+    if (join_graph->vertices().size() <= edge.vertex_indices.first) continue;
+    if (join_graph->vertices().size() <= edge.vertex_indices.second) continue;
+
+    const auto& edge_node_a = join_graph->vertices()[edge.vertex_indices.first];
+    const auto& edge_node_b = join_graph->vertices()[edge.vertex_indices.second];
+
+    if (edge_node_a == node_a) {
+      if (edge_node_b == node_b && edge.column_ids == std::make_pair(column_id_a, column_id_b)) {
+        return true;  // we found a matching edge
+      }
+    } else {
+      if (edge_node_a == node_b && edge_node_b == node_a &&
+          edge.column_ids == std::make_pair(column_id_b, column_id_a)) {
+        return true;
+      }
     }
   }
 
