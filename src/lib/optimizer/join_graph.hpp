@@ -8,20 +8,16 @@
 
 namespace opossum {
 
-struct JoinPredicate {
-  // TODO(moritz) ensure no crosses and naturals here
-  // TODO(moritz) Create with constructor
-  JoinMode mode;
-  std::pair<ColumnID, ColumnID> column_ids;
-  ScanType scan_type;
-};
-
 struct JoinEdge {
-  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, JoinMode mode,
-           const std::pair<ColumnID, ColumnID>& column_ids, ScanType scan_type);
+  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices,
+           const std::pair<ColumnID, ColumnID>& column_ids,
+           JoinMode join_mode,
+           ScanType scan_type);
 
-  JoinPredicate predicate;
-  std::pair<JoinVertexID, JoinVertexID> vertex_indices{INVALID_JOIN_VERTEX_ID, INVALID_JOIN_VERTEX_ID};
+  std::pair<JoinVertexID, JoinVertexID> vertex_indices;
+  std::pair<ColumnID, ColumnID> column_ids;
+  JoinMode join_mode;
+  ScanType scan_type;
 };
 
 class JoinGraph final {

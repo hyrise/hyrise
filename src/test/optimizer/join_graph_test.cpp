@@ -34,12 +34,12 @@ class JoinGraphTest : public BaseTest {
       const auto& edge_node_b = join_graph->vertices()[edge.vertex_indices.second];
 
       if (edge_node_a == node_a) {
-        if (edge_node_b == node_b && edge.predicate.column_ids == std::make_pair(column_id_a, column_id_b)) {
+        if (edge_node_b == node_b && edge.column_ids == std::make_pair(column_id_a, column_id_b)) {
           return;  // we found a matching edge
         }
       } else {
         if (edge_node_a == node_b && edge_node_b == node_a &&
-            edge.predicate.column_ids == std::make_pair(column_id_b, column_id_a)) {
+            edge.column_ids == std::make_pair(column_id_b, column_id_a)) {
           return;
         }
       }

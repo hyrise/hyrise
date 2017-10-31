@@ -11,9 +11,15 @@
 
 namespace opossum {
 
-JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, ScanType scan_type)
-    : predicate{mode, column_ids, scan_type}, vertex_indices(vertex_indices) {}
+JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices,
+         const std::pair<ColumnID, ColumnID>& column_ids,
+         JoinMode join_mode,
+         ScanType scan_type):
+  vertex_indices(vertex_indices),
+  column_ids(column_ids), join_mode(join_mode), scan_type(scan_type)
+{
+  DebugAssert(join_mode == JoinMode::Inner, "Only inner join edges supported atm.");
+}
 
 std::shared_ptr<JoinGraph> JoinGraph::build_join_graph(const std::shared_ptr<AbstractASTNode>& root) {
   JoinGraph::Vertices vertices;
@@ -39,8 +45,8 @@ void JoinGraph::print(std::ostream& out) const {
   }
   out << "==== Edges ====" << std::endl;
   for (const auto& edge : _edges) {
-    std::cout << edge.vertex_indices.first << " <-- " << edge.predicate.column_ids.first << " "
-              << scan_type_to_string.left.at(edge.predicate.scan_type) << " " << edge.predicate.column_ids.second
+    std::cout << edge.vertex_indices.first << " <-- " << edge.column_ids.first << " "
+              << scan_type_to_string.left.at(edge.scan_type) << " " << edge.column_ids.second
               << " --> " << edge.vertex_indices.second << std::endl;
   }
 
@@ -107,8 +113,10 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
   const auto find_left_result = find_column(left_column_id, left_vertex_offset, right_vertex_offset);
   const auto find_right_result = find_column(right_column_id, right_vertex_offset, make_join_vertex_id(o_vertices.size()));
 
-  JoinEdge edge({find_left_result.first, find_right_result.first}, join_node->join_mode(),
-                {find_left_result.second, find_right_result.second}, *join_node->scan_type());
+  const auto vertex_ids = std::make_pair(find_left_result.first, find_right_result.first);
+  const auto column_ids = std::make_pair(find_left_result.second, find_right_result.second);
+
+  JoinEdge edge(vertex_ids, column_ids, join_node->join_mode(), *join_node->scan_type());
 
   o_edges.emplace_back(edge);
 }
