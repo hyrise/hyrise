@@ -238,8 +238,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * NOTE: Can't be protected because derived Nodes need to call this on AbstractASTNode objects, which C++ wouldn't
    *    allow
    */
-  virtual void map_column_ids(const ColumnIDMapping& column_id_mapping,
-                              ASTChildSide caller_child_side);
+  virtual void map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side);
   // @}
 
   // @{

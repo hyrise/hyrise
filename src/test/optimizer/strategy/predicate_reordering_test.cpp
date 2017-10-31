@@ -22,7 +22,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 class TableStatisticsMock : public TableStatistics {

@@ -32,8 +32,7 @@ class SortNode : public AbstractASTNode {
 
   const OrderByDefinitions& order_by_definitions() const;
 
-  void map_column_ids(const ColumnIDMapping& column_id_mapping,
-                      ASTChildSide caller_child_side) override;
+  void map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) override;
 
  private:
   OrderByDefinitions _order_by_definitions;

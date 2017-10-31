@@ -258,8 +258,7 @@ ColumnOrigin JoinNode::get_column_origin(ColumnID column_id) const {
   return left_child()->get_column_origin(column_id);
 }
 
-void JoinNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
-                              ASTChildSide caller_child_side) {
+void JoinNode::map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) {
   DebugAssert(left_child() && right_child(), "Children need to be set for this operation");
 
   ColumnIDMapping join_column_id_mapping(output_column_count(), INVALID_COLUMN_ID);

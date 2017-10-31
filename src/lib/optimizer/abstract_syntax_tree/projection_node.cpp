@@ -61,9 +61,10 @@ const std::vector<std::string>& ProjectionNode::output_column_names() const {
   return *_output_column_names;
 }
 
-void ProjectionNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
-                                    ASTChildSide caller_child_side) {
-  DebugAssert(left_child(), "Input needs to be set to perform this operation. Mostly because we can't validate the size of column_id_mapping otherwise.");
+void ProjectionNode::map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) {
+  DebugAssert(left_child(),
+              "Input needs to be set to perform this operation. Mostly because we can't validate the size of "
+              "column_id_mapping otherwise.");
   DebugAssert(column_id_mapping.size() == left_child()->output_column_count(), "Invalid column_id_mapping");
 
   for (const auto& column_expression : _column_expressions) {
@@ -195,8 +196,7 @@ void ProjectionNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(!_output_column_ids_to_input_column_ids,
-              "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(!_output_column_ids_to_input_column_ids, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 

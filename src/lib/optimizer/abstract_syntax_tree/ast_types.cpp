@@ -1,7 +1,7 @@
 #include "ast_types.hpp"
 
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace opossum {
 

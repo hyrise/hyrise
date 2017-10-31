@@ -321,8 +321,7 @@ void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins& prev_colum
   _propagate_column_id_mapping_to_parents(column_id_mapping);
 }
 
-void AbstractASTNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
-                                     ASTChildSide caller_child_side) {
+void AbstractASTNode::map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) {
   /**
    * By default, simply forward to parents.
    * Derived AST node types need to override this if they want to react on column order changes
