@@ -31,7 +31,7 @@ TEST_F(UpdateNodeTest, MapColumnIDs) {
   // Previous order: {a, b, c, d} - New order: {c, a, d, b}
   ColumnIDMapping column_id_mapping({ColumnID{1}, ColumnID{3}, ColumnID{0}, ColumnID{2}});
 
-  mock->map_column_ids(column_id_mapping);
+  update->map_column_ids(column_id_mapping, ASTChildSide::Left);
 
   EXPECT_EQ(update->column_expressions().at(0)->column_id(), ColumnID{1});
 }

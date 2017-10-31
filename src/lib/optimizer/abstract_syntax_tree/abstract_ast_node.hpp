@@ -225,7 +225,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *    allow
    */
   virtual void map_column_ids(const ColumnIDMapping& column_id_mapping,
-                              const std::optional<ASTChildSide>& caller_child_side = std::nullopt);
+                              ASTChildSide caller_child_side);
   // @}
 
   // @{

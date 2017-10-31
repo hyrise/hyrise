@@ -259,11 +259,14 @@ void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins& prev_colum
 }
 
 void AbstractASTNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
-                                     const std::optional<ASTChildSide>& caller_child_side) {
+                                     ASTChildSide caller_child_side) {
   /**
    * By default, simply forward to parents.
    * Derived AST node types need to override this if they want to react on column order changes
    */
+
+  DebugAssert(left_child() && !right_child(), "Need left child and no right child.");
+  DebugAssert(column_id_mapping.size() == left_child()->output_col_count(), "Invalid column_id_mapping");
 
   _propagate_column_id_mapping_to_parent(column_id_mapping);
 }

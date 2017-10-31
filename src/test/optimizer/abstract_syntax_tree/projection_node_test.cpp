@@ -97,7 +97,7 @@ TEST_F(ProjectionNodeTest, MapColumnIDs) {
   // Previous order: {a,b,c,d} - New order: {c,a,b,d}
   auto column_id_mapping = ColumnIDMapping({ColumnID{1}, ColumnID{2}, ColumnID{0}, ColumnID{3}});
 
-  projection->map_column_ids(column_id_mapping);
+  projection->map_column_ids(column_id_mapping, ASTChildSide::Left);
 
   EXPECT_EQ(predicate->column_id(), ColumnID{1});
   EXPECT_EQ(projection->column_expressions().at(0)->column_id(), ColumnID{2});

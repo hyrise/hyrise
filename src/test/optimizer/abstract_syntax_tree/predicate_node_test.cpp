@@ -34,7 +34,7 @@ TEST_F(PredicateNodeTest, MapColumnIDs) {
   // Previous order: {a, b, c, d} - New order: {c, a, d, b}
   ColumnIDMapping column_id_mapping({ColumnID{1}, ColumnID{3}, ColumnID{0}, ColumnID{2}});
 
-  mock->map_column_ids(column_id_mapping);
+  predicate_0->map_column_ids(column_id_mapping, ASTChildSide::Left);
 
   EXPECT_EQ(predicate_1->column_id(), ColumnID{1});
   EXPECT_EQ(predicate_0->column_id(), ColumnID{2});

@@ -245,13 +245,14 @@ ColumnOrigin JoinNode::get_column_origin(ColumnID column_id) const {
 }
 
 void JoinNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
-                              const std::optional<ASTChildSide>& caller_child_side) {
+                              ASTChildSide caller_child_side) {
   DebugAssert(left_child() && right_child(), "Children need to be set for this operation");
-  DebugAssert(caller_child_side, "JoinNode needs to know which childs column_id_mapping changed");
 
   ColumnIDMapping join_column_id_mapping(output_col_count(), INVALID_COLUMN_ID);
 
   if (caller_child_side == ASTChildSide::Left) {
+    DebugAssert(column_id_mapping.size() == left_child()->output_col_count(), "Invalid column_id_mapping");
+
     if (_join_column_ids) {
       _join_column_ids->first = column_id_mapping[_join_column_ids->first];
     }
@@ -260,6 +261,8 @@ void JoinNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
     std::iota(join_column_id_mapping.begin() + left_child()->output_col_count(), join_column_id_mapping.end(),
               make_column_id(left_child()->output_col_count()));
   } else {
+    DebugAssert(column_id_mapping.size() == right_child()->output_col_count(), "Invalid column_id_mapping");
+
     if (_join_column_ids) {
       _join_column_ids->second = column_id_mapping[_join_column_ids->second];
     }

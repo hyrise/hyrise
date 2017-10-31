@@ -141,7 +141,7 @@ void AggregateNode::_on_child_changed() {
 }
 
 void AggregateNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
-                                   const std::optional<ASTChildSide>& caller_child_side) {
+                                   ASTChildSide caller_child_side) {
   for (const auto& aggregate_expression : _aggregate_expressions) {
     aggregate_expression->map_column_ids(column_id_mapping);
   }

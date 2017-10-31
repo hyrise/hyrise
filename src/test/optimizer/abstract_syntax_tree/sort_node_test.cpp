@@ -35,7 +35,7 @@ TEST_F(SortNodeTest, MapColumnIDs) {
   // Previous order: {a, b, c, d} - New order: {c, a, d, b}
   ColumnIDMapping column_id_mapping({ColumnID{1}, ColumnID{3}, ColumnID{0}, ColumnID{2}});
 
-  mock->map_column_ids(column_id_mapping);
+  sort_0->map_column_ids(column_id_mapping, ASTChildSide::Left);
 
   EXPECT_EQ(sort_1->order_by_definitions().at(0).column_id, ColumnID{1});
   EXPECT_EQ(sort_1->order_by_definitions().at(1).column_id, ColumnID{0});
