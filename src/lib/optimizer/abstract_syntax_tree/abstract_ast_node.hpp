@@ -48,6 +48,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   std::vector<std::shared_ptr<AbstractASTNode>> parents() const;
 
+  size_t num_parents() const;
+
   void remove_parent(const std::shared_ptr<AbstractASTNode>& parent);
   void clear_parents();
 
