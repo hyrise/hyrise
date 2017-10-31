@@ -143,6 +143,8 @@ set(
     optimizer/column_statistics.hpp
     optimizer/expression.cpp
     optimizer/expression.hpp
+    optimizer/join_graph.cpp
+    optimizer/join_graph.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
