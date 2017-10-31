@@ -12,6 +12,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_nested_loop_a.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
@@ -39,7 +40,7 @@ class JoinNullTest : public JoinTest {
   std::shared_ptr<TableWrapper> _table_wrapper_a_null;
 };
 
-using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge>;
+using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoopA>;
 TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
