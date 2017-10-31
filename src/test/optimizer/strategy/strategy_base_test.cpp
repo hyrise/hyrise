@@ -20,7 +20,7 @@ std::shared_ptr<AbstractASTNode> StrategyBaseTest::apply_rule(const std::shared_
 
   // Remove ASTRootNode
   const auto optimized_node = root_node->left_child();
-  optimized_node->clear_parent();
+  optimized_node->clear_parents();
 
   return optimized_node;
 }

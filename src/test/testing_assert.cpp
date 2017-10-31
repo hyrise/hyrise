@@ -188,4 +188,20 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanTy
 }
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node) {}
+
+bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChildSide child_side,
+                   const std::shared_ptr<const AbstractASTNode>& child) {
+  auto parents = child->parents();
+  for (const auto& parent2 : parents) {
+    if (!parent2) {
+      return false;
+    }
+    if (parent == parent2 && parent2->child(child_side) == child) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace opossum

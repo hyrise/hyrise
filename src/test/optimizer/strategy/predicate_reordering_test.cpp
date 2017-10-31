@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -21,7 +22,6 @@
 
 #include "utils/assert.hpp"
 
-#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
 
 namespace opossum {
 
@@ -193,6 +193,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
 
   // Setup first AST
+  // predicate_node_1 -> predicate_node_0 -> stored_table_node
   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpLessThan, 20);
   predicate_node_0->set_left_child(stored_table_node);
 
@@ -204,6 +205,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second AST
+  // predicate_node_3 -> predicate_node_2 -> stored_table_node
   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
   predicate_node_2->set_left_child(stored_table_node);
 
@@ -259,8 +261,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);
   auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
   auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 30);
-  auto table_0 = std::make_shared<MockTableNode>(table_statistics, "a");
-  auto table_1 = std::make_shared<MockTableNode>(table_statistics, "b");
+  auto table_0 = std::make_shared<MockNode>(table_statistics, "a");
+  auto table_1 = std::make_shared<MockNode>(table_statistics, "b");
 
   predicate_1->set_left_child(table_0);
   predicate_0->set_left_child(predicate_1);

@@ -45,13 +45,13 @@ const OrderByDefinitions& SortNode::order_by_definitions() const { return _order
 void SortNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
                               ASTChildSide caller_child_side) {
   DebugAssert(left_child(), "Input needs to be set to perform this operation. Mostly because we can't validate the size of column_id_mapping otherwise.");
-  DebugAssert(column_id_mapping.size() == left_child()->output_col_count(), "Invalid column_id_mapping");
+  DebugAssert(column_id_mapping.size() == left_child()->output_column_count(), "Invalid column_id_mapping");
 
   for (auto& order_by_definition : _order_by_definitions) {
     order_by_definition.column_id = column_id_mapping[order_by_definition.column_id];
   }
 
-  _propagate_column_id_mapping_to_parent(column_id_mapping);
+  _propagate_column_id_mapping_to_parents(column_id_mapping);
 }
 
 }  // namespace opossum

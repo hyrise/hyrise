@@ -3,7 +3,7 @@
 
 #include "gtest/gtest.h"
 
-#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 
 namespace opossum {
@@ -24,7 +24,7 @@ TEST_F(SortNodeTest, MapColumnIDs) {
    *        |
    *      Mock
    */
-  auto mock = std::make_shared<MockTableNode>("a", 4);
+  auto mock = std::make_shared<MockNode>("a", 4);
   auto sort_1 = std::make_shared<SortNode>(
       OrderByDefinitions{{ColumnID{0}, OrderByMode::Ascending}, {ColumnID{2}, OrderByMode::Descending}});
   auto sort_0 = std::make_shared<SortNode>(OrderByDefinitions{{ColumnID{1}, OrderByMode::Descending}});

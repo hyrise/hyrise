@@ -1,3 +1,4 @@
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
@@ -7,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
@@ -20,54 +22,76 @@ class AbstractSyntaxTreeTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", 0));
+
+    /**
+     * Init complex graph. This one is hard to visualize in ASCII. I suggest drawing it from the initialization below,
+     * in case you need to visualize it
+     */
+    for (auto& node : _nodes) {
+      node = std::make_shared<MockNode>();
+    }
+
+    _nodes[5]->set_right_child(_nodes[7]);
+    _nodes[0]->set_right_child(_nodes[4]);
+    _nodes[4]->set_left_child(_nodes[5]);
+    _nodes[4]->set_right_child(_nodes[7]);
+    _nodes[5]->set_left_child(_nodes[6]);
+    _nodes[2]->set_left_child(_nodes[5]);
+    _nodes[1]->set_right_child(_nodes[3]);
+    _nodes[3]->set_left_child(_nodes[5]);
+    _nodes[3]->set_right_child(_nodes[7]);
+    _nodes[1]->set_left_child(_nodes[2]);
+    _nodes[0]->set_left_child(_nodes[1]);
   }
 
   void TearDown() override { StorageManager::get().reset(); }
+
+  std::array<std::shared_ptr<MockNode>, 8> _nodes;
 };
 
-TEST_F(AbstractSyntaxTreeTest, ParentTest) {
+TEST_F(AbstractSyntaxTreeTest, SimpleParentTest) {
   const auto table_node = std::make_shared<StoredTableNode>("a");
 
   ASSERT_EQ(table_node->left_child(), nullptr);
   ASSERT_EQ(table_node->right_child(), nullptr);
-  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_TRUE(table_node->parents().empty());
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
   const auto& expressions = Expression::create_columns(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parent(), projection_node);
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node);
   ASSERT_EQ(projection_node->right_child(), nullptr);
-  ASSERT_EQ(projection_node->parent(), nullptr);
+  ASSERT_TRUE(projection_node->parents().empty());
 }
 
-TEST_F(AbstractSyntaxTreeTest, ClearParentTest) {
+TEST_F(AbstractSyntaxTreeTest, SimpleClearParentsTest) {
   const auto table_node = std::make_shared<StoredTableNode>("a");
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 
-  table_node->clear_parent();
+  table_node->clear_parents();
 
-  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_TRUE(table_node->parents().empty());
   ASSERT_EQ(predicate_node->left_child(), nullptr);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 }
 
 TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
@@ -75,33 +99,33 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
 
   ASSERT_EQ(table_node->left_child(), nullptr);
   ASSERT_EQ(table_node->right_child(), nullptr);
-  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_TRUE(table_node->parents().empty());
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
-  ASSERT_EQ(predicate_node->parent(), nullptr);
+  ASSERT_TRUE(predicate_node->parents().empty());
 
   const auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, "b");
   predicate_node_2->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parent(), predicate_node_2);
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node_2});
   ASSERT_EQ(predicate_node_2->left_child(), predicate_node);
   ASSERT_EQ(predicate_node_2->right_child(), nullptr);
-  ASSERT_EQ(predicate_node_2->parent(), nullptr);
+  ASSERT_TRUE(predicate_node_2->parents().empty());
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
   const auto& expressions = Expression::create_columns(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
-  ASSERT_EQ(predicate_node_2->parent(), projection_node);
+  ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node_2);
   ASSERT_EQ(projection_node->right_child(), nullptr);
-  ASSERT_EQ(projection_node->parent(), nullptr);
+  ASSERT_TRUE(projection_node->parents().empty());
 }
 
 TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
@@ -110,7 +134,7 @@ TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
 
   ASSERT_EQ(join_node->left_child(), nullptr);
   ASSERT_EQ(join_node->right_child(), nullptr);
-  ASSERT_EQ(join_node->parent(), nullptr);
+  ASSERT_TRUE(join_node->parents().empty());
 
   const auto table_a_node = std::make_shared<StoredTableNode>("a");
   const auto table_b_node = std::make_shared<StoredTableNode>("b");
@@ -120,10 +144,10 @@ TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
 
   ASSERT_EQ(join_node->left_child(), table_a_node);
   ASSERT_EQ(join_node->right_child(), table_b_node);
-  ASSERT_EQ(join_node->parent(), nullptr);
+  ASSERT_TRUE(join_node->parents().empty());
 
-  ASSERT_EQ(table_a_node->parent(), join_node);
-  ASSERT_EQ(table_b_node->parent(), join_node);
+  ASSERT_EQ(table_a_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{join_node});
+  ASSERT_EQ(table_b_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{join_node});
 }
 
 TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
@@ -138,6 +162,99 @@ TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
   ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b"}), ColumnID{1});
   ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b", {"foo"}}), ColumnID{1});
   ASSERT_EQ(predicate_node->find_column_id_by_named_column_reference({"b", {"a"}}), std::nullopt);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphStructure) {
+  ASSERT_AST_TIE(_nodes[0], ASTChildSide::Left, _nodes[1]);
+  ASSERT_AST_TIE(_nodes[0], ASTChildSide::Right, _nodes[4]);
+  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Left, _nodes[2]);
+  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Right, _nodes[3]);
+  ASSERT_AST_TIE(_nodes[2], ASTChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Left, _nodes[6]);
+  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, _nodes[7]);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTree) {
+  _nodes[2]->remove_from_tree();
+
+  EXPECT_TRUE(_nodes[2]->parents().empty());
+  EXPECT_EQ(_nodes[2]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[2]->right_child(), nullptr);
+
+  // Make sure _node[1], _node[3] and _node[4] are the only parents _nodes[5] has
+  EXPECT_EQ(_nodes[5]->parents().size(), 3u);
+  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, _nodes[5]);
+
+  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Right, _nodes[3]);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTreeLeaf) {
+  _nodes[6]->remove_from_tree();
+  _nodes[7]->remove_from_tree();
+
+  EXPECT_TRUE(_nodes[6]->parents().empty());
+  EXPECT_TRUE(_nodes[7]->parents().empty());
+  EXPECT_EQ(_nodes[6]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_child(), nullptr);
+  EXPECT_EQ(_nodes[7]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_child(), nullptr);
+  EXPECT_EQ(_nodes[5]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[3]->right_child(), nullptr);
+  EXPECT_EQ(_nodes[4]->right_child(), nullptr);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWith) {
+  auto new_node = std::make_shared<MockNode>();
+
+  _nodes[5]->replace_with(new_node);
+
+  // Make sure _nodes[5] is untied from the AST
+  EXPECT_TRUE(_nodes[5]->parents().empty());
+  EXPECT_EQ(_nodes[5]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[5]->right_child(), nullptr);
+
+  // Make sure new_node is the only parent of _nodes[6]
+  EXPECT_EQ(_nodes[6]->parents().size(), 1u);
+  ASSERT_AST_TIE(new_node, ASTChildSide::Left, _nodes[6]);
+
+  // Make sure new_node, _nodes[3] and _nodes[4] are the only parents of _nodes[7]
+  EXPECT_EQ(_nodes[7]->parents().size(), 3u);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(new_node, ASTChildSide::Right, _nodes[7]);
+
+  // Make sure _nodes[5] former parents point to new_node.
+  ASSERT_AST_TIE(_nodes[2], ASTChildSide::Left, new_node);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, new_node);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, new_node);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWithLeaf) {
+  auto new_node_a = std::make_shared<MockNode>();
+  auto new_node_b = std::make_shared<MockNode>();
+
+  _nodes[6]->replace_with(new_node_a);
+  _nodes[7]->replace_with(new_node_b);
+
+  // Make sure _nodes[6] is untied from the AST
+  EXPECT_TRUE(_nodes[6]->parents().empty());
+  EXPECT_EQ(_nodes[6]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_child(), nullptr);
+
+  // Make sure _nodes[7] is untied from the AST
+  EXPECT_TRUE(_nodes[7]->parents().empty());
+  EXPECT_EQ(_nodes[7]->left_child(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_child(), nullptr);
+
+  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Left, new_node_a);
+  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, new_node_b);
+  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, new_node_b);
 }
 
 }  // namespace opossum

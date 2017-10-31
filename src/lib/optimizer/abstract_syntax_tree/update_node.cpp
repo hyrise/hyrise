@@ -29,12 +29,12 @@ const std::string& UpdateNode::table_name() const { return _table_name; }
 void UpdateNode::map_column_ids(const ColumnIDMapping& column_id_mapping,
                                 ASTChildSide caller_child_side) {
   DebugAssert(left_child(), "Input needs to be set to perform this operation. Mostly because we can't validate the size of column_id_mapping otherwise.");
-  DebugAssert(column_id_mapping.size() == left_child()->output_col_count(), "Invalid column_id_mapping");
+  DebugAssert(column_id_mapping.size() == left_child()->output_column_count(), "Invalid column_id_mapping");
 
   for (const auto& column_expression : _column_expressions) {
     column_expression->map_column_ids(column_id_mapping);
   }
-  _propagate_column_id_mapping_to_parent(column_id_mapping);
+  _propagate_column_id_mapping_to_parents(column_id_mapping);
 }
 
 }  // namespace opossum

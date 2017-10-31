@@ -5,7 +5,7 @@
 
 #include "base_test.hpp"
 
-#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
@@ -86,7 +86,7 @@ TEST_F(ProjectionNodeTest, MapColumnIDs) {
    *      Mock
    */
 
-  auto mock = std::make_shared<MockTableNode>("a", 4);
+  auto mock = std::make_shared<MockNode>("a", 4);
   auto projection =
       std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{1}, ColumnID{2}, ColumnID{0}}));
   auto predicate = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, 5);

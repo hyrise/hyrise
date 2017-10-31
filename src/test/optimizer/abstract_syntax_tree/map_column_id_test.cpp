@@ -4,7 +4,7 @@
 
 #include "optimizer/abstract_syntax_tree/ast_utils.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
-#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/expression.hpp"
@@ -22,19 +22,19 @@ namespace opossum {
 class MapColumnIDTest : public ::testing::Test {
  public:
   void SetUp() override {
-    _table_a = std::make_shared<MockTableNode>("a", 2);
-    _table_b = std::make_shared<MockTableNode>("b", 4);
-    _table_c = std::make_shared<MockTableNode>("c", 3);
-    _table_d = std::make_shared<MockTableNode>("d", 2);
-    _table_e = std::make_shared<MockTableNode>("e", 1);
+    _table_a = std::make_shared<MockNode>("a", 2);
+    _table_b = std::make_shared<MockNode>("b", 4);
+    _table_c = std::make_shared<MockNode>("c", 3);
+    _table_d = std::make_shared<MockNode>("d", 2);
+    _table_e = std::make_shared<MockNode>("e", 1);
   }
 
  protected:
-  std::shared_ptr<MockTableNode> _table_a;
-  std::shared_ptr<MockTableNode> _table_b;
-  std::shared_ptr<MockTableNode> _table_c;
-  std::shared_ptr<MockTableNode> _table_d;
-  std::shared_ptr<MockTableNode> _table_e;
+  std::shared_ptr<MockNode> _table_a;
+  std::shared_ptr<MockNode> _table_b;
+  std::shared_ptr<MockNode> _table_c;
+  std::shared_ptr<MockNode> _table_d;
+  std::shared_ptr<MockNode> _table_e;
   std::shared_ptr<AbstractASTNode> _plan_a;
 };
 

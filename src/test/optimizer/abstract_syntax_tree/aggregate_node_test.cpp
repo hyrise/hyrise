@@ -7,7 +7,7 @@
 #include "base_test.hpp"
 
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
-#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
@@ -59,7 +59,7 @@ TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
-  const auto& column_ids = _aggregate_node->output_column_id_to_input_column_id();
+  const auto& column_ids = _aggregate_node->output_column_ids_to_input_column_ids();
 
   const auto iter_0 = std::find(column_ids.begin(), column_ids.end(), ColumnID{0});
   EXPECT_NE(iter_0, column_ids.end());
@@ -139,7 +139,7 @@ TEST_F(AggregateNodeTest, MapColumnIDs) {
   auto sum_b = Expression::create_aggregate_function(AggregateFunction::Sum, {Expression::create_column(ColumnID{1})});
   auto sum_d = Expression::create_aggregate_function(AggregateFunction::Sum, {Expression::create_column(ColumnID{3})});
 
-  auto mock = std::make_shared<MockTableNode>("a", 4);
+  auto mock = std::make_shared<MockNode>("a", 4);
   auto aggregate = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>({sum_b, sum_d}),
                                                    std::vector<ColumnID>({ColumnID{2}, ColumnID{0}}));
   auto predicate = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpEquals, 5);
