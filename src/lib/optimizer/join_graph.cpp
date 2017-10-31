@@ -7,10 +7,11 @@
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/type_utils.hpp"
 
 namespace opossum {
 
-JoinEdge::JoinEdge(const std::pair<JoinVertexId, JoinVertexId>& vertex_indices, JoinMode mode,
+JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, JoinMode mode,
                    const std::pair<ColumnID, ColumnID>& column_ids, ScanType scan_type)
     : predicate{mode, column_ids, scan_type}, vertex_indices(vertex_indices) {}
 
@@ -73,7 +74,7 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
   /**
    * Process children on the left side
    */
-  const auto left_vertex_offset = o_vertices.size();
+  const auto left_vertex_offset = make_join_vertex_id(o_vertices.size());
   _traverse_ast_for_join_graph(node->left_child(), o_vertices, o_edges, column_id_offset);
 
   /**
@@ -81,7 +82,7 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
    */
   const auto right_column_offset =
       ColumnID{static_cast<ColumnID::base_type>(column_id_offset + node->left_child()->output_column_count())};
-  const auto right_vertex_offset = o_vertices.size();
+  const auto right_vertex_offset = make_join_vertex_id(o_vertices.size());
   _traverse_ast_for_join_graph(node->right_child(), o_vertices, o_edges, right_column_offset);
 
   /**
@@ -92,7 +93,7 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
 
   // Find vertex indices
   const auto find_column = [&o_vertices](auto column_id, const auto vertex_range_begin, const auto vertex_range_end) {
-    for (JoinVertexId vertex_idx = vertex_range_begin; vertex_idx < vertex_range_end; ++vertex_idx) {
+    for (auto vertex_idx = vertex_range_begin; vertex_idx < vertex_range_end; ++vertex_idx) {
       const auto& vertex = o_vertices[vertex_idx];
       if (column_id < vertex->output_column_count()) {
         return std::make_pair(vertex_idx, column_id);
@@ -104,7 +105,7 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
   };
 
   const auto find_left_result = find_column(left_column_id, left_vertex_offset, right_vertex_offset);
-  const auto find_right_result = find_column(right_column_id, right_vertex_offset, o_vertices.size());
+  const auto find_right_result = find_column(right_column_id, right_vertex_offset, make_join_vertex_id(o_vertices.size()));
 
   JoinEdge edge({find_left_result.first, find_right_result.first}, join_node->join_mode(),
                 {find_left_result.second, find_right_result.second}, *join_node->scan_type());
