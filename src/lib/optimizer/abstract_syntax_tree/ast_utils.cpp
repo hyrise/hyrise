@@ -68,7 +68,7 @@ bool ast_contains_join_edge(const std::shared_ptr<const AbstractASTNode>& node, 
        */
       if (static_cast<size_t>(column_id_b) >= left_column_count) {
         const auto in_column_order = join_node->join_column_ids() ==
-                                     std::make_pair(column_id_a, make_column_id(column_id_b - left_column_count)) &&
+                                         std::make_pair(column_id_a, make_column_id(column_id_b - left_column_count)) &&
                                      join_node->scan_type() == scan_type;
         if (in_column_order) {
           return true;
@@ -82,9 +82,9 @@ bool ast_contains_join_edge(const std::shared_ptr<const AbstractASTNode>& node, 
        */
       if (static_cast<size_t>(column_id_a) >= left_column_count) {
         const auto in_flipped_column_order =
-          join_node->join_column_ids() ==
-          std::make_pair(column_id_b, make_column_id(column_id_a - left_column_count)) &&
-          join_node->scan_type() == flip_scan_type(scan_type);
+            join_node->join_column_ids() ==
+                std::make_pair(column_id_b, make_column_id(column_id_a - left_column_count)) &&
+            join_node->scan_type() == flip_scan_type(scan_type);
         if (in_flipped_column_order) {
           return true;
         }

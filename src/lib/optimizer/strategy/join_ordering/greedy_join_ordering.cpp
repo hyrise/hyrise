@@ -4,9 +4,9 @@
 #include <numeric>
 #include <set>
 
-#include "optimizer/join_graph.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
+#include "optimizer/join_graph.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
 #include "utils/type_utils.hpp"
@@ -114,8 +114,7 @@ std::shared_ptr<AbstractASTNode> GreedyJoinOrdering::run() {
      * GreedyJoinOrdering III.3
      *      Extend the JoinPlan with a new JoinNode
      */
-    _left_column_id_of_vertex[join_vertex_ids.second] =
-        make_column_id(current_root->output_column_count());
+    _left_column_id_of_vertex[join_vertex_ids.second] = make_column_id(current_root->output_column_count());
     auto new_root = std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, join_edge.scan_type);
     new_root->set_left_child(current_root);
     new_root->set_right_child(_input_graph->vertices()[join_vertex_ids.second]);
@@ -134,9 +133,8 @@ std::shared_ptr<AbstractASTNode> GreedyJoinOrdering::run() {
       const auto right_column_id =
           _left_column_id_of_vertex[predicate_edge.vertex_indices.second] + predicate_edge.column_ids.second;
 
-      auto new_root = std::make_shared<PredicateNode>(make_column_id(left_column_id),
-                                                      predicate_edge.scan_type,
-      make_column_id(right_column_id));
+      auto new_root = std::make_shared<PredicateNode>(make_column_id(left_column_id), predicate_edge.scan_type,
+                                                      make_column_id(right_column_id));
       new_root->set_left_child(current_root);
       current_root = new_root;
     }
@@ -145,7 +143,7 @@ std::shared_ptr<AbstractASTNode> GreedyJoinOrdering::run() {
   return current_root;
 }
 
-std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t> &neighbourhood_edges,
+std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t>& neighbourhood_edges,
                                                               size_t join_edge_idx) {
   const auto& join_edge = _input_graph->edges()[join_edge_idx];
 
@@ -170,7 +168,7 @@ std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t> &
   return predicate_edge_ids;
 }
 
-float GreedyJoinOrdering::_cost_join(const std::shared_ptr<AbstractASTNode> &left_node, size_t edge_idx) const {
+float GreedyJoinOrdering::_cost_join(const std::shared_ptr<AbstractASTNode>& left_node, size_t edge_idx) const {
   const auto& edge = _input_graph->edges()[edge_idx];
 
   const auto vertex_ids = _order_edge_vertices(edge);
@@ -186,13 +184,11 @@ std::pair<ColumnID, ColumnID> GreedyJoinOrdering::_get_edge_column_ids(size_t ed
                                                                        JoinVertexID right_vertex_id) const {
   const auto& edge = _input_graph->edges()[edge_idx];
   if (edge.vertex_indices.second == right_vertex_id) {
-    return std::make_pair(
-        make_column_id(_left_column_id_of_vertex[edge.vertex_indices.first] + edge.column_ids.first),
-        edge.column_ids.second);
+    return std::make_pair(make_column_id(_left_column_id_of_vertex[edge.vertex_indices.first] + edge.column_ids.first),
+                          edge.column_ids.second);
   }
-  return std::make_pair(
-      make_column_id(_left_column_id_of_vertex[edge.vertex_indices.second] + edge.column_ids.second),
-      edge.column_ids.first);
+  return std::make_pair(make_column_id(_left_column_id_of_vertex[edge.vertex_indices.second] + edge.column_ids.second),
+                        edge.column_ids.first);
 }
 
 std::set<size_t> GreedyJoinOrdering::_extract_vertex_neighbourhood(JoinVertexID vertex_idx) {
@@ -212,7 +208,7 @@ std::set<size_t> GreedyJoinOrdering::_extract_vertex_neighbourhood(JoinVertexID 
   return edge_indices;
 }
 
-std::pair<JoinVertexID, JoinVertexID> GreedyJoinOrdering::_order_edge_vertices(const JoinEdge &edge) const {
+std::pair<JoinVertexID, JoinVertexID> GreedyJoinOrdering::_order_edge_vertices(const JoinEdge& edge) const {
   auto new_vertex_idx = edge.vertex_indices.first;
   auto contained_vertex_idx = edge.vertex_indices.second;
 

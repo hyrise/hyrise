@@ -1,7 +1,7 @@
 #include "join_graph.hpp"
 
-#include <utility>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "constant_mappings.hpp"

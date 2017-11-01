@@ -7,8 +7,7 @@
 
 namespace opossum {
 
-class GreedyJoinOrderingTest : public JoinReorderingBaseTest {
-};
+class GreedyJoinOrderingTest : public JoinReorderingBaseTest {};
 
 TEST_F(GreedyJoinOrderingTest, BasicChainGraph) {
   /**

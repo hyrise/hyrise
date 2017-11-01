@@ -50,7 +50,7 @@ class GreedyJoinOrdering {
    * - Identify the new vertex and add all its edges to the `neighbourhood_edges`
    * @returns neighbourhood edges that have to be turned into Predicates
    */
-  std::vector<size_t> _update_neighbourhood(std::set<size_t> &neighbourhood_edges, size_t join_edge_idx);
+  std::vector<size_t> _update_neighbourhood(std::set<size_t>& neighbourhood_edges, size_t join_edge_idx);
 
   /**
    * Identify the cost of joining Edge at `edge_idx` to JoinPlan left_node. Currently the cost == the number of rows

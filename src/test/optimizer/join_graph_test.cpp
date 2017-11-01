@@ -11,8 +11,8 @@
 #include "optimizer/expression.hpp"
 #include "optimizer/join_graph.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

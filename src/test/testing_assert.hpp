@@ -4,10 +4,10 @@
 
 #include "gtest/gtest.h"
 
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/ast_utils.hpp"
-#include "all_type_variant.hpp"
-#include "all_parameter_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -51,9 +51,9 @@ bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::sh
  * Predicate
  */
 bool check_contains_join_edge(const std::shared_ptr<AbstractASTNode>& node,
-                               const std::shared_ptr<AbstractASTNode>& leaf_a,
-                               const std::shared_ptr<AbstractASTNode>& leaf_b, ColumnID column_id_a,
-                               ColumnID column_id_b, ScanType scan_type);
+                              const std::shared_ptr<AbstractASTNode>& leaf_a,
+                              const std::shared_ptr<AbstractASTNode>& leaf_b, ColumnID column_id_a,
+                              ColumnID column_id_b, ScanType scan_type);
 }  // namespace opossum
 
 #define ASSERT_AST_TIE(parent, child_side, child) \
