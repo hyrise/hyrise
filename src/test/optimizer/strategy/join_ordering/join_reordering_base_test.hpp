@@ -14,10 +14,10 @@ namespace opossum {
  */
 class JoinOrderingTableStatistics : public TableStatistics {
  public:
-  JoinOrderingTableStatistics(int32_t min, int32_t max, float row_count) :
-    TableStatistics(row_count,
-      std::vector<std::shared_ptr<BaseColumnStatistics>>{
-        std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, row_count, min, max, 1.0f)}) {
+  JoinOrderingTableStatistics(int32_t min, int32_t max, float row_count)
+      : TableStatistics(row_count,
+                        std::vector<std::shared_ptr<BaseColumnStatistics>>{
+                            std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, row_count, min, max, 1.0f)}) {
     Assert(min <= max, "min value should be smaller than max value");
   }
 };
@@ -33,7 +33,8 @@ class JoinReorderingBaseTest : public StrategyBaseTest {
       JoinGraph::Edges edges;
 
       for (auto vertex_idx_a = JoinVertexID{0}; vertex_idx_a < vertices.size(); ++vertex_idx_a) {
-        for (auto vertex_idx_b = make_join_vertex_id(vertex_idx_a + 1); vertex_idx_b < vertices.size(); ++vertex_idx_b) {
+        for (auto vertex_idx_b = make_join_vertex_id(vertex_idx_a + 1); vertex_idx_b < vertices.size();
+             ++vertex_idx_b) {
           JoinEdge edge({vertex_idx_a, vertex_idx_b}, {ColumnID{0}, ColumnID{0}}, JoinMode::Inner, ScanType::OpEquals);
 
           edges.emplace_back(edge);
@@ -74,12 +75,10 @@ class JoinReorderingBaseTest : public StrategyBaseTest {
      *
      */
     JoinGraph::Vertices vertices_abcde = {_table_node_a, _table_node_b, _table_node_c, _table_node_d, _table_node_e};
-    JoinGraph::Edges edges_abcde = {_create_equi_edge(JoinVertexID{0}, JoinVertexID{1}),
-                                    _create_equi_edge(JoinVertexID{1}, JoinVertexID{2}),
-                                    _create_equi_edge(JoinVertexID{2}, JoinVertexID{3}),
-                                    _create_equi_edge(JoinVertexID{3}, JoinVertexID{4}),
-                                    _create_equi_edge(JoinVertexID{1}, JoinVertexID{4}),
-                                    _create_equi_edge(JoinVertexID{1}, JoinVertexID{3})};
+    JoinGraph::Edges edges_abcde = {
+        _create_equi_edge(JoinVertexID{0}, JoinVertexID{1}), _create_equi_edge(JoinVertexID{1}, JoinVertexID{2}),
+        _create_equi_edge(JoinVertexID{2}, JoinVertexID{3}), _create_equi_edge(JoinVertexID{3}, JoinVertexID{4}),
+        _create_equi_edge(JoinVertexID{1}, JoinVertexID{4}), _create_equi_edge(JoinVertexID{1}, JoinVertexID{3})};
     _join_graph_abcde = std::make_shared<JoinGraph>(std::move(vertices_abcde), std::move(edges_abcde));
   }
 
