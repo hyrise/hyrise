@@ -7,7 +7,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "import_export/csv.hpp"
+#include "import_export/csv_meta.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -58,7 +58,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   std::shared_ptr<Table> table;
   const std::string filename = "/tmp/export_test.csv";
-  const std::string meta_filename = filename + CsvConfig{}.meta_file_extension;
+  const std::string meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
 };
 
 TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
