@@ -74,12 +74,12 @@ class JoinReorderingBaseTest : public StrategyBaseTest {
      *
      */
     JoinGraph::Vertices vertices_abcde = {_table_node_a, _table_node_b, _table_node_c, _table_node_d, _table_node_e};
-    JoinGraph::Edges edges_abcde = {_create_equi_edge(JoinV0, 1),
-                                    _create_equi_edge(1, 2),
-                                    _create_equi_edge(2, 3),
-                                    _create_equi_edge(3, 4),
-                                    _create_equi_edge(1, 4),
-                                    _create_equi_edge(1, 3)};
+    JoinGraph::Edges edges_abcde = {_create_equi_edge(JoinVertexID{0}, JoinVertexID{1}),
+                                    _create_equi_edge(JoinVertexID{1}, JoinVertexID{2}),
+                                    _create_equi_edge(JoinVertexID{2}, JoinVertexID{3}),
+                                    _create_equi_edge(JoinVertexID{3}, JoinVertexID{4}),
+                                    _create_equi_edge(JoinVertexID{1}, JoinVertexID{4}),
+                                    _create_equi_edge(JoinVertexID{1}, JoinVertexID{3})};
     _join_graph_abcde = std::make_shared<JoinGraph>(std::move(vertices_abcde), std::move(edges_abcde));
   }
 
@@ -94,7 +94,7 @@ class JoinReorderingBaseTest : public StrategyBaseTest {
   std::shared_ptr<JoinGraph> _join_graph_abcde;
 
   JoinEdge _create_equi_edge(JoinVertexID vertex_id_a, JoinVertexID vertex_id_b) {
-    return JoinEdge({vertex_id_a, vertex_id_b}, JoinMode::Inner, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals);
+    return JoinEdge({vertex_id_a, vertex_id_b}, {ColumnID{0}, ColumnID{0}}, JoinMode::Inner, ScanType::OpEquals);
   }
 };
 }

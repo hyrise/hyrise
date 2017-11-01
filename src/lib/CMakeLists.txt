@@ -265,6 +265,7 @@ set(
     utils/numa_memory_resource.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/type_utils.cpp
     utils/type_utils.hpp
 )
 

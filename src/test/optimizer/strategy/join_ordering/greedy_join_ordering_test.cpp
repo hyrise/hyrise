@@ -3,11 +3,11 @@
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering/greedy_join_ordering.hpp"
+#include "testing_assert.hpp"
 
 namespace opossum {
 
 class GreedyJoinOrderingTest : public JoinReorderingBaseTest {
- public:
 };
 
 TEST_F(GreedyJoinOrderingTest, BasicChainGraph) {
@@ -54,23 +54,26 @@ TEST_F(GreedyJoinOrderingTest, BasicCliqueGraph) {
 
   auto plan = GreedyJoinOrdering(_join_graph_bcd_clique).run();
 
-  // If Predicate is C.a == B.a
-  if (check_predicate_node(plan, ColumnID{1}, ScanType::OpEquals, ColumnID{2})) {
-    // ...then join must be D.a == B.a
-    ASSERT_INNER_JOIN_NODE(plan->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
-  } else {
-    // Predicate must be D.a == B.a
-    ASSERT_PREDICATE_NODE(plan, ColumnID{0}, ScanType::OpEquals, ColumnID{2});
-    // ...and join must be C.a == B.a
-    ASSERT_INNER_JOIN_NODE(plan->left_child(), ScanType::OpEquals, ColumnID{1}, ColumnID{0});
-  }
+  /**
+   * Assert the JoinPlan structure: Joins/Predicates
+   */
+  ASSERT_EQ(plan->type(), ASTNodeType::Predicate);
+  ASSERT_EQ(plan->left_child()->type(), ASTNodeType::Join);
+  ASSERT_EQ(plan->left_child()->left_child()->type(), ASTNodeType::Join);
 
-  ASSERT_INNER_JOIN_NODE(plan->left_child()->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
-
-  // Assert leafs
+  /**
+   * Assert leafs/vertices
+   */
   ASSERT_EQ(plan->left_child()->right_child(), _table_node_b);
   ASSERT_EQ(plan->left_child()->left_child()->left_child(), _table_node_d);
   ASSERT_EQ(plan->left_child()->left_child()->right_child(), _table_node_c);
+
+  /**
+   * Assert edges
+   */
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_c, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_c, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
 }
 
 TEST_F(GreedyJoinOrderingTest, MediumSizeGraph) {
@@ -90,12 +93,18 @@ TEST_F(GreedyJoinOrderingTest, MediumSizeGraph) {
    *   _Join_       D
    *  /      \
    * A        B
+   *
+   * Reasoning: A is the smallest table, so we'll start with that one. A is only connected to B, so it is connected
+   * next. Out of C, D and E, the join with D is the cheapest, because its a small table. Next comes C and finally E,
+   * which is a large table.
+   * After joining C, we can apply another predicate (either the BC or the CD edge) and after joining E we can add
+   * either the BE or the DE edge as another predicate.
    */
 
   auto plan = GreedyJoinOrdering(_join_graph_abcde).run();
 
   /**
-   * Assert Joins/Predicates
+   * Assert the join graph structure: Joins/Predicates
    */
   ASSERT_EQ(plan->type(), ASTNodeType::Predicate);
   ASSERT_EQ(plan->left_child()->type(), ASTNodeType::Join);
@@ -105,7 +114,7 @@ TEST_F(GreedyJoinOrderingTest, MediumSizeGraph) {
   ASSERT_EQ(plan->left_child()->left_child()->left_child()->left_child()->left_child()->type(), ASTNodeType::Join);
 
   /**
-   * Assert Leafs
+   * Assert the join graphs vertices: Leafs
    */
   ASSERT_EQ(plan->left_child()->right_child(), _table_node_e);
   ASSERT_EQ(plan->left_child()->left_child()->left_child()->right_child(), _table_node_c);
@@ -114,13 +123,13 @@ TEST_F(GreedyJoinOrderingTest, MediumSizeGraph) {
   ASSERT_EQ(plan->left_child()->left_child()->left_child()->left_child()->left_child()->right_child(), _table_node_b);
 
   /**
-   * Assert edges
+   * Assert all edges in the JoinGraph still exist in the JoinPlan
    */
-  EXPECT_CONTAINS_JOIN_EDGE(plan, _table_node_a, _table_node_b, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
-  EXPECT_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_c, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
-  EXPECT_CONTAINS_JOIN_EDGE(plan, _table_node_c, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
-  EXPECT_CONTAINS_JOIN_EDGE(plan, _table_node_d, _table_node_e, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
-  EXPECT_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
-  EXPECT_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_e, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_a, _table_node_b, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_c, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_c, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_d, _table_node_e, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_e, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
 }
 }
