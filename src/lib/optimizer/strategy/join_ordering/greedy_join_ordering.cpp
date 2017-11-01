@@ -162,8 +162,10 @@ std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t>& 
 
     if (edge.vertex_indices.first == vertex_ids.second || edge.vertex_indices.second == vertex_ids.second) {
       predicate_edge_ids.emplace_back(edge_idx);
-      neighbourhood_edges.erase(edge_idx);
     }
+  }
+  for (const auto& edge_idx : predicate_edge_ids) {
+    neighbourhood_edges.erase(edge_idx);
   }
 
   auto new_vertex_neighbourhood = _extract_vertex_neighbourhood(vertex_ids.second);
