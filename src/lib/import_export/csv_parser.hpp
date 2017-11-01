@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include "import_export/csv.hpp"
+#include "import_export/csv_meta.hpp"
 
 namespace opossum {
 
@@ -29,7 +29,7 @@ class CsvParser {
    * @param csv_config  Csv configuration (delimiter, separator, ..).
    * @param rfc_mode    Indicator whether RFC 4180 should be used for parsing.
    */
-  explicit CsvParser(const CsvConfig& csv_config = {});
+  explicit CsvParser();
 
   // cannot move-assign because of const members
   CsvParser& operator=(CsvParser&&) = delete;
@@ -40,12 +40,14 @@ class CsvParser {
    */
   std::shared_ptr<Table> parse(const std::string& filename);
 
+  void set_meta_information(const CsvMeta& meta);
+
  protected:
   /*
    * @param filename Path to the .meta file.
-   * @returns        Empty table with column and chunk information based on .meta file.
    */
-  std::shared_ptr<Table> _process_meta_file(const std::string& filename);
+
+  std::shared_ptr<Table> _create_table_from_meta();
 
   /*
    * @param      csv_content String_view on the remaining content of the CSV.
@@ -70,7 +72,8 @@ class CsvParser {
    */
   void _sanitize_field(std::string& field);
 
-  // Csv configuration, e.g. delimiter, separator, etc.
-  const CsvConfig _csv_config;
+  // CSV meta information like chunk_size, column information, delimitor/seperator charactere, etc.
+  CsvMeta _meta;
+  bool _meta_is_loaded;
 };
 }  // namespace opossum

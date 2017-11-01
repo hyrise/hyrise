@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "import_export/csv.hpp"
+#include "import_export/csv_meta.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -30,10 +30,10 @@ class ImportCsv : public AbstractReadOnlyOperator {
 
   /*
    * @param filename    Path to the input file.
-   * @param config      Csv configuration, e.g. delimiter, separator, etc.
+   * @param meta        A specific meta config, to override the given .json file.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
    */
-  explicit ImportCsv(const std::string& filename, const CsvConfig& config,
+  explicit ImportCsv(const std::string& filename, const CsvMeta& meta,
                      const std::optional<std::string> tablename = std::nullopt);
 
   // cannot move-assign because of const members
@@ -50,7 +50,9 @@ class ImportCsv : public AbstractReadOnlyOperator {
   const std::string _filename;
   // Name for adding the table to the StorageManager
   const std::optional<std::string> _tablename;
-  // Csv configuration, e.g. delimiter, separator, etc.
-  const CsvConfig _config;
+  // CSV meta information
+  CsvMeta _meta;
+  // Information whether custom meta information are provided (true) or the meta file should be used
+  bool _custom_meta;
 };
 }  // namespace opossum
