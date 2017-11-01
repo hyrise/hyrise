@@ -217,7 +217,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * For all columns that this node outputs, find the node that originally "created" it, and the ColumnID it is in that
    * node.
-   * Columns are "created" by Unions, Projections, Aggregates, StoredTables or MockTables, all other nodes just forward
+   * Columns are "created" by Unions, Projections, Aggregates, StoredTables or MockNodes, all other nodes just forward
    * them.
    *
    * JoinNode needs to override get_column_origin() - all other nodes will default to forwarding this request to their
