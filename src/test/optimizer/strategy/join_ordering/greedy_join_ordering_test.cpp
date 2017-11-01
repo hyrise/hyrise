@@ -1,4 +1,4 @@
-#include "join_reordering_base_test.hpp"
+#include "join_ordering_base_test.hpp"
 
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class GreedyJoinOrderingTest : public JoinReorderingBaseTest {};
+class GreedyJoinOrderingTest : public JoinOrderingBaseTest {};
 
 TEST_F(GreedyJoinOrderingTest, BasicChainGraph) {
   /**
