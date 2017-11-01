@@ -495,10 +495,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (_inputs_swapped) {
       _copy_table_metadata(_right_in_table, _output_table);
-      _copy_table_metadata(_left_in_table, _output_table);
+      if (_mode != JoinMode::Semi) {
+        _copy_table_metadata(_left_in_table, _output_table);
+      }
     } else {
       _copy_table_metadata(_left_in_table, _output_table);
-      _copy_table_metadata(_right_in_table, _output_table);
+      if (_mode != JoinMode::Semi) {
+        _copy_table_metadata(_right_in_table, _output_table);
+      }
     }
 
     /*
@@ -612,10 +616,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
         write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
-        write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
+        if (_mode != JoinMode::Semi) {
+          write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
+        }
       } else {
         write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
-        write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
+        if (_mode != JoinMode::Semi) {
+          write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
+        }
       }
       _output_table->emplace_chunk(std::move(output_chunk));
     }

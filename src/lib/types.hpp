@@ -206,7 +206,7 @@ enum class ExpressionType {
   Hint
 };
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
 
 enum class UnionMode { Positions };
 
