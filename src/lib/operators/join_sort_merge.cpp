@@ -371,7 +371,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     for (auto partition : *sorted_table) {
       if (partition->size() > 0) {
-        return partition->at(0).value;
+        return (*partition)[0].value;
       }
     }
 
@@ -387,8 +387,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
     for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      if (sorted_table->at(partition_id)->size() > 0) {
-        return sorted_table->at(partition_id)->back().value;
+      if ((*sorted_table)[partition_id]->size() > 0) {
+        return (*sorted_table)[partition_id]->back().value;
       }
     }
 
@@ -403,10 +403,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::pair<TablePosition, bool> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
                                                              Function condition) {
     for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
-      auto partition = sorted_table->at(partition_id);
+      auto partition = (*sorted_table)[partition_id];
       if (partition->size() > 0 && condition(partition->back().value)) {
         for (size_t index = 0; index < partition->size(); ++index) {
-          if (condition(partition->at(index).value)) {
+          if (condition((*partition)[index].value)) {
             return std::pair<TablePosition, bool>(TablePosition(partition_id, index), true);
           }
         }
@@ -425,10 +425,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                             std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
                                                             Function condition) {
     for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      auto partition = sorted_table->at(partition_id);
-      if (partition->size() > 0 && condition(partition->at(0).value)) {
+      auto partition = (*sorted_table)[partition_id];
+      if (partition->size() > 0 && condition((*partition)[0].value)) {
         for (size_t index = partition->size() - 1; index < partition->size(); --index) {
-          if (condition(partition->at(index).value)) {
+          if (condition((*partition)[index].value)) {
             return std::make_pair(TablePosition(partition_id, index + 1), true);
           }
         }
@@ -438,58 +438,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     return std::make_pair(TablePosition(0, 0), false);
   }
 
-  void _outer_non_equi_join(std::unique_ptr<MaterializedColumnList<T>>& outer_side,
-                                                             std::unique_ptr<MaterializedColumnList<T>>& null_side) {
-    auto& outer_min_value = _table_min_value(outer_table);
-    auto& outer_max_value = _table_max_value(outer_table);
-    auto end_of_null_table = _end_of_table(_sorted_right_table);
-
-    if (_op == ScanType::OpLessThan) {
-      // Left outer
-      // Look for the first rhs value that is bigger than the smallest lhs value.
-      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
-        return value > left_min_value;
-      });
-      if (result.second) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.first));
-      }
-      // Right outer
-      // Look for the last lhs value that is smaller than the biggest rhs value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
-        return value < right_max_value;
-      });
-      if (result.second) {
-        _emit_right_null_combinations(0, result.first.to(end_of_left_table));
-      }
-    } else if (_op == ScanType::OpLessThanEquals) {
-      // Look for the first rhs value that is bigger or equal to the smallest lhs value.
-      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
-        return value >= left_min_value;
-      });
-      if (result.second) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.first));
-      }
-    } else if (_op == ScanType::OpGreaterThan) {
-      // Look for the first rhs value that is smaller than the biggest lhs value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
-        return value < left_max_value;
-      });
-      if (result.second) {
-        _emit_left_null_combinations(0, result.first.to(end_of_right_table));
-      }
-    } else if (_op == ScanType::OpGreaterThanEquals) {
-      // Look for the first rhs value that is smaller or equal to the biggest lhs value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
-        return value <= left_max_value;
-      });
-      if (result.second) {
-        _emit_left_null_combinations(0, result.first.to(end_of_right_table));
-      }
-    }
-  }
-
   /**
-  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=)
+  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+  * This method adds those rows from the left table to the output that do not find a join partner.
+  * The outer join for the equality operator is handled in _join_runs instead.
   **/
   void _left_outer_non_equi_join() {
     auto& left_min_value = _table_min_value(_sorted_left_table);
@@ -531,9 +483,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  /**
-  * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=)
-  **/
+    /**
+    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+    * This method adds those rows from the right table to the output that do not find a join partner.
+    * The outer join for the equality operator is handled in _join_runs instead.
+    **/
   void _right_outer_non_equi_join() {
     auto& right_min_value = _table_min_value(_sorted_right_table);
     auto& right_max_value = _table_max_value(_sorted_right_table);
