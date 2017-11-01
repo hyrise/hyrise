@@ -123,9 +123,10 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
 }
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
-  CsvConfig config;
-  config.separator = ';';
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/ints_semicolon_separator.csv", config);
+  std::string csv_file = "src/test/csv/ints_semicolon_separator.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  csv_meta.config.separator = ';';
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -176,9 +177,10 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
 }
 
 TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
-  CsvConfig config;
-  config.rfc_mode = false;
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped_unsafe.csv", config);
+  std::string csv_file = "src/test/csv/string_escaped_unsafe.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  csv_meta.config.rfc_mode = false;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -229,9 +231,10 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 }
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
-  auto config = CsvConfig{};
-  config.reject_quoted_nonstrings = false;
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv", config);
+  std::string csv_file = "src/test/csv/with_and_without_quotes.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  csv_meta.config.reject_quoted_nonstrings = false;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -250,9 +253,10 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
 }
 
 TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
-  auto config = CsvConfig{};
-  config.escape = '\\';
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_double_escape.csv", config);
+  std::string csv_file = "src/test/csv/string_double_escape.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  csv_meta.config.escape = '\\';
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
