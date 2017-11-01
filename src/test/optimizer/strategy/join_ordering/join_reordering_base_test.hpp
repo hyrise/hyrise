@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <string>
+#include <vector>
+
 #include "optimizer/abstract_syntax_tree/mock_node.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/join_graph.hpp"
@@ -96,4 +101,4 @@ class JoinReorderingBaseTest : public StrategyBaseTest {
     return JoinEdge({vertex_id_a, vertex_id_b}, {ColumnID{0}, ColumnID{0}}, JoinMode::Inner, ScanType::OpEquals);
   }
 };
-}
+}  // namespace opossum
