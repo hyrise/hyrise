@@ -9,9 +9,11 @@
 #include "all_type_variant.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/join_graph.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
+#include "utils/type_utils.hpp"
 
 namespace {
 
@@ -159,6 +161,32 @@ namespace opossum {
   }
 
   return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult check_predicate_node(const std::shared_ptr<AbstractASTNode>& node, ColumnID column_id,
+                                                ScanType scan_type, const AllParameterVariant& value,
+                                                const std::optional<AllTypeVariant>& value2) {
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+
+  if (predicate_node == nullptr) return ::testing::AssertionFailure() << "Node is no Predicate";
+
+  if (column_id == predicate_node->column_id() && scan_type == predicate_node->scan_type() &&
+      value == predicate_node->value() && value2 == predicate_node->value2()) {
+    return ::testing::AssertionSuccess();
+  }
+
+  if (scan_type == ScanType::OpBetween || scan_type == ScanType::OpLike) return ::testing::AssertionFailure();
+  if (value.type() != typeid(ColumnID)) return ::testing::AssertionFailure();
+
+  // Check if the switched operands match
+  const auto flipped_scan_type = flip_scan_type(scan_type);
+
+  if (column_id == boost::get<ColumnID>(predicate_node->value()) && flipped_scan_type == predicate_node->scan_type() &&
+      boost::get<ColumnID>(value) == predicate_node->column_id()) {
+    return ::testing::AssertionSuccess();
+  }
+
+  return ::testing::AssertionFailure();
 }
 
 void EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
