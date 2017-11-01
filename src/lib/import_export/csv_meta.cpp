@@ -1,6 +1,8 @@
 #include "csv_meta.hpp"
 
 #include <fstream>
+#include <string>
+#include <vector>
 
 #include "utils/assert.hpp"
 
@@ -15,7 +17,7 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
   return meta;
 }
 
-void assign_if_exists(char &value, const nlohmann::json& json_object, const std::string &key) {
+void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
   if (json_object.find(key) != json_object.end()) {
     std::string character = json_object.at(key);
     Assert(character.size() == 1, "CSV meta file config: Character specifications can only be a single character.");
@@ -23,7 +25,7 @@ void assign_if_exists(char &value, const nlohmann::json& json_object, const std:
   }
 }
 
-void assign_if_exists(bool &value, const nlohmann::json& json_object, const std::string &key) {
+void assign_if_exists(bool& value, const nlohmann::json& json_object, const std::string& key) {
   if (json_object.find(key) != json_object.end()) {
     value = json_object.at(key);
   }
@@ -63,31 +65,22 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
 }
 
 void to_json(nlohmann::json& json, const CsvMeta& meta) {
-  nlohmann::json config = nlohmann::json {
-    {"delimiter", std::string(1, meta.config.delimiter)},
-    {"separator", std::string(1, meta.config.separator)},
-    {"quote", std::string(1, meta.config.quote)},
-    {"escape", std::string(1, meta.config.escape)},
-    {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
-    {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
-    {"rfc_mode", meta.config.rfc_mode}
-  };
+  nlohmann::json config = nlohmann::json{{"delimiter", std::string(1, meta.config.delimiter)},
+                                         {"separator", std::string(1, meta.config.separator)},
+                                         {"quote", std::string(1, meta.config.quote)},
+                                         {"escape", std::string(1, meta.config.escape)},
+                                         {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
+                                         {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
+                                         {"rfc_mode", meta.config.rfc_mode}};
 
   nlohmann::json columns = "[]"_json;
   for (auto column_meta : meta.columns) {
-    nlohmann::json column_meta_json = nlohmann::json {
-      {"name", column_meta.name},
-      {"type", column_meta.type},
-      {"nullable", column_meta.nullable}
-    };
+    nlohmann::json column_meta_json =
+        nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}};
     columns.push_back(column_meta_json);
   }
 
-  json = nlohmann::json {
-    {"chunk_size", meta.chunk_size},
-    {"config", config},
-    {"columns", columns}
-  };
+  json = nlohmann::json{{"chunk_size", meta.chunk_size}, {"config", config}, {"columns", columns}};
 }
 
 }  // namespace opossum

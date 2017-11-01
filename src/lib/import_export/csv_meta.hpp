@@ -24,7 +24,6 @@ struct ParseConfig {
   // If this is set to true, "4.3" will not be accepted as a value for a float column
   bool reject_quoted_nonstrings = true;
 
-
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;
 
@@ -48,4 +47,4 @@ void to_json(nlohmann::json& json, const CsvMeta& meta);
 
 CsvMeta process_csv_meta_file(const std::string& filename);
 
-} // namespace opossum
+}  // namespace opossum

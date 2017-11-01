@@ -216,7 +216,7 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
 
   EXPECT_TRUE(fileExists(filename));
   EXPECT_TRUE(fileExists(meta_filename));
-  
+
   auto meta_information = process_csv_meta_file(meta_filename);
   EXPECT_TRUE(meta_information.columns.at(0).nullable);
   EXPECT_TRUE(meta_information.columns.at(1).nullable);

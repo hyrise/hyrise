@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
-#include "import_export/csv_meta.hpp"
 #include "import_export/csv_converter.hpp"
+#include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/table.hpp"

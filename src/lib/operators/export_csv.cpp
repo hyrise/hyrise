@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "json.hpp"
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
+#include "json.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
