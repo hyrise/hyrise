@@ -18,7 +18,7 @@ class DummyTableNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
+  const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::optional<ColumnID> find_column_id_by_named_column_reference(
@@ -29,7 +29,6 @@ class DummyTableNode : public AbstractASTNode {
  protected:
   void _on_child_changed() override;
 
-  std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
 

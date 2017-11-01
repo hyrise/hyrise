@@ -23,7 +23,7 @@ class StoredTableNode : public AbstractASTNode {
   const std::string& table_name() const;
 
   std::string description() const override;
-  const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
+  const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
@@ -45,7 +45,6 @@ class StoredTableNode : public AbstractASTNode {
  private:
   const std::string _table_name;
 
-  std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
 
