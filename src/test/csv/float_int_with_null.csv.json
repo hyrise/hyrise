@@ -3,7 +3,8 @@
     "columns": [
         {
             "name": "a",
-            "type": "float_null"
+            "type": "float",
+            "nullable": true
         },
         {
             "name": "b",
@@ -11,7 +12,8 @@
         },
         {
             "name": "c",
-            "type": "int_null"
+            "type": "int",
+            "nullable": true
         }
     ]
 }

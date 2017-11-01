@@ -34,15 +34,10 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
 
   // Column Types
   for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
-    auto type = table->column_type(col_id);
-
-    if (table->column_is_nullable(col_id)) {
-      type += std::string("_") + ParseConfig::NULL_STRING;
-    }
-
     ColumnMeta column_meta;
     column_meta.name = table->column_name(col_id);
-    column_meta.type = type;
+    column_meta.type = table->column_type(col_id);
+    column_meta.nullable = table->column_is_nullable(col_id);
 
     meta.columns.push_back(column_meta);
   }

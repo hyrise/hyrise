@@ -86,13 +86,8 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
 
     auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
-    //TODO: change to use 'nullable' property
-    auto type_nullable = _split<std::string>(column_type, '_');
-    column_type = type_nullable[0];
 
-    auto is_nullable = type_nullable.size() > 1 && boost::to_lower_copy(type_nullable[1]) == ParseConfig::NULL_STRING;
-
-    table->add_column_definition(column_name, column_type, is_nullable);
+    table->add_column_definition(column_name, column_type, column_meta.nullable);
   }
 
   return table;

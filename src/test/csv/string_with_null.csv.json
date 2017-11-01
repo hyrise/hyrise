@@ -3,7 +3,8 @@
     "columns": [
         {
             "name": "a",
-            "type": "string_NULL"
+            "type": "string",
+            "nullable": true
         }
     ]
 }
