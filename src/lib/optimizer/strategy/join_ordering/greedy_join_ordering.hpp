@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <set>
+#include <utility>
+#include <vector>
 
 #include "optimizer/join_graph.hpp"
 #include "types.hpp"
@@ -77,4 +79,4 @@ class GreedyJoinOrdering {
    */
   std::pair<JoinVertexID, JoinVertexID> _order_edge_vertices(const JoinEdge& edge) const;
 };
-}
+}  // namespace opossum

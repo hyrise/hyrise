@@ -1,8 +1,12 @@
 #include "greedy_join_ordering.hpp"
 
 #include <algorithm>
+#include <limits>
+#include <memory>
 #include <numeric>
 #include <set>
+#include <utility>
+#include <vector>
 
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -220,4 +224,5 @@ std::pair<JoinVertexID, JoinVertexID> GreedyJoinOrdering::_order_edge_vertices(c
 
   return std::make_pair(new_vertex_idx, contained_vertex_idx);
 }
-}
+}  // namespace opossum
+

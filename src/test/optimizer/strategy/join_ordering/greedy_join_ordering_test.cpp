@@ -131,4 +131,4 @@ TEST_F(GreedyJoinOrderingTest, MediumSizeGraph) {
   EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
   EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_b, _table_node_e, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
 }
-}
+}  // namespace opossum

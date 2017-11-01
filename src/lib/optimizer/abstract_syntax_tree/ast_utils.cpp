@@ -1,6 +1,8 @@
 #include "ast_utils.hpp"
 
 #include <map>
+#include <memory>
+#include <utility>
 
 #include "boost/variant.hpp"
 

@@ -28,4 +28,5 @@ ScanType flip_scan_type(ScanType scan_type) {
   Fail("Shouldn't be reached");
   return ScanType::OpEquals;  // stupid clang thinks this might get reached.
 }
-}
+}  // namespace opossum
+
