@@ -35,7 +35,7 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
   // Apply only parts of the ParseConfig that are provided, use default values otherwise
   ParseConfig config{};
   if (json.find("config") != json.end()) {
-    Assert(json.at("columns").is_object(), "CSV meta file,\"Config\" field has to be a json object.");
+    Assert(json.at("config").is_object(), "CSV meta file,\"Config\" field has to be a json object.");
     nlohmann::json config_json = json.at("config");
     assign_if_exists(config.delimiter, config_json, "delimiter");
     assign_if_exists(config.separator, config_json, "separator");
@@ -64,11 +64,11 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
 
 void to_json(nlohmann::json& json, const CsvMeta& meta) {
   nlohmann::json config = nlohmann::json {
-    {"delimiter", meta.config.delimiter},
-    {"separator", meta.config.separator},
-    {"quote", meta.config.quote},
-    {"escape", meta.config.escape},
-    {"delimiter_escape", meta.config.delimiter_escape},
+    {"delimiter", std::string(1, meta.config.delimiter)},
+    {"separator", std::string(1, meta.config.separator)},
+    {"quote", std::string(1, meta.config.quote)},
+    {"escape", std::string(1, meta.config.escape)},
+    {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
     {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
     {"rfc_mode", meta.config.rfc_mode}
   };
