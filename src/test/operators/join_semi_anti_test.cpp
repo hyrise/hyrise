@@ -26,15 +26,7 @@ This contains the tests for Semi- and Anti-Join implementations.
 
 class JoinSemiAntiTest : public JoinTest {
  protected:
-  void SetUp() override {
-    JoinTest::SetUp();
-
-    // _table_wrapper_a_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
-
-    // _table_wrapper_a_null->execute();
-  }
-
-  //   std::shared_ptr<TableWrapper> _table_wrapper_a_null;
+  void SetUp() override { JoinTest::SetUp(); }
 };
 
 TEST_F(JoinSemiAntiTest, SemiJoin) {
