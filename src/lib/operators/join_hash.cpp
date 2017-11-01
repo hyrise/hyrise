@@ -46,11 +46,13 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   /*
   This is the expected implementation for swapping tables:
   (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
+  (2) for an anti join the inputs are always swapped
   (2) else the smaller relation will become build relation, the larger probe relation
   (3) for full outer joins we currently don't have an implementation.
   */
-  if (_mode == JoinMode::Left || (_mode != JoinMode::Right &&
-                                  (_input_left->get_output()->row_count() > _input_right->get_output()->row_count()))) {
+  if (_mode == JoinMode::Left || _mode == JoinMode::Anti ||
+      (_mode != JoinMode::Right &&
+       (_input_left->get_output()->row_count() > _input_right->get_output()->row_count()))) {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     inputs_swapped = true;
     build_operator = _input_right;
@@ -416,33 +418,48 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           auto pos_list_left_local = std::make_shared<PosList>();
           auto pos_list_right_local = std::make_shared<PosList>();
 
-          for (size_t i = partition_begin; i < partition_end; ++i) {
-            auto& row = partition[i];
+          if (_mode == JoinMode::Anti) {
+            // find all rows that do NOT match
+            for (size_t i = partition_begin; i < partition_end; ++i) {
+              auto& row = partition[i];
+              auto row_ids = hashtable->get(row.value);
 
-            if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-              continue;
-            }
-
-            auto row_ids = hashtable->get(row.value);
-
-            if (row_ids) {
-              for (const auto& row_id : *row_ids) {
-                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                  pos_list_left_local->emplace_back(row_id);
-                  pos_list_right_local->emplace_back(row.row_id);
-                }
+              if (!row_ids) {
+                pos_list_right_local->emplace_back(row.row_id);
               }
-              // We assume that the relations have been swapped previously,
-              // so that the outer relation is the probing relation.
-            } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-              pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-              pos_list_right_local->emplace_back(row.row_id);
             }
-          }
 
-          if (!pos_list_left_local->empty()) {
             pos_list_left[current_partition_id] = pos_list_left_local;
             pos_list_right[current_partition_id] = pos_list_right_local;
+          } else {
+            for (size_t i = partition_begin; i < partition_end; ++i) {
+              auto& row = partition[i];
+
+              if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+                continue;
+              }
+
+              auto row_ids = hashtable->get(row.value);
+
+              if (row_ids) {
+                for (const auto& row_id : *row_ids) {
+                  if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                    pos_list_left_local->emplace_back(row_id);
+                    pos_list_right_local->emplace_back(row.row_id);
+                  }
+                }
+                // We assume that the relations have been swapped previously,
+                // so that the outer relation is the probing relation.
+              } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
+                pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+                pos_list_right_local->emplace_back(row.row_id);
+              }
+            }
+
+            if (!pos_list_left_local->empty()) {
+              pos_list_left[current_partition_id] = pos_list_left_local;
+              pos_list_right[current_partition_id] = pos_list_right_local;
+            }
           }
         } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
           /*
@@ -466,6 +483,18 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             pos_list_left[current_partition_id] = pos_list_left_local;
             pos_list_right[current_partition_id] = pos_list_right_local;
           }
+        } else if (_mode == JoinMode::Anti) {
+          // no matches on the other side means that we can add all rows in this partition to the output
+          auto pos_list_left_local = std::make_shared<PosList>();
+          auto pos_list_right_local = std::make_shared<PosList>();
+
+          for (size_t i = partition_begin; i < partition_end; ++i) {
+            auto& row = partition[i];
+            pos_list_right_local->emplace_back(row.row_id);
+          }
+
+          pos_list_left[current_partition_id] = pos_list_left_local;
+          pos_list_right[current_partition_id] = pos_list_right_local;
         }
       }));
       jobs.back()->schedule();
@@ -495,12 +524,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (_inputs_swapped) {
       _copy_table_metadata(_right_in_table, _output_table);
-      if (_mode != JoinMode::Semi) {
+
+      if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
         _copy_table_metadata(_left_in_table, _output_table);
       }
     } else {
       _copy_table_metadata(_left_in_table, _output_table);
-      if (_mode != JoinMode::Semi) {
+
+      if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
         _copy_table_metadata(_right_in_table, _output_table);
       }
     }
@@ -616,12 +647,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
         write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
-        if (_mode != JoinMode::Semi) {
+
+        if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
           write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
         }
       } else {
         write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
-        if (_mode != JoinMode::Semi) {
+
+        if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
           write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
         }
       }
