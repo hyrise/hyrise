@@ -124,7 +124,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   std::string csv_file = "src/test/csv/ints_semicolon_separator.csv";
-  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.separator = ';';
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
@@ -178,7 +178,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
 
 TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   std::string csv_file = "src/test/csv/string_escaped_unsafe.csv";
-  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.rfc_mode = false;
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
@@ -232,7 +232,7 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   std::string csv_file = "src/test/csv/with_and_without_quotes.csv";
-  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.reject_quoted_nonstrings = false;
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
@@ -254,7 +254,7 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
 
 TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   std::string csv_file = "src/test/csv/string_double_escape.csv";
-  auto csv_meta = process_csv_meta_file(csv_file + ".json");
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.escape = '\\';
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
