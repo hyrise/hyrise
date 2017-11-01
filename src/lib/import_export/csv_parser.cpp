@@ -72,8 +72,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   return table;
 }
 
-void CsvParser::set_meta_information(const CsvMeta& meta) {
-  _meta = meta;
+void CsvParser::set_meta_information(const CsvMeta& csv_meta) {
+  _meta = csv_meta;
   _meta_is_loaded = true;
 }
 

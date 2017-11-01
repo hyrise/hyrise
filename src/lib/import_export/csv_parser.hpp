@@ -25,11 +25,7 @@ class Chunk;
  */
 class CsvParser {
  public:
-  /*
-   * @param csv_config  Csv configuration (delimiter, separator, ..).
-   * @param rfc_mode    Indicator whether RFC 4180 should be used for parsing.
-   */
-  explicit CsvParser();
+  CsvParser();
 
   // cannot move-assign because of const members
   CsvParser& operator=(CsvParser&&) = delete;
@@ -40,11 +36,14 @@ class CsvParser {
    */
   std::shared_ptr<Table> parse(const std::string& filename);
 
-  void set_meta_information(const CsvMeta& meta);
+  /*
+   * @param csv_meta New meta information.
+   */
+  void set_meta_information(const CsvMeta& csv_meta);
 
  protected:
   /*
-   * @param filename Path to the .meta file.
+   * Use the meta information stored in _meta to create a new table with according column description.
    */
 
   std::shared_ptr<Table> _create_table_from_meta();
