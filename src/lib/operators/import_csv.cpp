@@ -32,9 +32,10 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
   std::shared_ptr<Table> table;
   CsvParser parser;
   if (_custom_meta) {
-    parser.set_meta_information(_meta);
+    table = parser.parse(_filename, _meta);
+  } else {
+    table = parser.parse(_filename);
   }
-  table = parser.parse(_filename);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);

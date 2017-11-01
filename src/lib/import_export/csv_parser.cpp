@@ -19,13 +19,19 @@
 
 namespace opossum {
 
-CsvParser::CsvParser() : _meta_is_loaded(false) {}
+CsvParser::CsvParser() {}
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
-  if (!_meta_is_loaded) {
-    set_meta_information(process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION));
-  }
+  _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+  return _parse(filename);
+}
 
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMeta& csv_meta) {
+  _meta = csv_meta;
+  return _parse(filename);
+}
+
+std::shared_ptr<Table> CsvParser::_parse(const std::string& filename) {
   const auto table = _create_table_from_meta();
 
   std::ifstream csvfile{filename};
@@ -70,11 +76,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   }
 
   return table;
-}
-
-void CsvParser::set_meta_information(const CsvMeta& csv_meta) {
-  _meta = csv_meta;
-  _meta_is_loaded = true;
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {

@@ -37,16 +37,22 @@ class CsvParser {
   std::shared_ptr<Table> parse(const std::string& filename);
 
   /*
-   * @param csv_meta New meta information.
+   * @param filename Path to the input file.
+   * @param csv_meta Custom csv meta information (no meta file is loaded from disk)
+   * @returns        The table that was created from the csv file.
    */
-  void set_meta_information(const CsvMeta& csv_meta);
+  std::shared_ptr<Table> parse(const std::string& filename, const CsvMeta& csv_meta);
 
  protected:
   /*
    * Use the meta information stored in _meta to create a new table with according column description.
    */
-
   std::shared_ptr<Table> _create_table_from_meta();
+
+  /*
+   * This method gets called from one of the two public parse() methods.
+   */
+  std::shared_ptr<Table> _parse(const std::string& filename);
 
   /*
    * @param      csv_content String_view on the remaining content of the CSV.
@@ -73,6 +79,5 @@ class CsvParser {
 
   // CSV meta information like chunk_size, column information, delimitor/seperator charactere, etc.
   CsvMeta _meta;
-  bool _meta_is_loaded;
 };
 }  // namespace opossum
