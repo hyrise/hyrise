@@ -216,11 +216,10 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
 
   EXPECT_TRUE(fileExists(filename));
   EXPECT_TRUE(fileExists(meta_filename));
-  EXPECT_TRUE(compare_file(meta_filename,
-                           "\"PropertyType\",\"Key\",\"Value\"\n"
-                           "\"ChunkSize\",\"\",4\n"
-                           "\"ColumnType\",\"a\",\"int_null\"\n"
-                           "\"ColumnType\",\"b\",\"float_null\"\n"));
+  
+  auto meta_information = process_csv_meta_file(meta_filename);
+  EXPECT_TRUE(meta_information.columns.at(0).nullable);
+  EXPECT_TRUE(meta_information.columns.at(1).nullable);
 }
 
 }  // namespace opossum
