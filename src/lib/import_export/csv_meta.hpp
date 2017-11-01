@@ -40,7 +40,7 @@ struct CsvMeta {
   ParseConfig config;
   std::vector<ColumnMeta> columns;
 
-  std::string meta_file_extension = ".json";
+  static constexpr const char* META_FILE_EXTENSION = ".json";
 };
 
 void from_json(const nlohmann::json& json, CsvMeta& meta);

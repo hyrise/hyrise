@@ -23,7 +23,7 @@ CsvParser::CsvParser() : _meta_is_loaded(false) {}
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   if (!_meta_is_loaded) {
-    set_meta_information(process_csv_meta_file(filename + ".json"));
+    set_meta_information(process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION));
   }
 
   const auto table = _create_table_from_meta();

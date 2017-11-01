@@ -85,7 +85,6 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
 
   json = nlohmann::json {
     {"chunk_size", meta.chunk_size},
-    {"meta_file_extension", meta.meta_file_extension},
     {"config", config},
     {"columns", columns}
   };
