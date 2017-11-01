@@ -55,6 +55,8 @@ set(
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/expression_test.cpp
     optimizer/join_graph_test.cpp
+    optimizer/strategy/join_ordering/greedy_join_ordering_test.cpp
+    optimizer/strategy/join_ordering/join_reordering_base_test.hpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/table_statistics_join_test.cpp

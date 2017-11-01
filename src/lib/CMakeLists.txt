@@ -151,6 +151,8 @@ set(
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
+    optimizer/strategy/join_ordering/greedy_join_ordering.cpp
+    optimizer/strategy/join_ordering/greedy_join_ordering.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
