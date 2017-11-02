@@ -13,9 +13,7 @@
 namespace opossum {
 
 class AbstractASTNode;
-
 class JoinGraph;
-
 class Table;
 
 ::testing::AssertionResult check_table_equal(const Table& tleft, const Table& tright, bool order_sensitive,
@@ -45,6 +43,7 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
 
 bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
                      const std::shared_ptr<AbstractASTNode>& node_b, ColumnID column_id_a, ColumnID column_id_b,
+                     ScanType scan_type);
 
 bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
                            const std::shared_ptr<AbstractASTNode>& node_b);

@@ -119,7 +119,15 @@ std::shared_ptr<AbstractASTNode> GreedyJoinOrdering::run() {
      *      Extend the JoinPlan with a new JoinNode
      */
     _left_column_id_of_vertex[join_vertex_ids.second] = make_column_id(current_root->output_column_count());
-    auto new_root = std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, join_edge.scan_type);
+    std::shared_ptr<JoinNode> new_root;
+
+    if (join_edge.join_mode == JoinMode::Inner) {
+      new_root = std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, *join_edge.scan_type);
+    } else {
+      DebugAssert(join_edge.join_mode == JoinMode::Cross, "Bug. Expected CrossJoin here");
+      new_root = std::make_shared<JoinNode>(JoinMode::Cross);
+    }
+
     new_root->set_left_child(current_root);
     new_root->set_right_child(_input_graph->vertices()[join_vertex_ids.second]);
     current_root = new_root;
@@ -132,12 +140,16 @@ std::shared_ptr<AbstractASTNode> GreedyJoinOrdering::run() {
     for (const auto& edge_idx : predicate_edge_indices) {
       const auto& predicate_edge = _input_graph->edges()[edge_idx];
 
-      const auto left_column_id =
-          _left_column_id_of_vertex[predicate_edge.vertex_indices.first] + predicate_edge.column_ids.first;
-      const auto right_column_id =
-          _left_column_id_of_vertex[predicate_edge.vertex_indices.second] + predicate_edge.column_ids.second;
+      DebugAssert(predicate_edge.join_mode == JoinMode::Inner, "Non-inner joins can't be predicates right now.");
 
-      auto new_root = std::make_shared<PredicateNode>(make_column_id(left_column_id), predicate_edge.scan_type,
+      const auto left_column_id =
+          _left_column_id_of_vertex[predicate_edge.vertex_indices.first] + predicate_edge.column_ids->first;
+      const auto right_column_id =
+          _left_column_id_of_vertex[predicate_edge.vertex_indices.second] + predicate_edge.column_ids->second;
+
+      DebugAssert(predicate_edge.scan_type, "Bug. Expected an edge with a scan_type here");
+
+      auto new_root = std::make_shared<PredicateNode>(make_column_id(left_column_id), *predicate_edge.scan_type,
                                                       make_column_id(right_column_id));
       new_root->set_left_child(current_root);
       current_root = new_root;
@@ -161,6 +173,10 @@ std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t>& 
     const auto& edge = _input_graph->edges()[edge_idx];
 
     if (edge.vertex_indices.first == vertex_ids.second || edge.vertex_indices.second == vertex_ids.second) {
+      // IMPORTANT: CrossJoins don't become Predicates, as they don't discard any rows
+      if (edge.join_mode == JoinMode::Cross) {
+        continue;
+      }
       predicate_edge_ids.emplace_back(edge_idx);
     }
   }
@@ -181,20 +197,30 @@ float GreedyJoinOrdering::_cost_join(const std::shared_ptr<AbstractASTNode>& lef
   const auto& new_vertex = _input_graph->vertices()[vertex_ids.second];
   const auto join_column_ids = _get_edge_column_ids(edge_idx, vertex_ids.second);
 
-  const auto join_stats = left_node->get_statistics()->generate_predicated_join_statistics(
-      new_vertex->get_statistics(), JoinMode::Inner, join_column_ids, edge.scan_type);
-  return join_stats->row_count();
+  if (edge.join_mode == JoinMode::Inner) {
+    const auto join_stats = left_node->get_statistics()->generate_predicated_join_statistics(
+    new_vertex->get_statistics(), JoinMode::Inner, join_column_ids, *edge.scan_type);
+    return join_stats->row_count();
+  } else {
+    DebugAssert(edge.join_mode == JoinMode::Cross, "Bug. Was expecting a cross join here.");
+
+    const auto join_stats = left_node->get_statistics()->generate_cross_join_statistics(new_vertex->get_statistics());
+    return join_stats->row_count();
+  }
 }
 
 std::pair<ColumnID, ColumnID> GreedyJoinOrdering::_get_edge_column_ids(size_t edge_idx,
                                                                        JoinVertexID right_vertex_id) const {
   const auto& edge = _input_graph->edges()[edge_idx];
+
+  DebugAssert(edge.column_ids, "Edge type doesn't refer to columns");
+
   if (edge.vertex_indices.second == right_vertex_id) {
-    return std::make_pair(make_column_id(_left_column_id_of_vertex[edge.vertex_indices.first] + edge.column_ids.first),
-                          edge.column_ids.second);
+    return std::make_pair(make_column_id(_left_column_id_of_vertex[edge.vertex_indices.first] + edge.column_ids->first),
+                          edge.column_ids->second);
   }
-  return std::make_pair(make_column_id(_left_column_id_of_vertex[edge.vertex_indices.second] + edge.column_ids.second),
-                        edge.column_ids.first);
+  return std::make_pair(make_column_id(_left_column_id_of_vertex[edge.vertex_indices.second] + edge.column_ids->second),
+                        edge.column_ids->first);
 }
 
 std::set<size_t> GreedyJoinOrdering::_extract_vertex_neighbourhood(JoinVertexID vertex_idx) {
