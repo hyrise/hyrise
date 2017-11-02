@@ -198,7 +198,7 @@ float GreedyJoinOrdering::_cost_join(const std::shared_ptr<AbstractASTNode>& lef
   if (edge.join_mode == JoinMode::Inner) {
     const auto join_column_ids = _get_edge_column_ids(edge_idx, vertex_ids.second);
     const auto join_stats = left_node->get_statistics()->generate_predicated_join_statistics(
-    new_vertex->get_statistics(), JoinMode::Inner, join_column_ids, *edge.scan_type);
+        new_vertex->get_statistics(), JoinMode::Inner, join_column_ids, *edge.scan_type);
     return join_stats->row_count();
   } else {
     DebugAssert(edge.join_mode == JoinMode::Cross, "Bug. Was expecting a cross join here.");
@@ -252,4 +252,3 @@ std::pair<JoinVertexID, JoinVertexID> GreedyJoinOrdering::_order_edge_vertices(c
   return std::make_pair(new_vertex_idx, contained_vertex_idx);
 }
 }  // namespace opossum
-

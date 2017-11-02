@@ -29,4 +29,3 @@ ScanType flip_scan_type(ScanType scan_type) {
   return ScanType::OpEquals;  // stupid clang thinks this might get reached.
 }
 }  // namespace opossum
-

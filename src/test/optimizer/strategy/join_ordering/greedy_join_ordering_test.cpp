@@ -176,6 +176,4 @@ TEST_F(GreedyJoinOrderingTest, MediumSizeGraphWithCross) {
   EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_d, _table_node_c, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
 }
 
-
-
 }  // namespace opossum
