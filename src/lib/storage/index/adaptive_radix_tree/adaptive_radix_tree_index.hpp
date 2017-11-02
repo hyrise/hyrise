@@ -26,7 +26,7 @@ class BaseDictionaryColumn;
  *
  * The full specification of an ART can be found in the following paper: https://db.in.tum.de/~leis/papers/ART.pdf
  *
- * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/AdaptiveRadixTree-(ART)-Index
+ * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AdaptiveRadixTree-(ART)-Index
  *
  */
 class AdaptiveRadixTreeIndex : public BaseIndex {

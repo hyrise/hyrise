@@ -41,7 +41,7 @@ class Table;
  * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
  *
  * Find more information about table statistics in our wiki:
- * https://github.com/hyrise/zweirise/wiki/potential_statistics
+ * https://github.com/hyrise/hyrise/wiki/potential_statistics
  */
 class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
  public:
