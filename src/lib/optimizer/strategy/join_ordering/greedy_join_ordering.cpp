@@ -168,10 +168,13 @@ std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t>& 
   _remaining_edge_indices.erase(join_edge_idx);
 
   std::vector<size_t> predicate_edge_ids;
+  std::vector<size_t> fulfilled_edge_ids;
   for (const auto& edge_idx : neighbourhood_edges) {
     const auto& edge = _input_graph->edges()[edge_idx];
 
     if (edge.vertex_indices.first == vertex_ids.second || edge.vertex_indices.second == vertex_ids.second) {
+      fulfilled_edge_ids.emplace_back(edge_idx);
+
       // IMPORTANT: CrossJoins don't become Predicates, as they don't discard any rows
       if (edge.join_mode == JoinMode::Cross) {
         continue;
@@ -179,8 +182,9 @@ std::vector<size_t> GreedyJoinOrdering::_update_neighbourhood(std::set<size_t>& 
       predicate_edge_ids.emplace_back(edge_idx);
     }
   }
-  for (const auto& edge_idx : predicate_edge_ids) {
+  for (const auto& edge_idx : fulfilled_edge_ids) {
     neighbourhood_edges.erase(edge_idx);
+    _remaining_edge_indices.erase(edge_idx);
   }
 
   auto new_vertex_neighbourhood = _extract_vertex_neighbourhood(vertex_ids.second);

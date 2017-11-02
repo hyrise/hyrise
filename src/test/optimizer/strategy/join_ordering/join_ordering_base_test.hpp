@@ -65,8 +65,13 @@ class JoinOrderingBaseTest : public ::testing::Test {
      */
     JoinGraph::Vertices vertices_abcde_complete_cross = {_table_node_a, _table_node_b, _table_node_c,_table_node_d,
                                                          _table_node_e};
-    JoinGraph::Edges edges_abcde_cross = _create_complete_cross_graph_edges(vertices_abcde_complete_cross.size());
-    edges_abcde_cross.emplace_back(std::make_pair(JoinVertexID{0}, JoinVertexID{1}))
+    JoinGraph::Edges edges_abcde_complete_cross = _create_complete_cross_graph_edges(vertices_abcde_complete_cross.size());
+    edges_abcde_complete_cross.emplace_back(_create_equi_edge(JoinVertexID{0}, JoinVertexID{3}));
+    edges_abcde_complete_cross.emplace_back(_create_equi_edge(JoinVertexID{2}, JoinVertexID{4}));
+    edges_abcde_complete_cross.emplace_back(_create_equi_edge(JoinVertexID{3}, JoinVertexID{4}));
+
+    _join_graph_abcde_complete_cross =
+      std::make_shared<JoinGraph>(std::move(vertices_abcde_complete_cross), std::move(edges_abcde_complete_cross));
 
   }
 

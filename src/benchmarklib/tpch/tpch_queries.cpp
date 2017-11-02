@@ -161,7 +161,6 @@ const char* const tpch_query_5 =
       AND o_orderdate < '1995-01-01'
       GROUP BY n_name
       ORDER BY revenue DESC;)";
-EXPECT_AST_CONTAINS_JOIN_EDGE
 
 /**
  * TPC-H 6

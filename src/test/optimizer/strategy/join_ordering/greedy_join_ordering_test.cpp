@@ -176,4 +176,48 @@ TEST_F(GreedyJoinOrderingTest, MediumSizeGraphWithCross) {
   EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_d, _table_node_c, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
 }
 
+TEST_F(GreedyJoinOrderingTest, MediumSizeCompleteGraphWithCross) {
+  /**
+   * Expected Result:
+   *                   _CrossJoin
+   *                  /          \
+   *               _Join_         B
+   *              /      \
+   *         _Join_       C
+   *        /      \
+   *   _Join_       E
+   *  /      \
+   * A        D
+   *
+   * Reasoning: A is the smallest table, so we'll start with that one. Then we follow the chain of possible non-cross
+   * joins via D, E and C. Finally we have to add B via Cross join.
+   */
+
+  auto plan = GreedyJoinOrdering(_join_graph_abcde_complete_cross).run();
+
+  /**
+   * Assert the join graph structure: Joins/Predicates
+   */
+  ASSERT_EQ(plan->type(), ASTNodeType::Join);
+  ASSERT_EQ(plan->left_child()->type(), ASTNodeType::Join);
+  ASSERT_EQ(plan->left_child()->left_child()->type(), ASTNodeType::Join);
+  ASSERT_EQ(plan->left_child()->left_child()->left_child()->type(), ASTNodeType::Join);
+
+  /**
+   * Assert the join graphs vertices: Leafs
+   */
+  ASSERT_EQ(plan->right_child(), _table_node_b);
+  ASSERT_EQ(plan->left_child()->right_child(), _table_node_c);
+  ASSERT_EQ(plan->left_child()->left_child()->right_child(), _table_node_e);
+  ASSERT_EQ(plan->left_child()->left_child()->left_child()->right_child(), _table_node_d);
+  ASSERT_EQ(plan->left_child()->left_child()->left_child()->left_child(), _table_node_a);
+
+  /**
+   * Assert all edges in the JoinGraph still exist in the JoinPlan
+   */
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_a, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_e, _table_node_d, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+  EXPECT_AST_CONTAINS_JOIN_EDGE(plan, _table_node_e, _table_node_c, ColumnID{0}, ColumnID{0}, ScanType::OpEquals);
+}
+
 }  // namespace opossum
