@@ -238,7 +238,7 @@ void AbstractASTNode::remove_from_tree() {
   Assert(!right_child(), "Can only remove nodes that only have a left child or no children");
 
   /**
-   * Back up parents and in which child side they hold this node
+   * Backup parents and in which child side they hold this node
    */
   auto parents = this->parents();
   auto child_sides = this->get_child_sides();
