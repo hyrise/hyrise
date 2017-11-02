@@ -6,21 +6,27 @@
 #include <vector>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class JoinNode;
+class PredcicateNode;
 
 /**
  * A connection between two JoinGraph-Vertices.
  */
 struct JoinEdge {
+  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices,
+           JoinMode join_mode);
   JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, const std::pair<ColumnID, ColumnID>& column_ids,
            JoinMode join_mode, ScanType scan_type);
 
   std::pair<JoinVertexID, JoinVertexID> vertex_indices;
-  std::pair<ColumnID, ColumnID> column_ids;
+  std::optional<std::pair<ColumnID, ColumnID>> column_ids;
   JoinMode join_mode;
-  ScanType scan_type;
+  std::optional<ScanType> scan_type;
 };
 
 /**
@@ -58,6 +64,12 @@ class JoinGraph final {
    * @param o_edges             Output parameter, collecting all edges/predicates in the tree
    */
   static void _traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNode>& node,
+                                           JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
+  static void _traverse_inner_join_node(const std::shared_ptr<JoinNode>& node,
+                                           JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
+  static void _traverse_cross_join_node(const std::shared_ptr<JoinNode>& node,
+                                           JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
+  static void _traverse_predicate_node(const std::shared_ptr<PredicateNode>& node,
                                            JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
 
   /**

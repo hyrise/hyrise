@@ -230,4 +230,22 @@ bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::sh
   return false;
 }
 
+bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
+                           const std::shared_ptr<AbstractASTNode>& node_b) {
+  for (const auto& edge : join_graph->edges()) {
+    if (edge.join_mode != JoinMode::Cross) continue;
+    if (join_graph->vertices().size() <= edge.vertex_indices.first) continue;
+    if (join_graph->vertices().size() <= edge.vertex_indices.second) continue;
+
+    const auto& edge_node_a = join_graph->vertices()[edge.vertex_indices.first];
+    const auto& edge_node_b = join_graph->vertices()[edge.vertex_indices.second];
+
+    if ((edge_node_a == node_a && edge_node_b == node_b) || (edge_node_a == node_b && edge_node_b == node_a)) {
+      return true;  // we found a matching edge
+    }
+  }
+
+  return false;
+}
+
 }  // namespace opossum

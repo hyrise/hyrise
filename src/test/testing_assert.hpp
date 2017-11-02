@@ -39,6 +39,9 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
 bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
                      const std::shared_ptr<AbstractASTNode>& node_b, ColumnID column_id_a, ColumnID column_id_b,
                      ScanType scan_type);
+
+bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
+                           const std::shared_ptr<AbstractASTNode>& node_b);
 }  // namespace opossum
 
 #define ASSERT_AST_TIE(parent, child_side, child) \
@@ -46,5 +49,8 @@ bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::sh
 
 #define EXPECT_JOIN_EDGE(join_graph, node_a, node_b, column_id_a, column_id_b, scan_type) \
   EXPECT_TRUE(opossum::check_join_edge(join_graph, node_a, node_b, column_id_a, column_id_b, scan_type))
+
+#define EXPECT_CROSS_JOIN_EDGE(join_graph, node_a, node_b) \
+  EXPECT_TRUE(opossum::check_cross_join_edge(join_graph, node_a, node_b))
 
 #define EXPECT_JOIN_VERTICES(vertices_a, vertices_b) EXPECT_EQ(vertices_a, vertices_b)
