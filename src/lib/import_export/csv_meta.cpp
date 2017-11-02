@@ -13,8 +13,7 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
   Assert(metafile.good(), "Meta file does not exist: " + filename);
   nlohmann::json meta_json;
   metafile >> meta_json;
-  CsvMeta meta = meta_json;
-  return meta;
+  return static_cast<CsvMeta>(meta_json);
 }
 
 void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
@@ -50,15 +49,13 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
 
   if (json.find("columns") != json.end()) {
     Assert(json.at("columns").is_array(), "CSV meta file,\"Columns\" field has to be a json array.");
-    std::vector<ColumnMeta> columns;
-    for (auto column : json.at("columns")) {
+    for (const auto& column : json.at("columns")) {
       ColumnMeta column_meta;
       column_meta.name = column.at("name");
       column_meta.type = column.at("type");
       assign_if_exists(column_meta.nullable, column, "nullable");
-      columns.push_back(column_meta);
+      meta.columns.push_back(column_meta);
     }
-    meta.columns = columns;
   }
 
   meta.config = config;
@@ -74,10 +71,9 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"rfc_mode", meta.config.rfc_mode}};
 
   nlohmann::json columns = "[]"_json;
-  for (auto column_meta : meta.columns) {
-    nlohmann::json column_meta_json =
-        nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}};
-    columns.push_back(column_meta_json);
+  for (const auto& column_meta : meta.columns) {
+    columns.emplace_back(
+        nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
   json = nlohmann::json{{"chunk_size", meta.chunk_size}, {"config", config}, {"columns", columns}};

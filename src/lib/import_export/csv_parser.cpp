@@ -81,7 +81,7 @@ std::shared_ptr<Table> CsvParser::_parse(const std::string& filename) {
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
   const auto table = std::make_shared<Table>(_meta.chunk_size);
 
-  for (auto column_meta : _meta.columns) {
+  for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;
     BaseCsvConverter::unescape(column_name);
 
