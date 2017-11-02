@@ -330,13 +330,15 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto current_left = RowID{context->chunk_id_left, row_left};
 
           // Check null values
-          auto comparing_null =
-              is_left_value_null(offset_in_left_value_column) || is_right_value_null(offset_in_right_value_column);
+          auto is_match =
+              !(is_left_value_null(offset_in_left_value_column) || is_right_value_null(offset_in_right_value_column));
 
-          auto is_match = context->compare_func(get_left_column_value(offset_in_left_value_column),
-                                                get_right_column_value(offset_in_right_value_column));
+          if (is_match) {
+            is_match = context->compare_func(get_left_column_value(offset_in_left_value_column),
+                                             get_right_column_value(offset_in_right_value_column));
+          }
 
-          if (!comparing_null && is_match) {
+          if (is_match) {
             // For outer joins we need to mark these rows, since they don't need to be added later on.
             if (context->join_mode == JoinMode::Right || context->join_mode == JoinMode::Outer) {
               (*unmatched_rows_map_right)[current_right] = false;
