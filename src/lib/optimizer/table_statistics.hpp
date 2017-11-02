@@ -59,7 +59,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
 
   /**
    * Create the TableStatistics by explicitly specifying its underlying data. Intended for statistics tests or to
-   * supply mocked statistics to a MockTableNode
+   * supply mocked statistics to a MockNode
    */
   TableStatistics(float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
 

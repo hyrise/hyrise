@@ -48,7 +48,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& table_a, const std
 }
 
 Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
-  _chunks.push_back(Chunk{true});
+  _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
 void Table::add_column_definition(const std::string& name, const std::string& type, bool nullable) {
@@ -78,7 +78,7 @@ void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count +=
 
 void Table::create_new_chunk() {
   // Create chunk with mvcc columns
-  Chunk newChunk{true};
+  Chunk newChunk{ChunkUseMvcc::Yes};
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
     const auto& type = _column_types[column_id];
