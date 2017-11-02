@@ -29,7 +29,7 @@ TEST_F(CsvMetaTest, MinimalMetaInformation) {
       "chunk_size": 0
     }
   )"_json;
-  
+
   auto meta_expected = CsvMeta{};
   meta_expected.chunk_size = 0;
 
@@ -84,7 +84,7 @@ TEST_F(CsvMetaTest, ChunkSizeNotNegative) {
       "chunk_size": -1
     }
   )"_json;
-  
+
   EXPECT_THROW(static_cast<CsvMeta>(json_meta), std::logic_error);
 }
 
@@ -94,7 +94,7 @@ TEST_F(CsvMetaTest, ChunkSizeTypeMismatch) {
       "chunk_size": 0.4
     }
   )"_json;
-  
+
   EXPECT_THROW(static_cast<CsvMeta>(json_meta), std::logic_error);
 }
 

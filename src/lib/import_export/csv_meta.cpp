@@ -32,7 +32,8 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
   auto chunk_size = json.at("chunk_size");
-  Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size), "CSV meta file, chunk_size must be an integer.");
+  Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size),
+         "CSV meta file, chunk_size must be an integer.");
   Assert(static_cast<int64_t>(chunk_size) >= 0, "CSV meta file, chunk_size must not be negative.");
   meta.chunk_size = chunk_size;
 
@@ -83,27 +84,19 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
 }
 
 bool operator==(const ColumnMeta& lhs, const ColumnMeta& rhs) {
-  bool equal = lhs.name == rhs.name
-            && lhs.type == rhs.type
-            && lhs.nullable == rhs.nullable;
+  bool equal = lhs.name == rhs.name && lhs.type == rhs.type && lhs.nullable == rhs.nullable;
   return equal;
 }
 
 bool operator==(const ParseConfig& lhs, const ParseConfig& rhs) {
-  bool equal = lhs.delimiter == rhs.delimiter
-            && lhs.separator == rhs.separator
-            && lhs.quote == rhs.quote
-            && lhs.escape == rhs.escape
-            && lhs.delimiter_escape == rhs.delimiter_escape
-            && lhs.reject_quoted_nonstrings == rhs.reject_quoted_nonstrings
-            && lhs.rfc_mode == rhs.rfc_mode;
+  bool equal = lhs.delimiter == rhs.delimiter && lhs.separator == rhs.separator && lhs.quote == rhs.quote &&
+               lhs.escape == rhs.escape && lhs.delimiter_escape == rhs.delimiter_escape &&
+               lhs.reject_quoted_nonstrings == rhs.reject_quoted_nonstrings && lhs.rfc_mode == rhs.rfc_mode;
   return equal;
 }
 
 bool operator==(const CsvMeta& lhs, const CsvMeta& rhs) {
-  bool equal = lhs.chunk_size == rhs.chunk_size
-            && lhs.config == rhs.config
-            && lhs.columns == rhs.columns;
+  bool equal = lhs.chunk_size == rhs.chunk_size && lhs.config == rhs.config && lhs.columns == rhs.columns;
   return equal;
 }
 
