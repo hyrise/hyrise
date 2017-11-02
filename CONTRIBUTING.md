@@ -26,6 +26,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use forward declarations whenever possible to reduce compile time
 - We mostly use structs for PODS (plain old data structures). If it has methods, chances are that it is a class.
 - Don't write `this->` if you don't have to
+- Use C++11 for loops when possible: `for (const auto& item : items) {...}`
 
 ## Naming Conventions
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp
