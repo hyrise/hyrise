@@ -160,7 +160,7 @@ const char* const tpch_query_5 =
       AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'ASIA' AND o_orderdate >= '1994-01-01'
       AND o_orderdate < '1995-01-01'
       GROUP BY n_name
-      ORDER BY revenue DESC;)";
+      ORDER BY revenue DESC;)";EXPECT_AST_CONTAINS_JOIN_EDGE
 
 /**
  * TPC-H 6
