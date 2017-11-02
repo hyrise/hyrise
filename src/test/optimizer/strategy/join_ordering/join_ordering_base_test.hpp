@@ -48,7 +48,7 @@ class JoinOrderingBaseTest : public ::testing::Test {
     _join_graph_abcde = std::make_shared<JoinGraph>(std::move(vertices_abcde), std::move(edges_abcde));
 
     /**
-     * Build the ABCDE-Cross graph which is a chain AEDC with B being connected to A,C and E via Cross Joins
+     * Build the ABCDE-Cross graph, which is a chain AEDC with B being connected to A,C and E via Cross Joins
      */
     JoinGraph::Vertices vertices_abcde_cross = {_table_node_a, _table_node_b, _table_node_c, _table_node_d,
                                                 _table_node_e};
@@ -58,6 +58,16 @@ class JoinOrderingBaseTest : public ::testing::Test {
         _create_equi_edge(JoinVertexID{3}, JoinVertexID{4}),  _create_equi_edge(JoinVertexID{0}, JoinVertexID{4})};
     _join_graph_abcde_cross =
         std::make_shared<JoinGraph>(std::move(vertices_abcde_cross), std::move(edges_abcde_cross));
+
+    /**
+     * Build the ABCDE-CompleteCross graph, which is a complete cross-join graph of ABCDE, with the additional
+     * InnerJoin edges AD, EC and ED
+     */
+    JoinGraph::Vertices vertices_abcde_complete_cross = {_table_node_a, _table_node_b, _table_node_c,_table_node_d,
+                                                         _table_node_e};
+    JoinGraph::Edges edges_abcde_cross = _create_complete_cross_graph_edges(vertices_abcde_complete_cross.size());
+    edges_abcde_cross.emplace_back(std::make_pair(JoinVertexID{0}, JoinVertexID{1}))
+
   }
 
  protected:
@@ -70,6 +80,7 @@ class JoinOrderingBaseTest : public ::testing::Test {
   std::shared_ptr<JoinGraph> _join_graph_bcd_clique;
   std::shared_ptr<JoinGraph> _join_graph_abcde;
   std::shared_ptr<JoinGraph> _join_graph_abcde_cross;
+  std::shared_ptr<JoinGraph> _join_graph_abcde_complete_cross;
 
   static JoinEdge _create_equi_edge(JoinVertexID vertex_id_a, JoinVertexID vertex_id_b) {
     return JoinEdge({vertex_id_a, vertex_id_b}, {ColumnID{0}, ColumnID{0}}, JoinMode::Inner, ScanType::OpEquals);
@@ -118,6 +129,17 @@ class JoinOrderingBaseTest : public ::testing::Test {
     }
 
     return std::make_shared<JoinGraph>(std::move(vertices), std::move(edges));
+  }
+
+  static JoinGraph::Edges _create_complete_cross_graph_edges(size_t num_vertices) {
+    JoinGraph::Edges edges;
+    for (auto vertex_id_a = JoinVertexID{0}; vertex_id_a < make_join_vertex_id(num_vertices); ++vertex_id_a) {
+      for (auto vertex_id_b = make_join_vertex_id(vertex_id_a + 1); vertex_id_b < make_join_vertex_id(num_vertices);
+           ++vertex_id_b) {
+        edges.emplace_back(std::make_pair(vertex_id_a, vertex_id_b), JoinMode::Cross);
+      }
+    }
+    return edges;
   }
 };
 }  // namespace opossum
