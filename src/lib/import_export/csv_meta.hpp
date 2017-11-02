@@ -63,4 +63,9 @@ CsvMeta process_csv_meta_file(const std::string& filename);
 void from_json(const nlohmann::json& json, CsvMeta& meta);
 void to_json(nlohmann::json& json, const CsvMeta& meta);
 
+/*
+ * Equals-operator for convenience and use in tests.
+ */
+bool operator==(const CsvMeta& lhs, const CsvMeta& rhs);
+
 }  // namespace opossum
