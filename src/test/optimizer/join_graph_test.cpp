@@ -11,8 +11,8 @@
 #include "optimizer/expression.hpp"
 #include "optimizer/join_graph.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -147,8 +147,8 @@ TEST_F(JoinGraphTest, BuildJoinGraphLarge) {
   const auto join_graph = JoinGraph::build_join_graph(join_a_node);
 
   EXPECT_JOIN_VERTICES(join_graph->vertices(),
-                       std::vector<std::shared_ptr<AbstractASTNode>>(
-                           {table_a_0_node, table_b_0_node, table_c_0_node, table_b_1_node, table_a_1_node, table_c_1_node}));
+                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_0_node, table_b_0_node, table_c_0_node,
+                                                                      table_b_1_node, table_a_1_node, table_c_1_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 5u);
   EXPECT_JOIN_EDGE(join_graph, table_a_0_node, table_c_1_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
@@ -233,8 +233,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicatesAndCrossJoin) {
   auto projection_node = std::make_shared<ProjectionNode>(Expression::create_columns({ColumnID{0}}));
   auto join_node =
       std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{3}), ScanType::OpGreaterThan);
-  auto cross_join_node =
-      std::make_shared<JoinNode>(JoinMode::Cross);
+  auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   auto table_a_node = std::make_shared<StoredTableNode>("table_a");
   auto table_b_node = std::make_shared<StoredTableNode>("table_b");
   auto table_c_node = std::make_shared<StoredTableNode>("table_c");
@@ -277,7 +276,8 @@ TEST_F(JoinGraphTest, BuildJoinGraphWithCrossJoins) {
    */
   auto cross_join_0 = std::make_shared<JoinNode>(JoinMode::Cross);
   auto cross_join_1 = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
+  auto join_node =
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
 
   auto table_a_node = std::make_shared<StoredTableNode>("table_a");
   auto table_b_0_node = std::make_shared<StoredTableNode>("table_b");
@@ -291,8 +291,8 @@ TEST_F(JoinGraphTest, BuildJoinGraphWithCrossJoins) {
   // Searching from join_a should yield a non-empty join graph
   const auto join_graph = JoinGraph::build_join_graph(cross_join_0);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(),
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_0_node, table_c_node, table_b_1_node}));
+  EXPECT_JOIN_VERTICES(join_graph->vertices(), std::vector<std::shared_ptr<AbstractASTNode>>(
+                                                   {table_a_node, table_b_0_node, table_c_node, table_b_1_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 6u);
   EXPECT_CROSS_JOIN_EDGE(join_graph, table_a_node, table_b_0_node);

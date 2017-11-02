@@ -1,8 +1,8 @@
 #include "join_graph.hpp"
 
-#include <utility>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "constant_mappings.hpp"
@@ -21,8 +21,8 @@ JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices,
   DebugAssert(join_mode == JoinMode::Inner, "This constructor only supports inner join edges");
 }
 
-JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices,
-         JoinMode join_mode): vertex_indices(vertex_indices), join_mode(join_mode) {
+JoinEdge::JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, JoinMode join_mode)
+    : vertex_indices(vertex_indices), join_mode(join_mode) {
   DebugAssert(join_mode == JoinMode::Cross, "This constructor only supports cross join edges");
 }
 
@@ -51,9 +51,9 @@ void JoinGraph::print(std::ostream& out) const {
   out << "==== Edges ====" << std::endl;
   for (const auto& edge : _edges) {
     if (edge.join_mode == JoinMode::Inner) {
-        std::cout << edge.vertex_indices.first << " <-- " << edge.column_ids->first << " "
-                  << scan_type_to_string.left.at(*edge.scan_type) << " " << edge.column_ids->second << " --> "
-                  << edge.vertex_indices.second << std::endl;
+      std::cout << edge.vertex_indices.first << " <-- " << edge.column_ids->first << " "
+                << scan_type_to_string.left.at(*edge.scan_type) << " " << edge.column_ids->second << " --> "
+                << edge.vertex_indices.second << std::endl;
     } else {
       std::cout << edge.vertex_indices.first << " <----> " << edge.vertex_indices.second << std::endl;
     }
@@ -102,9 +102,8 @@ void JoinGraph::_traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNo
   }
 }
 
-void JoinGraph::_traverse_inner_join_node(const std::shared_ptr<JoinNode>& node,
-                                      JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges) {
-
+void JoinGraph::_traverse_inner_join_node(const std::shared_ptr<JoinNode>& node, JoinGraph::Vertices& o_vertices,
+                                          JoinGraph::Edges& o_edges) {
   // The first vertex in o_vertices that belongs to the left subtree.
   const auto first_left_subtree_vertex_idx = make_join_vertex_id(o_vertices.size());
   _traverse_ast_for_join_graph(node->left_child(), o_vertices, o_edges);
@@ -113,21 +112,19 @@ void JoinGraph::_traverse_inner_join_node(const std::shared_ptr<JoinNode>& node,
   const auto first_right_subtree_vertex_idx = make_join_vertex_id(o_vertices.size());
   _traverse_ast_for_join_graph(node->right_child(), o_vertices, o_edges);
 
+  auto vertex_and_column_left = _find_vertex_and_column_id(
+      o_vertices, node->join_column_ids()->first, first_left_subtree_vertex_idx, first_right_subtree_vertex_idx);
+  auto vertex_and_column_right =
+      _find_vertex_and_column_id(o_vertices, node->join_column_ids()->second, first_right_subtree_vertex_idx,
+                                 make_join_vertex_id(o_vertices.size()));
 
-  auto vertex_and_column_left = _find_vertex_and_column_id(o_vertices, node->join_column_ids()->first, first_left_subtree_vertex_idx, first_right_subtree_vertex_idx);
-  auto vertex_and_column_right = _find_vertex_and_column_id(o_vertices, node->join_column_ids()->second, first_right_subtree_vertex_idx, make_join_vertex_id(o_vertices.size()));
-
-  o_edges.emplace_back(
-    std::make_pair(vertex_and_column_left.first, vertex_and_column_right.first),
-    std::make_pair(vertex_and_column_left.second, vertex_and_column_right.second),
-    JoinMode::Inner,
-    *node->scan_type()
-  );
+  o_edges.emplace_back(std::make_pair(vertex_and_column_left.first, vertex_and_column_right.first),
+                       std::make_pair(vertex_and_column_left.second, vertex_and_column_right.second), JoinMode::Inner,
+                       *node->scan_type());
 }
 
-void JoinGraph::_traverse_cross_join_node(const std::shared_ptr<JoinNode>& node,
-                                      JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges) {
-
+void JoinGraph::_traverse_cross_join_node(const std::shared_ptr<JoinNode>& node, JoinGraph::Vertices& o_vertices,
+                                          JoinGraph::Edges& o_edges) {
   // The first vertex in o_vertices that belongs to the left subtree.
   const auto first_left_subtree_vertex_idx = make_join_vertex_id(o_vertices.size());
   _traverse_ast_for_join_graph(node->left_child(), o_vertices, o_edges);
@@ -140,39 +137,35 @@ void JoinGraph::_traverse_cross_join_node(const std::shared_ptr<JoinNode>& node,
    * Create a unconditioned edge from each vertex in the left subtree to each vertex in the right subtree
    */
   for (auto left_vertex_idx = first_left_subtree_vertex_idx; left_vertex_idx < first_right_subtree_vertex_idx;
-    ++left_vertex_idx) {
-
+       ++left_vertex_idx) {
     for (auto right_vertex_idx = first_right_subtree_vertex_idx; right_vertex_idx < o_vertices.size();
          ++right_vertex_idx) {
-
       o_edges.emplace_back(std::make_pair(left_vertex_idx, right_vertex_idx), JoinMode::Cross);
     }
   }
 }
 
-void JoinGraph::_traverse_predicate_node(const std::shared_ptr<PredicateNode>& node,
-                                                JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges) {
+void JoinGraph::_traverse_predicate_node(const std::shared_ptr<PredicateNode>& node, JoinGraph::Vertices& o_vertices,
+                                         JoinGraph::Edges& o_edges) {
   const auto first_subtree_vertex_idx = make_join_vertex_id(o_vertices.size());
   _traverse_ast_for_join_graph(node->left_child(), o_vertices, o_edges);
 
   const auto column_id_left = node->column_id();
   const auto column_id_right = boost::get<ColumnID>(node->value());
 
-  auto vertex_and_column_left = _find_vertex_and_column_id(o_vertices, column_id_left, first_subtree_vertex_idx, make_join_vertex_id(o_vertices.size()));
-  auto vertex_and_column_right = _find_vertex_and_column_id(o_vertices, column_id_right, first_subtree_vertex_idx, make_join_vertex_id(o_vertices.size()));
+  auto vertex_and_column_left = _find_vertex_and_column_id(o_vertices, column_id_left, first_subtree_vertex_idx,
+                                                           make_join_vertex_id(o_vertices.size()));
+  auto vertex_and_column_right = _find_vertex_and_column_id(o_vertices, column_id_right, first_subtree_vertex_idx,
+                                                            make_join_vertex_id(o_vertices.size()));
 
-  o_edges.emplace_back(
-    std::make_pair(vertex_and_column_left.first, vertex_and_column_right.first),
-    std::make_pair(vertex_and_column_left.second, vertex_and_column_right.second),
-    JoinMode::Inner,
-    node->scan_type()
-  );
+  o_edges.emplace_back(std::make_pair(vertex_and_column_left.first, vertex_and_column_right.first),
+                       std::make_pair(vertex_and_column_left.second, vertex_and_column_right.second), JoinMode::Inner,
+                       node->scan_type());
 }
 
 std::pair<JoinVertexID, ColumnID> JoinGraph::_find_vertex_and_column_id(
     const std::vector<std::shared_ptr<AbstractASTNode>>& vertices, ColumnID column_id, JoinVertexID vertex_range_begin,
     JoinVertexID vertex_range_end) {
-
   /**
    * This is where the magic happens.
    *
