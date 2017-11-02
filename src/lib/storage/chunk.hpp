@@ -27,7 +27,7 @@ enum class ChunkUseMvcc {
  * It stores the table's data column by column.
  * Optionally, mostly applying to StoredTables, it may also hold a set of MvccColumns.
  *
- * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/chunk-concept
+ * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/chunk-concept
  */
 class Chunk : private Noncopyable {
  public:
