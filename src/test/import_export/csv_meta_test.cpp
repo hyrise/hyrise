@@ -45,7 +45,8 @@ TEST_F(CsvMetaTest, MustProvideChunkSize) {
     {}
   )"_json;
 
-  EXPECT_THROW(static_cast<CsvMeta>(json_meta), nlohmann::json::exception);
+  CsvMeta meta;
+  EXPECT_THROW(from_json(json_meta, meta), nlohmann::json::exception);
 }
 
 TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
@@ -64,7 +65,8 @@ TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
     }
   )"_json;
 
-  EXPECT_THROW(static_cast<CsvMeta>(json_meta), std::logic_error);
+  CsvMeta meta;
+  EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, ColumnsMustBeArray) {
@@ -75,7 +77,8 @@ TEST_F(CsvMetaTest, ColumnsMustBeArray) {
     }
   )"_json;
 
-  EXPECT_THROW(static_cast<CsvMeta>(json_meta), std::logic_error);
+  CsvMeta meta;
+  EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, ChunkSizeNotNegative) {
@@ -85,7 +88,8 @@ TEST_F(CsvMetaTest, ChunkSizeNotNegative) {
     }
   )"_json;
 
-  EXPECT_THROW(static_cast<CsvMeta>(json_meta), std::logic_error);
+  CsvMeta meta;
+  EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, ChunkSizeTypeMismatch) {
@@ -95,7 +99,8 @@ TEST_F(CsvMetaTest, ChunkSizeTypeMismatch) {
     }
   )"_json;
 
-  EXPECT_THROW(static_cast<CsvMeta>(json_meta), std::logic_error);
+  CsvMeta meta;
+  EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 }  // namespace opossum
