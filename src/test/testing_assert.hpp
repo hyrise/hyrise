@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "all_parameter_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -42,6 +43,12 @@ bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::sh
 
 bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node_a,
                            const std::shared_ptr<AbstractASTNode>& node_b);
+
+bool check_vertex_predicate(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node,
+                            ColumnID column_id, ScanType scan_type, const AllParameterVariant & value);
+
+bool check_vertex_nodes(const std::shared_ptr<JoinGraph>& join_graph, const std::vector<std::shared_ptr<AbstractASTNode>> & vertex_nodes);
+
 }  // namespace opossum
 
 #define ASSERT_AST_TIE(parent, child_side, child) \
@@ -53,4 +60,7 @@ bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const s
 #define EXPECT_CROSS_JOIN_EDGE(join_graph, node_a, node_b) \
   EXPECT_TRUE(opossum::check_cross_join_edge(join_graph, node_a, node_b))
 
-#define EXPECT_JOIN_VERTICES(vertices_a, vertices_b) EXPECT_EQ(vertices_a, vertices_b)
+#define EXPECT_VERTEX_NODES(join_graph, vertex_nodes) EXPECT_TRUE(check_vertex_nodes(join_graph, vertex_nodes));
+
+#define EXPECT_VERTEX_PREDICATE(join_graph, vertex, column_id, scan_type, value) \
+  EXPECT_TRUE(check_vertex_predicate(join_graph, vertex, column_id, scan_type, value))

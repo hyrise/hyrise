@@ -43,7 +43,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphSimple) {
 
   const auto join_graph = JoinGraph::build_join_graph(join_node);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(),
+  EXPECT_VERTEX_NODES(join_graph,
                        std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 1u);
@@ -64,7 +64,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMedium) {
    *    /                              \
    *  table_a                   Join_b (table_b.a = table_c.c)
    *                           /                              \
-   *                     table_b                              Predicate
+   *                     table_b                              Predicate (a > 4)
    *                                                              |
    *                                                            table_c
    */
@@ -87,18 +87,19 @@ TEST_F(JoinGraphTest, BuildJoinGraphMedium) {
 
   // Searching from the root shouldn't yield anything except the root as it is not a join
   const auto join_graph_a = JoinGraph::build_join_graph(projection_node);
-  EXPECT_JOIN_VERTICES(join_graph_a->vertices(), std::vector<std::shared_ptr<AbstractASTNode>>({projection_node}));
+  EXPECT_VERTEX_NODES(join_graph_a, std::vector<std::shared_ptr<AbstractASTNode>>({projection_node}));
   EXPECT_EQ(join_graph_a->edges().size(), 0u);
 
   // Searching from join_a should yield a non-empty join graph
   const auto join_graph_b = JoinGraph::build_join_graph(join_a_node);
 
-  EXPECT_JOIN_VERTICES(join_graph_b->vertices(),
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, predicate_node}));
+  EXPECT_VERTEX_NODES(join_graph_b,
+                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
 
   EXPECT_EQ(join_graph_b->edges().size(), 2u);
-  EXPECT_JOIN_EDGE(join_graph_b, table_a_node, predicate_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
-  EXPECT_JOIN_EDGE(join_graph_b, table_b_node, predicate_node, ColumnID{0}, ColumnID{2}, ScanType::OpEquals);
+  EXPECT_JOIN_EDGE(join_graph_b, table_a_node, table_c_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
+  EXPECT_JOIN_EDGE(join_graph_b, table_b_node, table_c_node, ColumnID{0}, ColumnID{2}, ScanType::OpEquals);
+  EXPECT_VERTEX_PREDICATE(join_graph_b, table_c_node, ColumnID{0}, ScanType::OpGreaterThan, 4);
 }
 
 TEST_F(JoinGraphTest, BuildJoinGraphLarge) {
@@ -146,7 +147,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphLarge) {
   // Searching from join_a should yield a non-empty join graph
   const auto join_graph = JoinGraph::build_join_graph(join_a_node);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(),
+  EXPECT_VERTEX_NODES(join_graph,
                        std::vector<std::shared_ptr<AbstractASTNode>>({table_a_0_node, table_b_0_node, table_c_0_node,
                                                                       table_b_1_node, table_a_1_node, table_c_1_node}));
 
@@ -176,7 +177,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicates) {
    *                                           |
    *                              Join_b (table_b.a = table_c.c)
    *                             /                              \
-   *                      table_b                            Predicate_b
+   *                      table_b                          Predicate_b (a > 4)
    *                                                             |
    *                                                           table_c
    */
@@ -202,31 +203,34 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicates) {
   // Searching from join_a should yield a non-empty join graph
   const auto join_graph = JoinGraph::build_join_graph(join_a_node);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(),
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, predicate_b_node}));
+  EXPECT_VERTEX_NODES(join_graph,
+                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 3u);
-  EXPECT_JOIN_EDGE(join_graph, table_a_node, predicate_b_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
-  EXPECT_JOIN_EDGE(join_graph, table_b_node, predicate_b_node, ColumnID{0}, ColumnID{2}, ScanType::OpEquals);
-  EXPECT_JOIN_EDGE(join_graph, table_b_node, predicate_b_node, ColumnID{0}, ColumnID{0}, ScanType::OpGreaterThan);
+  EXPECT_JOIN_EDGE(join_graph, table_a_node, table_c_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
+  EXPECT_JOIN_EDGE(join_graph, table_b_node, table_c_node, ColumnID{0}, ColumnID{2}, ScanType::OpEquals);
+  EXPECT_JOIN_EDGE(join_graph, table_b_node, table_c_node, ColumnID{0}, ColumnID{0}, ScanType::OpGreaterThan);
+  EXPECT_VERTEX_PREDICATE(join_graph, table_c_node, ColumnID{0}, ScanType::OpGreaterThan, 4);
 }
 
 TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicatesAndCrossJoin) {
   /**
    * Test that
-   *    - Joins, Predicates and Cross Joins work in combination
+   *    - Joins, Column-to-Column Predicates and Cross Joins work in combination
    */
 
   /**
    *                   Projection
    *                     |
+   *           Predicate_a (table_b.b = 3)
+   *                     |
    *     _____Join (table_a.a > table_c.b)_____
    *    /                                      \
-   * table_a                  Predicate_a (table_c.a < table_b.a)
+   * table_a                  Predicate_b (table_c.a < table_b.a)
    *                                           |
    *                              _________CrossJoin____________
    *                             /                              \
-   *                      table_b                            Predicate_b
+   *                      table_b                     Predicate_c (table_c.a > 4)
    *                                                             |
    *                                                           table_c
    */
@@ -237,27 +241,31 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicatesAndCrossJoin) {
   auto table_a_node = std::make_shared<StoredTableNode>("table_a");
   auto table_b_node = std::make_shared<StoredTableNode>("table_b");
   auto table_c_node = std::make_shared<StoredTableNode>("table_c");
-  auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpLessThan, ColumnID{0});
-  auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 4);
+  auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpEquals, 3);
+  auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpLessThan, ColumnID{0});
+  auto predicate_c_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 4);
 
-  predicate_a_node->set_left_child(cross_join_node);
-  predicate_b_node->set_left_child(table_c_node);
+  predicate_a_node->set_left_child(join_node);
+  predicate_b_node->set_left_child(cross_join_node);
+  predicate_c_node->set_left_child(table_c_node);
   cross_join_node->set_left_child(table_b_node);
-  cross_join_node->set_right_child(predicate_b_node);
+  cross_join_node->set_right_child(predicate_c_node);
   join_node->set_left_child(table_a_node);
-  join_node->set_right_child(predicate_a_node);
-  projection_node->set_left_child(join_node);
+  join_node->set_right_child(predicate_b_node);
+  projection_node->set_left_child(predicate_a_node);
 
   // Searching from join_a should yield a non-empty join graph
-  const auto join_graph = JoinGraph::build_join_graph(join_node);
+  const auto join_graph = JoinGraph::build_join_graph(predicate_a_node);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(),
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, predicate_b_node}));
+  EXPECT_VERTEX_NODES(join_graph,
+                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 3u);
-  EXPECT_JOIN_EDGE(join_graph, table_a_node, predicate_b_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
-  EXPECT_JOIN_EDGE(join_graph, table_b_node, predicate_b_node, ColumnID{0}, ColumnID{0}, ScanType::OpGreaterThan);
-  EXPECT_CROSS_JOIN_EDGE(join_graph, table_b_node, predicate_b_node);
+  EXPECT_JOIN_EDGE(join_graph, table_a_node, table_c_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
+  EXPECT_JOIN_EDGE(join_graph, table_b_node, table_c_node, ColumnID{0}, ColumnID{0}, ScanType::OpGreaterThan);
+  EXPECT_CROSS_JOIN_EDGE(join_graph, table_b_node, table_c_node);
+  EXPECT_VERTEX_PREDICATE(join_graph, table_c_node, ColumnID{0}, ScanType::OpGreaterThan, 4);
+  EXPECT_VERTEX_PREDICATE(join_graph, table_b_node, ColumnID{1}, ScanType::OpEquals, 3);
 }
 
 TEST_F(JoinGraphTest, BuildJoinGraphWithCrossJoins) {
@@ -291,7 +299,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphWithCrossJoins) {
   // Searching from join_a should yield a non-empty join graph
   const auto join_graph = JoinGraph::build_join_graph(cross_join_0);
 
-  EXPECT_JOIN_VERTICES(join_graph->vertices(), std::vector<std::shared_ptr<AbstractASTNode>>(
+  EXPECT_VERTEX_NODES(join_graph, std::vector<std::shared_ptr<AbstractASTNode>>(
                                                    {table_a_node, table_b_0_node, table_c_node, table_b_1_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 6u);
