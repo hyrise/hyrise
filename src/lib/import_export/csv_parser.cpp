@@ -30,7 +30,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 }
 
 std::shared_ptr<Table> CsvParser::_parse(const std::string& filename) {
-  const auto table = _create_table_from_meta();
+  auto table = _create_table_from_meta();
 
   std::ifstream csvfile{filename};
   std::string content{std::istreambuf_iterator<char>(csvfile), {}};
@@ -77,7 +77,7 @@ std::shared_ptr<Table> CsvParser::_parse(const std::string& filename) {
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
-  const auto table = std::make_shared<Table>(_meta.chunk_size);
+  auto table = std::make_shared<Table>(_meta.chunk_size);
 
   for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;
