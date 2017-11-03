@@ -43,8 +43,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphSimple) {
 
   const auto join_graph = JoinGraph::build_join_graph(join_node);
 
-  EXPECT_VERTEX_NODES(join_graph,
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node}));
+  EXPECT_VERTEX_NODES(join_graph, std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 1u);
   EXPECT_JOIN_EDGE(join_graph, table_a_node, table_b_node, ColumnID{0}, ColumnID{1}, ScanType::OpEquals);
@@ -94,7 +93,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMedium) {
   const auto join_graph_b = JoinGraph::build_join_graph(join_a_node);
 
   EXPECT_VERTEX_NODES(join_graph_b,
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
+                      std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
 
   EXPECT_EQ(join_graph_b->edges().size(), 2u);
   EXPECT_JOIN_EDGE(join_graph_b, table_a_node, table_c_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
@@ -148,8 +147,8 @@ TEST_F(JoinGraphTest, BuildJoinGraphLarge) {
   const auto join_graph = JoinGraph::build_join_graph(join_a_node);
 
   EXPECT_VERTEX_NODES(join_graph,
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_0_node, table_b_0_node, table_c_0_node,
-                                                                      table_b_1_node, table_a_1_node, table_c_1_node}));
+                      std::vector<std::shared_ptr<AbstractASTNode>>({table_a_0_node, table_b_0_node, table_c_0_node,
+                                                                     table_b_1_node, table_a_1_node, table_c_1_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 5u);
   EXPECT_JOIN_EDGE(join_graph, table_a_0_node, table_c_1_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
@@ -204,7 +203,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicates) {
   const auto join_graph = JoinGraph::build_join_graph(join_a_node);
 
   EXPECT_VERTEX_NODES(join_graph,
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
+                      std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 3u);
   EXPECT_JOIN_EDGE(join_graph, table_a_node, table_c_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
@@ -258,7 +257,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicatesAndCrossJoin) {
   const auto join_graph = JoinGraph::build_join_graph(predicate_a_node);
 
   EXPECT_VERTEX_NODES(join_graph,
-                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
+                      std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 3u);
   EXPECT_JOIN_EDGE(join_graph, table_a_node, table_c_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
@@ -300,7 +299,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphWithCrossJoins) {
   const auto join_graph = JoinGraph::build_join_graph(cross_join_0);
 
   EXPECT_VERTEX_NODES(join_graph, std::vector<std::shared_ptr<AbstractASTNode>>(
-                                                   {table_a_node, table_b_0_node, table_c_node, table_b_1_node}));
+                                      {table_a_node, table_b_0_node, table_c_node, table_b_1_node}));
 
   EXPECT_EQ(join_graph->edges().size(), 6u);
   EXPECT_CROSS_JOIN_EDGE(join_graph, table_a_node, table_b_0_node);

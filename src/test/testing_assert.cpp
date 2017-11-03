@@ -248,7 +248,8 @@ bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const s
   return false;
 }
 
-bool check_vertex_nodes(const std::shared_ptr<JoinGraph>& join_graph, const std::vector<std::shared_ptr<AbstractASTNode>> & vertex_nodes) {
+bool check_vertex_nodes(const std::shared_ptr<JoinGraph>& join_graph,
+                        const std::vector<std::shared_ptr<AbstractASTNode>>& vertex_nodes) {
   if (join_graph->vertices().size() != vertex_nodes.size()) {
     return false;
   }
@@ -263,8 +264,8 @@ bool check_vertex_nodes(const std::shared_ptr<JoinGraph>& join_graph, const std:
 }
 
 bool check_vertex_predicate(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node,
-                            ColumnID column_id, ScanType scan_type, const AllParameterVariant & value) {
-  for (const auto &vertex : join_graph->vertices()) {
+                            ColumnID column_id, ScanType scan_type, const AllParameterVariant& value) {
+  for (const auto& vertex : join_graph->vertices()) {
     if (vertex.node != node) {
       continue;
     }

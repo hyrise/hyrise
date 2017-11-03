@@ -1,11 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "gtest/gtest.h"
 
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "all_parameter_variant.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -45,9 +46,10 @@ bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const s
                            const std::shared_ptr<AbstractASTNode>& node_b);
 
 bool check_vertex_predicate(const std::shared_ptr<JoinGraph>& join_graph, const std::shared_ptr<AbstractASTNode>& node,
-                            ColumnID column_id, ScanType scan_type, const AllParameterVariant & value);
+                            ColumnID column_id, ScanType scan_type, const AllParameterVariant& value);
 
-bool check_vertex_nodes(const std::shared_ptr<JoinGraph>& join_graph, const std::vector<std::shared_ptr<AbstractASTNode>> & vertex_nodes);
+bool check_vertex_nodes(const std::shared_ptr<JoinGraph>& join_graph,
+                        const std::vector<std::shared_ptr<AbstractASTNode>>& vertex_nodes);
 
 }  // namespace opossum
 

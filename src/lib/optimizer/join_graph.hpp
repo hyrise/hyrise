@@ -37,7 +37,7 @@ struct JoinVertexPredicate {
 };
 
 struct JoinVertex {
-  explicit JoinVertex(const std::shared_ptr<AbstractASTNode> & node);
+  explicit JoinVertex(const std::shared_ptr<AbstractASTNode>& node);
 
   std::shared_ptr<AbstractASTNode> node;
   std::vector<JoinVertexPredicate> predicates;
@@ -83,18 +83,18 @@ class JoinGraph final {
                                         JoinGraph::Edges& o_edges);
   static void _traverse_cross_join_node(const std::shared_ptr<JoinNode>& node, JoinGraph::Vertices& o_vertices,
                                         JoinGraph::Edges& o_edges);
-  static void _traverse_column_predicate_node(const std::shared_ptr<PredicateNode>& node, JoinGraph::Vertices& o_vertices,
-                                       JoinGraph::Edges& o_edges);
-  static void _traverse_value_predicate_node(const std::shared_ptr<PredicateNode>& node, JoinGraph::Vertices& o_vertices,
-                                       JoinGraph::Edges& o_edges);
+  static void _traverse_column_predicate_node(const std::shared_ptr<PredicateNode>& node,
+                                              JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
+  static void _traverse_value_predicate_node(const std::shared_ptr<PredicateNode>& node,
+                                             JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
 
   /**
    * Within the index range [vertex_range_begin, vertex_range_end) in vertices, look for the `column_id`th column and
    * return the index of the Vertex it belongs to, as well as the ColumnID in that vertex
    */
-  static std::pair<JoinVertexID, ColumnID> _find_vertex_and_column_id(
-      const Vertices& vertices, ColumnID column_id,
-      JoinVertexID vertex_range_begin, JoinVertexID vertex_range_end);
+  static std::pair<JoinVertexID, ColumnID> _find_vertex_and_column_id(const Vertices& vertices, ColumnID column_id,
+                                                                      JoinVertexID vertex_range_begin,
+                                                                      JoinVertexID vertex_range_end);
 
   Vertices _vertices;
   Edges _edges;
