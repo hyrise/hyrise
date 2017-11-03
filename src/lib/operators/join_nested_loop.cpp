@@ -1,4 +1,4 @@
-#include "join_nested_loop_c.hpp"
+#include "join_nested_loop.hpp"
 
 #include <map>
 #include <memory>
@@ -23,19 +23,19 @@ namespace opossum {
  * so only use this for testing or benchmarking purposes.
  */
 
-JoinNestedLoopC::JoinNestedLoopC(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                                 const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
+JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
+                               const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                               const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
 
-const std::string JoinNestedLoopC::name() const { return "JoinNestedLoopC"; }
+const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
-std::shared_ptr<AbstractOperator> JoinNestedLoopC::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<JoinNestedLoopC>(_input_left->recreate(args), _input_right->recreate(args), _mode,
-                                           _column_ids, _scan_type);
+std::shared_ptr<AbstractOperator> JoinNestedLoop::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<JoinNestedLoop>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+                                          _scan_type);
 }
 
-std::shared_ptr<const Table> JoinNestedLoopC::_on_execute() {
+std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   PerformanceWarning("Nested Loop Join used");
 
   _prepare_output();
@@ -62,7 +62,7 @@ std::shared_ptr<const Table> JoinNestedLoopC::_on_execute() {
   return _output_table;
 }
 
-void JoinNestedLoopC::_prepare_output() {
+void JoinNestedLoop::_prepare_output() {
   _output_table = std::make_shared<Table>();
 
   _left_in_table = _input_left->get_output();
@@ -87,7 +87,7 @@ void JoinNestedLoopC::_prepare_output() {
 }
 
 template <typename LeftType, typename RightType>
-void JoinNestedLoopC::_perform_join() {
+void JoinNestedLoop::_perform_join() {
   std::function<bool(LeftType, RightType)> _comparator;
 
   // Parsing the join operator
@@ -144,7 +144,11 @@ void JoinNestedLoopC::_perform_join() {
       auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
 
       // for Outer joins, remember matches on the left side
-      std::map<ChunkOffset, bool> left_matches;
+      std::vector<bool> left_matches;
+
+      if (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer) {
+        left_matches.resize(typed_left_column.size());
+      }
 
       // Scan all chunks for right input
       for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
@@ -154,6 +158,7 @@ void JoinNestedLoopC::_perform_join() {
           auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
           iterable_left.for_each([&](const auto& left_value) {
+            std::cout << chunk_id_left << " " << left_value.chunk_offset() << std::endl;
             if (left_value.is_null()) return;
 
             iterable_right.for_each([&](const auto& right_value) {
@@ -176,9 +181,11 @@ void JoinNestedLoopC::_perform_join() {
 
       if (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer) {
         // add unmatched rows for outer joins
-        for (const auto& key_value : left_matches) {
-          pos_list_left->emplace_back(RowID{chunk_id_left, key_value.first});
-          pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
+          if (!left_matches[chunk_offset]) {
+            pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+            pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          }
         }
       }
     });
@@ -218,8 +225,8 @@ void JoinNestedLoopC::_perform_join() {
   _output_table->emplace_chunk(std::move(output_chunk));
 }
 
-void JoinNestedLoopC::_write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                                           std::shared_ptr<PosList> pos_list) {
+void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
+                                          std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;

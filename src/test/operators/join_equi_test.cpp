@@ -12,8 +12,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_nested_loop_a.hpp"
-#include "operators/join_nested_loop_b.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
@@ -31,7 +30,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinHash, JoinSortMerge>;
+using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
@@ -280,21 +279,10 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
+TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
   auto join =
-      std::make_shared<JoinNestedLoopA>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
-                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
-  join->execute();
-
-  this->template test_join_output<TypeParam>(
-      join, this->_table_wrapper_h, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-      JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
-}
-
-TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
-  auto join =
-      std::make_shared<JoinNestedLoopB>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
-                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+      std::make_shared<JoinNestedLoop>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                       std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
