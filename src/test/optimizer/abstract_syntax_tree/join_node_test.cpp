@@ -1,10 +1,13 @@
 #include <memory>
+#include <utility>
 
 #include "gtest/gtest.h"
 
 #include "base_test.hpp"
 
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -56,4 +59,39 @@ TEST_F(JoinNodeTest, AliasedSubqueryTest) {
   EXPECT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"x", {"foo"}}), ColumnID{3});
 }
 
+TEST_F(JoinNodeTest, MapColumnIDs) {
+  /**
+   * Test that changing the column order in the left AS WELL AS the right child propagates correctly to the
+   * JoinColumnIds and the parent node
+   */
+
+  /**
+   *    Predicate(MockA.b = MockB.c)
+   *                |
+   *     Join(MockA.a = MockB.b)
+   *    /                      \
+   *  MockA                     MockB
+   */
+
+  auto mock_a = std::make_shared<MockNode>("a", 3);
+  auto mock_b = std::make_shared<MockNode>("b", 4);
+  auto join = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
+  auto predicate = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, ColumnID{5});
+
+  join->set_children(mock_a, mock_b);
+  predicate->set_left_child(join);
+
+  // MockA previous order: {a,b,c} - new order: {c,a,b}
+  auto column_id_mapping_a = ColumnIDMapping({ColumnID{1}, ColumnID{2}, ColumnID{0}});
+  join->map_column_ids(column_id_mapping_a, ASTChildSide::Left);
+
+  // MockB previous order: {a,b,c,d} - new order: {d,c,b,a}
+  auto column_id_mapping_b = ColumnIDMapping({ColumnID{3}, ColumnID{2}, ColumnID{1}, ColumnID{0}});
+  join->map_column_ids(column_id_mapping_b, ASTChildSide::Right);
+
+  EXPECT_EQ(join->join_column_ids()->first, ColumnID{1});
+  EXPECT_EQ(join->join_column_ids()->second, ColumnID{2});
+  EXPECT_EQ(predicate->column_id(), ColumnID{2});
+  EXPECT_EQ(boost::get<ColumnID>(predicate->value()), ColumnID{4});
+}
 }  // namespace opossum

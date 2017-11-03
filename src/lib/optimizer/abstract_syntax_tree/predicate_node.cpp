@@ -60,4 +60,19 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
 }
 
+void PredicateNode::map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) {
+  DebugAssert(left_child(),
+              "Input needs to be set to perform this operation. Mostly because we can't validate the size of "
+              "column_id_mapping otherwise.");
+  DebugAssert(column_id_mapping.size() == left_child()->output_column_count(), "Invalid column_id_mapping");
+
+  _column_id = column_id_mapping[_column_id];
+
+  if (_value.type() == typeid(ColumnID)) {
+    _value = column_id_mapping[boost::get<ColumnID>(_value)];
+  }
+
+  _propagate_column_id_mapping_to_parents(column_id_mapping);
+}
+
 }  // namespace opossum

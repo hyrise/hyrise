@@ -57,6 +57,8 @@ class AggregateNode : public AbstractASTNode {
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  void map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) override;
+
  protected:
   void _on_child_changed() override;
 

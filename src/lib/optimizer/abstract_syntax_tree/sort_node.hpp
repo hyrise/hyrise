@@ -19,19 +19,23 @@ struct OrderByDefinition {
   OrderByMode order_by_mode;
 };
 
+using OrderByDefinitions = std::vector<OrderByDefinition>;
+
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
 class SortNode : public AbstractASTNode {
  public:
-  explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
+  explicit SortNode(const OrderByDefinitions& order_by_definitions);
 
   std::string description() const override;
 
-  const std::vector<OrderByDefinition>& order_by_definitions() const;
+  const OrderByDefinitions& order_by_definitions() const;
+
+  void map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) override;
 
  private:
-  const std::vector<OrderByDefinition> _order_by_definitions;
+  OrderByDefinitions _order_by_definitions;
 };
 
 }  // namespace opossum

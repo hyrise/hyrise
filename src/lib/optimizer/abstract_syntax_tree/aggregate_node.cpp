@@ -112,6 +112,16 @@ const std::vector<std::string>& AggregateNode::output_column_names() const {
   return *_output_column_names;
 }
 
+void AggregateNode::map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) {
+  for (const auto& aggregate_expression : _aggregate_expressions) {
+    aggregate_expression->map_column_ids(column_id_mapping);
+  }
+
+  for (auto& group_by_column : _groupby_column_ids) {
+    group_by_column = column_id_mapping[group_by_column];
+  }
+}
+
 const std::vector<ColumnID>& AggregateNode::output_column_ids_to_input_column_ids() const {
   if (!_output_column_ids_to_input_column_ids) {
     _update_output();
@@ -250,8 +260,7 @@ void AggregateNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(!_output_column_ids_to_input_column_ids,
-              "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(!_output_column_ids_to_input_column_ids, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 

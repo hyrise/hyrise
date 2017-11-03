@@ -10,6 +10,7 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/type_utils.hpp"
 
 namespace opossum {
 
@@ -85,6 +86,12 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode>& ri
 std::shared_ptr<AbstractASTNode> AbstractASTNode::child(ASTChildSide side) const {
   const auto child_index = static_cast<int>(side);
   return _children[child_index];
+}
+
+void AbstractASTNode::set_children(const std::shared_ptr<AbstractASTNode>& left,
+                                   const std::shared_ptr<AbstractASTNode>& right) {
+  set_left_child(left);
+  set_right_child(right);
 }
 
 void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child) {
@@ -279,6 +286,53 @@ void AbstractASTNode::replace_with(const std::shared_ptr<AbstractASTNode>& repla
 
 void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
+ColumnOrigins AbstractASTNode::get_column_origins() const {
+  ColumnOrigins column_origins(output_column_count());
+
+  for (size_t column_idx = 0; column_idx < column_origins.size(); ++column_idx) {
+    column_origins[column_idx] = get_column_origin(make_column_id(column_idx));
+  }
+
+  return column_origins;
+}
+
+ColumnOrigin AbstractASTNode::get_column_origin(ColumnID column_id) const {
+  DebugAssert(column_id < output_column_ids_to_input_column_ids().size(), "ColumnID out of range");
+
+  const auto input_column_id = output_column_ids_to_input_column_ids()[column_id];
+  if (input_column_id == INVALID_COLUMN_ID) {
+    return {shared_from_this(), column_id};
+  }
+
+  DebugAssert(left_child() && !right_child(), "Must have left child and no right child to determine column origin.");
+  return left_child()->get_column_origin(input_column_id);
+}
+
+void AbstractASTNode::dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins) {
+  /**
+   * Obtain the current column origins of this node's subtree and generate a mapping from the previous column order
+   * defined by `prev_column_origins`.
+   * Then, propagate this mapping to the parent.
+   */
+
+  const auto post_ordering_column_origins = get_column_origins();
+  const auto column_id_mapping = ast_generate_column_id_mapping(prev_column_origins, get_column_origins());
+
+  _propagate_column_id_mapping_to_parents(column_id_mapping);
+}
+
+void AbstractASTNode::map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) {
+  /**
+   * By default, simply forward to parents.
+   * Derived AST node types need to override this if they want to react on column order changes
+   */
+
+  DebugAssert(left_child() && !right_child(), "Need left child and no right child.");
+  DebugAssert(column_id_mapping.size() == left_child()->output_column_count(), "Invalid column_id_mapping");
+
+  _propagate_column_id_mapping_to_parents(column_id_mapping);
+}
+
 void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
@@ -354,6 +408,12 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
   return reference;
 }
 
+void AbstractASTNode::_propagate_column_id_mapping_to_parents(const ColumnIDMapping& column_id_mapping) {
+  for (auto& parent : parents()) {
+    parent->map_column_ids(column_id_mapping, get_child_side(parent));
+  }
+}
+
 void AbstractASTNode::_child_changed() {
   _statistics.reset();
   _output_column_ids_to_input_column_ids.reset();
@@ -383,13 +443,6 @@ void AbstractASTNode::_add_parent_pointer(const std::shared_ptr<AbstractASTNode>
   DebugAssert(iter == _parents.end(), "Specified new parent node is already a parent node.");
 #endif
   _parents.emplace_back(parent);
-}
-
-std::string NamedColumnReference::as_string() const {
-  std::stringstream ss;
-  if (table_name) ss << *table_name << ".";
-  ss << column_name;
-  return ss.str();
 }
 
 }  // namespace opossum

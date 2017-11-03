@@ -7,6 +7,8 @@
 #include "base_test.hpp"
 
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/mock_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
 #include "storage/storage_manager.hpp"
@@ -117,6 +119,44 @@ TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
             ColumnID{3});
   EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", {"foo"}}), ColumnID{3});
   EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
+}
+
+TEST_F(AggregateNodeTest, MapColumnIDs) {
+  /**
+   * Test that:
+   *  - _aggregate_expressions and _groupby_column_ids get updated
+   *  - parent nodes don't get updated
+   */
+
+  /**
+   *                Predicate(SUM(b) = 5)
+   *                        |
+   *    Aggregate(aggregates=[SUM(b), SUM(d)], groupby=[c,a])
+   *                        |
+   *                      Mock
+   */
+
+  auto sum_b = Expression::create_aggregate_function(AggregateFunction::Sum, {Expression::create_column(ColumnID{1})});
+  auto sum_d = Expression::create_aggregate_function(AggregateFunction::Sum, {Expression::create_column(ColumnID{3})});
+
+  auto mock = std::make_shared<MockNode>("a", 4);
+  auto aggregate = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>({sum_b, sum_d}),
+                                                   std::vector<ColumnID>({ColumnID{2}, ColumnID{0}}));
+  auto predicate = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpEquals, 5);
+
+  aggregate->set_left_child(mock);
+  predicate->set_left_child(aggregate);
+
+  // Previous order: {a, b, c, d} - New order: {c, a, d, b}
+  ColumnIDMapping column_id_mapping({ColumnID{1}, ColumnID{3}, ColumnID{0}, ColumnID{2}});
+
+  aggregate->map_column_ids(column_id_mapping, ASTChildSide::Left);
+
+  EXPECT_EQ(predicate->column_id(), ColumnID{2});
+  EXPECT_EQ(aggregate->aggregate_expressions().at(0)->expression_list().at(0)->column_id(), ColumnID{3});
+  EXPECT_EQ(aggregate->aggregate_expressions().at(1)->expression_list().at(0)->column_id(), ColumnID{2});
+  EXPECT_EQ(aggregate->groupby_column_ids().at(0), ColumnID{0});
+  EXPECT_EQ(aggregate->groupby_column_ids().at(1), ColumnID{1});
 }
 
 }  // namespace opossum

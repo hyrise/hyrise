@@ -11,7 +11,16 @@ namespace opossum {
 
 MockNode::MockNode() : AbstractASTNode(ASTNodeType::Mock) {}
 
-MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractASTNode(ASTNodeType::Mock) {
+MockNode::MockNode(const std::string& name, size_t column_count) : AbstractASTNode(ASTNodeType::Mock), _name(name) {
+  for (size_t column_idx = 0; column_idx < column_count; ++column_idx) {
+    _output_column_names.emplace_back("MockCol" + std::to_string(column_idx));
+  }
+
+  _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
+}
+
+MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std::string& name)
+    : AbstractASTNode(ASTNodeType::Mock), _name(name) {
   set_statistics(statistics);
 
   for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();
@@ -23,6 +32,7 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : Abstrac
 }
 
 const std::vector<ColumnID>& MockNode::output_column_ids_to_input_column_ids() const {
+  DebugAssert(_output_column_ids_to_input_column_ids, "Invalid operation");
   return *_output_column_ids_to_input_column_ids;
 }
 

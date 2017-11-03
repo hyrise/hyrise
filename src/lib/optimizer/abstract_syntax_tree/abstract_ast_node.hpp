@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "ast_types.hpp"
+#include "ast_utils.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -14,35 +16,6 @@ namespace opossum {
 struct ColumnID;
 class Expression;
 class TableStatistics;
-
-enum class ASTNodeType {
-  Aggregate,
-  Delete,
-  DummyTable,
-  Insert,
-  Join,
-  Limit,
-  Predicate,
-  Projection,
-  Root,
-  ShowColumns,
-  ShowTables,
-  Sort,
-  StoredTable,
-  Update,
-  Union,
-  Validate,
-  Mock
-};
-
-enum class ASTChildSide { Left, Right };
-
-struct NamedColumnReference {
-  std::string column_name;
-  std::optional<std::string> table_name = std::nullopt;
-
-  std::string as_string() const;
-};
 
 /**
  * Base class for a Node in the Abstract Syntax Tree on which the Query Optimization is performed on.
@@ -66,7 +39,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Set and get the parents/children of this node.
    *
    * The _parents are implicitly set in set_left_child/set_right_child.
-   * For removing parents use remove_parent() or clear_parent().
+   * For removing parents use remove_parents() or clear_parents().
    *
    * set_child() is a shorthand for set_left_child() or set_right_child(), useful if the side is a runtime value
    */
@@ -80,7 +53,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   void clear_parents();
 
   /**
-   * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
   ASTChildSide get_child_side(const std::shared_ptr<AbstractASTNode>& parent) const;
@@ -96,9 +68,10 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::shared_ptr<AbstractASTNode> right_child() const;
   void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
 
-  std::shared_ptr<AbstractASTNode> child(ASTChildSide side) const;
-
+  void set_children(const std::shared_ptr<AbstractASTNode>& left, const std::shared_ptr<AbstractASTNode>& right);
   void set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child);
+
+  std::shared_ptr<AbstractASTNode> child(ASTChildSide side) const;
   // @}
 
   ASTNodeType type() const;
@@ -207,7 +180,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   /**
    * Replaces 'this' node with @param replacement_node node.
-   * @pre replacement_node has neither parent nor children
+   * @pre replacement_node has neither parents nor children
    */
   void replace_with(const std::shared_ptr<AbstractASTNode>& replacement_node);
 
@@ -216,6 +189,57 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
    */
   void set_alias(const std::optional<std::string>& table_alias);
+
+  // @{
+  /**
+   * Altering the order of Columns in a subtree.
+   *
+   * The order of Columns in a subtree might change, e.g., as the result of Join Re-Ordering. In this call all nodes
+   * above the root of the JoinTree need to adapt the ColumnIDs they refer to. Think, e.g. the ColumnIDs of a SortNode.
+   *
+   * In order to this:
+   *    1. Obtain the ColumnOrigins of the *old* subtree-root by calling get_column_origins() on it.
+   *    2. Hook in the *new* subtree-root.
+   *    3. Call dispatch_column_id_mapping() on the *new* root, passing the ColumnOrigins you obtained in step 1.
+   *
+   * dispatch_column_id_mapping() will
+   *    1. Generate a ColumnIDMapping
+   *    2. Pass this ColumnIDMapping upwards in the tree by calling map_column_ids()
+   *    3. Stop when either the root of the AST is reached OR a Aggregate- or ProjectionNode is reached
+   */
+
+  /**
+   * @returns {get_column_origin(ColumnID{0}), ..., get_column_origin(ColumnID{n-1})}
+   */
+  ColumnOrigins get_column_origins() const;
+
+  /**
+   * For all columns that this node outputs, find the node that originally "created" it, and the ColumnID it is in that
+   * node.
+   * Columns are "created" by Unions, Projections, Aggregates, StoredTables or MockTables, all other nodes just forward
+   * them.
+   *
+   * JoinNode needs to override get_column_origin() - all other nodes will default to forwarding this request to their
+   * left input, *if the column wasn't created by this node*
+   */
+  virtual ColumnOrigin get_column_origin(ColumnID column_id) const;
+
+  /**
+   * See "Altering the order of Columns in a subtree" comment above.
+   *
+   * NOTE: Call this on the node whose Column order changed, NOT on its parents.
+   */
+  void dispatch_column_id_mapping(const ColumnOrigins& prev_column_origins);
+
+  /**
+   * Overridden by Nodes who need to update ColumnIDs.
+   * Overrides need to call map_column_ids() on their parents if the node doesn't define a new Column order (as
+   * Projections and Aggregates do).
+   * NOTE: Can't be protected because derived Nodes need to call this on AbstractASTNode objects, which C++ wouldn't
+   *    allow
+   */
+  virtual void map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side);
+  // @}
 
   // @{
   /**
@@ -276,6 +300,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+
+  // Calls map_column_ids() on this nodes parents, if any exist.
+  void _propagate_column_id_mapping_to_parents(const ColumnIDMapping& column_id_mapping);
 
  private:
   std::vector<std::weak_ptr<AbstractASTNode>> _parents;
