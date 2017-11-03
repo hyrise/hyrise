@@ -12,6 +12,7 @@
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -35,6 +36,8 @@ std::shared_ptr<AbstractOperator> JoinNestedLoopC::recreate(const std::vector<Al
 }
 
 std::shared_ptr<const Table> JoinNestedLoopC::_on_execute() {
+  PerformanceWarning("Nested Loop Join used");
+
   _prepare_output();
 
   _left_column_id = _column_ids.first;
