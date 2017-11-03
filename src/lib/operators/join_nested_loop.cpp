@@ -158,7 +158,6 @@ void JoinNestedLoop::_perform_join() {
           auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
           iterable_left.for_each([&](const auto& left_value) {
-            std::cout << chunk_id_left << " " << left_value.chunk_offset() << std::endl;
             if (left_value.is_null()) return;
 
             iterable_right.for_each([&](const auto& right_value) {
