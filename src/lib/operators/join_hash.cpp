@@ -95,10 +95,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _scan_type(scan_type),
         _inputs_swapped(inputs_swapped),
-        _output_table(std::make_shared<Table>()) {
-    // Setting comparator to Equal Comparison -> That is the only supported comparison type for Hash Joins
-    _comparator = [](LeftType left_value, RightType right_value) { return value_equal(left_value, right_value); };
-  }
+        _output_table(std::make_shared<Table>()) {}
 
   virtual ~JoinHashImpl() = default;
 
@@ -110,7 +107,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;
-  std::function<bool(LeftType, RightType)> _comparator;
 
   const unsigned int _partitioning_seed = 13;
   const size_t _radix_bits = 9;
@@ -422,6 +418,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             // find all rows that do NOT match
             for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
               auto& row = partition[partition_offset];
+
+              // This is where the actual comparison happens. `get` only returns values that match and eliminiates hash
+              // collisions.
               auto row_ids = hashtable->get(row.value);
 
               if (!row_ids) {
