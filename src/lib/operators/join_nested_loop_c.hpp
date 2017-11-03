@@ -26,7 +26,9 @@ class JoinNestedLoopC : public AbstractJoinOperator {
   template <typename LeftType, typename RightType>
   void _perform_join();
 
-  void _write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table, ChunkID chunk_id,
+  void _prepare_output();
+
+  void _write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
                             std::shared_ptr<PosList> pos_list);
 
   std::shared_ptr<Table> _output_table;
