@@ -38,7 +38,7 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::recreate(const std::vector<All
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   PerformanceWarning("Nested Loop Join used");
 
-  _prepare_output();
+  _create_table_structure();
 
   _left_column_id = _column_ids.first;
   _right_column_id = _column_ids.second;
@@ -62,7 +62,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   return _output_table;
 }
 
-void JoinNestedLoop::_prepare_output() {
+void JoinNestedLoop::_create_table_structure() {
   _output_table = std::make_shared<Table>();
 
   _left_in_table = _input_left->get_output();
@@ -88,38 +88,13 @@ void JoinNestedLoop::_prepare_output() {
 
 template <typename LeftType, typename RightType>
 void JoinNestedLoop::_perform_join() {
-  std::function<bool(LeftType, RightType)> _comparator;
-
-  // Parsing the join operator
-  switch (_scan_type) {
-    case ScanType::OpEquals:
-      _comparator = [](LeftType left_val, RightType right_val) { return value_equal(left_val, right_val); };
-      break;
-    case ScanType::OpNotEquals:
-      _comparator = [](LeftType left_val, RightType right_val) { return !value_equal(left_val, right_val); };
-      break;
-    case ScanType::OpLessThan:
-      _comparator = [](LeftType left_val, RightType right_val) { return value_smaller(left_val, right_val); };
-      break;
-    case ScanType::OpLessThanEquals:
-      _comparator = [](LeftType left_val, RightType right_val) { return !value_greater(left_val, right_val); };
-      break;
-    case ScanType::OpGreaterThan:
-      _comparator = [](LeftType left_val, RightType right_val) { return value_greater(left_val, right_val); };
-      break;
-    case ScanType::OpGreaterThanEquals:
-      _comparator = [](LeftType left_val, RightType right_val) { return !value_smaller(left_val, right_val); };
-      break;
-
-    default:
-      Fail(std::string("Unsupported operator for join."));
-  }
-
   auto left_table = _left_in_table;
   auto right_table = _right_in_table;
 
   auto left_column_id = _left_column_id;
   auto right_column_id = _right_column_id;
+
+  auto _comparator = get_comparator<LeftType, RightType>(_scan_type);
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
@@ -142,7 +117,7 @@ void JoinNestedLoop::_perform_join() {
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
     auto column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
 
-    resolve_column_type<LeftType>(*column_left, [&](auto& typed_left_column) {
+    resolve_column_type<LeftType>(*column_left, [&](const auto& typed_left_column) {
       auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
 
       // for Outer joins, remember matches on the left side
@@ -156,7 +131,7 @@ void JoinNestedLoop::_perform_join() {
       for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
         auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-        resolve_column_type<RightType>(*column_right, [&](auto& typed_right_column) {
+        resolve_column_type<RightType>(*column_right, [&](const auto& typed_right_column) {
           auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
           iterable_left.for_each([&](const auto& left_value) {
@@ -234,7 +209,7 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
 
-    if (auto ref_col_left = std::dynamic_pointer_cast<const ReferenceColumn>(
+    if (auto reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
             input_table->get_chunk(ChunkID{0}).get_column(column_id))) {
       auto new_pos_list = std::make_shared<PosList>();
 
@@ -245,14 +220,14 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
         if (row.chunk_id != current_chunk_id) {
           current_chunk_id = row.chunk_id;
 
-          ref_col_left = std::dynamic_pointer_cast<const ReferenceColumn>(
+          reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
               input_table->get_chunk(current_chunk_id).get_column(column_id));
         }
-        new_pos_list->push_back(ref_col_left->pos_list()->at(row.chunk_offset));
+        new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
       }
 
-      column = std::make_shared<ReferenceColumn>(ref_col_left->referenced_table(), ref_col_left->referenced_column_id(),
-                                                 new_pos_list);
+      column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
+                                                 reference_column->referenced_column_id(), new_pos_list);
     } else {
       column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
     }

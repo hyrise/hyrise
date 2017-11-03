@@ -1,7 +1,11 @@
 #pragma once
 
 #include <boost/lexical_cast.hpp>
+#include <string>
 #include <type_traits>
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -88,6 +92,36 @@ typename std::enable_if<std::is_arithmetic<R>::value && IsLexCastable<L>::value 
                         bool>::type
 value_greater(L l, R r) {
   return boost::lexical_cast<R>(l) > r;
+}
+
+// Retrieve a comparator lambda for a given scan type, i.e., operator.
+template <typename L, typename R>
+std::function<bool(L, R)> get_comparator(ScanType scan_type) {
+  switch (scan_type) {
+    case ScanType::OpEquals:
+      return [](L left_val, R right_val) { return value_equal(left_val, right_val); };
+
+    case ScanType::OpNotEquals:
+      return [](L left_val, R right_val) { return !value_equal(left_val, right_val); };
+
+    case ScanType::OpLessThan:
+      return [](L left_val, R right_val) { return value_smaller(left_val, right_val); };
+
+    case ScanType::OpLessThanEquals:
+      return [](L left_val, R right_val) { return !value_greater(left_val, right_val); };
+
+    case ScanType::OpGreaterThan:
+      return [](L left_val, R right_val) { return value_greater(left_val, right_val); };
+
+    case ScanType::OpGreaterThanEquals:
+      return [](L left_val, R right_val) { return !value_smaller(left_val, right_val); };
+
+    default:
+      Fail(std::string("get_comparator: invalid scan type"));
+  }
+
+  // compiler wants a return value, despite the exception above
+  return [](L, R) { return false; };
 }
 
 }  // namespace opossum
