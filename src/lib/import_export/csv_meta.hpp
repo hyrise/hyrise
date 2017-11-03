@@ -57,7 +57,7 @@ CsvMeta process_csv_meta_file(const std::string& filename);
  * opossum::CsvMeta meta{};
  * nlohmann::json json = meta;
  *
- * nlohmann::json json = "{ ... }"_json;
+ * nlohmann::json json = nlohmann::json::parse("{ ... }");
  * opossum::CsvMeta meta = json;
  */
 void from_json(const nlohmann::json& json, CsvMeta& meta);

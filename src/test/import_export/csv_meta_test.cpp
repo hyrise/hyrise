@@ -24,11 +24,11 @@ TEST_F(CsvMetaTest, ProcessCsvMetaFileMissing) {
 }
 
 TEST_F(CsvMetaTest, MinimalMetaInformation) {
-  auto json_meta = R"(
+  auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": 0
     }
-  )"_json;
+  )");
 
   auto meta_expected = CsvMeta{};
   meta_expected.chunk_size = 0;
@@ -41,16 +41,16 @@ TEST_F(CsvMetaTest, JsonSyntaxError) {
 }
 
 TEST_F(CsvMetaTest, MustProvideChunkSize) {
-  auto json_meta = R"(
+  auto json_meta = nlohmann::json::parse(R"(
     {}
-  )"_json;
+  )");
 
   CsvMeta meta;
   EXPECT_THROW(from_json(json_meta, meta), nlohmann::json::exception);
 }
 
 TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
-  auto json_meta = R"(
+  auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": 5,
       "columns": [
@@ -63,41 +63,41 @@ TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
         "delimiter": "\n\n"
       }
     }
-  )"_json;
+  )");
 
   CsvMeta meta;
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, ColumnsMustBeArray) {
-  auto json_meta = R"(
+  auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": 5,
       "columns": {}
     }
-  )"_json;
+  )");
 
   CsvMeta meta;
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, ChunkSizeNotNegative) {
-  auto json_meta = R"(
+  auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": -1
     }
-  )"_json;
+  )");
 
   CsvMeta meta;
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
 TEST_F(CsvMetaTest, ChunkSizeTypeMismatch) {
-  auto json_meta = R"(
+  auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": 0.4
     }
-  )"_json;
+  )");
 
   CsvMeta meta;
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);

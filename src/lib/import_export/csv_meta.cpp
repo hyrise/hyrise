@@ -74,7 +74,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
                                          {"rfc_mode", meta.config.rfc_mode}};
 
-  nlohmann::json columns = "[]"_json;
+  auto columns = nlohmann::json::parse("[]");
   for (const auto& column_meta : meta.columns) {
     columns.emplace_back(
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
