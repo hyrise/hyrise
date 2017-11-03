@@ -21,13 +21,12 @@ namespace opossum {
 
 CsvParser::CsvParser() {}
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
-  _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
-  return _parse(filename);
-}
-
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMeta& csv_meta) {
-  _meta = csv_meta;
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta> csv_meta) {
+  if (csv_meta == std::nullopt) {
+    _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+  } else {
+    _meta = csv_meta.value();
+  }
   return _parse(filename);
 }
 

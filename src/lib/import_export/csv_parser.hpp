@@ -32,16 +32,10 @@ class CsvParser {
 
   /*
    * @param filename Path to the input file.
+   * @param csv_meta Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
    * @returns        The table that was created from the csv file.
    */
-  std::shared_ptr<Table> parse(const std::string& filename);
-
-  /*
-   * @param filename Path to the input file.
-   * @param csv_meta Custom csv meta information (no meta file is loaded from disk)
-   * @returns        The table that was created from the csv file.
-   */
-  std::shared_ptr<Table> parse(const std::string& filename, const CsvMeta& csv_meta);
+  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta> csv_meta = std::nullopt);
 
  protected:
   /*
