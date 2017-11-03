@@ -47,7 +47,7 @@ struct CsvMeta {
 
 /*
  * This returns a CsvMeta object based on the content of the provided JSON file.
- * It takes all default values from the CsvMeta struct, and then overrides the ones which are provided in the JSON.
+ * It takes all default values from the CsvMeta struct, and then overrides the ones that are provided in the JSON.
  */
 CsvMeta process_csv_meta_file(const std::string& filename);
 

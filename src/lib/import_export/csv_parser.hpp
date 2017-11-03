@@ -25,8 +25,6 @@ class Chunk;
  */
 class CsvParser {
  public:
-  CsvParser();
-
   // cannot move-assign because of const members
   CsvParser& operator=(CsvParser&&) = delete;
 
@@ -35,7 +33,7 @@ class CsvParser {
    * @param csv_meta Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
    * @returns        The table that was created from the csv file.
    */
-  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta> csv_meta = std::nullopt);
+  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
  protected:
   /*
