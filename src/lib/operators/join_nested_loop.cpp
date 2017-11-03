@@ -133,6 +133,8 @@ void JoinNestedLoop::_perform_join() {
   auto pos_list_left = std::make_shared<PosList>();
   auto pos_list_right = std::make_shared<PosList>();
 
+  const auto is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
+
   // for Full Outer, remember the matches on the right side
   std::set<RowID> right_matches;
 
@@ -146,7 +148,7 @@ void JoinNestedLoop::_perform_join() {
       // for Outer joins, remember matches on the left side
       std::vector<bool> left_matches;
 
-      if (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer) {
+      if (is_outer_join) {
         left_matches.resize(typed_left_column.size());
       }
 
@@ -167,7 +169,9 @@ void JoinNestedLoop::_perform_join() {
                 pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
                 pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
-                left_matches[left_value.chunk_offset()] = true;
+                if (is_outer_join) {
+                  left_matches[left_value.chunk_offset()] = true;
+                }
 
                 if (_mode == JoinMode::Outer) {
                   right_matches.insert(RowID{chunk_id_right, right_value.chunk_offset()});
@@ -178,7 +182,7 @@ void JoinNestedLoop::_perform_join() {
         });
       }
 
-      if (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer) {
+      if (is_outer_join) {
         // add unmatched rows for outer joins
         for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
           if (!left_matches[chunk_offset]) {
