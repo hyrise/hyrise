@@ -84,20 +84,15 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
 }
 
 bool operator==(const ColumnMeta& lhs, const ColumnMeta& rhs) {
-  bool equal = lhs.name == rhs.name && lhs.type == rhs.type && lhs.nullable == rhs.nullable;
-  return equal;
+  return std::tie(lhs.name, lhs.type, lhs.nullable) == std::tie(rhs.name, rhs.type, rhs.nullable);
 }
 
 bool operator==(const ParseConfig& lhs, const ParseConfig& rhs) {
-  bool equal = lhs.delimiter == rhs.delimiter && lhs.separator == rhs.separator && lhs.quote == rhs.quote &&
-               lhs.escape == rhs.escape && lhs.delimiter_escape == rhs.delimiter_escape &&
-               lhs.reject_quoted_nonstrings == rhs.reject_quoted_nonstrings && lhs.rfc_mode == rhs.rfc_mode;
-  return equal;
+  return std::tie(lhs.delimiter, lhs.separator, lhs.quote, lhs.escape, lhs.delimiter_escape, lhs.reject_quoted_nonstrings, lhs.rfc_mode) == std::tie(rhs.delimiter, rhs.separator, rhs.quote, rhs.escape, rhs.delimiter_escape, rhs.reject_quoted_nonstrings, rhs.rfc_mode);
 }
 
 bool operator==(const CsvMeta& lhs, const CsvMeta& rhs) {
-  bool equal = lhs.chunk_size == rhs.chunk_size && lhs.config == rhs.config && lhs.columns == rhs.columns;
-  return equal;
+  return std::tie(lhs.chunk_size, lhs.config, lhs.columns) == std::tie(rhs.chunk_size, rhs.config, rhs.columns);
 }
 
 }  // namespace opossum
