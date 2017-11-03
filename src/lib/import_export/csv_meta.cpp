@@ -88,7 +88,10 @@ bool operator==(const ColumnMeta& lhs, const ColumnMeta& rhs) {
 }
 
 bool operator==(const ParseConfig& lhs, const ParseConfig& rhs) {
-  return std::tie(lhs.delimiter, lhs.separator, lhs.quote, lhs.escape, lhs.delimiter_escape, lhs.reject_quoted_nonstrings, lhs.rfc_mode) == std::tie(rhs.delimiter, rhs.separator, rhs.quote, rhs.escape, rhs.delimiter_escape, rhs.reject_quoted_nonstrings, rhs.rfc_mode);
+  return std::tie(lhs.delimiter, lhs.separator, lhs.quote, lhs.escape, lhs.delimiter_escape,
+                  lhs.reject_quoted_nonstrings,
+                  lhs.rfc_mode) == std::tie(rhs.delimiter, rhs.separator, rhs.quote, rhs.escape, rhs.delimiter_escape,
+                                            rhs.reject_quoted_nonstrings, rhs.rfc_mode);
 }
 
 bool operator==(const CsvMeta& lhs, const CsvMeta& rhs) {
