@@ -39,7 +39,6 @@ std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParame
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
-  bool inputs_swapped;
   ColumnID build_column_id;
   ColumnID probe_column_id;
 
@@ -324,8 +323,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         }
 
         auto& out = static_cast<Partition<T>&>(*output);
-        for (size_t i = input_offset; i < input_offset + input_size; ++i) {
-          auto& element = (*materialized)[i];
+        for (size_t column_offset = input_offset; column_offset < input_offset + input_size; ++column_offset) {
+          auto& element = (*materialized)[column_offset];
 
           if (!keep_nulls && element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
             continue;
@@ -367,8 +366,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         auto hashtable = std::make_shared<HashTable<LeftType>>(partition_size);
 
-        for (size_t i = partition_left_begin; i < partition_left_end; ++i) {
-          auto& element = partition_left[i];
+        for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end;
+             ++partition_offset) {
+          auto& element = partition_left[partition_offset];
           hashtable->put(element.value, element.row_id);
         }
 
@@ -420,8 +420,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
           if (_mode == JoinMode::Anti) {
             // find all rows that do NOT match
-            for (size_t i = partition_begin; i < partition_end; ++i) {
-              auto& row = partition[i];
+            for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+              auto& row = partition[partition_offset];
               auto row_ids = hashtable->get(row.value);
 
               if (!row_ids) {
@@ -429,11 +429,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               }
             }
 
-            pos_list_left[current_partition_id] = pos_list_left_local;
             pos_list_right[current_partition_id] = pos_list_right_local;
           } else {
-            for (size_t i = partition_begin; i < partition_end; ++i) {
-              auto& row = partition[i];
+            for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+              auto& row = partition[partition_offset];
 
               if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
                 continue;
@@ -474,8 +473,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           auto pos_list_left_local = std::make_shared<PosList>();
           auto pos_list_right_local = std::make_shared<PosList>();
 
-          for (size_t i = partition_begin; i < partition_end; ++i) {
-            auto& row = partition[i];
+          for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& row = partition[partition_offset];
             pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
             pos_list_right_local->emplace_back(row.row_id);
           }
@@ -485,15 +484,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           }
         } else if (_mode == JoinMode::Anti) {
           // no matches on the other side means that we can add all rows in this partition to the output
-          auto pos_list_left_local = std::make_shared<PosList>();
+          // auto pos_list_left_local = std::make_shared<PosList>();
           auto pos_list_right_local = std::make_shared<PosList>();
 
-          for (size_t i = partition_begin; i < partition_end; ++i) {
-            auto& row = partition[i];
+          for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& row = partition[partition_offset];
             pos_list_right_local->emplace_back(row.row_id);
           }
 
-          pos_list_left[current_partition_id] = pos_list_left_local;
+          // pos_list_left[current_partition_id] = pos_list_left_local;
           pos_list_right[current_partition_id] = pos_list_right_local;
         }
       }));
@@ -632,14 +631,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             ? true
             : false;
 
-    for (size_t i = 0; i < left_pos_lists.size(); i++) {
-      auto& left = left_pos_lists[i];
-      auto& right = right_pos_lists[i];
+    for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
+      auto& left = left_pos_lists[partition_id];
+      auto& right = right_pos_lists[partition_id];
 
       if (!right && !left) {
         continue;
-      } else if (!right || !left) {
-        Fail("JoinHash: either left or right pos_list is empty. Should not happen");
       }
 
       Chunk output_chunk;
