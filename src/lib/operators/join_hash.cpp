@@ -43,18 +43,18 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   ColumnID build_column_id;
   ColumnID probe_column_id;
 
-  /*
-  This is the expected implementation for swapping tables:
-  (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
-  (2) for an anti join the inputs are always swapped
-  (2) else the smaller relation will become build relation, the larger probe relation
-  (3) for full outer joins we currently don't have an implementation.
-  */
-  if (_mode == JoinMode::Left || _mode == JoinMode::Anti ||
-      (_mode != JoinMode::Right &&
-       (_input_left->get_output()->row_count() > _input_right->get_output()->row_count()))) {
-    // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
+  // This is the expected implementation for swapping tables:
+  // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
+  // (2) for an anti join the inputs are always swapped
+  bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti);
+
+  // (3) else the smaller relation will become build relation, the larger probe relation
+  if (!inputs_swapped && _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
     inputs_swapped = true;
+  }
+
+  if (inputs_swapped) {
+    // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     build_operator = _input_right;
     probe_operator = _input_left;
     build_column_id = _column_ids.second;
