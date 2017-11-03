@@ -419,7 +419,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
               auto& row = partition[partition_offset];
 
-              // This is where the actual comparison happens. `get` only returns values that match and eliminiates hash
+              // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
               // collisions.
               auto row_ids = hashtable->get(row.value);
 
