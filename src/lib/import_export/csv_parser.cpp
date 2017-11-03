@@ -13,23 +13,25 @@
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta, const bool auto_compress) {
   // If no meta info is given as a parameter, look for a json file
   if (csv_meta == std::nullopt) {
     _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
   } else {
     _meta = csv_meta.value();
   }
-  return _parse(filename);
+
+  return _parse(filename, auto_compress);
 }
 
-std::shared_ptr<Table> CsvParser::_parse(const std::string& filename) {
+std::shared_ptr<Table> CsvParser::_parse(const std::string& filename, const bool auto_compress) {
   auto table = _create_table_from_meta();
 
   std::ifstream csvfile{filename};
@@ -59,8 +61,11 @@ std::shared_ptr<Table> CsvParser::_parse(const std::string& filename) {
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
+    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk, auto_compress]() {
       _parse_into_chunk(relevant_content, field_ends, *table, chunk);
+      if (auto_compress && chunk.size() == _meta.chunk_size) {
+        DictionaryCompression::compress_chunk(table->column_types(), chunk);
+      }
     }));
     tasks.back()->schedule();
   }

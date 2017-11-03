@@ -23,12 +23,18 @@ namespace opossum {
 class ImportCsv : public AbstractReadOnlyOperator {
  public:
   /*
-   * @param filename    Path to the input file.
-   * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param meta        Optional. A specific meta config, to override the given .json file.
+   * @param filename      Path to the input file.
+   * @param auto_compress If true, use DictionaryCompression on each chunk after it is parsed.
+   * @param tablename     Optional. Name of the table to store/look up in the StorageManager.
+   * @param meta          Optional. A specific meta config, to override the given .json file.
    */
-  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt,
+  explicit ImportCsv(const std::string& filename, const bool auto_compress = false,
+                     const std::optional<std::string> tablename = std::nullopt,
                      const std::optional<CsvMeta> csv_meta = std::nullopt);
+
+  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename,
+                     const std::optional<CsvMeta> csv_meta = std::nullopt);
+
   explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
                      const std::optional<std::string> tablename = std::nullopt);
 
@@ -44,6 +50,8 @@ class ImportCsv : public AbstractReadOnlyOperator {
 
   // Path to the input file
   const std::string _filename;
+  // Use DictionaryCompression to compress each chunk during parsing
+  const bool _auto_compress;
   // Name for adding the table to the StorageManager
   const std::optional<std::string> _tablename;
   // CSV meta information
