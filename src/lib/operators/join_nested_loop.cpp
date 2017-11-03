@@ -230,7 +230,6 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
 
-    DebugAssert(chunk_id < input_table->chunk_count(), "Chunk id out of range");
     if (auto ref_col_left = std::dynamic_pointer_cast<const ReferenceColumn>(
             input_table->get_chunk(ChunkID{0}).get_column(column_id))) {
       auto new_pos_list = std::make_shared<PosList>();
