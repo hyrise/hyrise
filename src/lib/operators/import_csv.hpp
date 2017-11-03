@@ -25,15 +25,11 @@ class ImportCsv : public AbstractReadOnlyOperator {
   /*
    * @param filename    Path to the input file.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
+   * @param meta        Optional. A specific meta config, to override the given .json file.
    */
-  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt);
-
-  /*
-   * @param filename    Path to the input file.
-   * @param meta        A specific meta config, to override the given .json file.
-   * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   */
-  explicit ImportCsv(const std::string& filename, const CsvMeta& meta,
+  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt,
+                     const std::optional<CsvMeta> csv_meta = std::nullopt);
+  explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
                      const std::optional<std::string> tablename = std::nullopt);
 
   // cannot move-assign because of const members
@@ -51,8 +47,6 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // Name for adding the table to the StorageManager
   const std::optional<std::string> _tablename;
   // CSV meta information
-  CsvMeta _meta;
-  // Information whether custom meta information are provided (true) or the meta file should be used
-  bool _custom_meta;
+  const std::optional<CsvMeta> _csv_meta;
 };
 }  // namespace opossum
