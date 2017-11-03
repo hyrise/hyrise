@@ -216,7 +216,7 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
       ChunkID current_chunk_id{0};
 
       // de-reference to the correct RowID so the output can be used in a Multi Join
-      for (const auto& row : *pos_list) {
+      for (const auto row : *pos_list) {
         if (row.chunk_id != current_chunk_id) {
           current_chunk_id = row.chunk_id;
 
