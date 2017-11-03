@@ -34,8 +34,8 @@ struct TwoColumnSelectivityResult;
  *
  * Find more information in our Blog: https://medium.com/hyrise/the-brain-of-every-database-c622aaba7d75
  *                                    https://medium.com/hyrise/how-much-is-the-fish-a8ea1f4a0577
- *                      and our Wiki: https://github.com/hyrise/zweirise/wiki/Statistics-Component
- *                                    https://github.com/hyrise/zweirise/wiki/gathering_statistics
+ *                      and our Wiki: https://github.com/hyrise/hyrise/wiki/Statistics-Component
+ *                                    https://github.com/hyrise/hyrise/wiki/gathering_statistics
  */
 class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStatistics> {
  public:

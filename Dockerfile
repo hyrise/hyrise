@@ -1,4 +1,4 @@
-# https://github.com/hyrise/zweirise/wiki/Docker-Image
+# https://github.com/hyrise/hyrise/wiki/Docker-Image
 
 FROM ubuntu:17.10
 ENV DEBIAN_FRONTEND noninteractive

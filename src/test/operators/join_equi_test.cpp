@@ -300,7 +300,7 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
   if (!std::is_same<TypeParam, JoinHash>::value) {
     // todo(anyone): Fix for other joins
@@ -316,7 +316,7 @@ TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
       JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
   if (!std::is_same<TypeParam, JoinHash>::value) {
     // todo(anyone): Fix for other joins
@@ -332,7 +332,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
       JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
   if (!std::is_same<TypeParam, JoinHash>::value) {
     // todo(anyone): Fix for other joins
@@ -348,7 +348,7 @@ TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
       JoinMode::Right, "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
   if (!std::is_same<TypeParam, JoinHash>::value) {
     // todo(anyone): Fix for other joins
