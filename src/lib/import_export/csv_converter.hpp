@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-#include "csv.hpp"
+#include "csv_meta.hpp"
 #include "storage/base_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -39,14 +39,14 @@ class BaseCsvConverter {
    * The operation is in-place and does not create a new string object.
    * Field must be a valid csv field.
    */
-  static void unescape(std::string& field, const CsvConfig& config = {});
-  static std::string unescape_copy(const std::string& field, const CsvConfig& config = {});
+  static void unescape(std::string& field, const ParseConfig& config = {});
+  static std::string unescape_copy(const std::string& field, const ParseConfig& config = {});
 };
 
 template <typename T>
 class CsvConverter : public BaseCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const CsvConfig& config = {}, bool is_nullable = false)
+  explicit CsvConverter(ChunkOffset size, const ParseConfig& config = {}, bool is_nullable = false)
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(std::string& value, ChunkOffset position) override {
@@ -54,7 +54,7 @@ class CsvConverter : public BaseCsvConverter {
       _null_values[position] = true;
       return;
     }
-    Assert(boost::to_lower_copy(value) != CsvConfig::NULL_STRING,
+    Assert(boost::to_lower_copy(value) != ParseConfig::NULL_STRING,
            "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
 
     // clang-format off
@@ -92,7 +92,7 @@ class CsvConverter : public BaseCsvConverter {
   tbb::concurrent_vector<T> _parsed_values;
   tbb::concurrent_vector<bool> _null_values;
   const bool _is_nullable;
-  CsvConfig _config;
+  ParseConfig _config;
 };
 
 template <>
