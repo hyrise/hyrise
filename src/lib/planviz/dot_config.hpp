@@ -10,4 +10,4 @@ struct DotConfig {
   DotColor background_color = DotColor::Transparent;
   DotRenderFormat render_format = DotRenderFormat::PNG;
 };
-}
+}  // namespace opossum
