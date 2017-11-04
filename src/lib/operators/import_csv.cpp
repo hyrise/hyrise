@@ -11,7 +11,8 @@
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& filename, const bool auto_compress, const std::optional<std::string> tablename, const std::optional<CsvMeta> csv_meta)
+ImportCsv::ImportCsv(const std::string& filename, const bool auto_compress, const std::optional<std::string> tablename,
+                     const std::optional<CsvMeta> csv_meta)
     : _filename(filename), _auto_compress(auto_compress), _tablename(tablename), _csv_meta(csv_meta) {}
 
 ImportCsv::ImportCsv(const std::string& filename, const std::optional<std::string> tablename,

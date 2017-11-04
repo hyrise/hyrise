@@ -34,7 +34,8 @@ class CsvParser {
    * @param auto_compress If true, use DictionaryCompression on each chunk after it is parsed.
    * @returns             The table that was created from the csv file.
    */
-  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt, const bool auto_compress = false);
+  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt,
+                               const bool auto_compress = false);
 
  protected:
   /*
