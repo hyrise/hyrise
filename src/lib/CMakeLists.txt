@@ -159,6 +159,8 @@ set(
     planviz/ast_visualizer.hpp
     planviz/dot_config.cpp
     planviz/dot_config.hpp
+    planviz/join_graph_visualizer.cpp
+    planviz/join_graph_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
