@@ -101,8 +101,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Values                | T                                     |  row_count * sizeof(T)
    * Is Value Null?        | bool                                  |  row_count * 1
+   * Values                | T                                     |  row_count * sizeof(T)
    *
    *
    * For all other cases the file contains:
