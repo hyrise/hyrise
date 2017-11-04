@@ -247,7 +247,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
   return join_table_stats;
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::generate_union_positions_statistics(const std::shared_ptr<TableStatistics>& right_table_stats) {
+std::shared_ptr<TableStatistics> TableStatistics::generate_union_positions_statistics(
+    const std::shared_ptr<TableStatistics>& right_table_stats) {
   /**
    * TODO(anybody) This function is just a hack, it assumes that both tables are distinct.
    */
@@ -259,12 +260,12 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_union_positions_stati
 
   std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(_column_statistics.size());
   for (size_t column_idx = 0; column_idx < _column_statistics.size(); ++column_idx) {
-    column_statistics[column_idx] = _column_statistics[column_idx]->estimate_union_positions(
-      right_table_stats->_column_statistics[column_idx]
-      );
+    column_statistics[column_idx] =
+        _column_statistics[column_idx]->estimate_union_positions(right_table_stats->_column_statistics[column_idx]);
   }
 
-  auto union_statistics = std::make_shared<TableStatistics>(_row_count + right_table_stats->_row_count, column_statistics);
+  auto union_statistics =
+      std::make_shared<TableStatistics>(_row_count + right_table_stats->_row_count, column_statistics);
 
   return union_statistics;
 }

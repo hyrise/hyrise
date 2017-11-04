@@ -340,7 +340,7 @@ std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractASTNode::_resolve_node_alias(const NamedColumnReference &reference) const {
+std::optional<NamedColumnReference> AbstractASTNode::_resolve_node_alias(const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

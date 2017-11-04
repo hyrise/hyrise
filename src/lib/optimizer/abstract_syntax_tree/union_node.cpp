@@ -15,7 +15,9 @@ UnionNode::UnionNode(UnionMode union_mode) : AbstractASTNode(ASTNodeType::Union)
 
 UnionMode UnionNode::union_mode() const { return _union_mode; }
 
-std::string UnionNode::description(DescriptionMode mode) const { return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode); }
+std::string UnionNode::description(DescriptionMode mode) const {
+  return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode);
+}
 
 std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need children to determine Column name");
@@ -50,7 +52,6 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
-
   auto named_column_reference_without_node_alias = _resolve_node_alias(named_column_reference);
   if (!named_column_reference_without_node_alias) {
     return {};

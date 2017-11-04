@@ -23,7 +23,9 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
   _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
 }
 
-std::string StoredTableNode::description(DescriptionMode mode) const { return "[StoredTable] Name: '" + _table_name + "'"; }
+std::string StoredTableNode::description(DescriptionMode mode) const {
+  return "[StoredTable] Name: '" + _table_name + "'";
+}
 
 const std::vector<ColumnID>& StoredTableNode::output_column_ids_to_input_column_ids() const {
   DebugAssert(_output_column_ids_to_input_column_ids, "Not initialized");

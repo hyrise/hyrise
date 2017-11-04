@@ -17,13 +17,9 @@
 
 namespace opossum {
 
-ASTVisualizer::ASTVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& _ast_roots, const std::string& _output_prefix, DotConfig _config):
-  _ast_roots(_ast_roots),
-  _output_prefix(_output_prefix),
-  _config(_config)
-{
-  
-}
+ASTVisualizer::ASTVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& _ast_roots,
+                             const std::string& _output_prefix, DotConfig _config)
+    : _ast_roots(_ast_roots), _output_prefix(_output_prefix), _config(_config) {}
 
 void ASTVisualizer::visualize() {
   const auto dot_filename = _output_prefix + ".dot";

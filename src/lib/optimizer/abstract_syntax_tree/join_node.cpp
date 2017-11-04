@@ -82,8 +82,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
   // If there is no qualifying table name or this table's alias is used, search both children.
   if (!named_column_reference_without_node_alias->table_name ||
       (_table_alias && *_table_alias == named_column_reference_without_node_alias->table_name)) {
-    left_column_id =
-        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
+    left_column_id = left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
     right_column_id =
         right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
   } else {
