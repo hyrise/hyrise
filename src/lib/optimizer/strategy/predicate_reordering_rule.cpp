@@ -26,7 +26,7 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& n
     auto current_node = node;
     while (current_node->type() == ASTNodeType::Predicate) {
       // Once a node has multiple parents, we're not talking about a Predicate chain anymore
-      if (current_node->parents().size() != 1) {
+      if (current_node->parents().size() > 1) {
         break;
       }
 
