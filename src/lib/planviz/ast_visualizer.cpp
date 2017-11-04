@@ -62,7 +62,7 @@ void ASTVisualizer::visualize() {
 }
 
 void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file) {
-  auto already_visited = _visited_subtrees.emplace(node).second;
+  auto already_visited = !_visited_subtrees.emplace(node).second;
   if (already_visited) {
     return;
   }
