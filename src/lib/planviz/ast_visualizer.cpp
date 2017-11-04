@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
+#include "dot_config.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "utils/assert.hpp"
-#include "dot_config.hpp"
 
 namespace opossum {
 
