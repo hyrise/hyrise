@@ -51,18 +51,22 @@ class ColumnStatistics : public BaseColumnStatistics {
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
+  std::shared_ptr<BaseColumnStatistics> estimate_union_positions(
+      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics) override;
+
   /**
    * Accessors for class variable optionals. Compute values, if not available.
    * See _distinct_count declaration below for explanation of float type.
    */
   float distinct_count() const override;
 
+  ColumnType get_or_calculate_min() const;
+  ColumnType get_or_calculate_max() const;
+
   std::shared_ptr<BaseColumnStatistics> clone() const override;
 
  protected:
   std::ostream& _print_to_stream(std::ostream& os) const override;
-  ColumnType _get_or_calculate_min() const;
-  ColumnType _get_or_calculate_max() const;
 
   /**
    * Returns a column statistics identical to this which does not have null values.

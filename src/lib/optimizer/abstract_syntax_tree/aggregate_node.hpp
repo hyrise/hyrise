@@ -27,7 +27,7 @@ class AggregateNode : public AbstractASTNode {
   const std::vector<std::shared_ptr<Expression>>& aggregate_expressions() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
 
@@ -55,7 +55,7 @@ class AggregateNode : public AbstractASTNode {
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string get_qualified_column_name(ColumnID column_id) const override;
 
   void map_column_ids(const ColumnIDMapping& column_id_mapping, ASTChildSide caller_child_side) override;
 

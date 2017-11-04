@@ -41,7 +41,7 @@ class Table;
  * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
  *
  * Find more information about table statistics in our wiki:
- * https://github.com/hyrise/zweirise/wiki/potential_statistics
+ * https://github.com/hyrise/hyrise/wiki/potential_statistics
  */
 class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
  public:
@@ -90,6 +90,12 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
       const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
       const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type);
+
+  /**
+   * Generate table statistics for UnionPositions.
+   */
+  virtual std::shared_ptr<TableStatistics> generate_union_positions_statistics(
+      const std::shared_ptr<TableStatistics>& right_table_stats);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);

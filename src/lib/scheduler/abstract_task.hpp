@@ -44,7 +44,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * Description for debugging purposes
    */
-  std::string description() const;
+  std::string description(DescriptionMode mode) const;
   void set_description(const std::string& description);
 
   /**

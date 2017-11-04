@@ -38,7 +38,7 @@ class GroupKeyIndexTest;
  *    | 7 |         5 |            |         |  |-------->  7 |  ie "inbox" can be found at i = 7 in the AV
  *    +---+-----------+------------+---------+----------------+
  *
- * Find more information about this in our Wiki: https://github.com/hyrise/zweirise/wiki/GroupKey-Index
+ * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */
 class GroupKeyIndex : public BaseIndex {
   friend class GroupKeyIndexTest;

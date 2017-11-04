@@ -24,7 +24,7 @@ class TransactionContext;
 //
 // Operators shall not be executed twice.
 //
-// Find more information about operators in our Wiki: https://github.com/hyrise/zweirise/wiki/operator-concept
+// Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
 
 class AbstractOperator : private Noncopyable {
  public:

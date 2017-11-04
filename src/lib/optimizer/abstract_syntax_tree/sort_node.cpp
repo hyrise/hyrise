@@ -16,28 +16,26 @@ OrderByDefinition::OrderByDefinition(const ColumnID column_id, const OrderByMode
 SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
     : AbstractASTNode(ASTNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
-std::string SortNode::description() const {
-  std::ostringstream s;
+std::string SortNode::description(DescriptionMode mode) const {
+  std::ostringstream desc;
 
-  s << "[Sort] ";
-
-  auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << get_verbose_column_name(definition.column_id);
-    s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
-  };
-
-  auto it = _order_by_definitions.begin();
-  if (it != _order_by_definitions.end()) {
-    stream_aggregate(*it);
-    ++it;
+  desc << "[Sort] ";
+  if (mode == DescriptionMode::MultiLine) {
+    desc << "\n";
   }
 
-  for (; it != _order_by_definitions.end(); ++it) {
-    s << ", ";
-    stream_aggregate(*it);
+  for (size_t definition_idx = 0; definition_idx < _order_by_definitions.size(); ++definition_idx) {
+    const auto& definition = _order_by_definitions[definition_idx];
+
+    desc << get_qualified_column_name(definition.column_id);
+    desc << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
+
+    if (definition_idx + 1 < _order_by_definitions.size()) {
+      desc << (mode == DescriptionMode::SingleLine ? ", " : "\n");
+    }
   }
 
-  return s.str();
+  return desc.str();
 }
 
 const OrderByDefinitions& SortNode::order_by_definitions() const { return _order_by_definitions; }
