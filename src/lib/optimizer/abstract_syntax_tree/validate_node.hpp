@@ -13,7 +13,7 @@ class ValidateNode : public AbstractASTNode {
  public:
   ValidateNode();
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 };
 
 }  // namespace opossum

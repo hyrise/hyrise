@@ -29,50 +29,69 @@ const std::vector<std::shared_ptr<Expression>>& AggregateNode::aggregate_express
 
 const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return _groupby_column_ids; }
 
-std::string AggregateNode::description() const {
-  std::ostringstream s;
+std::string AggregateNode::description(DescriptionMode mode) const {
+  std::ostringstream desc;
 
-  s << "[Aggregate] ";
+  desc << "[Aggregate] ";
+  if (mode == DescriptionMode::MultiLine) {
+    desc << "\n";
+  }
 
   std::vector<std::string> verbose_column_names;
   if (left_child()) {
     verbose_column_names = left_child()->get_verbose_column_names();
   }
 
-  auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
-    s << aggregate_expr->to_string(verbose_column_names);
+  for (size_t aggregate_idx = 0; aggregate_idx < _aggregate_expressions.size(); ++aggregate_idx) {
+    const auto& aggregate_expr = _aggregate_expressions[aggregate_idx];
 
+    desc << aggregate_expr->to_string(verbose_column_names);
     if (aggregate_expr->alias()) {
-      s << " AS \"" << (*aggregate_expr->alias()) << "\"";
+      desc << " AS \"" << (*aggregate_expr->alias()) << "\"";
     }
-  };
 
-  auto aggregates_it = _aggregate_expressions.begin();
-  if (aggregates_it != _aggregate_expressions.end()) {
-    stream_aggregate(*aggregates_it);
-    ++aggregates_it;
-  }
-
-  for (; aggregates_it != _aggregate_expressions.end(); ++aggregates_it) {
-    s << ", ";
-    stream_aggregate(*aggregates_it);
+    if (aggregate_idx + 1 < _aggregate_expressions.size()) {
+      if (mode == DescriptionMode::SingleLine) {
+        desc << ", ";
+      } else {
+        desc << "\n";
+      }
+    }
   }
 
   if (!_groupby_column_ids.empty()) {
-    s << " GROUP BY [";
+    if (mode == DescriptionMode::MultiLine) {
+      desc << "\n";
+    }
+
+    desc << " GROUP BY";
+    if (mode == DescriptionMode::MultiLine) {
+      desc << "   \n";
+    } else {
+      desc << "[";
+    }
 
     for (size_t group_by_idx = 0; group_by_idx < _groupby_column_ids.size(); ++group_by_idx) {
       if (left_child()) {
-        s << left_child()->get_verbose_column_name(_groupby_column_ids[group_by_idx]);
-        if (group_by_idx + 1 < _groupby_column_ids.size()) {
-          s << ", ";
+        desc << left_child()->get_verbose_column_name(_groupby_column_ids[group_by_idx]);
+      } else {
+        desc << "Column #" << _groupby_column_ids[group_by_idx];
+      }
+
+      if (group_by_idx + 1 < _groupby_column_ids.size()) {
+        if (mode == DescriptionMode::SingleLine) {
+          desc << ", ";
+        } else {
+          desc << "\n";
         }
       }
     }
-    s << "]";
+    if (mode == DescriptionMode::SingleLine) {
+      desc << "]";
+    }
   }
 
-  return s.str();
+  return desc.str();
 }
 
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
@@ -123,8 +142,8 @@ std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child(), "AggregateNode needs a child.");
 
-  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
-  if (!named_column_reference_without_local_alias) {
+  auto named_column_reference_without_node_alias = _resolve_node_alias(named_column_reference);
+  if (!named_column_reference_without_node_alias) {
     return {};
   }
 
@@ -133,15 +152,15 @@ std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   std::optional<ColumnID> column_id_aggregate;
-  if (!named_column_reference_without_local_alias->table_name) {
+  if (!named_column_reference_without_node_alias->table_name) {
     for (auto aggregate_idx = 0u; aggregate_idx < _aggregate_expressions.size(); aggregate_idx++) {
       const auto& aggregate_expression = _aggregate_expressions[aggregate_idx];
 
       // If AggregateDefinition has no alias, column_name will not match.
-      if (named_column_reference_without_local_alias->column_name == aggregate_expression->alias()) {
+      if (named_column_reference_without_node_alias->column_name == aggregate_expression->alias()) {
         // Check that we haven't found a match yet.
         Assert(!column_id_aggregate,
-               "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
+               "Column name " + named_column_reference_without_node_alias->column_name + " is ambiguous.");
         // Aggregate columns come after Group By columns in the Aggregate's output
         column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(aggregate_idx + _groupby_column_ids.size())};
       }
@@ -155,7 +174,7 @@ std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
    */
   std::optional<ColumnID> column_id_groupby;
   const auto column_id_child =
-      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
   if (column_id_child) {
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
     if (iter != _groupby_column_ids.end()) {
@@ -165,7 +184,7 @@ std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
 
   // Max one can be set, both not being set is fine, as we are in a find_* method
   Assert(!column_id_aggregate || !column_id_groupby,
-         "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
+         "Column name " + named_column_reference_without_node_alias->column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
     return column_id_aggregate;

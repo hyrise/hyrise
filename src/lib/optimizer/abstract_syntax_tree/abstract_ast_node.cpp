@@ -180,11 +180,11 @@ std::optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_referenc
   DebugAssert(left_child() && !right_child(),
               "Node has no or two inputs and therefore needs to override this function");
 
-  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
-  if (!named_column_reference_without_local_alias) {
+  auto named_column_reference_without_node_alias = _resolve_node_alias(named_column_reference);
+  if (!named_column_reference_without_node_alias) {
     return {};
   } else {
-    return left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+    return left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
   }
 }
 
@@ -340,7 +340,7 @@ std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractASTNode::_resolve_node_alias(const NamedColumnReference &reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

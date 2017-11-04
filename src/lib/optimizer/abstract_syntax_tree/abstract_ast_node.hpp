@@ -230,7 +230,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * Returns a string describing this node, but nothing about its children.
    */
-  virtual std::string description() const = 0;
+  virtual std::string description(DescriptionMode mode = DescriptionMode::SingleLine) const = 0;
 
   /**
    * Generate a name for a column that contains all aliases it went through as well as the name of the table that it
@@ -275,7 +275,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * only operate on the column name. If an alias for this subtree is set, but this reference does not match
    * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+  std::optional<NamedColumnReference> _resolve_node_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
   std::vector<std::weak_ptr<AbstractASTNode>> _parents;

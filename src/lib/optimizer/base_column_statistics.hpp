@@ -72,6 +72,9 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
+  virtual std::shared_ptr<BaseColumnStatistics> estimate_union_positions(
+      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics) = 0;
+
   /**
    * Gets distinct count of column.
    * See _distinct_count declaration in column_statistics.hpp for explanation of float type.

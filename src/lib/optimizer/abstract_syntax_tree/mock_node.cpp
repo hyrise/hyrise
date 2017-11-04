@@ -36,5 +36,5 @@ std::string MockNode::get_verbose_column_name(ColumnID column_id) const {
   return output_column_names()[column_id];
 }
 
-std::string MockNode::description() const { return "[MockTable]"; }
+std::string MockNode::description(DescriptionMode mode) const { return "[MockTable]"; }
 }  // namespace opossum

@@ -15,7 +15,7 @@ class UnionNode : public AbstractASTNode {
 
   UnionMode union_mode() const;
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 

@@ -13,7 +13,7 @@ class LimitNode : public AbstractASTNode {
  public:
   explicit LimitNode(const size_t num_rows);
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   size_t num_rows() const;
 

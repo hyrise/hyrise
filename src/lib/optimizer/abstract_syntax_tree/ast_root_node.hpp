@@ -18,7 +18,7 @@ class ASTRootNode : public AbstractASTNode {
  public:
   ASTRootNode();
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 };
 
 }  // namespace opossum

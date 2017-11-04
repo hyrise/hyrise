@@ -20,7 +20,7 @@ PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type,
       _value(value),
       _value2(value2) {}
 
-std::string PredicateNode::description() const {
+std::string PredicateNode::description(DescriptionMode mode) const {
   std::string left_operand_name = get_verbose_column_name(_column_id);
   std::string right_a_operand_name;
 
@@ -32,7 +32,12 @@ std::string PredicateNode::description() const {
 
   std::ostringstream desc;
 
-  desc << "[Predicate] " << left_operand_name << " " << scan_type_to_string.left.at(_scan_type);
+  desc << "[Predicate] ";
+  if (mode == DescriptionMode::MultiLine) {
+    desc << "\n";
+  }
+
+  desc << left_operand_name << " " << scan_type_to_string.left.at(_scan_type);
   desc << " " << right_a_operand_name << "";
   if (_value2) {
     desc << " AND ";

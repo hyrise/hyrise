@@ -16,10 +16,14 @@ namespace opossum {
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions)
     : AbstractASTNode(ASTNodeType::Projection), _column_expressions(column_expressions) {}
 
-std::string ProjectionNode::description() const {
+std::string ProjectionNode::description(DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Projection] ";
+
+  if (mode == DescriptionMode::MultiLine) {
+    desc << "\n";
+  }
 
   std::vector<std::string> verbose_column_names;
   if (left_child()) {
@@ -29,7 +33,11 @@ std::string ProjectionNode::description() const {
   for (size_t column_idx = 0; column_idx < _column_expressions.size(); ++column_idx) {
     desc << _column_expressions[column_idx]->to_string(verbose_column_names);
     if (column_idx + 1 < _column_expressions.size()) {
-      desc << ", ";
+      if (mode == DescriptionMode::SingleLine) {
+        desc << ", ";
+      } else {
+        desc << "\n";
+      }
     }
   }
 
@@ -70,8 +78,8 @@ std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference
    */
   std::optional<ColumnID> result_column_id;
 
-  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
-  if (!named_column_reference_without_local_alias) {
+  auto named_column_reference_without_node_alias = _resolve_node_alias(named_column_reference);
+  if (!named_column_reference_without_node_alias) {
     return {};
   }
 
@@ -83,7 +91,7 @@ std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference
    * the projection it might still be an ALIAS of the projection.
    */
   const auto child_column_id =
-      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
 
   for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
     const auto& column_expression = _column_expressions[column_id];
@@ -95,7 +103,7 @@ std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference
     if (child_column_id && column_expression->type() == ExpressionType::Column &&
         column_expression->column_id() == *child_column_id && !column_expression->alias()) {
       Assert(!result_column_id,
-             "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
+             "Column name " + named_column_reference_without_node_alias->column_name + " is ambiguous.");
       result_column_id = column_id;
       continue;
     }
@@ -106,21 +114,21 @@ std::optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference
      * either one of the Projection's ALIASes or column names generated based on arithmetic expressions (i.e. 5+3 ->
      * "5+3").
      */
-    if (!named_column_reference_without_local_alias->table_name) {
+    if (!named_column_reference_without_node_alias->table_name) {
       if (column_expression->alias()) {
         // Check whether `named_column_reference` is the ALIAS of a column, e.g. `a AS some_a` or `a+b AS sum_ab`
-        if (*column_expression->alias() == named_column_reference_without_local_alias->column_name) {
+        if (*column_expression->alias() == named_column_reference_without_node_alias->column_name) {
           Assert(!result_column_id,
-                 "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
+                 "Column name " + named_column_reference_without_node_alias->column_name + " is ambiguous.");
           result_column_id = column_id;
           continue;
         }
       } else {
         // Check whether `named_column_reference` is the generated name of a column, e.g. `a+b` without ALIAS
         if (column_expression->to_string(left_child()->output_column_names()) ==
-            named_column_reference_without_local_alias->column_name) {
+            named_column_reference_without_node_alias->column_name) {
           Assert(!result_column_id,
-                 "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
+                 "Column name " + named_column_reference_without_node_alias->column_name + " is ambiguous.");
           result_column_id = column_id;
           continue;
         }

@@ -14,7 +14,7 @@ class DeleteNode : public AbstractASTNode {
  public:
   explicit DeleteNode(const std::string& table_name);
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   const std::string& table_name() const;
 

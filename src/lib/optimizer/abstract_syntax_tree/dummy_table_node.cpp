@@ -13,7 +13,7 @@ DummyTableNode::DummyTableNode() : AbstractASTNode(ASTNodeType::DummyTable) {
   _output_column_ids_to_input_column_ids.emplace();
 }
 
-std::string DummyTableNode::description() const { return "[DummyTable]"; }
+std::string DummyTableNode::description(DescriptionMode mode) const { return "[DummyTable]"; }
 
 void DummyTableNode::_on_child_changed() { Fail("DummyTableNode cannot have children."); }
 

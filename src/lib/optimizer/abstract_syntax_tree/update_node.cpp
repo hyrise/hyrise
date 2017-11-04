@@ -15,7 +15,7 @@ UpdateNode::UpdateNode(const std::string& table_name,
                        const std::vector<std::shared_ptr<Expression>>& column_expressions)
     : AbstractASTNode(ASTNodeType::Update), _table_name(table_name), _column_expressions(column_expressions) {}
 
-std::string UpdateNode::description() const {
+std::string UpdateNode::description(DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Update] Table: '" << _table_name << "'";

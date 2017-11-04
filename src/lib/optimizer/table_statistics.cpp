@@ -247,6 +247,28 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
   return join_table_stats;
 }
 
+std::shared_ptr<TableStatistics> TableStatistics::generate_union_positions_statistics(const std::shared_ptr<TableStatistics>& right_table_stats) {
+  /**
+   * TODO(anybody) This function is just a hack, it assumes that both tables are distinct.
+   */
+
+  _create_all_column_statistics();
+  right_table_stats->_create_all_column_statistics();
+
+  DebugAssert(_column_statistics.size() == right_table_stats->_column_statistics.size(), "Table layout mismatch");
+
+  std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(_column_statistics.size());
+  for (size_t column_idx = 0; column_idx < _column_statistics.size(); ++column_idx) {
+    column_statistics[column_idx] = _column_statistics[column_idx]->estimate_union_positions(
+      right_table_stats->_column_statistics[column_idx]
+      );
+  }
+
+  auto union_statistics = std::make_shared<TableStatistics>(_row_count + right_table_stats->_row_count, column_statistics);
+
+  return union_statistics;
+}
+
 std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(const ColumnID column_id) {
   if (_column_statistics[column_id]) {
     return _column_statistics[column_id];

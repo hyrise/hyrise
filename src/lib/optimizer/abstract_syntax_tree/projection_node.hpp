@@ -22,7 +22,7 @@ class ProjectionNode : public AbstractASTNode {
 
   const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 

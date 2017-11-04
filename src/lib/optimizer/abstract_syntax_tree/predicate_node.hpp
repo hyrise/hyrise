@@ -26,7 +26,7 @@ class PredicateNode : public AbstractASTNode {
   PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
                 const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   const ColumnID column_id() const;
   ScanType scan_type() const;
