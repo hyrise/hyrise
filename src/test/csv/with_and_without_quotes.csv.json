@@ -1,0 +1,37 @@
+{
+    "chunk_size": 5,
+    "columns": [
+        {
+            "name": "a",
+            "type": "string"
+        },
+        {
+            "name": "b",
+            "type": "int"
+        },
+        {
+            "name": "c",
+            "type": "float"
+        },
+        {
+            "name": "d",
+            "type": "double"
+        },
+        {
+            "name": "e",
+            "type": "string"
+        },
+        {
+            "name": "f",
+            "type": "int"
+        },
+        {
+            "name": "g",
+            "type": "float"
+        },
+        {
+            "name": "h",
+            "type": "double"
+        }
+    ]
+}
