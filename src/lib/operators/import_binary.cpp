@@ -37,6 +37,14 @@ pmr_vector<std::string> ImportBinary::_read_values(std::ifstream& file, const si
   return _read_string_values(file, count);
 }
 
+// specialized implementation for bool values
+template <>
+pmr_vector<bool> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+  pmr_vector<binary_bool_t> readable_bools(count);
+  file.read(reinterpret_cast<char*>(readable_bools.data()), readable_bools.size() * sizeof(binary_bool_t));
+  return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
+}
+
 template <typename T>
 pmr_vector<std::string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
   const auto string_lengths = _read_values<T>(file, count);
@@ -92,13 +100,14 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto column_count = _read_value<ColumnID>(file);
   const auto data_types = _read_values<std::string>(file, column_count);
+  const auto column_nullables = _read_values<bool>(file, column_count);
   const auto column_names = _read_string_values<ColumnNameLength>(file, column_count);
 
   auto table = std::make_shared<Table>(chunk_size);
 
   // Add columns to table
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    table->add_column_definition(column_names[column_id], data_types[column_id]);
+    table->add_column_definition(column_names[column_id], data_types[column_id], column_nullables[column_id]);
   }
 
   return std::make_pair(table, chunk_count);
@@ -109,18 +118,19 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
   Chunk chunk{ChunkUseMvcc::Yes};
 
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    chunk.add_column(_import_column(file, row_count, table->column_type(column_id)));
+    chunk.add_column(
+        _import_column(file, row_count, table->column_type(column_id), table->column_is_nullable(column_id)));
   }
   return chunk;
 }
 
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count,
-                                                         const std::string& data_type) {
+                                                         const std::string& data_type, bool is_nullable) {
   std::shared_ptr<BaseColumn> result;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == data_type) {
       using column_type = typename decltype(+hana::second(x))::type;
-      result = _import_column<column_type>(file, row_count);
+      result = _import_column<column_type>(file, row_count, is_nullable);
     }
   });
   DebugAssert(static_cast<bool>(result), ("unknown type " + data_type));
@@ -128,12 +138,12 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
 }
 
 template <typename DataType>
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count) {
+std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
   const auto column_type = _read_value<BinaryColumnType>(file);
 
   switch (column_type) {
     case BinaryColumnType::value_column:
-      return _import_value_column<DataType>(file, row_count);
+      return _import_value_column<DataType>(file, row_count, is_nullable);
     case BinaryColumnType::dictionary_column:
       return _import_dictionary_column<DataType>(file, row_count);
     default:
@@ -159,11 +169,19 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
 }
 
 template <typename T>
-std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count) {
+std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count,
+                                                                   bool is_nullable) {
   // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
   // needed
-  const auto values = _read_values<T>(file, row_count);
-  return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+  if (is_nullable) {
+    const auto nullables = _read_values<bool>(file, row_count);
+    const auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
+                                            tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
+  } else {
+    const auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+  }
 }
 
 template <typename T>

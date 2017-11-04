@@ -54,10 +54,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Chunk size             | ChunkOffset                           |   4
+   * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
+   * Column nullable       | bool                                  |   Column Count * 1
    * Column name lengths   | ColumnNameLength array                |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
@@ -80,11 +81,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // Calls the right _import_column<DataType> depending on the given data_type.
   static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count,
-                                                    const std::string& data_type);
+                                                    const std::string& data_type, bool is_nullable);
 
   // Reads the column type from the given file and chooses a column import function from it.
   template <typename DataType>
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
   /*
    * Imports a serialized ValueColumn from the given file.
@@ -95,6 +96,15 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Length of Strings     | StringLength array                    |   row_count * 2
    * Values                | std::string array                     |   Total sum of string lengths
    *
+   *
+   * In case the column is nullable the file contains:
+   *
+   * Description           | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Values                | T                                     |  row_count * sizeof(T)
+   * Is Value Null?        | bool                                  |  row_count * 1
+   *
+   *
    * For all other cases the file contains:
    *
    * Description           | Type                                  | Size in bytes
@@ -103,7 +113,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    */
   template <typename T>
-  static std::shared_ptr<ValueColumn<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<ValueColumn<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count,
+                                                              bool is_nullable);
 
   /*
    * Imports a serialized DictionaryColumn from the given file.

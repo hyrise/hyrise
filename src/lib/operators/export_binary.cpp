@@ -69,6 +69,14 @@ void _export_values(std::ofstream& ofstream, const std::vector<std::string>& val
   _export_string_values(ofstream, values);
 }
 
+// specialized implementation for bool values
+template <>
+void _export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
+  // Cast to fixed-size format used in binary file
+  const auto writable_bools = std::vector<opossum::binary_bool_t>(values.begin(), values.end());
+  _export_values(ofstream, writable_bools);
+}
+
 template <typename T>
 void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<T>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
@@ -82,6 +90,14 @@ void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vecto
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<std::string>{values.begin(), values.end()};
   _export_string_values(ofstream, value_block);
+}
+
+// specialized implementation for bool values
+template <>
+void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<bool>& values) {
+  // Cast to fixed-size format used in binary file
+  const auto writable_bools = std::vector<opossum::binary_bool_t>(values.begin(), values.end());
+  _export_values(ofstream, writable_bools);
 }
 
 // Writes a shallow copy of the given value to the ofstream
@@ -105,6 +121,7 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
 
   const auto table = _input_left->get_output();
   _write_header(table, ofstream);
+
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     _write_chunk(table, ofstream, chunk_id);
   }
@@ -119,13 +136,16 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   std::vector<std::string> column_types(table->column_count());
   std::vector<std::string> column_names(table->column_count());
+  std::vector<bool> column_nullables(table->column_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     column_types[column_id] = table->column_type(column_id);
     column_names[column_id] = table->column_name(column_id);
+    column_nullables[column_id] = table->column_is_nullable(column_id);
   }
   _export_values(ofstream, column_types);
+  _export_values(ofstream, column_nullables);
   _export_string_values<ColumnNameLength>(ofstream, column_names);
 }
 
@@ -150,6 +170,11 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(const BaseValueCo
   const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
   _export_value(context->ofstream, BinaryColumnType::value_column);
+
+  if (column.is_nullable()) {
+    _export_values(context->ofstream, column.null_values());
+  }
+
   _export_values(context->ofstream, column.values());
 }
 
