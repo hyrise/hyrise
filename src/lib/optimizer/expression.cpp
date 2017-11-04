@@ -209,7 +209,7 @@ bool Expression::is_null_literal() const { return _type == ExpressionType::Liter
 
 bool Expression::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
 
-const std::string Expression::description(DescriptionMode mode) const {
+const std::string Expression::description() const {
   std::ostringstream desc;
 
   auto alias_string = _alias ? *_alias : std::string("-");

@@ -97,7 +97,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
 
-  const std::string description(DescriptionMode mode = DescriptionMode::SingleLine) const;
+  const std::string description() const;
 
   // @{
   /**
