@@ -13,22 +13,25 @@
 #include "optimizer/table_statistics.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "utils/assert.hpp"
-#include "viz_utils.hpp"
+#include "dot_config.hpp"
 
 namespace opossum {
 
-ASTVisualizer::ASTVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& _ast_roots,
-                             const std::string& _output_prefix, DotConfig _config)
-    : _ast_roots(_ast_roots), _output_prefix(_output_prefix), _config(_config) {}
+ASTVisualizer::ASTVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots,
+                             const std::string& output_prefix, const DotConfig& config)
+    : _ast_roots(ast_roots), _output_prefix(output_prefix), _config(config) {}
 
 void ASTVisualizer::visualize() {
   const auto dot_filename = _output_prefix + ".dot";
 
+  std::string format_arg;
   std::string img_filename = _output_prefix + ".";
   if (_config.render_format == DotRenderFormat::PNG) {
     img_filename += "png";
+    format_arg = "png";
   } else if (_config.render_format == DotRenderFormat::SVG) {
     img_filename += "svg";
+    format_arg = "svg";
   } else {
     Fail("Unsupported format");
   }
@@ -49,7 +52,7 @@ void ASTVisualizer::visualize() {
   file.close();
 
   // Step 2: Generate png from dot file
-  auto cmd = std::string("dot -Tsvg " + dot_filename + " > ") + img_filename;
+  auto cmd = std::string(std::string("dot -T") + format_arg + " " + dot_filename + " > ") + img_filename;
   auto ret = system(cmd.c_str());
 
   Assert(ret == 0,
@@ -59,10 +62,10 @@ void ASTVisualizer::visualize() {
 }
 
 void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file) {
-  if (_visited_subtrees.find(node) != _visited_subtrees.end()) {
+  auto already_visited = _visited_subtrees.emplace(node).second;
+  if (already_visited) {
     return;
   }
-  _visited_subtrees.emplace(node);
 
   file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
        << boost::replace_all_copy(node->description(DescriptionMode::MultiLine), "\"", "\\\"") << "\"]" << std::endl;

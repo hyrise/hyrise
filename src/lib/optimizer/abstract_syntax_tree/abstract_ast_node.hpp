@@ -236,10 +236,10 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Generate a name for a column that contains all aliases it went through as well as the name of the table that it
    * originally came from, if any
    */
-  virtual std::string get_verbose_column_name(ColumnID column_id) const;
+  virtual std::string get_qualified_column_name(ColumnID column_id) const;
 
   /**
-   * @returns {get_verbose_column_name(0), ..., get_verbose_column_name(n-1)}
+   * @returns {get_qualified_column_name(0), ..., get_qualified_column_name(n-1)}
    */
   std::vector<std::string> get_verbose_column_names() const;
   // @}

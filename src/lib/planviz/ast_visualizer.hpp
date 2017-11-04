@@ -13,7 +13,7 @@ namespace opossum {
 class ASTVisualizer final {
  public:
   ASTVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots, const std::string& output_prefix,
-                DotConfig config = {});
+                const DotConfig& config = {});
 
   void visualize();
 

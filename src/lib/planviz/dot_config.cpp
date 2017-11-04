@@ -1,4 +1,4 @@
-#include "viz_utils.hpp"
+#include "dot_config.hpp"
 
 #include <string>
 #include <unordered_map>

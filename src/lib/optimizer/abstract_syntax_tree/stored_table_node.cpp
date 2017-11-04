@@ -88,7 +88,7 @@ std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std
   return column_ids;
 }
 
-std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
+std::string StoredTableNode::get_qualified_column_name(ColumnID column_id) const {
   if (_table_alias) {
     return "(" + _table_name + " AS " + *_table_alias + ")." + output_column_names()[column_id];
   }

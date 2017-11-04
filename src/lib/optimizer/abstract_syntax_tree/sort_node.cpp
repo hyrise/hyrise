@@ -26,15 +26,11 @@ std::string SortNode::description(DescriptionMode mode) const {
   for (size_t definition_idx = 0; definition_idx < _order_by_definitions.size(); ++definition_idx) {
     const auto& definition = _order_by_definitions[definition_idx];
 
-    desc << get_verbose_column_name(definition.column_id);
+    desc << get_qualified_column_name(definition.column_id);
     desc << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
 
     if (definition_idx + 1 < _order_by_definitions.size()) {
-      if (mode == DescriptionMode::SingleLine) {
-        desc << ", ";
-      } else {
-        desc << "\n";
-      }
+      desc << (mode == DescriptionMode::SingleLine ? ", " : "\n");
     }
   }
 

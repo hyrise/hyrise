@@ -51,11 +51,7 @@ std::string AggregateNode::description(DescriptionMode mode) const {
     }
 
     if (aggregate_idx + 1 < _aggregate_expressions.size()) {
-      if (mode == DescriptionMode::SingleLine) {
-        desc << ", ";
-      } else {
-        desc << "\n";
-      }
+      desc << (mode == DescriptionMode::SingleLine ? ", " : "\n");
     }
   }
 
@@ -73,17 +69,13 @@ std::string AggregateNode::description(DescriptionMode mode) const {
 
     for (size_t group_by_idx = 0; group_by_idx < _groupby_column_ids.size(); ++group_by_idx) {
       if (left_child()) {
-        desc << left_child()->get_verbose_column_name(_groupby_column_ids[group_by_idx]);
+        desc << left_child()->get_qualified_column_name(_groupby_column_ids[group_by_idx]);
       } else {
         desc << "Column #" << _groupby_column_ids[group_by_idx];
       }
 
       if (group_by_idx + 1 < _groupby_column_ids.size()) {
-        if (mode == DescriptionMode::SingleLine) {
-          desc << ", ";
-        } else {
-          desc << "\n";
-        }
+        desc << (mode == DescriptionMode::SingleLine ? ", " : "\n");
       }
     }
     if (mode == DescriptionMode::SingleLine) {
@@ -94,7 +86,7 @@ std::string AggregateNode::description(DescriptionMode mode) const {
   return desc.str();
 }
 
-std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
+std::string AggregateNode::get_qualified_column_name(ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
   if (column_id < _aggregate_expressions.size()) {
@@ -114,7 +106,7 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   const auto group_by_column_id = column_id - _aggregate_expressions.size();
   DebugAssert(group_by_column_id < _groupby_column_ids.size(), "ColumnID out of range");
 
-  return left_child()->get_verbose_column_name(_groupby_column_ids[group_by_column_id]);
+  return left_child()->get_qualified_column_name(_groupby_column_ids[group_by_column_id]);
 }
 
 void AggregateNode::_on_child_changed() {

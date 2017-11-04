@@ -21,11 +21,11 @@ PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type,
       _value2(value2) {}
 
 std::string PredicateNode::description(DescriptionMode mode) const {
-  std::string left_operand_name = get_verbose_column_name(_column_id);
+  std::string left_operand_name = get_qualified_column_name(_column_id);
   std::string right_a_operand_name;
 
   if (_value.type() == typeid(ColumnID)) {
-    right_a_operand_name = get_verbose_column_name(boost::get<ColumnID>(_value));
+    right_a_operand_name = get_qualified_column_name(boost::get<ColumnID>(_value));
   } else {
     right_a_operand_name = boost::lexical_cast<std::string>(_value);
   }

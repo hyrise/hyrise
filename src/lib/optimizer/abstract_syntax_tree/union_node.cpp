@@ -19,11 +19,11 @@ std::string UnionNode::description(DescriptionMode mode) const {
   return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode);
 }
 
-std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
+std::string UnionNode::get_qualified_column_name(ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need children to determine Column name");
 
-  const auto left_column_name = left_child()->get_verbose_column_name(column_id);
-  const auto right_column_name = right_child()->get_verbose_column_name(column_id);
+  const auto left_column_name = left_child()->get_qualified_column_name(column_id);
+  const auto right_column_name = right_child()->get_qualified_column_name(column_id);
 
   Assert(left_column_name == right_column_name, "Input column names don't match");
 

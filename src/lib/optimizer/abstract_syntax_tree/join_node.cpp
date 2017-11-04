@@ -42,9 +42,9 @@ std::string JoinNode::description(DescriptionMode mode) const {
   }
 
   if (_join_column_ids && _scan_type) {
-    desc << " " << get_verbose_column_name(_join_column_ids->first);
+    desc << " " << get_qualified_column_name(_join_column_ids->first);
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << get_verbose_column_name(ColumnID{static_cast<ColumnID::base_type>(
+    desc << " " << get_qualified_column_name(ColumnID{static_cast<ColumnID::base_type>(
                        left_child()->output_column_count() + _join_column_ids->second)});
   }
 
@@ -202,13 +202,13 @@ const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; 
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
-std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
+std::string JoinNode::get_qualified_column_name(ColumnID column_id) const {
   Assert(left_child() && right_child(), "Can't generate column names without children being set");
 
   if (column_id < left_child()->output_column_count()) {
-    return left_child()->get_verbose_column_name(column_id);
+    return left_child()->get_qualified_column_name(column_id);
   }
-  return right_child()->get_verbose_column_name(
+  return right_child()->get_qualified_column_name(
       ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_column_count())});
 }
 
