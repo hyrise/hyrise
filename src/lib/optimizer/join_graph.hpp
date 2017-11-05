@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <memory>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -18,11 +19,11 @@ class PredcicateNode;
  * A connection between two JoinGraph-Vertices.
  */
 struct JoinEdge {
-  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, JoinMode join_mode);
-  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_indices, const std::pair<ColumnID, ColumnID>& column_ids,
+  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_ids, JoinMode join_mode);
+  JoinEdge(const std::pair<JoinVertexID, JoinVertexID>& vertex_ids, const std::pair<ColumnID, ColumnID>& column_ids,
            JoinMode join_mode, ScanType scan_type);
 
-  std::pair<JoinVertexID, JoinVertexID> vertex_indices;
+  std::pair<JoinVertexID, JoinVertexID> vertex_ids;
   std::optional<std::pair<ColumnID, ColumnID>> column_ids;
   JoinMode join_mode;
   std::optional<ScanType> scan_type;
@@ -56,11 +57,6 @@ class JoinGraph final {
   using Vertices = std::vector<JoinVertex>;
   using Edges = std::vector<JoinEdge>;
 
-  /**
-   * From the subtree of root, build a join graph.
-   * The AST is not modified during this process.
-   */
-  static std::shared_ptr<JoinGraph> build_join_graph(const std::shared_ptr<AbstractASTNode>& root);
 
   JoinGraph() = default;
   JoinGraph(Vertices&& vertices, Edges&& edges);
@@ -71,31 +67,6 @@ class JoinGraph final {
   void print(std::ostream& out = std::cout) const;
 
  private:
-  /**
-   * Helper method/actual implementation for build_join_graph().
-   * @param node                The subtree to investigate
-   * @param o_vertices          Output parameter, collecting all the vertex-AST-nodes
-   * @param o_edges             Output parameter, collecting all edges/predicates in the tree
-   */
-  static void _traverse_ast_for_join_graph(const std::shared_ptr<AbstractASTNode>& node,
-                                           JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
-  static void _traverse_inner_join_node(const std::shared_ptr<JoinNode>& node, JoinGraph::Vertices& o_vertices,
-                                        JoinGraph::Edges& o_edges);
-  static void _traverse_cross_join_node(const std::shared_ptr<JoinNode>& node, JoinGraph::Vertices& o_vertices,
-                                        JoinGraph::Edges& o_edges);
-  static void _traverse_column_predicate_node(const std::shared_ptr<PredicateNode>& node,
-                                              JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
-  static void _traverse_value_predicate_node(const std::shared_ptr<PredicateNode>& node,
-                                             JoinGraph::Vertices& o_vertices, JoinGraph::Edges& o_edges);
-
-  /**
-   * Within the index range [vertex_range_begin, vertex_range_end) in vertices, look for the `column_id`th column and
-   * return the index of the Vertex it belongs to, as well as the ColumnID in that vertex
-   */
-  static std::pair<JoinVertexID, ColumnID> _find_vertex_and_column_id(const Vertices& vertices, ColumnID column_id,
-                                                                      JoinVertexID vertex_range_begin,
-                                                                      JoinVertexID vertex_range_end);
-
   Vertices _vertices;
   Edges _edges;
 };

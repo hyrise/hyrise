@@ -2,7 +2,11 @@
 
 #include <chrono>
 #include <planviz/ast_visualizer.hpp>
+#include <planviz/join_graph_visualizer.hpp>
+#include <optimizer/abstract_syntax_tree/abstract_ast_node.hpp>
 #include <optimizer/optimizer.hpp>
+#include <optimizer/join_graph.hpp>
+#include <optimizer/join_graph_builder.hpp>
 
 #include "sql/sql_to_ast_translator.hpp"
 #include "operators/import_csv.hpp"
@@ -39,18 +43,34 @@ int main() {
   opossum::StorageManager::get().add_table("region", std::move(region));
   opossum::StorageManager::get().add_table("supplier", std::move(supplier));
 
+  const auto query = std::string(opossum::tpch_queries[6]);
+
+ // const auto query = R"(SELECT * FROM supplier, lineitem WHERE s_suppkey = l_suppkey AND s_name = 'Hans' ;)";
+
   hsql::SQLParserResult parser_result;
-  hsql::SQLParser::parse(opossum::tpch_queries[6], &parser_result);
+  hsql::SQLParser::parse(query, &parser_result);
 
   opossum::DotConfig config;
-  config.background_color = opossum::DotColor::Black;
-  config.render_format = opossum::DotRenderFormat::SVG;
+  config.background_color = opossum::GraphvizColor::Black;
+  config.render_format = opossum::GraphvizRenderFormat::SVG;
 
   auto ast = opossum::SQLToASTTranslator(false).translate_parse_result(parser_result);
-  opossum::ASTVisualizer(ast, "vis", config).visualize();
+  opossum::ASTVisualizer(config).visualize(ast, "vis");
+  ast[0]->print();
+
+  auto join_graphs = opossum::JoinGraphBuilder::build_all_join_graphs(ast[0]);
+
+  if (!join_graphs.empty()) {
+    for (size_t join_graph_idx = 0; join_graph_idx < join_graphs.size(); ++join_graph_idx) {
+      opossum::JoinGraphVisualizer(config).visualize(join_graphs[join_graph_idx], "join_graph" + std::to_string(join_graph_idx));
+    }
+  }
 
   auto astopt = opossum::Optimizer::get().optimize(ast[0]);
-  opossum::ASTVisualizer({astopt}, "visopt", config).visualize();
+  opossum::ASTVisualizer(config).visualize({astopt}, "visopt");
+  astopt->print();
+
+
 
   return 0;
 }

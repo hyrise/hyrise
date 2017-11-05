@@ -146,6 +146,8 @@ set(
     optimizer/expression.hpp
     optimizer/join_graph.cpp
     optimizer/join_graph.hpp
+    optimizer/join_graph_builder.cpp
+    optimizer/join_graph_builder.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -158,6 +160,8 @@ set(
     optimizer/table_statistics.hpp
     planviz/ast_visualizer.cpp
     planviz/ast_visualizer.hpp
+    planviz/graphviz_tools.cpp
+    planviz/graphviz_tools.hpp
     planviz/dot_config.cpp
     planviz/dot_config.hpp
     planviz/join_graph_visualizer.cpp

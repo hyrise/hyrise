@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-const std::unordered_map<DotColor, std::string> dot_color_to_string({{DotColor::Black, "black"},
-                                                                     {DotColor::White, "white"},
-                                                                     {DotColor::Transparent, "transparent"}});
+const std::unordered_map<GraphvizColor, std::string> dot_color_to_string({{GraphvizColor::Black, "black"},
+                                                                     {GraphvizColor::White, "white"},
+                                                                     {GraphvizColor::Transparent, "transparent"}});
 }  // namespace opossum

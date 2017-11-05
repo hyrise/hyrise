@@ -209,11 +209,11 @@ bool check_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const std::sh
                      const std::shared_ptr<AbstractASTNode>& node_b, ColumnID column_id_a, ColumnID column_id_b,
                      ScanType scan_type) {
   for (const auto& edge : join_graph->edges()) {
-    if (join_graph->vertices().size() <= edge.vertex_indices.first) continue;
-    if (join_graph->vertices().size() <= edge.vertex_indices.second) continue;
+    if (join_graph->vertices().size() <= edge.vertex_ids.first) continue;
+    if (join_graph->vertices().size() <= edge.vertex_ids.second) continue;
 
-    const auto& edge_node_a = join_graph->vertices()[edge.vertex_indices.first].node;
-    const auto& edge_node_b = join_graph->vertices()[edge.vertex_indices.second].node;
+    const auto& edge_node_a = join_graph->vertices()[edge.vertex_ids.first].node;
+    const auto& edge_node_b = join_graph->vertices()[edge.vertex_ids.second].node;
 
     if (edge_node_a == node_a) {
       if (edge_node_b == node_b && edge.column_ids == std::make_pair(column_id_a, column_id_b)) {
@@ -234,11 +234,11 @@ bool check_cross_join_edge(const std::shared_ptr<JoinGraph>& join_graph, const s
                            const std::shared_ptr<AbstractASTNode>& node_b) {
   for (const auto& edge : join_graph->edges()) {
     if (edge.join_mode != JoinMode::Cross) continue;
-    if (join_graph->vertices().size() <= edge.vertex_indices.first) continue;
-    if (join_graph->vertices().size() <= edge.vertex_indices.second) continue;
+    if (join_graph->vertices().size() <= edge.vertex_ids.first) continue;
+    if (join_graph->vertices().size() <= edge.vertex_ids.second) continue;
 
-    const auto& edge_node_a = join_graph->vertices()[edge.vertex_indices.first].node;
-    const auto& edge_node_b = join_graph->vertices()[edge.vertex_indices.second].node;
+    const auto& edge_node_a = join_graph->vertices()[edge.vertex_ids.first].node;
+    const auto& edge_node_b = join_graph->vertices()[edge.vertex_ids.second].node;
 
     if ((edge_node_a == node_a && edge_node_b == node_b) || (edge_node_a == node_b && edge_node_b == node_a)) {
       return true;  // we found a matching edge

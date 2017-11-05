@@ -2,24 +2,20 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "dot_config.hpp"
 
 namespace opossum {
 
-class AbstractASTNode;
+class JoinGraph;
 
 class JoinGraphVisualizer {
  public:
-  JoinGraphVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots, const std::string& output_prefix,
-                      const DotConfig& config = {});
+  JoinGraphVisualizer(const DotConfig& config = {});
 
-  void visualize();
+  void visualize(const std::shared_ptr<JoinGraph>& join_graph, const std::string& output_prefix);
 
  private:
-  const std::vector<std::shared_ptr<AbstractASTNode>> _ast_roots;
-  const std::string _output_prefix;
   const DotConfig _config;
 
 };

@@ -5,15 +5,17 @@
 
 namespace opossum {
 
-enum class DotColor { Black, White, Transparent };
+enum class GraphvizColor { Black, White, Transparent };
 
-enum class DotRenderFormat { PNG, SVG };
+enum class GraphvizRenderFormat { PNG, SVG };
+
+enum class GraphvizLayout { Dot, Neato, FDP, SFDP, TwoPi, Circo };
 
 struct DotConfig {
-  DotColor background_color = DotColor::Transparent;
-  DotRenderFormat render_format = DotRenderFormat::PNG;
+  GraphvizColor background_color = GraphvizColor::Transparent;
+  GraphvizRenderFormat render_format = GraphvizRenderFormat::PNG;
 };
 
-extern const std::unordered_map<DotColor, std::string> dot_color_to_string;
+extern const std::unordered_map<GraphvizColor, std::string> dot_color_to_string;
 
 }  // namespace opossum

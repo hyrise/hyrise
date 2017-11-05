@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <iostream>
 #include <unordered_set>
 #include <vector>
 
@@ -12,19 +13,15 @@ namespace opossum {
 
 class ASTVisualizer final {
  public:
-  ASTVisualizer(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots, const std::string& output_prefix,
-                const DotConfig& config = {});
+  ASTVisualizer(const DotConfig& config = {});
 
-  void visualize();
+  void visualize(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots, const std::string& output_prefix);
 
- protected:
-  void _visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file);
-  void _visualize_dataflow(const std::shared_ptr<AbstractASTNode>& from, const std::shared_ptr<AbstractASTNode>& to,
-                           std::ofstream& file);
+  void visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ostream& stream);
+  void visualize_dataflow(const std::shared_ptr<AbstractASTNode>& from, const std::shared_ptr<AbstractASTNode>& to,
+                           std::ostream& stream);
 
  private:
-  const std::vector<std::shared_ptr<AbstractASTNode>> _ast_roots;
-  const std::string _output_prefix;
   const DotConfig _config;
 
   // Saving all subtrees we already processed makes sure we're not generating edge duplicates in multi-parent trees

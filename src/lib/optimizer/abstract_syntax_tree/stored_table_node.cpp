@@ -24,7 +24,13 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
 }
 
 std::string StoredTableNode::description(DescriptionMode mode) const {
-  return "[StoredTable] Name: '" + _table_name + "'";
+  auto desc = "[StoredTable] Name: '" + _table_name + "'";
+
+  if (_table_alias) {
+    desc += " AS " + *_table_alias;
+  }
+
+  return desc;
 }
 
 const std::vector<ColumnID>& StoredTableNode::output_column_ids_to_input_column_ids() const {
