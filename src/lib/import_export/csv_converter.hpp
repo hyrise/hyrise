@@ -97,22 +97,42 @@ class CsvConverter : public BaseCsvConverter {
 
 template <>
 inline std::function<int(const std::string&)> CsvConverter<int>::_get_conversion_function() {
-  return [](const std::string& str) { return std::stoi(str); };
+  return [](const std::string& str) {
+    size_t pos;
+    auto converted = std::stoi(str, &pos);
+    Assert(pos == str.size(), "Unprocessed characters found while converting to int: " + str);
+    return converted;
+  };
 }
 
 template <>
 inline std::function<int64_t(const std::string&)> CsvConverter<int64_t>::_get_conversion_function() {
-  return [](const std::string& str) { return static_cast<int64_t>(std::stoll(str)); };
+  return [](const std::string& str) {
+    size_t pos;
+    auto converted = static_cast<int64_t>(std::stoll(str, &pos));
+    Assert(pos == str.size(), "Unprocessed characters found while converting to long: " + str);
+    return converted;
+  };
 }
 
 template <>
 inline std::function<float(const std::string&)> CsvConverter<float>::_get_conversion_function() {
-  return [](const std::string& str) { return std::stof(str); };
+  return [](const std::string& str) {
+    size_t pos;
+    auto converted = std::stof(str, &pos);
+    Assert(pos == str.size(), "Unprocessed characters found while converting to float: " + str);
+    return converted;
+  };
 }
 
 template <>
 inline std::function<double(const std::string&)> CsvConverter<double>::_get_conversion_function() {
-  return [](const std::string& str) { return std::stod(str); };
+  return [](const std::string& str) {
+    size_t pos;
+    auto converted = std::stod(str, &pos);
+    Assert(pos == str.size(), "Unprocessed characters found while converting to double: " + str);
+    return converted;
+  };
 }
 
 template <>
