@@ -1,0 +1,9 @@
+{
+    "chunk_size": 0,
+    "columns": [
+        {
+            "name": "a",
+            "type": "double"
+        }
+    ]
+}

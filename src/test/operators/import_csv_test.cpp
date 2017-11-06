@@ -304,4 +304,15 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   }
 }
 
+TEST_F(OperatorsImportCsvTest, UnconvertedCharactersThrows) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_int.csv");
+  EXPECT_THROW(importer->execute(), std::logic_error);
+
+  importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_float.csv");
+  EXPECT_THROW(importer->execute(), std::logic_error);
+
+  importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_double.csv");
+  EXPECT_THROW(importer->execute(), std::logic_error);
+}
+
 }  // namespace opossum
