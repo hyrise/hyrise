@@ -472,9 +472,8 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumnWithoutNulls) {
+TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   auto table = load_table("src/test/tables/int_float.tbl", 4);
-  DictionaryCompression::compress_table(*table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
