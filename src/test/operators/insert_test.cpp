@@ -9,6 +9,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
+#include "operators/validate.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -52,7 +53,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto t_name = "test1";
   auto t_name2 = "test2";
 
-  // 3 Rows, column_size = 4
+  // 3 Rows, chunk_size = 4
   auto t = load_table("src/test/tables/int.tbl", 4u);
   StorageManager::get().add_table(t_name, t);
 
@@ -125,6 +126,31 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   EXPECT_EQ(t->chunk_count(), 7u);
   EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 2u);
   EXPECT_EQ(t->row_count(), 13u);
+}
+
+TEST_F(OperatorsInsertTest, Rollback) {
+  auto t_name = "test3";
+
+  auto t = load_table("src/test/tables/int.tbl", 4u);
+  StorageManager::get().add_table(t_name, t);
+
+  auto gt1 = std::make_shared<GetTable>(t_name);
+  gt1->execute();
+
+  auto ins = std::make_shared<Insert>(t_name, gt1);
+  auto context1 = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context1);
+  ins->execute();
+  context1->rollback();
+
+  auto gt2 = std::make_shared<GetTable>(t_name);
+  gt2->execute();
+  auto validate = std::make_shared<Validate>(gt2);
+  auto context2 = TransactionManager::get().new_transaction_context();
+  validate->set_transaction_context(context2);
+  validate->execute();
+
+  EXPECT_EQ(validate->get_output()->row_count(), 3u);
 }
 
 }  // namespace opossum
