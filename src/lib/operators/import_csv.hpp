@@ -23,12 +23,13 @@ namespace opossum {
 class ImportCsv : public AbstractReadOnlyOperator {
  public:
   /*
-   * @param filename    Path to the input file.
-   * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param meta        Optional. A specific meta config, to override the given .json file.
+   * @param filename      Path to the input file.
+   * @param tablename     Optional. Name of the table to store/look up in the StorageManager.
+   * @param meta          Optional. A specific meta config, to override the given .json file.
    */
   explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt,
                      const std::optional<CsvMeta> csv_meta = std::nullopt);
+
   explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
                      const std::optional<std::string> tablename = std::nullopt);
 
