@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -25,6 +26,8 @@ TEST_F(StorageStorageManagerTest, GetTable) {
   auto t3 = sm.get_table("first_table");
   auto t4 = sm.get_table("second_table");
   EXPECT_THROW(sm.get_table("third_table"), std::exception);
+  auto names = std::vector<std::string>{"first_table", "second_table"};
+  EXPECT_EQ(sm.table_names(), names);
 }
 
 TEST_F(StorageStorageManagerTest, DropTable) {
