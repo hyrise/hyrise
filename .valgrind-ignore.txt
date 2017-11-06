@@ -1,0 +1,55 @@
+{
+   <sqlite3-malloc-possible>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   ...
+   obj:*libsqlite3.so.*
+   ...
+}
+
+{
+   <sqlite3-malloc-definite>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   obj:*libsqlite3.so.*
+   ...
+}
+
+{
+   <sqlite3-realloc>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   ...
+   obj:*libsqlite3.so.*
+   ...
+}
+
+{
+   <gtest_says_to_ignore_this_1>
+   Memcheck:Value8
+   ...
+   fun:*PrintByteSegmentInObjectTo*
+   ...
+}
+
+{
+   <gtest_says_to_ignore_this_2>
+   Memcheck:Cond
+   ...
+   fun:*PrintByteSegmentInObjectTo*
+   ...
+}
+
+{
+   <pgasus_topology_hwloc>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   obj:*libhwloc.so*
+   fun:hwloc_topology_init
+   fun:*Topology*
+}
