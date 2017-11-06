@@ -454,7 +454,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value > left_min_value;
       });
       if (result.has_value()) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.value()));
+        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
       // Look for the first rhs value that is bigger or equal to the smallest lhs value.
@@ -462,7 +462,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value >= left_min_value;
       });
       if (result.has_value()) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.value()));
+        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_op == ScanType::OpGreaterThan) {
       // Look for the first rhs value that is smaller than the biggest lhs value.
@@ -470,7 +470,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value < left_max_value;
       });
       if (result.has_value()) {
-        _emit_left_null_combinations(0, result.value().to(end_of_right_table));
+        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
       // Look for the first rhs value that is smaller or equal to the biggest lhs value.
@@ -478,7 +478,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value <= left_max_value;
       });
       if (result.has_value()) {
-        _emit_left_null_combinations(0, result.value().to(end_of_right_table));
+        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
       }
     }
   }
@@ -499,7 +499,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value < right_max_value;
       });
       if (result.has_value()) {
-        _emit_right_null_combinations(0, result.value().to(end_of_left_table));
+        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
       // Look for the last lhs value that is smaller or equal than the biggest rhs value.
@@ -507,7 +507,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value <= right_max_value;
       });
       if (result.has_value()) {
-        _emit_right_null_combinations(0, result.value().to(end_of_left_table));
+        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
       }
     } else if (_op == ScanType::OpGreaterThan) {
       // Look for the first lhs value that is bigger than the smallest rhs value.
@@ -515,7 +515,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value > right_min_value;
       });
       if (result.has_value()) {
-        _emit_right_null_combinations(0, TablePosition(0, 0).to(result.value()));
+        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
       // Look for the first lhs value that is bigger or equal to the smallest rhs value.
@@ -523,7 +523,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         return value >= right_min_value;
       });
       if (result.has_value()) {
-        _emit_right_null_combinations(0, TablePosition(0, 0).to(result.value()));
+        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     }
   }
