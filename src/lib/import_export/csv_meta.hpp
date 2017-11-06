@@ -33,12 +33,14 @@ struct ParseConfig {
 /*
  * Meta information for a CSV table:
  *
- * chunk_size desired chunk size of the table
- * config     characters and options that specify how the CSV should be parsed (delimiter, separator, etc.)
- * columns    column meta information (name, type, nullable) for each column
+ * chunk_size    desired chunk size of the table
+ * auto_compress if true, use DictionaryCompression on each chunk after it is parsed.
+ * config        characters and options that specify how the CSV should be parsed (delimiter, separator, etc.)
+ * columns       column meta information (name, type, nullable) for each column
  */
 struct CsvMeta {
   size_t chunk_size;
+  bool auto_compress = false;
   ParseConfig config;
   std::vector<ColumnMeta> columns;
 

@@ -37,6 +37,8 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
   Assert(static_cast<int64_t>(chunk_size) >= 0, "CSV meta file, chunk_size must not be negative.");
   meta.chunk_size = chunk_size;
 
+  assign_if_exists(meta.auto_compress, json, "auto_compress");
+
   // Apply only parts of the ParseConfig that are provided, use default values otherwise
   ParseConfig config{};
   if (json.find("config") != json.end()) {
@@ -80,7 +82,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
-  json = nlohmann::json{{"chunk_size", meta.chunk_size}, {"config", config}, {"columns", columns}};
+  json = nlohmann::json{{"chunk_size", meta.chunk_size}, {"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
 }
 
 bool operator==(const ColumnMeta& lhs, const ColumnMeta& rhs) {
@@ -95,7 +97,7 @@ bool operator==(const ParseConfig& lhs, const ParseConfig& rhs) {
 }
 
 bool operator==(const CsvMeta& lhs, const CsvMeta& rhs) {
-  return std::tie(lhs.chunk_size, lhs.config, lhs.columns) == std::tie(rhs.chunk_size, rhs.config, rhs.columns);
+  return std::tie(lhs.chunk_size, lhs.auto_compress, lhs.config, lhs.columns) == std::tie(rhs.chunk_size, rhs.auto_compress, rhs.config, rhs.columns);
 }
 
 }  // namespace opossum

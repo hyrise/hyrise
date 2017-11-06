@@ -1,5 +1,6 @@
 {
     "chunk_size": 2,
+    "auto_compress": false,
     "columns": [
         {
             "name": "a",

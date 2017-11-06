@@ -21,8 +21,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
-                                        const bool auto_compress) {
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
   // If no meta info is given as a parameter, look for a json file
   if (csv_meta == std::nullopt) {
     _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
@@ -30,10 +29,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     _meta = *csv_meta;
   }
 
-  return _parse(filename, auto_compress);
-}
-
-std::shared_ptr<Table> CsvParser::_parse(const std::string& filename, const bool auto_compress) {
   auto table = _create_table_from_meta();
 
   std::ifstream csvfile{filename};
@@ -63,9 +58,9 @@ std::shared_ptr<Table> CsvParser::_parse(const std::string& filename, const bool
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk, auto_compress]() {
+    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
       _parse_into_chunk(relevant_content, field_ends, *table, chunk);
-      if (auto_compress && chunk.size() == _meta.chunk_size) {
+      if (_meta.auto_compress && chunk.size() == _meta.chunk_size) {
         DictionaryCompression::compress_chunk(table->column_types(), chunk);
       }
     }));

@@ -273,7 +273,10 @@ TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
 }
 
 TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv", true);
+  std::string csv_file = "src/test/csv/float_int_large.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.auto_compress = true;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(20);
