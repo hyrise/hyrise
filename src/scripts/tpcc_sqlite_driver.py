@@ -58,24 +58,22 @@ def executemany_sql(cur, statement, params=()):
     cur.executemany(statement, params)
 
 def load_table(cur, directory, name, name_override=None):
-    csv_meta_path = '%s/%s.csv.meta' % (directory, name)
+    csv_meta_path = '%s/%s.csv.json' % (directory, name)
     csv_path = '%s/%s.csv' % (directory, name)
 
     in_db_name = name_override if name_override is not None else name
 
-    with open(csv_meta_path) as csv_file:
-        reader = csv.reader(csv_file, delimiter=',', quotechar='\"')
-
+    with open(csv_meta_path) as meta_file:
+        meta_information = json.load(meta_file)
         columns = []
 
         csv_type_to_sql = {'int': 'INTEGER',
                            'float': 'REAL',
                            'string': 'TEXT'}
 
-        for row in reader:
-            if row[0] == 'ColumnType':
-                column_type = csv_type_to_sql[row[2].lower()]
-                columns.append((row[1], column_type))
+        for column in meta_information['columns']:
+            column_type = csv_type_to_sql[column['type'].lower()]
+            columns.append((column['name'], column_type))
 
     items_decl = ','.join([' '.join(column) for column in columns])
     placeholders = ','.join(['?' for column in columns])

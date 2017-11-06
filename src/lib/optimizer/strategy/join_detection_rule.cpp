@@ -52,6 +52,10 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
     const std::shared_ptr<JoinNode>& cross_join) {
   Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
 
+  // Everytime we traverse a node which we're the right child of, the ColumnIDs a predicate needs to reference become
+  // offsetted
+  auto column_id_offset = 0;
+
   // Go up in AST to find corresponding PredicateNode
   std::shared_ptr<AbstractASTNode> node = cross_join;
   while (true) {
@@ -63,6 +67,10 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
      */
     if (parents.empty() || parents.size() > 1) {
       break;
+    }
+
+    if (node->get_child_side(parents[0]) == ASTChildSide::Right) {
+      column_id_offset += parents[0]->left_child()->output_column_count();
     }
 
     node = parents[0];
@@ -98,8 +106,18 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
        * IMPORTANT: Since we only traversed nodes that do not change the column order when looking for the Predicate,
        * we can do this by the simple range check in _is_join_condition()
        */
-      const auto predicate_left_column_id = predicate_node->column_id();
-      const auto predicate_right_column_id = boost::get<ColumnID>(predicate_node->value());
+      auto predicate_left_column_id = predicate_node->column_id();
+      auto predicate_right_column_id = boost::get<ColumnID>(predicate_node->value());
+
+      // The Predicate refers to a subtree left of the subtree the Cross Join came from
+      if (predicate_left_column_id < column_id_offset || predicate_right_column_id < column_id_offset) {
+        continue;
+      }
+
+      // Calculate column ids relative to the leftmost output column of the CrossJoin subtree.
+      predicate_left_column_id -= column_id_offset;
+      predicate_right_column_id -= column_id_offset;
+
       const auto cross_left_num_cols = cross_join->left_child()->output_column_count();
       const auto cross_right_num_cols = cross_join->right_child()->output_column_count();
 

@@ -15,7 +15,8 @@ set(
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
-    import_export/csv.hpp
+    import_export/csv_meta.cpp
+    import_export/csv_meta.hpp
     import_export/csv_parser.cpp
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp

@@ -25,15 +25,27 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& n
     // Gather adjacent PredicateNodes
     auto current_node = node;
     while (current_node->type() == ASTNodeType::Predicate) {
+      // Once a node has multiple parents, we're not talking about a Predicate chain anymore
+      if (current_node->parents().size() > 1) {
+        break;
+      }
+
       predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
       current_node = current_node->left_child();
     }
 
-    // Sort PredicateNodes in descending order with regards to the expected row_count
+    /**
+     * A chain of predicates was found.
+     * Sort PredicateNodes in descending order with regards to the expected row_count
+     * Continue rule in deepest child
+     */
     if (predicate_nodes.size() > 1) {
       reordered = _reorder_predicates(predicate_nodes);
+      reordered |= _apply_to_children(predicate_nodes.back());
+    } else {
+      // No chain was found, continue with the current nodes children.
+      reordered = _apply_to_children(node);
     }
-    reordered |= _apply_to_children(predicate_nodes.back());
   } else {
     reordered = _apply_to_children(node);
   }
