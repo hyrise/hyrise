@@ -12,6 +12,7 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
+    import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     operators/aggregate_test.cpp
@@ -54,6 +55,7 @@ set(
     optimizer/column_statistics_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/expression_test.cpp
+    optimizer/join_graph_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/table_statistics_join_test.cpp

@@ -1,0 +1,13 @@
+{
+    "chunk_size": 0,
+    "columns": [
+        {
+            "name": "b",
+            "type": "float"
+        },
+        {
+            "name": "a",
+            "type": "int"
+        }
+    ]
+}

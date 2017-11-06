@@ -37,6 +37,7 @@ STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(int32_t, CpuID);
+STRONG_TYPEDEF(size_t, JoinVertexID);  // Index of a vertex in a JoinGraph
 
 namespace opossum {
 
@@ -109,6 +110,7 @@ constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
+constexpr JoinVertexID INVALID_JOIN_VERTEX_ID{std::numeric_limits<JoinVertexID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
@@ -215,6 +217,8 @@ enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
+
+enum class DescriptionMode { SingleLine, MultiLine };
 
 class Noncopyable {
  protected:

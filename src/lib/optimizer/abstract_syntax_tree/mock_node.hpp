@@ -22,8 +22,8 @@ class MockNode : public AbstractASTNode {
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
-  std::string description() const override;
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string description(DescriptionMode mode) const override;
+  std::string get_qualified_column_name(ColumnID column_id) const override;
 
  private:
   std::string _name;

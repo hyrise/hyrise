@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -14,13 +15,15 @@ UnionNode::UnionNode(UnionMode union_mode) : AbstractASTNode(ASTNodeType::Union)
 
 UnionMode UnionNode::union_mode() const { return _union_mode; }
 
-std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode); }
+std::string UnionNode::description(DescriptionMode mode) const {
+  return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode);
+}
 
-std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
+std::string UnionNode::get_qualified_column_name(ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need children to determine Column name");
 
-  const auto left_column_name = left_child()->get_verbose_column_name(column_id);
-  const auto right_column_name = right_child()->get_verbose_column_name(column_id);
+  const auto left_column_name = left_child()->get_qualified_column_name(column_id);
+  const auto right_column_name = right_child()->get_qualified_column_name(column_id);
 
   Assert(left_column_name == right_column_name, "Input column names don't match");
 
@@ -43,30 +46,24 @@ const std::vector<ColumnID>& UnionNode::output_column_ids_to_input_column_ids() 
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
-  Fail("Statistics for UNION not yet implemented");
-  return nullptr;  // Return something
+  DebugAssert(left_child && right_child, "Invalid input, child(ren) missing");
+  return left_child->get_statistics()->generate_union_positions_statistics(right_child->get_statistics());
 }
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
-  /**
-   * This function has to be overwritten if columns or their order are in any way redefined by this Node.
-   * Examples include Projections, Aggregates, and Joins.
-   */
-  DebugAssert(left_child() && !right_child(),
-              "Node has no or two inputs and therefore needs to override this function");
-
-  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
-  if (!named_column_reference_without_local_alias) {
+  auto named_column_reference_without_node_alias = _resolve_node_alias(named_column_reference);
+  if (!named_column_reference_without_node_alias) {
     return {};
   } else {
     const auto column_id_in_left =
-        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
 #if IS_DEBUG
     const auto column_id_in_right =
-        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
     DebugAssert(column_id_in_left == column_id_in_right, "Input layouts don't match");
 #endif
+
     return column_id_in_left;
   }
 }

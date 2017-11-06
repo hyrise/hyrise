@@ -13,7 +13,7 @@ namespace opossum {
 
 InsertNode::InsertNode(const std::string table_name) : AbstractASTNode(ASTNodeType::Insert), _table_name(table_name) {}
 
-std::string InsertNode::description() const {
+std::string InsertNode::description(DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Insert] Into table '" << _table_name << "'";

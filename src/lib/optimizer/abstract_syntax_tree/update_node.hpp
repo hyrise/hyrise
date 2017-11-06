@@ -16,7 +16,7 @@ class UpdateNode : public AbstractASTNode {
   explicit UpdateNode(const std::string& table_name,
                       const std::vector<std::shared_ptr<Expression>>& column_expressions);
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   const std::string& table_name() const;
 

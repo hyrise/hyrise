@@ -26,7 +26,7 @@ class JoinNode : public AbstractASTNode {
   const std::optional<ScanType>& scan_type() const;
   JoinMode join_mode() const;
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
@@ -40,7 +40,7 @@ class JoinNode : public AbstractASTNode {
   std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string get_qualified_column_name(ColumnID column_id) const override;
 
   ColumnOrigin get_column_origin(ColumnID column_id) const override;
 

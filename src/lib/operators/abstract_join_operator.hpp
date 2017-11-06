@@ -18,7 +18,7 @@ namespace opossum {
 // to positions - i.e., your sorting order might be disturbed
 
 // find more information about joins in our Wiki:
-// https://github.com/hyrise/zweirise/wiki/Operator-Join
+// https://github.com/hyrise/hyrise/wiki/Operator-Join
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:

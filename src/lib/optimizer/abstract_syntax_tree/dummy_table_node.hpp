@@ -16,7 +16,7 @@ class DummyTableNode : public AbstractASTNode {
  public:
   DummyTableNode();
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;

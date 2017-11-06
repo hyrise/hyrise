@@ -58,7 +58,7 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::clone() cons
 }
 
 template <typename ColumnType>
-ColumnType ColumnStatistics<ColumnType>::_get_or_calculate_min() const {
+ColumnType ColumnStatistics<ColumnType>::get_or_calculate_min() const {
   if (!_min) {
     _initialize_min_max();
   }
@@ -66,7 +66,7 @@ ColumnType ColumnStatistics<ColumnType>::_get_or_calculate_min() const {
 }
 
 template <typename ColumnType>
-ColumnType ColumnStatistics<ColumnType>::_get_or_calculate_max() const {
+ColumnType ColumnStatistics<ColumnType>::get_or_calculate_max() const {
   if (!_max) {
     _initialize_min_max();
   }
@@ -114,9 +114,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_r
                                                                                                ColumnType maximum) {
   // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
-  auto common_min = std::max(minimum, _get_or_calculate_min());
-  auto common_max = std::min(maximum, _get_or_calculate_max());
-  if (common_min == _get_or_calculate_min() && common_max == _get_or_calculate_max()) {
+  auto common_min = std::max(minimum, get_or_calculate_min());
+  auto common_max = std::min(maximum, get_or_calculate_max());
+  if (common_min == get_or_calculate_min() && common_max == get_or_calculate_max()) {
     return {_non_null_value_ratio, _this_without_null_values()};
   }
   float selectivity = 0.f;
@@ -137,10 +137,9 @@ float ColumnStatistics<ColumnType>::estimate_selectivity_for_range(ColumnType mi
   // for decimals the size of the range is used
   if (std::is_integral<ColumnType>::value) {
     return static_cast<float>(maximum - minimum + 1) /
-           static_cast<float>(_get_or_calculate_max() - _get_or_calculate_min() + 1);
+           static_cast<float>(get_or_calculate_max() - get_or_calculate_min() + 1);
   } else {
-    return static_cast<float>(maximum - minimum) /
-           static_cast<float>(_get_or_calculate_max() - _get_or_calculate_min());
+    return static_cast<float>(maximum - minimum) / static_cast<float>(get_or_calculate_max() - get_or_calculate_min());
   }
 }
 
@@ -157,7 +156,7 @@ template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_equals_predicate(ColumnType value) {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   float new_distinct_count = 1.f;
-  if (value < _get_or_calculate_min() || value > _get_or_calculate_max()) {
+  if (value < get_or_calculate_min() || value > get_or_calculate_max()) {
     new_distinct_count = 0.f;
   }
   auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, new_distinct_count, value, value);
@@ -167,11 +166,11 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_e
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_not_equals_predicate(ColumnType value) {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
-  if (value < _get_or_calculate_min() || value > _get_or_calculate_max()) {
+  if (value < get_or_calculate_min() || value > get_or_calculate_max()) {
     return {_non_null_value_ratio, _this_without_null_values()};
   }
-  auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, _get_or_calculate_min(),
-                                                              _get_or_calculate_max());
+  auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, get_or_calculate_min(),
+                                                              get_or_calculate_max());
   return {_non_null_value_ratio * (1 - 1.f / distinct_count()), column_statistics};
 }
 
@@ -192,7 +191,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // for integers "< value" means that the new max is value <= value - 1
       // for decimals "< value" means that the new max is value <= value - ε
       if (std::is_integral<ColumnType>::value) {
-        return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value - 1);
+        return _create_column_stats_for_range_predicate(get_or_calculate_min(), casted_value - 1);
       }
       // intentionally no break
       // if ColumnType is a floating point number,
@@ -200,14 +199,14 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       [[fallthrough]];
     }
     case ScanType::OpLessThanEquals: {
-      return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value);
+      return _create_column_stats_for_range_predicate(get_or_calculate_min(), casted_value);
     }
     case ScanType::OpGreaterThan: {
       // distinction between integers and decimals
       // for integers "> value" means that the new min value is >= value + 1
       // for decimals "> value" means that the new min value is >= value + ε
       if (std::is_integral<ColumnType>::value) {
-        return _create_column_stats_for_range_predicate(casted_value + 1, _get_or_calculate_max());
+        return _create_column_stats_for_range_predicate(casted_value + 1, get_or_calculate_max());
       }
       // intentionally no break
       // if ColumnType is a floating point number,
@@ -215,7 +214,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       [[fallthrough]];
     }
     case ScanType::OpGreaterThanEquals: {
-      return _create_column_stats_for_range_predicate(casted_value, _get_or_calculate_max());
+      return _create_column_stats_for_range_predicate(casted_value, get_or_calculate_max());
     }
     case ScanType::OpBetween: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
@@ -261,12 +260,12 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
   switch (scan_type) {
     case ScanType::OpEquals: {
       auto column_statistics =
-          std::make_shared<ColumnStatistics>(_column_id, 1, _get_or_calculate_min(), _get_or_calculate_max());
+          std::make_shared<ColumnStatistics>(_column_id, 1, get_or_calculate_min(), get_or_calculate_max());
       return {1.f / distinct_count(), column_statistics};
     }
     case ScanType::OpNotEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1,
-                                                                  _get_or_calculate_min(), _get_or_calculate_max());
+                                                                  get_or_calculate_min(), get_or_calculate_max());
       return {(distinct_count() - 1.f) / distinct_count(), column_statistics};
     }
     case ScanType::OpLessThan:
@@ -275,7 +274,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
     case ScanType::OpGreaterThanEquals: {
       auto column_statistics =
           std::make_shared<ColumnStatistics>(_column_id, distinct_count() * DEFAULT_OPEN_ENDED_SELECTIVITY,
-                                             _get_or_calculate_min(), _get_or_calculate_max());
+                                             get_or_calculate_min(), get_or_calculate_max());
       return {_non_null_value_ratio * DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
@@ -284,7 +283,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
-      ColumnSelectivityResult output = _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value2);
+      ColumnSelectivityResult output = _create_column_stats_for_range_predicate(get_or_calculate_min(), casted_value2);
       // return, if value2 < min
       if (output.selectivity == 0.f) {
         return output;
@@ -292,7 +291,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // create statistics, if value2 >= max
       if (output.column_statistics == shared_from_this()) {
         output.column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count(),
-                                                                      _get_or_calculate_min(), _get_or_calculate_max());
+                                                                      get_or_calculate_min(), get_or_calculate_max());
       }
       // apply default selectivity for open ended
       output.selectivity *= DEFAULT_OPEN_ENDED_SELECTIVITY;
@@ -372,8 +371,8 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
 
   // for predicate "col_left < col_right": col_left statistics = this and col_right statistics = right_stats
 
-  auto overlapping_range_min = std::max(_get_or_calculate_min(), right_stats->_get_or_calculate_min());
-  auto overlapping_range_max = std::min(_get_or_calculate_max(), right_stats->_get_or_calculate_max());
+  auto overlapping_range_min = std::max(get_or_calculate_min(), right_stats->get_or_calculate_min());
+  auto overlapping_range_max = std::min(get_or_calculate_max(), right_stats->get_or_calculate_max());
 
   // calculate ratio of values before, in and above the common value range
   float left_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_min, overlapping_range_max);
@@ -385,27 +384,27 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
   float right_below_overlapping_ratio = 0.f;
   float right_above_overlapping_ratio = 0.f;
   if (std::is_integral<ColumnType>::value) {
-    if (_get_or_calculate_min() < overlapping_range_min) {
-      left_below_overlapping_ratio = estimate_selectivity_for_range(_get_or_calculate_min(), overlapping_range_min - 1);
+    if (get_or_calculate_min() < overlapping_range_min) {
+      left_below_overlapping_ratio = estimate_selectivity_for_range(get_or_calculate_min(), overlapping_range_min - 1);
     }
-    if (overlapping_range_max < _get_or_calculate_max()) {
-      left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max + 1, _get_or_calculate_max());
+    if (overlapping_range_max < get_or_calculate_max()) {
+      left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max + 1, get_or_calculate_max());
     }
-    if (right_stats->_get_or_calculate_min() < overlapping_range_min) {
+    if (right_stats->get_or_calculate_min() < overlapping_range_min) {
       right_below_overlapping_ratio =
-          right_stats->estimate_selectivity_for_range(right_stats->_get_or_calculate_min(), overlapping_range_min - 1);
+          right_stats->estimate_selectivity_for_range(right_stats->get_or_calculate_min(), overlapping_range_min - 1);
     }
-    if (overlapping_range_max < right_stats->_get_or_calculate_max()) {
+    if (overlapping_range_max < right_stats->get_or_calculate_max()) {
       right_above_overlapping_ratio =
-          right_stats->estimate_selectivity_for_range(overlapping_range_max + 1, right_stats->_get_or_calculate_max());
+          right_stats->estimate_selectivity_for_range(overlapping_range_max + 1, right_stats->get_or_calculate_max());
     }
   } else {
-    left_below_overlapping_ratio = estimate_selectivity_for_range(_get_or_calculate_min(), overlapping_range_min);
-    left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max, _get_or_calculate_max());
+    left_below_overlapping_ratio = estimate_selectivity_for_range(get_or_calculate_min(), overlapping_range_min);
+    left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max, get_or_calculate_max());
     right_below_overlapping_ratio =
-        right_stats->estimate_selectivity_for_range(right_stats->_get_or_calculate_min(), overlapping_range_min);
+        right_stats->estimate_selectivity_for_range(right_stats->get_or_calculate_min(), overlapping_range_min);
     right_above_overlapping_ratio =
-        right_stats->estimate_selectivity_for_range(overlapping_range_max, right_stats->_get_or_calculate_max());
+        right_stats->estimate_selectivity_for_range(overlapping_range_max, right_stats->get_or_calculate_max());
   }
 
   // calculate ratio of distinct values in common value range
@@ -471,31 +470,31 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     }
     case ScanType::OpNotEquals: {
       auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, distinct_count(),
-                                                                      _get_or_calculate_min(), _get_or_calculate_max());
-      auto new_right_column_stats = std::make_shared<ColumnStatistics>(
-          right_stats->_column_id, right_stats->distinct_count(), right_stats->_get_or_calculate_min(),
-          right_stats->_get_or_calculate_max());
+                                                                      get_or_calculate_min(), get_or_calculate_max());
+      auto new_right_column_stats =
+          std::make_shared<ColumnStatistics>(right_stats->_column_id, right_stats->distinct_count(),
+                                             right_stats->get_or_calculate_min(), right_stats->get_or_calculate_max());
       return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpLessThan: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
-                                                           _get_or_calculate_min(),
-                                                           right_stats->_get_or_calculate_max(), false);
+                                                           get_or_calculate_min(), right_stats->get_or_calculate_max(),
+                                                           false);
     }
     case ScanType::OpLessThanEquals: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
-                                                           _get_or_calculate_min(),
-                                                           right_stats->_get_or_calculate_max(), true);
+                                                           get_or_calculate_min(), right_stats->get_or_calculate_max(),
+                                                           true);
     }
     case ScanType::OpGreaterThan: {
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
-                                                           right_stats->_get_or_calculate_min(),
-                                                           _get_or_calculate_max(), false);
+                                                           right_stats->get_or_calculate_min(), get_or_calculate_max(),
+                                                           false);
     }
     case ScanType::OpGreaterThanEquals: {
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
-                                                           right_stats->_get_or_calculate_min(),
-                                                           _get_or_calculate_max(), true);
+                                                           right_stats->get_or_calculate_min(), get_or_calculate_max(),
+                                                           true);
     }
     // case ScanType::OpBetween is not supported for ColumnID as TableScan does not support this
     default: {
@@ -522,6 +521,25 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
 
   return {_non_null_value_ratio * right_stats->_non_null_value_ratio, _this_without_null_values(),
           right_stats->_this_without_null_values()};
+}
+
+template <typename ColumnType>
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::estimate_union_positions(
+    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics) {
+  auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(right_base_column_statistics);
+  DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
+
+  const auto distinct_count = this->distinct_count() + right_stats->distinct_count();
+  const auto min = std::min(get_or_calculate_min(), right_stats->get_or_calculate_min());
+  const auto max = std::max(get_or_calculate_max(), right_stats->get_or_calculate_max());
+
+  // TODO(anybody) this is just a hack to add *something* here
+  const auto non_null_value_ratio = 1.0f - ((null_value_ratio() + right_stats->null_value_ratio()) / 2.0f);
+
+  auto union_positions_column_statistics =
+      std::make_shared<ColumnStatistics<ColumnType>>(_column_id, distinct_count, min, max, non_null_value_ratio);
+
+  return union_positions_column_statistics;
 }
 
 template <typename ColumnType>

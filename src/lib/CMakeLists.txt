@@ -15,7 +15,8 @@ set(
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
-    import_export/csv.hpp
+    import_export/csv_meta.cpp
+    import_export/csv_meta.hpp
     import_export/csv_parser.cpp
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
@@ -143,6 +144,10 @@ set(
     optimizer/column_statistics.hpp
     optimizer/expression.cpp
     optimizer/expression.hpp
+    optimizer/join_graph.cpp
+    optimizer/join_graph.hpp
+    optimizer/join_graph_builder.cpp
+    optimizer/join_graph_builder.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -155,6 +160,12 @@ set(
     optimizer/table_statistics.hpp
     planviz/ast_visualizer.cpp
     planviz/ast_visualizer.hpp
+    planviz/graphviz_tools.cpp
+    planviz/graphviz_tools.hpp
+    planviz/dot_config.cpp
+    planviz/dot_config.hpp
+    planviz/join_graph_visualizer.cpp
+    planviz/join_graph_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -47,6 +48,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Locks all parents and returns them as shared_ptrs
    */
   std::vector<std::shared_ptr<AbstractASTNode>> parents() const;
+
+  size_t num_parents() const;
 
   void remove_parent(const std::shared_ptr<AbstractASTNode>& parent);
   void clear_parents();
@@ -253,16 +256,16 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * Returns a string describing this node, but nothing about its children.
    */
-  virtual std::string description() const = 0;
+  virtual std::string description(DescriptionMode mode = DescriptionMode::SingleLine) const = 0;
 
   /**
    * Generate a name for a column that contains all aliases it went through as well as the name of the table that it
    * originally came from, if any
    */
-  virtual std::string get_verbose_column_name(ColumnID column_id) const;
+  virtual std::string get_qualified_column_name(ColumnID column_id) const;
 
   /**
-   * @returns {get_verbose_column_name(0), ..., get_verbose_column_name(n-1)}
+   * @returns {get_qualified_column_name(0), ..., get_qualified_column_name(n-1)}
    */
   std::vector<std::string> get_verbose_column_names() const;
   // @}
@@ -298,7 +301,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * only operate on the column name. If an alias for this subtree is set, but this reference does not match
    * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+  std::optional<NamedColumnReference> _resolve_node_alias(const NamedColumnReference& named_column_reference) const;
 
   // Calls map_column_ids() on this nodes parents, if any exist.
   void _propagate_column_id_mapping_to_parents(const ColumnIDMapping& column_id_mapping);

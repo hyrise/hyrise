@@ -23,7 +23,15 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
   _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
 }
 
-std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
+std::string StoredTableNode::description(DescriptionMode mode) const {
+  auto desc = "[StoredTable] Name: '" + _table_name + "'";
+
+  if (_table_alias) {
+    desc += " AS " + *_table_alias;
+  }
+
+  return desc;
+}
 
 const std::vector<ColumnID>& StoredTableNode::output_column_ids_to_input_column_ids() const {
   DebugAssert(_output_column_ids_to_input_column_ids, "Not initialized");
@@ -86,7 +94,7 @@ std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std
   return column_ids;
 }
 
-std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
+std::string StoredTableNode::get_qualified_column_name(ColumnID column_id) const {
   if (_table_alias) {
     return "(" + _table_name + " AS " + *_table_alias + ")." + output_column_names()[column_id];
   }
