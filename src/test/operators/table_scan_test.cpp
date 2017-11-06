@@ -479,8 +479,8 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumnWithoutNulls) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::OpEquals, {}}, {ScanType::OpNotEquals, {12345, 123, 1234}}};
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {}},
+                                                                     {ScanType::OpNotEquals, {12345, 123, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
