@@ -45,6 +45,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
+   * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
    * Column name lengths   | ColumnNameLength array                |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
@@ -88,6 +89,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column Type           | ColumnType                            |   1
+   * Null Values'          | vector<bool> (BoolAsByteType)         |   rows * 1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<StringLength>                  |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
@@ -95,6 +97,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
+   * ': These fields are only written if the column is nullable.
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
