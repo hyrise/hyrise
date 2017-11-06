@@ -27,8 +27,9 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   StorageManager::get().add_table("table_dict", table_dict);
 
   auto compression_task1 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{0});
-  compression_task1->set_done_callback([](){
-    auto compression_task2 = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{1}, ChunkID{2}});
+  compression_task1->set_done_callback([]() {
+    auto compression_task2 =
+        std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{1}, ChunkID{2}});
     compression_task2->execute();
   });
   compression_task1->execute();
@@ -54,8 +55,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   auto table_dict = load_table("src/test/tables/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_dict", table_dict);
 
-  auto compression =
-      std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
+  auto compression = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
   compression->execute();
 
   constexpr auto chunk_count = 2u;
