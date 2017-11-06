@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <set>
 #include <string>
@@ -112,6 +113,25 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
   EXPECT_EQ(std::distance(leaf02->begin(), leaf02->end()), 1);
   EXPECT_EQ(*(leaf02->begin()), 0x00000006u);
   EXPECT_FALSE(std::find(leaf02->begin(), leaf02->end(), static_cast<uint8_t>(0x00000006u)) == leaf02->end());
+}
+
+TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
+  std::vector<int> ints(10001);
+  for (auto i = 0u; i < ints.size(); ++i) {
+    ints[i] = i * 2;
+  }
+  std::random_shuffle(ints.begin(), ints.end());
+
+  auto column = create_dict_column_by_type<int>("int", ints);
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+
+  for (auto i : {0, 10, 100, 1000, 10000}) {
+    EXPECT_EQ(column->get(*index->lower_bound({i})), i);
+    EXPECT_EQ(column->get(*index->lower_bound({i + 1})), i + 2);
+    EXPECT_EQ(column->get(*index->upper_bound({i})), i + 2);
+    EXPECT_EQ(column->get(*index->upper_bound({i + 1})), i + 2);
+    EXPECT_EQ(index->upper_bound({99999}), index->cend());
+  }
 }
 
 }  // namespace opossum
