@@ -74,6 +74,12 @@ TYPED_TEST(JoinFullTest, InnerJoinOnString) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/string_inner_join.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, InnerJoinSingleChunk) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_e, this->_table_wrapper_f, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, InnerRefJoin) {
   this->_table_wrapper_a->execute();
   this->_table_wrapper_b->execute();
