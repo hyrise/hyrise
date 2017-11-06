@@ -4,6 +4,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -24,7 +25,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   if (csv_meta == std::nullopt) {
     _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
   } else {
-    _meta = csv_meta.value();
+    _meta = *csv_meta;
   }
   return _parse(filename);
 }
