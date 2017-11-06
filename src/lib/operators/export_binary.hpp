@@ -89,7 +89,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column Type           | ColumnType                            |   1
-   * Null Values'          | vector<bool> (BoolAsBinaryType)       |   rows * 1
+   * Null Values'          | vector<bool> (BoolAsByteType)         |   rows * 1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<StringLength>                  |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
