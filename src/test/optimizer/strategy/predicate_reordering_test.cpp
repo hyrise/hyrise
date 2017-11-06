@@ -12,6 +12,7 @@
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/union_node.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/expression.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
@@ -281,6 +282,48 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   EXPECT_EQ(reordered->right_child(), predicate_4);
   EXPECT_EQ(reordered->right_child()->left_child(), predicate_3);
   EXPECT_EQ(reordered->right_child()->left_child()->left_child(), predicate_2);
+}
+
+TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
+  /**
+   * If a PredicateNode has multiple parents, it should not be considered for reordering
+   */
+  /**
+   *      _____Union___
+   *    /             /
+   * Predicate_a     /
+   *    \           /
+   *     Predicate_b
+   *         |
+   *       Table
+   *
+   * predicate_a should come before predicate_b - but since Predicate_b has two parents, it can't be reordered
+   */
+
+  /**
+   * The mocked table has one column of int32_ts with the value range 0..100
+   */
+  auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
+  auto table_statistics =
+  std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+
+  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+  auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);
+  auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto table_node = std::make_shared<MockNode>(table_statistics);
+
+  union_node->set_left_child(predicate_a_node);
+  union_node->set_right_child(predicate_b_node);
+  predicate_a_node->set_left_child(predicate_b_node);
+  predicate_b_node->set_left_child(table_node);
+
+  const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
+
+  EXPECT_EQ(reordered, union_node);
+  EXPECT_EQ(reordered->left_child(), predicate_a_node);
+  EXPECT_EQ(reordered->right_child(), predicate_b_node);
+  EXPECT_EQ(predicate_a_node->left_child(), predicate_b_node);
+  EXPECT_EQ(predicate_b_node->left_child(), table_node);
 }
 
 }  // namespace opossum
