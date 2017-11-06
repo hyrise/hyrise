@@ -60,9 +60,6 @@ class ValueColumn : public BaseValueColumn {
   // We cannot always use the materialize method below because sort results might come from different BaseColumns.
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
-  const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(
-      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
-
  protected:
   pmr_concurrent_vector<T> _values;
   std::optional<pmr_concurrent_vector<bool>> _null_values;
