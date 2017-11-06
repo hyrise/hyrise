@@ -472,6 +472,19 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
+TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumnWithoutNulls) {
+  auto table = load_table("src/test/tables/int_float.tbl", 4);
+  DictionaryCompression::compress_table(*table);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
+      {ScanType::OpEquals, {}}, {ScanType::OpNotEquals, {12345, 123, 1234}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
