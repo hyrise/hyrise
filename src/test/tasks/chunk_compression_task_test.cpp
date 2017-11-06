@@ -20,14 +20,15 @@ class ChunkCompressionTaskTest : public BaseTest {
 };
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
-  auto table = load_table("src/test/tables/compression_input.tbl", 6u);
+  auto table = load_table("src/test/tables/compression_input.tbl", 3u);
   StorageManager::get().add_table("table", table);
 
-  auto table_dict = load_table("src/test/tables/compression_input.tbl", 6u);
+  auto table_dict = load_table("src/test/tables/compression_input.tbl", 12u);
   StorageManager::get().add_table("table_dict", table_dict);
 
   auto compression =
-      std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
+      std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{0});
+      std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{1}, ChunkID{2}});
   compression->execute();
 
   ASSERT_TABLE_EQ(table, table_dict);
