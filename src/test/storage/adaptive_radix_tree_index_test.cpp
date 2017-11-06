@@ -125,7 +125,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   auto column = create_dict_column_by_type<int>("int", ints);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
 
-  for (auto i : {0, 10, 100, 1000, 10000}) {
+  for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
     EXPECT_EQ(column->get(*index->lower_bound({i})), i);
     EXPECT_EQ(column->get(*index->lower_bound({i + 1})), i + 2);
     EXPECT_EQ(column->get(*index->upper_bound({i})), i + 2);
