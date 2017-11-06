@@ -26,6 +26,7 @@ RUN apt-get update \
         parallel \
         python2.7 \
         sudo \
+        valgrind \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer

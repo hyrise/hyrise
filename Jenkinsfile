@@ -57,7 +57,7 @@ node {
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
         sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/hyriseSanitizers"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug/hyriseSanitizers"
         }
       }, gccRelease: {
         stage("gcc-release") {
@@ -71,14 +71,14 @@ node {
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/hyriseSanitizers"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release/hyriseSanitizers"
         }
       }, clangReleaseSanitizersNoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-no-numa && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release-no-numa/hyriseSanitizers"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-no-numa/hyriseSanitizers"
         }
-      }, gccDebugCverage: {
+      }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./scripts/coverage.sh gcc-debug-coverage true"
@@ -96,6 +96,10 @@ node {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
             githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
           }
+        }
+      }, memcheck: {
+        stage("valgrind-memcheck") {
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
         }
       }
 
