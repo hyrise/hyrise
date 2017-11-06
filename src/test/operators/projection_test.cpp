@@ -79,9 +79,8 @@ class OperatorsProjectionTest : public BaseTest {
                                                   Expression::create_literal(std::string("A"), std::string("b"))};
 
     // Projection Expression: a + 'hallo' AS b
-    _concat_expr = Projection::ColumnExpressions{Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
-                                                 Expression::create_literal("hallo"), {"b"})};
-
+    _concat_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
+        ExpressionType::Addition, Expression::create_column(ColumnID{0}), Expression::create_literal("hallo"), {"b"})};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;
