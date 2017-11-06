@@ -59,6 +59,7 @@ SELECT SUM(b + b) AS sum_b_b FROM int_float;
 
 -- GROUP BY
 SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;
+SELECT a AS whatever, SUM(b) FROM groupby_int_1gb_1agg GROUP BY whatever;
 SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;
 SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;
 
