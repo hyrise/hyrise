@@ -484,6 +484,18 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   scan_for_null_values(table_wrapper, tests);
 }
 
+TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNulls) {
+  auto table = load_table("src/test/tables/int_float.tbl", 4);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  table_wrapper->execute();
+
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {}},
+                                                                     {ScanType::OpNotEquals, {12345, 123, 1234}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
