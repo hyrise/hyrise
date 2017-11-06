@@ -40,8 +40,8 @@ pmr_vector<std::string> ImportBinary::_read_values(std::ifstream& file, const si
 // specialized implementation for bool values
 template <>
 pmr_vector<bool> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<binary_bool_t> readable_bools(count);
-  file.read(reinterpret_cast<char*>(readable_bools.data()), readable_bools.size() * sizeof(binary_bool_t));
+  pmr_vector<BoolAsByteType> readable_bools(count);
+  file.read(reinterpret_cast<char*>(readable_bools.data()), readable_bools.size() * sizeof(BoolAsByteType));
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 

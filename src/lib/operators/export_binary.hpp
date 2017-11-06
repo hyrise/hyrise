@@ -45,6 +45,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Chunk count           | ChunkID                               |   4
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
+   * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
    * Column name lengths   | ColumnNameLength array                |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
@@ -88,7 +89,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column Type           | ColumnType                            |   1
-   * Null Values'          | vector<bool>                          |   rows * 1
+   * Null Values'          | vector<bool> (BoolAsBinaryType)       |   rows * 1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<StringLength>                  |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
