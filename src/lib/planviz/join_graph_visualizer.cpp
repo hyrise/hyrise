@@ -30,25 +30,22 @@ void JoinGraphVisualizer::visualize(const std::shared_ptr<JoinGraph> &join_graph
   file << "subgraph {" << std::endl;
   file << "node [fontsize=18,shape=record]" << std::endl;
   file << "edge [dir=none]" << std::endl;
-  for (size_t join_vertex_idx = 0; join_vertex_idx < join_graph->vertices().size(); ++join_vertex_idx) {
-    const auto& join_vertex = join_graph->vertices()[join_vertex_idx];
-
+  for (const auto& join_vertex : join_graph->vertices()) {
     /**
      * Generate VertexPredicate descriptions
      */
     std::vector<std::string> predicate_descriptions;
     for (const auto& predicate : join_vertex.predicates) {
-      const auto description =
-        join_vertex.node->get_qualified_column_name(predicate.column_id) + " " +
-        scan_type_to_string.left.at(predicate.scan_type) + " " + boost::lexical_cast<std::string>(predicate.value);
+      const auto description = join_vertex.get_predicate_description(predicate);
       predicate_descriptions.emplace_back(description);
     }
 
-    /**
-     * Generate Vertex label - use description of root of subtree
-     */
+    // Generate Vertex label - use description of root of subtree
     std::string label = join_vertex.node->description();
 
+    /**
+     * Create a "record" layout for the VertexPredicates
+     */
     file << reinterpret_cast<uintptr_t>(&join_vertex) << "[label=\"{" << label;
     if (!predicate_descriptions.empty()) {
       file << " | { Predicates | {";
@@ -60,12 +57,13 @@ void JoinGraphVisualizer::visualize(const std::shared_ptr<JoinGraph> &join_graph
       }
       file << "} }";
     }
+
     file << "}\"]";
     file << std::endl;
   }
 
   /**
-   * CrossJoin edges
+   * CrossJoin edges - displayed as narrow, dotted edges
    */
   file << "edge [style=dotted,penwidth=2]" << std::endl;
   for (size_t join_edge_idx = 0; join_edge_idx < join_graph->edges().size(); ++join_edge_idx) {
@@ -81,7 +79,7 @@ void JoinGraphVisualizer::visualize(const std::shared_ptr<JoinGraph> &join_graph
   }
 
   /**
-   * PredicateJoin edges
+   * PredicateJoin edges - displayed as wider edges with an appropriate label
    */
   file << "edge [style=solid,penwidth=3]" << std::endl;
   for (size_t join_edge_idx = 0; join_edge_idx < join_graph->edges().size(); ++join_edge_idx) {
@@ -94,16 +92,12 @@ void JoinGraphVisualizer::visualize(const std::shared_ptr<JoinGraph> &join_graph
     file << " -> ";
     file << reinterpret_cast<uintptr_t>(&join_graph->vertices()[join_edge.vertex_ids.second]);
 
-    const auto left_column_name = join_graph->vertices()[join_edge.vertex_ids.first].node->get_qualified_column_name(join_edge.column_ids->first);
-    const auto right_column_name = join_graph->vertices()[join_edge.vertex_ids.second].node->get_qualified_column_name(join_edge.column_ids->second);
-    const auto scan_type_name = scan_type_to_string.left.at(*join_edge.scan_type);
+    const auto description = join_graph->get_edge_description(join_edge, DescriptionMode::MultiLine);
 
     const auto color = graphviz_random_color();
 
     file << "[";
-    file << "label=\"" << left_column_name << "\\n";
-    file << scan_type_name << "\\n";
-    file << right_column_name << "\"";
+    file << "label=\"" << description << "\"";
     file << ",";
     file << "color=\"" << color << "\"";
     file << "fontcolor=\"" << color << "\"";

@@ -128,15 +128,9 @@ void JoinGraphBuilder::_traverse_cross_join_node(const std::shared_ptr<JoinNode>
   _traverse_ast_for_join_graph(node->right_child(), o_vertices, o_edges, false);
 
   /**
-   * Create a unconditioned edge from each vertex in the left subtree to each vertex in the right subtree
+   * Create a unconditioned edge from one vertex in the left subtree to one vertex in the right subtree
    */
-  for (auto left_vertex_idx = first_left_subtree_vertex_idx; left_vertex_idx < first_right_subtree_vertex_idx;
-       ++left_vertex_idx) {
-    for (auto right_vertex_idx = first_right_subtree_vertex_idx; right_vertex_idx < o_vertices.size();
-         ++right_vertex_idx) {
-      o_edges.emplace_back(std::make_pair(left_vertex_idx, right_vertex_idx), JoinMode::Cross);
-    }
-  }
+  o_edges.emplace_back(std::make_pair(first_left_subtree_vertex_idx, first_right_subtree_vertex_idx), JoinMode::Cross);
 }
 
 void JoinGraphBuilder::_traverse_column_predicate_node(const std::shared_ptr<PredicateNode>& node,

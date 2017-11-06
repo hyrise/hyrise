@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
 #include "optimizer/join_graph.hpp"
+#include "optimizer/join_graph_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
@@ -41,7 +42,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphSimple) {
   join_node->set_left_child(table_a_node);
   join_node->set_right_child(table_b_node);
 
-  const auto join_graph = JoinGraph::build_join_graph(join_node);
+  const auto join_graph = JoinGraphBuilder::build_join_graph(join_node);
 
   EXPECT_VERTEX_NODES(join_graph, std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node}));
 
@@ -85,12 +86,12 @@ TEST_F(JoinGraphTest, BuildJoinGraphMedium) {
   projection_node->set_left_child(join_a_node);
 
   // Searching from the root shouldn't yield anything except the root as it is not a join
-  const auto join_graph_a = JoinGraph::build_join_graph(projection_node);
+  const auto join_graph_a = JoinGraphBuilder::build_join_graph(projection_node);
   EXPECT_VERTEX_NODES(join_graph_a, std::vector<std::shared_ptr<AbstractASTNode>>({projection_node}));
   EXPECT_EQ(join_graph_a->edges().size(), 0u);
 
   // Searching from join_a should yield a non-empty join graph
-  const auto join_graph_b = JoinGraph::build_join_graph(join_a_node);
+  const auto join_graph_b = JoinGraphBuilder::build_join_graph(join_a_node);
 
   EXPECT_VERTEX_NODES(join_graph_b,
                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
@@ -144,7 +145,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphLarge) {
   join_a_node->set_children(table_a_0_node, join_b_node);
 
   // Searching from join_a should yield a non-empty join graph
-  const auto join_graph = JoinGraph::build_join_graph(join_a_node);
+  const auto join_graph = JoinGraphBuilder::build_join_graph(join_a_node);
 
   EXPECT_VERTEX_NODES(join_graph,
                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_0_node, table_b_0_node, table_c_0_node,
@@ -200,7 +201,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicates) {
   projection_node->set_left_child(join_a_node);
 
   // Searching from join_a should yield a non-empty join graph
-  const auto join_graph = JoinGraph::build_join_graph(join_a_node);
+  const auto join_graph = JoinGraphBuilder::build_join_graph(join_a_node);
 
   EXPECT_VERTEX_NODES(join_graph,
                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
@@ -254,7 +255,7 @@ TEST_F(JoinGraphTest, BuildJoinGraphMediumWithPredicatesAndCrossJoin) {
   projection_node->set_left_child(predicate_a_node);
 
   // Searching from join_a should yield a non-empty join graph
-  const auto join_graph = JoinGraph::build_join_graph(predicate_a_node);
+  const auto join_graph = JoinGraphBuilder::build_join_graph(predicate_a_node);
 
   EXPECT_VERTEX_NODES(join_graph,
                       std::vector<std::shared_ptr<AbstractASTNode>>({table_a_node, table_b_node, table_c_node}));
@@ -296,17 +297,14 @@ TEST_F(JoinGraphTest, BuildJoinGraphWithCrossJoins) {
   join_node->set_children(table_c_node, table_b_1_node);
 
   // Searching from join_a should yield a non-empty join graph
-  const auto join_graph = JoinGraph::build_join_graph(cross_join_0);
+  const auto join_graph = JoinGraphBuilder::build_join_graph(cross_join_0);
 
   EXPECT_VERTEX_NODES(join_graph, std::vector<std::shared_ptr<AbstractASTNode>>(
                                       {table_a_node, table_b_0_node, table_c_node, table_b_1_node}));
 
-  EXPECT_EQ(join_graph->edges().size(), 6u);
+  EXPECT_EQ(join_graph->edges().size(), 3u);
   EXPECT_CROSS_JOIN_EDGE(join_graph, table_a_node, table_b_0_node);
   EXPECT_CROSS_JOIN_EDGE(join_graph, table_a_node, table_c_node);
-  EXPECT_CROSS_JOIN_EDGE(join_graph, table_a_node, table_b_1_node);
-  EXPECT_CROSS_JOIN_EDGE(join_graph, table_b_0_node, table_c_node);
-  EXPECT_CROSS_JOIN_EDGE(join_graph, table_b_0_node, table_b_1_node);
   EXPECT_JOIN_EDGE(join_graph, table_c_node, table_b_1_node, ColumnID{0}, ColumnID{1}, ScanType::OpGreaterThan);
 }
 

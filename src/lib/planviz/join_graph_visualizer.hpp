@@ -11,13 +11,12 @@ class JoinGraph;
 
 class JoinGraphVisualizer {
  public:
-  JoinGraphVisualizer(const DotConfig& config = {});
+  explicit JoinGraphVisualizer(const DotConfig& config = {});
 
   void visualize(const std::shared_ptr<JoinGraph>& join_graph, const std::string& output_prefix);
 
  private:
   const DotConfig _config;
-
 };
 
 }

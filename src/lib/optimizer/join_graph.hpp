@@ -14,6 +14,7 @@ namespace opossum {
 
 class JoinNode;
 class PredcicateNode;
+struct JoinVertex;
 
 /**
  * A connection between two JoinGraph-Vertices.
@@ -40,6 +41,9 @@ struct JoinVertexPredicate {
 struct JoinVertex {
   explicit JoinVertex(const std::shared_ptr<AbstractASTNode>& node);
 
+  std::string description() const;
+  std::string get_predicate_description(const JoinVertexPredicate& vertex_predicate) const;
+
   std::shared_ptr<AbstractASTNode> node;
   std::vector<JoinVertexPredicate> predicates;
 };
@@ -48,7 +52,7 @@ struct JoinVertex {
  * Describes a set of AST subtrees (called "vertices") and the predicates (called "edges") they are connected with.
  * JoinGraphs are the core data structure worked on during JoinOrdering.
  * A JoinGraph is a unordered representation of a JoinPlan, i.e. a AST subtree that consists of Joins,
- * ColumnToColumn-Predicates and Leafs (which are all other kind of nodes).
+ * Predicates and Leafs (which are all other kind of nodes).
  *
  * See the tests for examples.
  */
@@ -57,7 +61,6 @@ class JoinGraph final {
   using Vertices = std::vector<JoinVertex>;
   using Edges = std::vector<JoinEdge>;
 
-
   JoinGraph() = default;
   JoinGraph(Vertices&& vertices, Edges&& edges);
 
@@ -65,6 +68,8 @@ class JoinGraph final {
   const Edges& edges() const;
 
   void print(std::ostream& out = std::cout) const;
+
+  std::string get_edge_description(const JoinEdge& join_edge, DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 
  private:
   Vertices _vertices;
