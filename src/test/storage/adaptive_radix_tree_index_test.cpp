@@ -130,8 +130,14 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
     EXPECT_EQ(column->get(*index->lower_bound({i + 1})), i + 2);
     EXPECT_EQ(column->get(*index->upper_bound({i})), i + 2);
     EXPECT_EQ(column->get(*index->upper_bound({i + 1})), i + 2);
-    EXPECT_EQ(index->upper_bound({99999}), index->cend());
+
+    auto expected_lower = i;
+    for(auto it = index->lower_bound({i}); it < index->lower_bound({i + 20}); ++it) {
+      EXPECT_EQ(column->get(*it), expected_lower);
+      expected_lower += 2;
+    }
   }
+  EXPECT_EQ(index->upper_bound({99999}), index->cend());
 }
 
 }  // namespace opossum
