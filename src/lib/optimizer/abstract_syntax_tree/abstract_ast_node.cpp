@@ -180,11 +180,11 @@ std::optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_referenc
   DebugAssert(left_child() && !right_child(),
               "Node has no or two inputs and therefore needs to override this function");
 
-  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
-  if (!named_column_reference_without_local_alias) {
+  auto named_column_reference_without_node_alias = _resolve_node_alias(named_column_reference);
+  if (!named_column_reference_without_node_alias) {
     return {};
   } else {
-    return left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+    return left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_node_alias);
   }
 }
 
@@ -307,12 +307,12 @@ void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
   levels.pop_back();
 }
 
-std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
+std::string AbstractASTNode::get_qualified_column_name(ColumnID column_id) const {
   DebugAssert(!right_child(), "Node with right child needs to override this function.");
 
   /**
    *  A AbstractASTNode without a left child should generally be a StoredTableNode, which overrides this function. But
-   *  since get_verbose_column_name() is just a convenience function we don't want to force anyone to override this
+   *  since get_qualified_column_name() is just a convenience function we don't want to force anyone to override this
    *  function when experimenting with nodes. Thus we handle the case of no left child here as well.
    */
   if (!left_child()) {
@@ -323,7 +323,7 @@ std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
     return output_column_names()[column_id];
   }
 
-  const auto verbose_name = left_child()->get_verbose_column_name(column_id);
+  const auto verbose_name = left_child()->get_qualified_column_name(column_id);
 
   if (_table_alias) {
     return *_table_alias + "." + verbose_name;
@@ -335,12 +335,12 @@ std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
 std::vector<std::string> AbstractASTNode::get_verbose_column_names() const {
   std::vector<std::string> verbose_names(output_column_count());
   for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
-    verbose_names[column_id] = get_verbose_column_name(column_id);
+    verbose_names[column_id] = get_qualified_column_name(column_id);
   }
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractASTNode::_resolve_node_alias(const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

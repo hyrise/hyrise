@@ -26,7 +26,7 @@ class SortNode : public AbstractASTNode {
  public:
   explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
 
-  std::string description() const override;
+  std::string description(DescriptionMode mode) const override;
 
   const std::vector<OrderByDefinition>& order_by_definitions() const;
 

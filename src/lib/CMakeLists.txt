@@ -152,6 +152,8 @@ set(
     optimizer/table_statistics.hpp
     planviz/ast_visualizer.cpp
     planviz/ast_visualizer.hpp
+    planviz/dot_config.cpp
+    planviz/dot_config.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp

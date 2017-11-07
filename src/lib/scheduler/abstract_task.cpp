@@ -24,7 +24,7 @@ bool AbstractTask::is_done() const { return _done; }
 
 bool AbstractTask::is_scheduled() const { return _is_scheduled; }
 
-std::string AbstractTask::description() const {
+std::string AbstractTask::description(DescriptionMode mode) const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
 }
 

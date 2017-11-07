@@ -216,6 +216,8 @@ enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNu
 
 enum class TableType { References, Data };
 
+enum class DescriptionMode { SingleLine, MultiLine };
+
 class Noncopyable {
  protected:
   Noncopyable() = default;

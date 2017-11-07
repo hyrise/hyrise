@@ -28,7 +28,7 @@ const std::vector<ColumnID>& MockNode::output_column_ids_to_input_column_ids() c
 
 const std::vector<std::string>& MockNode::output_column_names() const { return _output_column_names; }
 
-std::string MockNode::get_verbose_column_name(ColumnID column_id) const {
+std::string MockNode::get_qualified_column_name(ColumnID column_id) const {
   // Aliasing a MockNode doesn't really make sense, but let's stay covered
   if (_table_alias) {
     return *_table_alias + "." + output_column_names()[column_id];
@@ -36,5 +36,5 @@ std::string MockNode::get_verbose_column_name(ColumnID column_id) const {
   return output_column_names()[column_id];
 }
 
-std::string MockNode::description() const { return "[MockTable]"; }
+std::string MockNode::description(DescriptionMode mode) const { return "[MockTable]"; }
 }  // namespace opossum

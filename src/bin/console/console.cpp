@@ -521,7 +521,7 @@ int Console::visualize(const std::string& input) {
 
       dot_filename = "." + mode + ".dot";
       img_filename = mode + ".png";
-      ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
+      ASTVisualizer(ast_roots, mode).visualize();
     } catch (const std::exception& exception) {
       out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
