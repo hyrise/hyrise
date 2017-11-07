@@ -175,7 +175,8 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
       try {
         converters[column_id]->insert(field, row_id);
       } catch (const std::exception& exception) {
-        throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " + std::to_string(column_id) + ".");
+        throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
+                               std::to_string(column_id) + ".");
       }
     }
   }
