@@ -56,8 +56,6 @@ bool TransactionContext::aborted() const {
   return (phase == TransactionPhase::Aborted) || (phase == TransactionPhase::RolledBack);
 }
 
-std::shared_ptr<CommitContext> TransactionContext::commit_context() { return _commit_context; }
-
 bool TransactionContext::rollback() {
   const auto success = _abort();
 

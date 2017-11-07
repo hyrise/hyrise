@@ -74,6 +74,12 @@ TYPED_TEST(JoinFullTest, InnerJoinOnString) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/string_inner_join.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, InnerJoinSingleChunk) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_e, this->_table_wrapper_f, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_single_chunk.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, InnerRefJoin) {
   this->_table_wrapper_a->execute();
   this->_table_wrapper_b->execute();
@@ -365,6 +371,15 @@ TYPED_TEST(JoinFullTest, JoinOnValueAndReferenceColumn) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpNotEquals,
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_neq.tbl", 1);
+}
+
+TYPED_TEST(JoinFullTest, JoinLessThanOnDictAndDict) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    return;
+  }
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThanEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_leq_dict.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnReferenceColumnAndDict) {

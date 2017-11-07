@@ -260,7 +260,7 @@ int Console::_eval_sql(const std::string& sql) {
 
   if (_execute_plan(plan) == ReturnCode::Error) {
     transaction_context->rollback();
-    out("Execution failed and the transaction has been rolled back.");
+    out("Execution failed and the transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }
@@ -282,7 +282,7 @@ int Console::_eval_sql(const std::string& sql) {
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   if (transaction_context->aborted()) {
-    out("An operator failed and the transaction has been rolled back.");
+    out("An operator failed and the transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }

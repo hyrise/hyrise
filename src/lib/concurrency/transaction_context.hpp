@@ -81,11 +81,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   bool aborted() const;
 
   /**
-   * Currently only used for tests
-   */
-  std::shared_ptr<CommitContext> commit_context();
-
-  /**
    * Aborts and rolls back the transaction.
    *
    * @returns false if called a second time

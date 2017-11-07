@@ -47,6 +47,8 @@ class SQLiteTestRunner : public testing::TestWithParam<std::string> {
       std::string table_file = args.at(0);
       std::string table_name = args.at(1);
 
+      DebugAssert(!StorageManager::get().has_table(table_name), "Table already loaded");
+
       _sqlite->create_table_from_tbl(table_file, table_name);
 
       std::shared_ptr<Table> table = load_table(table_file, 0);
@@ -103,8 +105,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   bool order_sensitive = false;
 
-  if (parse_result.getStatement(0)->is(hsql::kStmtSelect)) {
-    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatement(0));
+  if (parse_result.getStatements().back()->is(hsql::kStmtSelect)) {
+    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatements().back());
     order_sensitive = (select_statement->order != nullptr);
   }
 

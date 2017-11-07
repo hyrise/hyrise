@@ -27,13 +27,6 @@ std::string CsvWriter::escape(const std::string& string) {
   return result;
 }
 
-void CsvWriter::write_line(const std::vector<AllTypeVariant>& values) {
-  for (const auto& value : values) {
-    write(value);
-  }
-  end_line();
-}
-
 void CsvWriter::end_line() {
   _stream << _config.delimiter;
   _current_col_count = 0;

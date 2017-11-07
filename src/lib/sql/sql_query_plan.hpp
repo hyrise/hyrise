@@ -26,14 +26,8 @@ class SQLQueryPlan {
   // Returns the number of trees in the plan.
   size_t num_trees() const;
 
-  // Returns the number of operators in all trees in the plan.
-  size_t num_operators() const;
-
   // Append all operator trees from the other plan.
   void append_plan(const SQLQueryPlan& other_plan);
-
-  // Remove all trees from the current plan.
-  void clear();
 
   // Wrap all operator trees in tasks and return them.
   std::vector<std::shared_ptr<OperatorTask>> create_tasks() const;
