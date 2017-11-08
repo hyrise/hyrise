@@ -116,7 +116,6 @@ void JoinNestedLoop::_perform_join() {
 
       resolve_data_and_column_type(left_type_string, *column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_type_string, *column_right, [&](auto right_type, auto& typed_right_column) {
-
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
