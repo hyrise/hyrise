@@ -158,7 +158,7 @@ void JoinNestedLoop::_perform_join() {
       }
 
       if (is_outer_join) {
-        // add unmatched rows for outer joins
+        // add unmatched rows on the left for Left and Full Outer joins
         for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
           if (!left_matches[chunk_offset]) {
             pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
