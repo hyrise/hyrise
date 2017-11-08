@@ -4,24 +4,32 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include "import_export/csv_converter.hpp"
+#include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-CsvParser::CsvParser(const CsvConfig& csv_config) : _csv_config(csv_config) {}
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
+  // If no meta info is given as a parameter, look for a json file
+  if (csv_meta == std::nullopt) {
+    _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+  } else {
+    _meta = *csv_meta;
+  }
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
-  const auto table = _process_meta_file(filename + _csv_config.meta_file_extension);
+  auto table = _create_table_from_meta();
 
   std::ifstream csvfile{filename};
   std::string content{std::istreambuf_iterator<char>(csvfile), {}};
@@ -30,7 +38,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   if (!csvfile) return table;
 
   // make sure content ends with a delimiter for better row processing later
-  if (content.back() != _csv_config.delimiter) content.push_back(_csv_config.delimiter);
+  if (content.back() != _meta.config.delimiter) content.push_back(_meta.config.delimiter);
 
   std::string_view content_view{content.c_str(), content.size()};
 
@@ -52,6 +60,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
       _parse_into_chunk(relevant_content, field_ends, *table, chunk);
+      if (_meta.auto_compress && chunk.size() == _meta.chunk_size) {
+        DictionaryCompression::compress_chunk(table->column_types(), chunk);
+      }
     }));
     tasks.back()->schedule();
   }
@@ -67,56 +78,17 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   return table;
 }
 
-std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename) {
-  const char delimiter = '\n';
-  const char separator = ',';
+std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
+  auto table = std::make_shared<Table>(_meta.chunk_size);
 
-  std::ifstream metafile{filename};
-  std::string content{std::istreambuf_iterator<char>(metafile), {}};
-
-  // make sure content ends with '\n' for better row processing later
-  if (content.back() != delimiter) content.push_back(delimiter);
-
-  // skip header
-  content.erase(0, content.find(delimiter) + 1);
-
-  // skip next two fields
-  content.erase(0, content.find(separator) + 1);
-  content.erase(0, content.find(separator) + 1);
-
-  // read chunk size
-  auto pos = content.find(delimiter);
-  const size_t chunk_size{std::stoul(content.substr(0, pos))};
-  content.erase(0, pos + 1);
-
-  const auto table = std::make_shared<Table>(chunk_size);
-
-  // read column info
-  while ((pos = content.find(delimiter)) != std::string::npos) {
-    auto row = content.substr(0, pos);
-
-    // remove property type
-    auto property_type_pos = row.find(separator);
-    row.erase(0, property_type_pos + 1);
-
-    // read column name
-    auto row_pos = row.find(separator);
-    auto column_name = row.substr(0, row_pos);
+  for (const auto& column_meta : _meta.columns) {
+    auto column_name = column_meta.name;
     BaseCsvConverter::unescape(column_name);
-    row.erase(0, row_pos + 1);
 
-    // read column type
-    row_pos = row.find(delimiter);
-    auto column_type = row.substr(0, row_pos);
+    auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
-    auto type_nullable = _split<std::string>(column_type, '_');
-    column_type = type_nullable[0];
 
-    auto is_nullable = type_nullable.size() > 1 && boost::to_lower_copy(type_nullable[1]) == CsvConfig::NULL_STRING;
-
-    content.erase(0, pos + 1);
-
-    table->add_column_definition(column_name, column_type, is_nullable);
+    table->add_column_definition(column_name, column_type, column_meta.nullable);
   }
 
   return table;
@@ -129,7 +101,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     return false;
   }
 
-  std::string search_for{_csv_config.separator, _csv_config.delimiter, _csv_config.quote};
+  std::string search_for{_meta.config.separator, _meta.config.delimiter, _meta.config.quote};
 
   size_t pos, from = 0;
   unsigned int rows = 0, field_count = 1;
@@ -144,10 +116,10 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     const char elem = csv_content.at(pos);
 
     // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string (i.e. escaped)
-    if (elem == _csv_config.quote) {
+    if (elem == _meta.config.quote) {
       bool quote_is_escaped = false;
-      if (_csv_config.quote != _csv_config.escape) {
-        quote_is_escaped = pos != 0 && csv_content.at(pos - 1) == _csv_config.escape;
+      if (_meta.config.quote != _meta.config.escape) {
+        quote_is_escaped = pos != 0 && csv_content.at(pos - 1) == _meta.config.escape;
       }
       if (!quote_is_escaped) {
         in_quotes = !in_quotes;
@@ -155,14 +127,14 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     }
 
     // Determine if delimiter marks end of row or is part of the (string) value
-    if (elem == _csv_config.delimiter && !in_quotes) {
+    if (elem == _meta.config.delimiter && !in_quotes) {
       Assert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }
 
     // Determine if separator marks end of field or is part of the (string) value
-    if (in_quotes || elem == _csv_config.quote) {
+    if (in_quotes || elem == _meta.config.quote) {
       continue;
     }
 
@@ -185,7 +157,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
     const auto column_type = table.column_type(column_id);
 
     converters.emplace_back(
-        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _csv_config, is_nullable));
+        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
   }
 
   size_t start = 0;
@@ -195,7 +167,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
       auto field = std::string{csv_chunk.substr(start, end - start)};
       start = end + 1;
 
-      if (!_csv_config.rfc_mode) {
+      if (!_meta.config.rfc_mode) {
         // CSV fields not following RFC 4810 might need some preprocessing
         _sanitize_field(field);
       }
@@ -216,9 +188,9 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
 }
 
 void CsvParser::_sanitize_field(std::string& field) {
-  const std::string linebreak(1, _csv_config.delimiter);
+  const std::string linebreak(1, _meta.config.delimiter);
   const std::string escaped_linebreak =
-      std::string(1, _csv_config.delimiter_escape) + std::string(1, _csv_config.delimiter);
+      std::string(1, _meta.config.delimiter_escape) + std::string(1, _meta.config.delimiter);
 
   std::string::size_type pos = 0;
   while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos) {

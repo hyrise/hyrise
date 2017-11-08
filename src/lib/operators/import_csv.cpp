@@ -11,11 +11,13 @@
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& filename, const std::optional<std::string> tablename)
-    : _filename(filename), _tablename(tablename), _config(CsvConfig{}) {}
+ImportCsv::ImportCsv(const std::string& filename, const std::optional<std::string> tablename,
+                     const std::optional<CsvMeta> csv_meta)
+    : _filename(filename), _tablename(tablename), _csv_meta(csv_meta) {}
 
-ImportCsv::ImportCsv(const std::string& filename, const CsvConfig& config, const std::optional<std::string> tablename)
-    : _filename(filename), _tablename(tablename), _config(config) {}
+ImportCsv::ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
+                     const std::optional<std::string> tablename)
+    : ImportCsv(filename, tablename, csv_meta) {}
 
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
@@ -30,8 +32,8 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
   file.close();
 
   std::shared_ptr<Table> table;
-  CsvParser parser{_config};
-  table = parser.parse(_filename);
+  CsvParser parser;
+  table = parser.parse(_filename, _csv_meta);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);

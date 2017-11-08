@@ -76,10 +76,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
-  // TODO(anyone): Move this to base column once final optimization is supported by gcc
-  const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(
-      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
-
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;

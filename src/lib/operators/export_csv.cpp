@@ -5,8 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "import_export/csv.hpp"
+#include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
+#include "json.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
@@ -21,31 +22,30 @@ ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std
 const std::string ExportCsv::name() const { return "ExportCSV"; }
 
 std::shared_ptr<const Table> ExportCsv::_on_execute() {
-  CsvConfig config{};
-  _generate_meta_info_file(_input_left->get_output(), _filename + config.meta_file_extension);
+  _generate_meta_info_file(_input_left->get_output(), _filename + CsvMeta::META_FILE_EXTENSION);
   _generate_content_file(_input_left->get_output(), _filename);
 
   return _input_left->get_output();
 }
 
-void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file) {
-  CsvWriter writer(meta_file);
-  // Write header line
-  writer.write_line({"PropertyType", "Key", "Value"});
-
-  // Chunk size
-  writer.write_line({"ChunkSize", "", static_cast<int64_t>(table->chunk_size())});
+void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {
+  CsvMeta meta{};
+  meta.chunk_size = table->chunk_size();
 
   // Column Types
   for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
-    auto type = table->column_type(col_id);
+    ColumnMeta column_meta;
+    column_meta.name = table->column_name(col_id);
+    column_meta.type = table->column_type(col_id);
+    column_meta.nullable = table->column_is_nullable(col_id);
 
-    if (table->column_is_nullable(col_id)) {
-      type += std::string("_") + CsvConfig::NULL_STRING;
-    }
-
-    writer.write_line({"ColumnType", table->column_name(col_id), type});
+    meta.columns.push_back(column_meta);
   }
+
+  nlohmann::json meta_json = meta;
+
+  std::ofstream meta_file_stream(meta_file_path);
+  meta_file_stream << std::setw(4) << meta_json << std::endl;
 }
 
 void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table, const std::string& csv_file) {

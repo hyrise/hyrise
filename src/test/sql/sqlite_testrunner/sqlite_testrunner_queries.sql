@@ -16,6 +16,7 @@ SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0 OR (b > 457.0 AND b < 458.
 SELECT a FROM int_float;
 SELECT a as b FROM int_float;
 SELECT a, 4+6 as b FROM int_float;
+SELECT a*b/c AS calc FROM int_int_int;
 
 -- ORDER BY
 SELECT * FROM int_float ORDER BY a DESC;
@@ -58,6 +59,7 @@ SELECT SUM(b + b) AS sum_b_b FROM int_float;
 
 -- GROUP BY
 SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;
+SELECT a AS whatever, SUM(b) FROM groupby_int_1gb_1agg GROUP BY whatever;
 SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;
 SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;
 

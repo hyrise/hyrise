@@ -1,0 +1,19 @@
+{
+    "chunk_size": 3,
+    "columns": [
+        {
+            "name": "a",
+            "type": "float",
+            "nullable": true
+        },
+        {
+            "name": "b",
+            "type": "int"
+        },
+        {
+            "name": "c",
+            "type": "int",
+            "nullable": true
+        }
+    ]
+}

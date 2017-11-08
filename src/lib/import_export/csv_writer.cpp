@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-CsvWriter::CsvWriter(const std::string& file, const CsvConfig& config) : _config(config) {
+CsvWriter::CsvWriter(const std::string& file, const ParseConfig& config) : _config(config) {
   _stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   _stream.open(file);
 }
@@ -25,13 +25,6 @@ std::string CsvWriter::escape(const std::string& string) {
     next_pos += 2;
   }
   return result;
-}
-
-void CsvWriter::write_line(const std::vector<AllTypeVariant>& values) {
-  for (const auto& value : values) {
-    write(value);
-  }
-  end_line();
 }
 
 void CsvWriter::end_line() {

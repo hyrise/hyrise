@@ -6,7 +6,7 @@
 namespace opossum {
 
 // potential issues with optimization strategies are documented here:
-// https://github.com/hyrise/zweirise/wiki/potential_issues
+// https://github.com/hyrise/hyrise/wiki/potential_issues
 
 class AbstractASTNode;
 

@@ -113,7 +113,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
        * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
        */
       // TODO(mp): translate as soon as SQLToASTTranslator is merged
-      throw std::runtime_error("Selects are not supported yet.");
+      throw std::runtime_error("Subselects are not supported yet.");
     default:
       throw std::runtime_error("Unsupported expression type");
   }

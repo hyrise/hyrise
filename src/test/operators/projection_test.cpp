@@ -27,6 +27,9 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_int = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_int.tbl", 2));
     _table_wrapper_int->execute();
 
+    _table_wrapper_string = std::make_shared<TableWrapper>(load_table("src/test/tables/string.tbl", 2));
+    _table_wrapper_string->execute();
+
     _table_wrapper_float = std::make_shared<TableWrapper>(load_table("src/test/tables/float_float_float.tbl", 2));
     _table_wrapper_float->execute();
 
@@ -74,6 +77,10 @@ class OperatorsProjectionTest : public BaseTest {
     // Projection Expression: 123 AS a, A AS b
     _literal_expr = Projection::ColumnExpressions{Expression::create_literal(123, std::string("a")),
                                                   Expression::create_literal(std::string("A"), std::string("b"))};
+
+    // Projection Expression: a + 'hallo' AS b
+    _concat_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
+        ExpressionType::Addition, Expression::create_column(ColumnID{0}), Expression::create_literal("hallo"), {"b"})};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;
@@ -84,8 +91,9 @@ class OperatorsProjectionTest : public BaseTest {
   Projection::ColumnExpressions _b_a_expr;
   Projection::ColumnExpressions _a_b_expr;
   Projection::ColumnExpressions _literal_expr;
+  Projection::ColumnExpressions _concat_expr;
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_dict, _table_wrapper_float,
-      _dummy_wrapper;
+      _dummy_wrapper, _table_wrapper_string;
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumnInt) {
@@ -156,6 +164,15 @@ TEST_F(OperatorsProjectionTest, SimpleArithmeticProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_addition.tbl", 2);
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int, _sum_a_b_expr);
+  projection->execute();
+
+  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, StringConcat) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/string_concatenated.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper_string, _concat_expr);
   projection->execute();
 
   EXPECT_TABLE_EQ(projection->get_output(), expected_result);

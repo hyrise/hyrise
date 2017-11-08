@@ -316,6 +316,47 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
 
+TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
+  /**
+   * Test that
+   *
+   *        Predicate
+   *      (b.a == c.b)
+   *            |
+   *          Cross_1
+   *         /     \
+   *        a     Cross_2
+   *             /     \
+   *            b       c
+   *
+   *   gets converted to
+   *
+   *         Cross_1
+   *        /     \
+   *       a   InnerJoin (b.a == c.b)
+   *          /                     \
+   *         b                       c
+   *
+   */
+  const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node2 = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpEquals, ColumnID{5});
+
+  predicate_node->set_left_child(join_node1);
+  join_node1->set_left_child(_table_node_a);
+  join_node1->set_right_child(join_node2);
+  join_node2->set_left_child(_table_node_b);
+  join_node2->set_right_child(_table_node_c);
+
+  auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(output, join_node1);
+  EXPECT_EQ(output->left_child(), _table_node_a);
+  ASSERT_INNER_JOIN_NODE(output->right_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{1});
+  EXPECT_EQ(output->right_child()->left_child(), _table_node_b);
+  EXPECT_EQ(output->right_child()->right_child(), _table_node_c);
+}
+
 TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   /**
    * Test that
