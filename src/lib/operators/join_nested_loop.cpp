@@ -91,13 +91,10 @@ void JoinNestedLoop::_perform_join() {
   auto left_type_string = left_table->column_type(left_column_id);
   auto right_type_string = right_table->column_type(right_column_id);
 
-  auto pos_list_left = std::make_shared<PosList>();
-  auto pos_list_right = std::make_shared<PosList>();
+  _pos_list_left = std::make_shared<PosList>();
+  _pos_list_right = std::make_shared<PosList>();
 
-  const auto is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
-
-  // for Full Outer, remember the matches on the right side
-  std::set<RowID> right_matches;
+  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
@@ -106,7 +103,7 @@ void JoinNestedLoop::_perform_join() {
     // for Outer joins, remember matches on the left side
     std::vector<bool> left_matches;
 
-    if (is_outer_join) {
+    if (_is_outer_join) {
       left_matches.resize(column_left->size());
     }
 
@@ -119,41 +116,36 @@ void JoinNestedLoop::_perform_join() {
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
-          auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
-          auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
+          constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
+          constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
 
-          auto _comparator = get_comparator<LeftType, RightType>(_scan_type);
+          constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+          constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-          iterable_left.for_each([&](const auto& left_value) {
-            if (left_value.is_null()) return;
+          // clang-format off
+          if constexpr(neither_is_string_column || both_are_string_columns) {
+            auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+            auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
-            iterable_right.for_each([&](const auto& right_value) {
-              if (right_value.is_null()) return;
-
-              if (_comparator(left_value.value(), right_value.value())) {
-                pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-                pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
-
-                if (is_outer_join) {
-                  left_matches[left_value.chunk_offset()] = true;
-                }
-
-                if (_mode == JoinMode::Outer) {
-                  right_matches.insert(RowID{chunk_id_right, right_value.chunk_offset()});
-                }
-              }
+            iterable_left.with_iterators([&](auto left_it, auto left_end) {
+              iterable_right.with_iterators([&](auto right_it, auto right_end) {
+                this->_with_operator(_scan_type, [&](auto comparator) {
+                  this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
+                                          chunk_id_right, left_matches);
+                });
+              });
             });
-          });
+          }
         });
       });
     }
 
-    if (is_outer_join) {
+    if (_is_outer_join) {
       // add unmatched rows on the left for Left and Full Outer joins
       for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
-          pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-          pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+          _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
         }
       }
     }
@@ -172,9 +164,9 @@ void JoinNestedLoop::_perform_join() {
 
         iterable_right.for_each([&](const auto& right_value) {
           const auto row_id = RowID{chunk_id_right, right_value.chunk_offset()};
-          if (!right_matches.count(row_id)) {
-            pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-            pos_list_right->emplace_back(row_id);
+          if (!_right_matches.count(row_id)) {
+            _pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+            _pos_list_right->emplace_back(row_id);
           }
         });
       });
@@ -185,11 +177,11 @@ void JoinNestedLoop::_perform_join() {
   auto output_chunk = Chunk();
 
   if (_mode == JoinMode::Right) {
-    _write_output_chunks(output_chunk, right_table, pos_list_right);
-    _write_output_chunks(output_chunk, left_table, pos_list_left);
+    _write_output_chunks(output_chunk, right_table, _pos_list_right);
+    _write_output_chunks(output_chunk, left_table, _pos_list_left);
   } else {
-    _write_output_chunks(output_chunk, left_table, pos_list_left);
-    _write_output_chunks(output_chunk, right_table, pos_list_right);
+    _write_output_chunks(output_chunk, left_table, _pos_list_left);
+    _write_output_chunks(output_chunk, right_table, _pos_list_right);
   }
 
   _output_table->emplace_chunk(std::move(output_chunk));
