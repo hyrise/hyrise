@@ -44,8 +44,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   // This is the expected implementation for swapping tables:
   // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
-  // (2) for an anti join the inputs are always swapped
-  bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti);
+  // (2) for a semi and anti join the inputs are always swapped
+  bool inputs_swapped = (_mode == JoinMode::Left || _mode == JoinMode::Anti || _mode == JoinMode::Semi);
 
   // (3) else the smaller relation will become build relation, the larger probe relation
   if (!inputs_swapped && _input_left->get_output()->row_count() > _input_right->get_output()->row_count()) {
@@ -386,9 +386,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   number of hash tables that need to be looked into to just 1.
   */
   void _probe(const RadixContainer<RightType>& radix_container,
-              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables,
-              std::vector<std::shared_ptr<PosList>>& pos_list_left,
-              std::vector<std::shared_ptr<PosList>>& pos_list_right) {
+              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables, std::vector<PosList>& pos_list_left,
+              std::vector<PosList>& pos_list_right) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -413,51 +412,33 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           return;
         }
 
+        PosList pos_list_left_local;
+        PosList pos_list_right_local;
+
         if (hashtables[current_partition_id]) {
           auto& hashtable = hashtables.at(current_partition_id);
-          auto pos_list_left_local = std::make_shared<PosList>();
-          auto pos_list_right_local = std::make_shared<PosList>();
 
-          if (_mode == JoinMode::Anti) {
-            // find all rows that do NOT match
-            for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-              auto& row = partition[partition_offset];
-              auto row_ids = hashtable->get(row.value);
+          for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& row = partition[partition_offset];
 
-              if (!row_ids) {
-                pos_list_right_local->emplace_back(row.row_id);
-              }
+            if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+              continue;
             }
 
-            pos_list_right[current_partition_id] = pos_list_right_local;
-          } else {
-            for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-              auto& row = partition[partition_offset];
+            auto row_ids = hashtable->get(row.value);
 
-              if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-                continue;
-              }
-
-              auto row_ids = hashtable->get(row.value);
-
-              if (row_ids) {
-                for (const auto& row_id : *row_ids) {
-                  if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                    pos_list_left_local->emplace_back(row_id);
-                    pos_list_right_local->emplace_back(row.row_id);
-                  }
+            if (row_ids) {
+              for (const auto& row_id : *row_ids) {
+                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(row.row_id);
                 }
-                // We assume that the relations have been swapped previously,
-                // so that the outer relation is the probing relation.
-              } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-                pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-                pos_list_right_local->emplace_back(row.row_id);
               }
-            }
-
-            if (!pos_list_left_local->empty()) {
-              pos_list_left[current_partition_id] = pos_list_left_local;
-              pos_list_right[current_partition_id] = pos_list_right_local;
+              // We assume that the relations have been swapped previously,
+              // so that the outer relation is the probing relation.
+            } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
+              pos_list_left_local.emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+              pos_list_right_local.emplace_back(row.row_id);
             }
           }
         } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
@@ -470,30 +451,75 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           Hence we are going to write NULL values for each row.
           */
 
-          auto pos_list_left_local = std::make_shared<PosList>();
-          auto pos_list_right_local = std::make_shared<PosList>();
+          for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& row = partition[partition_offset];
+            pos_list_left_local.emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+            pos_list_right_local.emplace_back(row.row_id);
+          }
+        }
+
+        if (!pos_list_left_local.empty()) {
+          pos_list_left[current_partition_id] = std::move(pos_list_left_local);
+          pos_list_right[current_partition_id] = std::move(pos_list_right_local);
+        }
+      }));
+      jobs.back()->schedule();
+    }
+
+    CurrentScheduler::wait_for_tasks(jobs);
+  }
+
+  void _probe_semi_anti(const RadixContainer<RightType>& radix_container,
+                        const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables,
+                        std::vector<PosList>& pos_lists) {
+    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    jobs.reserve(radix_container.partition_offsets.size() - 1);
+
+    for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
+         ++current_partition_id) {
+      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+        // Get information from work queue
+        auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
+        const auto& partition_begin = radix_container.partition_offsets[current_partition_id];
+        const auto& partition_end = radix_container.partition_offsets[current_partition_id + 1];
+
+        // Skip empty partitions to avoid empty output chunks
+        if ((partition_end - partition_begin) == 0) {
+          return;
+        }
+
+        // auto pos_list_local = std::make_shared<PosList>();
+        PosList pos_list_local;
+
+        if (hashtables[current_partition_id]) {
+          // Valid hashtable found, so there is at least one match in this partition
+          auto& hashtable = hashtables.at(current_partition_id);
 
           for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& row = partition[partition_offset];
-            pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-            pos_list_right_local->emplace_back(row.row_id);
-          }
-          if (!pos_list_left_local->empty()) {
-            pos_list_left[current_partition_id] = pos_list_left_local;
-            pos_list_right[current_partition_id] = pos_list_right_local;
+
+            if (row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+              continue;
+            }
+
+            auto matching_rows = hashtable->get(row.value);
+
+            if ((_mode == JoinMode::Semi && matching_rows) || (_mode == JoinMode::Anti && !matching_rows)) {
+              // Semi: found at least one match for this row -> match
+              // Anti: no matching rows found -> match
+              pos_list_local.emplace_back(row.row_id);
+            }
           }
         } else if (_mode == JoinMode::Anti) {
-          // no matches on the other side means that we can add all rows in this partition to the output
-          // auto pos_list_left_local = std::make_shared<PosList>();
-          auto pos_list_right_local = std::make_shared<PosList>();
-
+          // no hashtable on other side, but we are in Anti mode
           for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& row = partition[partition_offset];
-            pos_list_right_local->emplace_back(row.row_id);
+            pos_list_local.emplace_back(row.row_id);
           }
+        }
 
-          // pos_list_left[current_partition_id] = pos_list_left_local;
-          pos_list_right[current_partition_id] = pos_list_right_local;
+        if (!pos_list_local.empty()) {
+          pos_lists[current_partition_id] = std::move(pos_list_local);
         }
       }));
       jobs.back()->schedule();
@@ -529,10 +555,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
     } else {
       _copy_table_metadata(_left_in_table, _output_table);
-
-      if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
-        _copy_table_metadata(_right_in_table, _output_table);
-      }
+      _copy_table_metadata(_right_in_table, _output_table);
     }
 
     /*
@@ -606,8 +629,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     _build(radix_left, hashtables);
 
     // Probe phase
-    std::vector<std::shared_ptr<PosList>> left_pos_lists;
-    std::vector<std::shared_ptr<PosList>> right_pos_lists;
+    std::vector<PosList> left_pos_lists;
+    std::vector<PosList> right_pos_lists;
     left_pos_lists.resize(radix_right.partition_offsets.size() - 1);
     right_pos_lists.resize(radix_right.partition_offsets.size() - 1);
     /*
@@ -615,7 +638,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     The workers for each radix partition P should be scheduled on the same node as the input data:
     leftP, rightP and hashtableP.
     */
-    _probe(radix_right, hashtables, left_pos_lists, right_pos_lists);
+    if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
+      _probe_semi_anti(radix_right, hashtables, right_pos_lists);
+    } else {
+      _probe(radix_right, hashtables, left_pos_lists, right_pos_lists);
+    }
 
     /*
     Add columns to output chunk.
@@ -635,7 +662,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       auto& left = left_pos_lists[partition_id];
       auto& right = right_pos_lists[partition_id];
 
-      if (!right && !left) {
+      if (left.empty() && right.empty()) {
         continue;
       }
 
@@ -650,10 +677,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         }
       } else {
         write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
-
-        if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
-          write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
-        }
+        write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
       }
       _output_table->emplace_chunk(std::move(output_chunk));
     }
@@ -662,7 +686,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                                  std::shared_ptr<PosList> pos_list, bool is_ref_column) {
+                                  PosList& pos_list, bool is_ref_column) {
+    if (pos_list.empty()) return;
+
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
@@ -682,7 +708,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         // Get the row ids that are referenced
         auto new_pos_list = std::make_shared<PosList>();
-        for (const auto& row : *pos_list) {
+        for (const auto& row : pos_list) {
           if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
             new_pos_list->push_back(row);
           } else {
@@ -692,7 +718,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         column = std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
                                                    new_pos_list);
       } else {
-        column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
+        column = std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list));
       }
 
       output_chunk.add_column(column);
