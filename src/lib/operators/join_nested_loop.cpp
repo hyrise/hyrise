@@ -40,24 +40,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
   _create_table_structure();
 
-  _left_column_id = _column_ids.first;
-  _right_column_id = _column_ids.second;
-
-  // Resolve both column data types and execute the main join loop
-  resolve_data_type(_left_in_table->column_type(_left_column_id), [&](auto left_type) {
-    using LeftType = typename decltype(left_type)::type;
-
-    resolve_data_type(_right_in_table->column_type(_right_column_id), [&](auto right_type) {
-      using RightType = typename decltype(right_type)::type;
-
-      // for the right outer join we switch types because we treat the "left" side as the outer relation
-      if (_mode == JoinMode::Right) {
-        this->_perform_join<RightType, LeftType>();
-      } else {
-        this->_perform_join<LeftType, RightType>();
-      }
-    });
-  });
+  _perform_join();
 
   return _output_table;
 }
@@ -67,6 +50,9 @@ void JoinNestedLoop::_create_table_structure() {
 
   _left_in_table = _input_left->get_output();
   _right_in_table = _input_right->get_output();
+
+  _left_column_id = _column_ids.first;
+  _right_column_id = _column_ids.second;
 
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
@@ -86,15 +72,12 @@ void JoinNestedLoop::_create_table_structure() {
   }
 }
 
-template <typename LeftType, typename RightType>
 void JoinNestedLoop::_perform_join() {
   auto left_table = _left_in_table;
   auto right_table = _right_in_table;
 
   auto left_column_id = _left_column_id;
   auto right_column_id = _right_column_id;
-
-  auto _comparator = get_comparator<LeftType, RightType>(_scan_type);
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
@@ -104,6 +87,9 @@ void JoinNestedLoop::_perform_join() {
     left_column_id = _right_column_id;
     right_column_id = _left_column_id;
   }
+
+  auto left_type_string = left_table->column_type(left_column_id);
+  auto right_type_string = right_table->column_type(right_column_id);
 
   auto pos_list_left = std::make_shared<PosList>();
   auto pos_list_right = std::make_shared<PosList>();
@@ -117,22 +103,27 @@ void JoinNestedLoop::_perform_join() {
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
     auto column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
 
-    resolve_column_type<LeftType>(*column_left, [&](const auto& typed_left_column) {
-      auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+    // for Outer joins, remember matches on the left side
+    std::vector<bool> left_matches;
 
-      // for Outer joins, remember matches on the left side
-      std::vector<bool> left_matches;
+    if (is_outer_join) {
+      left_matches.resize(column_left->size());
+    }
 
-      if (is_outer_join) {
-        left_matches.resize(typed_left_column.size());
-      }
+    // Scan all chunks for right input
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-      // Scan all chunks for right input
-      for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-        auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+      resolve_data_and_column_type(left_type_string, *column_left, [&](auto left_type, auto& typed_left_column) {
+        resolve_data_and_column_type(right_type_string, *column_right, [&](auto right_type, auto& typed_right_column) {
 
-        resolve_column_type<RightType>(*column_right, [&](const auto& typed_right_column) {
+          using LeftType = typename decltype(left_type)::type;
+          using RightType = typename decltype(right_type)::type;
+
+          auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
           auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
+
+          auto _comparator = get_comparator<LeftType, RightType>(_scan_type);
 
           iterable_left.for_each([&](const auto& left_value) {
             if (left_value.is_null()) return;
@@ -155,18 +146,18 @@ void JoinNestedLoop::_perform_join() {
             });
           });
         });
-      }
+      });
+    }
 
-      if (is_outer_join) {
-        // add unmatched rows on the left for Left and Full Outer joins
-        for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
-          if (!left_matches[chunk_offset]) {
-            pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-            pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-          }
+    if (is_outer_join) {
+      // add unmatched rows on the left for Left and Full Outer joins
+      for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
+        if (!left_matches[chunk_offset]) {
+          pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+          pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
         }
       }
-    });
+    }
   }
 
   // For Full Outer we need to add all unmatched rows for the right side.
@@ -175,7 +166,9 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-      resolve_column_type<RightType>(*column_right, [&](auto& typed_right_column) {
+      resolve_data_and_column_type(right_type_string, *column_right, [&](auto right_type, auto& typed_right_column) {
+        using RightType = typename decltype(right_type)::type;
+
         auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
         iterable_right.for_each([&](const auto& right_value) {

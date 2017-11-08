@@ -23,7 +23,6 @@ class JoinNestedLoop : public AbstractJoinOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  template <typename LeftType, typename RightType>
   void _perform_join();
 
   void _create_table_structure();
