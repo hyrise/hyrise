@@ -174,4 +174,9 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   EXPECT_EQ(t.chunk_count(), 3u);
 }
 
+TEST_F(StorageTableTest, EnforceSingleChunkWhenChunkSizeZero) {
+  Table table{0u};
+  EXPECT_THROW(table.create_new_chunk(), std::logic_error);
+}
+
 }  // namespace opossum
