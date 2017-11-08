@@ -24,11 +24,13 @@ This contains the tests for Semi- and Anti-Join implementations.
 
 class JoinSemiAntiTest : public JoinTest {
  protected:
-  void SetUp() override { JoinTest::SetUp(); 
-  
-    _table_wrapper_semi_a = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_left.tbl", 2));
-    _table_wrapper_semi_b = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_right.tbl", 2));
+  void SetUp() override {
+    JoinTest::SetUp();
 
+    _table_wrapper_semi_a =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_left.tbl", 2));
+    _table_wrapper_semi_b =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_right.tbl", 2));
 
     _table_wrapper_semi_a->execute();
     _table_wrapper_semi_b->execute();
@@ -54,8 +56,8 @@ TEST_F(JoinSemiAntiTest, SemiJoinRefColumns) {
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals,
-                             JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1);
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
+                             ScanType::OpEquals, JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
@@ -72,6 +74,11 @@ TEST_F(JoinSemiAntiTest, AntiJoinRefColumns) {
 
   test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals, JoinMode::Anti,
                              "src/test/tables/joinoperators/anti_int4.tbl", 1);
+}
+
+TEST_F(JoinSemiAntiTest, AntiJoinBig) {
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
+                             ScanType::OpEquals, JoinMode::Anti, "src/test/tables/joinoperators/anti_result.tbl", 1);
 }
 
 }  // namespace opossum
