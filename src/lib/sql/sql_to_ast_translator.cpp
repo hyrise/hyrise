@@ -516,6 +516,11 @@ std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_ag
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
+  for (const auto & name : input_node->get_verbose_column_names()) {
+    std::cout << name << ", ";
+  }
+  std::cout << std::endl;
+
   /**
    * This function creates the following node structure:
    *
@@ -536,10 +541,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
   /**
    * The Aggregate Operator outputs all groupby columns first, and then all aggregates.
-   * Therefore we need to work with two different offsets when constructing the projection list.
+   * Therefore use this offset when setting up the ColumnIDs for the Projection that puts the columns in the right order.
    */
   auto aggregate_offset = group_by ? ColumnID{static_cast<uint16_t>(group_by->columns->size())} : ColumnID{0};
-  ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
     std::optional<std::string> alias;
@@ -562,10 +566,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       auto is_in_group_by_clause = false;
-      for (const auto* groupby_expr : *group_by->columns) {
+      auto selected_group_by_idx = size_t{0};
+      for (size_t group_by_idx = 0; group_by_idx < group_by->columns->size(); ++group_by_idx) {
+        const auto* groupby_expr = (*group_by->columns)[group_by_idx];
+
         if ((column_expr->name && groupby_expr->name && strcmp(column_expr->name, groupby_expr->name) == 0) ||
             (column_expr->alias && groupby_expr->name && strcmp(column_expr->alias, groupby_expr->name) == 0)) {
           is_in_group_by_clause = true;
+          selected_group_by_idx = group_by_idx;
           break;
         }
       }
@@ -573,11 +581,22 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
       Assert(is_in_group_by_clause, std::string("Column '") + column_expr->getName() +
                                         "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}, alias));
+      projections.push_back(Expression::create_column(static_cast<ColumnID>(selected_group_by_idx), alias));
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }
   }
+
+  for (auto projection : projections) std::cout << projection->column_id() << ", ";
+  std::cout << std::endl;
+
+  std::cout << "Aggregates:" << std::endl;
+  for (auto & aggregate:aggregate_expressions) {
+    std::cout << "   ";
+    std::cout << aggregate->to_string();
+    std::cout << std::endl;
+  }
+  std::cout << "/Aggregates:" << std::endl;
 
   /**
    * Collect the ColumnIDs to GROUP BY

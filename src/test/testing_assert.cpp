@@ -131,7 +131,7 @@ namespace opossum {
         } else {
           EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
         }
-        EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        EXPECT_NEAR(left_val, right_val, 1.0) << "Row/Col:" << row << "/" << col;
       } else if (tleft.column_type(col) == "double") {
         auto left_val = type_cast<double>(left[row][col]);
         auto right_val = type_cast<double>(right[row][col]);
@@ -141,7 +141,7 @@ namespace opossum {
         } else {
           EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
         }
-        EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        EXPECT_NEAR(left_val, right_val, 1.0) << "Row/Col:" << row << "/" << col;
       } else {
         if (!strict_types && (tleft.column_type(col) == "int" || tleft.column_type(col) == "long")) {
           auto left_val = type_cast<int64_t>(left[row][col]);

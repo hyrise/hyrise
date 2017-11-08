@@ -34,16 +34,6 @@ class SQLToASTTranslatorTest : public BaseTest {
 
     std::shared_ptr<Table> table_c = load_table("src/test/tables/int_float5.tbl", 2);
     StorageManager::get().add_table("table_c", std::move(table_c));
-
-    // TPCH
-    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
-    StorageManager::get().add_table("customer", customer);
-
-    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
-    StorageManager::get().add_table("orders", orders);
-
-    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
-    StorageManager::get().add_table("lineitem", lineitem);
   }
 
   std::shared_ptr<AbstractASTNode> compile_query(const std::string& query) {

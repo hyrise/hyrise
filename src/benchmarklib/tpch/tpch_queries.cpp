@@ -7,13 +7,25 @@ namespace {
  *
  * Original:
  *
- * SELECT l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price,
- * sum(l_extendedprice*(1-l_discount)) as sum_disc_price, sum(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge,
- * avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order
- * FROM lineitem
- * WHERE l_shipdate <= date '1998-12-01' - interval '[DELTA]' day (3)
- * GROUP BY l_returnflag, l_linestatus
- * ORDER BY l_returnflag, l_linestatus
+ * SELECT
+ *      l_returnflag,
+ *      l_linestatus,
+ *      sum(l_quantity) as sum_qty,
+ *      sum(l_extendedprice) as sum_base_price,
+ *      sum(l_extendedprice*(1-l_discount)) as sum_disc_price,
+ *      sum(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge,
+ *      avg(l_quantity) as avg_qty,
+ *      avg(l_extendedprice) as avg_price,
+ *      avg(l_discount) as avg_disc,
+ *      count(*) as count_order
+ * FROM
+ *      lineitem
+ * WHERE
+ *      l_shipdate <= date '1998-12-01' - interval '[DELTA]' day (3)
+ * GROUP BY
+ *      l_returnflag, l_linestatus
+ * ORDER BY
+ *      l_returnflag, l_linestatus
  *
  * Changes:
  *  1. dates are not supported
@@ -334,13 +346,37 @@ const char* const tpch_query_9 =
  *
  * Original:
  *
- * SELECT c_custkey, c_name, sum(l_extendedprice * (1 - l_discount)) as revenue, c_acctbal, n_name, c_address,
- * c_phone, c_comment
- * FROM customer, orders, lineitem, nation
- * WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate >= date '[DATE]'
- * AND o_orderdate < date '[DATE]' + interval '3' month AND l_returnflag = 'R' AND c_nationkey = n_nationkey
- * GROUP BY c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment
- * ORDER BY revenue DESC;
+ * SELECT
+ *      c_custkey,
+ *      c_name,
+ *      sum(l_extendedprice * (1 - l_discount)) as revenue,
+ *      c_acctbal,
+ *      n_name,
+ *      c_address,
+ *      c_phone,
+ *      c_comment
+ * FROM
+ *      customer,
+ *      orders,
+ *      lineitem,
+ *      nation
+ * WHERE
+ *      c_custkey = o_custkey AND
+ *      l_orderkey = o_orderkey AND
+ *      o_orderdate >= date '[DATE]' AND
+ *      o_orderdate < date '[DATE]' + interval '3' month AND
+ *      l_returnflag = 'R' AND
+ *      c_nationkey = n_nationkey
+ * GROUP BY
+ *      c_custkey,
+ *      c_name,
+ *      c_acctbal,
+ *      c_phone,
+ *      n_name,
+ *      c_address,
+ *      c_comment
+ * ORDER BY
+ *      revenue DESC;
  *
  * Changes:
  *  1. Random values are hardcoded

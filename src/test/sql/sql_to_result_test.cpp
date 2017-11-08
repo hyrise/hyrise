@@ -35,9 +35,9 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
  protected:
   void SetUp() override {
     // Load TPC-H tables
-    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 1));
-    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 1));
-    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 1));
+    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 500));
+    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 500));
+    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 500));
   }
 };
 

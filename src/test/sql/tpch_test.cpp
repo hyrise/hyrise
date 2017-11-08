@@ -26,14 +26,14 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
   void SetUp() override {
     // Chosen rather arbitrarily
     const auto chunk_size = 100;
-    
+
     std::vector<std::string> tpch_table_names({"customer", "lineitem", "nation", "orders", "part", "partsupp", "region",
                                                "supplier"});
 
     _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    
+
     for (const auto &tpch_table_name : tpch_table_names) {
-      const auto tpch_table_path = std::string("src/test/tables/tpch/") + tpch_table_name + ".tbl";      
+      const auto tpch_table_path = std::string("src/test/tables/tpch/") + tpch_table_name + ".tbl";
       StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }
@@ -55,6 +55,7 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     }
 
     auto result_node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
+    result_node->print();
 
     if (optimize) {
       result_node = Optimizer::get().optimize(result_node);
@@ -74,11 +75,8 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
 
   void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
                          bool order_sensitive = false) {
-    auto result_unoptimized = schedule_query_and_return_task(query, false)->get_operator()->get_output();
-    EXPECT_TABLE_EQ(result_unoptimized, expected_result, order_sensitive);
-
     auto result_optimized = schedule_query_and_return_task(query, true)->get_operator()->get_output();
-    EXPECT_TABLE_EQ(result_optimized, expected_result, order_sensitive);
+    EXPECT_TABLE_EQ(result_optimized, expected_result, order_sensitive, false);
   }
 };
 
@@ -87,9 +85,9 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx + 1));
 
-  const auto query = tpch_queries[query_idx];  
-  const auto sqlite_result_table = _sqlite_wrapper->execute_query(query); 
-  
+  const auto query = tpch_queries[query_idx];
+  const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
+
   execute_and_check(query, sqlite_result_table, true);
 }
 

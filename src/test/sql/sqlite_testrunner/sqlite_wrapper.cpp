@@ -155,7 +155,7 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
         }
 
         case SQLITE_FLOAT: {
-          col_types[i] = "float";
+          col_types[i] = "double";
           break;
         }
 
