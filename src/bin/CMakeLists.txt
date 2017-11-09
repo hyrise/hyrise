@@ -1,3 +1,10 @@
+# SIMD playground
+add_executable(
+    hyriseSIMDPlayground
+
+    simd_playground.cpp
+)
+
 # Configure server
 add_executable(
     hyriseServer
