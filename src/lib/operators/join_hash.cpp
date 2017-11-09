@@ -486,12 +486,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           return;
         }
 
-        // auto pos_list_local = std::make_shared<PosList>();
         PosList pos_list_local;
 
-        if (hashtables[current_partition_id]) {
+        if (auto& hashtable = hashtables[current_partition_id]) {
           // Valid hashtable found, so there is at least one match in this partition
-          auto& hashtable = hashtables.at(current_partition_id);
 
           for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& row = partition[partition_offset];
@@ -548,6 +546,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     if (_inputs_swapped) {
       _copy_table_metadata(_right_in_table, _output_table);
 
+      // Semi/Anti joins are always swapped but do not need the outer relation
       if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
         _copy_table_metadata(_left_in_table, _output_table);
       }
@@ -670,6 +669,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_inputs_swapped) {
         write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
 
+        // Semi/Anti joins are always swapped but do not need the outer relation
         if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
           write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
         }
