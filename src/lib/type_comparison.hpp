@@ -94,34 +94,31 @@ value_greater(L l, R r) {
   return boost::lexical_cast<R>(l) > r;
 }
 
-// Retrieve a comparator lambda for a given scan type, i.e., operator.
-template <typename L, typename R>
-std::function<bool(L, R)> get_comparator(ScanType scan_type) {
+// Function that calls a given functor with the correct std comparator
+template <typename Functor>
+void call_with_operator(const ScanType scan_type, const Functor& func) {
   switch (scan_type) {
     case ScanType::OpEquals:
-      return [](L left_val, R right_val) { return value_equal(left_val, right_val); };
+      return func(std::equal_to<void>{});
 
     case ScanType::OpNotEquals:
-      return [](L left_val, R right_val) { return !value_equal(left_val, right_val); };
+      return func(std::not_equal_to<void>{});
 
     case ScanType::OpLessThan:
-      return [](L left_val, R right_val) { return value_smaller(left_val, right_val); };
+      return func(std::less<void>{});
 
     case ScanType::OpLessThanEquals:
-      return [](L left_val, R right_val) { return !value_greater(left_val, right_val); };
+      return func(std::less_equal<void>{});
 
     case ScanType::OpGreaterThan:
-      return [](L left_val, R right_val) { return value_greater(left_val, right_val); };
+      return func(std::greater<void>{});
 
     case ScanType::OpGreaterThanEquals:
-      return [](L left_val, R right_val) { return !value_smaller(left_val, right_val); };
+      return func(std::greater_equal<void>{});
 
     default:
-      Fail(std::string("get_comparator: invalid scan type"));
+      Fail("Unsupported operator.");
   }
-
-  // compiler wants a return value, despite the exception above
-  return [](L, R) { return false; };
 }
 
 }  // namespace opossum
