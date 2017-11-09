@@ -27,4 +27,6 @@ void ChunkMetricsCollectionTask::_on_execute() {
 
 }  // namespace opossum
 
+#else
+int chunk_metrics_collection_task_dummy;
 #endif

@@ -53,4 +53,6 @@ bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t m
 
 }  // namespace opossum
 
+#else
+int chunk_migration_task_dummy;
 #endif

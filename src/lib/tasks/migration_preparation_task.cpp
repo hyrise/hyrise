@@ -212,4 +212,6 @@ int MigrationPreparationTask::get_node_id(const PolymorphicAllocator<size_t>& al
 
 }  // namespace opossum
 
+#else
+int migration_preparation_task_dummy;
 #endif

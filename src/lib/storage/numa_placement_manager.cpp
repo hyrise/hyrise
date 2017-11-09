@@ -71,4 +71,8 @@ const std::shared_ptr<Topology>& NUMAPlacementManager::topology() const { return
 
 }  // namespace opossum
 
+#else
+
+int numa_placement_manager_dummy;
+
 #endif
