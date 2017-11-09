@@ -17,28 +17,16 @@ namespace opossum {
 
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
-uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
-  if (_history.size() < 2 || lookback == 0) return 0;
-  const auto last = _history.back();
-  const auto prelast_index = std::max(0l, static_cast<int64_t>(_history.size()) - static_cast<int64_t>(lookback));
-  const auto prelast = _history.at(prelast_index);
-  return last - prelast;
+Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
+
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter
+             ) : _alloc(alloc), _access_counter(access_counter) {
 }
 
-Chunk::Chunk() : Chunk(PolymorphicAllocator<Chunk>(), false) {}
-
-Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(), has_mvcc_columns) {}
-
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter,
-             const bool has_mvcc_columns)
-    : _alloc(alloc), _access_counter(access_counter) {
-  if (has_mvcc_columns) _mvcc_columns = std::make_shared<MvccColumns>();
-}
-
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns, const bool has_access_counter)
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode, const ChunkUseAccessCounter counter_mode)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
-  if (has_mvcc_columns) _mvcc_columns = std::make_shared<MvccColumns>();
-  if (has_access_counter) _access_counter = std::make_shared<AccessCounter>(alloc);
+  if (mvcc_mode == ChunkUseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
+  if (counter_mode == ChunkUseAccessCounter::Yes) _access_counter = std::make_shared<AccessCounter>(alloc);
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
@@ -168,5 +156,13 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
 }
 
 const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
+
+uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
+  if (_history.size() < 2 || lookback == 0) return 0;
+  const auto last = _history.back();
+  const auto prelast_index = std::max(0ll, static_cast<int64_t>(_history.size()) - static_cast<int64_t>(lookback));
+  const auto prelast = _history.at(prelast_index);
+  return last - prelast;
+}
 
 }  // namespace opossum

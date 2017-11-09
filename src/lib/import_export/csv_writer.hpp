@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "csv.hpp"
+#include "csv_meta.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -17,7 +17,7 @@ class CsvWriter {
    * Creates a new CsvWriter with the given file as output file.
    * @param file The file to output the csv to.
    */
-  explicit CsvWriter(const std::string& file, const CsvConfig& config = {});
+  explicit CsvWriter(const std::string& file, const ParseConfig& config = {});
 
   template <typename T>
   void write(const T& value) {
@@ -33,12 +33,6 @@ class CsvWriter {
    */
   void end_line();
 
-  /*
-   * Writes a full line of AllTypeVariants as a row.
-   * Also calls end_line() to finish the row.
-   */
-  void write_line(const std::vector<AllTypeVariant>& values);
-
  protected:
   std::string escape(const std::string& string);
 
@@ -47,7 +41,7 @@ class CsvWriter {
 
   std::ofstream _stream;
   ColumnID _current_col_count{0};
-  CsvConfig _config;
+  ParseConfig _config;
 };
 
 template <typename T>

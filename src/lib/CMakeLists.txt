@@ -15,7 +15,8 @@ set(
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
-    import_export/csv.hpp
+    import_export/csv_meta.cpp
+    import_export/csv_meta.hpp
     import_export/csv_parser.cpp
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
@@ -113,8 +114,8 @@ set(
     optimizer/abstract_syntax_tree/insert_node.hpp
     optimizer/abstract_syntax_tree/limit_node.cpp
     optimizer/abstract_syntax_tree/limit_node.hpp
-    optimizer/abstract_syntax_tree/mock_table_node.cpp
-    optimizer/abstract_syntax_tree/mock_table_node.hpp
+    optimizer/abstract_syntax_tree/mock_node.cpp
+    optimizer/abstract_syntax_tree/mock_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp

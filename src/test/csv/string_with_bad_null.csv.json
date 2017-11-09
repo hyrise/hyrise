@@ -1,0 +1,10 @@
+{
+    "chunk_size": 4,
+    "columns": [
+        {
+            "name": "a",
+            "type": "string",
+            "nullable": true
+        }
+    ]
+}

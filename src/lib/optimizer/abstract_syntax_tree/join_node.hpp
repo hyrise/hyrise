@@ -27,7 +27,7 @@ class JoinNode : public AbstractASTNode {
   JoinMode join_mode() const;
 
   std::string description() const override;
-  const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
+  const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
@@ -50,8 +50,9 @@ class JoinNode : public AbstractASTNode {
   std::optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
   std::optional<ScanType> _scan_type;
 
-  std::vector<ColumnID> _output_column_id_to_input_column_id;
-  std::vector<std::string> _output_column_names;
+  mutable std::optional<std::vector<std::string>> _output_column_names;
+
+  void _update_output() const;
 };
 
 }  // namespace opossum

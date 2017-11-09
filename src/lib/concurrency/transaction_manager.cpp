@@ -23,8 +23,6 @@ void TransactionManager::reset() {
 TransactionManager::TransactionManager()
     : _next_transaction_id{1u}, _last_commit_id{0u}, _last_commit_context{std::make_shared<CommitContext>(0u)} {}
 
-TransactionID TransactionManager::next_transaction_id() const { return _next_transaction_id; }
-
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {

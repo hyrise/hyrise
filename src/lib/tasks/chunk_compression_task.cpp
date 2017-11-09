@@ -13,12 +13,11 @@
 
 namespace opossum {
 
-ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id, bool check_completion)
-    : ChunkCompressionTask{table_name, std::vector<ChunkID>{chunk_id}, check_completion} {}
+ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id)
+    : ChunkCompressionTask{table_name, std::vector<ChunkID>{chunk_id}} {}
 
-ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
-                                           bool check_completion)
-    : _check_completion{check_completion}, _table_name{table_name}, _chunk_ids{chunk_ids} {}
+ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids)
+    : _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
 void ChunkCompressionTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);
@@ -30,9 +29,7 @@ void ChunkCompressionTask::_on_execute() {
 
     auto& chunk = table->get_chunk(chunk_id);
 
-    if (_check_completion && !chunk_is_completed(chunk, table->chunk_size())) {
-      Fail("Chunk is not completed and thus can’t be compressed.");
-    }
+    DebugAssert(chunk_is_completed(chunk, table->chunk_size()), "Chunk is not completed and thus can’t be compressed.");
 
     DictionaryCompression::compress_chunk(table->column_types(), chunk);
   }

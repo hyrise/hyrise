@@ -148,7 +148,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
       current_result_node = _translate_projection(*insert.values, current_result_node);
     }
 
-    Assert(current_result_node->output_col_count() == target_table->column_count(), "Insert: column mismatch");
+    Assert(current_result_node->output_column_count() == target_table->column_count(), "Insert: column mismatch");
   } else {
     // Certain columns have been specified. In this case we create a new expression list
     // for the Projection, so that it contains as many columns as the target table.
@@ -212,10 +212,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
          "Unconditional updates are currently not supported");
 
   std::vector<std::shared_ptr<Expression>> update_expressions;
-  update_expressions.reserve(current_values_node->output_col_count());
+  update_expressions.reserve(current_values_node->output_column_count());
 
   // pre-fill with regular column references
-  for (ColumnID column_idx{0}; column_idx < current_values_node->output_col_count(); ++column_idx) {
+  for (ColumnID column_idx{0}; column_idx < current_values_node->output_column_count(); ++column_idx) {
     update_expressions.emplace_back(Expression::create_column(column_idx));
   }
 
@@ -661,7 +661,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
 
       if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
-        for (ColumnID column_idx{0}; column_idx < input_node->output_col_count(); ++column_idx) {
+        for (ColumnID column_idx{0}; column_idx < input_node->output_column_count(); ++column_idx) {
           column_ids.emplace_back(column_idx);
         }
       } else {

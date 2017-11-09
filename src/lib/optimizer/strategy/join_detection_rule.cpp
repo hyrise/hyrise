@@ -37,7 +37,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
         /**
          * Place the conditional join where the cross join was and remove the predicate node
          */
-        new_join_node->replace_in_tree(cross_join_node);
+        cross_join_node->replace_with(new_join_node);
         predicate_node->remove_from_tree();
 
         return true;
@@ -52,10 +52,28 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
     const std::shared_ptr<JoinNode>& cross_join) {
   Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
 
+  // Everytime we traverse a node which we're the right child of, the ColumnIDs a predicate needs to reference become
+  // offsetted
+  auto column_id_offset = 0;
+
   // Go up in AST to find corresponding PredicateNode
   std::shared_ptr<AbstractASTNode> node = cross_join;
-  while (node->parent() != nullptr) {
-    node = node->parent();
+  while (true) {
+    const auto parents = node->parents();
+
+    /**
+     * Can't deal with the parents.size() > 0 case - would need to check that a potential predicate exists in all
+     * parents and this is too much work considering the JoinDetectionRule will be removed soon-ish (TM)
+     */
+    if (parents.empty() || parents.size() > 1) {
+      break;
+    }
+
+    if (node->get_child_side(parents[0]) == ASTChildSide::Right) {
+      column_id_offset += parents[0]->left_child()->output_column_count();
+    }
+
+    node = parents[0];
 
     /**
      * TODO(anyone)
@@ -88,10 +106,20 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
        * IMPORTANT: Since we only traversed nodes that do not change the column order when looking for the Predicate,
        * we can do this by the simple range check in _is_join_condition()
        */
-      const auto predicate_left_column_id = predicate_node->column_id();
-      const auto predicate_right_column_id = boost::get<ColumnID>(predicate_node->value());
-      const auto cross_left_num_cols = cross_join->left_child()->output_col_count();
-      const auto cross_right_num_cols = cross_join->right_child()->output_col_count();
+      auto predicate_left_column_id = predicate_node->column_id();
+      auto predicate_right_column_id = boost::get<ColumnID>(predicate_node->value());
+
+      // The Predicate refers to a subtree left of the subtree the Cross Join came from
+      if (predicate_left_column_id < column_id_offset || predicate_right_column_id < column_id_offset) {
+        continue;
+      }
+
+      // Calculate column ids relative to the leftmost output column of the CrossJoin subtree.
+      predicate_left_column_id -= column_id_offset;
+      predicate_right_column_id -= column_id_offset;
+
+      const auto cross_left_num_cols = cross_join->left_child()->output_column_count();
+      const auto cross_right_num_cols = cross_join->right_child()->output_column_count();
 
       if (_is_join_condition(predicate_left_column_id, predicate_right_column_id, cross_left_num_cols,
                              cross_right_num_cols)) {

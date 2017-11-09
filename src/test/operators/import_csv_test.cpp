@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/import_csv.hpp"
+#include "storage/base_dictionary_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -123,9 +124,10 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
 }
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
-  CsvConfig config;
-  config.separator = ';';
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/ints_semicolon_separator.csv", config);
+  std::string csv_file = "src/test/csv/ints_semicolon_separator.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.config.separator = ';';
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -176,9 +178,10 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
 }
 
 TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
-  CsvConfig config;
-  config.rfc_mode = false;
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped_unsafe.csv", config);
+  std::string csv_file = "src/test/csv/string_escaped_unsafe.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.config.rfc_mode = false;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -229,9 +232,10 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 }
 
 TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
-  auto config = CsvConfig{};
-  config.reject_quoted_nonstrings = false;
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/with_and_without_quotes.csv", config);
+  std::string csv_file = "src/test/csv/with_and_without_quotes.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.config.reject_quoted_nonstrings = false;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -250,9 +254,10 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
 }
 
 TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
-  auto config = CsvConfig{};
-  config.escape = '\\';
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_double_escape.csv", config);
+  std::string csv_file = "src/test/csv/string_double_escape.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.config.escape = '\\';
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
@@ -265,6 +270,49 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
 TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/quoted_int.csv");
   EXPECT_THROW(importer->execute(), std::exception);
+}
+
+TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
+  std::string csv_file = "src/test/csv/float_int_large.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.auto_compress = true;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(20);
+  expected_table->add_column("b", "float");
+  expected_table->add_column("a", "int");
+
+  for (int i = 0; i < 100; ++i) {
+    expected_table->append({458.7f, 12345});
+  }
+
+  auto result_table = importer->get_output();
+
+  // Check if table content is preserved
+  EXPECT_TABLE_EQ(result_table, expected_table, true);
+
+  // Check if columns are compressed into DictionaryColumns
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
+    auto& chunk = result_table->get_chunk(chunk_id);
+    for (ColumnID column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
+      auto base_column = chunk.get_column(column_id);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(base_column);
+
+      EXPECT_TRUE(dict_column != nullptr);
+    }
+  }
+}
+
+TEST_F(OperatorsImportCsvTest, UnconvertedCharactersThrows) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_int.csv");
+  EXPECT_THROW(importer->execute(), std::logic_error);
+
+  importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_float.csv");
+  EXPECT_THROW(importer->execute(), std::logic_error);
+
+  importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_double.csv");
+  EXPECT_THROW(importer->execute(), std::logic_error);
 }
 
 }  // namespace opossum

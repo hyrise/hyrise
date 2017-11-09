@@ -49,7 +49,6 @@ class TransactionManager : private Noncopyable {
   static TransactionManager& get();
   static void reset();
 
-  TransactionID next_transaction_id() const;
   CommitID last_commit_id() const;
 
   /**

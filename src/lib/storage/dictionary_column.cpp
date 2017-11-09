@@ -161,35 +161,6 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
   }
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
-template <typename T>
-const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
-    ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
-  auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>(_dictionary->get_allocator());
-
-  /*
-  We only offset if this ValueColumn was referenced by a ReferenceColumn. Thus it might actually be filtered.
-  */
-  if (offsets) {
-    materialized_vector->reserve(offsets->size());
-    for (auto& offset : *offsets) {
-      T value = (*_dictionary)[_attribute_vector->get(offset)];
-      auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
-      materialized_vector->push_back(materialized_row);
-    }
-  } else {
-    materialized_vector->reserve(_attribute_vector->size());
-    for (ChunkOffset offset = 0; offset < _attribute_vector->size(); offset++) {
-      T value = (*_dictionary)[_attribute_vector->get(offset)];
-      auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
-      materialized_vector->push_back(materialized_row);
-    }
-  }
-
-  return materialized_vector;
-}
-
-// Copies a DictionaryColumn using a new allocator. This is useful for placing the DictionaryColumn on a new NUMA node.
 template <typename T>
 std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);

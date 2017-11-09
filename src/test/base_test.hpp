@@ -8,6 +8,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -27,10 +28,12 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
  protected:
   // creates a dictionary column with the given type and values
   template <class T>
-  static std::shared_ptr<BaseColumn> create_dict_column_by_type(const std::string& type, const std::vector<T>& values) {
+  static std::shared_ptr<DictionaryColumn<T>> create_dict_column_by_type(const std::string& type,
+                                                                         const std::vector<T>& values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
-    return DictionaryCompression::compress_column(type, value_column);
+    auto compressed_column = DictionaryCompression::compress_column(type, value_column);
+    return std::static_pointer_cast<DictionaryColumn<T>>(compressed_column);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {

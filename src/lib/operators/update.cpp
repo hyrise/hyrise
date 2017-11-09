@@ -45,10 +45,6 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto pos_list = std::make_shared<PosList>();
     for (auto i = 0u; i < _input_table_right()->get_chunk(chunk_id).size(); ++i) {
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
-        while (_input_table_left()->get_chunk(current_left_chunk_id).size() == 0u) {
-          ++current_left_chunk_id;
-        }
-
         current_row_in_left_chunk = 0u;
         current_pos_list = std::static_pointer_cast<const ReferenceColumn>(
                                _input_table_left()->get_chunk(current_left_chunk_id).get_column(ColumnID{0}))
@@ -61,7 +57,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    Chunk chunk{false};
+    Chunk chunk{ChunkUseMvcc::No};
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
       chunk.add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }

@@ -9,7 +9,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
-#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -65,18 +64,16 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
-TEST_F(OperatorsValidateTest, ProjectedValidate) {
+TEST_F(OperatorsValidateTest, ScanValidate) {
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_scanned.tbl", 2u);
 
-  Projection::ColumnExpressions column_expressions(
-      {Expression::create_column(ColumnID{2}), Expression::create_column(ColumnID{0})});
-  auto projection = std::make_shared<Projection>(_table_wrapper, column_expressions);
-  projection->set_transaction_context(context);
-  projection->execute();
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 2);
+  table_scan->set_transaction_context(context);
+  table_scan->execute();
 
-  auto validate = std::make_shared<Validate>(projection);
+  auto validate = std::make_shared<Validate>(table_scan);
   validate->set_transaction_context(context);
   validate->execute();
 

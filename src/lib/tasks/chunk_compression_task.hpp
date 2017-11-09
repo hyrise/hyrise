@@ -36,9 +36,8 @@ class Chunk;
  */
 class ChunkCompressionTask : public AbstractTask {
  public:
-  explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id, bool check_completion = true);
-  explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
-                                bool check_completion = true);
+  explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id);
+  explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids);
 
  protected:
   void _on_execute() override;
@@ -52,7 +51,6 @@ class ChunkCompressionTask : public AbstractTask {
   bool chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size);
 
  private:
-  const bool _check_completion;  ///< decides whether chunk_is_completed is called before compression
   const std::string _table_name;
   const std::vector<ChunkID> _chunk_ids;
 };
