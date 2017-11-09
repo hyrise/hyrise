@@ -250,8 +250,7 @@ void AggregateNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(!_output_column_ids_to_input_column_ids,
-              "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(!_output_column_ids_to_input_column_ids, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 

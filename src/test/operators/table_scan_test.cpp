@@ -239,7 +239,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[ScanType::OpLessThanEquals] = {100, 102, 104};
   tests[ScanType::OpGreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::OpBetween] = {}; // Will throw
+  tests[ScanType::OpBetween] = {};  // Will throw
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4,
@@ -266,7 +266,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   tests[ScanType::OpLessThanEquals] = {100, 102, 104};
   tests[ScanType::OpGreaterThan] = {106};
   tests[ScanType::OpGreaterThanEquals] = {104, 106};
-  tests[ScanType::OpBetween] = {}; // Will throw
+  tests[ScanType::OpBetween] = {};  // Will throw
 
   for (const auto& test : tests) {
     auto scan1 = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{1}, ScanType::OpLessThan, 108);

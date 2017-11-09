@@ -305,7 +305,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
    */
   auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
   auto table_statistics =
-  std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+      std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
   auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);

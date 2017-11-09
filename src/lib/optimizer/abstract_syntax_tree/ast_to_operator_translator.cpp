@@ -63,9 +63,11 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
     auto table_scan1 =
-        std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), ScanType::OpGreaterThanEquals, table_scan_node->value(), std::nullopt);
+        std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), ScanType::OpGreaterThanEquals,
+                                    table_scan_node->value(), std::nullopt);
 
-    return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::OpLessThanEquals, *table_scan_node->value2(), std::nullopt);
+    return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::OpLessThanEquals,
+                                       *table_scan_node->value2(), std::nullopt);
   }
 
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), table_scan_node->scan_type(),

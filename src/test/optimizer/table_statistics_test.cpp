@@ -41,10 +41,12 @@ class TableStatisticsTest : public BaseTest {
 
     std::shared_ptr<TableScan> table_scan;
     if (scan_type == ScanType::OpBetween) {
-      auto first_table_scan = std::make_shared<TableScan>(table_wrapper, column_id, ScanType::OpGreaterThanEquals, value, std::nullopt);
+      auto first_table_scan =
+          std::make_shared<TableScan>(table_wrapper, column_id, ScanType::OpGreaterThanEquals, value, std::nullopt);
       first_table_scan->execute();
 
-      table_scan = std::make_shared<TableScan>(first_table_scan, column_id, ScanType::OpLessThanEquals, *value2, std::nullopt);
+      table_scan =
+          std::make_shared<TableScan>(first_table_scan, column_id, ScanType::OpLessThanEquals, *value2, std::nullopt);
     } else {
       table_scan = std::make_shared<TableScan>(table_wrapper, column_id, scan_type, value, value2);
     }
