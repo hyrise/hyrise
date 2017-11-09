@@ -79,7 +79,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
-  // Copies a DictionaryColumn using a new allocator. This is useful for placing the DictionaryColumn on a new NUMA node.
+  // Copies a DictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:

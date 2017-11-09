@@ -1,7 +1,5 @@
 #include "chunk_migration_task.hpp"
 
-#if HYRISE_NUMA_SUPPORT
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,6 +7,8 @@
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+
+#if HYRISE_NUMA_SUPPORT
 
 namespace opossum {
 

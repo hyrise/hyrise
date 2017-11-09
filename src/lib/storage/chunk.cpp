@@ -19,11 +19,11 @@ const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
 Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
 
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter
-             ) : _alloc(alloc), _access_counter(access_counter) {
-}
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter)
+    : _alloc(alloc), _access_counter(access_counter) {}
 
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode, const ChunkUseAccessCounter counter_mode)
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
+             const ChunkUseAccessCounter counter_mode)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
   if (mvcc_mode == ChunkUseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
   if (counter_mode == ChunkUseAccessCounter::Yes) _access_counter = std::make_shared<AccessCounter>(alloc);

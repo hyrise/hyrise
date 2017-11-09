@@ -1,7 +1,5 @@
 #include "migration_preparation_task.hpp"
 
-#if HYRISE_NUMA_SUPPORT
-
 #include <numa.h>
 #include <algorithm>
 #include <chrono>
@@ -20,6 +18,8 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/numa_memory_resource.hpp"
+
+#if HYRISE_NUMA_SUPPORT
 
 namespace opossum {
 
@@ -156,7 +156,6 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, co
   std::sort(chunk_infos.begin(), chunk_infos.end(), [](const ChunkInfo& a, const ChunkInfo& b) { return b < a; });
   return chunk_infos;
 }
-
 
 MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::Options& options) : _options(options) {}
 
