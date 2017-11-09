@@ -68,12 +68,19 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
   predicate_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator{}.translate_node(predicate_node);
 
-  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
+  const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
+  ASSERT_TRUE(table_scan_op2);
+  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op2->scan_type(), ScanType::OpLessThanEquals);
+  EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(1337));
+  EXPECT_EQ(table_scan_op2->right_value2(), std::nullopt);
+
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
-  EXPECT_EQ(table_scan_op->scan_type(), ScanType::OpBetween);
+  EXPECT_EQ(table_scan_op->scan_type(), ScanType::OpGreaterThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
-  EXPECT_EQ(table_scan_op->right_value2(), AllTypeVariant(1337));
+  EXPECT_EQ(table_scan_op->right_value2(), std::nullopt);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
