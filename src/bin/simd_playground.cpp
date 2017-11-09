@@ -16,38 +16,53 @@ void print_128_bit(__m128i reg) {
   std::cout << std::bitset<32>{_var[0]} << std::endl << std::endl;
 }
 
-void pack_128(const uint32_t* _in, __m128i* out, const uint8_t bit_size) {
-  constexpr auto _32_bit = 32;
+template <uint8_t BitSize, uint8_t CarryOver, uint8_t RemainingRecursions>
+struct Fill128Bit {
+  void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {
+    constexpr auto _32_bit = 32u;
+    constexpr auto i_max = (_32_bit - CarryOver) / BitSize;
 
-  auto in = reinterpret_cast<const __m128i*>(_in);
-
-  const auto mask = _mm_set1_epi32((1U << bit_size) - 1);
-
-  auto in_reg = _mm_setzero_si128();
-  auto out_reg = _mm_setzero_si128();
-
-  auto offset = 0;
-  for (auto _128_bit_block = 0; _128_bit_block < bit_size; ++_128_bit_block) {
-    auto i_max = (_32_bit - offset) / bit_size;
-    for (auto i = 0; i < i_max; ++i) {
+    for (auto i = 0u; i < i_max; ++i) {
       in_reg = _mm_and_si128(_mm_load_si128(in++), mask);
-      out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, offset + i * bit_size));
+      const auto offset = CarryOver + i * BitSize;
+      out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, offset));
     }
 
-    if ((offset + i_max * bit_size) < _32_bit) {
-      out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, offset + (i_max) * bit_size));
+    constexpr auto partial_fit_offset = CarryOver + i_max * BitSize;
+    constexpr auto num_first_bits = _32_bit - partial_fit_offset;
+
+    if (partial_fit_offset < _32_bit) {
+      out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, partial_fit_offset));
+
       _mm_store_si128(out, out_reg);
       ++out;
 
-      auto carry_over = _32_bit - (offset + i_max * bit_size);
-      out_reg = _mm_srli_epi32(in_reg, carry_over);
-
-      offset = bit_size - carry_over;
+      out_reg = _mm_srli_epi32(in_reg, num_first_bits);
     } else {
       _mm_store_si128(out, out_reg);
       ++out;
     }
+
+    constexpr auto new_carry_over = BitSize - num_first_bits;
+    Fill128Bit<BitSize, new_carry_over, RemainingRecursions - 1u>{}(in, out, in_reg, out_reg, mask);
   }
+};
+
+template <uint8_t BitSize, uint8_t CarryOver>
+struct Fill128Bit<BitSize, CarryOver, 0u> {
+  void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {}
+};
+
+template <uint8_t BitSize>
+void pack_128(const uint32_t* _in, __m128i* out) {
+  auto in = reinterpret_cast<const __m128i*>(_in);
+
+  auto in_reg = _mm_setzero_si128();
+  auto out_reg = _mm_setzero_si128();
+  const auto mask = _mm_set1_epi32((1u << BitSize) - 1);
+
+  constexpr auto carry_over = 0u;
+  Fill128Bit<BitSize, carry_over, BitSize>{}(in, out, in_reg, out_reg, mask);
 }
 
 int main(int argc, char const *argv[])
@@ -58,13 +73,15 @@ int main(int argc, char const *argv[])
     in_array[i] = 1;
   }
 
-  __m128i out_array[5];
+  constexpr auto bit_size = 2u;
 
-  pack_128(in_array, out_array, 5);
+  __m128i out_array[bit_size];
+
+  pack_128<bit_size>(in_array, out_array);
 
   auto _out_array = reinterpret_cast<uint32_t *>(out_array);
 
-  for (auto i = 0; i < 5; ++i) {
+  for (auto i = 0u; i < bit_size; ++i) {
     std::cout << std::bitset<32>{_out_array[i * 4 + 3]} << "|";
     std::cout << std::bitset<32>{_out_array[i * 4 + 2]} << "|";
     std::cout << std::bitset<32>{_out_array[i * 4 + 1]} << "|";
