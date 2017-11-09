@@ -10,6 +10,7 @@
 #include "storage/iterables/create_iterable_from_column.hpp"
 
 #include "resolve_type.hpp"
+#include "type_comparison.hpp"
 
 namespace opossum {
 
@@ -37,7 +38,7 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-        _with_operator(_scan_type, [&](auto comparator) {
+        call_with_operator(_scan_type, [&](auto comparator) {
           _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
