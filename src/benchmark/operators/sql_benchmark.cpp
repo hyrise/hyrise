@@ -26,9 +26,9 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();
-    storage_manager.add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 0));
-    storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 0));
-    storage_manager.add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 0));
+    storage_manager.add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl", 0));
+    storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl", 0));
+    storage_manager.add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", 0));
   }
 
   void TearDown(benchmark::State& st) override {}

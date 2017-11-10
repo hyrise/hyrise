@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
+#include "operators/print.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
@@ -55,7 +56,6 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     }
 
     auto result_node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
-    result_node->print();
 
     if (optimize) {
       result_node = Optimizer::get().optimize(result_node);
@@ -76,6 +76,7 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
   void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
                          bool order_sensitive = false) {
     auto result_optimized = schedule_query_and_return_task(query, true)->get_operator()->get_output();
+    Print::print(result_optimized);
     EXPECT_TABLE_EQ(result_optimized, expected_result, order_sensitive, false);
   }
 };
@@ -99,7 +100,7 @@ INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
   // 3, /* Enable once we support Exists and Subselects in WHERE condition */
   4,
   5,
-  // 6, /* Enable once OR is supported in WHERE condition */
+  6,
   // 7, /* Enable once CASE and arithmetic operations of Aggregations are supported */
   8,
   9

@@ -49,12 +49,6 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
-  /**
-   * This function has to be overwritten if columns or their order are in any way redefined by this Node.
-   * Examples include Projections, Aggregates, and Joins.
-   */
-  DebugAssert(left_child() && !right_child(),
-              "Node has no or two inputs and therefore needs to override this function");
 
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {

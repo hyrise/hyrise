@@ -17,8 +17,7 @@ typedef std::tuple<uint32_t, std::string, size_t, std::string> SQLTestParam;
 class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(table_a));
+    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 2));
 
     // Load TPC-H tables.
     load_tpch_tables();
@@ -29,14 +28,9 @@ class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterf
   }
 
   void load_tpch_tables() {
-    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
-    StorageManager::get().add_table("customer", customer);
-
-    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
-    StorageManager::get().add_table("orders", orders);
-
-    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
-    StorageManager::get().add_table("lineitem", lineitem);
+    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl", 1));
+    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", 1));
+    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl", 1));
   }
 };
 

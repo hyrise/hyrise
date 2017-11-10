@@ -587,17 +587,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     }
   }
 
-  for (auto projection : projections) std::cout << projection->column_id() << ", ";
-  std::cout << std::endl;
-
-  std::cout << "Aggregates:" << std::endl;
-  for (auto & aggregate:aggregate_expressions) {
-    std::cout << "   ";
-    std::cout << aggregate->to_string();
-    std::cout << std::endl;
-  }
-  std::cout << "/Aggregates:" << std::endl;
-
   /**
    * Collect the ColumnIDs to GROUP BY
    */

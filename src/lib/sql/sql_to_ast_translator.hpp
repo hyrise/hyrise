@@ -43,14 +43,13 @@ class AggregateNode;
  *
  *
  * ## Usage
- * Refer to sql_to_result_test.cpp for an example of the SQLToASTTranslator in proper action.
- * It is used as a Singleton via SQLToASTTranslator::get().
+ * Refer to the SQLPlanner for an example of the SQLToASTTranslator in proper action.
  *
  * The basic usage looks like this:
  *
  * hsql::SQLParserResult parse_result;
  * hsql::SQLParser::parseSQLString(params.query, &parse_result);
- * auto result_nodes = SQLToASTTranslator::get().translate_parse_result(parse_result);
+ * auto result_nodes = SQLToASTTranslator().translate_parse_result(parse_result);
  */
 class SQLToASTTranslator final : public Noncopyable {
  public:
