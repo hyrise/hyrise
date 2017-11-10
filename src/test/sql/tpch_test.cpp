@@ -72,13 +72,6 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     }
     return tasks.back();
   }
-
-  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
-                         bool order_sensitive = false) {
-    auto result_optimized = schedule_query_and_return_task(query, true)->get_operator()->get_output();
-    Print::print(result_optimized);
-    EXPECT_TABLE_EQ(result_optimized, expected_result, order_sensitive, false);
-  }
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
@@ -89,7 +82,8 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto query = tpch_queries[query_idx];
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
-  execute_and_check(query, sqlite_result_table, true);
+  auto result_table = schedule_query_and_return_task(query, true)->get_operator()->get_output();
+  EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference);
 }
 
 // clang-format off

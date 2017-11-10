@@ -102,7 +102,7 @@ TEST_F(OperatorsProjectionTest, SingleColumnInt) {
   auto projection = std::make_shared<Projection>(_table_wrapper, _a_expr);
   projection->execute();
   auto out = projection->get_output();
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProjectInt) {
@@ -114,7 +114,7 @@ TEST_F(OperatorsProjectionTest, DoubleProjectInt) {
   auto projection2 = std::make_shared<Projection>(projection1, _a_expr);
   projection2->execute();
 
-  EXPECT_TABLE_EQ(projection2->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection2->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, SingleColumnFloat) {
@@ -123,7 +123,7 @@ TEST_F(OperatorsProjectionTest, SingleColumnFloat) {
   auto projection = std::make_shared<Projection>(_table_wrapper_float, _a_expr);
   projection->execute();
   auto out = projection->get_output();
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProjectFloat) {
@@ -135,7 +135,7 @@ TEST_F(OperatorsProjectionTest, DoubleProjectFloat) {
   auto projection2 = std::make_shared<Projection>(projection1, _a_expr);
   projection2->execute();
 
-  EXPECT_TABLE_EQ(projection2->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection2->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
@@ -144,7 +144,7 @@ TEST_F(OperatorsProjectionTest, AllColumns) {
   auto projection = std::make_shared<Projection>(_table_wrapper, _b_a_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, ConstantArithmeticProjection) {
@@ -157,7 +157,7 @@ TEST_F(OperatorsProjectionTest, ConstantArithmeticProjection) {
   auto projection = std::make_shared<Projection>(_table_wrapper_int, column_expressions);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, SimpleArithmeticProjection) {
@@ -166,7 +166,7 @@ TEST_F(OperatorsProjectionTest, SimpleArithmeticProjection) {
   auto projection = std::make_shared<Projection>(_table_wrapper_int, _sum_a_b_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, StringConcat) {
@@ -175,7 +175,7 @@ TEST_F(OperatorsProjectionTest, StringConcat) {
   auto projection = std::make_shared<Projection>(_table_wrapper_string, _concat_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionA) {
@@ -184,7 +184,7 @@ TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionA) {
   auto projection = std::make_shared<Projection>(_table_wrapper_int, _mul_a_b_c_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionB) {
@@ -193,7 +193,7 @@ TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionB) {
   auto projection = std::make_shared<Projection>(_table_wrapper_int, _sum_a_b_c_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionWithDictA) {
@@ -202,7 +202,7 @@ TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionWithDictA) {
   auto projection = std::make_shared<Projection>(_table_wrapper_int_dict, _sum_a_b_c_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
@@ -215,7 +215,7 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
   auto projection = std::make_shared<Projection>(table_scan, _sum_a_b_c_expr);
   projection->execute();
 
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, ValueColumnCount) {
@@ -262,7 +262,7 @@ TEST_F(OperatorsProjectionTest, Literals) {
   auto projection = std::make_shared<Projection>(_dummy_wrapper, _literal_expr);
   projection->execute();
   auto out = projection->get_output();
-  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, OperatorName) {

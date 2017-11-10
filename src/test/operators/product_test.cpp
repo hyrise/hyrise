@@ -34,7 +34,7 @@ TEST_F(OperatorsProductTest, ValueColumns) {
   product->execute();
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_product.tbl", 3);
-  EXPECT_TABLE_EQ(product->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(product->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProductTest, ReferenceAndValueColumns) {
@@ -46,7 +46,7 @@ TEST_F(OperatorsProductTest, ReferenceAndValueColumns) {
   product->execute();
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_filtered_float_product.tbl", 3);
-  EXPECT_TABLE_EQ(product->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(product->get_output(), expected_result);
 }
 
 }  // namespace opossum

@@ -516,10 +516,6 @@ std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_ag
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
-  for (const auto & name : input_node->get_verbose_column_names()) {
-    std::cout << name << ", ";
-  }
-  std::cout << std::endl;
 
   /**
    * This function creates the following node structure:

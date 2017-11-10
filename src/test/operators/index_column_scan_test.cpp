@@ -66,7 +66,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, ColumnID{1}, ScanType::OpLessThan, 457.9);
   scan_2->execute();
 
-  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
@@ -86,7 +86,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
   auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   scan->execute();
 
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, LikeOperatorThrowsException) {

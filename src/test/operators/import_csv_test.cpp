@@ -22,28 +22,28 @@ TEST_F(OperatorsImportCsvTest, SingleFloatColumn) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FloatIntTable) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int.tbl", 2);
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringNoQuotes) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/string.tbl", 5);
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringQuotes) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_quotes.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/string.tbl", 5);
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringEscaping) {
@@ -57,14 +57,14 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   expected_table->append({"yy,y"});
   expected_table->append({"zz\nz"});
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, TrailingNewline) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_trailing_newline.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int.tbl", 2);
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FileDoesNotExist) {
@@ -76,8 +76,8 @@ TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
-  EXPECT_TABLE_EQ(StorageManager::get().get_table("float_table"), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(StorageManager::get().get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
@@ -86,8 +86,8 @@ TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
   auto retriever = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
-  EXPECT_TABLE_EQ(importer->get_output(), retriever->get_output(), true);
-  EXPECT_TABLE_EQ(StorageManager::get().get_table("float_table"), retriever->get_output(), true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), retriever->get_output());
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(StorageManager::get().get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportCsvTest, EmptyStrings) {
@@ -102,7 +102,7 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
     expected_table->append({"", "", ""});
   }
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, Parallel) {
@@ -119,7 +119,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
   }
 
   CurrentScheduler::get()->finish();
-  EXPECT_TABLE_EQ(importer->get_operator()->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_operator()->get_output(), expected_table);
   CurrentScheduler::set(nullptr);
 }
 
@@ -138,7 +138,7 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
     expected_table->append({1, 2, 3});
   }
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, ChunkSize) {
@@ -174,7 +174,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
     expected_table->append({458.7f, 12345});
   }
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
@@ -191,7 +191,7 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   expected_table->append({"yy,y"});
   expected_table->append({"zz\nz"});
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
@@ -207,7 +207,7 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
   expected_table->append({NULL_VALUE, 123, 456});
   expected_table->append({457.7f, 1234, 675});
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
@@ -223,7 +223,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   expected_table->append({"zzz"});
   expected_table->append({NULL_VALUE});
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
@@ -250,7 +250,7 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
   expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
@@ -264,7 +264,7 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   expected_table->add_column("a", "string");
   expected_table->append({"xxx\\\"xyz\\\""});
 
-  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
@@ -290,7 +290,7 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   auto result_table = importer->get_output();
 
   // Check if table content is preserved
-  EXPECT_TABLE_EQ(result_table, expected_table, true);
+  EXPECT_ORDER_DEPENDENT_TABLE_EQ(result_table, expected_table);
 
   // Check if columns are compressed into DictionaryColumns
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {

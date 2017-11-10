@@ -62,7 +62,7 @@ TYPED_TEST(RecreationTestJoin, RecreationJoin) {
                                           std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   EXPECT_NE(join, nullptr) << "Could not build Join";
   join->execute();
-  EXPECT_TABLE_EQ(join->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(join->get_output(), expected_result);
 
   // recreate and execute recreated join
   auto recreated_join = join->recreate();
@@ -72,7 +72,7 @@ TYPED_TEST(RecreationTestJoin, RecreationJoin) {
   recreated_join->mutable_input_left()->execute();
   recreated_join->mutable_input_right()->execute();
   recreated_join->execute();
-  EXPECT_TABLE_EQ(recreated_join->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(recreated_join->get_output(), expected_result);
 }
 
 TEST_F(RecreationTest, RecreationDifference) {
@@ -81,7 +81,7 @@ TEST_F(RecreationTest, RecreationDifference) {
   // build and execute difference
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_c);
   difference->execute();
-  EXPECT_TABLE_EQ(difference->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(difference->get_output(), expected_result);
 
   // recreate and execute recreated difference
   auto recreated_difference = difference->recreate();
@@ -91,21 +91,21 @@ TEST_F(RecreationTest, RecreationDifference) {
   recreated_difference->mutable_input_left()->execute();
   recreated_difference->mutable_input_right()->execute();
   recreated_difference->execute();
-  EXPECT_TABLE_EQ(recreated_difference->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(recreated_difference->get_output(), expected_result);
 }
 
 TEST_F(RecreationTest, RecreationGetTable) {
   // build and execute get table
   auto get_table = std::make_shared<GetTable>("aNiceTestTable");
   get_table->execute();
-  EXPECT_TABLE_EQ(get_table->get_output(), _test_get_table);
+  DEFAULT_EXPECT_TABLE_EQ(get_table->get_output(), _test_get_table);
 
   // recreate and execute recreated get table
   auto recreated_get_table = get_table->recreate();
   EXPECT_NE(recreated_get_table, nullptr) << "Could not recreate GetTable";
 
   recreated_get_table->execute();
-  EXPECT_TABLE_EQ(recreated_get_table->get_output(), _test_get_table);
+  DEFAULT_EXPECT_TABLE_EQ(recreated_get_table->get_output(), _test_get_table);
 }
 
 TEST_F(RecreationTest, RecreationLimit) {
@@ -114,7 +114,7 @@ TEST_F(RecreationTest, RecreationLimit) {
   // build and execute limit
   auto limit = std::make_shared<Limit>(_table_wrapper_d, 1);
   limit->execute();
-  EXPECT_TABLE_EQ(limit->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(limit->get_output(), expected_result);
 
   // recreate and execute recreated limit
   auto recreated_limit = limit->recreate();
@@ -123,7 +123,7 @@ TEST_F(RecreationTest, RecreationLimit) {
   // table wrapper needs to be executed manually
   recreated_limit->mutable_input_left()->execute();
   recreated_limit->execute();
-  EXPECT_TABLE_EQ(recreated_limit->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(recreated_limit->get_output(), expected_result);
 }
 
 TEST_F(RecreationTest, RecreationSort) {
@@ -132,7 +132,7 @@ TEST_F(RecreationTest, RecreationSort) {
   // build and execute sort
   auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(sort->get_output(), expected_result);
 
   // recreate and execute recreated sort
   auto recreated_sort = sort->recreate();
@@ -141,7 +141,7 @@ TEST_F(RecreationTest, RecreationSort) {
   // table wrapper needs to be executed manually
   recreated_sort->mutable_input_left()->execute();
   recreated_sort->execute();
-  EXPECT_TABLE_EQ(recreated_sort->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(recreated_sort->get_output(), expected_result);
 }
 
 TEST_F(RecreationTest, RecreationTableScan) {
@@ -150,7 +150,7 @@ TEST_F(RecreationTest, RecreationTableScan) {
   // build and execute table scan
   auto scan = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   scan->execute();
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 
   // recreate and execute recreated table scan
   auto recreated_scan = scan->recreate();
@@ -159,7 +159,7 @@ TEST_F(RecreationTest, RecreationTableScan) {
   // table wrapper needs to be executed manually
   recreated_scan->mutable_input_left()->execute();
   recreated_scan->execute();
-  EXPECT_TABLE_EQ(recreated_scan->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(recreated_scan->get_output(), expected_result);
 }
 
 }  // namespace opossum
