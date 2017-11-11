@@ -109,8 +109,9 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_operato
 };
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Natural, "Natural"},
-    {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
+    {JoinMode::Cross, "Cross"},     {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"},
+    {JoinMode::Natural, "Natural"}, {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"},
+    {JoinMode::Self, "Self"},       {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
