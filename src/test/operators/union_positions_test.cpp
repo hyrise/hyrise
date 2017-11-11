@@ -139,7 +139,8 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleColumns) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  DEFAULT_EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float4_overlapping_ranges.tbl", 0));
+  DEFAULT_EXPECT_TABLE_EQ(union_unique_op->get_output(),
+                          load_table("src/test/tables/int_float4_overlapping_ranges.tbl", 0));
 }
 
 TEST_F(UnionPositionsTest, MultipleReferencedTables) {
@@ -191,7 +192,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                 table_scan_b_op, union_unique_op});
 
   DEFAULT_EXPECT_TABLE_EQ(union_unique_op->get_output(),
-                  load_table("src/test/tables/int_float4_int_int_union_positions.tbl", 0));
+                          load_table("src/test/tables/int_float4_int_int_union_positions.tbl", 0));
 
   /**
    * Additionally check that Column 0 and 1 have the same pos list and that Column 2 and 3 have the same pos list to
@@ -316,7 +317,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
   DEFAULT_EXPECT_TABLE_EQ(set_union_op->get_output(),
-                  load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", 0));
+                          load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", 0));
 }
 
 }  // namespace opossum

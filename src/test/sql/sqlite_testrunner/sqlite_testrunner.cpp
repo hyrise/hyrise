@@ -112,8 +112,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     }
   }
 
-  ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference)) << "Query failed: "
-                                                                                              << query;
+  ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
+                                FloatComparisonMode::RelativeDifference))
+      << "Query failed: " << query;
 }
 
 auto formatter = [](const testing::TestParamInfo<std::string>) {

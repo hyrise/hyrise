@@ -28,21 +28,19 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     // Chosen rather arbitrarily
     const auto chunk_size = 100;
 
-    std::vector<std::string> tpch_table_names({"customer", "lineitem", "nation", "orders", "part", "partsupp", "region",
-                                               "supplier"});
+    std::vector<std::string> tpch_table_names(
+        {"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"});
 
     _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
 
-    for (const auto &tpch_table_name : tpch_table_names) {
+    for (const auto& tpch_table_name : tpch_table_names) {
       const auto tpch_table_path = std::string("src/test/tables/tpch/") + tpch_table_name + ".tbl";
       StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }
   }
 
-  void TearDown() override {
-    StorageManager::reset();
-  }
+  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
     hsql::SQLParserResult parse_result;
@@ -83,7 +81,8 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
   auto result_table = schedule_query_and_return_task(query, true)->get_operator()->get_output();
-  EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference);
+  EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
+                  FloatComparisonMode::RelativeDifference);
 }
 
 // clang-format off

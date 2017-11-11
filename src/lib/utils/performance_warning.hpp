@@ -29,7 +29,8 @@ class PerformanceWarningClass {
  public:
   explicit PerformanceWarningClass(const std::string& text) {
     if (_disabled) return;
-    std::cout << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n" << std::endl;
+    std::cout << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n"
+              << std::endl;
   }
 
  protected:

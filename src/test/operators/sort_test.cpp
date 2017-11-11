@@ -214,13 +214,14 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
   auto union_all = std::make_shared<UnionAll>(table_wrapper1, ts2);
   union_all->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(union_all->get_output(), load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
+  DEFAULT_EXPECT_TABLE_EQ(union_all->get_output(),
+                          load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
 
   auto sort = std::make_shared<Sort>(union_all, ColumnID{1});
   sort->execute();
 
   EXPECT_ORDER_DEPENDENT_TABLE_EQ(sort->get_output(),
-                  load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0));
+                                  load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0));
 }
 
 }  // namespace opossum

@@ -43,7 +43,7 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& t) {
   return matrix;
 }
 
-std::string _matrix_to_string(const std::string &title, const Matrix &m) {
+std::string _matrix_to_string(const std::string& title, const Matrix& m) {
   std::stringstream stream;
   stream << "-------" << title << "-------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
@@ -59,10 +59,9 @@ std::string _matrix_to_string(const std::string &title, const Matrix &m) {
 
 namespace opossum {
 
-bool check_table_equal(const std::shared_ptr<const Table>& opossum_table, const std::shared_ptr<const Table>& expected_table,
-                                             OrderSensitivity order_sensitivity,
-                                             TypeCmpMode type_cmp_mode,
-                                             FloatComparisonMode float_comparison_mode) {
+bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+                       const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
+                       TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
   auto opossum_matrix = _table_to_matrix(opossum_table);
   auto expected_matrix = _table_to_matrix(expected_table);
 
@@ -79,10 +78,9 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table, const 
   // compare schema of tables
   //  - column count
   if (opossum_table->column_count() != expected_table->column_count()) {
-      std::cout
-      << generate_table_comparison()
-      << "Number of columns is different. " << std::endl
-      << "Opossum's result: " << opossum_table->column_count() << ", Expected result: " << expected_table->column_count();
+    std::cout << generate_table_comparison() << "Number of columns is different. " << std::endl
+              << "Opossum's result: " << opossum_table->column_count()
+              << ", Expected result: " << expected_table->column_count();
     return false;
   }
 
@@ -106,12 +104,12 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table, const 
       }
     }
     if (left_col_type != right_col_type || opossum_table->column_name(col_id) != expected_table->column_name(col_id)) {
-      std::cout
-        << generate_table_comparison()
-        << "Table schema is different."
-        << "Column with ID " << col_id << " is different" << std::endl
-        << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_table->column_type(col_id) << ")" << std::endl
-        << "Expected: " << expected_table->column_name(col_id) << " (" << expected_table->column_type(col_id) << ")" << std::endl;
+      std::cout << generate_table_comparison() << "Table schema is different."
+                << "Column with ID " << col_id << " is different" << std::endl
+                << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_table->column_type(col_id) << ")"
+                << std::endl
+                << "Expected: " << expected_table->column_name(col_id) << " (" << expected_table->column_type(col_id)
+                << ")" << std::endl;
       return false;
     }
   }
@@ -119,11 +117,9 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table, const 
   // compare content of tables
   //  - row count for fast failure
   if (opossum_table->row_count() != expected_table->row_count()) {
-    std::cout
-      << "Number of rows is different."
-      << "Got: " << opossum_table->row_count() << " rows"
-      << "Expected: " << expected_table->row_count() << " rows"
-      << generate_table_comparison();
+    std::cout << "Number of rows is different."
+              << "Got: " << opossum_table->row_count() << " rows"
+              << "Expected: " << expected_table->row_count() << " rows" << generate_table_comparison();
     return false;
   }
 
@@ -166,7 +162,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table, const 
           EXPECT_REL_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
         }
       } else {
-        if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->column_type(col) == "int" || opossum_table->column_type(col) == "long")) {
+        if (type_cmp_mode == TypeCmpMode::Lenient &&
+            (opossum_table->column_type(col) == "int" || opossum_table->column_type(col) == "long")) {
           auto left_val = type_cast<int64_t>(opossum_matrix[row][col]);
           auto right_val = type_cast<int64_t>(expected_matrix[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;
@@ -202,12 +199,10 @@ bool check_column_expression(const std::shared_ptr<const Expression>& expression
 
 bool check_aggregate_function_expression(const std::shared_ptr<const Expression>& expression,
                                          AggregateFunction aggregate_function, ColumnID column_id) {
-  return
-    expression->type() == ExpressionType::Function &&
-    expression->aggregate_function() == aggregate_function &&
-    expression->expression_list().size() == 1u &&
-    expression->expression_list()[0]->type() == ExpressionType::Column &&
-    expression->expression_list()[0]->column_id() == column_id;
+  return expression->type() == ExpressionType::Function && expression->aggregate_function() == aggregate_function &&
+         expression->expression_list().size() == 1u &&
+         expression->expression_list()[0]->type() == ExpressionType::Column &&
+         expression->expression_list()[0]->column_id() == column_id;
 }
 
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,

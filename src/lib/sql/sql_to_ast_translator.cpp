@@ -1,12 +1,12 @@
 #include "sql_to_ast_translator.hpp"
 
+#include <util/sqlhelper.h>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <util/sqlhelper.h>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
@@ -517,7 +517,6 @@ std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_ag
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
-
   /**
    * This function creates the following node structure:
    *
@@ -602,7 +601,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
       Assert(is_in_group_by_clause, std::string("Column '") + column_expr->getName() +
                                         "' is specified in SELECT list, but not in GROUP BY clause.");
-      
+
       projections.push_back(Expression::create_column(static_cast<ColumnID>(selected_group_by_idx), alias));
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");

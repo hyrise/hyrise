@@ -59,7 +59,8 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   }
 
   // Compare results.
-  DEFAULT_EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), cloned_tasks.back()->get_operator()->get_output());
+  DEFAULT_EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(),
+                          cloned_tasks.back()->get_operator()->get_output());
 }
 
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {

@@ -49,7 +49,6 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
-
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {
     return {};

@@ -10,11 +10,11 @@ TEST(Hello, WorldTest) {
   FAIL(r);
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char* argv[]) {
   struct stat info;
   opossum::Assert(
-  stat("src/test/tables", &info) == 0,
-  "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
+      stat("src/test/tables", &info) == 0,
+      "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
 
   ::testing::InitGoogleTest(&argc, argv);
 
