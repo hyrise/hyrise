@@ -40,11 +40,24 @@ enum class FloatComparisonMode {
   AbsoluteDifference
 };
 
+// @{
+/**
+ * Functions implementing the functionality of our custom macros defined at the bottom of this file.
+ */
+
 bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        const std::shared_ptr<const Table>& expected_table,
                                              OrderSensitivity order_sensitivity,
                                              TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode);
+
+bool check_stored_table_node(const std::shared_ptr<const AbstractASTNode>& node, const std::string& table_name);
+
+bool check_column_expression(const std::shared_ptr<const Expression>& expression, ColumnID column_id);
+
+bool check_aggregate_function_expression(const std::shared_ptr<const Expression>& expression, AggregateFunction aggregate_function, ColumnID column_id);
+
+// @}
 
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,
                             ColumnID right_column_id);
@@ -68,3 +81,9 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
   if (!opossum::check_ast_tie(parent, child_side, child)) FAIL();
 
 #define EXPECT_REL_NEAR(test_value, reference_value, rel_error) EXPECT_NEAR(reference_value, test_value, std::fabs(reference_value * rel_error))
+
+#define EXPECT_STORED_TABLE_NODE(node, table_name) EXPECT_TRUE(check_stored_table_node(node, table_name))
+
+#define EXPECT_COLUMN_EXPRESSION(expression, column_id) EXPECT_TRUE(check_column_expression(expression, column_id))
+
+#define EXPECT_AGGREGATE_FUNCTION_EXPRESSION(expression, aggregate_function, column_id) EXPECT_TRUE(check_aggregate_function_expression(expression, aggregate_function, column_id));

@@ -463,4 +463,68 @@ TEST_F(SQLToASTTranslatorTest, Update) {
   EXPECT_EQ(*expressions[1]->alias(), "b");
 }
 
+TEST_F(SQLToASTTranslatorTest, MixedAggregateAndGroupBySelectList) {
+  /**
+   * Test:
+   *    - Select list can contain both GroupBy and Aggregate Columns in any order
+   *    - The order of GroupBy Columns in the SelectList can differ from the order in the GroupByList
+   */
+
+  const auto query = R"(SELECT
+                          table_b.a, SUM(table_c.a), table_a.b, table_b.b
+                        FROM
+                          table_a, table_b, table_c
+                        GROUP BY
+                          table_a.b, table_a.a, table_b.a, table_b.b)";
+
+  /**
+   * Expect this AST:
+   *
+   * [Projection] table_a.a, SUM(table_c.a), table_a.b, table_a.b
+   *  |_[Aggregate] SUM(table_c.a) GROUP BY [table_a.b, table_a.a, table_b.a, table_b.b]
+   *     |_[Cross Join]
+   *        |_[Cross Join]
+   *         |  |_[StoredTable] Name: 'table_b'
+   *         |  |_[StoredTable] Name: 'table_c'
+   *         |_[StoredTable] Name: 'table_a'
+   */
+
+  auto result = compile_query(query);
+
+  /**
+   * Assert the Projection
+   */
+  ASSERT_EQ(result->type(), ASTNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result);
+  ASSERT_EQ(projection_node->column_expressions().size(), 4u);
+  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], ColumnID{2});
+  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], ColumnID{4});
+  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], ColumnID{0});
+  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], ColumnID{3});
+
+  /**
+   * Assert the Aggregate
+   */
+  ASSERT_EQ(projection_node->left_child()->type(), ASTNodeType::Aggregate);
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(projection_node->left_child());
+  ASSERT_EQ(aggregate_node->groupby_column_ids().size(), 4u);
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[0], ColumnID{5});
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[1], ColumnID{4});
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[2], ColumnID{0});
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[3], ColumnID{1});
+  ASSERT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
+  const auto sum_expression = aggregate_node->aggregate_expressions()[0];
+  ASSERT_EQ(sum_expression->type(), ExpressionType::Function);
+  EXPECT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum, ColumnID{2});
+
+  /**
+   * Assert rest of the AST
+   */
+  ASSERT_CROSS_JOIN_NODE(aggregate_node->left_child());
+  ASSERT_CROSS_JOIN_NODE(aggregate_node->left_child()->left_child());
+  EXPECT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->left_child(), "table_b");
+  EXPECT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->right_child(), "table_c");
+  EXPECT_STORED_TABLE_NODE(aggregate_node->left_child()->right_child(), "table_a");
+}
+
 }  // namespace opossum
