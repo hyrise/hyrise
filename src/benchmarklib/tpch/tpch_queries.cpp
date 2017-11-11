@@ -180,9 +180,6 @@ const char* const tpch_query_4 =
  *    b. pre-calculate date operation
  *  3. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
- *
- *     AND o_orderdate >= '1994-01-01'
-      AND o_orderdate < '1995-01-01'
  */
 const char* const tpch_query_5 =
     R"(SELECT n_name, SUM(l_extendedprice * (1.0 - l_discount)) as revenue

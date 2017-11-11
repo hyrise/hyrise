@@ -71,7 +71,7 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeEmptyStringOnDict) {
   // wildcard has to be placed at front and/or back of search string
   auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%");
   scan->execute();
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  DEFAULT_EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeCaseInsensitivity) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
@@ -174,8 +174,7 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeNotFound) {
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
-TEST_F(Oper
-atorsTableScanLikeTest, ScanLikeNotFoundOnDictColumn) {
+TEST_F(OperatorsTableScanLikeTest, ScanLikeNotFoundOnDictColumn) {
   auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%not_there%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
