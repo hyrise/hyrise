@@ -102,53 +102,6 @@ std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_diction
   return result;
 }
 
-std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(std::string& str) {
-  std::map<std::string, std::string> ranges;
-
-  int rangeID = 0;
-  std::string::size_type startPos = 0;
-  std::string::size_type endPos = 0;
-
-  while ((startPos = str.find("[", startPos)) != std::string::npos &&
-         (endPos = str.find("]", startPos + 1)) != std::string::npos) {
-    std::stringstream ss;
-    ss << "[[" << rangeID << "]]";
-    std::string chars = str.substr(startPos + 1, endPos - startPos - 1);
-    str.replace(startPos, chars.size() + 2, ss.str());
-    rangeID++;
-    startPos += ss.str().size();
-
-    boost::replace_all(chars, "[", "\\[");
-    boost::replace_all(chars, "]", "\\]");
-    ranges[ss.str()] = "[" + chars + "]";
-  }
-
-  int open = 0;
-  std::string::size_type searchPos = 0;
-  startPos = 0;
-  endPos = 0;
-  do {
-    startPos = str.find("[", searchPos);
-    endPos = str.find("]", searchPos);
-
-    if (startPos == std::string::npos && endPos == std::string::npos) break;
-
-    if (startPos < endPos || endPos == std::string::npos) {
-      open++;
-      searchPos = startPos + 1;
-    } else {
-      if (open <= 0) {
-        str.replace(endPos, 1, "\\]");
-        searchPos = endPos + 2;
-      } else {
-        open--;
-        searchPos = endPos + 1;
-      }
-    }
-  } while (searchPos < str.size());
-  return ranges;
-}
-
 std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
   constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{".", "\\."},
                                                                                     {"^", "\\^"},
@@ -168,11 +121,6 @@ std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
 
   for (const auto& pair : replace_by) {
     boost::replace_all(sqllike, pair.first, pair.second);
-  }
-
-  std::map<std::string, std::string> ranges = _extract_character_ranges(sqllike);  // Escapes [ and ] where necessary
-  for (auto& range : ranges) {
-    boost::replace_all(sqllike, range.first, range.second);
   }
 
   return "^" + sqllike + "$";
