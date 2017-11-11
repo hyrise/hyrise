@@ -76,8 +76,11 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
 #define ASSERT_AST_TIE(parent, child_side, child) \
   if (!opossum::check_ast_tie(parent, child_side, child)) FAIL();
 
+/**
+ * Checks whether test_value differs at max `reference_value * rel_error` from reference_value.
+ */
 #define EXPECT_REL_NEAR(test_value, reference_value, rel_error) \
-  EXPECT_NEAR(reference_value, test_value, std::fabs(reference_value* rel_error))
+  EXPECT_NEAR(test_value, reference_value, std::fabs(reference_value * rel_error))
 
 #define EXPECT_STORED_TABLE_NODE(node, table_name) EXPECT_TRUE(check_stored_table_node(node, table_name))
 
