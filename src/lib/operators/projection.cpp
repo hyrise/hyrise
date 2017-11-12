@@ -41,7 +41,8 @@ void Projection::_create_column(boost::hana::basic_type<T> type, Chunk& chunk, c
     // fill a nullable column with NULLs
     auto row_count = input_table_left->get_chunk(chunk_id).size();
     auto null_values = pmr_concurrent_vector<bool>(row_count, true);
-    auto values = pmr_concurrent_vector<T>(row_count);
+    // Explicitly pass T{} because in some cases it won't initialize otherwise
+    auto values = pmr_concurrent_vector<T>(row_count, T{});
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   } else {

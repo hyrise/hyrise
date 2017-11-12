@@ -294,8 +294,6 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_colum
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_dummy_table_node(
     const std::shared_ptr<AbstractASTNode>& node) const {
-  const auto table_node = std::dynamic_pointer_cast<DummyTableNode>(node);
-
   return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 

@@ -153,4 +153,30 @@ TEST_F(OperatorsInsertTest, Rollback) {
   EXPECT_EQ(validate->get_output()->row_count(), 3u);
 }
 
+TEST_F(OperatorsInsertTest, InsertNullValue) {
+  auto t_name = "test1";
+  auto t_name2 = "test2";
+
+  auto t = load_table("src/test/tables/string_with_null.tbl", 4u);
+  StorageManager::get().add_table(t_name, t);
+
+  auto t2 = load_table("src/test/tables/string_with_null.tbl", 4u);
+  StorageManager::get().add_table(t_name2, t2);
+
+  auto gt2 = std::make_shared<GetTable>(t_name2);
+  gt2->execute();
+
+  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
+  ins->execute();
+  context->commit();
+
+  EXPECT_EQ(t->chunk_count(), 2u);
+  EXPECT_EQ(t->row_count(), 8u);
+
+  auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[2];
+  EXPECT_TRUE(is_null(null_val));
+}
+
 }  // namespace opossum
