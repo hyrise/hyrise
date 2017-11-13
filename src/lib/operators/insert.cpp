@@ -8,6 +8,8 @@
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_dictionary_column.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/iterables/value_column_iterable.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
@@ -49,25 +51,38 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 
     if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
       std::copy_n(casted_source->values().begin() + source_start_index, length, vect.begin() + target_start_index);
+
       if (casted_source->is_nullable()) {
         // Values to insert contain null, copy them
         Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
         std::copy_n(casted_source->null_values().begin() + source_start_index, length,
                     casted_target->null_values().begin() + target_start_index);
       }
+    } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueColumn<int32_t>>(source)) {
+      // We use the column type of the Dummy table used to insert a single null value.
+      // A few asserts are needed to guarantee correct behaviour.
+      Assert(length == 1, "Cannot insert multiple unknown null values at once.");
+      Assert(casted_dummy_source->size() == 1, "Source column is of wrong type.");
+      Assert(casted_dummy_source->null_values().front() == true, "Only value in dummy table must be NULL!");
+      Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target.");
 
-      // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
-      // since we have no guarantee that a referenceColumn references only a single other column,
-      // this would require us to find out the referenced column's type for each single row.
-      // instead, we just use the slow path below.
-    } else {
+      // Ignore source value and only set null to true
+      casted_target->null_values()[target_start_index] = true;
+    }
+
+    // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
+    // since we have no guarantee that a referenceColumn references only a single other column,
+    // this would require us to find out the referenced column's type for each single row.
+    // instead, we just use the slow path below.
+    else {
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
-        vect[target_start_index + i] = type_cast<T>(ref_value);
-
         if (is_null(ref_value)) {
           Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
+          vect[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;
+        } else {
+          vect[target_start_index + i] = type_cast<T>(ref_value);
         }
       }
     }
