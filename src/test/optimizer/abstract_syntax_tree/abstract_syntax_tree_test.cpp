@@ -182,7 +182,7 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphStructure) {
 
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphPrinted) {
   std::stringstream stream;
-  _nodes[0]->print(stream, {});
+  _nodes[0]->print(stream);
 
   ASSERT_EQ(stream.str(), R"([MockTable]
  \_[MockTable]
