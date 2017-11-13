@@ -61,7 +61,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
@@ -77,7 +77,7 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 }
 
 }  // namespace opossum

@@ -58,7 +58,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   validate->set_transaction_context(t_context);
   validate->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 
   // The new validated table should have the same number of (valid) rows as before.
   EXPECT_EQ(validate->get_output()->row_count(), original_row_count);

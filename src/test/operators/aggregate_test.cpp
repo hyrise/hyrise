@@ -125,7 +125,7 @@ class OperatorsAggregateTest : public BaseTest {
       auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_column_ids);
       EXPECT_NE(aggregate, nullptr) << "Could not build Aggregate";
       aggregate->execute();
-      DEFAULT_EXPECT_TABLE_EQ(aggregate->get_output(), expected_result);
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
     }
   }
 

@@ -58,7 +58,7 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
 
   if (!expected_result_file.empty()) {
     auto expected_result = load_table(expected_result_file, 1);
-    DEFAULT_EXPECT_TABLE_EQ(plan.tree_roots().back()->get_output(), expected_result);
+    EXPECT_TABLE_EQ_UNORDERED(plan.tree_roots().back()->get_output(), expected_result);
   }
 }
 

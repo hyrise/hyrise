@@ -59,7 +59,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   }
 
   // Compare results.
-  DEFAULT_EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(),
+  EXPECT_TABLE_EQ_UNORDERED(tasks.back()->get_operator()->get_output(),
                           cloned_tasks.back()->get_operator()->get_output());
 }
 
@@ -92,8 +92,8 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   CurrentScheduler::get()->finish();
   CurrentScheduler::set(nullptr);
 
-  DEFAULT_EXPECT_TABLE_EQ(cloned_tasks.back()->get_operator()->get_output(), expected_result);
-  DEFAULT_EXPECT_TABLE_EQ(cloned_tasks2.back()->get_operator()->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(cloned_tasks.back()->get_operator()->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(cloned_tasks2.back()->get_operator()->get_output(), expected_result);
 }
 
 }  // namespace opossum

@@ -65,11 +65,11 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
   EXPECT_TRUE(                                                                                                  \
       check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode));
 
-#define DEFAULT_EXPECT_TABLE_EQ(opossum_table, expected_table)                              \
+#define EXPECT_TABLE_EQ_UNORDERED(opossum_table, expected_table)                              \
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
-#define EXPECT_ORDER_DEPENDENT_TABLE_EQ(opossum_table, expected_table)                       \
+#define EXPECT_TABLE_EQ_ORDERED(opossum_table, expected_table)                       \
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 

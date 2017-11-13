@@ -209,7 +209,7 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, ScanType::OpLessThan, 457.9);
   scan_2->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, EmptyResultScan) {
@@ -226,7 +226,7 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   auto scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   scan->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
@@ -292,7 +292,7 @@ TEST_F(OperatorsTableScanTest, ScanPartiallyCompressed) {
   auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpLessThan, 10);
   scan_1->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(scan_1->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(scan_1->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, ScanWeirdPosList) {
@@ -302,7 +302,7 @@ TEST_F(OperatorsTableScanTest, ScanWeirdPosList) {
   auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpLessThan, 10);
   scan_1->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(scan_1->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(scan_1->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValue) {

@@ -127,7 +127,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 
   validate->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(validate->get_output(), expected_result->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result->get_output());
 }
 
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {

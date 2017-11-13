@@ -53,7 +53,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   for (auto task : task_list1) task->execute();
   for (auto task : task_list2) task->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(task_list1.back()->get_operator()->get_output(),
+  EXPECT_TABLE_EQ_UNORDERED(task_list1.back()->get_operator()->get_output(),
                           task_list2.back()->get_operator()->get_output());
 }
 

@@ -35,7 +35,7 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(difference->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(difference->get_output(), expected_result);
 }
 
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
@@ -53,7 +53,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   auto difference = std::make_shared<Difference>(projection1, projection2);
   difference->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(difference->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(difference->get_output(), expected_result);
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {

@@ -35,7 +35,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
   auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, _table_wrapper_b);
   union_all->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(union_all->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(union_all->get_output(), expected_result);
 }
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
@@ -49,7 +49,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);
   union_all->execute();
 
-  DEFAULT_EXPECT_TABLE_EQ(union_all->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(union_all->get_output(), expected_result);
 }
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {

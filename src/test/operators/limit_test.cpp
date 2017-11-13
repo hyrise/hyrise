@@ -26,7 +26,7 @@ class OperatorsLimitTest : public BaseTest {
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 3);
-    EXPECT_ORDER_DEPENDENT_TABLE_EQ(limit->get_output(), expected_result);
+    EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
   void test_limit_2() {
@@ -34,7 +34,7 @@ class OperatorsLimitTest : public BaseTest {
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3_limit_2.tbl", 3);
-    EXPECT_ORDER_DEPENDENT_TABLE_EQ(limit->get_output(), expected_result);
+    EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
   /**
@@ -45,7 +45,7 @@ class OperatorsLimitTest : public BaseTest {
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3_limit_4.tbl", 3);
-    EXPECT_ORDER_DEPENDENT_TABLE_EQ(limit->get_output(), expected_result);
+    EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
   /**
@@ -56,7 +56,7 @@ class OperatorsLimitTest : public BaseTest {
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3.tbl", 3);
-    EXPECT_ORDER_DEPENDENT_TABLE_EQ(limit->get_output(), expected_result);
+    EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper;
