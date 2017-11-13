@@ -6,6 +6,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "types.hpp"
@@ -279,32 +280,11 @@ void AbstractASTNode::replace_with(const std::shared_ptr<AbstractASTNode>& repla
 
 void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
-void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
-  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
-  for (size_t level = 0; level < max_level; ++level) {
-    if (levels[level]) {
-      out << " | ";
-    } else {
-      out << "   ";
-    }
-  }
+void AbstractASTNode::print(std::ostream& out) const {
+  std::vector<bool> levels;
+  std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t> id_by_node;
 
-  if (!levels.empty()) {
-    out << " \\_";
-  }
-  out << description() << std::endl;
-
-  levels.emplace_back(right_child() != nullptr);
-
-  if (left_child()) {
-    left_child()->print(out, levels);
-  }
-  if (right_child()) {
-    levels.back() = false;
-    right_child()->print(out, levels);
-  }
-
-  levels.pop_back();
+  _print_impl(out, levels, id_by_node, 0);
 }
 
 std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
@@ -352,6 +332,53 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
     }
   }
   return reference;
+}
+
+void AbstractASTNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
+                                  std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t>& id_by_node,
+                                  size_t id_counter) const {
+  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
+  for (size_t level = 0; level < max_level; ++level) {
+    if (levels[level]) {
+      out << " | ";
+    } else {
+      out << "   ";
+    }
+  }
+
+  if (!levels.empty()) {
+    out << " \\_";
+  }
+
+  /**
+   * Check whether the node has been printed before
+   */
+  const auto iter = id_by_node.find(shared_from_this());
+  if (iter != id_by_node.end()) {
+    out << "Recurring Node --> [" << iter->second << "]" << std::endl;
+    return;
+  }
+
+  const auto this_node_id = id_counter;
+  id_counter++;
+  id_by_node.emplace(shared_from_this(), this_node_id);
+
+  /**
+   *
+   */
+  out << "[" << this_node_id << "] " << description() << std::endl;
+
+  levels.emplace_back(right_child() != nullptr);
+
+  if (left_child()) {
+    left_child()->_print_impl(out, levels, id_by_node, id_counter);
+  }
+  if (right_child()) {
+    levels.back() = false;
+    right_child()->_print_impl(out, levels, id_by_node, id_counter);
+  }
+
+  levels.pop_back();
 }
 
 void AbstractASTNode::_child_changed() {

@@ -4,7 +4,7 @@
 #include "base_test.hpp"
 
 #include "operators/get_table.hpp"
-#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -179,10 +179,10 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   auto get_table_b_op = std::make_shared<GetTable>("int_int");
   auto get_table_c_op = std::make_shared<GetTable>("int_float4");
   auto get_table_d_op = std::make_shared<GetTable>("int_int");
-  auto join_a = std::make_shared<JoinNestedLoopA>(get_table_a_op, get_table_b_op, JoinMode::Inner,
-                                                  std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
-  auto join_b = std::make_shared<JoinNestedLoopA>(get_table_c_op, get_table_d_op, JoinMode::Inner,
-                                                  std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+  auto join_a = std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
+                                                 std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+  auto join_b = std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
+                                                 std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
 
   auto table_scan_a_op = std::make_shared<TableScan>(join_a, ColumnID{3}, ScanType::OpGreaterThanEquals, 2);
   auto table_scan_b_op = std::make_shared<TableScan>(join_b, ColumnID{1}, ScanType::OpLessThan, 457.0);
@@ -276,7 +276,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto column_right_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
   auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
-  auto table_left = std::make_shared<Table>();
+  auto table_left = std::make_shared<Table>(3);
   table_left->add_column_definition("a", "int");
   table_left->add_column_definition("b", "float");
   table_left->add_column_definition("c", "int");
@@ -293,7 +293,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   chunk_left_1.add_column(column_left_1_2);
   table_left->emplace_chunk(std::move(chunk_left_1));
 
-  auto table_right = std::make_shared<Table>();
+  auto table_right = std::make_shared<Table>(4);
   table_right->add_column_definition("a", "int");
   table_right->add_column_definition("b", "float");
   table_right->add_column_definition("c", "int");
