@@ -37,6 +37,10 @@ class ProjectionNodeTest : public BaseTest {
   std::shared_ptr<ProjectionNode> _projection_node;
 };
 
+TEST_F(ProjectionNodeTest, Description) {
+  EXPECT_EQ(_projection_node->description(), "[Projection] t_a.c, t_a.a, t_a.b, t_a.b + t_a.c, t_a.a + t_a.c");
+}
+
 TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", std::nullopt}), 0);
   EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 0);

@@ -39,4 +39,37 @@ TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(sort_c->description(), "[Sort] table_a.d (Descending), table_a.f (Ascending), table_a.i (Descending)");
 }
 
+TEST_F(SortNodeTest, UnchangedColumnMapping) {
+  auto sort_node = std::make_shared<SortNode>(
+      std::vector<OrderByDefinition>{OrderByDefinition{ColumnID{0}, OrderByMode::Ascending}});
+  sort_node->set_left_child(_table_node);
+
+  auto column_ids = sort_node->output_column_ids_to_input_column_ids();
+
+  EXPECT_EQ(column_ids.size(), _table_node->output_column_names().size());
+
+  for (ColumnID column_id{0}; column_id < column_ids.size(); ++column_id) {
+    EXPECT_EQ(column_ids[column_id], column_id);
+  }
+}
+
+TEST_F(SortNodeTest, OutputColumnIDs) {
+  auto sort_node = std::make_shared<SortNode>(
+      std::vector<OrderByDefinition>{OrderByDefinition{ColumnID{0}, OrderByMode::Ascending}});
+  sort_node->set_left_child(_table_node);
+
+  // Valid table name
+  auto column_ids = sort_node->get_output_column_ids_for_table("table_a");
+
+  EXPECT_EQ(column_ids.size(), _table_node->output_column_names().size());
+
+  for (ColumnID column_id{0}; column_id < column_ids.size(); ++column_id) {
+    EXPECT_EQ(column_ids[column_id], column_id);
+  }
+
+  // Invalid table name
+  column_ids = sort_node->get_output_column_ids_for_table("invalid_table");
+  EXPECT_EQ(column_ids.size(), 0u);
+}
+
 }  // namespace opossum
