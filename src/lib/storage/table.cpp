@@ -77,6 +77,10 @@ void Table::append(std::vector<AllTypeVariant> values) {
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk() {
+  if (_chunk_size == 0) {
+    throw std::logic_error("Table with chunk size 0 (unlimited) cannot have more than one chunk.");
+  }
+
   // Create chunk with mvcc columns
   Chunk newChunk{ChunkUseMvcc::Yes};
 
