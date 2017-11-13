@@ -59,8 +59,10 @@ TYPED_TEST(JoinEquiTest, RightJoin) {
       ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-// Currently not implemented for Hash Join, thus disabled
-TYPED_TEST(JoinEquiTest, DISABLED_OuterJoin) {
+TYPED_TEST(JoinEquiTest, OuterJoin) {
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    return;
+  }
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
@@ -365,7 +367,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
-TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion) {
+TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
   //  Filtering to generate RefColumns
   auto filtered_left =
       std::make_shared<opossum::TableScan>(this->_table_wrapper_e, ColumnID{0}, ScanType::OpLessThanEquals, 10);

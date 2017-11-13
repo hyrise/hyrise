@@ -80,7 +80,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
  * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
  * in the translator.
  */
-TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
+TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
 
@@ -331,7 +331,7 @@ TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
 }
 
 // TODO(mp): Natural Joins are not translated correctly yet. Resolving matching columns is not implemented so far.
-TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin) {
+TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin /* #495 */) {
   const auto query = "SELECT * FROM table_a AS a NATURAL JOIN table_b AS b;";
   auto result_node = compile_query(query);
 
