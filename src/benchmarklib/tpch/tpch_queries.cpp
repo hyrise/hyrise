@@ -138,8 +138,8 @@ const char* const tpch_query_3 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_4 =
-    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1993-07-01' AND
-      o_orderdate < '1993-10-01' AND exists (
+    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
+      o_orderdate < '1996-10-01' AND exists (
       SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
       GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
 
