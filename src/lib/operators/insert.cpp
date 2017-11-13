@@ -68,13 +68,11 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 
       // Ignore source value and only set null to true
       casted_target->null_values()[target_start_index] = true;
-    }
-
-    // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
-    // since we have no guarantee that a referenceColumn references only a single other column,
-    // this would require us to find out the referenced column's type for each single row.
-    // instead, we just use the slow path below.
-    else {
+    } else {
+      // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
+      // since we have no guarantee that a referenceColumn references only a single other column,
+      // this would require us to find out the referenced column's type for each single row.
+      // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
         if (is_null(ref_value)) {
