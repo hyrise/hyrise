@@ -65,11 +65,11 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
   EXPECT_TRUE(                                                                                                  \
       check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode));
 
-#define EXPECT_TABLE_EQ_UNORDERED(opossum_table, expected_table)                              \
+#define EXPECT_TABLE_EQ_UNORDERED(opossum_table, expected_table)                            \
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
-#define EXPECT_TABLE_EQ_ORDERED(opossum_table, expected_table)                       \
+#define EXPECT_TABLE_EQ_ORDERED(opossum_table, expected_table)                               \
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
@@ -80,7 +80,7 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
  * Checks whether test_value differs at max `reference_value * rel_error` from reference_value.
  */
 #define EXPECT_REL_NEAR(test_value, reference_value, rel_error) \
-  EXPECT_NEAR(test_value, reference_value, std::fabs(reference_value * rel_error))
+  EXPECT_NEAR(test_value, reference_value, std::fabs(reference_value* rel_error))
 
 #define EXPECT_STORED_TABLE_NODE(node, table_name) EXPECT_TRUE(check_stored_table_node(node, table_name))
 

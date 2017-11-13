@@ -215,13 +215,13 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
   union_all->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(union_all->get_output(),
-                          load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
+                            load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
 
   auto sort = std::make_shared<Sort>(union_all, ColumnID{1});
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(),
-                                  load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0));
+                          load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0));
 }
 
 }  // namespace opossum

@@ -126,7 +126,6 @@ TEST_F(AggregateNodeTest, Description) {
 }
 
 TEST_F(AggregateNodeTest, VerboseColumnNames) {
-
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{1}), "t_a.c");
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{2}), "SUM(t_a.a + t_a.b)");

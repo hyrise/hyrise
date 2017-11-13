@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/delete_node.hpp"
@@ -27,10 +29,8 @@
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "util/sqlhelper.h"
-#include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "types.hpp"
+#include "util/sqlhelper.h"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
