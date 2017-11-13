@@ -8,7 +8,8 @@ if [ -z "$1" ]
 fi
 
 cd $1
-make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 2))
+cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
+make hyriseCoverage -j $(( cores / 2))
 cd -
 
 ./$1/hyriseCoverage
