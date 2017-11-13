@@ -295,7 +295,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
                    std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t>& id_by_node,
-                   size_t id_counter) const;
+                   size_t& id_counter) const;
 
   // @{
   /**

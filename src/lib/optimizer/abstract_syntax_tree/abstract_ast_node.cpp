@@ -283,8 +283,8 @@ void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) {
 void AbstractASTNode::print(std::ostream& out) const {
   std::vector<bool> levels;
   std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t> id_by_node;
-
-  _print_impl(out, levels, id_by_node, 0);
+  size_t id_counter = 0;
+  _print_impl(out, levels, id_by_node, id_counter);
 }
 
 std::string AbstractASTNode::get_verbose_column_name(ColumnID column_id) const {
@@ -336,7 +336,7 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
 
 void AbstractASTNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
                                   std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t>& id_by_node,
-                                  size_t id_counter) const {
+                                  size_t& id_counter) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
     if (levels[level]) {
