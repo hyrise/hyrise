@@ -1,7 +1,12 @@
 #pragma once
 
 #include <boost/lexical_cast.hpp>
+#include <functional>
+#include <string>
 #include <type_traits>
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -88,6 +93,33 @@ typename std::enable_if<std::is_arithmetic<R>::value && IsLexCastable<L>::value 
                         bool>::type
 value_greater(L l, R r) {
   return boost::lexical_cast<R>(l) > r;
+}
+
+// Function that calls a given functor with the correct std comparator
+template <typename Functor>
+void with_comparator(const ScanType scan_type, const Functor& func) {
+  switch (scan_type) {
+    case ScanType::OpEquals:
+      return func(std::equal_to<void>{});
+
+    case ScanType::OpNotEquals:
+      return func(std::not_equal_to<void>{});
+
+    case ScanType::OpLessThan:
+      return func(std::less<void>{});
+
+    case ScanType::OpLessThanEquals:
+      return func(std::less_equal<void>{});
+
+    case ScanType::OpGreaterThan:
+      return func(std::greater<void>{});
+
+    case ScanType::OpGreaterThanEquals:
+      return func(std::greater_equal<void>{});
+
+    default:
+      Fail("Unsupported operator.");
+  }
 }
 
 }  // namespace opossum
