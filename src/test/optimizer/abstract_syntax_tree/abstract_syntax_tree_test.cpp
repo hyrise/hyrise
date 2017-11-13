@@ -184,22 +184,18 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphPrinted) {
   std::stringstream stream;
   _nodes[0]->print(stream);
 
-  ASSERT_EQ(stream.str(), R"([MockTable]
- \_[MockTable]
- |  \_[MockTable]
- |  |  \_[MockTable]
- |  |     \_[MockTable]
- |  |     \_[MockTable]
- |  \_[MockTable]
- |     \_[MockTable]
- |     |  \_[MockTable]
- |     |  \_[MockTable]
- |     \_[MockTable]
- \_[MockTable]
-    \_[MockTable]
-    |  \_[MockTable]
-    |  \_[MockTable]
-    \_[MockTable]
+  ASSERT_EQ(stream.str(), R"([0] [MockTable]
+ \_[1] [MockTable]
+ |  \_[2] [MockTable]
+ |  |  \_[3] [MockTable]
+ |  |     \_[4] [MockTable]
+ |  |     \_[4] [MockTable]
+ |  \_[2] [MockTable]
+ |     \_Recurring Node --> [3]
+ |     \_Recurring Node --> [4]
+ \_[1] [MockTable]
+    \_Recurring Node --> [3]
+    \_Recurring Node --> [4]
 )");
 }
 
