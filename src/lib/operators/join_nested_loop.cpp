@@ -159,7 +159,7 @@ void JoinNestedLoop::_perform_join() {
 
             iterable_left.with_iterators([&](auto left_it, auto left_end) {
               iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                with_operator(_scan_type, [&](auto comparator) {
+                with_comparator(_scan_type, [&](auto comparator) {
                   this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
                                           chunk_id_right, left_matches);
                 });

@@ -97,7 +97,7 @@ value_greater(L l, R r) {
 
 // Function that calls a given functor with the correct std comparator
 template <typename Functor>
-void with_operator(const ScanType scan_type, const Functor& func) {
+void with_comparator(const ScanType scan_type, const Functor& func) {
   switch (scan_type) {
     case ScanType::OpEquals:
       return func(std::equal_to<void>{});
