@@ -163,7 +163,7 @@ enum class ScanType {
   OpLessThanEquals,
   OpGreaterThan,
   OpGreaterThanEquals,
-  OpBetween,
+  OpBetween,  // Currently, OpBetween is not handled by a single scan. The ASTToOperatorTranslator creates two scans.
   OpLike
 };
 
@@ -214,7 +214,7 @@ enum class ExpressionType {
   Hint
 };
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
 
 enum class UnionMode { Positions };
 

@@ -73,6 +73,8 @@ TEST_F(AbstractSyntaxTreeTest, SimpleParentTest) {
   ASSERT_EQ(projection_node->left_child(), predicate_node);
   ASSERT_EQ(projection_node->right_child(), nullptr);
   ASSERT_TRUE(projection_node->parents().empty());
+
+  ASSERT_ANY_THROW(projection_node->get_child_side(table_node));
 }
 
 TEST_F(AbstractSyntaxTreeTest, SimpleClearParentsTest) {
@@ -176,6 +178,25 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphStructure) {
   ASSERT_AST_TIE(_nodes[5], ASTChildSide::Left, _nodes[6]);
   ASSERT_AST_TIE(_nodes[5], ASTChildSide::Right, _nodes[7]);
   ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, _nodes[7]);
+}
+
+TEST_F(AbstractSyntaxTreeTest, ComplexGraphPrinted) {
+  std::stringstream stream;
+  _nodes[0]->print(stream);
+
+  ASSERT_EQ(stream.str(), R"([0] [MockTable]
+ \_[1] [MockTable]
+ |  \_[2] [MockTable]
+ |  |  \_[3] [MockTable]
+ |  |     \_[4] [MockTable]
+ |  |     \_[5] [MockTable]
+ |  \_[6] [MockTable]
+ |     \_Recurring Node --> [3]
+ |     \_Recurring Node --> [5]
+ \_[7] [MockTable]
+    \_Recurring Node --> [3]
+    \_Recurring Node --> [5]
+)");
 }
 
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTree) {

@@ -38,7 +38,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
-  // found in join_nested_loop_a.hpp.
+  // found in join_hash.hpp.
   class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractJoinOperatorImpl() = default;

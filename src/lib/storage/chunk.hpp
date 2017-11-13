@@ -22,7 +22,6 @@ class BaseIndex;
 class BaseColumn;
 
 enum class ChunkUseMvcc { Yes, No };
-
 enum class ChunkUseAccessCounter { Yes, No };
 
 /**

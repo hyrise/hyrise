@@ -54,12 +54,7 @@ const std::string TableScan::description() const {
 
   if (_input_table_left()) column_name = _input_table_left()->column_name(_left_column_id);
 
-  std::string predicate_string;
-  if (_scan_type == ScanType::OpBetween) {
-    predicate_string = to_string(_right_parameter) + " and " + to_string(*_right_value2);
-  } else {
-    predicate_string = to_string(_right_parameter);
-  }
+  std::string predicate_string = to_string(_right_parameter);
 
   return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
 }
@@ -78,10 +73,6 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
-  if (auto between_output_table = __on_execute_between()) {
-    return between_output_table;
-  }
-
   _in_table = _input_table_left();
 
   _init_scan();
@@ -204,25 +195,6 @@ void TableScan::_init_scan() {
 
     _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _scan_type, right_column_id);
   }
-}
-
-std::shared_ptr<const Table> TableScan::__on_execute_between() {
-  if (_scan_type != ScanType::OpBetween) {
-    return nullptr;
-  }
-
-  DebugAssert(static_cast<bool>(_right_value2), "Scan type BETWEEN requires a right_value2");
-  PerformanceWarning("TableScan executes BETWEEN as two separate selects");
-
-  auto table_scan1 =
-      std::make_shared<TableScan>(_input_left, _left_column_id, ScanType::OpGreaterThanEquals, _right_parameter);
-  table_scan1->execute();
-
-  auto table_scan2 =
-      std::make_shared<TableScan>(table_scan1, _left_column_id, ScanType::OpLessThanEquals, *_right_value2);
-  table_scan2->execute();
-
-  return table_scan2->get_output();
 }
 
 }  // namespace opossum

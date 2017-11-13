@@ -5,7 +5,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
 
@@ -40,7 +40,7 @@ class TableStatisticsJoinTest : public BaseTest {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
             table_with_statistics.statistics, mode, column_ids, scan_type);
-        auto join = std::make_shared<JoinNestedLoopA>(table_wrapper, table_wrapper, mode, column_ids, scan_type);
+        auto join = std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, scan_type);
         join->execute();
         auto result = join->get_output();
         EXPECT_FLOAT_EQ(result->row_count(), join_stats->row_count());
