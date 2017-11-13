@@ -145,6 +145,7 @@ void JoinNestedLoop::_perform_join() {
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
+          // make sure that we do not compile invalid versions of these lambdas
           constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
           constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
 
@@ -152,13 +153,13 @@ void JoinNestedLoop::_perform_join() {
           constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
           // clang-format off
-          if constexpr(neither_is_string_column || both_are_string_columns) {
+          if constexpr (neither_is_string_column || both_are_string_columns) {
             auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
             auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
             iterable_left.with_iterators([&](auto left_it, auto left_end) {
               iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                call_with_operator(_scan_type, [&](auto comparator) {
+                with_operator(_scan_type, [&](auto comparator) {
                   this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
                                           chunk_id_right, left_matches);
                 });
