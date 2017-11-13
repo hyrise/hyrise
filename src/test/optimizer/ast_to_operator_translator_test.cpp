@@ -12,6 +12,8 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_tables.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -21,6 +23,8 @@
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
@@ -123,6 +127,24 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   EXPECT_EQ(join_op->column_ids(), join_node->join_column_ids());
   EXPECT_EQ(join_op->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_op->mode(), JoinMode::Outer);
+}
+
+TEST_F(ASTToOperatorTranslatorTest, ShowTablesNode) {
+  const auto show_tables_node = std::make_shared<ShowTablesNode>();
+  const auto op = ASTToOperatorTranslator{}.translate_node(show_tables_node);
+
+  const auto show_tables_op = std::dynamic_pointer_cast<ShowTables>(op);
+  ASSERT_TRUE(show_tables_op);
+  EXPECT_EQ(show_tables_op->name(), "ShowTables");
+}
+
+TEST_F(ASTToOperatorTranslatorTest, ShowColumnsNode) {
+  const auto show_column_node = std::make_shared<ShowColumnsNode>("table_a");
+  const auto op = ASTToOperatorTranslator{}.translate_node(show_column_node);
+
+  const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
+  ASSERT_TRUE(show_columns_op);
+  EXPECT_EQ(show_columns_op->name(), "ShowColumns");
 }
 
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {

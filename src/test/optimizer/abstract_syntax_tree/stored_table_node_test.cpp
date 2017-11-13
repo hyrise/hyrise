@@ -48,6 +48,22 @@ TEST_F(StoredTableNodeTest, OwnOutputColumnIDs) {
   EXPECT_EQ(column_ids[1], ColumnID{1});
 }
 
+TEST_F(StoredTableNodeTest, UnknownTableColumns) {
+  auto column_ids = _stored_table_node->get_output_column_ids_for_table("invalid_table");
+  EXPECT_EQ(column_ids.size(), 0u);
+}
+
+TEST_F(StoredTableNodeTest, AliasTableColumns) {
+  const auto alias_table_node = std::make_shared<StoredTableNode>(*_stored_table_node);
+  alias_table_node->set_alias({"foo"});
+
+  auto column_ids = alias_table_node->get_output_column_ids_for_table("foo");
+
+  EXPECT_EQ(column_ids.size(), 2u);
+  EXPECT_EQ(column_ids[0], ColumnID{0});
+  EXPECT_EQ(column_ids[1], ColumnID{1});
+}
+
 TEST_F(StoredTableNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_stored_table_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
   EXPECT_EQ(_stored_table_node->get_verbose_column_name(ColumnID{1}), "t_a.b");
