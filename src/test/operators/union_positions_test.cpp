@@ -275,7 +275,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto column_right_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
   auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
-  auto table_left = std::make_shared<Table>();
+  auto table_left = std::make_shared<Table>(3);
   table_left->add_column_definition("a", "int");
   table_left->add_column_definition("b", "float");
   table_left->add_column_definition("c", "int");
@@ -292,7 +292,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   chunk_left_1.add_column(column_left_1_2);
   table_left->emplace_chunk(std::move(chunk_left_1));
 
-  auto table_right = std::make_shared<Table>();
+  auto table_right = std::make_shared<Table>(4);
   table_right->add_column_definition("a", "int");
   table_right->add_column_definition("b", "float");
   table_right->add_column_definition("c", "int");
