@@ -16,12 +16,12 @@ class Table;
 
 /**
  * Indicates whether the comparison of two tables should happen order sensitive (Yes) or whether it should just be
- * checked whether both tables contain the same rows, independant of order.
+ * checked whether both tables contain the same rows, independent of order.
  */
 enum class OrderSensitivity { Yes, No };
 
 /**
- * "Strct" enforces that both tables have precisely the same column types, "Lenient" allows float instead of double, double
+ * "Strict" enforces that both tables have precisely the same column types, "Lenient" allows float instead of double, double
  * instead of float, long instead of int, int instead of long
  */
 enum class TypeCmpMode { Strict, Lenient };

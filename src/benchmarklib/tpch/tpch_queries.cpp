@@ -506,7 +506,6 @@ const char* const tpch_query_11 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
-
  */
 const char* const tpch_query_12 =
     R"(SELECT l_shipmode, SUM(case when o_orderpriority ='1-URGENT' or o_orderpriority ='2-HIGH' then 1 else 0 end)

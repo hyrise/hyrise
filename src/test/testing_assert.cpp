@@ -68,7 +68,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   const auto generate_table_comparison = [&]() {
     std::stringstream stream;
     stream << "========= Tables are not equal =========" << std::endl;
-    stream << _matrix_to_string("Opossum's Result", opossum_matrix);
+    stream << _matrix_to_string("Hyrise's Result", opossum_matrix);
     stream << std::endl;
     stream << _matrix_to_string("Expected Result", expected_matrix);
     stream << "========================================" << std::endl;
@@ -79,7 +79,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   //  - column count
   if (opossum_table->column_count() != expected_table->column_count()) {
     std::cout << generate_table_comparison() << "Number of columns is different. " << std::endl
-              << "Opossum's result: " << opossum_table->column_count()
+              << "Hyrises's result: " << opossum_table->column_count()
               << ", Expected result: " << expected_table->column_count();
     return false;
   }

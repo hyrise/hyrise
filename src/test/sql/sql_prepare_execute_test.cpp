@@ -28,9 +28,9 @@ class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterf
   }
 
   void load_tpch_tables() {
-    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl", 1));
-    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", 1));
-    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl", 1));
+    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl", 0));
+    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", 0));
+    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl", 0));
   }
 };
 

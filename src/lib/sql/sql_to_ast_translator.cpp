@@ -1,6 +1,5 @@
 #include "sql_to_ast_translator.hpp"
 
-#include <util/sqlhelper.h>
 #include <memory>
 #include <optional>
 #include <string>
@@ -28,7 +27,7 @@
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
+#include "util/sqlhelper.h"
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
 #include "types.hpp"
