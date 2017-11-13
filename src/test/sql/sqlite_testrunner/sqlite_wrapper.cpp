@@ -1,4 +1,4 @@
-7#include "sqlite_wrapper.hpp"
+#include "sqlite_wrapper.hpp"
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
