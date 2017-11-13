@@ -9,7 +9,7 @@ fi
 
 cd $1
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-make hyriseCoverage -j $(( cores / 2))
+make hyriseCoverage -j $((cores / 2))
 cd -
 
 ./$1/hyriseCoverage
