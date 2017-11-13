@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "types.hpp"
@@ -225,7 +226,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * Prints this node and all its descendants formatted as a tree
    */
-  void print(std::ostream& out = std::cout, std::vector<bool> levels = {}) const;
+  void print(std::ostream& out = std::cout) const;
 
   /**
    * Returns a string describing this node, but nothing about its children.
@@ -287,6 +288,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Reset statistics, call _on_child_changed() for node specific behaviour and call _child_changed() on parents
    */
   void _child_changed();
+
+  /**
+   * Actual impl of AbstractASTNode::print(). AbstractASTNode::print() just creates the `levels` and `id_by_node`
+   * instances used during the recursion.
+   */
+  void _print_impl(std::ostream& out, std::vector<bool>& levels,
+                   std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t>& id_by_node,
+                   size_t id_counter) const;
 
   // @{
   /**
