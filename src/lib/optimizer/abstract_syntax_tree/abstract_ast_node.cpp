@@ -6,6 +6,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "types.hpp"
@@ -333,10 +334,8 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
   return reference;
 }
 
-
-void AbstractASTNode::_print_impl(std::ostream& out,
-                                  std::vector<bool> & levels,
-                                  std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t> & id_by_node,
+void AbstractASTNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
+                                  std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t>& id_by_node,
                                   size_t id_counter) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
