@@ -33,6 +33,10 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
   EXPECT_THROW(_union_node->derive_statistics_from(_table_node_a, _table_node_b), std::exception);
 }
 
+TEST_F(UnionNodeTest, NoInputTableColumn) {
+  EXPECT_THROW(_union_node->get_output_column_ids_for_table("table_a"), std::exception);
+}
+
 TEST_F(UnionNodeTest, OutputColumnMapping) {
   auto column_ids = _union_node->output_column_ids_to_input_column_ids();
 

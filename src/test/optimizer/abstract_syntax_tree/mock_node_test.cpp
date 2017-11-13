@@ -36,4 +36,24 @@ TEST_F(MockNodeTest, OutputColumnNames) {
   }
 }
 
+TEST_F(MockNodeTest, ColumnNamesWithAlias) {
+  auto aliased_node = std::make_shared<MockNode>(_statistics);
+  aliased_node->set_alias("foo");
+
+  for (ColumnID column_index{0}; column_index < ColumnID{4}; ++column_index) {
+    auto expected_name = "foo.MockCol" + std::to_string(column_index);
+    EXPECT_EQ(aliased_node->get_verbose_column_name(column_index), expected_name);
+  }
+}
+
+TEST_F(MockNodeTest, NoMappingForInputColumns) {
+  auto column_ids = _mock_node->output_column_ids_to_input_column_ids();
+
+  EXPECT_EQ(column_ids.size(), _mock_node->output_column_count());
+
+  for (auto column_id : column_ids) {
+    EXPECT_EQ(column_id, INVALID_COLUMN_ID);
+  }
+}
+
 }  // namespace opossum

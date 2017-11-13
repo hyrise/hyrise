@@ -132,4 +132,14 @@ TEST_F(AggregateNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{3}), "t_a.c");
 }
 
+TEST_F(AggregateNodeTest, ColumnInputMapping) {
+  auto column_ids = _aggregate_node->get_output_column_ids_for_table("t_a");
+
+  // we are grouping by two columns
+  EXPECT_EQ(column_ids.size(), 2u);
+
+  EXPECT_EQ(column_ids[0], ColumnID{0});
+  EXPECT_EQ(column_ids[1], ColumnID{1});
+}
+
 }  // namespace opossum
