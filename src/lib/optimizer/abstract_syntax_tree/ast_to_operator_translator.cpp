@@ -57,6 +57,19 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
     const std::shared_ptr<AbstractASTNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
+
+  if (table_scan_node->scan_type() == ScanType::OpBetween) {
+    DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
+    PerformanceWarning("TableScan executes BETWEEN as two separate selects");
+
+    auto table_scan1 =
+        std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), ScanType::OpGreaterThanEquals,
+                                    table_scan_node->value(), std::nullopt);
+
+    return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::OpLessThanEquals,
+                                       *table_scan_node->value2(), std::nullopt);
+  }
+
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), table_scan_node->scan_type(),
                                      table_scan_node->value(), table_scan_node->value2());
 }
