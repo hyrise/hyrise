@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <memory>
+#include <random>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -120,7 +121,10 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   for (auto i = 0u; i < ints.size(); ++i) {
     ints[i] = i * 2;
   }
-  std::random_shuffle(ints.begin(), ints.end());
+
+  std::random_device rd;
+  std::mt19937 random_generator(rd());
+  std::shuffle(ints.begin(), ints.end(), random_generator);
 
   auto column = create_dict_column_by_type<int>("int", ints);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
