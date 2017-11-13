@@ -119,4 +119,27 @@ TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
   EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
 }
 
+TEST_F(AggregateNodeTest, Description) {
+  auto description = _aggregate_node->description();
+
+  EXPECT_EQ(description, "[Aggregate] SUM(t_a.a + t_a.b), SUM(t_a.a + t_a.c) AS \"some_sum\" GROUP BY [t_a.a, t_a.c]");
+}
+
+TEST_F(AggregateNodeTest, VerboseColumnNames) {
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{0}), "SUM(t_a.a + t_a.b)");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{1}), "some_sum");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{2}), "t_a.a");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{3}), "t_a.c");
+}
+
+TEST_F(AggregateNodeTest, ColumnInputMapping) {
+  auto column_ids = _aggregate_node->get_output_column_ids_for_table("t_a");
+
+  // we are grouping by two columns
+  EXPECT_EQ(column_ids.size(), 2u);
+
+  EXPECT_EQ(column_ids[0], ColumnID{0});
+  EXPECT_EQ(column_ids[1], ColumnID{1});
+}
+
 }  // namespace opossum

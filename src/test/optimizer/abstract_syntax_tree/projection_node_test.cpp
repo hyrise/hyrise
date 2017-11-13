@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -36,6 +37,10 @@ class ProjectionNodeTest : public BaseTest {
   std::shared_ptr<ProjectionNode> _projection_node;
 };
 
+TEST_F(ProjectionNodeTest, Description) {
+  EXPECT_EQ(_projection_node->description(), "[Projection] t_a.c, t_a.a, t_a.b, t_a.b + t_a.c, t_a.a + t_a.c");
+}
+
 TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", std::nullopt}), 0);
   EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 0);
@@ -67,6 +72,28 @@ TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", {"foo"}}), 2);
   EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}),
             std::nullopt);
+}
+
+TEST_F(ProjectionNodeTest, ColumnIdsForTable) {
+  auto column_ids = _projection_node->get_output_column_ids_for_table("t_a");
+
+  EXPECT_EQ(column_ids.size(), 3u);
+
+  // make sure all three used columns are in the vector
+  EXPECT_NE(std::find(column_ids.begin(), column_ids.end(), ColumnID{0}), column_ids.end());
+  EXPECT_NE(std::find(column_ids.begin(), column_ids.end(), ColumnID{1}), column_ids.end());
+  EXPECT_NE(std::find(column_ids.begin(), column_ids.end(), ColumnID{2}), column_ids.end());
+}
+
+TEST_F(ProjectionNodeTest, ColumnIdsForUnknownTable) {
+  EXPECT_EQ(_projection_node->get_output_column_ids_for_table("invalid").size(), 0u);
+}
+
+TEST_F(ProjectionNodeTest, VerboseColumnNames) {
+  EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{0}), "c");
+  EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{1}), "a");
+  EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{2}), "alias_for_b");
+  EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{3}), "some_addition");
 }
 
 }  // namespace opossum

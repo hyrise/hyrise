@@ -1,4 +1,5 @@
 #include <memory>
+#include <utility>
 
 #include "gtest/gtest.h"
 
@@ -22,14 +23,39 @@ class JoinNodeTest : public BaseTest {
     _join_node = std::make_shared<JoinNode>(JoinMode::Cross);
     _join_node->set_left_child(_stored_table_node_a);
     _join_node->set_right_child(_stored_table_node_b);
+
+    _inner_join_node =
+        std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
+    _inner_join_node->set_left_child(_stored_table_node_a);
+    _inner_join_node->set_right_child(_stored_table_node_b);
   }
 
   void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<StoredTableNode> _stored_table_node_a;
   std::shared_ptr<StoredTableNode> _stored_table_node_b;
-  std::shared_ptr<JoinNode> _join_node;
+  std::shared_ptr<JoinNode> _join_node, _inner_join_node;
 };
+
+TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Cross Join]"); }
+
+TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Inner Join] t_a.a = t_b.y"); }
+
+TEST_F(JoinNodeTest, VerboseColumnNames) {
+  EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
+  EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{1}), "t_a.b");
+  EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{2}), "t_a.c");
+  EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{3}), "t_b.x");
+  EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{4}), "t_b.y");
+}
+
+TEST_F(JoinNodeTest, VerboseColumnNamesInnerJoin) {
+  EXPECT_EQ(_inner_join_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
+  EXPECT_EQ(_inner_join_node->get_verbose_column_name(ColumnID{1}), "t_a.b");
+  EXPECT_EQ(_inner_join_node->get_verbose_column_name(ColumnID{2}), "t_a.c");
+  EXPECT_EQ(_inner_join_node->get_verbose_column_name(ColumnID{3}), "t_b.x");
+  EXPECT_EQ(_inner_join_node->get_verbose_column_name(ColumnID{4}), "t_b.y");
+}
 
 TEST_F(JoinNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_join_node->get_column_id_by_named_column_reference({"a", std::nullopt}), 0);
