@@ -131,6 +131,10 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
+
+  bool is_null = is_nullable() && (*_null_values)[chunk_offset];
+  Assert(!is_null, "This operation does not support NULL values.");
+
   // buffering value at chunk_offset
   buffer << _values[chunk_offset];
   uint32_t length = buffer.str().length();
