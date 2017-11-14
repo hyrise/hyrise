@@ -11,15 +11,15 @@ namespace opossum {
 
 class SimdBp128Encoder : public BaseAttributeEncoder {
  public:
-  constexpr auto block_size = 128u;
-  constexpr auto blocks_in_meta_block = 16u;
-  constexpr auto meta_block_size = block_size * blocks_in_meta_block;
-
- public:
   void init(size_t size) final;
   void append(uint32_t value) final;
   void finish() final;
   std::unique_ptr<BaseEncodedVector> get_vector() final;
+
+ public:
+  static constexpr auto block_size = 128u;
+  static constexpr auto blocks_in_meta_block = 16u;
+  static constexpr auto meta_block_size = block_size * blocks_in_meta_block;
 
  private:
   bool meta_block_complete();
@@ -27,7 +27,7 @@ class SimdBp128Encoder : public BaseAttributeEncoder {
   void pack_incomplete_meta_block();
 
   std::array<uint8_t, blocks_in_meta_block> bits_needed_per_block();
-  void write_meta_info(const std::array<uint8_t, blocks_in_meta_block>& bits_needed)
+  void write_meta_info(const std::array<uint8_t, blocks_in_meta_block>& bits_needed);
   void pack_blocks(const uint8_t num_blocks, const std::array<uint8_t, blocks_in_meta_block>& bits_needed);
   void pack_block(const uint32_t* _in, __m128i* out, const uint8_t bit_size);
 

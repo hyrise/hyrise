@@ -4,6 +4,7 @@
 #include <array>
 
 #include "utils/assert.hpp"
+#include "simd_bp128_vector.hpp"
 
 
 namespace {
@@ -76,7 +77,7 @@ void SimdBp128Encoder::finish() {
 }
 
 std::unique_ptr<BaseEncodedVector> SimdBp128Encoder::get_vector() {
-  return std::make_shared<SimdBp128Vector>(std::move(_data), _size);
+  return std::make_unique<SimdBp128Vector>(std::move(_data), _size);
 }
 
 bool SimdBp128Encoder::meta_block_complete() {
@@ -98,13 +99,13 @@ void SimdBp128Encoder::pack_incomplete_meta_block() {
   const auto bits_needed = bits_needed_per_block();
   write_meta_info(bits_needed);
 
-  // Returns ceiling of integer devision
+  // Returns ceiling of integer division
   const auto num_blocks_left = (_meta_block_index + block_size - 1) / block_size;
 
   pack_blocks(num_blocks_left, bits_needed);
 }
 
-std::array<uint8_t, blocks_in_meta_block> SimdBp128Encoder::bits_needed_per_block() {
+auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, blocks_in_meta_block> {
   std::array<uint8_t, blocks_in_meta_block> bits_needed{};
 
   for (auto block_index = 0u; block_index < blocks_in_meta_block; ++block_index) {
@@ -115,14 +116,14 @@ std::array<uint8_t, blocks_in_meta_block> SimdBp128Encoder::bits_needed_per_bloc
       bit_collector |= _pending_meta_block[block_offset + block_index];
     }
 
-    for (bit_collector != 0; bits_needed[block_index]++) { var >>= 1u; }
+    for (;bit_collector != 0; bits_needed[block_index]++) { bit_collector >>= 1u; }
   }
 
   return bits_needed;
 }
 
 void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, blocks_in_meta_block>& bits_needed) {
-  const auto meta_block_info = *(static_cast<__m128i*>(bits_needed.data()));
+  const auto meta_block_info = *(reinterpret_cast<const __m128i*>(bits_needed.data()));
   _data[_data_index++] = meta_block_info;
 }
 
@@ -153,131 +154,131 @@ void SimdBp128Encoder::pack_block(const uint32_t* _in, __m128i* out, const uint8
       return;
 
     case 1u:
-      Pack128Bit<1u>(in, out, in_reg, out_reg, mask);
+      Pack128Bit<1u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 2u:
-      Pack128Bit<2u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<2u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 3u:
-      Pack128Bit<3u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<3u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 4u:
-      Pack128Bit<4u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<4u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 5u:
-      Pack128Bit<5u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<5u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 6u:
-      Pack128Bit<6u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<6u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 7u:
-      Pack128Bit<7u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<7u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 8u:
-      Pack128Bit<8u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<8u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 9u:
-      Pack128Bit<9u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<9u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 10u:
-      Pack128Bit<10u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<10u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 11u:
-      Pack128Bit<11u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<11u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 12u:
-      Pack128Bit<12u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<12u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 13u:
-      Pack128Bit<13u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<13u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 14u:
-      Pack128Bit<14u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<14u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 15u:
-      Pack128Bit<15u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<15u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 16u:
-      Pack128Bit<16u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<16u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 17u:
-      Pack128Bit<17u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<17u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 18u:
-      Pack128Bit<18u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<18u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 19u:
-      Pack128Bit<19u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<19u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 20u:
-      Pack128Bit<20u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<20u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 21u:
-      Pack128Bit<21u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<21u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 22u:
-      Pack128Bit<22u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<22u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 23u:
-      Pack128Bit<23u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<23u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 24u:
-      Pack128Bit<24u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<24u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 25u:
-      Pack128Bit<25u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<25u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 26u:
-      Pack128Bit<26u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<26u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 27u:
-      Pack128Bit<27u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<27u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 28u:
-      Pack128Bit<28u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<28u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 29u:
-      Pack128Bit<29u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<29u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 30u:
-      Pack128Bit<30u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<30u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 31u:
-      Pack128Bit<31u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<31u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     case 32u:
-      Pack128Bit<32u>{in, out, in_reg, out_reg, mask};
+      Pack128Bit<32u>{}(in, out, in_reg, out_reg, mask);
       return;
 
     default:

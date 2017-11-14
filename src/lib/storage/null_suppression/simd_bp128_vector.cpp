@@ -1,9 +1,10 @@
 #include "simd_bp128_vector.hpp"
 
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-SimdBp128Vector::SimdBp128Vector(pmr_vector<__m128i> vector, size_t size) : _vector{std::move(vector)}, _size{size} {}
+SimdBp128Vector::SimdBp128Vector(pmr_vector<__m128i> vector, size_t size) : _data{std::move(vector)}, _size{size} {}
 
 uint32_t SimdBp128Vector::get(const size_t i) const {
   Fail("Not yet implemented.");
