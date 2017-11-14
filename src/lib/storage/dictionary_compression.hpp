@@ -17,6 +17,9 @@ class DictionaryCompression {
   /**
    * @brief Compresses a column
    *
+   * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
+   * only be called by the ChunkCompressionTask.
+   *
    * @param column_type string representation of its type
    * @param column needs to be of type ValueColumn<T>
    * @return a compressed column of type DictionaryColumn<T>
@@ -31,6 +34,9 @@ class DictionaryCompression {
    * and reducing the fragmentation of its mvcc columns
    * All columns of the chunk need to be of type ValueColumn<T>
    *
+   * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
+   * only be called by the ChunkCompressionTask.
+   *
    * @param column_types from the chunk’s table
    * @param chunk to be compressed
    */
@@ -38,11 +44,17 @@ class DictionaryCompression {
 
   /**
    * @brief Compresses specified chunks of a table
+   *
+   * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
+   * only be called by the ChunkCompressionTask.
    */
   static void compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids);
 
   /**
    * @brief Compresses a table by calling compress_chunk for each chunk
+   *
+   * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
+   * only be called by the ChunkCompressionTask.
    */
   static void compress_table(Table& table);
 };

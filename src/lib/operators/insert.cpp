@@ -8,8 +8,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_dictionary_column.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/iterables/value_column_iterable.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
