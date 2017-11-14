@@ -24,10 +24,8 @@ std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
 
   const auto left_column_name = left_child()->output_column_names()[column_id];
 
-#if IS_DEBUG
   const auto right_column_name = right_child()->output_column_names()[column_id];
   Assert(left_column_name == right_column_name, "Input column names don't match");
-#endif
 
   if (_table_alias) {
     return *_table_alias + "." + left_column_name;
