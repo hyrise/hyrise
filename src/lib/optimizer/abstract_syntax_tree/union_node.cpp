@@ -19,7 +19,8 @@ std::string UnionNode::description() const { return "[UnionNode] Mode: " + union
 std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need children to determine Column name");
   Assert(column_id < left_child()->output_column_names().size(), "ColumnID out of range");
-  Assert(right_child()->output_column_names().size() == left_child()->output_column_names().size(), "Input node mismatch");
+  Assert(right_child()->output_column_names().size() == left_child()->output_column_names().size(),
+         "Input node mismatch");
 
   const auto left_column_name = left_child()->output_column_names()[column_id];
 
@@ -57,7 +58,6 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
-
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
 
   if (!named_column_reference_without_local_alias) {
