@@ -28,7 +28,7 @@ namespace opossum {
 // and a classification of hot and cold nodes.
 struct NodeInfoSet {
   double imbalance;
-  std::vector<double> node_temperature;
+  std::vector<double> node_temperatures;
   std::vector<NodeID> hot_nodes;
   std::vector<NodeID> cold_nodes;
 };
@@ -90,17 +90,15 @@ double inverted_entropy(const std::vector<double>& node_chunk) {
 }
 
 // Returns a NodeInfoSet struct that contains the current state of the NUMA nodes
-NodeInfoSet compute_node_info(const std::vector<double>& node_chunk) {
-  double avg_tasks = mean(node_chunk);
+NodeInfoSet compute_node_info(const std::vector<double>& node_temperatures) {
+  double avg_temperature = mean(node_temperatures);
 
-  std::vector<double> node_temperature(node_chunk.size());
   std::vector<NodeID> hot_nodes;
   std::vector<NodeID> cold_nodes;
 
-  for (NodeID i = NodeID(0); static_cast<size_t>(i) < node_chunk.size(); i++) {
-    double a = node_chunk[i];
-    double temperature = (a - avg_tasks);
-    node_temperature[i] = a;
+  for (NodeID i = NodeID(0); static_cast<size_t>(i) < node_temperatures.size(); i++) {
+    double node_temperature = node_temperatures[i];
+    double temperature = (node_temperature - avg_temperature);
     if (temperature > 0) {
       hot_nodes.push_back(i);
     } else if (node_has_capacity(i)) {
@@ -108,32 +106,33 @@ NodeInfoSet compute_node_info(const std::vector<double>& node_chunk) {
     }
   }
 
-  std::sort(hot_nodes.begin(), hot_nodes.end(), [&node_temperature](const auto& a, const auto& b) {
-    return node_temperature.at(a) < node_temperature.at(b);
+  std::sort(hot_nodes.begin(), hot_nodes.end(), [&node_temperatures](const auto& a, const auto& b) {
+    return node_temperatures.at(a) < node_temperatures.at(b);
   });
-  std::sort(cold_nodes.begin(), cold_nodes.end(), [&node_temperature](const auto& a, const auto& b) {
-    return node_temperature.at(a) < node_temperature.at(b);
+  std::sort(cold_nodes.begin(), cold_nodes.end(), [&node_temperatures](const auto& a, const auto& b) {
+    return node_temperatures.at(a) < node_temperatures.at(b);
   });
 
-  return {/* .imbalance = */ inverted_entropy(node_chunk),
-          /* .node_temperature = */ node_temperature,
+  return {/* .imbalance = */ inverted_entropy(node_temperatures),
+          /* .node_temperatures = */ node_temperatures,
           /* .hot_nodes = */ hot_nodes,
           /* .cold_nodes = */ cold_nodes};
 }
 
 // Computes the temperature of a NUMA node based on the Chunks that reside on that node.
-std::vector<double> get_node_temperature(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
-  std::vector<double> node_temperature(node_count);
+std::vector<double> get_node_temperatures(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
+  std::vector<double> node_temperatures(node_count);
   for (const auto& chunk_info : chunk_infos) {
-    node_temperature.at(chunk_info.node) += chunk_info.temperature;
+    node_temperatures.at(chunk_info.node) += chunk_info.temperature;
   }
-  return scale(node_temperature);
+  return scale(node_temperatures);
 }
 
 // Calculates chunk temperature metrics for all full chunks in all tables
 // that are stored in the supplied StorageManager.
-std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, const std::chrono::milliseconds& lookback,
-                                       const std::chrono::milliseconds& counter_history_interval) {
+std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager,
+                                           const std::chrono::milliseconds& lookback,
+                                           const std::chrono::milliseconds& counter_history_interval) {
   std::vector<ChunkInfo> chunk_infos;
   double sum_temperature = 0.0;
   size_t lookback_samples = lookback.count() / counter_history_interval.count();
@@ -165,18 +164,18 @@ void MigrationPreparationTask::_on_execute() {
   const auto topology = NUMAPlacementManager::get().topology();
 
   // Collect chunk and NUMA node temperature metrics
-  auto hot_chunks =
-      find_hot_chunks(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
+  auto chunk_infos =
+      collect_chunk_infos(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
-  NodeInfoSet node_info = compute_node_info(get_node_temperature(hot_chunks, topology->nodes().size()));
+  NodeInfoSet node_info = compute_node_info(get_node_temperatures(chunk_infos, topology->nodes().size()));
 
   // Migrations are only considered when the imbalance between the NUMA nodes is high enough.
   if (node_info.imbalance > _options.imbalance_threshold && node_info.cold_nodes.size() > 0) {
     // Identify migration candidates (chunks)
     std::vector<ChunkInfo> migration_candidates;
-    for (const auto& hot_chunk : hot_chunks) {
-      if (hot_chunk.node < 0 || contains(node_info.hot_nodes, static_cast<NodeID>(hot_chunk.node))) {
-        migration_candidates.push_back(hot_chunk);
+    for (const auto& chunk_info : chunk_infos) {
+      if (chunk_info.node < 0 || contains(node_info.hot_nodes, static_cast<NodeID>(chunk_info.node))) {
+        migration_candidates.push_back(chunk_info);
       }
       if (migration_candidates.size() >= _options.migration_count) {
         break;
@@ -206,7 +205,7 @@ int MigrationPreparationTask::get_node_id(const PolymorphicAllocator<size_t>& al
   if (memory_source) {
     return memory_source->get_node_id();
   }
-  return -1;
+  return NUMAMemoryResource::UNDEFINED_NODE_ID;
 }
 
 }  // namespace opossum

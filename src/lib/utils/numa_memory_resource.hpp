@@ -22,6 +22,8 @@ class NUMAMemoryResource : public boost::container::pmr::memory_resource {
 
   int get_node_id() const;
 
+  static constexpr int UNDEFINED_NODE_ID = -1;
+
  private:
 #if HYRISE_NUMA_SUPPORT
   const numa::MemSource _mem_source;

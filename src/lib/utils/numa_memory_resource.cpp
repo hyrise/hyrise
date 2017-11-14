@@ -46,7 +46,7 @@ void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t a
 
 bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcept { return true; }
 
-int NUMAMemoryResource::get_node_id() const { return -1; }
+int NUMAMemoryResource::get_node_id() const { return UNDEFINED_NODE_ID; }
 #endif
 
 }  // namespace opossum
