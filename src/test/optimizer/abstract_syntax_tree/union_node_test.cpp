@@ -34,6 +34,9 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
 }
 
 TEST_F(UnionNodeTest, NoInputTableColumn) {
+  /**
+   * A Column can't be related to one of UnionNode input tables since it stems from both.
+   */
   EXPECT_THROW(_union_node->get_output_column_ids_for_table("table_a"), std::exception);
 }
 
@@ -46,6 +49,10 @@ TEST_F(UnionNodeTest, OutputColumnMapping) {
 }
 
 TEST_F(UnionNodeTest, MismatchingColumnNames) {
+  /**
+   * If the input tables have different column layouts get_verbose_column_name() will fail
+   */
+
   StorageManager::get().add_table("table_c", load_table("src/test/tables/string_int.tbl", 2));
 
   auto table_node_c = std::make_shared<StoredTableNode>("table_c");
@@ -57,42 +64,45 @@ TEST_F(UnionNodeTest, MismatchingColumnNames) {
 }
 
 TEST_F(UnionNodeTest, KnowsNoTables) {
+  /**
+   * knows_table() is not a concept that applies to Unions
+   */
+
   EXPECT_FALSE(_union_node->knows_table("table_a"));
   EXPECT_FALSE(_union_node->knows_table("table_b"));
   EXPECT_FALSE(_union_node->knows_table("any_table"));
 }
 
-TEST_F(UnionNodeTest, DISABLED_VerboseColumnNames) {
-  /* 
-   * Currently the verbose column names of the inputs need to be *exactly* the same.
-   * That is why we need to use the same input table for left AND right input.
-   * This is probably a logical error in `UnionNode::get_verbose_column_name`.
+TEST_F(UnionNodeTest, VerboseColumnNames) {
+  /**
+   * UnionNode will only prefix column's with its own ALIAS and forget of any table names / aliases of its input tables
    */
 
   auto verbose_union = std::make_shared<UnionNode>(UnionMode::Positions);
   verbose_union->set_left_child(_table_node_a);
   verbose_union->set_right_child(_table_node_b);
+  verbose_union->set_alias("union_alias");
 
-  EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{0}), "a");
-  EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{1}), "b");
+  EXPECT_EQ(_union_node->get_verbose_column_name(ColumnID{0}), "a");
+  EXPECT_EQ(_union_node->get_verbose_column_name(ColumnID{1}), "b");
+  EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{0}), "union_alias.a");
+  EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{1}), "union_alias.b");
 }
 
-TEST_F(UnionNodeTest, DISABLED_FindingColumnReferences) {
-  /*
-   * Resolving names does not seem to work properly. On one hand, it is required to have two input tables
-   * with exactly the same name and alias for `get_verbose_column_name` to work, but on the other hand,
-   * `find_column_id_by_named_column_reference` requires column names to be different on each side.
-   */
+TEST_F(UnionNodeTest, FindingColumnReferences) {
+  /**
+    * UnionNode can only resolve column references without a table_name
+    */
 
   // finding column named "a"
   EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"a", std::nullopt}), ColumnID{0});
-  EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"a", {"table_a"}}), ColumnID{0});
-  EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"a", {"table_b"}}), ColumnID{0});
+  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"a", {"table_a"}}), std::nullopt);
+  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"a", {"table_b"}}), std::nullopt);
 
   // finding column named "b"
   EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"b", std::nullopt}), ColumnID{1});
-  EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"b", {"table_a"}}), ColumnID{1});
-  EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"b", {"table_b"}}), ColumnID{1});
+  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"b", {"table_a"}}), std::nullopt);
+  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"b", {"table_b"}}), std::nullopt);
 
   // invalid names
   EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"c", std::nullopt}), std::nullopt);
