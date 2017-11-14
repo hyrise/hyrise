@@ -49,7 +49,7 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
 
 std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
-  return create_fake_numa_topology(max_num_cores);
+  return create_fake_numa_topology(std::max(max_num_cores, 1));
 #else
 
   if (numa_available() < 0) {
