@@ -5,6 +5,12 @@ add_executable(
     simd_playground.cpp
 )
 
+target_link_libraries(
+    hyriseSIMDPlayground
+
+    hyrise
+)
+
 # Configure server
 add_executable(
     hyriseServer

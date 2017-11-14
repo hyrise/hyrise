@@ -114,9 +114,11 @@ void unpack_128(const __m128i* in, uint32_t* _out) {
 
 int main(int argc, char const *argv[])
 {
+  std::cout << alignof(std::max_align_t) << '\n';
+
   uint32_t in_array[128];
 
-  for (auto i = 0; i < 128; ++i) {
+  for (auto i = 0u; i < 128u; ++i) {
     in_array[i] = i;
   }
 
@@ -139,7 +141,7 @@ int main(int argc, char const *argv[])
     std::cout << std::bitset<32>{_out_array[i * 4]} << std::endl;
   }
 
-  for (auto i = 0u; i < 128; ++i) {
+  for (auto i = 0u; i < 128u; ++i) {
     std::cout << out_array_uncompressed[i] << std::endl;
   }
 
