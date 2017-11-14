@@ -80,8 +80,7 @@ node {
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./scripts/coverage.sh gcc-debug-coverage true"
+          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
           publishHTML (target: [
