@@ -78,6 +78,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     auto in_table = _in_operator->get_output();
     for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
+      Assert(!(in_table->column_is_nullable(column_id)), "Cannot perform IndexColumnScan on nullable column.");
     }
 
     // Defining all possible operators here might appear odd. Chances are, however, that we will not
@@ -217,6 +218,8 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
                            std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
     const auto& column = static_cast<const ValueColumn<T>&>(base_column);
+    Assert(!column.is_nullable(), "Cannot perform IndexColumnScan on nullable column.");
+
     const auto& values = column.values();
     auto& matches_out = context->matches_out;
 
@@ -328,6 +331,8 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         default:
           Fail("Unknown comparison type encountered");
       }
+
+      Assert(search_vid != NULL_VALUE_ID, "Cannot perform IndexColumnScan on NULL values.");
 
       if (_scan_type == ScanType::OpEquals && search_vid != INVALID_VALUE_ID &&
           column.value_by_value_id(search_vid) != _casted_value) {
