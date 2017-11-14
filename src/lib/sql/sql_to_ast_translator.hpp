@@ -89,6 +89,7 @@ class SQLToASTTranslator final : public Noncopyable {
                                                        const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractASTNode> _translate_natural_join(const hsql::JoinDefinition& select);
 
   std::shared_ptr<AbstractASTNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 

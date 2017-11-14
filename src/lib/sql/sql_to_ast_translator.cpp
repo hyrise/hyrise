@@ -1,5 +1,6 @@
 #include "sql_to_ast_translator.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -294,8 +295,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_type_to_join_mode(join.type);
 
-  // TODO(anybody): both operator and translator support are missing.
-  DebugAssert(join_mode != JoinMode::Natural, "Natural Joins are currently not supported.");
+  if (join_mode == JoinMode::Natural) {
+    return _translate_natural_join(join);
+  }
 
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
@@ -362,6 +364,52 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   join_node->set_right_child(right_node);
 
   return join_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
+  DebugAssert(translate_join_type_to_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
+
+  const auto& left_node = _translate_table_ref(*join.left);
+  const auto& right_node = _translate_table_ref(*join.right);
+
+  std::vector<std::string> join_column_names;
+  std::set_intersection(left_node->output_column_names().begin(), left_node->output_column_names().end(),
+                        right_node->output_column_names().begin(), right_node->output_column_names().end(),
+                        std::back_inserter(join_column_names));
+
+  Assert(!join_column_names.empty(), "No matching columns for natural join found");
+
+  std::shared_ptr<AbstractASTNode> return_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  return_node->set_left_child(left_node);
+  return_node->set_right_child(right_node);
+
+  for (const auto& join_column_name : join_column_names) {
+    auto left_column_id = left_node->get_column_id_by_named_column_reference({join_column_name});
+    auto right_column_id = right_node->get_column_id_by_named_column_reference({join_column_name});
+    auto right_column_id_in_cross = static_cast<ColumnID>(right_column_id + left_node->output_column_count());
+    auto predicate = std::make_shared<PredicateNode>(left_column_id, ScanType::OpEquals, right_column_id_in_cross);
+    predicate->set_left_child(return_node);
+    return_node = predicate;
+  }
+
+  // We need to collect the column ids so that we can remove the duplicate columns used in the join condition
+  std::vector<ColumnID> column_ids;
+  for (auto column_idx = 0u; column_idx < return_node->output_column_count(); ++column_idx) {
+    if (column_idx >= left_node->output_column_count()) {
+      if (std::find(join_column_names.cbegin(), join_column_names.cend(),
+                    return_node->output_column_names()[column_idx]) != join_column_names.cend()) {
+        continue;
+      }
+    }
+    column_ids.emplace_back(column_idx);
+  }
+
+  const auto& column_references = Expression::create_columns(column_ids);
+
+  auto projection = std::make_shared<ProjectionNode>(column_references);
+  projection->set_left_child(return_node);
+
+  return projection;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(

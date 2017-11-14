@@ -330,22 +330,30 @@ TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
   EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
 }
 
-// TODO(mp): Natural Joins are not translated correctly yet. Resolving matching columns is not implemented so far.
-TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin) {
-  const auto query = "SELECT * FROM table_a AS a NATURAL JOIN table_b AS b;";
+TEST_F(SQLToASTTranslatorTest, SelectNaturalJoin) {
+  const auto query = "SELECT * FROM table_a NATURAL JOIN table_c;";
   auto result_node = compile_query(query);
+
+  // skip the projection that is always inserted on the top
+  result_node = result_node->left_child();
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  std::vector<std::string> output_columns = {"a", "b", "a", "b"};
+  std::vector<std::string> output_columns = {"a", "b", "d"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(join_node->join_mode(), JoinMode::Natural);
-  EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0} /* "a" */);
-  EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
+  EXPECT_EQ(projection_node->left_child()->type(), ASTNodeType::Predicate);
+  auto predicate = std::dynamic_pointer_cast<PredicateNode>(projection_node->left_child());
+  EXPECT_FALSE(predicate->right_child());
+  EXPECT_EQ(predicate->column_id(), ColumnID{0});
+  EXPECT_EQ(predicate->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(predicate->value(), AllParameterVariant{ColumnID{2}});
+
+  EXPECT_EQ(predicate->left_child()->type(), ASTNodeType::Join);
+  auto cross = std::dynamic_pointer_cast<JoinNode>(predicate->left_child());
+  EXPECT_EQ(cross->join_mode(), JoinMode::Cross);
+  EXPECT_EQ(cross->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(cross->right_child()->type(), ASTNodeType::StoredTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectCrossJoin) {
