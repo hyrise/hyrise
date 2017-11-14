@@ -304,7 +304,7 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
 
 // TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     // todo(anyone): Fix for other joins
     return;
   }
@@ -320,7 +320,7 @@ TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
 
 // TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     // todo(anyone): Fix for other joins
     return;
   }
@@ -336,7 +336,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
 
 // TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     // todo(anyone): Fix for other joins
     return;
   }
@@ -352,7 +352,7 @@ TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
 
 // TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     // todo(anyone): Fix for other joins
     return;
   }

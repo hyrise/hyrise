@@ -238,7 +238,11 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
           reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
               input_table->get_chunk(current_chunk_id).get_column(column_id));
         }
-        new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
+        if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+          new_pos_list->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        } else {
+          new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
+        }
       }
 
       column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
