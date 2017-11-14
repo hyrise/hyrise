@@ -65,8 +65,8 @@ node {
           sh "./gcc-release/hyriseTest"
         }
       }, tpcc: {
-        stage("TPCC Test") {
-            sh "./scripts/test_tpcc.sh clang-release"
+        stage("System Test") {
+            sh "./scripts/run_system_test.sh clang-release"
         }
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
@@ -80,8 +80,7 @@ node {
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./scripts/coverage.sh gcc-debug-coverage true"
+          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
           publishHTML (target: [

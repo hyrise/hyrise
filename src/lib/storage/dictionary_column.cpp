@@ -129,7 +129,10 @@ template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
   // buffering value at chunk_offset
-  T value = _dictionary->at(_attribute_vector->get(chunk_offset));
+  auto value_id = _attribute_vector->get(chunk_offset);
+  Assert(value_id != NULL_VALUE_ID, "This operation does not support NULL values.");
+
+  T value = _dictionary->at(value_id);
   buffer << value;
   uint32_t length = buffer.str().length();
   // writing byte representation of length

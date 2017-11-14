@@ -189,13 +189,13 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphPrinted) {
  |  \_[2] [MockTable]
  |  |  \_[3] [MockTable]
  |  |     \_[4] [MockTable]
- |  |     \_[4] [MockTable]
- |  \_[2] [MockTable]
+ |  |     \_[5] [MockTable]
+ |  \_[6] [MockTable]
  |     \_Recurring Node --> [3]
- |     \_Recurring Node --> [4]
- \_[1] [MockTable]
+ |     \_Recurring Node --> [5]
+ \_[7] [MockTable]
     \_Recurring Node --> [3]
-    \_Recurring Node --> [4]
+    \_Recurring Node --> [5]
 )");
 }
 

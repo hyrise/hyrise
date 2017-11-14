@@ -6,7 +6,11 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "operators/get_table.hpp"
+#include "operators/insert.hpp"
+#include "operators/validate.hpp"
 #include "storage/base_dictionary_column.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
@@ -76,6 +80,38 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
       EXPECT_EQ(dict_column->unique_values_count(), dictionary_sizes[chunk_id][column_id]);
     }
   }
+}
+
+TEST_F(ChunkCompressionTaskTest, DISABLED_CompressionWithAbortedInsert /* #492 */) {
+  auto table = load_table("src/test/tables/compression_input.tbl", 6u);
+  StorageManager::get().add_table("table_insert", table);
+
+  auto gt1 = std::make_shared<GetTable>("table_insert");
+  gt1->execute();
+
+  auto ins = std::make_shared<Insert>("table_insert", gt1);
+  auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
+  ins->execute();
+  context->rollback();
+
+  auto compression = std::make_unique<ChunkCompressionTask>(
+      "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
+  compression->execute();
+
+  for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
+    auto dict_column =
+        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i).get_column(ColumnID{0}));
+    ASSERT_NE(dict_column, nullptr);
+  }
+
+  auto gt2 = std::make_shared<GetTable>("table_insert");
+  gt2->execute();
+  auto validate = std::make_shared<Validate>(gt2);
+  context = TransactionManager::get().new_transaction_context();
+  validate->set_transaction_context(context);
+  validate->execute();
+  EXPECT_EQ(validate->get_output()->row_count(), 12u);
 }
 
 }  // namespace opossum
