@@ -446,7 +446,7 @@ int Console::load_table(const std::string& args) {
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);
-        out("Table " + tablename + " already existed. Replaced it.");
+        out("Table " + tablename + " already existed. Replaced it.\n");
       }
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
