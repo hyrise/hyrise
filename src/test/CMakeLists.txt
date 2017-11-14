@@ -1,14 +1,14 @@
 set(
     SHARED_SOURCES
     base_test.hpp
-    gtest_case_template.cpp
-    gtest_main.cpp
     testing_assert.cpp
     testing_assert.hpp
+    sql/sqlite_testrunner/sqlite_wrapper.cpp
+    sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
 
 set(
-    HYRISE_TEST_SOURCES
+    HYRISE_UNIT_TEST_SOURCES
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
@@ -78,10 +78,7 @@ set(
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
     sql/sql_to_ast_translator_test.cpp
-    sql/tpch_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
-    sql/sqlite_testrunner/sqlite_wrapper.cpp
-    sql/sqlite_testrunner/sqlite_wrapper.hpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
@@ -101,13 +98,17 @@ set(
     tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
+    gtest_main.cpp
 )
 
 set (
-    TPCC_TEST_SOURCES
+    SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     tpc/tpcc_ref_test.cpp
+    tpc/tpch_test.cpp
+    gtest_main.cpp
 )
+
 
 # Both hyriseTest and hyriseSanitizers link against these
 set(
@@ -134,13 +135,13 @@ set(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
-add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
+add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
-add_coverage_executable(hyriseCoverage "${HYRISE_TEST_SOURCES}" "hyriseCoverageLib;hyriseBenchmarkCoverageLib;${LIBRARIES}")
-add_sanitizers_executable(hyriseSanitizers "${HYRISE_TEST_SOURCES}" "hyriseSanitizersLib;hyriseBenchmarkSanitizersLib;${LIBRARIES_SANITIZERS}")
+add_coverage_executable(hyriseCoverage "${HYRISE_UNIT_TEST_SOURCES}" "hyriseCoverageLib;hyriseBenchmarkCoverageLib;${LIBRARIES}")
+add_sanitizers_executable(hyriseSanitizers "${HYRISE_UNIT_TEST_SOURCES}" "hyriseSanitizersLib;hyriseBenchmarkSanitizersLib;${LIBRARIES_SANITIZERS}")
 
-# Configure hyriseTestTPCC
-add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
-target_link_libraries(hyriseTestTPCC hyrise hyriseBenchmarkLib ${LIBRARIES})
-add_dependencies(hyriseTestTPCC tpccTableGenerator)
+# Configure hyriseSystemTest
+add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+add_dependencies(hyriseSystemTest tpccTableGenerator)
