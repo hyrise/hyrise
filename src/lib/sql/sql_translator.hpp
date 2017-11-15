@@ -17,13 +17,13 @@ namespace opossum {
 class AggregateNode;
 
 /**
- * Produces an AST (Abstract Syntax Tree), as defined in logical_query_plan, from an hsql::SQLParseResult.
+* Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
  *
- * The elements of the vector returned by SQLToASTTranslator::translate_parse_result(const hsql::SQLParserResult&)
- * point to the root/result nodes of the ASTs.
+ * The elements of the vector returned by SQLTranslator::translate_parse_result(const hsql::SQLParserResult&)
+ * point to the root/result nodes of the LQPs.
  *
- * An AST can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
- * the ASTToOperatorTranslator.
+ * An LQP can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
+ * the LQPTranslator.
  *
  *
  * ## ColumnID Resolution
@@ -43,21 +43,20 @@ class AggregateNode;
  *
  *
  * ## Usage
- * Refer to sql_to_result_test.cpp for an example of the SQLToASTTranslator in proper action.
- * It is used as a Singleton via SQLToASTTranslator::get().
+ * Refer to sql_to_result_test.cpp for an example of the SQLTranslator in proper action.
  *
  * The basic usage looks like this:
  *
  * hsql::SQLParserResult parse_result;
  * hsql::SQLParser::parseSQLString(params.query, &parse_result);
- * auto result_nodes = SQLToASTTranslator::get().translate_parse_result(parse_result);
+ * auto result_nodes = SQLTranslator().translate_parse_result(parse_result);
  */
-class SQLToASTTranslator final : public Noncopyable {
+class SQLTranslator final : public Noncopyable {
  public:
   /**
    * @param validate If set to false, does not add validate nodes to the resulting tree.
    */
-  constexpr SQLToASTTranslator(bool validate = true) : _validate{validate} {}
+  constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> translate_parse_result(const hsql::SQLParserResult& result);

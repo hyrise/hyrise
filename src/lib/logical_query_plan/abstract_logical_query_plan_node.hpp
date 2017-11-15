@@ -223,7 +223,7 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
 
   /**
    * Sets the table alias for this subtree, see _table_alias for details.
-   * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
+   * This is not part of the constructor because it is only used in SQLTranslator::_translate_table_ref.
    */
   void set_alias(const std::optional<std::string>& table_alias);
 

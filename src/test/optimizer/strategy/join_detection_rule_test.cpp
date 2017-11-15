@@ -14,7 +14,7 @@
 #include "optimizer/expression.hpp"
 #include "optimizer/strategy/join_detection_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
@@ -82,7 +82,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
    *   a       b
    */
 
-  // Generate AST
+  // Generate LQP
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
@@ -124,7 +124,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
    *   a       b
    */
 
-  // Generate AST
+  // Generate LQP
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
@@ -161,7 +161,7 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
    * is not manipulated
    */
 
-  // Generate AST
+  // Generate LQP
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
@@ -197,7 +197,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
    * isn't manipulated.
    */
 
-  // Generate AST
+  // Generate LQP
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
@@ -503,7 +503,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
 
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString(params.query, &parse_result);
-  auto node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
+  auto node = SQLTranslator{false}.translate_parse_result(parse_result)[0];
 
   auto before = _count_cross_joins(node);
   auto output = StrategyBaseTest::apply_rule(_rule, node);

@@ -15,7 +15,7 @@ class StrategyBaseTest : public BaseTest {
   void TearDown() override {}
 
   /**
-   * Helper method for applying a single rule to an AST. Creates the temporary LogicalPlanRootNode and returns its child
+   * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and returns its child
    * after applying the rule
    */
   std::shared_ptr<AbstractLogicalQueryPlanNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,

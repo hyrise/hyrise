@@ -18,7 +18,7 @@ struct ColumnID;
 
 /**
  * This optimizer rule tries to find join conditions for cross join.
- * The rule tries to rewrite the corresponding ASTs for the following SQL statements to an equivalent AST:
+ * The rule tries to rewrite the corresponding LQPs for the following SQL statements to an equivalent LQP:
  *
  * SELECT * FROM a, b WHERE a.id = b.id;
  * =>
@@ -28,7 +28,7 @@ struct ColumnID;
  *
  * HOW THIS WORKS
  *
- * The rule traverses the AST recursively searching for JoinNodes with JoinMode::Cross.
+ * The rule traverses the LQP recursively searching for JoinNodes with JoinMode::Cross.
  * For each Cross Join Node it will look for an appropriate join condition
  * by searching the parent nodes for PredicateNodes. Each PredicateNode is a potential candidate
  * but only those that compare two columns are interesting enough to check.

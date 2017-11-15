@@ -8,9 +8,9 @@
 
 namespace opossum {
 
-class ASTVisualizer {
+class LQPVisualizer {
  public:
-  static void visualize(const std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>& ast_roots, const std::string& dot_filename,
+  static void visualize(const std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>& lqp_roots, const std::string& dot_filename,
                         const std::string& img_filename);
 
  protected:

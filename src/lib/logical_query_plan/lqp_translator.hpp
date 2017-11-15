@@ -12,13 +12,11 @@ class AbstractOperator;
 class TransactionContext;
 
 /**
- * Translates an AST (Abstract Syntax Tree), represented by its root node, into an Operator tree for the execution
+ * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
  * engine, which in return is represented by its root Operator.
  */
 class LQPTranslator final : private Noncopyable {
  public:
-  LQPTranslator() = default;
-
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const;
 
  private:

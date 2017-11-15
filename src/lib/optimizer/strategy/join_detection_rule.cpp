@@ -56,7 +56,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
   // offsetted
   auto column_id_offset = 0;
 
-  // Go up in AST to find corresponding PredicateNode
+  // Go up in LQP to find corresponding PredicateNode
   std::shared_ptr<AbstractLogicalQueryPlanNode> node = cross_join;
   while (true) {
     const auto parents = node->parents();

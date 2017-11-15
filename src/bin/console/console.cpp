@@ -24,10 +24,10 @@
 #include "operators/print.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "planviz/ast_visualizer.hpp"
+#include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -377,7 +377,7 @@ int Console::help(const std::string&) {
   out("  print TABLENAME         - Fully print the given table (including MVCC columns)\n");
   out("  visualize [options] SQL - Visualize a SQL query\n");
   out("             noexec          - without executing the query\n");
-  out("             lqp             - print the raw abstract syntax tree\n");
+  out("             lqp             - print the raw logical query plans\n");
   out("             lqpopt          - print the optimized abstract syntax tree\n");
   out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
   out("  rollback             - Roll back a manually created transaction\n");
@@ -511,17 +511,17 @@ int Console::visualize(const std::string& input) {
 
   if (mode == "lqp" || mode == "lqpopt") {
     try {
-      auto ast_roots = SQLToASTTranslator{}.translate_parse_result(parse_result);
+      auto lqp_roots = SQLTranslator{}.translate_parse_result(parse_result);
 
       if (mode == "lqpopt") {
-        for (auto& root : ast_roots) {
+        for (auto& root : lqp_roots) {
           root = Optimizer::get().optimize(root);
         }
       }
 
       dot_filename = "." + mode + ".dot";
       img_filename = mode + ".png";
-      ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
+      LQPVisualizer::visualize(lqp_roots, dot_filename, img_filename);
     } catch (const std::exception& exception) {
       out("Exception while creating query plan:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;

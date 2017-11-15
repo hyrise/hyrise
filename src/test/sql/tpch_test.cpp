@@ -11,7 +11,7 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "tpch/tpch_queries.hpp"
@@ -50,7 +50,7 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
       throw std::runtime_error("Query is not valid.");
     }
 
-    auto result_node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
+    auto result_node = SQLTranslator{false}.translate_parse_result(parse_result)[0];
 
     if (optimize) {
       result_node = Optimizer::get().optimize(result_node);

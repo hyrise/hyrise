@@ -15,10 +15,10 @@ class AbstractRule {
   virtual std::string name() const = 0;
 
   /**
-   * This function applies the concrete Optimizer Rule to an AST.
+   * This function applies the concrete Optimizer Rule to an LQP.
    * apply_to() is intended to be called recursively by the concrete rule.
    * The optimizer will pass the immutable LogicalPlanRootNode to this function.
-   * @return whether the rule changed the AST, used to stop the optimizers iteration
+   * @return whether the rule changed the LQP, used to stop the optimizers iteration
    */
   virtual bool apply_to(const std::shared_ptr<AbstractLogicalQueryPlanNode>& root) = 0;
 

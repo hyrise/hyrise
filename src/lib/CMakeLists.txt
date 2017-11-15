@@ -94,8 +94,8 @@ set(
     operators/validate.hpp
     logical_query_plan/abstract_logical_query_plan_node.cpp
     logical_query_plan/abstract_logical_query_plan_node.hpp
-    logical_query_plan/abstract_non_optimizable_ast_node.cpp
-    logical_query_plan/abstract_non_optimizable_ast_node.hpp
+    logical_query_plan/abstract_non_optimizable_lqp_node.cpp
+    logical_query_plan/abstract_non_optimizable_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
@@ -148,8 +148,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
-    planviz/ast_visualizer.cpp
-    planviz/ast_visualizer.hpp
+    planviz/lqp_visualizer.cpp
+    planviz/lqp_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
@@ -185,8 +185,8 @@ set(
     sql/sql_query_plan.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
-    sql/sql_to_ast_translator.cpp
-    sql/sql_to_ast_translator.hpp
+    sql/sql_translator.cpp
+    sql/sql_translator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/chunk.cpp

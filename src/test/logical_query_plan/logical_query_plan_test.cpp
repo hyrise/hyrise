@@ -167,17 +167,17 @@ TEST_F(LogicalQueryPlanTest, AliasedSubqueryTest) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphStructure) {
-  ASSERT_AST_TIE(_nodes[0], LQPChildSide::Left, _nodes[1]);
-  ASSERT_AST_TIE(_nodes[0], LQPChildSide::Right, _nodes[4]);
-  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Left, _nodes[2]);
-  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Right, _nodes[3]);
-  ASSERT_AST_TIE(_nodes[2], LQPChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(_nodes[5], LQPChildSide::Left, _nodes[6]);
-  ASSERT_AST_TIE(_nodes[5], LQPChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(_nodes[0], LQPChildSide::Left, _nodes[1]);
+  ASSERT_LQP_TIE(_nodes[0], LQPChildSide::Right, _nodes[4]);
+  ASSERT_LQP_TIE(_nodes[1], LQPChildSide::Left, _nodes[2]);
+  ASSERT_LQP_TIE(_nodes[1], LQPChildSide::Right, _nodes[3]);
+  ASSERT_LQP_TIE(_nodes[2], LQPChildSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[3], LQPChildSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[3], LQPChildSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(_nodes[5], LQPChildSide::Left, _nodes[6]);
+  ASSERT_LQP_TIE(_nodes[5], LQPChildSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Right, _nodes[7]);
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphPrinted) {
@@ -208,11 +208,11 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTree) {
 
   // Make sure _node[1], _node[3] and _node[4] are the only parents _nodes[5] has
   EXPECT_EQ(_nodes[5]->parents().size(), 3u);
-  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[1], LQPChildSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[3], LQPChildSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Left, _nodes[5]);
 
-  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Right, _nodes[3]);
+  ASSERT_LQP_TIE(_nodes[1], LQPChildSide::Right, _nodes[3]);
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
@@ -235,25 +235,25 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
 
   _nodes[5]->replace_with(new_node);
 
-  // Make sure _nodes[5] is untied from the AST
+  // Make sure _nodes[5] is untied from the LQP
   EXPECT_TRUE(_nodes[5]->parents().empty());
   EXPECT_EQ(_nodes[5]->left_child(), nullptr);
   EXPECT_EQ(_nodes[5]->right_child(), nullptr);
 
   // Make sure new_node is the only parent of _nodes[6]
   EXPECT_EQ(_nodes[6]->parents().size(), 1u);
-  ASSERT_AST_TIE(new_node, LQPChildSide::Left, _nodes[6]);
+  ASSERT_LQP_TIE(new_node, LQPChildSide::Left, _nodes[6]);
 
   // Make sure new_node, _nodes[3] and _nodes[4] are the only parents of _nodes[7]
   EXPECT_EQ(_nodes[7]->parents().size(), 3u);
-  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(new_node, LQPChildSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(_nodes[3], LQPChildSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(new_node, LQPChildSide::Right, _nodes[7]);
 
   // Make sure _nodes[5] former parents point to new_node.
-  ASSERT_AST_TIE(_nodes[2], LQPChildSide::Left, new_node);
-  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Left, new_node);
-  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Left, new_node);
+  ASSERT_LQP_TIE(_nodes[2], LQPChildSide::Left, new_node);
+  ASSERT_LQP_TIE(_nodes[3], LQPChildSide::Left, new_node);
+  ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Left, new_node);
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
@@ -263,19 +263,19 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
   _nodes[6]->replace_with(new_node_a);
   _nodes[7]->replace_with(new_node_b);
 
-  // Make sure _nodes[6] is untied from the AST
+  // Make sure _nodes[6] is untied from the LQP
   EXPECT_TRUE(_nodes[6]->parents().empty());
   EXPECT_EQ(_nodes[6]->left_child(), nullptr);
   EXPECT_EQ(_nodes[6]->right_child(), nullptr);
 
-  // Make sure _nodes[7] is untied from the AST
+  // Make sure _nodes[7] is untied from the LQP
   EXPECT_TRUE(_nodes[7]->parents().empty());
   EXPECT_EQ(_nodes[7]->left_child(), nullptr);
   EXPECT_EQ(_nodes[7]->right_child(), nullptr);
 
-  ASSERT_AST_TIE(_nodes[5], LQPChildSide::Left, new_node_a);
-  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Right, new_node_b);
-  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Right, new_node_b);
+  ASSERT_LQP_TIE(_nodes[5], LQPChildSide::Left, new_node_a);
+  ASSERT_LQP_TIE(_nodes[3], LQPChildSide::Right, new_node_b);
+  ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Right, new_node_b);
 }
 
 }  // namespace opossum

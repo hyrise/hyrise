@@ -67,7 +67,7 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
     return false;
   }
 
-  // Untie predicates from AST, so we can freely retie them
+  // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
     predicate->remove_from_tree();
   }

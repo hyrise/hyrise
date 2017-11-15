@@ -215,7 +215,7 @@ void JoinNode::_on_child_changed() { _output_column_names.reset(); }
 void JoinNode::_update_output() const {
   /**
    * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
-   * re-computed on request. This allows ASTs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left child in Join) and thus
    * allows easier manipulation in the optimizer.
    */
 

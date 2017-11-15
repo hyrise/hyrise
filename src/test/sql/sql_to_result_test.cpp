@@ -17,7 +17,7 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_planner.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

@@ -1,4 +1,4 @@
-#include "ast_visualizer.hpp"
+#include "lqp_visualizer.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <cmath>
@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>& ast_roots,
+void LQPVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>& lqp_roots,
                               const std::string& dot_filename, const std::string& img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
@@ -27,7 +27,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalQ
   file << "ratio=0.5" << std::endl;
   file << "node [color=white,fontcolor=white,shape=parallelogram]" << std::endl;
   file << "edge [color=white,fontcolor=white]" << std::endl;
-  for (const auto& root : ast_roots) {
+  for (const auto& root : lqp_roots) {
     _visualize_subtree(root, file);
   }
   file << "}" << std::endl;
@@ -43,7 +43,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalQ
   // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
 }
 
-void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node, std::ofstream& file) {
+void LQPVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node, std::ofstream& file) {
   file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
        << boost::replace_all_copy(node->description(), "\"", "\\\"") << "\"]" << std::endl;
 
@@ -58,7 +58,7 @@ void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLogicalQuer
   }
 }
 
-void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLogicalQueryPlanNode>& from,
+void LQPVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLogicalQueryPlanNode>& from,
                                         const std::shared_ptr<AbstractLogicalQueryPlanNode>& to, std::ofstream& file) {
   float row_count, row_percentage = 100.0f;
   uint32_t pen_width;

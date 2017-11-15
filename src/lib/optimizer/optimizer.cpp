@@ -25,7 +25,7 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> Optimizer::optimize(const std::sha
   root_node->set_left_child(input);
 
   /**
-   * Apply all optimization over and over until all of them stopped changing the AST or the max number of
+   * Apply all optimization over and over until all of them stopped changing the LQP or the max number of
    * iterations is reached
    */
   for (uint32_t iter_index = 0; iter_index < _max_num_iterations; ++iter_index) {

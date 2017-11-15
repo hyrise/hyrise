@@ -2,14 +2,14 @@
 
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "sql_query_plan.hpp"
 
 namespace opossum {
 
 SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result, bool validate) {
-  // Translate to AST
-  auto result_nodes = SQLToASTTranslator{validate}.translate_parse_result(result);
+  // Translate to LQP
+  auto result_nodes = SQLTranslator{validate}.translate_parse_result(result);
 
   SQLQueryPlan plan{};
 

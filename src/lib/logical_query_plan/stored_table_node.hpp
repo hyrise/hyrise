@@ -14,7 +14,7 @@ class TableStatistics;
 
 /**
  * This node type represents a table stored by the table manager.
- * They are the leafs of every meaningful AST tree.
+ * They are the leafs of every meaningful LQP tree.
  */
 class StoredTableNode : public AbstractLogicalQueryPlanNode {
  public:

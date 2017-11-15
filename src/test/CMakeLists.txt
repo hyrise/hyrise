@@ -77,7 +77,7 @@ set(
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
-    sql/sql_to_ast_translator_test.cpp
+    sql/sql_translator_test.cpp
     sql/sql_to_result_test.cpp
     sql/tpch_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp

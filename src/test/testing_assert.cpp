@@ -189,7 +189,7 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLogicalQueryPlanNode>&
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) {}
 
-bool check_ast_tie(const std::shared_ptr<const AbstractLogicalQueryPlanNode>& parent, LQPChildSide child_side,
+bool check_lqp_tie(const std::shared_ptr<const AbstractLogicalQueryPlanNode>& parent, LQPChildSide child_side,
                    const std::shared_ptr<const AbstractLogicalQueryPlanNode>& child) {
   auto parents = child->parents();
   for (const auto& parent2 : parents) {

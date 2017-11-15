@@ -2,14 +2,14 @@
 
 #include <string>
 
-#include "abstract_non_optimizable_ast_node.hpp"
+#include "abstract_non_optimizable_lqp_node.hpp"
 
 namespace opossum {
 
 /**
  * This node type represents the SHOW COLUMNS management command.
  */
-class ShowColumnsNode : public AbstractNonOptimizableASTNode {
+class ShowColumnsNode : public AbstractNonOptimizableLQPNode {
  public:
   explicit ShowColumnsNode(const std::string& table_name);
 

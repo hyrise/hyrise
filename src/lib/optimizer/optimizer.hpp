@@ -9,7 +9,7 @@ class AbstractRule;
 class AbstractLogicalQueryPlanNode;
 
 /**
- * Applies (currently: all) optimization rules to an AST.
+ * Applies (currently: all) optimization rules to an LQP.
  */
 class Optimizer final {
  public:

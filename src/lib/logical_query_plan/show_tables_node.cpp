@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-ShowTablesNode::ShowTablesNode() : AbstractNonOptimizableASTNode(LQPNodeType::ShowTables) {}
+ShowTablesNode::ShowTablesNode() : AbstractNonOptimizableLQPNode(LQPNodeType::ShowTables) {}
 
 std::string ShowTablesNode::description() const { return "[ShowTables]"; }
 

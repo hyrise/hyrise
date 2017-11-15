@@ -18,12 +18,12 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/update_node.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-class SQLToASTTranslatorTest : public BaseTest {
+class SQLTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -54,11 +54,11 @@ class SQLToASTTranslatorTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    return SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
+    return SQLTranslator{false}.translate_parse_result(parse_result)[0];
   }
 };
 
-TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
+TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   auto result_node = compile_query(query);
 
@@ -80,7 +80,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
  * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
  * in the translator.
  */
-TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
+TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
 
@@ -95,7 +95,7 @@ TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   // TODO(anybody): once this is implemented, the value side has to be checked.
 }
 
-TEST_F(SQLToASTTranslatorTest, TwoColumnFilter) {
+TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   auto result_node = compile_query(query);
 
@@ -110,7 +110,7 @@ TEST_F(SQLToASTTranslatorTest, TwoColumnFilter) {
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{ColumnID{1}});
 }
 
-TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
+TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   auto result_node = compile_query(query);
 
@@ -125,7 +125,7 @@ TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectWithAndCondition) {
+TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
 
@@ -146,7 +146,7 @@ TEST_F(SQLToASTTranslatorTest, SelectWithAndCondition) {
   EXPECT_FALSE(t_node->right_child());
 }
 
-TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
+TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
@@ -173,13 +173,13 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   EXPECT_FALSE(t_node_1->right_child());
 }
 
-TEST_F(SQLToASTTranslatorTest, AggregateWithInvalidGroupBy) {
+TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
   // Cannot select b without it being in the GROUP BY clause.
   const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
   EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
-TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
+TEST_F(SQLTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
 
@@ -205,7 +205,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   EXPECT_FALSE(t_node_1->right_child());
 }
 
-TEST_F(SQLToASTTranslatorTest, AggregateWithCountDistinct) {
+TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
   const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
@@ -233,7 +233,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithCountDistinct) {
   EXPECT_FALSE(t_node_1->right_child());
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
+TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   auto result_node = compile_query(query);
 
@@ -256,7 +256,7 @@ TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   EXPECT_FALSE(sort_node->right_child());
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
+TEST_F(SQLTranslatorTest, SelectInnerJoin) {
   const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a;";
   auto result_node = compile_query(query);
 
@@ -275,7 +275,7 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
 }
 
 // Verifies that LEFT/RIGHT JOIN are handled correctly and LEFT/RIGHT OUTER JOIN identically
-TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
+TEST_F(SQLTranslatorTest, SelectLeftRightOuterJoins) {
   using namespace std::string_literals;  // NOLINT (Linter does not know about using namespace)
 
   for (auto mode : {JoinMode::Left, JoinMode::Right}) {
@@ -313,7 +313,7 @@ TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
   }
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
+TEST_F(SQLTranslatorTest, SelectOuterJoin) {
   const auto query = "SELECT * FROM table_a AS a OUTER JOIN table_b AS b ON a.a = b.a;";
   auto result_node = compile_query(query);
 
@@ -331,7 +331,7 @@ TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
 }
 
 // TODO(mp): Natural Joins are not translated correctly yet. Resolving matching columns is not implemented so far.
-TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin /* #495 */) {
+TEST_F(SQLTranslatorTest, DISABLED_SelectNaturalJoin /* #495 */) {
   const auto query = "SELECT * FROM table_a AS a NATURAL JOIN table_b AS b;";
   auto result_node = compile_query(query);
 
@@ -348,7 +348,7 @@ TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin /* #495 */) {
   EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectCrossJoin) {
+TEST_F(SQLTranslatorTest, SelectCrossJoin) {
   const auto query = "SELECT * FROM table_a AS a, table_b AS b WHERE a.a = b.a;";
   auto result_node = compile_query(query);
 
@@ -364,7 +364,7 @@ TEST_F(SQLToASTTranslatorTest, SelectCrossJoin) {
   EXPECT_EQ(join_node->join_mode(), JoinMode::Cross);
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectLimit) {
+TEST_F(SQLTranslatorTest, SelectLimit) {
   const auto query = "SELECT * FROM table_a LIMIT 2;";
   auto result_node = compile_query(query);
 
@@ -374,7 +374,7 @@ TEST_F(SQLToASTTranslatorTest, SelectLimit) {
   EXPECT_EQ(limit_node->left_child()->type(), LQPNodeType::Projection);
 }
 
-TEST_F(SQLToASTTranslatorTest, InsertValues) {
+TEST_F(SQLTranslatorTest, InsertValues) {
   const auto query = "INSERT INTO table_a VALUES (10, 12.5);";
   auto result_node = compile_query(query);
 
@@ -395,7 +395,7 @@ TEST_F(SQLToASTTranslatorTest, InsertValues) {
   EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
 
-TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
+TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   const auto query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
   auto result_node = compile_query(query);
 
@@ -416,7 +416,7 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
   EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
 
-TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
+TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
   const auto query = "INSERT INTO table_a (a) VALUES (10);";
   auto result_node = compile_query(query);
 
@@ -436,7 +436,7 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
   EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
 
-TEST_F(SQLToASTTranslatorTest, InsertSubquery) {
+TEST_F(SQLTranslatorTest, InsertSubquery) {
   const auto query = "INSERT INTO table_a SELECT a, b FROM table_b;";
   auto result_node = compile_query(query);
 
@@ -455,7 +455,7 @@ TEST_F(SQLToASTTranslatorTest, InsertSubquery) {
   EXPECT_EQ(expressions[1]->column_id(), ColumnID{1});
 }
 
-TEST_F(SQLToASTTranslatorTest, Update) {
+TEST_F(SQLTranslatorTest, Update) {
   const auto query = "UPDATE table_a SET b = 3.2 WHERE a > 1;";
   auto result_node = compile_query(query);
 
