@@ -6,7 +6,7 @@
 namespace opossum {
 
 class AbstractRule;
-class AbstractASTNode;
+class AbstractLogicalPlanNode;
 
 /**
  * Applies (currently: all) optimization rules to an AST.
@@ -17,7 +17,7 @@ class Optimizer final {
 
   Optimizer();
 
-  std::shared_ptr<AbstractASTNode> optimize(const std::shared_ptr<AbstractASTNode>& input) const;
+  std::shared_ptr<AbstractLogicalPlanNode> optimize(const std::shared_ptr<AbstractLogicalPlanNode>& input) const;
 
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;

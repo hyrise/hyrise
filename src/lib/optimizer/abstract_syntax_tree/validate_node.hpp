@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents validating tables with the Validate operator.
  */
-class ValidateNode : public AbstractASTNode {
+class ValidateNode : public AbstractLogicalPlanNode {
  public:
   ValidateNode();
 

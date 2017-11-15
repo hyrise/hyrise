@@ -16,7 +16,7 @@ struct ColumnID;
  * Node type to represent common projections, i.e. without any aggregate functionality.
  * It is, however, responsible to calculate arithmetic expressions.
  */
-class ProjectionNode : public AbstractASTNode {
+class ProjectionNode : public AbstractLogicalPlanNode {
  public:
   explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
 

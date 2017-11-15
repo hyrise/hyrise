@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents limiting a result to a certain number of rows (LIMIT operator).
  */
-class LimitNode : public AbstractASTNode {
+class LimitNode : public AbstractLogicalPlanNode {
  public:
   explicit LimitNode(const size_t num_rows);
 

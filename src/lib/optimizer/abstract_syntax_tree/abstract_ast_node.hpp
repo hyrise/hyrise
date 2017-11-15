@@ -16,7 +16,7 @@ struct ColumnID;
 class Expression;
 class TableStatistics;
 
-enum class ASTNodeType {
+enum class LQPNodeType {
   Aggregate,
   Delete,
   DummyTable,
@@ -36,7 +36,7 @@ enum class ASTNodeType {
   Mock
 };
 
-enum class ASTChildSide { Left, Right };
+enum class LQPChildSide { Left, Right };
 
 struct NamedColumnReference {
   std::string column_name;
@@ -46,16 +46,24 @@ struct NamedColumnReference {
 };
 
 /**
- * Base class for a Node in the Abstract Syntax Tree on which the Query Optimization is performed on.
- * Usually produced by SQLToASTTranslator and turned into actual Operators by ASTToOperatorTranslator.
+ * Base class for a Node in the Logical Query Plan.
+ *
+ * The Logical Query Plan (abbreviated LQP) is a Directional Acyclic Graph (DAG) with each node having 0..2 incoming
+ * edges and 0..n outgoing edges. The adjacent nodes on incoming edges are called "children" and those on the outgoing
+ * edges "parents". The direction of the edges models data flow (with "data" being Tables) where children produce the
+ * input data their parents operate on.
+ *
+ * The LQP is created by the SQLTranslator and can optionally be further processed by the Optimizer.
+ * The LQPTranslator creates the actual executable Operator-DAG. We are very careful that the LQP remains semantically
+ * the same whether it was optimized or not.
  *
  * Design decision:
- * We decided to have mutable Nodes for now.
- * By that we can apply rules without creating new nodes for every optimization rule.
+ * We decided to have mutable Nodes for now. By that we can apply rules without creating new nodes for every
+ * optimization rule.
  */
-class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
+class AbstractLogicalPlanNode : public std::enable_shared_from_this<AbstractLogicalPlanNode> {
  public:
-  explicit AbstractASTNode(ASTNodeType node_type);
+  explicit AbstractLogicalPlanNode(LQPNodeType node_type);
 
   /**
    * @returns whether the Optimizer should consider this node
@@ -75,52 +83,52 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * Locks all parents and returns them as shared_ptrs
    */
-  std::vector<std::shared_ptr<AbstractASTNode>> parents() const;
+  std::vector<std::shared_ptr<AbstractLogicalPlanNode>> parents() const;
 
-  void remove_parent(const std::shared_ptr<AbstractASTNode>& parent);
+  void remove_parent(const std::shared_ptr<AbstractLogicalPlanNode>& parent);
   void clear_parents();
 
   /**
    * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
-  ASTChildSide get_child_side(const std::shared_ptr<AbstractASTNode>& parent) const;
+  LQPChildSide get_child_side(const std::shared_ptr<AbstractLogicalPlanNode>& parent) const;
 
   /**
    * @returns {get_child_side(parents()[0], ..., get_child_side(parents()[n-1])}
    */
-  std::vector<ASTChildSide> get_child_sides() const;
+  std::vector<LQPChildSide> get_child_sides() const;
 
-  std::shared_ptr<AbstractASTNode> left_child() const;
-  void set_left_child(const std::shared_ptr<AbstractASTNode>& left);
+  std::shared_ptr<AbstractLogicalPlanNode> left_child() const;
+  void set_left_child(const std::shared_ptr<AbstractLogicalPlanNode>& left);
 
-  std::shared_ptr<AbstractASTNode> right_child() const;
-  void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
+  std::shared_ptr<AbstractLogicalPlanNode> right_child() const;
+  void set_right_child(const std::shared_ptr<AbstractLogicalPlanNode>& right);
 
-  std::shared_ptr<AbstractASTNode> child(ASTChildSide side) const;
+  std::shared_ptr<AbstractLogicalPlanNode> child(LQPChildSide side) const;
 
-  void set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child);
+  void set_child(LQPChildSide side, const std::shared_ptr<AbstractLogicalPlanNode>& child);
   // @}
 
-  ASTNodeType type() const;
+  LQPNodeType type() const;
 
   // @{
   /**
    * These functions provide access to statistics for this particular node.
    *
-   * AbstractASTNode::derive_statistics_from() calculates new statistics for this node as they would appear if
+   * AbstractLogicalPlanNode::derive_statistics_from() calculates new statistics for this node as they would appear if
    * left_child and right_child WERE its children. This works for the actual children of this node during the lazy
    * initialization in get_statistics() as well as e.g. in an optimizer rule
    * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
    * that shall be reordered with the same reference node.
    *
-   * Inheriting nodes are free to override AbstractASTNode::derive_statistics_from().
+   * Inheriting nodes are free to override AbstractLogicalPlanNode::derive_statistics_from().
    */
   void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
   const std::shared_ptr<TableStatistics> get_statistics();
   virtual std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode>& left_child,
-      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const;
+      const std::shared_ptr<AbstractLogicalPlanNode>& left_child,
+      const std::shared_ptr<AbstractLogicalPlanNode>& right_child = nullptr) const;
   // @}
 
   virtual const std::vector<std::string>& output_column_names() const;
@@ -141,11 +149,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * discussion
    * on this.
    *
-   * AbstractASTNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
+   * AbstractLogicalPlanNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
    * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise std::nullopt
    * is returned.
    *
-   * AbstractASTNode::get_column_id_by_named_column_reference() is more strict and will fail if the
+   * AbstractLogicalPlanNode::get_column_id_by_named_column_reference() is more strict and will fail if the
    * @param named_column_reference cannot be found.
    *
    * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
@@ -210,7 +218,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Replaces 'this' node with @param replacement_node node.
    * @pre replacement_node has neither parent nor children
    */
-  void replace_with(const std::shared_ptr<AbstractASTNode>& replacement_node);
+  void replace_with(const std::shared_ptr<AbstractLogicalPlanNode>& replacement_node);
 
   /**
    * Sets the table alias for this subtree, see _table_alias for details.
@@ -253,7 +261,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual void _on_child_changed() {}
 
   // Used to easily differentiate between node types without pointer casts.
-  ASTNodeType _type;
+  LQPNodeType _type;
 
   /**
    * Each subtree can be a subselect. A subselect can be given an alias:
@@ -279,8 +287,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
-  std::vector<std::weak_ptr<AbstractASTNode>> _parents;
-  std::array<std::shared_ptr<AbstractASTNode>, 2> _children;
+  std::vector<std::weak_ptr<AbstractLogicalPlanNode>> _parents;
+  std::array<std::shared_ptr<AbstractLogicalPlanNode>, 2> _children;
 
   std::shared_ptr<TableStatistics> _statistics;
 
@@ -290,11 +298,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   void _child_changed();
 
   /**
-   * Actual impl of AbstractASTNode::print(). AbstractASTNode::print() just creates the `levels` and `id_by_node`
+   * Actual impl of AbstractLogicalPlanNode::print(). AbstractLogicalPlanNode::print() just creates the `levels` and `id_by_node`
    * instances used during the recursion.
    */
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
-                   std::unordered_map<std::shared_ptr<const AbstractASTNode>, size_t>& id_by_node,
+                   std::unordered_map<std::shared_ptr<const AbstractLogicalPlanNode>, size_t>& id_by_node,
                    size_t& id_counter) const;
 
   // @{
@@ -302,8 +310,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Add or remove a parent without manipulating this parents child ptr. For internal usage in set_left_child(),
    * set_right_child(), remove_parent
    */
-  void _remove_parent_pointer(const std::shared_ptr<AbstractASTNode>& parent);
-  void _add_parent_pointer(const std::shared_ptr<AbstractASTNode>& parent);
+  void _remove_parent_pointer(const std::shared_ptr<AbstractLogicalPlanNode>& parent);
+  void _add_parent_pointer(const std::shared_ptr<AbstractLogicalPlanNode>& parent);
   // @}
 };
 

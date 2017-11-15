@@ -18,8 +18,8 @@ namespace opossum {
 
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
-bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
-  if (node->type() == ASTNodeType::Join) {
+bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLogicalPlanNode>& node) {
+  if (node->type() == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
     if (cross_join_node->join_mode() == JoinMode::Cross) {
@@ -57,7 +57,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
   auto column_id_offset = 0;
 
   // Go up in AST to find corresponding PredicateNode
-  std::shared_ptr<AbstractASTNode> node = cross_join;
+  std::shared_ptr<AbstractLogicalPlanNode> node = cross_join;
   while (true) {
     const auto parents = node->parents();
 
@@ -69,7 +69,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
       break;
     }
 
-    if (node->get_child_side(parents[0]) == ASTChildSide::Right) {
+    if (node->get_child_side(parents[0]) == LQPChildSide::Right) {
       column_id_offset += parents[0]->left_child()->output_column_count();
     }
 
@@ -82,11 +82,11 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
      *
      * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
-    if (node->type() != ASTNodeType::Join && node->type() != ASTNodeType::Predicate) {
+    if (node->type() != LQPNodeType::Join && node->type() != LQPNodeType::Predicate) {
       return std::nullopt;
     }
 
-    if (node->type() == ASTNodeType::Predicate) {
+    if (node->type() == LQPNodeType::Predicate) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
       if (predicate_node->value().type() != typeid(ColumnID)) {

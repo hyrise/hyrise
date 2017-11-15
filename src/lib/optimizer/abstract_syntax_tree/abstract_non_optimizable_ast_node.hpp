@@ -8,9 +8,9 @@ namespace opossum {
  * This class is a specialization used for nodes that are not intended to be optimized.
  * The current use case is nodes representing management commands, e.g. SHOW TABLES.
  */
-class AbstractNonOptimizableASTNode : public AbstractASTNode {
+class AbstractNonOptimizableASTNode : public AbstractLogicalPlanNode {
  public:
-  explicit AbstractNonOptimizableASTNode(ASTNodeType node_type);
+  explicit AbstractNonOptimizableASTNode(LQPNodeType node_type);
 
   bool is_optimizable() const override;
 };

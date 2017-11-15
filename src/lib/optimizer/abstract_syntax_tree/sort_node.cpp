@@ -13,7 +13,7 @@ OrderByDefinition::OrderByDefinition(const ColumnID column_id, const OrderByMode
     : column_id(column_id), order_by_mode(order_by_mode) {}
 
 SortNode::SortNode(const std::vector<OrderByDefinition>& order_by_definitions)
-    : AbstractASTNode(ASTNodeType::Sort), _order_by_definitions(order_by_definitions) {}
+    : AbstractLogicalPlanNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
 std::string SortNode::description() const {
   std::ostringstream s;

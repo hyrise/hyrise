@@ -21,7 +21,7 @@ class TableStatistics;
  *
  * HAVING clauses of GROUP BY clauses will be translated to this node type as well.
  */
-class PredicateNode : public AbstractASTNode {
+class PredicateNode : public AbstractLogicalPlanNode {
  public:
   PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
                 const std::optional<AllTypeVariant>& value2 = std::nullopt);
@@ -34,8 +34,8 @@ class PredicateNode : public AbstractASTNode {
   const std::optional<AllTypeVariant>& value2() const;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode>& left_child,
-      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractLogicalPlanNode>& left_child,
+      const std::shared_ptr<AbstractLogicalPlanNode>& right_child = nullptr) const override;
 
  private:
   const ColumnID _column_id;

@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots,
+void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalPlanNode>>& ast_roots,
                               const std::string& dot_filename, const std::string& img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
@@ -43,7 +43,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
   // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
 }
 
-void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file) {
+void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLogicalPlanNode>& node, std::ofstream& file) {
   file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
        << boost::replace_all_copy(node->description(), "\"", "\\\"") << "\"]" << std::endl;
 
@@ -58,8 +58,8 @@ void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode>& n
   }
 }
 
-void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode>& from,
-                                        const std::shared_ptr<AbstractASTNode>& to, std::ofstream& file) {
+void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLogicalPlanNode>& from,
+                                        const std::shared_ptr<AbstractLogicalPlanNode>& to, std::ofstream& file) {
   float row_count, row_percentage = 100.0f;
   uint32_t pen_width;
 

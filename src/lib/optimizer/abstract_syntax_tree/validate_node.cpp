@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-ValidateNode::ValidateNode() : AbstractASTNode(ASTNodeType::Validate) {}
+ValidateNode::ValidateNode() : AbstractLogicalPlanNode(LQPNodeType::Validate) {}
 
 std::string ValidateNode::description() const { return "[Validate]"; }
 

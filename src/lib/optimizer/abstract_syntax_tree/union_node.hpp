@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class UnionNode : public AbstractASTNode {
+class UnionNode : public AbstractLogicalPlanNode {
  public:
   explicit UnionNode(UnionMode union_mode);
 
@@ -23,8 +23,8 @@ class UnionNode : public AbstractASTNode {
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode>& left_child,
-      const std::shared_ptr<AbstractASTNode>& right_child) const override;
+      const std::shared_ptr<AbstractLogicalPlanNode>& left_child,
+      const std::shared_ptr<AbstractLogicalPlanNode>& right_child) const override;
 
   std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;

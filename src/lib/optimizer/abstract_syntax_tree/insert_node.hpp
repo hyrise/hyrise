@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * Node type to represent insertion of rows into a table.
  */
-class InsertNode : public AbstractASTNode {
+class InsertNode : public AbstractLogicalPlanNode {
  public:
   explicit InsertNode(const std::string table_name);
 

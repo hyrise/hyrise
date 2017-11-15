@@ -5,7 +5,7 @@
 namespace opossum {
 
 ShowColumnsNode::ShowColumnsNode(const std::string& table_name)
-    : AbstractNonOptimizableASTNode(ASTNodeType::ShowColumns), _table_name(table_name) {}
+    : AbstractNonOptimizableASTNode(LQPNodeType::ShowColumns), _table_name(table_name) {}
 
 std::string ShowColumnsNode::description() const { return "[ShowColumns] Table: '" + _table_name + "'"; }
 

@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-AbstractNonOptimizableASTNode::AbstractNonOptimizableASTNode(ASTNodeType node_type) : AbstractASTNode(node_type) {}
+AbstractNonOptimizableASTNode::AbstractNonOptimizableASTNode(LQPNodeType node_type) : AbstractLogicalPlanNode(node_type) {}
 
 bool AbstractNonOptimizableASTNode::is_optimizable() const { return false; }
 

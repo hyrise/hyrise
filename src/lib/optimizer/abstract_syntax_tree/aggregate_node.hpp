@@ -19,7 +19,7 @@ class Expression;
  *
  *  The order of the output columns is groupby columns followed by aggregate columns
  */
-class AggregateNode : public AbstractASTNode {
+class AggregateNode : public AbstractLogicalPlanNode {
  public:
   explicit AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregates,
                          const std::vector<ColumnID>& groupby_column_ids);

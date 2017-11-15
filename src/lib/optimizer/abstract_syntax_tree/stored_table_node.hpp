@@ -16,7 +16,7 @@ class TableStatistics;
  * This node type represents a table stored by the table manager.
  * They are the leafs of every meaningful AST tree.
  */
-class StoredTableNode : public AbstractASTNode {
+class StoredTableNode : public AbstractLogicalPlanNode {
  public:
   explicit StoredTableNode(const std::string& table_name);
 
@@ -27,8 +27,8 @@ class StoredTableNode : public AbstractASTNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode>& left_child = nullptr,
-      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractLogicalPlanNode>& left_child = nullptr,
+      const std::shared_ptr<AbstractLogicalPlanNode>& right_child = nullptr) const override;
 
   bool knows_table(const std::string& table_name) const override;
 

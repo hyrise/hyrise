@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-class AbstractASTNode;
+class AbstractLogicalPlanNode;
 class Table;
 
 template <typename ParamType>

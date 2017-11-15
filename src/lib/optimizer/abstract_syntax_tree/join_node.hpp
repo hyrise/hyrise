@@ -16,7 +16,7 @@ namespace opossum {
  * This node type is used to represent any type of Join, including cross products.
  * The idea is that the optimizer is able to decide on the physical join implementation.
  */
-class JoinNode : public AbstractASTNode {
+class JoinNode : public AbstractLogicalPlanNode {
  public:
   explicit JoinNode(const JoinMode join_mode);
 
@@ -31,8 +31,8 @@ class JoinNode : public AbstractASTNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode>& left_child,
-      const std::shared_ptr<AbstractASTNode>& right_child) const override;
+      const std::shared_ptr<AbstractLogicalPlanNode>& left_child,
+      const std::shared_ptr<AbstractLogicalPlanNode>& right_child) const override;
 
   bool knows_table(const std::string& table_name) const override;
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;

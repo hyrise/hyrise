@@ -22,7 +22,7 @@ struct OrderByDefinition {
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
-class SortNode : public AbstractASTNode {
+class SortNode : public AbstractLogicalPlanNode {
  public:
   explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
 

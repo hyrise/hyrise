@@ -59,7 +59,7 @@ TEST_F(AbstractSyntaxTreeTest, SimpleParentTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_TRUE(predicate_node->parents().empty());
@@ -69,7 +69,7 @@ TEST_F(AbstractSyntaxTreeTest, SimpleParentTest) {
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{projection_node});
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node);
   ASSERT_EQ(projection_node->right_child(), nullptr);
   ASSERT_TRUE(projection_node->parents().empty());
@@ -83,7 +83,7 @@ TEST_F(AbstractSyntaxTreeTest, SimpleClearParentsTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_TRUE(predicate_node->parents().empty());
@@ -106,7 +106,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node});
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_TRUE(predicate_node->parents().empty());
@@ -114,7 +114,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   const auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, "b");
   predicate_node_2->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{predicate_node_2});
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{predicate_node_2});
   ASSERT_EQ(predicate_node_2->left_child(), predicate_node);
   ASSERT_EQ(predicate_node_2->right_child(), nullptr);
   ASSERT_TRUE(predicate_node_2->parents().empty());
@@ -124,7 +124,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
-  ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{projection_node});
+  ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node_2);
   ASSERT_EQ(projection_node->right_child(), nullptr);
   ASSERT_TRUE(projection_node->parents().empty());
@@ -148,8 +148,8 @@ TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
   ASSERT_EQ(join_node->right_child(), table_b_node);
   ASSERT_TRUE(join_node->parents().empty());
 
-  ASSERT_EQ(table_a_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{join_node});
-  ASSERT_EQ(table_b_node->parents(), std::vector<std::shared_ptr<AbstractASTNode>>{join_node});
+  ASSERT_EQ(table_a_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{join_node});
+  ASSERT_EQ(table_b_node->parents(), std::vector<std::shared_ptr<AbstractLogicalPlanNode>>{join_node});
 }
 
 TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
@@ -167,17 +167,17 @@ TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
 }
 
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphStructure) {
-  ASSERT_AST_TIE(_nodes[0], ASTChildSide::Left, _nodes[1]);
-  ASSERT_AST_TIE(_nodes[0], ASTChildSide::Right, _nodes[4]);
-  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Left, _nodes[2]);
-  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Right, _nodes[3]);
-  ASSERT_AST_TIE(_nodes[2], ASTChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Left, _nodes[6]);
-  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[0], LQPChildSide::Left, _nodes[1]);
+  ASSERT_AST_TIE(_nodes[0], LQPChildSide::Right, _nodes[4]);
+  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Left, _nodes[2]);
+  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Right, _nodes[3]);
+  ASSERT_AST_TIE(_nodes[2], LQPChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[5], LQPChildSide::Left, _nodes[6]);
+  ASSERT_AST_TIE(_nodes[5], LQPChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Right, _nodes[7]);
 }
 
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphPrinted) {
@@ -208,11 +208,11 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTree) {
 
   // Make sure _node[1], _node[3] and _node[4] are the only parents _nodes[5] has
   EXPECT_EQ(_nodes[5]->parents().size(), 3u);
-  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, _nodes[5]);
-  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Left, _nodes[5]);
+  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Left, _nodes[5]);
 
-  ASSERT_AST_TIE(_nodes[1], ASTChildSide::Right, _nodes[3]);
+  ASSERT_AST_TIE(_nodes[1], LQPChildSide::Right, _nodes[3]);
 }
 
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphRemoveFromTreeLeaf) {
@@ -242,18 +242,18 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWith) {
 
   // Make sure new_node is the only parent of _nodes[6]
   EXPECT_EQ(_nodes[6]->parents().size(), 1u);
-  ASSERT_AST_TIE(new_node, ASTChildSide::Left, _nodes[6]);
+  ASSERT_AST_TIE(new_node, LQPChildSide::Left, _nodes[6]);
 
   // Make sure new_node, _nodes[3] and _nodes[4] are the only parents of _nodes[7]
   EXPECT_EQ(_nodes[7]->parents().size(), 3u);
-  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, _nodes[7]);
-  ASSERT_AST_TIE(new_node, ASTChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Right, _nodes[7]);
+  ASSERT_AST_TIE(new_node, LQPChildSide::Right, _nodes[7]);
 
   // Make sure _nodes[5] former parents point to new_node.
-  ASSERT_AST_TIE(_nodes[2], ASTChildSide::Left, new_node);
-  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Left, new_node);
-  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Left, new_node);
+  ASSERT_AST_TIE(_nodes[2], LQPChildSide::Left, new_node);
+  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Left, new_node);
+  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Left, new_node);
 }
 
 TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWithLeaf) {
@@ -273,9 +273,9 @@ TEST_F(AbstractSyntaxTreeTest, ComplexGraphReplaceWithLeaf) {
   EXPECT_EQ(_nodes[7]->left_child(), nullptr);
   EXPECT_EQ(_nodes[7]->right_child(), nullptr);
 
-  ASSERT_AST_TIE(_nodes[5], ASTChildSide::Left, new_node_a);
-  ASSERT_AST_TIE(_nodes[3], ASTChildSide::Right, new_node_b);
-  ASSERT_AST_TIE(_nodes[4], ASTChildSide::Right, new_node_b);
+  ASSERT_AST_TIE(_nodes[5], LQPChildSide::Left, new_node_a);
+  ASSERT_AST_TIE(_nodes[3], LQPChildSide::Right, new_node_b);
+  ASSERT_AST_TIE(_nodes[4], LQPChildSide::Right, new_node_b);
 }
 
 }  // namespace opossum

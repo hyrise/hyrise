@@ -377,8 +377,8 @@ int Console::help(const std::string&) {
   out("  print TABLENAME         - Fully print the given table (including MVCC columns)\n");
   out("  visualize [options] SQL - Visualize a SQL query\n");
   out("             noexec          - without executing the query\n");
-  out("             ast             - print the raw abstract syntax tree\n");
-  out("             astopt          - print the optimized abstract syntax tree\n");
+  out("             lqp             - print the raw abstract syntax tree\n");
+  out("             lqpopt          - print the optimized abstract syntax tree\n");
   out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
   out("  rollback             - Roll back a manually created transaction\n");
   out("  commit               - Commit a manually created transaction\n");
@@ -486,7 +486,7 @@ int Console::print_table(const std::string& args) {
 int Console::visualize(const std::string& input) {
   auto first_word = input.substr(0, input.find_first_of(" \n"));
   std::string mode, sql, dot_filename, img_filename;
-  if (first_word == "noexec" || first_word == "ast" || first_word == "astopt") {
+  if (first_word == "noexec" || first_word == "lqp" || first_word == "lqpopt") {
     mode = first_word;
   }
 
@@ -509,11 +509,11 @@ int Console::visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  if (mode == "ast" || mode == "astopt") {
+  if (mode == "lqp" || mode == "lqpopt") {
     try {
       auto ast_roots = SQLToASTTranslator{}.translate_parse_result(parse_result);
 
-      if (mode == "astopt") {
+      if (mode == "lqpopt") {
         for (auto& root : ast_roots) {
           root = Optimizer::get().optimize(root);
         }
@@ -523,7 +523,7 @@ int Console::visualize(const std::string& input) {
       img_filename = mode + ".png";
       ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
     } catch (const std::exception& exception) {
-      out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
+      out("Exception while creating query plan:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {

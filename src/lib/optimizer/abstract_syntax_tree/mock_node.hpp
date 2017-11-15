@@ -11,9 +11,9 @@ namespace opossum {
 
 /**
  * Node that represents a table that has no data backing it, but may provide (mocked) statistics. Intended for usage in
- * tests (e.g. general AST tests, optimizer tests that just rely on statistics and not actual data) and the playground
+ * tests (e.g. general LQP tests, optimizer tests that just rely on statistics and not actual data) and the playground
  */
-class MockNode : public AbstractASTNode {
+class MockNode : public AbstractLogicalPlanNode {
  public:
   MockNode();
   explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);

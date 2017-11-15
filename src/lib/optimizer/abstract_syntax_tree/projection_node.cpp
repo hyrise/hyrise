@@ -14,7 +14,7 @@
 namespace opossum {
 
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions)
-    : AbstractASTNode(ASTNodeType::Projection), _column_expressions(column_expressions) {}
+    : AbstractLogicalPlanNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
   std::ostringstream desc;

@@ -16,15 +16,15 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLogicalPlanNode>& node) {
   auto reordered = false;
 
-  if (node->type() == ASTNodeType::Predicate) {
+  if (node->type() == LQPNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (current_node->type() == ASTNodeType::Predicate) {
+    while (current_node->type() == LQPNodeType::Predicate) {
       // Once a node has multiple parents, we're not talking about a Predicate chain anymore
       if (current_node->parents().size() > 1) {
         break;

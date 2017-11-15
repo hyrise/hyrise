@@ -46,7 +46,7 @@ class SQLToASTTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractASTNode> compile_query(const std::string& query) {
+  std::shared_ptr<AbstractLogicalPlanNode> compile_query(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -65,10 +65,10 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
   EXPECT_EQ(expected_columns, result_node->output_column_ids_to_input_column_ids());
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
 
   EXPECT_TRUE(result_node->left_child());
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::StoredTable);
 
   EXPECT_FALSE(result_node->right_child());
   EXPECT_FALSE(result_node->left_child()->left_child());
@@ -84,11 +84,11 @@ TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   auto ts_node_1 = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
-  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
   EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
@@ -99,11 +99,11 @@ TEST_F(SQLToASTTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
-  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
   EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
@@ -114,11 +114,11 @@ TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
-  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
   EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
@@ -129,19 +129,19 @@ TEST_F(SQLToASTTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   auto ts_node_1 = result_node->left_child();
-  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
 
   auto ts_node_2 = ts_node_1->left_child();
-  EXPECT_EQ(ts_node_2->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(ts_node_2->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_2->right_child());
 
   auto t_node = ts_node_2->left_child();
-  EXPECT_EQ(t_node->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(t_node->type(), LQPNodeType::StoredTable);
   EXPECT_FALSE(t_node->left_child());
   EXPECT_FALSE(t_node->right_child());
 }
@@ -150,7 +150,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
@@ -168,7 +168,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
 
   auto t_node_1 = aggregate_node->left_child();
-  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(t_node_1->type(), LQPNodeType::StoredTable);
   EXPECT_FALSE(t_node_1->left_child());
   EXPECT_FALSE(t_node_1->right_child());
 }
@@ -183,7 +183,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
@@ -200,7 +200,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
 
   auto t_node_1 = aggregate_node->left_child();
-  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(t_node_1->type(), LQPNodeType::StoredTable);
   EXPECT_FALSE(t_node_1->left_child());
   EXPECT_FALSE(t_node_1->right_child());
 }
@@ -209,7 +209,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithCountDistinct) {
   const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
@@ -228,7 +228,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithCountDistinct) {
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
 
   auto t_node_1 = aggregate_node->left_child();
-  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(t_node_1->type(), LQPNodeType::StoredTable);
   EXPECT_FALSE(t_node_1->left_child());
   EXPECT_FALSE(t_node_1->right_child());
 }
@@ -238,7 +238,7 @@ TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   auto result_node = compile_query(query);
 
   auto sort_node = std::dynamic_pointer_cast<SortNode>(result_node);
-  EXPECT_EQ(sort_node->type(), ASTNodeType::Sort);
+  EXPECT_EQ(sort_node->type(), LQPNodeType::Sort);
 
   const auto& order_by_definitions = sort_node->order_by_definitions();
   EXPECT_EQ(order_by_definitions.size(), 2u);
@@ -260,13 +260,13 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   EXPECT_EQ(projection_node->output_column_count(), 4u);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
@@ -283,12 +283,12 @@ TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
     const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
     auto result_node = compile_query(query);
 
-    EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+    EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
     auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
     std::vector<std::string> output_columns = {"a", "b", "a", "b"};
     EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-    EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+    EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
     auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
     EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
     EXPECT_EQ(join_node->join_mode(), mode);
@@ -299,12 +299,12 @@ TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
     const auto query_outer = "SELECT * FROM table_a AS a "s + mode_str + " OUTER JOIN table_b AS b ON a.a = b.a;";
     auto result_node_outer = compile_query(query_outer);
 
-    EXPECT_EQ(result_node_outer->type(), ASTNodeType::Projection);
+    EXPECT_EQ(result_node_outer->type(), LQPNodeType::Projection);
     auto projection_node_outer = std::dynamic_pointer_cast<ProjectionNode>(result_node_outer);
     std::vector<std::string> output_columns_outer = {"a", "b", "a", "b"};
     EXPECT_EQ(projection_node_outer->output_column_names(), output_columns_outer);
 
-    EXPECT_EQ(result_node_outer->left_child()->type(), ASTNodeType::Join);
+    EXPECT_EQ(result_node_outer->left_child()->type(), LQPNodeType::Join);
     auto join_node_outer = std::dynamic_pointer_cast<JoinNode>(result_node_outer->left_child());
     EXPECT_EQ(join_node_outer->scan_type(), join_node->scan_type());
     EXPECT_EQ(join_node_outer->join_mode(), join_node->join_mode());
@@ -317,12 +317,12 @@ TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
   const auto query = "SELECT * FROM table_a AS a OUTER JOIN table_b AS b ON a.a = b.a;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Outer);
@@ -335,12 +335,12 @@ TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin /* #495 */) {
   const auto query = "SELECT * FROM table_a AS a NATURAL JOIN table_b AS b;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Natural);
@@ -352,13 +352,13 @@ TEST_F(SQLToASTTranslatorTest, SelectCrossJoin) {
   const auto query = "SELECT * FROM table_a AS a, table_b AS b WHERE a.a = b.a;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Predicate);
-  EXPECT_EQ(result_node->left_child()->left_child()->type(), ASTNodeType::Join);
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
+  EXPECT_EQ(result_node->left_child()->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child()->left_child());
   EXPECT_FALSE(join_node->scan_type());
   EXPECT_EQ(join_node->join_mode(), JoinMode::Cross);
@@ -368,20 +368,20 @@ TEST_F(SQLToASTTranslatorTest, SelectLimit) {
   const auto query = "SELECT * FROM table_a LIMIT 2;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Limit);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Limit);
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(result_node);
   EXPECT_EQ(limit_node->num_rows(), 2u);
-  EXPECT_EQ(limit_node->left_child()->type(), ASTNodeType::Projection);
+  EXPECT_EQ(limit_node->left_child()->type(), LQPNodeType::Projection);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertValues) {
   const auto query = "INSERT INTO table_a VALUES (10, 12.5);";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Insert);
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
   EXPECT_EQ(insert_node->table_name(), "table_a");
-  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
+  EXPECT_EQ(insert_node->left_child()->type(), LQPNodeType::Projection);
 
   auto projection = std::dynamic_pointer_cast<ProjectionNode>(insert_node->left_child());
   EXPECT_NE(projection, nullptr);
@@ -392,17 +392,17 @@ TEST_F(SQLToASTTranslatorTest, InsertValues) {
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
   EXPECT_EQ(boost::get<float>(expressions[1]->value()), 12.5);
 
-  EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
+  EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
   const auto query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Insert);
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
   EXPECT_EQ(insert_node->table_name(), "table_a");
-  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
+  EXPECT_EQ(insert_node->left_child()->type(), LQPNodeType::Projection);
 
   auto projection = std::dynamic_pointer_cast<ProjectionNode>(insert_node->left_child());
   EXPECT_NE(projection, nullptr);
@@ -413,17 +413,17 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
   EXPECT_EQ(boost::get<int32_t>(expressions[1]->value()), 10);
 
-  EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
+  EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
   const auto query = "INSERT INTO table_a (a) VALUES (10);";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Insert);
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
   EXPECT_EQ(insert_node->table_name(), "table_a");
-  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
+  EXPECT_EQ(insert_node->left_child()->type(), LQPNodeType::Projection);
 
   auto projection = std::dynamic_pointer_cast<ProjectionNode>(insert_node->left_child());
   EXPECT_NE(projection, nullptr);
@@ -433,17 +433,17 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
   EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_TRUE(expressions[1]->is_null_literal());
 
-  EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
+  EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertSubquery) {
   const auto query = "INSERT INTO table_a SELECT a, b FROM table_b;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Insert);
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
   EXPECT_EQ(insert_node->table_name(), "table_a");
-  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
+  EXPECT_EQ(insert_node->left_child()->type(), LQPNodeType::Projection);
 
   auto projection = std::dynamic_pointer_cast<ProjectionNode>(insert_node->left_child());
   EXPECT_NE(projection, nullptr);
@@ -459,10 +459,10 @@ TEST_F(SQLToASTTranslatorTest, Update) {
   const auto query = "UPDATE table_a SET b = 3.2 WHERE a > 1;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Update);
+  EXPECT_EQ(result_node->type(), LQPNodeType::Update);
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(result_node);
   EXPECT_EQ(update_node->table_name(), "table_a");
-  EXPECT_EQ(update_node->left_child()->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(update_node->left_child()->type(), LQPNodeType::Predicate);
 
   auto expressions = update_node->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Column);

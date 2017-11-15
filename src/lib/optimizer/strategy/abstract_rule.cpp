@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-bool AbstractRule::_apply_to_children(std::shared_ptr<AbstractASTNode> node) {
+bool AbstractRule::_apply_to_children(std::shared_ptr<AbstractLogicalPlanNode> node) {
   auto children_changed = false;
 
   // Apply this rule recursively

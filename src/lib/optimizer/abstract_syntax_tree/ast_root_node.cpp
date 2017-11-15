@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-ASTRootNode::ASTRootNode() : AbstractASTNode(ASTNodeType::Root) {}
+ASTRootNode::ASTRootNode() : AbstractLogicalPlanNode(LQPNodeType::Root) {}
 
 std::string ASTRootNode::description() const { return "[ASTRootNode]"; }
 

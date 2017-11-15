@@ -14,7 +14,7 @@ namespace opossum {
 
 PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
                              const std::optional<AllTypeVariant>& value2)
-    : AbstractASTNode(ASTNodeType::Predicate),
+    : AbstractLogicalPlanNode(LQPNodeType::Predicate),
       _column_id(column_id),
       _scan_type(scan_type),
       _value(value),
@@ -55,7 +55,7 @@ const AllParameterVariant& PredicateNode::value() const { return _value; }
 const std::optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
-    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
+    const std::shared_ptr<AbstractLogicalPlanNode>& left_child, const std::shared_ptr<AbstractLogicalPlanNode>& right_child) const {
   DebugAssert(left_child && !right_child, "PredicateNode need left_child and no right_child");
   return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
 }

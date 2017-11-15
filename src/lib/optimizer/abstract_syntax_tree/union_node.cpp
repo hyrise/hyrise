@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-UnionNode::UnionNode(UnionMode union_mode) : AbstractASTNode(ASTNodeType::Union), _union_mode(union_mode) {}
+UnionNode::UnionNode(UnionMode union_mode) : AbstractLogicalPlanNode(LQPNodeType::Union), _union_mode(union_mode) {}
 
 UnionMode UnionNode::union_mode() const { return _union_mode; }
 
@@ -42,7 +42,7 @@ const std::vector<ColumnID>& UnionNode::output_column_ids_to_input_column_ids() 
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
-    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
+    const std::shared_ptr<AbstractLogicalPlanNode>& left_child, const std::shared_ptr<AbstractLogicalPlanNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
   return nullptr;  // Return something
 }

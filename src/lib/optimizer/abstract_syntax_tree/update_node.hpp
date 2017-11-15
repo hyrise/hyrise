@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * Node type to represent updates (i.e., invalidation and inserts) in a table.
  */
-class UpdateNode : public AbstractASTNode {
+class UpdateNode : public AbstractLogicalPlanNode {
  public:
   explicit UpdateNode(const std::string& table_name,
                       const std::vector<std::shared_ptr<Expression>>& column_expressions);

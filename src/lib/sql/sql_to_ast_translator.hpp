@@ -32,13 +32,13 @@ class AggregateNode;
  * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
  * Most of the lifting for this is done in the overrides of
- * AbstractASTNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
+ * AbstractLogicalPlanNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
  * have to have an implementation of (Projection, Join, ...).
  * The handling of ColumnIdentifierName::table_name is also done in these overrides. StoredTableNode handles table
  * ALIASes and names (`SELECT t1.a, alias_t2.b FROM t1, t2 AS alias_t2`), ProjectionNode ALIASes for Expressions
  * (`SELECT a+b AS s [...]`) and AggregateNode ALIASes for AggregateFunctions(`SELECT SUM(a) AS s [...]`)
  *
- * To resolve Table wildcards such as `SELECT t1.* FROM t1, [...]` AbstractASTNode::get_output_column_ids_for_table()
+ * To resolve Table wildcards such as `SELECT t1.* FROM t1, [...]` AbstractLogicalPlanNode::get_output_column_ids_for_table()
  * is used.
  *
  *
@@ -60,61 +60,61 @@ class SQLToASTTranslator final : public Noncopyable {
   constexpr SQLToASTTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
-  std::vector<std::shared_ptr<AbstractASTNode>> translate_parse_result(const hsql::SQLParserResult& result);
+  std::vector<std::shared_ptr<AbstractLogicalPlanNode>> translate_parse_result(const hsql::SQLParserResult& result);
 
-  std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
+  std::shared_ptr<AbstractLogicalPlanNode> translate_statement(const hsql::SQLStatement& statement);
 
   static AllParameterVariant translate_hsql_operand(
-      const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractASTNode>>& input_node = std::nullopt);
+      const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLogicalPlanNode>>& input_node = std::nullopt);
 
  protected:
-  std::shared_ptr<AbstractASTNode> _translate_select(const hsql::SelectStatement& select);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_select(const hsql::SelectStatement& select);
 
-  std::shared_ptr<AbstractASTNode> _translate_table_ref(const hsql::TableRef& table);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_table_ref(const hsql::TableRef& table);
 
-  std::shared_ptr<AbstractASTNode> _translate_where(const hsql::Expr& expr,
-                                                    const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_where(const hsql::Expr& expr,
+                                                    const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_having(const hsql::Expr& expr,
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_having(const hsql::Expr& expr,
                                                      const std::shared_ptr<AggregateNode>& aggregate_node,
-                                                     const std::shared_ptr<AbstractASTNode>& input_node);
+                                                     const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_aggregate(const hsql::SelectStatement& select,
-                                                        const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_aggregate(const hsql::SelectStatement& select,
+                                                        const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_projection(const std::vector<hsql::Expr*>& select_list,
-                                                         const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_projection(const std::vector<hsql::Expr*>& select_list,
+                                                         const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
-                                                       const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
+                                                       const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_join(const hsql::JoinDefinition& select);
 
-  std::shared_ptr<AbstractASTNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  std::shared_ptr<AbstractASTNode> _translate_limit(const hsql::LimitDescription& limit,
-                                                    const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_limit(const hsql::LimitDescription& limit,
+                                                    const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_insert(const hsql::InsertStatement& insert);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_insert(const hsql::InsertStatement& insert);
 
-  std::shared_ptr<AbstractASTNode> _translate_delete(const hsql::DeleteStatement& del);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_delete(const hsql::DeleteStatement& del);
 
-  std::shared_ptr<AbstractASTNode> _translate_update(const hsql::UpdateStatement& update);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_update(const hsql::UpdateStatement& update);
 
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */
-  std::shared_ptr<AbstractASTNode> _translate_predicate(
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_predicate(
       const hsql::Expr& hsql_expr, bool allow_function_columns,
       const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
-      const std::shared_ptr<AbstractASTNode>& input_node) const;
+      const std::shared_ptr<AbstractLogicalPlanNode>& input_node) const;
 
-  std::shared_ptr<AbstractASTNode> _translate_show(const hsql::ShowStatement& show_statement);
+  std::shared_ptr<AbstractLogicalPlanNode> _translate_show(const hsql::ShowStatement& show_statement);
 
-  std::shared_ptr<AbstractASTNode> _validate_if_active(const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractLogicalPlanNode> _validate_if_active(const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
   std::vector<std::shared_ptr<Expression>> _retrieve_having_aggregates(
-      const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node);
+      const hsql::Expr& expr, const std::shared_ptr<AbstractLogicalPlanNode>& input_node);
 
  private:
   const bool _validate;

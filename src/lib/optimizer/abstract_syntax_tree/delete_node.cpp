@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-DeleteNode::DeleteNode(const std::string& table_name) : AbstractASTNode(ASTNodeType::Delete), _table_name(table_name) {}
+DeleteNode::DeleteNode(const std::string& table_name) : AbstractLogicalPlanNode(LQPNodeType::Delete), _table_name(table_name) {}
 
 std::string DeleteNode::description() const {
   std::ostringstream desc;

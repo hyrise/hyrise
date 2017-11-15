@@ -14,7 +14,7 @@ namespace opossum {
  * By that Optimizer Rules don't have to worry whether they change the tree-identifying root node,
  * e.g. by removing the Projection at the top of the tree.
  */
-class ASTRootNode : public AbstractASTNode {
+class ASTRootNode : public AbstractLogicalPlanNode {
  public:
   ASTRootNode();
 

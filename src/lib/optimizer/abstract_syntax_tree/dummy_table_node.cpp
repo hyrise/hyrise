@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-DummyTableNode::DummyTableNode() : AbstractASTNode(ASTNodeType::DummyTable) {
+DummyTableNode::DummyTableNode() : AbstractLogicalPlanNode(LQPNodeType::DummyTable) {
   _output_column_ids_to_input_column_ids.emplace();
 }
 
