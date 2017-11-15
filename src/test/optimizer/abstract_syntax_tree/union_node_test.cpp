@@ -75,7 +75,7 @@ TEST_F(UnionNodeTest, KnowsNoTables) {
 
 TEST_F(UnionNodeTest, VerboseColumnNames) {
   /**
-   * UnionNode will only prefix column's with its own ALIAS and forget of any table names / aliases of its input tables
+   * UnionNode will only prefix columns with its own ALIAS and forget any table names / aliases of its input tables
    */
 
   auto verbose_union = std::make_shared<UnionNode>(UnionMode::Positions);
