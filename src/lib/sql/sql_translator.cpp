@@ -230,7 +230,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_update(c
     update_expressions[*column_id] = expr;
   }
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> update_node = std::make_shared<UpdateNode>((update.table)->name, update_expressions);
+  std::shared_ptr<AbstractLogicalQueryPlanNode> update_node =
+      std::make_shared<UpdateNode>((update.table)->name, update_expressions);
   update_node->set_left_child(current_values_node);
 
   return update_node;
@@ -683,7 +684,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_projecti
 }
 
 std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*>& order_list, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+    const std::vector<hsql::OrderDescription*>& order_list,
+    const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
   if (order_list.empty()) {
     return input_node;
   }
@@ -831,7 +833,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_predicat
   return predicate_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_show(
+    const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
       return std::make_shared<ShowTablesNode>();

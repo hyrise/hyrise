@@ -11,7 +11,8 @@ namespace opossum {
 
 MockNode::MockNode() : AbstractLogicalQueryPlanNode(LQPNodeType::Mock) {}
 
-MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractLogicalQueryPlanNode(LQPNodeType::Mock) {
+MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
+    : AbstractLogicalQueryPlanNode(LQPNodeType::Mock) {
   set_statistics(statistics);
 
   for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();

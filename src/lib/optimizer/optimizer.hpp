@@ -17,7 +17,8 @@ class Optimizer final {
 
   Optimizer();
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> optimize(const std::shared_ptr<AbstractLogicalQueryPlanNode>& input) const;
+  std::shared_ptr<AbstractLogicalQueryPlanNode> optimize(
+      const std::shared_ptr<AbstractLogicalQueryPlanNode>& input) const;
 
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;

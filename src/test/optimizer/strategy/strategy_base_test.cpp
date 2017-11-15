@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                                              const std::shared_ptr<AbstractLogicalQueryPlanNode>& input) {
+std::shared_ptr<AbstractLogicalQueryPlanNode> StrategyBaseTest::apply_rule(
+    const std::shared_ptr<AbstractRule>& rule, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input) {
   // Add explicit root node
   const auto root_node = std::make_shared<LogicalPlanRootNode>();
   root_node->set_left_child(input);

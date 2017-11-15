@@ -11,7 +11,8 @@
 
 namespace opossum {
 
-InsertNode::InsertNode(const std::string table_name) : AbstractLogicalQueryPlanNode(LQPNodeType::Insert), _table_name(table_name) {}
+InsertNode::InsertNode(const std::string table_name)
+    : AbstractLogicalQueryPlanNode(LQPNodeType::Insert), _table_name(table_name) {}
 
 std::string InsertNode::description() const {
   std::ostringstream desc;

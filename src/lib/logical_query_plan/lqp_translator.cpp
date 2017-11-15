@@ -5,7 +5,14 @@
 #include <string>
 #include <vector>
 
+#include "abstract_logical_query_plan_node.hpp"
+#include "aggregate_node.hpp"
 #include "constant_mappings.hpp"
+#include "delete_node.hpp"
+#include "dummy_table_node.hpp"
+#include "insert_node.hpp"
+#include "join_node.hpp"
+#include "limit_node.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
@@ -23,13 +30,6 @@
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "abstract_logical_query_plan_node.hpp"
-#include "aggregate_node.hpp"
-#include "delete_node.hpp"
-#include "dummy_table_node.hpp"
-#include "insert_node.hpp"
-#include "join_node.hpp"
-#include "limit_node.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
@@ -37,8 +37,8 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "validate_node.hpp"
 #include "utils/performance_warning.hpp"
+#include "validate_node.hpp"
 
 namespace opossum {
 

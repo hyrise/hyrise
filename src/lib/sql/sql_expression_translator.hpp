@@ -12,8 +12,8 @@ namespace opossum {
 
 class SQLExpressionTranslator {
  public:
-  static std::shared_ptr<Expression> translate_expression(const hsql::Expr& expr,
-                                                          const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node);
+  static std::shared_ptr<Expression> translate_expression(
+      const hsql::Expr& expr, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node);
 
   // Helper. Asserts that hsql_expr is a ColumnRef, constructs a NamedColumnReference from it
   static NamedColumnReference get_named_column_reference_for_column_ref(const hsql::Expr& hsql_expr);

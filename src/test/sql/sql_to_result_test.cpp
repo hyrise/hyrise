@@ -8,10 +8,10 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"

@@ -47,7 +47,8 @@ void AbstractLogicalQueryPlanNode::clear_parents() {
   }
 }
 
-LQPChildSide AbstractLogicalQueryPlanNode::get_child_side(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) const {
+LQPChildSide AbstractLogicalQueryPlanNode::get_child_side(
+    const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) const {
   if (parent->_children[0].get() == this) {
     return LQPChildSide::Left;
   } else if (parent->_children[1].get() == this) {
@@ -88,7 +89,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> AbstractLogicalQueryPlanNode::chil
   return _children[child_index];
 }
 
-void AbstractLogicalQueryPlanNode::set_child(LQPChildSide side, const std::shared_ptr<AbstractLogicalQueryPlanNode>& child) {
+void AbstractLogicalQueryPlanNode::set_child(LQPChildSide side,
+                                             const std::shared_ptr<AbstractLogicalQueryPlanNode>& child) {
   // We need a reference to _children[child_index], so not calling this->child(side)
   auto& current_child = _children[static_cast<int>(side)];
 
@@ -116,7 +118,9 @@ void AbstractLogicalQueryPlanNode::set_child(LQPChildSide side, const std::share
 
 LQPNodeType AbstractLogicalQueryPlanNode::type() const { return _type; }
 
-void AbstractLogicalQueryPlanNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
+void AbstractLogicalQueryPlanNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) {
+  _statistics = statistics;
+}
 
 const std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::get_statistics() {
   if (!_statistics) {
@@ -127,7 +131,8 @@ const std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::get_statist
 }
 
 std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child, const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
+    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
+    const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
   DebugAssert(left_child,
               "Default implementation of derive_statistics_from() requires a left child, override in concrete node "
               "implementation for different behavior");
@@ -208,7 +213,8 @@ std::vector<ColumnID> AbstractLogicalQueryPlanNode::get_output_column_ids() cons
   return column_ids;
 }
 
-std::vector<ColumnID> AbstractLogicalQueryPlanNode::get_output_column_ids_for_table(const std::string& table_name) const {
+std::vector<ColumnID> AbstractLogicalQueryPlanNode::get_output_column_ids_for_table(
+    const std::string& table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
@@ -278,7 +284,9 @@ void AbstractLogicalQueryPlanNode::replace_with(const std::shared_ptr<AbstractLo
   set_right_child(nullptr);
 }
 
-void AbstractLogicalQueryPlanNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
+void AbstractLogicalQueryPlanNode::set_alias(const std::optional<std::string>& table_alias) {
+  _table_alias = table_alias;
+}
 
 void AbstractLogicalQueryPlanNode::print(std::ostream& out) const {
   std::vector<bool> levels;
@@ -320,7 +328,8 @@ std::vector<std::string> AbstractLogicalQueryPlanNode::get_verbose_column_names(
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractLogicalQueryPlanNode::_resolve_local_alias(const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractLogicalQueryPlanNode::_resolve_local_alias(
+    const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
@@ -334,9 +343,10 @@ std::optional<NamedColumnReference> AbstractLogicalQueryPlanNode::_resolve_local
   return reference;
 }
 
-void AbstractLogicalQueryPlanNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
-                                  std::unordered_map<std::shared_ptr<const AbstractLogicalQueryPlanNode>, size_t>& id_by_node,
-                                  size_t& id_counter) const {
+void AbstractLogicalQueryPlanNode::_print_impl(
+    std::ostream& out, std::vector<bool>& levels,
+    std::unordered_map<std::shared_ptr<const AbstractLogicalQueryPlanNode>, size_t>& id_by_node,
+    size_t& id_counter) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
     if (levels[level]) {

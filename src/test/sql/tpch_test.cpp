@@ -7,8 +7,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/abstract_operator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_translator.hpp"

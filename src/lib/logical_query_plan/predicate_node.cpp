@@ -55,7 +55,8 @@ const AllParameterVariant& PredicateNode::value() const { return _value; }
 const std::optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child, const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
+    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
+    const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
   DebugAssert(left_child && !right_child, "PredicateNode need left_child and no right_child");
   return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
 }
