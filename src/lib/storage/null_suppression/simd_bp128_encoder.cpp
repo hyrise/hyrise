@@ -21,12 +21,11 @@ struct Pack128Bit {
       out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, offset));
     }
 
-    constexpr auto partial_fit_offset = carry_over + i_max * bit_size;
-    constexpr auto num_first_bits = _32_bit - partial_fit_offset;
-
-    if (partial_fit_offset < _32_bit) {
+    constexpr auto next_offset = carry_over + i_max * bit_size;
+    constexpr auto num_first_bits = _32_bit - next_offset;
+    if (next_offset < _32_bit) {
       in_reg = _mm_and_si128(_mm_loadu_si128(in++), mask);
-      out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, partial_fit_offset));
+      out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, next_offset));
 
       _mm_storeu_si128(out, out_reg);
       ++out;
@@ -35,9 +34,11 @@ struct Pack128Bit {
     } else {
       _mm_storeu_si128(out, out_reg);
       ++out;
+
+      out_reg = _mm_setzero_si128();
     }
 
-    constexpr auto new_carry_over = bit_size - num_first_bits;
+    constexpr auto new_carry_over = next_offset < _32_bit ? bit_size - num_first_bits : 0u;
     Pack128Bit<bit_size, new_carry_over, remaining_recursions - 1u>{}(in, out, in_reg, out_reg, mask);
   }
 };
@@ -52,7 +53,7 @@ struct Pack128Bit<bit_size, carry_over, 0u> {
 namespace opossum {
 
 void SimdBp128Encoder::init(size_t size) {
-  _data = pmr_vector<__m128i>(size);
+  _data = pmr_vector<__m128i>((size + 3u) / 4u);
   _data_index = 0u;
   _meta_block_index = 0u;
   _size = size;
@@ -113,7 +114,7 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, blocks_in_
 
     auto bit_collector = uint32_t{0u};
     for (auto index = 0u; index < block_size; ++index) {
-      bit_collector |= _pending_meta_block[block_offset + block_index];
+      bit_collector |= _pending_meta_block[block_offset + index];
     }
 
     for (;bit_collector != 0; bits_needed[block_index]++) { bit_collector >>= 1u; }
@@ -123,8 +124,8 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, blocks_in_
 }
 
 void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, blocks_in_meta_block>& bits_needed) {
-  const auto meta_block_info = *(reinterpret_cast<const __m128i*>(bits_needed.data()));
-  _data[_data_index++] = meta_block_info;
+  const auto meta_block_info = _mm_loadu_si128(reinterpret_cast<const __m128i*>(bits_needed.data()));
+  _mm_storeu_si128(_data.data() + _data_index++, meta_block_info);
 }
 
 void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,

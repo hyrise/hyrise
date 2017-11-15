@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <bitset>
 
+#include "storage/null_suppression/simd_bp128_encoder.hpp"
+#include "storage/null_suppression/simd_bp128_vector.hpp"
+
 void print_128_bit(__m128i reg) {
   __m128i var{};
   _mm_store_si128(&var, reg);
@@ -114,35 +117,27 @@ void unpack_128(const __m128i* in, uint32_t* _out) {
 
 int main(int argc, char const *argv[])
 {
-  std::cout << alignof(std::max_align_t) << '\n';
+  auto encoder = opossum::SimdBp128Encoder{};
 
-  uint32_t in_array[128];
+  encoder.init(512);
 
-  for (auto i = 0u; i < 128u; ++i) {
-    in_array[i] = i;
+  for (auto i = 0u; i < 513; ++i) {
+    encoder.append(i);
   }
 
-  constexpr auto bit_size = 7u;
+  encoder.finish();
 
-  __m128i out_array_compressed[bit_size];
+  auto base_vector = std::shared_ptr<opossum::BaseEncodedVector>{encoder.get_vector()};
+  auto vector = std::static_pointer_cast<opossum::SimdBp128Vector>(base_vector);
 
-  pack_128<bit_size>(in_array, out_array_compressed);
+  auto data = vector->data();
+  auto data_ptr = reinterpret_cast<const uint32_t *>(data.data());
 
-  uint32_t out_array_uncompressed[128];
-
-  unpack_128<bit_size>(out_array_compressed, out_array_uncompressed);
-
-  auto _out_array = reinterpret_cast<uint32_t *>(out_array_compressed);
-
-  for (auto i = 0u; i < bit_size; ++i) {
-    std::cout << std::bitset<32>{_out_array[i * 4 + 3]} << "|";
-    std::cout << std::bitset<32>{_out_array[i * 4 + 2]} << "|";
-    std::cout << std::bitset<32>{_out_array[i * 4 + 1]} << "|";
-    std::cout << std::bitset<32>{_out_array[i * 4]} << std::endl;
-  }
-
-  for (auto i = 0u; i < 128u; ++i) {
-    std::cout << out_array_uncompressed[i] << std::endl;
+  for (auto i = 0u; i < data.size(); ++i) {
+    std::cout << std::bitset<32>{data_ptr[i * 4 + 3]} << "|";
+    std::cout << std::bitset<32>{data_ptr[i * 4 + 2]} << "|";
+    std::cout << std::bitset<32>{data_ptr[i * 4 + 1]} << "|";
+    std::cout << std::bitset<32>{data_ptr[i * 4]} << std::endl;
   }
 
   return 0;
