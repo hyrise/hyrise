@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-class AbstractLogicalPlanNode;
+class AbstractLogicalQueryPlanNode;
 class JoinNode;
 class PredicateNode;
 
@@ -42,7 +42,7 @@ class JoinDetectionRule : public AbstractRule {
  protected:
   std::string name() const override;
 
-  bool apply_to(const std::shared_ptr<AbstractLogicalPlanNode>& node) override;
+  bool apply_to(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) override;
 
  private:
   struct JoinCondition {

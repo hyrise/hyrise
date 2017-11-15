@@ -9,7 +9,7 @@
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 

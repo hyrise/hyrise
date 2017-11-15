@@ -9,15 +9,15 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
-#include "optimizer/abstract_syntax_tree/insert_node.hpp"
-#include "optimizer/abstract_syntax_tree/join_node.hpp"
-#include "optimizer/abstract_syntax_tree/limit_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
-#include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "optimizer/abstract_syntax_tree/update_node.hpp"
+#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -46,7 +46,7 @@ class SQLToASTTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractLogicalPlanNode> compile_query(const std::string& query) {
+  std::shared_ptr<AbstractLogicalQueryPlanNode> compile_query(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 

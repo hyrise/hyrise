@@ -9,7 +9,7 @@
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "sql_query_plan.hpp"
 #include "sql_to_ast_translator.hpp"
 
@@ -156,7 +156,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
   auto result_node = SQLToASTTranslator{_validate}.translate_statement(stmt);
-  auto result_operator = ASTToOperatorTranslator{}.translate_node(result_node);
+  auto result_operator = LQPTranslator{}.translate_node(result_node);
 
   SQLQueryPlan query_plan;
   query_plan.add_tree_by_root(result_operator);

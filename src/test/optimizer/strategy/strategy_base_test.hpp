@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class AbstractLogicalPlanNode;
+class AbstractLogicalQueryPlanNode;
 class AbstractRule;
 
 class StrategyBaseTest : public BaseTest {
@@ -15,11 +15,11 @@ class StrategyBaseTest : public BaseTest {
   void TearDown() override {}
 
   /**
-   * Helper method for applying a single rule to an AST. Creates the temporary ASTRootNode and returns its child
+   * Helper method for applying a single rule to an AST. Creates the temporary LogicalPlanRootNode and returns its child
    * after applying the rule
    */
-  std::shared_ptr<AbstractLogicalPlanNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                              const std::shared_ptr<AbstractLogicalPlanNode>& input);
+  std::shared_ptr<AbstractLogicalQueryPlanNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
+                                              const std::shared_ptr<AbstractLogicalQueryPlanNode>& input);
 };
 
 }  // namespace opossum

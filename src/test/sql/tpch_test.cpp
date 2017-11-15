@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_to_ast_translator.hpp"
@@ -56,7 +56,7 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
       result_node = Optimizer::get().optimize(result_node);
     }
 
-    return ASTToOperatorTranslator{}.translate_node(result_node);
+    return LQPTranslator{}.translate_node(result_node);
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query, bool optimize) {

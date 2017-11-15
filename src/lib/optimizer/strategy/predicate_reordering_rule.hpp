@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class AbstractLogicalPlanNode;
+class AbstractLogicalQueryPlanNode;
 class PredicateNode;
 
 /**
@@ -26,7 +26,7 @@ class PredicateNode;
 class PredicateReorderingRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLogicalPlanNode>& node) override;
+  bool apply_to(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) override;
 
  private:
   bool _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const;

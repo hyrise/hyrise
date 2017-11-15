@@ -2,11 +2,11 @@
 
 #include <memory>
 
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
 
 namespace opossum {
 
-bool AbstractRule::_apply_to_children(std::shared_ptr<AbstractLogicalPlanNode> node) {
+bool AbstractRule::_apply_to_children(std::shared_ptr<AbstractLogicalQueryPlanNode> node) {
   auto children_changed = false;
 
   // Apply this rule recursively

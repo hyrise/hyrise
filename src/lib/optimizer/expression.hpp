@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-class AbstractLogicalPlanNode;
+class AbstractLogicalQueryPlanNode;
 
 /**
  * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
