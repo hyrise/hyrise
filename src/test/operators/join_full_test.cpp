@@ -373,9 +373,6 @@ TYPED_TEST(JoinFullTest, JoinOnValueAndReferenceColumn) {
 }
 
 TYPED_TEST(JoinFullTest, JoinLessThanOnDictAndDict) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    return;
-  }
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpLessThanEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_leq_dict.tbl", 1);
@@ -392,9 +389,6 @@ TYPED_TEST(JoinFullTest, JoinOnReferenceColumnAndDict) {
 }
 
 TYPED_TEST(JoinFullTest, JoinOnDictAndReferenceColumn) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    return;
-  }
   // scan that returns all rows
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThan, 100);
   scan_b->execute();
