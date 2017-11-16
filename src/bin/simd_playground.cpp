@@ -119,9 +119,9 @@ int main(int argc, char const *argv[])
 {
   auto encoder = opossum::SimdBp128Encoder{};
 
-  encoder.init(512);
+  encoder.init(136);
 
-  for (auto i = 0u; i < 513; ++i) {
+  for (auto i = 1024; i < 1160; ++i) {
     encoder.append(i);
   }
 

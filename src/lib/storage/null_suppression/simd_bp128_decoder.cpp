@@ -1,7 +1,5 @@
 #include "simd_bp128_decoder.hpp"
 
-#include "utils/assert.hpp"
-
 
 namespace opossum {
 

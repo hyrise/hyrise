@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "ns_decoder.hpp"
 #include "fixed_size_byte_aligned_vector.hpp"
 
@@ -17,24 +19,22 @@ class FixedSizeByteAlignedDecoder : public NsDecoder<FixedSizeByteAlignedDecoder
   using Vector = FixedSizeByteAlignedVector<UnsignedIntType>;
 
  public:
-  FixedSizeByteAlignedDecoder(const Vector& vector) : _vector{vector} {}
+  explicit FixedSizeByteAlignedDecoder(const Vector& vector) : _vector{vector} {}
 
-  class ConstIterator;
-
-  auto _on_cbegin() {
-    return ConstIterator{_vector.data().cbegin()};
-  }
-
-  auto _on_cend() {
-    return ConstIterator{_vector.data().cend()};
-  }
-
-  uint32_t _on_get(size_t i) {
+  uint32_t _on_get(size_t i) const {
     return _vector.data()[i];
   }
 
-  size_t _on_size() {
+  size_t _on_size() const {
     return _vector.size();
+  }
+
+  auto _on_cbegin() const {
+    return ConstIterator{_vector.data().cbegin()};
+  }
+
+  auto _on_cend() const {
+    return ConstIterator{_vector.data().cend()};
   }
 
  private:
@@ -59,7 +59,7 @@ class FixedSizeByteAlignedDecoder : public NsDecoder<FixedSizeByteAlignedDecoder
 
    private:
     ValueIterator _value_it;
-  }
+  };
 };
 
 }  // namespace opossum

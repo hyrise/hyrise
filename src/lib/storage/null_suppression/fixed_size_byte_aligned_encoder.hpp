@@ -3,6 +3,8 @@
 #include "base_attribute_encoder.hpp"
 #include "fixed_size_byte_aligned_vector.hpp"
 
+#include "types.hpp"
+
 
 namespace opossum {
 
@@ -15,12 +17,12 @@ class FixedSizeByteAlignedEncoder : public BaseAttributeEncoder {
   std::unique_ptr<BaseEncodedVector> get_vector() final;
 
  private:
-  pmr::vector<UnsignedIntType> _data;
+  pmr_vector<UnsignedIntType> _data;
 };
 
 template <typename UnsignedIntType>
 void FixedSizeByteAlignedEncoder::init(size_t size) {
-  _data = pmr::vector<UnsignedIntType>{};
+  _data = pmr_vector<UnsignedIntType>{};
   _data.reserve(size);
 }
 

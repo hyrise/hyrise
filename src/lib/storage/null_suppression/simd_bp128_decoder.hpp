@@ -18,24 +18,22 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
   using Vector = SimdBp128Vector;
 
  public:
-  SimdBp128Decoder(const Vector& vector) : _vector{vector} {}
+  explicit SimdBp128Decoder(const Vector& vector) : _vector{vector} {}
 
-  class ConstIterator;
-
-  auto _on_cbegin() {
-    return ConstIterator{&_vector.data(), _vector.size()};
-  }
-
-  auto _on_cend() {
-    return ConstIterator{nullptr, _vector.size()};
-  }
-
-  uint32_t _on_get(size_t i) {
+  uint32_t _on_get(size_t i) const {
     return 0u;
   }
 
-  size_t _on_size() {
+  size_t _on_size() const {
     return _vector.size();
+  }
+
+  auto _on_cbegin() const {
+    return ConstIterator{&_vector.data()};
+  }
+
+  auto _on_cend() const {
+    return ConstIterator{nullptr, _vector.size()};
   }
 
  private:
@@ -77,7 +75,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
       }
     }
 
-    bool equal(const ConstIterator& other) const { return _absolute_index == other._absolute_index; }
+    bool equal(const ConstIterator& other) const  { return _absolute_index == other._absolute_index; }
 
     uint32_t dereference() const {
       return (*_current_block)[_current_block_index];
