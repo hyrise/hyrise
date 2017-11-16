@@ -122,7 +122,7 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Vector::bl
   return bits_needed;
 }
 
-void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, blocks_in_meta_block>& bits_needed) {
+void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, Vector::blocks_in_meta_block>& bits_needed) {
   const auto meta_block_info = _mm_loadu_si128(reinterpret_cast<const __m128i*>(bits_needed.data()));
   _mm_storeu_si128(_data.data() + _data_index++, meta_block_info);
 }
@@ -136,7 +136,7 @@ void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,
     const auto out = _data.data() + _data_index;
     pack_block(in, out, bits_needed[block_index]);
 
-    in += block_size;
+    in += Vector::block_size;
     _data_index += bits_needed[block_index];
   }
 }

@@ -1,5 +1,7 @@
 #include "simd_bp128_decoder.hpp"
 
+#include "utils/assert.hpp"
+
 
 namespace {
 
@@ -43,17 +45,17 @@ struct Unpack128Bit<bit_size, carry_over, 0u> {
 
 namespace opossum {
 
-void SimdBp128Decoder::read_meta_info() {
+void SimdBp128Decoder::ConstIterator::read_meta_info() {
   auto meta_info_block_rgtr = _mm_loadu_si128(_data->data() + _data_index++);
-  _mm_storeu_si128(reinterpret_cast<const __m128i*>(_current_meta_info.data()), meta_info_block_rgtr);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(_current_meta_info.data()), meta_info_block_rgtr);
   _current_meta_info_index = 0u;
 }
 
-SimdBp128Decoder::ConstIterator::unpack_block() {
+void SimdBp128Decoder::ConstIterator::unpack_block() {
   const auto bit_size = _current_meta_info[_current_meta_info_index++];
 
   auto in = _data->data() + _data_index;
-  auto out = reinterpret_cast<__m128i*>(_current_block.data());
+  auto out = reinterpret_cast<__m128i*>(_current_block->data());
 
   _data_index += bit_size;
   _current_block_index = 0u;

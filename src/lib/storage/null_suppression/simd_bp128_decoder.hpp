@@ -2,19 +2,17 @@
 
 #include <emmintrin.h>
 
+#include <array>
+
 #include "ns_decoder.hpp"
-#include "fixed_size_byte_aligned_vector.hpp"
+#include "simd_bp128_vector.hpp"
 
 #include "types.hpp"
 
 
 namespace opossum {
 
-/**
- * Implements the non-virtual interface of all decoders
- */
-template <typename UnsignedIntType>
-class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder<UnsignedIntType>> {
+class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
  public:
   using Vector = SimdBp128Vector;
 
@@ -24,7 +22,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder<UnsignedIntType>> {
   class ConstIterator;
 
   auto _on_cbegin() {
-    return ConstIterator{&_vector.data()};
+    return ConstIterator{&_vector.data(), _vector.size()};
   }
 
   auto _on_cend() {
@@ -32,7 +30,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder<UnsignedIntType>> {
   }
 
   uint32_t _on_get(size_t i) {
-    return _vector.data()[i];
+    return 0u;
   }
 
   size_t _on_size() {
@@ -45,7 +43,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder<UnsignedIntType>> {
  public:
   class ConstIterator : public BaseNsIterator<ConstIterator> {
    public:
-    ConstIterator(const pmr_vector<__m128>* data, size_t absolute_index = 0u)
+    ConstIterator(const pmr_vector<__m128i>* data, size_t absolute_index = 0u)
         : _data{data},
           _data_index{0u},
           _absolute_index{absolute_index},
@@ -75,10 +73,10 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder<UnsignedIntType>> {
       }
     }
 
-    bool equal(const ConstIterator& other) const { return _current_absolute_index == other._current_absolute_index; }
+    bool equal(const ConstIterator& other) const { return _absolute_index == other._absolute_index; }
 
     uint32_t dereference() const {
-      return _current_block[_current_block_index];
+      return (*_current_block)[_current_block_index];
     }
 
    private:
@@ -86,17 +84,17 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder<UnsignedIntType>> {
     void unpack_block();
 
    private:
-    const pmr_vector<__m128>* _data;
+    const pmr_vector<__m128i>* _data;
 
-    size_t _absolute_index;
     size_t _data_index;
+    size_t _absolute_index;
 
     std::array<uint32_t, Vector::blocks_in_meta_block> _current_meta_info;
     size_t _current_meta_info_index;
 
     const std::unique_ptr<std::array<uint32_t, Vector::block_size>> _current_block;
     size_t _current_block_index;
-  }
+  };
 };
 
 }  // namespace opossum

@@ -14,15 +14,19 @@ using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_
 template <typename Derived>
 class NsDecoder {
  public:
-  // A constant forward iterator that inherits from BaseNsIterator
-  using ConstIterator = Derived::ConstIterator;
-
- public:
-  ConstIterator cbegin() {
+  /**
+   * @brief Returns an iterator to the beginning
+   * @return a constant forward iterator that inherits from BaseNsIterator
+   */
+  auto cbegin() {
     return _self()._on_cbegin();
   }
 
-  ConstIterator cend() {
+  /**
+   * @brief Returns an iterator to the end
+   * @return a constant forward iterator that inherits from BaseNsIterator
+   */
+  auto cend() {
     return _self()._on_cend();
   }
 
