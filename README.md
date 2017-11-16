@@ -91,7 +91,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 
 -	Yannick  Bäumer
-- Lawrence Benson
+-	Lawrence Benson
 -	Timo     Djürken
 -	Fabian   Dumke
 -	Moritz   Eyssen
