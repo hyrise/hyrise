@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "json.hpp"
+#include "storage/chunk.hpp"
 
 namespace opossum {
 
@@ -39,7 +40,7 @@ struct ParseConfig {
  * columns       column meta information (name, type, nullable) for each column
  */
 struct CsvMeta {
-  size_t chunk_size;
+  size_t chunk_size = Chunk::MAX_CHUNK_SIZE;
   bool auto_compress = false;
   ParseConfig config;
   std::vector<ColumnMeta> columns;

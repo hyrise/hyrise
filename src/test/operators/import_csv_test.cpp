@@ -142,7 +142,7 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
 }
 
 TEST_F(OperatorsImportCsvTest, ChunkSize) {
-  // chunk_size is defined as "20" in .meta file
+  // chunk_size is defined as "20" in meta file
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv");
   importer->execute();
 
@@ -155,12 +155,12 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
 }
 
 TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
-  // chunk_size is defined as "20" in .meta file
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_0.csv");
+  // chunk_size is not defined in the meta file, resulting in the maximum allowed chunk size
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_max.csv");
   importer->execute();
 
   // check if chunk_size property is correct (maximum chunk size, 0 for unlimited)
-  EXPECT_EQ(importer->get_output()->chunk_size(), 0U);
+  EXPECT_EQ(importer->get_output()->chunk_size(), Chunk::MAX_CHUNK_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 100U);

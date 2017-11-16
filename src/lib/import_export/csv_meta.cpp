@@ -31,11 +31,13 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
-  auto chunk_size = json.at("chunk_size");
-  Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size),
-         "CSV meta file, chunk_size must be an integer.");
-  Assert(static_cast<int64_t>(chunk_size) >= 0, "CSV meta file, chunk_size must not be negative.");
-  meta.chunk_size = chunk_size;
+  if (json.find("chunk_size") != json.end()) {
+    auto chunk_size = json.at("chunk_size");
+    Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size),
+           "CSV meta file, chunk_size must be an integer.");
+    Assert(static_cast<int64_t>(chunk_size) > 0, "CSV meta file, chunk_size must greater than 0.");
+    meta.chunk_size = chunk_size;
+  }
 
   assign_if_exists(meta.auto_compress, json, "auto_compress");
 
@@ -82,8 +84,13 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
-  json = nlohmann::json{
+  if (meta.chunk_size == Chunk::MAX_CHUNK_SIZE) {
+    json = nlohmann::json{
+      {"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
+  } else {
+    json = nlohmann::json{
       {"chunk_size", meta.chunk_size}, {"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
+  }
 }
 
 bool operator==(const ColumnMeta& lhs, const ColumnMeta& rhs) {
