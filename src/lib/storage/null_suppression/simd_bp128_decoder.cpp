@@ -1,5 +1,7 @@
 #include "simd_bp128_decoder.hpp"
 
+#include <iostream>
+
 
 namespace opossum {
 
@@ -11,9 +13,13 @@ void SimdBp128Decoder::ConstIterator::read_meta_info() {
 void SimdBp128Decoder::ConstIterator::unpack_block() {
   const auto in = _data->data() + _data_index;
   auto out = _current_block->data();
-  const auto bit_size = _current_meta_info[_current_meta_info_index++];
+  const auto bit_size = _current_meta_info[_current_meta_info_index];
 
   Packing::unpack_block(in, out, bit_size);
+
+  for (auto var : *_current_block) {
+    std::cout << var << std::endl;
+  }
 
   _data_index += bit_size;
   _current_block_index = 0u;

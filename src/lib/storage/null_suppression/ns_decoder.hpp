@@ -18,7 +18,7 @@ class BaseNsDecoder {
 };
 
 template <typename Derived>
-using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_traversal_tag, uint32_t&>;
+using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_traversal_tag, uint32_t>;
 
 /**
  * @brief Implements the non-virtual interface of all decoders
@@ -39,8 +39,8 @@ class NsDecoder : public BaseNsDecoder {
     decoded_vector.reserve(size());
 
     auto it = cbegin();
-    auto end = cend();
-    for (; it == end; ++it) {
+    const auto end = cend();
+    for (; it != end; ++it) {
       decoded_vector.push_back(*it);
     }
 
