@@ -21,7 +21,7 @@ class TableStatisticsJoinTest : public BaseTest {
   };
 
   void SetUp() override {
-    auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", 0);
+    auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_CHUNK_SIZE);
     _table_uniform_distribution_with_stats.statistics = std::make_shared<TableStatistics>(table_uniform_distribution);
     table_uniform_distribution->set_table_statistics(_table_uniform_distribution_with_stats.statistics);
     _table_uniform_distribution_with_stats.table = table_uniform_distribution;

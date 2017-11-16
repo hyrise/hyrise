@@ -54,7 +54,7 @@ class TableStatisticsMock : public TableStatistics {
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
+    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_CHUNK_SIZE));
     _rule = std::make_shared<PredicateReorderingRule>();
   }
 

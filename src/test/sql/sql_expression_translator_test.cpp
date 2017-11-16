@@ -19,7 +19,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     // We need a base table to be able to lookup column names for ColumnIDs.
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 0));
+    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_CHUNK_SIZE));
     _stored_table_node = std::make_shared<StoredTableNode>("table_a");
   }
 

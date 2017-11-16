@@ -24,7 +24,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/float_int.tbl", 0u);
+    _table = load_table("src/test/tables/float_int.tbl", Chunk::MAX_CHUNK_SIZE);
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
