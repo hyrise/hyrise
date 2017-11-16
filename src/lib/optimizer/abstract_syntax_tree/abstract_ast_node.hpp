@@ -123,6 +123,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
       const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const;
   // @}
 
+  /**
+   * @returns the names of the columns this node outputs without any alias added by this node
+   */
   virtual const std::vector<std::string>& output_column_names() const;
 
   /**
