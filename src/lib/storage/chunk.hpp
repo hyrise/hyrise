@@ -30,6 +30,7 @@ enum class ChunkUseMvcc { Yes, No };
 class Chunk : private Noncopyable {
  public:
   static const CommitID MAX_COMMIT_ID;
+  static const ChunkOffset MAX_CHUNK_SIZE;
 
   /**
    * Columns storing visibility information
