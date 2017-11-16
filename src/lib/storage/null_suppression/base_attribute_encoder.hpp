@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
+
 #include "base_encoded_vector.hpp"
-#include "types.hpp"
 
 namespace opossum {
 

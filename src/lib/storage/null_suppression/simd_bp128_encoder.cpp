@@ -4,7 +4,6 @@
 #include <array>
 
 #include "utils/assert.hpp"
-#include "simd_bp128_vector.hpp"
 
 
 namespace {
@@ -82,13 +81,13 @@ std::unique_ptr<BaseEncodedVector> SimdBp128Encoder::get_vector() {
 }
 
 bool SimdBp128Encoder::meta_block_complete() {
-  return (meta_block_size - _meta_block_index) <= 1u;
+  return (Vector::meta_block_size - _meta_block_index) <= 1u;
 }
 
 void SimdBp128Encoder::pack_meta_block() {
   const auto bits_needed = bits_needed_per_block();
   write_meta_info(bits_needed);
-  pack_blocks(blocks_in_meta_block, bits_needed);
+  pack_blocks(Vector::blocks_in_meta_block, bits_needed);
 
   _meta_block_index = 0u;
 }
@@ -101,19 +100,19 @@ void SimdBp128Encoder::pack_incomplete_meta_block() {
   write_meta_info(bits_needed);
 
   // Returns ceiling of integer division
-  const auto num_blocks_left = (_meta_block_index + block_size - 1) / block_size;
+  const auto num_blocks_left = (_meta_block_index + Vector::block_size - 1) / Vector::block_size;
 
   pack_blocks(num_blocks_left, bits_needed);
 }
 
-auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, blocks_in_meta_block> {
-  std::array<uint8_t, blocks_in_meta_block> bits_needed{};
+auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Vector::blocks_in_meta_block> {
+  std::array<uint8_t, Vector::blocks_in_meta_block> bits_needed{};
 
-  for (auto block_index = 0u; block_index < blocks_in_meta_block; ++block_index) {
-    const auto block_offset = block_index * block_size;
+  for (auto block_index = 0u; block_index < Vector::blocks_in_meta_block; ++block_index) {
+    const auto block_offset = block_index * Vector::block_size;
 
     auto bit_collector = uint32_t{0u};
-    for (auto index = 0u; index < block_size; ++index) {
+    for (auto index = 0u; index < Vector::block_size; ++index) {
       bit_collector |= _pending_meta_block[block_offset + index];
     }
 
@@ -129,7 +128,7 @@ void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, blocks_in_meta_
 }
 
 void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,
-                                   const std::array<uint8_t, blocks_in_meta_block>& bits_needed) {
+                                   const std::array<uint8_t, Vector::blocks_in_meta_block>& bits_needed) {
   DebugAssert(num_blocks <= 16u, "num_blocks must be smaller than 16.");
 
   auto in = _pending_meta_block.data();
@@ -150,7 +149,7 @@ void SimdBp128Encoder::pack_block(const uint32_t* _in, __m128i* out, const uint8
   const auto mask = _mm_set1_epi32((1u << bit_size) - 1);
 
   switch (bit_size) {
-    case 0:
+    case 0u:
       Fail("Bit size of zero hasn’t been implemented.");
       return;
 
@@ -284,6 +283,7 @@ void SimdBp128Encoder::pack_block(const uint32_t* _in, __m128i* out, const uint8
 
     default:
       Fail("Bit size must be in range [0, 32]");
+      return;
   }
 }
 

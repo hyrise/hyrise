@@ -232,8 +232,12 @@ set(
     storage/iterables/value_column_iterable.hpp
     storage/null_suppression/base_encoded_vector.hpp
     storage/null_suppression/base_attribute_encoder.hpp
+    storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_vector.hpp
+    storage/null_suppression/ns_decoder.hpp
+    storage/null_suppression/simd_bp128_decoder.cpp
+    storage/null_suppression/simd_bp128_decoder.hpp
     storage/null_suppression/simd_bp128_encoder.cpp
     storage/null_suppression/simd_bp128_encoder.hpp
     storage/null_suppression/simd_bp128_vector.cpp
