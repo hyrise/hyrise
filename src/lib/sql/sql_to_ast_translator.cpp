@@ -372,9 +372,16 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_natural_join(con
   const auto& left_node = _translate_table_ref(*join.left);
   const auto& right_node = _translate_table_ref(*join.right);
 
+  // we need copies that we can sort on.
+  auto left_column_names = left_node->output_column_names();
+  auto right_column_names = right_node->output_column_names();
+
+  std::sort(left_column_names.begin(), left_column_names.end());
+  std::sort(right_column_names.begin(), right_column_names.end());
+
   std::vector<std::string> join_column_names;
-  std::set_intersection(left_node->output_column_names().begin(), left_node->output_column_names().end(),
-                        right_node->output_column_names().begin(), right_node->output_column_names().end(),
+  std::set_intersection(left_column_names.begin(), left_column_names.end(),
+                        right_column_names.begin(), right_column_names.end(),
                         std::back_inserter(join_column_names));
 
   Assert(!join_column_names.empty(), "No matching columns for natural join found");
