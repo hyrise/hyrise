@@ -240,6 +240,8 @@ set(
     storage/null_suppression/simd_bp128_decoder.hpp
     storage/null_suppression/simd_bp128_encoder.cpp
     storage/null_suppression/simd_bp128_encoder.hpp
+    storage/null_suppression/simd_bp128_packing.cpp
+    storage/null_suppression/simd_bp128_packing.hpp
     storage/null_suppression/simd_bp128_vector.cpp
     storage/null_suppression/simd_bp128_vector.hpp
     storage/reference_column.cpp

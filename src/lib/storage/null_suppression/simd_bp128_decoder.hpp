@@ -6,6 +6,7 @@
 
 #include "ns_decoder.hpp"
 #include "simd_bp128_vector.hpp"
+#include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
 
@@ -42,13 +43,16 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
 
  public:
   class ConstIterator : public BaseNsIterator<ConstIterator> {
+   private:
+    using Packing = SimdBp128Packing;
+
    public:
     ConstIterator(const pmr_vector<__m128i>* data, size_t absolute_index = 0u)
         : _data{data},
           _data_index{0u},
           _absolute_index{absolute_index},
           _current_meta_info_index{0u},
-          _current_block{std::make_unique<std::array<uint32_t, Vector::block_size>>()},
+          _current_block{std::make_unique<std::array<uint32_t, Packing::block_size>>()},
           _current_block_index{0u} {
       read_meta_info();
       unpack_block();
@@ -61,10 +65,10 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
       ++_absolute_index;
       ++_current_block_index;
 
-      if (_current_block_index >= Vector::block_size) {
+      if (_current_block_index >= Packing::block_size) {
         ++_current_meta_info_index;
 
-        if (_current_meta_info_index >= Vector::blocks_in_meta_block) {
+        if (_current_meta_info_index >= Packing::blocks_in_meta_block) {
           read_meta_info();
           unpack_block();
         } else {
@@ -89,10 +93,10 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
     size_t _data_index;
     size_t _absolute_index;
 
-    std::array<uint32_t, Vector::blocks_in_meta_block> _current_meta_info;
+    std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info;
     size_t _current_meta_info_index;
 
-    const std::unique_ptr<std::array<uint32_t, Vector::block_size>> _current_block;
+    const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _current_block;
     size_t _current_block_index;
   };
 };
