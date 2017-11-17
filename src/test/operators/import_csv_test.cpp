@@ -159,7 +159,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_max.csv");
   importer->execute();
 
-  // check if chunk_size property is correct (maximum chunk size, 0 for unlimited)
+  // check if chunk_size property is correct (maximum chunk size)
   EXPECT_EQ(importer->get_output()->chunk_size(), Chunk::MAX_CHUNK_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
