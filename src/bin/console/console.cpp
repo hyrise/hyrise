@@ -485,7 +485,7 @@ int Console::print_table(const std::string& args) {
 
 int Console::visualize(const std::string& input) {
   auto first_word = input.substr(0, input.find_first_of(" \n"));
-  std::string mode, sql, dot_filename, img_filename;
+  std::string mode, sql, graph_filename, img_filename;
   if (first_word == "noexec" || first_word == "ast" || first_word == "astopt") {
     mode = first_word;
   }
@@ -519,9 +519,11 @@ int Console::visualize(const std::string& input) {
         }
       }
 
-      dot_filename = "." + mode + ".dot";
+      graph_filename = "." + mode + ".dot";
       img_filename = mode + ".png";
-      ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
+
+      ASTVisualizer visualizer;
+      visualizer.visualize(ast_roots, graph_filename, img_filename);
     } catch (const std::exception& exception) {
       out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
@@ -559,9 +561,10 @@ int Console::visualize(const std::string& input) {
       }
     }
 
-    dot_filename = ".queryplan.dot";
+    graph_filename = ".queryplan.dot";
     img_filename = "queryplan.png";
-    SQLQueryPlanVisualizer::visualize(plan, dot_filename, img_filename);
+    SQLQueryPlanVisualizer visualizer;
+    visualizer.visualize(plan, graph_filename, img_filename);
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");

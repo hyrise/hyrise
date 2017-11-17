@@ -27,6 +27,7 @@ struct VizVertexInfo {
   std::string color = GraphvizColor::White;
   std::string font_color = GraphvizColor::White;
   std::string shape = GraphvizShape::Rectangle;
+  uint8_t pen_width = 1u;
 };
 
 struct VizEdgeInfo {
@@ -36,10 +37,11 @@ struct VizEdgeInfo {
   uint8_t pen_width = 1u;
 };
 
+template <typename GraphBase>
 class AbstractVisualizer {
   //                                  Edge list    Vertex list   Directed graph
   using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
-                                      //                                  Vertex info    Edge info    Graph info
+                                      // Vertex info Edge info    Graph info
                                       VizVertexInfo, VizEdgeInfo, VizGraphInfo>;
 
  public:
@@ -62,6 +64,7 @@ class AbstractVisualizer {
     _add_property("label", &VizVertexInfo::label);
     _add_property("shape", &VizVertexInfo::shape);
     _add_property("fontcolor", &VizVertexInfo::font_color);
+    _add_property("penwidth", &VizVertexInfo::pen_width);
 
     // Add edge properties
     _add_property("color", &VizEdgeInfo::color);
@@ -70,12 +73,8 @@ class AbstractVisualizer {
     _add_property("penwidth", &VizEdgeInfo::pen_width);
   }
 
-  template <typename T>
-  void build_graph(const T& graph_base) {
-    Fail("Need to call from specific implementation!");
-  }
-
-  void visualize(const std::string& graph_filename, const std::string& img_filename) {
+  void visualize(const GraphBase& graph_base, const std::string& graph_filename, const std::string& img_filename) {
+    _build_graph(graph_base);
     std::ofstream file(graph_filename);
     boost::write_graphviz_dp(file, _graph, _properties);
 
@@ -92,6 +91,8 @@ class AbstractVisualizer {
   }
 
  protected:
+  virtual void _build_graph(const GraphBase& graph_base) = 0;
+
   template <typename T>
   void _add_vertex(const T& vertex) {
     _add_vertex(vertex, _default_vertex);

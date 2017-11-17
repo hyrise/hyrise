@@ -14,11 +14,11 @@
 
 namespace opossum {
 
-class ASTVisualizer : public AbstractVisualizer {
+class ASTVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractASTNode>>> {
  public:
   ASTVisualizer() : AbstractVisualizer() {
     // Set defaults for this visualizer
-    _default_vertex.shape = "parallelogram";
+    _default_vertex.shape = GraphvizShape::Parallelogram;
   }
 
   ASTVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
@@ -26,16 +26,15 @@ class ASTVisualizer : public AbstractVisualizer {
       : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                            std::move(edge_info)) {}
 
-  void build_graph(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots) {
+ protected:
+  void _build_graph(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots) {
     for (const auto& root : ast_roots) {
+      _add_vertex(root, root->description());
       _build_subtree(root);
     }
   }
 
- protected:
   void _build_subtree(const std::shared_ptr<AbstractASTNode>& node) {
-    _add_vertex(node, node->description());
-
     if (node->left_child()) {
       auto left_child = node->left_child();
       _add_vertex(left_child, left_child->description());
