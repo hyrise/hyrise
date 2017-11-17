@@ -154,7 +154,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
 
-  bool operator==(const Expression& rhs) const;
+  bool operator==(const Expression& other) const;
 
  private:
   // the type of the expression

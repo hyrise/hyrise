@@ -300,18 +300,18 @@ std::string Expression::to_string(const std::vector<std::string>& input_column_n
   Assert(left_child(), "Operator needs left child.");
 
   std::string result;
-  const auto lhs = left_child()->to_string(input_column_names);
+  const auto left_column_name = left_child()->to_string(input_column_names);
   const auto& op = expression_type_to_operator_string.at(_type);
 
   if (is_binary_operator()) {
     Assert(right_child(), "Binary Operator needs both children.");
 
-    const auto rhs = right_child()->to_string(input_column_names);
-    result = lhs + " " + op + " " + rhs;
+    const auto right_column_name = right_child()->to_string(input_column_names);
+    result = left_column_name + " " + op + " " + right_column_name;
   } else {
     Assert(!right_child(), "Unary Operator can only have left child.");
 
-    result = op + " " + lhs;
+    result = op + " " + left_column_name;
   }
 
   // Don't put brackets around root expression, i.e. generate "5+(a*3)" and not "(5+(a*3))"
@@ -328,28 +328,28 @@ void Expression::set_expression_list(const std::vector<std::shared_ptr<Expressio
   _expression_list = expression_list;
 }
 
-bool Expression::operator==(const Expression& rhs) const {
-  auto compare_expression_ptrs = [](const auto& ptr_lhs, const auto& ptr_rhs) {
-    if (ptr_lhs && ptr_rhs) {
-      return *ptr_lhs == *ptr_rhs;
+bool Expression::operator==(const Expression& other) const {
+  auto compare_expression_ptrs = [](const auto& left_pointer, const auto& right_pointer) {
+    if (left_pointer && right_pointer) {
+      return *left_pointer == *right_pointer;
     }
 
-    return ptr_lhs == ptr_rhs;
+    return left_pointer == right_pointer;
   };
 
-  if (!compare_expression_ptrs(_left_child, rhs._left_child)) return false;
-  if (!compare_expression_ptrs(_right_child, rhs._right_child)) return false;
+  if (!compare_expression_ptrs(_left_child, other._left_child)) return false;
+  if (!compare_expression_ptrs(_right_child, other._right_child)) return false;
 
-  if (_expression_list.size() != rhs._expression_list.size()) return false;
+  if (_expression_list.size() != other._expression_list.size()) return false;
 
   for (size_t expression_list_idx = 0; expression_list_idx < _expression_list.size(); ++expression_list_idx) {
-    if (!compare_expression_ptrs(_expression_list[expression_list_idx], rhs._expression_list[expression_list_idx])) {
+    if (!compare_expression_ptrs(_expression_list[expression_list_idx], other._expression_list[expression_list_idx])) {
       return false;
     }
   }
 
-  return _type == rhs._type && _value == rhs._value && _aggregate_function == rhs._aggregate_function &&
-         _table_name == rhs._table_name && _column_id == rhs._column_id && _alias == rhs._alias;
+  return _type == other._type && _value == other._value && _aggregate_function == other._aggregate_function &&
+         _table_name == other._table_name && _column_id == other._column_id && _alias == other._alias;
 }
 
 void Expression::set_alias(const std::string& alias) { _alias = alias; }

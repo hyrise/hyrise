@@ -61,7 +61,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   // sort keys and their positions
   std::sort(_position_list.begin(), _position_list.end(),
-            [&keys](auto lhs, auto rhs) { return keys[lhs] < keys[rhs]; });
+            [&keys](auto left, auto right) { return keys[left] < keys[right]; });
 
   _keys = VariableLengthKeyStore(column_size, bytes_per_key);
   for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {

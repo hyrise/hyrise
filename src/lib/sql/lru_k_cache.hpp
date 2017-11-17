@@ -46,11 +46,11 @@ class LRUKCache : public AbstractCache<Key, Value> {
     // The item with the largest backward k-distance should be at the top.
     // This is the item with the lowest k-th most recent access number.
     // If the history of both items is not equally long, the item with the shorter history is evicted.
-    bool operator<(const LRUKCacheEntry& rhs) const {
-      if (history.size() != rhs.history.size()) {
-        return history.size() > rhs.history.size();
+    bool operator<(const LRUKCacheEntry& other) const {
+      if (history.size() != other.history.size()) {
+        return history.size() > other.history.size();
       }
-      return history[0] > rhs.history[0];
+      return history[0] > other.history[0];
     }
   };
 

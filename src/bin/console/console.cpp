@@ -204,7 +204,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   std::string args = cmd.substr(first + 1, last - (first + 1));
 
   // Remove whitespace duplicates in args
-  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
   args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
 
   return static_cast<int>(func(args));
@@ -683,7 +683,7 @@ char** Console::command_completion(const char* text, int start, int end) {
   std::string input(rl_line_buffer);
 
   // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
   input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
 
   std::vector<std::string> tokens;

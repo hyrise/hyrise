@@ -35,8 +35,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
   void operator()();
 
-  void operator=(const Worker& rhs) = delete;
-  void operator=(Worker&& rhs) = delete;
+  void operator=(const Worker&) = delete;
+  void operator=(Worker&&) = delete;
 
  protected:
   template <typename TaskType>
