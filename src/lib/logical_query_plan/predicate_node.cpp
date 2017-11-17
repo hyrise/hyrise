@@ -21,19 +21,29 @@ PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type,
       _value2(value2) {}
 
 std::string PredicateNode::description() const {
-  std::string left_operand_name = get_verbose_column_name(_column_id);
-  std::string right_a_operand_name;
+  /**
+   * " a BETWEEN 5 AND c"
+   *  (0)       (1)   (2)
+   * " b >=     13"
+   *
+   * (0) left operand
+   * (1) middle operand
+   * (2) right operand (only for BETWEEN)
+   */
+
+  std::string left_operand_desc = get_verbose_column_name(_column_id);
+  std::string middle_operand_desc;
 
   if (_value.type() == typeid(ColumnID)) {
-    right_a_operand_name = get_verbose_column_name(boost::get<ColumnID>(_value));
+    middle_operand_desc = get_verbose_column_name(boost::get<ColumnID>(_value));
   } else {
-    right_a_operand_name = boost::lexical_cast<std::string>(_value);
+    middle_operand_desc = boost::lexical_cast<std::string>(_value);
   }
 
   std::ostringstream desc;
 
-  desc << "[Predicate] " << left_operand_name << " " << scan_type_to_string.left.at(_scan_type);
-  desc << " " << right_a_operand_name << "";
+  desc << "[Predicate] " << left_operand_desc << " " << scan_type_to_string.left.at(_scan_type);
+  desc << " " << middle_operand_desc << "";
   if (_value2) {
     desc << " AND ";
     if (_value2->type() == typeid(std::string)) {
