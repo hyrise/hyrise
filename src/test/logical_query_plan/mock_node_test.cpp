@@ -13,7 +13,7 @@ namespace opossum {
 class MockNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_CHUNK_SIZE);
+    auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_ALLOWED_SIZE);
     _statistics = std::make_shared<TableStatistics>(table);
 
     _mock_node = std::make_shared<MockNode>(_statistics);

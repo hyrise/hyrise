@@ -48,8 +48,8 @@ struct SumUp {
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = load_table("src/test/tables/int_float6.tbl", Chunk::MAX_CHUNK_SIZE);
-    table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_CHUNK_SIZE);
+    table = load_table("src/test/tables/int_float6.tbl", Chunk::MAX_ALLOWED_SIZE);
+    table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_ALLOWED_SIZE);
   }
 
   std::shared_ptr<Table> table;

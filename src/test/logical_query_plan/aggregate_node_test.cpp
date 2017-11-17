@@ -17,7 +17,7 @@ namespace opossum {
 class AggregateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_CHUNK_SIZE));
+    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_ALLOWED_SIZE));
 
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
 

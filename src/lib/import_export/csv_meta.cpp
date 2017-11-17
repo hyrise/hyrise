@@ -84,7 +84,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
-  if (meta.chunk_size == Chunk::MAX_CHUNK_SIZE) {
+  if (meta.chunk_size == Chunk::MAX_ALLOWED_SIZE) {
     json = nlohmann::json{{"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
   } else {
     json = nlohmann::json{{"chunk_size", meta.chunk_size},

@@ -74,7 +74,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 }
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
-  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_CHUNK_SIZE);
+  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_ALLOWED_SIZE);
   // Update operator works on the StorageManager
   StorageManager::get().add_table("updateTestTable", t);
 
@@ -85,13 +85,13 @@ TEST_F(OperatorsUpdateTest, SelfUpdate) {
 }
 
 TEST_F(OperatorsUpdateTest, NormalUpdate) {
-  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_CHUNK_SIZE);
+  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_ALLOWED_SIZE);
   StorageManager::get().add_table("updateTestTable", t);
 
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_CHUNK_SIZE);
+  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_ALLOWED_SIZE);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
@@ -108,7 +108,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_CHUNK_SIZE);
+  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_ALLOWED_SIZE);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
@@ -119,7 +119,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
 }
 
 TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
-  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_CHUNK_SIZE);
+  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_ALLOWED_SIZE);
   StorageManager::get().add_table("updateTestTable", t);
 
   auto gt = std::make_shared<GetTable>("updateTestTable");
