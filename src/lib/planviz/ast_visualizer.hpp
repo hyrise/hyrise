@@ -4,40 +4,56 @@
 #include <iomanip>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "planviz/abstract_visualizer.hpp"
 #include "planviz/visualizer.hpp"
 
 namespace opossum {
 
-class ASTVisualizer {
+class ASTVisualizer : public AbstractVisualizer {
  public:
-  static void visualize(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots, const std::string& dot_filename,
-                        const std::string& img_filename) {
-    visualize_tree(ast_roots, dot_filename, img_filename, "parallelogram", _visualize_subtree);
+  ASTVisualizer() : AbstractVisualizer() {
+    // Set defaults for this visualizer
+    _default_vertex.shape = "parallelogram";
+  }
+
+  ASTVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                VizEdgeInfo edge_info)
+      : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
+                           std::move(edge_info)) {}
+
+  void build_graph(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots) {
+    for (const auto& root : ast_roots) {
+      _build_subtree(root);
+    }
   }
 
  protected:
-  static void _visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file) {
-    file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
-         << boost::replace_all_copy(node->description(), "\"", "\\\"") << "\"]" << std::endl;
+  void _build_subtree(const std::shared_ptr<AbstractASTNode>& node) {
+    _add_vertex(node, node->description());
 
     if (node->left_child()) {
-      _visualize_dataflow(node->left_child(), node, file);
-      _visualize_subtree(node->left_child(), file);
+      auto left_child = node->left_child();
+      _add_vertex(left_child, left_child->description());
+      _build_dataflow(left_child, node);
+      _build_subtree(left_child);
     }
 
     if (node->right_child()) {
-      _visualize_dataflow(node->right_child(), node, file);
-      _visualize_subtree(node->right_child(), file);
+      auto right_child = node->right_child();
+      _add_vertex(right_child, right_child->description());
+      _build_dataflow(right_child, node);
+      _build_subtree(right_child);
     }
   }
-  static void _visualize_dataflow(const std::shared_ptr<AbstractASTNode>& from,
-                                  const std::shared_ptr<AbstractASTNode>& to, std::ofstream& file) {
+
+  void _build_dataflow(const std::shared_ptr<AbstractASTNode>& from, const std::shared_ptr<AbstractASTNode>& to) {
     float row_count, row_percentage = 100.0f;
-    uint32_t pen_width;
+    uint8_t pen_width;
 
     try {
       row_count = from->get_statistics()->row_count();
@@ -60,13 +76,19 @@ class ASTVisualizer {
       }
     }
 
-    file << reinterpret_cast<uintptr_t>(from.get()) << " -> " << reinterpret_cast<uintptr_t>(to.get()) << "[label=\" ";
+    std::ostringstream label_stream;
     if (!isnan(row_count)) {
-      file << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage << "% estd.";
+      label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
+                   << "% estd.";
     } else {
-      file << "no est.";
+      label_stream << "no est.";
     }
-    file << "\",penwidth=" << pen_width << "]" << std::endl;
+
+    VizEdgeInfo info = _default_edge;
+    info.label = label_stream.str();
+    info.pen_width = pen_width;
+
+    _add_edge(from, to, info);
   }
 };
 

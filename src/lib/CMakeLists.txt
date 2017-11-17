@@ -148,12 +148,12 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
+    planviz/abstract_visualizer.hpp
     planviz/ast_visualizer.hpp
-    planviz/ast_visualizer_new.hpp
+    planviz/graphviz_config.hpp
     planviz/sql_query_plan_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/visualizer.hpp
-    planviz/abstract_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
@@ -257,8 +257,7 @@ set(
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/performance_warning.cpp
-    utils/performance_warning.hpp
-        planviz/graphviz_config.hpp)
+    utils/performance_warning.hpp)
 
 set(
     LIBRARIES

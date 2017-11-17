@@ -12,7 +12,7 @@
 namespace opossum {
 
 struct GraphvizConfig {
-  std::string layout = GraphvizLayout::Circo;
+  std::string layout = GraphvizLayout::Dot;
   std::string format = GraphvizRenderFormat::Png;
 };
 
