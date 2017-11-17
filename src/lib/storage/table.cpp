@@ -16,8 +16,8 @@
 namespace opossum {
 
 std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<const Table>& in_table,
-                                                      const uint32_t chunk_size) {
-  auto new_table = std::make_shared<Table>(chunk_size);
+                                                      const uint32_t max_chunk_size) {
+  auto new_table = std::make_shared<Table>(max_chunk_size);
 
   for (ColumnID::base_type column_idx = 0; column_idx < in_table->column_count(); ++column_idx) {
     const auto type = in_table->column_type(ColumnID{column_idx});
@@ -47,8 +47,8 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
   return true;
 }
 
-Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
-  Assert(chunk_size > 0, "Table must have a chunk size greater than 0.");
+Table::Table(const uint32_t max_chunk_size) : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+  Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
@@ -70,7 +70,7 @@ void Table::add_column(const std::string& name, const std::string& type, bool nu
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunks.back().size() == _chunk_size) create_new_chunk();
+  if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
 }
@@ -115,7 +115,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return {};
 }
 
-uint32_t Table::chunk_size() const { return _chunk_size; }
+uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 

@@ -23,7 +23,7 @@ class Table : private Noncopyable {
  public:
   // Creates a new table that has the same layout (column-{types, names}) as the input table
   static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table>& in_table,
-                                                        const uint32_t chunk_size = Chunk::MAX_ALLOWED_SIZE);
+                                                        const uint32_t max_chunk_size = Chunk::MAX_ALLOWED_SIZE);
 
   /**
    * @returns whether both tables contain the same columns (in name and type) in the same order
@@ -33,7 +33,7 @@ class Table : private Noncopyable {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default is the maximum allowed chunk size. A table holds always at least one chunk
-  explicit Table(const uint32_t chunk_size = Chunk::MAX_ALLOWED_SIZE);
+  explicit Table(const uint32_t max_chunk_size = Chunk::MAX_ALLOWED_SIZE);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -90,7 +90,7 @@ class Table : private Noncopyable {
   ColumnID column_id_by_name(const std::string& column_name) const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
-  uint32_t chunk_size() const;
+  uint32_t max_chunk_size() const;
 
   // adds column definition without creating the actual columns
   void add_column_definition(const std::string& name, const std::string& type, bool nullable = false);
@@ -141,7 +141,7 @@ class Table : private Noncopyable {
   TableType get_type() const;
 
  protected:
-  const uint32_t _chunk_size;
+  const uint32_t _max_chunk_size;
   std::vector<Chunk> _chunks;
 
   // Stores the number of invalid (deleted) rows.

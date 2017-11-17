@@ -147,7 +147,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
   importer->execute();
 
   // check if chunk_size property is correct
-  EXPECT_EQ(importer->get_output()->chunk_size(), 20U);
+  EXPECT_EQ(importer->get_output()->max_chunk_size(), 20U);
 
   // check if actual chunk_size is correct
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 20U);
@@ -160,7 +160,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   importer->execute();
 
   // check if chunk_size property is correct (maximum chunk size)
-  EXPECT_EQ(importer->get_output()->chunk_size(), Chunk::MAX_ALLOWED_SIZE);
+  EXPECT_EQ(importer->get_output()->max_chunk_size(), Chunk::MAX_ALLOWED_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 100U);
