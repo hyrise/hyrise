@@ -6,31 +6,32 @@
 #include <unordered_map>
 
 #include "operators/print.hpp"
+#include "planviz/graphviz_config.hpp"
 
 namespace opossum {
 
 struct GraphvizInfo {
-  std::string render_format = "png";
-  std::string layout = "dot";
+  std::string render_format = GraphvizRenderFormat::Png;
+  std::string layout = GraphvizLayout::Dot;
 };
 
 struct VizGraphInfo {
-  std::string bg_color = "transparent";
+  std::string bg_color = GraphvizColor::Transparent;
   std::string rankdir = "BT";
   float ratio = 0.5f;
 };
 
 struct VizVertexInfo {
   std::string label;
-  std::string color = "white";
-  std::string shape = "rectangle";
-  std::string font_color = "white";
+  std::string color = GraphvizColor::White;
+  std::string font_color = GraphvizColor::White;
+  std::string shape = GraphvizShape::Rectangle;
 };
 
 struct VizEdgeInfo {
   std::string label;
-  std::string color = "white";
-  std::string font_color = "white";
+  std::string color = GraphvizColor::White;
+  std::string font_color = GraphvizColor::White;
   uint8_t pen_width = 1u;
 };
 
@@ -42,8 +43,11 @@ class AbstractVisualizer {
                                       VizVertexInfo, VizEdgeInfo, VizGraphInfo>;
 
  public:
-  AbstractVisualizer(const VizGraphInfo& graph_info, const VizVertexInfo& vertex_info, const VizEdgeInfo& edge_info)
-    : _graph_info(graph_info), _default_vertex(vertex_info), _default_edge(edge_info) {
+  AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
+
+  AbstractVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info, VizEdgeInfo edge_info)
+    : _graphviz_config(std::move(graphviz_config)), _graph_info(std::move(graph_info)),
+      _default_vertex(std::move(vertex_info)), _default_edge(std::move(edge_info)) {
     // Add global Graph properties
     _add_graph_property("rankdir", _graph_info.rankdir);
     _add_graph_property("bgcolor", _graph_info.bg_color);
@@ -62,8 +66,6 @@ class AbstractVisualizer {
     _add_property("label", &VizEdgeInfo::label);
     _add_property("penwidth", &VizEdgeInfo::pen_width);
   }
-
-  AbstractVisualizer() : AbstractVisualizer(VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
 
   template <typename T>
   void build_graph(const T& graph_base) {
@@ -87,6 +89,9 @@ class AbstractVisualizer {
 
  protected:
   template <typename T>
+  void _add_vertex(const T& vertex) { _add_vertex(vertex, _default_vertex); }
+
+  template <typename T>
   void _add_vertex(const T& vertex, const std::string& label) {
     VizVertexInfo info = _default_vertex;
     info.label = label;
@@ -94,7 +99,7 @@ class AbstractVisualizer {
   }
 
   template <typename T>
-  void _add_vertex(const T& vertex, VizVertexInfo& vertex_info = _default_vertex) {
+  void _add_vertex(const T& vertex, VizVertexInfo& vertex_info) {
     auto vertex_id = reinterpret_cast<uintptr_t>(vertex.get());
     auto inserted = _id_to_position.insert({vertex_id, _id_to_position.size()}).second;
     if (!inserted) {
@@ -106,7 +111,12 @@ class AbstractVisualizer {
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to, const VizEdgeInfo& edge_info = _default_edge) {
+  void _add_edge(const T& from, const K& to) {
+    _add_edge(from, to, _default_edge);
+  }
+
+  template <typename T, typename K>
+  void _add_edge(const T& from, const K& to, const VizEdgeInfo& edge_info) {
     auto from_id = reinterpret_cast<uintptr_t>(from.get());
     auto to_id = reinterpret_cast<uintptr_t>(to.get());
 
@@ -131,9 +141,10 @@ class AbstractVisualizer {
   std::unordered_map<uintptr_t, uint16_t> _id_to_position;
   boost::dynamic_properties _properties;
 
-  const VizGraphInfo _graph_info;
-  const VizVertexInfo _default_vertex;
-  const VizEdgeInfo _default_edge;
+  GraphvizConfig _graphviz_config;
+  VizGraphInfo _graph_info;
+  VizVertexInfo _default_vertex;
+  VizEdgeInfo _default_edge;
 };
 
 }  // namespace opossum

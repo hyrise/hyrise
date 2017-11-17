@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
@@ -16,15 +17,13 @@ namespace opossum {
 class ASTVisualizerNew : public AbstractVisualizer {
  public:
 
-  ASTVisualizerNew() {
-    VizVertexInfo vertex_info;
-    vertex_info.shape = "parallelogram";
-
-    ASTVisualizerNew(VizGraphInfo{}, vertex_info, VizEdgeInfo{});
+  ASTVisualizerNew() : AbstractVisualizer() {
+    // Set defaults for this visualizer
+    _default_vertex.shape = "parallelogram";
   };
 
-  ASTVisualizerNew(const VizGraphInfo& graph_info, const VizVertexInfo& vertex_info, const VizEdgeInfo& edge_info)
-    : AbstractVisualizer(graph_info, vertex_info, edge_info) {};
+  ASTVisualizerNew(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info, VizEdgeInfo edge_info)
+    : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info), std::move(edge_info)) {};
 
   void build_graph(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots) {
     for (const auto& root : ast_roots) {
@@ -80,12 +79,12 @@ class ASTVisualizerNew : public AbstractVisualizer {
 
     std::ostringstream label_stream;
     if (!isnan(row_count)) {
-      label_stream << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage << "% estd.";
+      label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage << "% estd.";
     } else {
       label_stream << "no est.";
     }
 
-    VizEdgeInfo info;
+    VizEdgeInfo info = _default_edge;
     info.label = label_stream.str();
     info.pen_width = pen_width;
 
