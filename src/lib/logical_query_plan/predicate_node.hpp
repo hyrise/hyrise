@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 
@@ -21,7 +21,7 @@ class TableStatistics;
  *
  * HAVING clauses of GROUP BY clauses will be translated to this node type as well.
  */
-class PredicateNode : public AbstractLogicalQueryPlanNode {
+class PredicateNode : public AbstractLQPNode {
  public:
   PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
                 const std::optional<AllTypeVariant>& value2 = std::nullopt);
@@ -34,8 +34,8 @@ class PredicateNode : public AbstractLogicalQueryPlanNode {
   const std::optional<AllTypeVariant>& value2() const;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractLQPNode>& left_child,
+      const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
  private:
   const ColumnID _column_id;

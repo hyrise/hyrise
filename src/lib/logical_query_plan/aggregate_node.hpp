@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -19,7 +19,7 @@ class Expression;
  *
  *  The order of the output columns is groupby columns followed by aggregate columns
  */
-class AggregateNode : public AbstractLogicalQueryPlanNode {
+class AggregateNode : public AbstractLQPNode {
  public:
   explicit AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregates,
                          const std::vector<ColumnID>& groupby_column_ids);

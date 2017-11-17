@@ -1,4 +1,4 @@
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -16,12 +16,12 @@ namespace opossum {
 
 class TableStatistics;
 
-AbstractLogicalQueryPlanNode::AbstractLogicalQueryPlanNode(LQPNodeType node_type) : _type(node_type) {}
+AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
-bool AbstractLogicalQueryPlanNode::is_optimizable() const { return true; }
+bool AbstractLQPNode::is_optimizable() const { return true; }
 
-std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> AbstractLogicalQueryPlanNode::parents() const {
-  std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> parents;
+std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
+  std::vector<std::shared_ptr<AbstractLQPNode>> parents;
   parents.reserve(_parents.size());
 
   for (const auto& parent_weak_ptr : _parents) {
@@ -33,12 +33,12 @@ std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> AbstractLogicalQueryP
   return parents;
 }
 
-void AbstractLogicalQueryPlanNode::remove_parent(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) {
+void AbstractLQPNode::remove_parent(const std::shared_ptr<AbstractLQPNode>& parent) {
   const auto child_side = get_child_side(parent);
   parent->set_child(child_side, nullptr);
 }
 
-void AbstractLogicalQueryPlanNode::clear_parents() {
+void AbstractLQPNode::clear_parents() {
   // Don't use for-each loop here, as remove_parent manipulates the _parents vector
   while (!_parents.empty()) {
     auto parent = _parents.front().lock();
@@ -47,8 +47,7 @@ void AbstractLogicalQueryPlanNode::clear_parents() {
   }
 }
 
-LQPChildSide AbstractLogicalQueryPlanNode::get_child_side(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) const {
+LQPChildSide AbstractLQPNode::get_child_side(const std::shared_ptr<AbstractLQPNode>& parent) const {
   if (parent->_children[0].get() == this) {
     return LQPChildSide::Left;
   } else if (parent->_children[1].get() == this) {
@@ -59,7 +58,7 @@ LQPChildSide AbstractLogicalQueryPlanNode::get_child_side(
   }
 }
 
-std::vector<LQPChildSide> AbstractLogicalQueryPlanNode::get_child_sides() const {
+std::vector<LQPChildSide> AbstractLQPNode::get_child_sides() const {
   std::vector<LQPChildSide> child_sides;
   child_sides.reserve(_parents.size());
 
@@ -72,25 +71,24 @@ std::vector<LQPChildSide> AbstractLogicalQueryPlanNode::get_child_sides() const 
   return child_sides;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> AbstractLogicalQueryPlanNode::left_child() const { return _children[0]; }
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_child() const { return _children[0]; }
 
-void AbstractLogicalQueryPlanNode::set_left_child(const std::shared_ptr<AbstractLogicalQueryPlanNode>& left) {
+void AbstractLQPNode::set_left_child(const std::shared_ptr<AbstractLQPNode>& left) {
   set_child(LQPChildSide::Left, left);
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> AbstractLogicalQueryPlanNode::right_child() const { return _children[1]; }
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::right_child() const { return _children[1]; }
 
-void AbstractLogicalQueryPlanNode::set_right_child(const std::shared_ptr<AbstractLogicalQueryPlanNode>& right) {
+void AbstractLQPNode::set_right_child(const std::shared_ptr<AbstractLQPNode>& right) {
   set_child(LQPChildSide::Right, right);
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> AbstractLogicalQueryPlanNode::child(LQPChildSide side) const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::child(LQPChildSide side) const {
   const auto child_index = static_cast<int>(side);
   return _children[child_index];
 }
 
-void AbstractLogicalQueryPlanNode::set_child(LQPChildSide side,
-                                             const std::shared_ptr<AbstractLogicalQueryPlanNode>& child) {
+void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child) {
   // We need a reference to _children[child_index], so not calling this->child(side)
   auto& current_child = _children[static_cast<int>(side)];
 
@@ -116,13 +114,11 @@ void AbstractLogicalQueryPlanNode::set_child(LQPChildSide side,
   }
 }
 
-LQPNodeType AbstractLogicalQueryPlanNode::type() const { return _type; }
+LQPNodeType AbstractLQPNode::type() const { return _type; }
 
-void AbstractLogicalQueryPlanNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) {
-  _statistics = statistics;
-}
+void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
 
-const std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::get_statistics() {
+const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
   if (!_statistics) {
     _statistics = derive_statistics_from(left_child(), right_child());
   }
@@ -130,9 +126,8 @@ const std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::get_statist
   return _statistics;
 }
 
-std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
+std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
+    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   DebugAssert(left_child,
               "Default implementation of derive_statistics_from() requires a left child, override in concrete node "
               "implementation for different behavior");
@@ -141,7 +136,7 @@ std::shared_ptr<TableStatistics> AbstractLogicalQueryPlanNode::derive_statistics
   return left_child->get_statistics();
 }
 
-const std::vector<std::string>& AbstractLogicalQueryPlanNode::output_column_names() const {
+const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
@@ -151,7 +146,7 @@ const std::vector<std::string>& AbstractLogicalQueryPlanNode::output_column_name
   return left_child()->output_column_names();
 }
 
-const std::vector<ColumnID>& AbstractLogicalQueryPlanNode::output_column_ids_to_input_column_ids() const {
+const std::vector<ColumnID>& AbstractLQPNode::output_column_ids_to_input_column_ids() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
@@ -167,9 +162,9 @@ const std::vector<ColumnID>& AbstractLogicalQueryPlanNode::output_column_ids_to_
   return *_output_column_ids_to_input_column_ids;
 }
 
-size_t AbstractLogicalQueryPlanNode::output_column_count() const { return output_column_names().size(); }
+size_t AbstractLQPNode::output_column_count() const { return output_column_names().size(); }
 
-ColumnID AbstractLogicalQueryPlanNode::get_column_id_by_named_column_reference(
+ColumnID AbstractLQPNode::get_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   const auto column_id = find_column_id_by_named_column_reference(named_column_reference);
   DebugAssert(column_id,
@@ -177,7 +172,7 @@ ColumnID AbstractLogicalQueryPlanNode::get_column_id_by_named_column_reference(
   return *column_id;
 }
 
-std::optional<ColumnID> AbstractLogicalQueryPlanNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> AbstractLQPNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
@@ -194,7 +189,7 @@ std::optional<ColumnID> AbstractLogicalQueryPlanNode::find_column_id_by_named_co
   }
 }
 
-bool AbstractLogicalQueryPlanNode::knows_table(const std::string& table_name) const {
+bool AbstractLQPNode::knows_table(const std::string& table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
@@ -207,14 +202,13 @@ bool AbstractLogicalQueryPlanNode::knows_table(const std::string& table_name) co
   }
 }
 
-std::vector<ColumnID> AbstractLogicalQueryPlanNode::get_output_column_ids() const {
+std::vector<ColumnID> AbstractLQPNode::get_output_column_ids() const {
   std::vector<ColumnID> column_ids(output_column_count());
   std::iota(column_ids.begin(), column_ids.end(), 0);
   return column_ids;
 }
 
-std::vector<ColumnID> AbstractLogicalQueryPlanNode::get_output_column_ids_for_table(
-    const std::string& table_name) const {
+std::vector<ColumnID> AbstractLQPNode::get_output_column_ids_for_table(const std::string& table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
@@ -232,7 +226,7 @@ std::vector<ColumnID> AbstractLogicalQueryPlanNode::get_output_column_ids_for_ta
   return left_child()->get_output_column_ids_for_table(table_name);
 }
 
-void AbstractLogicalQueryPlanNode::remove_from_tree() {
+void AbstractLQPNode::remove_from_tree() {
   Assert(!right_child(), "Can only remove nodes that only have a left child or no children");
 
   /**
@@ -257,7 +251,7 @@ void AbstractLogicalQueryPlanNode::remove_from_tree() {
   }
 }
 
-void AbstractLogicalQueryPlanNode::replace_with(const std::shared_ptr<AbstractLogicalQueryPlanNode>& replacement_node) {
+void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& replacement_node) {
   DebugAssert(replacement_node->_parents.empty(), "Node can't have parents");
   DebugAssert(!replacement_node->left_child() && !replacement_node->right_child(), "Node can't have children");
 
@@ -284,22 +278,20 @@ void AbstractLogicalQueryPlanNode::replace_with(const std::shared_ptr<AbstractLo
   set_right_child(nullptr);
 }
 
-void AbstractLogicalQueryPlanNode::set_alias(const std::optional<std::string>& table_alias) {
-  _table_alias = table_alias;
-}
+void AbstractLQPNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
-void AbstractLogicalQueryPlanNode::print(std::ostream& out) const {
+void AbstractLQPNode::print(std::ostream& out) const {
   std::vector<bool> levels;
-  std::unordered_map<std::shared_ptr<const AbstractLogicalQueryPlanNode>, size_t> id_by_node;
+  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> id_by_node;
   size_t id_counter = 0;
   _print_impl(out, levels, id_by_node, id_counter);
 }
 
-std::string AbstractLogicalQueryPlanNode::get_verbose_column_name(ColumnID column_id) const {
+std::string AbstractLQPNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(!right_child(), "Node with right child needs to override this function.");
 
   /**
-   *  A AbstractLogicalQueryPlanNode without a left child should generally be a StoredTableNode, which overrides this function. But
+   *  A AbstractLQPNode without a left child should generally be a StoredTableNode, which overrides this function. But
    *  since get_verbose_column_name() is just a convenience function we don't want to force anyone to override this
    *  function when experimenting with nodes. Thus we handle the case of no left child here as well.
    */
@@ -320,7 +312,7 @@ std::string AbstractLogicalQueryPlanNode::get_verbose_column_name(ColumnID colum
   return verbose_name;
 }
 
-std::vector<std::string> AbstractLogicalQueryPlanNode::get_verbose_column_names() const {
+std::vector<std::string> AbstractLQPNode::get_verbose_column_names() const {
   std::vector<std::string> verbose_names(output_column_count());
   for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
     verbose_names[column_id] = get_verbose_column_name(column_id);
@@ -328,8 +320,7 @@ std::vector<std::string> AbstractLogicalQueryPlanNode::get_verbose_column_names(
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractLogicalQueryPlanNode::_resolve_local_alias(
-    const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_alias(const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
@@ -343,10 +334,9 @@ std::optional<NamedColumnReference> AbstractLogicalQueryPlanNode::_resolve_local
   return reference;
 }
 
-void AbstractLogicalQueryPlanNode::_print_impl(
-    std::ostream& out, std::vector<bool>& levels,
-    std::unordered_map<std::shared_ptr<const AbstractLogicalQueryPlanNode>, size_t>& id_by_node,
-    size_t& id_counter) const {
+void AbstractLQPNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
+                                  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
+                                  size_t& id_counter) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
     if (levels[level]) {
@@ -391,7 +381,7 @@ void AbstractLogicalQueryPlanNode::_print_impl(
   levels.pop_back();
 }
 
-void AbstractLogicalQueryPlanNode::_child_changed() {
+void AbstractLQPNode::_child_changed() {
   _statistics.reset();
   _output_column_ids_to_input_column_ids.reset();
 
@@ -401,7 +391,7 @@ void AbstractLogicalQueryPlanNode::_child_changed() {
   }
 }
 
-void AbstractLogicalQueryPlanNode::_remove_parent_pointer(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) {
+void AbstractLQPNode::_remove_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent) {
   const auto iter =
       std::find_if(_parents.begin(), _parents.end(), [&](const auto& rhs) { return parent == rhs.lock(); });
   DebugAssert(iter != _parents.end(), "Specified parent node is not actually a parent node of this node.");
@@ -413,7 +403,7 @@ void AbstractLogicalQueryPlanNode::_remove_parent_pointer(const std::shared_ptr<
   _parents.erase(iter);
 }
 
-void AbstractLogicalQueryPlanNode::_add_parent_pointer(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) {
+void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent) {
 #if IS_DEBUG
   const auto iter =
       std::find_if(_parents.begin(), _parents.end(), [&](const auto& rhs) { return parent == rhs.lock(); });

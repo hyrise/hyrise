@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -14,7 +14,7 @@ namespace opossum {
  * By that Optimizer Rules don't have to worry whether they change the tree-identifying root node,
  * e.g. by removing the Projection at the top of the tree.
  */
-class LogicalPlanRootNode : public AbstractLogicalQueryPlanNode {
+class LogicalPlanRootNode : public AbstractLQPNode {
  public:
   LogicalPlanRootNode();
 

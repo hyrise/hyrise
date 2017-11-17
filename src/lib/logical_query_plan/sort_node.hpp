@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -22,7 +22,7 @@ struct OrderByDefinition {
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
-class SortNode : public AbstractLogicalQueryPlanNode {
+class SortNode : public AbstractLQPNode {
  public:
   explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
 

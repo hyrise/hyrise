@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -46,7 +46,7 @@ class SQLTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> compile_query(const std::string& query) {
+  std::shared_ptr<AbstractLQPNode> compile_query(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 

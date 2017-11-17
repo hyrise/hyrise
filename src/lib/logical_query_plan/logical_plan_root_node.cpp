@@ -2,11 +2,11 @@
 
 #include <string>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
-LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLogicalQueryPlanNode(LQPNodeType::Root) {}
+LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLQPNode(LQPNodeType::Root) {}
 
 std::string LogicalPlanRootNode::description() const { return "[LogicalPlanRootNode]"; }
 

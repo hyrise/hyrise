@@ -3,14 +3,14 @@
 #include <memory>
 #include <string>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
 /**
  * Node type to represent deletion (more specifically, invalidation) in a table.
  */
-class DeleteNode : public AbstractLogicalQueryPlanNode {
+class DeleteNode : public AbstractLQPNode {
  public:
   explicit DeleteNode(const std::string& table_name);
 

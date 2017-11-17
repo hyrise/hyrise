@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
@@ -16,7 +16,7 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   auto reordered = false;
 
   if (node->type() == LQPNodeType::Predicate) {

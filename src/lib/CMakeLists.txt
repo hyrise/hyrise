@@ -92,8 +92,8 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    logical_query_plan/abstract_logical_query_plan_node.cpp
-    logical_query_plan/abstract_logical_query_plan_node.hpp
+    logical_query_plan/abstract_lqp_node.cpp
+    logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/abstract_non_optimizable_lqp_node.cpp
     logical_query_plan/abstract_non_optimizable_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp

@@ -16,7 +16,7 @@
 namespace opossum {
 
 std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
   auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
@@ -129,8 +129,8 @@ NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_col
                               hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
 }
 
-ColumnID SQLExpressionTranslator::get_column_id_for_expression(
-    const hsql::Expr& hsql_expr, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr& hsql_expr,
+                                                               const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
   return input_node->get_column_id_by_named_column_reference(get_named_column_reference_for_column_ref(hsql_expr));

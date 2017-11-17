@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -18,7 +18,7 @@ namespace opossum {
 
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
-bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) {
+bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -57,7 +57,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
   auto column_id_offset = 0;
 
   // Go up in LQP to find corresponding PredicateNode
-  std::shared_ptr<AbstractLogicalQueryPlanNode> node = cross_join;
+  std::shared_ptr<AbstractLQPNode> node = cross_join;
   while (true) {
     const auto parents = node->parents();
 

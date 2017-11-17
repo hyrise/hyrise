@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -90,9 +90,9 @@ JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   return it->second;
 }
 
-std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> SQLTranslator::translate_parse_result(
+std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parse_result(
     const hsql::SQLParserResult& result) {
-  std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> result_nodes;
+  std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
@@ -103,7 +103,7 @@ std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> SQLTranslator::transl
   return result_nodes;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
@@ -121,13 +121,13 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::translate_statement
   }
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const std::string table_name{insert.tableName};
   auto target_table = StorageManager::get().get_table(table_name);
 
   Assert(target_table != nullptr, "Insert: Invalid table name");
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> current_result_node;
+  std::shared_ptr<AbstractLQPNode> current_result_node;
 
   // Check for SELECT ... INTO .. query
   if (insert.type == hsql::kInsertSelect) {
@@ -187,8 +187,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_insert(c
   return insert_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& del) {
-  std::shared_ptr<AbstractLogicalQueryPlanNode> current_result_node = std::make_shared<StoredTableNode>(del.tableName);
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& del) {
+  std::shared_ptr<AbstractLQPNode> current_result_node = std::make_shared<StoredTableNode>(del.tableName);
   current_result_node = _validate_if_active(current_result_node);
   if (del.expr) {
     current_result_node = _translate_where(*del.expr, current_result_node);
@@ -200,8 +200,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_delete(c
   return delete_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
-  std::shared_ptr<AbstractLogicalQueryPlanNode> current_values_node = _translate_table_ref(*update.table);
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
+  std::shared_ptr<AbstractLQPNode> current_values_node = _translate_table_ref(*update.table);
   if (update.where) {
     current_values_node = _translate_where(*update.where, current_values_node);
   }
@@ -230,14 +230,13 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_update(c
     update_expressions[*column_id] = expr;
   }
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> update_node =
-      std::make_shared<UpdateNode>((update.table)->name, update_expressions);
+  std::shared_ptr<AbstractLQPNode> update_node = std::make_shared<UpdateNode>((update.table)->name, update_expressions);
   update_node->set_left_child(current_values_node);
 
   return update_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_select(const hsql::SelectStatement& select) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::SelectStatement& select) {
   // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
@@ -292,7 +291,7 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_select(c
   return current_result_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_type_to_join_mode(join.type);
 
   // TODO(anybody): both operator and translator support are missing.
@@ -365,8 +364,7 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_join(con
   return join_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_cross_product(
-    const std::vector<hsql::TableRef*>& tables) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
   DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
   auto product = _translate_table_ref(*tables.front());
 
@@ -383,9 +381,9 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_cross_pr
   return product;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
   auto alias = table.alias ? std::optional<std::string>(table.alias) : std::nullopt;
-  std::shared_ptr<AbstractLogicalQueryPlanNode> node;
+  std::shared_ptr<AbstractLQPNode> node;
   switch (table.type) {
     case hsql::kTableName:
       node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
@@ -409,7 +407,7 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_table_re
 }
 
 AllParameterVariant SQLTranslator::translate_hsql_operand(
-    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLogicalQueryPlanNode>>& input_node) {
+    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -430,8 +428,8 @@ AllParameterVariant SQLTranslator::translate_hsql_operand(
   }
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_where(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Expr& expr,
+                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   /**
@@ -456,9 +454,9 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_where(
                               input_node);
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_having(
-    const hsql::Expr& expr, const std::shared_ptr<AggregateNode>& aggregate_node,
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_having(const hsql::Expr& expr,
+                                                                  const std::shared_ptr<AggregateNode>& aggregate_node,
+                                                                  const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   if (expr.opType == hsql::kOpOr) {
@@ -487,7 +485,7 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_having(
  * This is use by _translate_having to add missing aggregations to the Aggregate operator.
  */
 std::vector<std::shared_ptr<Expression>> SQLTranslator::_retrieve_having_aggregates(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
   std::vector<std::shared_ptr<Expression>> expressions;
 
   if (expr.type == hsql::kExprFunctionRef) {
@@ -515,8 +513,8 @@ std::vector<std::shared_ptr<Expression>> SQLTranslator::_retrieve_having_aggrega
   return expressions;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_aggregate(
-    const hsql::SelectStatement& select, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
+    const hsql::SelectStatement& select, const std::shared_ptr<AbstractLQPNode>& input_node) {
   /**
    * This function creates the following node structure:
    *
@@ -645,8 +643,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_aggregat
   return projection_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_projection(
-    const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
+    const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractLQPNode>& input_node) {
   std::vector<std::shared_ptr<Expression>> column_expressions;
 
   for (const auto* hsql_expr : select_list) {
@@ -683,9 +681,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_projecti
   return projection_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*>& order_list,
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
+    const std::vector<hsql::OrderDescription*>& order_list, const std::shared_ptr<AbstractLQPNode>& input_node) {
   if (order_list.empty()) {
     return input_node;
   }
@@ -711,17 +708,17 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_order_by
   return sort_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_limit(
-    const hsql::LimitDescription& limit, const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::LimitDescription& limit,
+                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
   auto limit_node = std::make_shared<LimitNode>(limit.limit);
   limit_node->set_left_child(input_node);
   return limit_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_predicate(
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     const hsql::Expr& hsql_expr, bool allow_function_columns,
     const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) const {
+    const std::shared_ptr<AbstractLQPNode>& input_node) const {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 
   /**
@@ -833,8 +830,7 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_predicat
   return predicate_node;
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_show(
-    const hsql::ShowStatement& show_statement) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
       return std::make_shared<ShowTablesNode>();
@@ -847,8 +843,8 @@ std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_translate_show(
   return {};
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> SQLTranslator::_validate_if_active(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
+    const std::shared_ptr<AbstractLQPNode>& input_node) {
   if (!_validate) return input_node;
 
   auto validate_node = std::make_shared<ValidateNode>();

@@ -62,9 +62,9 @@ struct NamedColumnReference {
  * We decided to have mutable Nodes for now. By that we can apply rules without creating new nodes for every
  * optimization rule.
  */
-class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<AbstractLogicalQueryPlanNode> {
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  explicit AbstractLogicalQueryPlanNode(LQPNodeType node_type);
+  explicit AbstractLQPNode(LQPNodeType node_type);
 
   /**
    * @returns whether the Optimizer should consider this node
@@ -84,31 +84,31 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
   /**
    * Locks all parents and returns them as shared_ptrs
    */
-  std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>> parents() const;
+  std::vector<std::shared_ptr<AbstractLQPNode>> parents() const;
 
-  void remove_parent(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent);
+  void remove_parent(const std::shared_ptr<AbstractLQPNode>& parent);
   void clear_parents();
 
   /**
    * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
-  LQPChildSide get_child_side(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent) const;
+  LQPChildSide get_child_side(const std::shared_ptr<AbstractLQPNode>& parent) const;
 
   /**
    * @returns {get_child_side(parents()[0], ..., get_child_side(parents()[n-1])}
    */
   std::vector<LQPChildSide> get_child_sides() const;
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> left_child() const;
-  void set_left_child(const std::shared_ptr<AbstractLogicalQueryPlanNode>& left);
+  std::shared_ptr<AbstractLQPNode> left_child() const;
+  void set_left_child(const std::shared_ptr<AbstractLQPNode>& left);
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> right_child() const;
-  void set_right_child(const std::shared_ptr<AbstractLogicalQueryPlanNode>& right);
+  std::shared_ptr<AbstractLQPNode> right_child() const;
+  void set_right_child(const std::shared_ptr<AbstractLQPNode>& right);
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> child(LQPChildSide side) const;
+  std::shared_ptr<AbstractLQPNode> child(LQPChildSide side) const;
 
-  void set_child(LQPChildSide side, const std::shared_ptr<AbstractLogicalQueryPlanNode>& child);
+  void set_child(LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child);
   // @}
 
   LQPNodeType type() const;
@@ -117,19 +117,19 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
   /**
    * These functions provide access to statistics for this particular node.
    *
-   * AbstractLogicalQueryPlanNode::derive_statistics_from() calculates new statistics for this node as they would appear if
+   * AbstractLQPNode::derive_statistics_from() calculates new statistics for this node as they would appear if
    * left_child and right_child WERE its children. This works for the actual children of this node during the lazy
    * initialization in get_statistics() as well as e.g. in an optimizer rule
    * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
    * that shall be reordered with the same reference node.
    *
-   * Inheriting nodes are free to override AbstractLogicalQueryPlanNode::derive_statistics_from().
+   * Inheriting nodes are free to override AbstractLQPNode::derive_statistics_from().
    */
   void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
   const std::shared_ptr<TableStatistics> get_statistics();
   virtual std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child = nullptr) const;
+      const std::shared_ptr<AbstractLQPNode>& left_child,
+      const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const;
   // @}
 
   /**
@@ -153,11 +153,11 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
    * discussion
    * on this.
    *
-   * AbstractLogicalQueryPlanNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
+   * AbstractLQPNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
    * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise std::nullopt
    * is returned.
    *
-   * AbstractLogicalQueryPlanNode::get_column_id_by_named_column_reference() is more strict and will fail if the
+   * AbstractLQPNode::get_column_id_by_named_column_reference() is more strict and will fail if the
    * @param named_column_reference cannot be found.
    *
    * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
@@ -222,7 +222,7 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
    * Replaces 'this' node with @param replacement_node node.
    * @pre replacement_node has neither parent nor children
    */
-  void replace_with(const std::shared_ptr<AbstractLogicalQueryPlanNode>& replacement_node);
+  void replace_with(const std::shared_ptr<AbstractLQPNode>& replacement_node);
 
   /**
    * Sets the table alias for this subtree, see _table_alias for details.
@@ -291,8 +291,8 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
-  std::vector<std::weak_ptr<AbstractLogicalQueryPlanNode>> _parents;
-  std::array<std::shared_ptr<AbstractLogicalQueryPlanNode>, 2> _children;
+  std::vector<std::weak_ptr<AbstractLQPNode>> _parents;
+  std::array<std::shared_ptr<AbstractLQPNode>, 2> _children;
 
   std::shared_ptr<TableStatistics> _statistics;
 
@@ -302,11 +302,11 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
   void _child_changed();
 
   /**
-   * Actual impl of AbstractLogicalQueryPlanNode::print(). AbstractLogicalQueryPlanNode::print() just creates the `levels` and `id_by_node`
+   * Actual impl of AbstractLQPNode::print(). AbstractLQPNode::print() just creates the `levels` and `id_by_node`
    * instances used during the recursion.
    */
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
-                   std::unordered_map<std::shared_ptr<const AbstractLogicalQueryPlanNode>, size_t>& id_by_node,
+                   std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
                    size_t& id_counter) const;
 
   // @{
@@ -314,8 +314,8 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
    * Add or remove a parent without manipulating this parents child ptr. For internal usage in set_left_child(),
    * set_right_child(), remove_parent
    */
-  void _remove_parent_pointer(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent);
-  void _add_parent_pointer(const std::shared_ptr<AbstractLogicalQueryPlanNode>& parent);
+  void _remove_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
+  void _add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
   // @}
 };
 

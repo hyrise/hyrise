@@ -4,14 +4,14 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
 /**
  * Node type to represent insertion of rows into a table.
  */
-class InsertNode : public AbstractLogicalQueryPlanNode {
+class InsertNode : public AbstractLQPNode {
  public:
   explicit InsertNode(const std::string table_name);
 

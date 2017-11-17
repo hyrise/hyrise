@@ -2,8 +2,7 @@
 
 namespace opossum {
 
-AbstractNonOptimizableLQPNode::AbstractNonOptimizableLQPNode(LQPNodeType node_type)
-    : AbstractLogicalQueryPlanNode(node_type) {}
+AbstractNonOptimizableLQPNode::AbstractNonOptimizableLQPNode(LQPNodeType node_type) : AbstractLQPNode(node_type) {}
 
 bool AbstractNonOptimizableLQPNode::is_optimizable() const { return false; }
 

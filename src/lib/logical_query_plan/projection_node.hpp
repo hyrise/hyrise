@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -16,7 +16,7 @@ struct ColumnID;
  * Node type to represent common projections, i.e. without any aggregate functionality.
  * It is, however, responsible to calculate arithmetic expressions.
  */
-class ProjectionNode : public AbstractLogicalQueryPlanNode {
+class ProjectionNode : public AbstractLQPNode {
  public:
   explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
 

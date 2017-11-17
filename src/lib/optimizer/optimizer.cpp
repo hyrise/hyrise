@@ -18,8 +18,7 @@ Optimizer::Optimizer() {
   _rules.emplace_back(std::make_shared<JoinDetectionRule>());
 }
 
-std::shared_ptr<AbstractLogicalQueryPlanNode> Optimizer::optimize(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& input) const {
+std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
   const auto root_node = std::make_shared<LogicalPlanRootNode>();
