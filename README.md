@@ -104,7 +104,7 @@ Contact: firstname.lastname@hpi.de
 -	Sven     Lehmann
 -	Jan      Mattfeld
 -	Arne     Mayer
--   Torben   Meyer
+-	Torben   Meyer
 -	Leander  Neiß
 -	David    Schumann
 -	Daniel   Stolpe
