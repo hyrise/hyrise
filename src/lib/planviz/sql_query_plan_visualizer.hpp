@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 
-#include "sql/sql_query_plan.hpp"
 #include "planviz/abstract_visualizer.hpp"
+#include "sql/sql_query_plan.hpp"
 
 namespace opossum {
 
@@ -17,8 +17,10 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
     _default_edge.color = GraphvizColor::Black;
   }
 
-  SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info, VizEdgeInfo edge_info)
-  : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info), std::move(edge_info)) {}
+  SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                         VizEdgeInfo edge_info)
+      : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
+                           std::move(edge_info)) {}
 
  protected:
   void _build_graph(const SQLQueryPlan& plan) override {
@@ -27,7 +29,6 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
       _build_subtree(root);
     }
   }
-
 
   void _build_subtree(const std::shared_ptr<const AbstractOperator>& op) {
     _add_operator(op);
@@ -47,7 +48,6 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
     }
   }
 
-
   void _build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
                        const std::shared_ptr<const AbstractOperator>& to) {
     VizEdgeInfo info = _default_edge;
@@ -56,7 +56,6 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
       // the input operator was executed, print the number of rows
       info.label = std::to_string(output->row_count()) + " row(s)";
       info.pen_width = static_cast<uint8_t>(std::fmax(1, std::ceil(std::log10(output->row_count()) / 2)));
-
     }
 
     _add_edge(from, to, std::move(info));
@@ -75,7 +74,6 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
     info.label = label;
     _add_vertex(op, info);
   }
-
 };
 
 }  // namespace opossum
