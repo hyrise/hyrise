@@ -7,12 +7,12 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "optimizer/abstract_syntax_tree/join_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
-#include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/abstract_syntax_tree/union_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/expression.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
@@ -22,7 +22,7 @@
 
 #include "utils/assert.hpp"
 
-#include "optimizer/abstract_syntax_tree/mock_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 
 namespace opossum {
 
@@ -193,7 +193,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
 
-  // Setup first AST
+  // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpLessThan, 20);
   predicate_node_0->set_left_child(stored_table_node);
@@ -205,7 +205,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
-  // Setup second AST
+  // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
   predicate_node_2->set_left_child(stored_table_node);

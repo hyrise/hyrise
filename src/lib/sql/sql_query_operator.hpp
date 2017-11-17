@@ -89,7 +89,7 @@ class SQLQueryOperator : public AbstractOperator {
   // True, if the generated plan will automatically be scheduled by the operator.
   const bool _schedule_plan;
 
-  // True, if the SQLToASTTranslator adds validation nodes.
+  // True, if the SQLTranslator adds validation nodes.
   const bool _validate;
 
   // True, if the parse tree was obtained from the cache.

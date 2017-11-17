@@ -8,16 +8,16 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_planner.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
