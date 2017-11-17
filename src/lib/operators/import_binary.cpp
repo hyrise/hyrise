@@ -16,6 +16,8 @@
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
+#include "constant_mappings.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -107,7 +109,9 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 
   // Add columns to table
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    table->add_column_definition(column_names[column_id], data_types[column_id], column_nullables[column_id]);
+    const auto type_symbol = type_symbol_to_string.right.at(data_types[column_id]);
+
+    table->add_column_definition(column_names[column_id], type_symbol, column_nullables[column_id]);
   }
 
   return std::make_pair(table, chunk_count);
@@ -125,15 +129,13 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
 }
 
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count,
-                                                         const std::string& data_type, bool is_nullable) {
+                                                         TypeSymbol type_symbol, bool is_nullable) {
   std::shared_ptr<BaseColumn> result;
-  hana::for_each(column_types, [&](auto x) {
-    if (std::string(hana::first(x)) == data_type) {
-      using column_type = typename decltype(+hana::second(x))::type;
-      result = _import_column<column_type>(file, row_count, is_nullable);
-    }
+  resolve_data_type(type_symbol, [&](auto type) {
+    using ColumnType = typename decltype(type)::type;
+    result = _import_column<ColumnType>(file, row_count, is_nullable);
   });
-  DebugAssert(static_cast<bool>(result), ("unknown type " + data_type));
+
   return result;
 }
 

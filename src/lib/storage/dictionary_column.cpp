@@ -159,6 +159,6 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
   }
 }
 
-EXPLICITLY_INSTANTIATE_COLUMN_TYPES(DictionaryColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 
 }  // namespace opossum

@@ -7,6 +7,8 @@
 
 #include "storage/table.hpp"
 
+#include "constant_mappings.hpp"
+
 namespace opossum {
 
 std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size) {
@@ -30,7 +32,8 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
   std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
   for (size_t i = 0; i < col_names.size(); i++) {
-    test_table->add_column(col_names[i], col_types[i], col_nullable[i]);
+    const auto type_symbol = type_symbol_to_string.right.at(col_types[i]);
+    test_table->add_column(col_names[i], type_symbol, col_nullable[i]);
   }
 
   while (std::getline(infile, line)) {

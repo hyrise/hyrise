@@ -18,6 +18,7 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -88,7 +89,9 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
     auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
 
-    table->add_column_definition(column_name, column_type, column_meta.nullable);
+    const auto type_symbol = type_symbol_to_string.right.at(column_type);
+
+    table->add_column_definition(column_name, type_symbol, column_meta.nullable);
   }
 
   return table;
@@ -157,7 +160,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
     const auto column_type = table.column_type(column_id);
 
     converters.emplace_back(
-        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
+        make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
   }
 
   size_t start = 0;

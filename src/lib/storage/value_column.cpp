@@ -172,6 +172,6 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
   }
 }
 
-EXPLICITLY_INSTANTIATE_COLUMN_TYPES(ValueColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);
 
 }  // namespace opossum

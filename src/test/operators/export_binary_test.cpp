@@ -56,8 +56,8 @@ class OperatorsExportBinaryTest : public BaseTest {
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   table = std::make_shared<Table>(30000);
-  table->add_column("FirstColumn", "int");
-  table->add_column("SecondColumn", "string");
+  table->add_column("FirstColumn", TypeSymbol::Int);
+  table->add_column("SecondColumn", TypeSymbol::String);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
@@ -69,7 +69,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
 
 TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   auto table = std::make_shared<Table>(5);
-  table->add_column("a", "float");
+  table->add_column("a", TypeSymbol::Float);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -84,7 +84,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
 }
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   auto table = std::make_shared<Table>(2);
-  table->add_column("a", "float");
+  table->add_column("a", TypeSymbol::Float);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -100,7 +100,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
   auto table = std::make_shared<Table>(5);
-  table->add_column("a", "string");
+  table->add_column("a", TypeSymbol::String);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -117,7 +117,7 @@ TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
 
 TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   auto table = std::make_shared<Table>(10);
-  table->add_column("a", "string");
+  table->add_column("a", TypeSymbol::String);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -136,11 +136,11 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", "string");
-  table->add_column("b", "int");
-  table->add_column("c", "long");
-  table->add_column("d", "float");
-  table->add_column("e", "double");
+  table->add_column("a", TypeSymbol::String);
+  table->add_column("b", TypeSymbol::Int);
+  table->add_column("c", TypeSymbol::Long);
+  table->add_column("d", TypeSymbol::Float);
+  table->add_column("e", TypeSymbol::Double);
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -156,11 +156,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
 }
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", "string");
-  table->add_column("b", "int");
-  table->add_column("c", "long");
-  table->add_column("d", "float");
-  table->add_column("e", "double");
+  table->add_column("a", TypeSymbol::String);
+  table->add_column("b", TypeSymbol::Int);
+  table->add_column("c", TypeSymbol::Long);
+  table->add_column("d", TypeSymbol::Float);
+  table->add_column("e", TypeSymbol::Double);
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -179,11 +179,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
 }
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", "string");
-  table->add_column("b", "int");
-  table->add_column("c", "long");
-  table->add_column("d", "float");
-  table->add_column("e", "double");
+  table->add_column("a", TypeSymbol::String);
+  table->add_column("b", TypeSymbol::Int);
+  table->add_column("c", TypeSymbol::Long);
+  table->add_column("d", TypeSymbol::Float);
+  table->add_column("e", TypeSymbol::Double);
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -205,11 +205,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 // They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
 TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
   auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", "string");
-  table->add_column("b", "int");
-  table->add_column("c", "long");
-  table->add_column("d", "float");
-  table->add_column("e", "double");
+  table->add_column("a", TypeSymbol::String);
+  table->add_column("b", TypeSymbol::Int);
+  table->add_column("c", TypeSymbol::Long);
+  table->add_column("d", TypeSymbol::Float);
+  table->add_column("e", TypeSymbol::Double);
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -230,7 +230,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
   auto table = std::make_shared<opossum::Table>(10);
-  table->add_column("a", "string");
+  table->add_column("a", TypeSymbol::String);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -249,7 +249,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   auto table = std::make_shared<opossum::Table>(10);
-  table->add_column("a", "string");
+  table->add_column("a", TypeSymbol::String);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -270,11 +270,11 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   auto table = std::make_shared<opossum::Table>();
-  table->add_column("a", "int", true);
-  table->add_column("b", "float", true);
-  table->add_column("c", "long", true);
-  table->add_column("d", "string", true);
-  table->add_column("e", "double", true);
+  table->add_column("a", TypeSymbol::Int, true);
+  table->add_column("b", TypeSymbol::Float, true);
+  table->add_column("c", TypeSymbol::Long, true);
+  table->add_column("d", TypeSymbol::String, true);
+  table->add_column("e", TypeSymbol::Double, true);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -294,11 +294,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   auto table = std::make_shared<opossum::Table>();
-  table->add_column("a", "int", true);
-  table->add_column("b", "float", true);
-  table->add_column("c", "long", true);
-  table->add_column("d", "string", true);
-  table->add_column("e", "double", true);
+  table->add_column("a", TypeSymbol::Int, true);
+  table->add_column("b", TypeSymbol::Float, true);
+  table->add_column("c", TypeSymbol::Long, true);
+  table->add_column("d", TypeSymbol::String, true);
+  table->add_column("e", TypeSymbol::Double, true);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

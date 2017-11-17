@@ -31,7 +31,7 @@ IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, con
 const std::string IndexColumnScan::name() const { return "IndexColumnScan"; }
 
 std::shared_ptr<const Table> IndexColumnScan::_on_execute() {
-  _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, IndexColumnScanImpl>(
+  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, IndexColumnScanImpl>(
       _input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
   return _impl->_on_execute();
 }

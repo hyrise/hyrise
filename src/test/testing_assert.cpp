@@ -11,6 +11,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
+#include "constant_mappings.hpp"
 
 namespace {
 
@@ -76,28 +77,32 @@ namespace opossum {
   }
 
   //  - column names and types
-  std::string left_col_type, right_col_type;
+  TypeSymbol left_col_type, right_col_type;
   for (ColumnID col_id{0}; col_id < tright.column_count(); ++col_id) {
     left_col_type = tleft.column_type(col_id);
     right_col_type = tright.column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (!strict_types) {
-      if (left_col_type == "double") {
-        left_col_type = "float";
-      } else if (left_col_type == "long") {
-        left_col_type = "int";
+      if (left_col_type == TypeSymbol::Double) {
+        left_col_type = TypeSymbol::Float;
+      } else if (left_col_type == TypeSymbol::Long) {
+        left_col_type = TypeSymbol::Int;
       }
 
-      if (right_col_type == "double") {
-        right_col_type = "float";
-      } else if (right_col_type == "long") {
-        right_col_type = "int";
+      if (right_col_type == TypeSymbol::Double) {
+        right_col_type = TypeSymbol::Float;
+      } else if (right_col_type == TypeSymbol::Long) {
+        right_col_type = TypeSymbol::Int;
       }
     }
     if (left_col_type != right_col_type || tleft.column_name(col_id) != tright.column_name(col_id)) {
       std::cout << "Column with ID " << col_id << " is different" << std::endl;
-      std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
-      std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;
+
+      const auto left_column_type_string = type_symbol_to_string.left.at(tleft.column_type(col_id));
+      const auto right_column_type_string = type_symbol_to_string.left.at(tright.column_type(col_id));
+
+      std::cout << "Got: " << tleft.column_name(col_id) << " (" << left_column_type_string << ")" << std::endl;
+      std::cout << "Expected: " << tright.column_name(col_id) << " (" << right_column_type_string << ")" << std::endl;
       print_tables();
       return ::testing::AssertionFailure() << "Table schema is different.";
     }
@@ -122,28 +127,28 @@ namespace opossum {
     for (ColumnID col{0}; col < left[row].size(); col++) {
       if (is_null(left[row][col]) || is_null(right[row][col])) {
         EXPECT_TRUE(is_null(left[row][col]) && is_null(right[row][col]));
-      } else if (tleft.column_type(col) == "float") {
+      } else if (tleft.column_type(col) == TypeSymbol::Float) {
         auto left_val = type_cast<float>(left[row][col]);
         auto right_val = type_cast<float>(right[row][col]);
 
         if (strict_types) {
-          EXPECT_EQ(tright.column_type(col), "float");
+          EXPECT_EQ(tright.column_type(col), TypeSymbol::Float);
         } else {
-          EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+          EXPECT_TRUE(tright.column_type(col) == TypeSymbol::Float || tright.column_type(col) == TypeSymbol::Double);
         }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
-      } else if (tleft.column_type(col) == "double") {
+      } else if (tleft.column_type(col) == TypeSymbol::Double) {
         auto left_val = type_cast<double>(left[row][col]);
         auto right_val = type_cast<double>(right[row][col]);
 
         if (strict_types) {
-          EXPECT_EQ(tright.column_type(col), "double");
+          EXPECT_EQ(tright.column_type(col), TypeSymbol::Double);
         } else {
-          EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+          EXPECT_TRUE(tright.column_type(col) == TypeSymbol::Float || tright.column_type(col) == TypeSymbol::Double);
         }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
       } else {
-        if (!strict_types && (tleft.column_type(col) == "int" || tleft.column_type(col) == "long")) {
+        if (!strict_types && (tleft.column_type(col) == TypeSymbol::Int || tleft.column_type(col) == TypeSymbol::Long)) {
           auto left_val = type_cast<int64_t>(left[row][col]);
           auto right_val = type_cast<int64_t>(right[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;

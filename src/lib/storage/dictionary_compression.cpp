@@ -108,13 +108,13 @@ class ColumnCompressor : public ColumnCompressorBase {
   }
 };
 
-std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(const std::string& column_type,
+std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(TypeSymbol column_type,
                                                                    const std::shared_ptr<BaseColumn>& column) {
-  auto compressor = make_shared_by_column_type<ColumnCompressorBase, ColumnCompressor>(column_type);
+  auto compressor = make_shared_by_data_type<ColumnCompressorBase, ColumnCompressor>(column_type);
   return compressor->compress_column(column);
 }
 
-void DictionaryCompression::compress_chunk(const std::vector<std::string>& column_types, Chunk& chunk) {
+void DictionaryCompression::compress_chunk(const std::vector<TypeSymbol>& column_types, Chunk& chunk) {
   DebugAssert((column_types.size() == chunk.column_count()),
               "Number of column types does not match the chunk’s column count.");
 

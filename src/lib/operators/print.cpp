@@ -11,6 +11,7 @@
 #include "storage/base_column.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -44,7 +45,8 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
   for (ColumnID col{0}; col < _input_table_left()->column_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << _input_table_left()->column_type(col) << std::setw(0);
+    const auto type_string = type_symbol_to_string.left.at(_input_table_left()->column_type(col));
+    _out << "|" << std::setw(widths[col]) << type_string << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";

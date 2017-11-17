@@ -73,7 +73,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     if (column_expression->is_null_literal()) {
       // in case of a NULL literal, simply add a nullable int column
-      output->add_column_definition(name, "int", true);
+      output->add_column_definition(name, TypeSymbol::Int, true);
     } else {
       const auto type = _get_type_of_expression(column_expression, _input_table_left());
       output->add_column_definition(name, type);
@@ -101,10 +101,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   return output;
 }
 
-const std::string Projection::_get_type_of_expression(const std::shared_ptr<Expression>& expression,
-                                                      const std::shared_ptr<const Table>& table) {
+TypeSymbol Projection::_get_type_of_expression(const std::shared_ptr<Expression>& expression,
+                                               const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
-    return type_string_from_all_type_variant(expression->value());
+    return type_symbol_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::Column) {
     return table->column_type(expression->column_id());

@@ -13,6 +13,7 @@
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "constant_mappings.hpp"
 
 namespace {
 
@@ -140,7 +141,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = table->column_type(column_id);
+    column_types[column_id] = type_symbol_to_string.left.at(table->column_type(column_id));
     column_names[column_id] = table->column_name(column_id);
     column_nullables[column_id] = table->column_is_nullable(column_id);
   }
@@ -158,7 +159,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID col_id{0}; col_id < chunk.column_count(); col_id++) {
-    auto visitor = make_unique_by_column_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
+    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
     chunk.get_column(col_id)->visit(*visitor, context);
   }
 }

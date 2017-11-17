@@ -12,6 +12,8 @@
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
+#include "constant_mappings.hpp"
+
 namespace opossum {
 
 ShowColumns::ShowColumns(const std::string& table_name) : _table_name(table_name) {}
@@ -24,9 +26,9 @@ std::shared_ptr<AbstractOperator> ShowColumns::recreate(const std::vector<AllPar
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
   auto out_table = std::make_shared<Table>();
-  out_table->add_column_definition("column_name", "string");
-  out_table->add_column_definition("column_type", "string");
-  out_table->add_column_definition("is_nullable", "int");
+  out_table->add_column_definition("column_name", TypeSymbol::String);
+  out_table->add_column_definition("column_type", TypeSymbol::String);
+  out_table->add_column_definition("is_nullable", TypeSymbol::Int);
 
   const auto table = StorageManager::get().get_table(_table_name);
   Chunk chunk;
@@ -37,8 +39,13 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   chunk.add_column(vc_names);
 
   const auto& column_types = table->column_types();
-  const auto vc_types = std::make_shared<ValueColumn<std::string>>(
-      tbb::concurrent_vector<std::string>(column_types.begin(), column_types.end()));
+
+  auto type_strings = tbb::concurrent_vector<std::string>{};
+  for (const auto column_type : column_types) {
+    type_strings.push_back(type_symbol_to_string.left.at(column_type));
+  }
+
+  const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(type_strings));
   chunk.add_column(vc_types);
 
   const auto& column_nullables = table->column_nullables();

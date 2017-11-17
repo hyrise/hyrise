@@ -61,7 +61,7 @@ class AbstractBenchmarkTableGenerator {
      */
     bool is_first_column = table->column_count() == 0;
 
-    auto data_type_name = opossum::type_string_from_type<T>();
+    auto data_type_name = opossum::type_symbol_from_type<T>();
     table->add_column_definition(name, data_type_name);
 
     /**
