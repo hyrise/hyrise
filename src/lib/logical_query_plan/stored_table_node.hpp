@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -16,7 +16,7 @@ class TableStatistics;
  * This node type represents a table stored by the table manager.
  * They are the leafs of every meaningful LQP tree.
  */
-class StoredTableNode : public AbstractLogicalQueryPlanNode {
+class StoredTableNode : public AbstractLQPNode {
  public:
   explicit StoredTableNode(const std::string& table_name);
 
@@ -27,8 +27,8 @@ class StoredTableNode : public AbstractLogicalQueryPlanNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child = nullptr,
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
+      const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
   bool knows_table(const std::string& table_name) const override;
 

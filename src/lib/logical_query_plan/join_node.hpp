@@ -8,7 +8,7 @@
 
 #include "types.hpp"
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -16,7 +16,7 @@ namespace opossum {
  * This node type is used to represent any type of Join, including cross products.
  * The idea is that the optimizer is able to decide on the physical join implementation.
  */
-class JoinNode : public AbstractLogicalQueryPlanNode {
+class JoinNode : public AbstractLQPNode {
  public:
   explicit JoinNode(const JoinMode join_mode);
 
@@ -31,8 +31,8 @@ class JoinNode : public AbstractLogicalQueryPlanNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& left_child,
+      const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
   bool knows_table(const std::string& table_name) const override;
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;

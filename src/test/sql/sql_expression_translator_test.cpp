@@ -79,7 +79,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
   }
 
   SQLExpressionTranslator _translator;
-  std::shared_ptr<AbstractLogicalQueryPlanNode> _stored_table_node;
+  std::shared_ptr<AbstractLQPNode> _stored_table_node;
 };
 
 TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {

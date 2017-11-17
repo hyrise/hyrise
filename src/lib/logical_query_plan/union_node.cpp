@@ -11,7 +11,7 @@
 namespace opossum {
 
 UnionNode::UnionNode(UnionMode union_mode)
-    : AbstractLogicalQueryPlanNode(LQPNodeType::Union), _union_mode(union_mode) {}
+    : AbstractLQPNode(LQPNodeType::Union), _union_mode(union_mode) {}
 
 UnionMode UnionNode::union_mode() const { return _union_mode; }
 
@@ -50,8 +50,8 @@ const std::vector<ColumnID>& UnionNode::output_column_ids_to_input_column_ids() 
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& left_child,
+    const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
   return nullptr;  // Return something
 }

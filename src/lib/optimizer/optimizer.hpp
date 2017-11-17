@@ -6,7 +6,7 @@
 namespace opossum {
 
 class AbstractRule;
-class AbstractLogicalQueryPlanNode;
+class AbstractLQPNode;
 
 /**
  * Applies (currently: all) optimization rules to an LQP.
@@ -17,8 +17,8 @@ class Optimizer final {
 
   Optimizer();
 
-  std::shared_ptr<AbstractLogicalQueryPlanNode> optimize(
-      const std::shared_ptr<AbstractLogicalQueryPlanNode>& input) const;
+  std::shared_ptr<AbstractLQPNode> optimize(
+      const std::shared_ptr<AbstractLQPNode>& input) const;
 
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;

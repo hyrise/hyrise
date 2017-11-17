@@ -2,14 +2,14 @@
 
 #include <string>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
 /**
  * This node type represents limiting a result to a certain number of rows (LIMIT operator).
  */
-class LimitNode : public AbstractLogicalQueryPlanNode {
+class LimitNode : public AbstractLQPNode {
  public:
   explicit LimitNode(const size_t num_rows);
 

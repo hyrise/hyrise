@@ -59,7 +59,7 @@ TEST_F(LogicalQueryPlanTest, SimpleParentTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{predicate_node});
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_TRUE(predicate_node->parents().empty());
@@ -69,7 +69,7 @@ TEST_F(LogicalQueryPlanTest, SimpleParentTest) {
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{projection_node});
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node);
   ASSERT_EQ(projection_node->right_child(), nullptr);
   ASSERT_TRUE(projection_node->parents().empty());
@@ -83,7 +83,7 @@ TEST_F(LogicalQueryPlanTest, SimpleClearParentsTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{predicate_node});
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_TRUE(predicate_node->parents().empty());
@@ -106,7 +106,7 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
-  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{predicate_node});
+  ASSERT_EQ(table_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{predicate_node});
   ASSERT_EQ(predicate_node->left_child(), table_node);
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_TRUE(predicate_node->parents().empty());
@@ -114,7 +114,7 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
   const auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, "b");
   predicate_node_2->set_left_child(predicate_node);
 
-  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{predicate_node_2});
+  ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{predicate_node_2});
   ASSERT_EQ(predicate_node_2->left_child(), predicate_node);
   ASSERT_EQ(predicate_node_2->right_child(), nullptr);
   ASSERT_TRUE(predicate_node_2->parents().empty());
@@ -124,7 +124,7 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
-  ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{projection_node});
+  ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{projection_node});
   ASSERT_EQ(projection_node->left_child(), predicate_node_2);
   ASSERT_EQ(projection_node->right_child(), nullptr);
   ASSERT_TRUE(projection_node->parents().empty());
@@ -148,8 +148,8 @@ TEST_F(LogicalQueryPlanTest, TwoInputsTest) {
   ASSERT_EQ(join_node->right_child(), table_b_node);
   ASSERT_TRUE(join_node->parents().empty());
 
-  ASSERT_EQ(table_a_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{join_node});
-  ASSERT_EQ(table_b_node->parents(), std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>{join_node});
+  ASSERT_EQ(table_a_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{join_node});
+  ASSERT_EQ(table_b_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{join_node});
 }
 
 TEST_F(LogicalQueryPlanTest, AliasedSubqueryTest) {

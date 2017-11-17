@@ -13,7 +13,7 @@ class Expression;
 
 UpdateNode::UpdateNode(const std::string& table_name,
                        const std::vector<std::shared_ptr<Expression>>& column_expressions)
-    : AbstractLogicalQueryPlanNode(LQPNodeType::Update),
+    : AbstractLQPNode(LQPNodeType::Update),
       _table_name(table_name),
       _column_expressions(column_expressions) {}
 

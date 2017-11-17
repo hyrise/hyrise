@@ -6,7 +6,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -40,7 +40,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _rule = std::make_shared<JoinDetectionRule>();
   }
 
-  uint8_t _count_cross_joins(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) {
+  uint8_t _count_cross_joins(const std::shared_ptr<AbstractLQPNode>& node) {
     uint8_t count = 0u;
     if (node->type() == LQPNodeType::Join) {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(node);

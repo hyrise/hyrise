@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -12,7 +12,7 @@ namespace opossum {
  * This node type represents a dummy table that is used to project literals.
  * See Projection::DummyTable for more details.
  */
-class DummyTableNode : public AbstractLogicalQueryPlanNode {
+class DummyTableNode : public AbstractLQPNode {
  public:
   DummyTableNode();
 

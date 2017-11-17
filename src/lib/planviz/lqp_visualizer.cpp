@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-void LQPVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalQueryPlanNode>>& lqp_roots,
+void LQPVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots,
                               const std::string& dot_filename, const std::string& img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
@@ -43,7 +43,7 @@ void LQPVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLogicalQ
   // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
 }
 
-void LQPVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node, std::ofstream& file) {
+void LQPVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLQPNode>& node, std::ofstream& file) {
   file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
        << boost::replace_all_copy(node->description(), "\"", "\\\"") << "\"]" << std::endl;
 
@@ -58,8 +58,8 @@ void LQPVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLogicalQuer
   }
 }
 
-void LQPVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLogicalQueryPlanNode>& from,
-                                        const std::shared_ptr<AbstractLogicalQueryPlanNode>& to, std::ofstream& file) {
+void LQPVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
+                                        const std::shared_ptr<AbstractLQPNode>& to, std::ofstream& file) {
   float row_count, row_percentage = 100.0f;
   uint32_t pen_width;
 

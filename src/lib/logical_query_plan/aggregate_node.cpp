@@ -15,7 +15,7 @@ namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregate_expressions,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractLogicalQueryPlanNode(LQPNodeType::Aggregate),
+    : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_ids(groupby_column_ids) {
   for ([[gnu::unused]] const auto& expression : aggregate_expressions) {

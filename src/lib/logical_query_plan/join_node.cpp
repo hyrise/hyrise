@@ -16,14 +16,14 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode) : AbstractLogicalQueryPlanNode(LQPNodeType::Join), _join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), _join_mode(join_mode) {
   DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID>& join_column_ids,
                    const ScanType scan_type)
-    : AbstractLogicalQueryPlanNode(LQPNodeType::Join),
+    : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
       _join_column_ids(join_column_ids),
       _scan_type(scan_type) {
@@ -132,8 +132,8 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& left_child,
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& left_child,
+    const std::shared_ptr<AbstractLQPNode>& right_child) const {
   if (_join_mode == JoinMode::Cross) {
     return left_child->get_statistics()->generate_cross_join_statistics(right_child->get_statistics());
   } else {

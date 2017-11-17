@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -13,7 +13,7 @@ namespace opossum {
  * Node that represents a table that has no data backing it, but may provide (mocked) statistics. Intended for usage in
  * tests (e.g. general LQP tests, optimizer tests that just rely on statistics and not actual data) and the playground
  */
-class MockNode : public AbstractLogicalQueryPlanNode {
+class MockNode : public AbstractLQPNode {
  public:
   MockNode();
   explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);

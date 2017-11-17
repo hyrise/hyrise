@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "logical_query_plan/abstract_logical_query_plan_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -178,7 +178,7 @@ void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const T
   ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node, ScanType scanType,
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scanType,
                             ColumnID left_column_id, ColumnID right_column_id) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -187,10 +187,10 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLogicalQueryPlanNode>&
   EXPECT_EQ(join_node->join_column_ids(), std::make_pair(left_column_id, right_column_id));
 }
 
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) {}
+void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLogicalQueryPlanNode>& parent, LQPChildSide child_side,
-                   const std::shared_ptr<const AbstractLogicalQueryPlanNode>& child) {
+bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
+                   const std::shared_ptr<const AbstractLQPNode>& child) {
   auto parents = child->parents();
   for (const auto& parent2 : parents) {
     if (!parent2) {

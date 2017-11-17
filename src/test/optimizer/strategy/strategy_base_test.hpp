@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class AbstractLogicalQueryPlanNode;
+class AbstractLQPNode;
 class AbstractRule;
 
 class StrategyBaseTest : public BaseTest {
@@ -18,8 +18,8 @@ class StrategyBaseTest : public BaseTest {
    * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and returns its child
    * after applying the rule
    */
-  std::shared_ptr<AbstractLogicalQueryPlanNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                                           const std::shared_ptr<AbstractLogicalQueryPlanNode>& input);
+  std::shared_ptr<AbstractLQPNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
+                                                           const std::shared_ptr<AbstractLQPNode>& input);
 };
 
 }  // namespace opossum

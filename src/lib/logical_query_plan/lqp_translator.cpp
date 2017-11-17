@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "constant_mappings.hpp"
 #include "delete_node.hpp"
@@ -43,18 +43,18 @@
 namespace opossum {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   return _translate_by_node_type(node->type(), node);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   return std::make_shared<GetTable>(table_node->table_name());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
@@ -75,7 +75,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto left_child = node->left_child();
   const auto input_operator = translate_node(node->left_child());
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
@@ -83,7 +83,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   auto input_operator = translate_node(node->left_child());
 
@@ -108,7 +108,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_left_operator = translate_node(node->left_child());
   const auto input_right_operator = translate_node(node->right_child());
 
@@ -132,7 +132,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
@@ -238,28 +238,28 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
   return std::make_shared<Limit>(input_operator, limit_node->num_rows());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
   return std::make_shared<Insert>(insert_node->table_name(), input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
   return std::make_shared<Delete>(delete_node->table_name(), input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
@@ -270,7 +270,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
 
   const auto input_operator_left = translate_node(node->left_child());
@@ -287,31 +287,31 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   return std::make_shared<Validate>(input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   DebugAssert(node->left_child() == nullptr, "ShowTables should not have an input operator.");
   return std::make_shared<ShowTables>();
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   DebugAssert(node->left_child() == nullptr, "ShowColumns should not have an input operator.");
   const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
   return std::make_shared<ShowColumns>(show_columns_node->table_name());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
-    const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
-    LQPNodeType type, const std::shared_ptr<AbstractLogicalQueryPlanNode>& node) const {
+    LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // SQL operators
     case LQPNodeType::StoredTable:

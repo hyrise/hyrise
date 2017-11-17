@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_logical_query_plan_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -8,7 +8,7 @@ namespace opossum {
  * This class is a specialization used for nodes that are not intended to be optimized.
  * The current use case is nodes representing management commands, e.g. SHOW TABLES.
  */
-class AbstractNonOptimizableLQPNode : public AbstractLogicalQueryPlanNode {
+class AbstractNonOptimizableLQPNode : public AbstractLQPNode {
  public:
   explicit AbstractNonOptimizableLQPNode(LQPNodeType node_type);
 
