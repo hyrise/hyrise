@@ -127,12 +127,10 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
     });
 
 const boost::bimap<TypeSymbol, std::string> type_symbol_to_string =
-    make_bimap<TypeSymbol, std::string>({
-        {TypeSymbol::Int, "int"},
-        {TypeSymbol::Long, "long"},
-        {TypeSymbol::Float, "float"},
-        {TypeSymbol::Double, "double"},
-        {TypeSymbol::String, "string"}
-    });
+    make_bimap<TypeSymbol, std::string>({{TypeSymbol::Int, "int"},
+                                         {TypeSymbol::Long, "long"},
+                                         {TypeSymbol::Float, "float"},
+                                         {TypeSymbol::Double, "double"},
+                                         {TypeSymbol::String, "string"}});
 
 }  // namespace opossum

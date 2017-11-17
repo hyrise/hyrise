@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "types.hpp"
 #include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -24,8 +24,7 @@ class DictionaryCompression {
    * @param column needs to be of type ValueColumn<T>
    * @return a compressed column of type DictionaryColumn<T>
    */
-  static std::shared_ptr<BaseColumn> compress_column(TypeSymbol column_type,
-                                                     const std::shared_ptr<BaseColumn>& column);
+  static std::shared_ptr<BaseColumn> compress_column(TypeSymbol column_type, const std::shared_ptr<BaseColumn>& column);
 
   /**
    * @brief Compresses a chunk

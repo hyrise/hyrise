@@ -7,11 +7,11 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
-#include "constant_mappings.hpp"
 
 namespace {
 
@@ -148,7 +148,8 @@ namespace opossum {
         }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
       } else {
-        if (!strict_types && (tleft.column_type(col) == TypeSymbol::Int || tleft.column_type(col) == TypeSymbol::Long)) {
+        if (!strict_types &&
+            (tleft.column_type(col) == TypeSymbol::Int || tleft.column_type(col) == TypeSymbol::Long)) {
           auto left_val = type_cast<int64_t>(left[row][col]);
           auto right_val = type_cast<int64_t>(right[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;

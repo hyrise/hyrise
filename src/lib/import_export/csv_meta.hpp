@@ -5,7 +5,6 @@
 
 #include "json.hpp"
 
-
 namespace opossum {
 
 struct ColumnMeta {

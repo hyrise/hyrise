@@ -10,10 +10,10 @@
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 
+#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
-#include "constant_mappings.hpp"
 
 namespace {
 

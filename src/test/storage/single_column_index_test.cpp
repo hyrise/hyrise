@@ -26,8 +26,8 @@ class SingleColumnIndexTest : public BaseTest {
     dict_col_int = BaseTest::create_dict_column_by_type<int>(TypeSymbol::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col_int}));
 
-    dict_col_str =
-        BaseTest::create_dict_column_by_type<std::string>(TypeSymbol::String, {"hello", "world", "test", "foo", "bar", "foo"});
+    dict_col_str = BaseTest::create_dict_column_by_type<std::string>(TypeSymbol::String,
+                                                                     {"hello", "world", "test", "foo", "bar", "foo"});
     index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col_str}));
   }
 

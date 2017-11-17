@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "import_export/csv_converter.hpp"
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
@@ -18,7 +19,6 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
-#include "constant_mappings.hpp"
 
 namespace opossum {
 

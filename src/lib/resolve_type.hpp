@@ -77,7 +77,7 @@ std::unique_ptr<Base> make_unique_by_data_type(TypeSymbol type_symbol, Construct
  */
 template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<Base> make_unique_by_data_types(TypeSymbol type_symbol1, TypeSymbol type_symbol2,
-                                                  ConstructorArgs&&... args) {
+                                                ConstructorArgs&&... args) {
   DebugAssert(type_symbol1 != TypeSymbol::Null, "type_symbol1 cannot be null.");
   DebugAssert(type_symbol2 != TypeSymbol::Null, "type_symbol2 cannot be null.");
 
@@ -88,8 +88,7 @@ std::unique_ptr<Base> make_unique_by_data_types(TypeSymbol type_symbol1, TypeSym
         if (hana::first(y) == type_symbol2) {
           using DataType1 = typename decltype(+hana::second(x))::type;
           using DataType2 = typename decltype(+hana::second(y))::type;
-          ret =
-              std::make_unique<Impl<DataType1, DataType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+          ret = std::make_unique<Impl<DataType1, DataType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
           return;
         }
       });
@@ -252,14 +251,15 @@ template <typename T>
 TypeSymbol type_symbol_from_type() {
   static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
 
-  return hana::fold_left(data_types_and_symbols, TypeSymbol{}, [](auto type_symbol, auto type_tuple) {
-    // check whether T is one of the column types
-    if (hana::type_c<T> == hana::second(type_tuple)) {
-      return hana::first(type_tuple);
-    }
+  return hana::fold_left(data_types_and_symbols, TypeSymbol{},
+                         [](auto type_symbol, auto type_tuple) {
+                           // check whether T is one of the column types
+                           if (hana::type_c<T> == hana::second(type_tuple)) {
+                             return hana::first(type_tuple);
+                           }
 
-    return type_symbol;
-  });
+                           return type_symbol;
+                         });
 }
 
 /**

@@ -11,13 +11,13 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "import_export/binary.hpp"
+#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
-#include "constant_mappings.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 

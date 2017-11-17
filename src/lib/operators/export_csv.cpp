@@ -12,8 +12,8 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 
-#include "resolve_type.hpp"
 #include "constant_mappings.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
