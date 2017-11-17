@@ -29,7 +29,8 @@ void ChunkCompressionTask::_on_execute() {
 
     auto& chunk = table->get_chunk(chunk_id);
 
-    DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()), "Chunk is not completed and thus can’t be compressed.");
+    DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()),
+                "Chunk is not completed and thus can’t be compressed.");
 
     DictionaryCompression::compress_chunk(table->column_types(), chunk);
   }

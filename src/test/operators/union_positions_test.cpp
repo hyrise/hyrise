@@ -317,8 +317,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
-  EXPECT_TABLE_EQ(set_union_op->get_output(),
-                  load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", Chunk::MAX_ALLOWED_SIZE));
+  EXPECT_TABLE_EQ(
+      set_union_op->get_output(),
+      load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", Chunk::MAX_ALLOWED_SIZE));
 }
 
 }  // namespace opossum
