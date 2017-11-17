@@ -11,8 +11,7 @@ namespace opossum {
 
 MockNode::MockNode() : AbstractLQPNode(LQPNodeType::Mock) {}
 
-MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
-    : AbstractLQPNode(LQPNodeType::Mock) {
+MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractLQPNode(LQPNodeType::Mock) {
   set_statistics(statistics);
 
   for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();

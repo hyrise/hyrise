@@ -230,8 +230,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     update_expressions[*column_id] = expr;
   }
 
-  std::shared_ptr<AbstractLQPNode> update_node =
-      std::make_shared<UpdateNode>((update.table)->name, update_expressions);
+  std::shared_ptr<AbstractLQPNode> update_node = std::make_shared<UpdateNode>((update.table)->name, update_expressions);
   update_node->set_left_child(current_values_node);
 
   return update_node;
@@ -365,8 +364,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   return join_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(
-    const std::vector<hsql::TableRef*>& tables) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
   DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
   auto product = _translate_table_ref(*tables.front());
 
@@ -430,8 +428,8 @@ AllParameterVariant SQLTranslator::translate_hsql_operand(
   }
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Expr& expr,
+                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   /**
@@ -456,9 +454,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(
                               input_node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_having(
-    const hsql::Expr& expr, const std::shared_ptr<AggregateNode>& aggregate_node,
-    const std::shared_ptr<AbstractLQPNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_having(const hsql::Expr& expr,
+                                                                  const std::shared_ptr<AggregateNode>& aggregate_node,
+                                                                  const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   if (expr.opType == hsql::kOpOr) {
@@ -684,8 +682,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*>& order_list,
-    const std::shared_ptr<AbstractLQPNode>& input_node) {
+    const std::vector<hsql::OrderDescription*>& order_list, const std::shared_ptr<AbstractLQPNode>& input_node) {
   if (order_list.empty()) {
     return input_node;
   }
@@ -711,8 +708,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
   return sort_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(
-    const hsql::LimitDescription& limit, const std::shared_ptr<AbstractLQPNode>& input_node) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::LimitDescription& limit,
+                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
   auto limit_node = std::make_shared<LimitNode>(limit.limit);
   limit_node->set_left_child(input_node);
   return limit_node;
@@ -833,8 +830,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   return predicate_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(
-    const hsql::ShowStatement& show_statement) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
       return std::make_shared<ShowTablesNode>();

@@ -59,43 +59,40 @@ class SQLTranslator final : public Noncopyable {
   constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
-  std::vector<std::shared_ptr<AbstractLQPNode>> translate_parse_result(
-      const hsql::SQLParserResult& result);
+  std::vector<std::shared_ptr<AbstractLQPNode>> translate_parse_result(const hsql::SQLParserResult& result);
 
   std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement& statement);
 
   static AllParameterVariant translate_hsql_operand(
-      const hsql::Expr& expr,
-      const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node = std::nullopt);
+      const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node = std::nullopt);
 
  protected:
   std::shared_ptr<AbstractLQPNode> _translate_select(const hsql::SelectStatement& select);
 
   std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef& table);
 
-  std::shared_ptr<AbstractLQPNode> _translate_where(
-      const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_where(const hsql::Expr& expr,
+                                                    const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _translate_having(
-      const hsql::Expr& expr, const std::shared_ptr<AggregateNode>& aggregate_node,
-      const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_having(const hsql::Expr& expr,
+                                                     const std::shared_ptr<AggregateNode>& aggregate_node,
+                                                     const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _translate_aggregate(
-      const hsql::SelectStatement& select, const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_aggregate(const hsql::SelectStatement& select,
+                                                        const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _translate_projection(
-      const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_projection(const std::vector<hsql::Expr*>& select_list,
+                                                         const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _translate_order_by(
-      const std::vector<hsql::OrderDescription*>& order_list,
-      const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
+                                                       const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select);
 
   std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  std::shared_ptr<AbstractLQPNode> _translate_limit(
-      const hsql::LimitDescription& limit, const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_limit(const hsql::LimitDescription& limit,
+                                                    const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
 
@@ -113,8 +110,7 @@ class SQLTranslator final : public Noncopyable {
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 
-  std::shared_ptr<AbstractLQPNode> _validate_if_active(
-      const std::shared_ptr<AbstractLQPNode>& input_node);
+  std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::vector<std::shared_ptr<Expression>> _retrieve_having_aggregates(
       const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node);

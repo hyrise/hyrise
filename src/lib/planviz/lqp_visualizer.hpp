@@ -10,8 +10,8 @@ namespace opossum {
 
 class LQPVisualizer {
  public:
-  static void visualize(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots,
-                        const std::string& dot_filename, const std::string& img_filename);
+  static void visualize(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots, const std::string& dot_filename,
+                        const std::string& img_filename);
 
  protected:
   static void _visualize_subtree(const std::shared_ptr<AbstractLQPNode>& node, std::ofstream& file);

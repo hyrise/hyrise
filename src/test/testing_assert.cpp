@@ -178,8 +178,8 @@ void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const T
   ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scanType,
-                            ColumnID left_column_id, ColumnID right_column_id) {
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scanType, ColumnID left_column_id,
+                            ColumnID right_column_id) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise

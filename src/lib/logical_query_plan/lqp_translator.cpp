@@ -42,8 +42,7 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
   return _translate_by_node_type(node->type(), node);
 }
 

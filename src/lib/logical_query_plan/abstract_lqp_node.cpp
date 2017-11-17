@@ -47,8 +47,7 @@ void AbstractLQPNode::clear_parents() {
   }
 }
 
-LQPChildSide AbstractLQPNode::get_child_side(
-    const std::shared_ptr<AbstractLQPNode>& parent) const {
+LQPChildSide AbstractLQPNode::get_child_side(const std::shared_ptr<AbstractLQPNode>& parent) const {
   if (parent->_children[0].get() == this) {
     return LQPChildSide::Left;
   } else if (parent->_children[1].get() == this) {
@@ -89,8 +88,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::child(LQPChildSide side) const
   return _children[child_index];
 }
 
-void AbstractLQPNode::set_child(LQPChildSide side,
-                                             const std::shared_ptr<AbstractLQPNode>& child) {
+void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child) {
   // We need a reference to _children[child_index], so not calling this->child(side)
   auto& current_child = _children[static_cast<int>(side)];
 
@@ -118,9 +116,7 @@ void AbstractLQPNode::set_child(LQPChildSide side,
 
 LQPNodeType AbstractLQPNode::type() const { return _type; }
 
-void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) {
-  _statistics = statistics;
-}
+void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
 
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
   if (!_statistics) {
@@ -131,8 +127,7 @@ const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
 }
 
 std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_child,
-    const std::shared_ptr<AbstractLQPNode>& right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   DebugAssert(left_child,
               "Default implementation of derive_statistics_from() requires a left child, override in concrete node "
               "implementation for different behavior");
@@ -213,8 +208,7 @@ std::vector<ColumnID> AbstractLQPNode::get_output_column_ids() const {
   return column_ids;
 }
 
-std::vector<ColumnID> AbstractLQPNode::get_output_column_ids_for_table(
-    const std::string& table_name) const {
+std::vector<ColumnID> AbstractLQPNode::get_output_column_ids_for_table(const std::string& table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
@@ -284,9 +278,7 @@ void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& repla
   set_right_child(nullptr);
 }
 
-void AbstractLQPNode::set_alias(const std::optional<std::string>& table_alias) {
-  _table_alias = table_alias;
-}
+void AbstractLQPNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
 void AbstractLQPNode::print(std::ostream& out) const {
   std::vector<bool> levels;
@@ -328,8 +320,7 @@ std::vector<std::string> AbstractLQPNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_alias(
-    const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_alias(const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
@@ -343,10 +334,9 @@ std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_alias(
   return reference;
 }
 
-void AbstractLQPNode::_print_impl(
-    std::ostream& out, std::vector<bool>& levels,
-    std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
-    size_t& id_counter) const {
+void AbstractLQPNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
+                                  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
+                                  size_t& id_counter) const {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
     if (levels[level]) {

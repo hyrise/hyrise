@@ -19,7 +19,7 @@ class StrategyBaseTest : public BaseTest {
    * after applying the rule
    */
   std::shared_ptr<AbstractLQPNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                                           const std::shared_ptr<AbstractLQPNode>& input);
+                                              const std::shared_ptr<AbstractLQPNode>& input);
 };
 
 }  // namespace opossum
