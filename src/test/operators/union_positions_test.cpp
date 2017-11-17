@@ -69,7 +69,8 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/10_ints_exclusive_ranges.tbl", Chunk::MAX_CHUNK_SIZE));
+  EXPECT_TABLE_EQ(union_unique_op->get_output(),
+                  load_table("src/test/tables/10_ints_exclusive_ranges.tbl", Chunk::MAX_CHUNK_SIZE));
 }
 
 TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
@@ -139,7 +140,8 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleColumns) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float4_overlapping_ranges.tbl", Chunk::MAX_CHUNK_SIZE));
+  EXPECT_TABLE_EQ(union_unique_op->get_output(),
+                  load_table("src/test/tables/int_float4_overlapping_ranges.tbl", Chunk::MAX_CHUNK_SIZE));
 }
 
 TEST_F(UnionPositionsTest, MultipleReferencedTables) {

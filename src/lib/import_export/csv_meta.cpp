@@ -85,11 +85,12 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
   }
 
   if (meta.chunk_size == Chunk::MAX_CHUNK_SIZE) {
-    json = nlohmann::json{
-      {"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
+    json = nlohmann::json{{"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
   } else {
-    json = nlohmann::json{
-      {"chunk_size", meta.chunk_size}, {"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
+    json = nlohmann::json{{"chunk_size", meta.chunk_size},
+                          {"auto_compress", meta.auto_compress},
+                          {"config", config},
+                          {"columns", columns}};
   }
 }
 
