@@ -152,7 +152,6 @@ set(
     planviz/ast_visualizer.hpp
     planviz/graphviz_config.hpp
     planviz/sql_query_plan_visualizer.hpp
-    planviz/visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
