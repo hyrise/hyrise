@@ -18,7 +18,7 @@ class BaseAttributeVector : private Noncopyable {
 
   virtual ValueID get(const ChunkOffset chunk_offset) const = 0;
 
-  // inserts the value_id at a given position
+  // sets the value_id at a given position
   virtual void set(const ChunkOffset chunk_offset, const ValueID value_id) = 0;
 
   // returns the number of values

@@ -42,7 +42,7 @@ class FittedAttributeVector : public BaseAttributeVector {
   }
 
   /**
-   * Inserts the value_id at a given position
+   * Sets the value_id at a given position
    * Note: NULL_VALUE_ID is converted to max(uintX_t)
    */
   void set(const ChunkOffset chunk_offset, const ValueID value_id) final {
