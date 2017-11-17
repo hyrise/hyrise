@@ -3,10 +3,10 @@
 #include <boost/graph/graphviz.hpp>
 
 #include <fstream>
+#include <string>
 #include <vector>
 
 #include "utils/assert.hpp"
-
 
 namespace opossum {
 
@@ -19,8 +19,8 @@ static void visualize_tree(const std::vector<T>& roots, const std::string& dot_f
   file << "rankdir=BT" << std::endl;
   file << "bgcolor=transparent" << std::endl;
   file << "ratio=0.5" << std::endl;
-  file << "node [color=black,fontcolor=black,shape=" << shape << "]" << std::endl;
-  file << "edge [color=black,fontcolor=black]" << std::endl;
+  file << "node [color=white,fontcolor=white,shape=" << shape << "]" << std::endl;
+  file << "edge [color=white,fontcolor=white]" << std::endl;
 
   for (const auto& root : roots) {
     visualize_subtree(root, file);
@@ -36,6 +36,6 @@ static void visualize_tree(const std::vector<T>& roots, const std::string& dot_f
          "Calling graphviz' dot failed. Have you installed graphviz "
          "(apt-get install graphviz / brew install graphviz)?");
   // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
-};
+}
 
 }  // namespace opossum

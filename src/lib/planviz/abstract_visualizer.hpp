@@ -1,18 +1,19 @@
 #pragma once
 
-#include <boost/graph/graphviz.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <utility>
+#include <boost/graph/graphviz.hpp>
+#include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "operators/print.hpp"
 #include "planviz/graphviz_config.hpp"
 
 namespace opossum {
 
-struct GraphvizInfo {
-  std::string render_format = GraphvizRenderFormat::Png;
-  std::string layout = GraphvizLayout::Dot;
+struct GraphvizConfig {
+  std::string layout = GraphvizLayout::Circo;
+  std::string format = GraphvizRenderFormat::Png;
 };
 
 struct VizGraphInfo {
@@ -35,19 +36,21 @@ struct VizEdgeInfo {
   uint8_t pen_width = 1u;
 };
 
-
 class AbstractVisualizer {
   //                                  Edge list    Vertex list   Directed graph
-  using Graph = boost::adjacency_list<boost::vecS, boost::vecS,  boost::directedS,
-  //                                  Vertex info    Edge info    Graph info
+  using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
+                                      //                                  Vertex info    Edge info    Graph info
                                       VizVertexInfo, VizEdgeInfo, VizGraphInfo>;
 
  public:
   AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
 
-  AbstractVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info, VizEdgeInfo edge_info)
-    : _graphviz_config(std::move(graphviz_config)), _graph_info(std::move(graph_info)),
-      _default_vertex(std::move(vertex_info)), _default_edge(std::move(edge_info)) {
+  AbstractVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                     VizEdgeInfo edge_info)
+      : _graphviz_config(std::move(graphviz_config)),
+        _graph_info(std::move(graph_info)),
+        _default_vertex(std::move(vertex_info)),
+        _default_edge(std::move(edge_info)) {
     // Add global Graph properties
     _add_graph_property("rankdir", _graph_info.rankdir);
     _add_graph_property("bgcolor", _graph_info.bg_color);
@@ -72,24 +75,27 @@ class AbstractVisualizer {
     Fail("Need to call from specific implementation!");
   }
 
-  void visualize(const std::string& dot_filename, const std::string& img_filename) {
-    std::ofstream file(dot_filename);
+  void visualize(const std::string& graph_filename, const std::string& img_filename) {
+    std::ofstream file(graph_filename);
     boost::write_graphviz_dp(file, _graph, _properties);
 
-    // Step 2: Generate png from dot file
-    auto cmd = std::string("dot -Tpng " + dot_filename + " > ") + img_filename;
+    auto executable = _graphviz_config.layout;
+    auto format = _graphviz_config.format;
+
+    auto cmd = executable + " -T" + format + " " + graph_filename + " > " + img_filename;
     auto ret = system(cmd.c_str());
 
-    Assert(ret == 0,
-           "Calling graphviz' dot failed. Have you installed graphviz "
-             "(apt-get install graphviz / brew install graphviz)?");
+    Assert(ret == 0, "Calling graphviz' " + executable +
+                         " failed. Have you installed graphviz "
+                         "(apt-get install graphviz / brew install graphviz)?");
     // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
   }
 
-
  protected:
   template <typename T>
-  void _add_vertex(const T& vertex) { _add_vertex(vertex, _default_vertex); }
+  void _add_vertex(const T& vertex) {
+    _add_vertex(vertex, _default_vertex);
+  }
 
   template <typename T>
   void _add_vertex(const T& vertex, const std::string& label) {
@@ -136,7 +142,6 @@ class AbstractVisualizer {
     _properties.property(property_name, boost::get(value, _graph));
   }
 
-
   Graph _graph;
   std::unordered_map<uintptr_t, uint16_t> _id_to_position;
   boost::dynamic_properties _properties;
@@ -148,5 +153,3 @@ class AbstractVisualizer {
 };
 
 }  // namespace opossum
-
-

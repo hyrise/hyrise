@@ -12,7 +12,7 @@ struct GraphvizLayout {
   static constexpr const char* FDP = "fdp";
   static constexpr const char* SFDP = "sfdp";
   static constexpr const char* TwoPi = "twopi";
-  static constexpr const char* Circo  = "circo";
+  static constexpr const char* Circo = "circo";
 };
 
 struct GraphvizColor {
@@ -33,13 +33,4 @@ struct GraphvizShape {
   static constexpr const char* Parallelogram = "parallelogram";
 };
 
-
-// General config object for Graph information
-struct GraphvizConfig {
-  std::string layout = GraphvizLayout::Dot;
-  std::string color = GraphvizColor::Transparent;
-};
-
 }  // namespace opossum
-
-
