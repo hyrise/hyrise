@@ -30,7 +30,7 @@ bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcep
   }
 }
 
-int NUMAMemoryResource::get_node_id() const { return _mem_source.getPhysicalNode(); }
+int NUMAMemoryResource::get_node_id() const { return _memory_source.getPhysicalNode(); }
 
 #else
 
