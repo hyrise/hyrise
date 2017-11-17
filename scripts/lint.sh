@@ -11,3 +11,5 @@ find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-n
 #             |      |        Regular call of cpplint with options
 #             |      Runs the following in parallel
 #             Finds all .cpp and .hpp files, separated by \0
+
+# grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/\(:[0-9]+\):.*/  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/'

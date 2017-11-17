@@ -24,7 +24,7 @@ class BaseColumn : private Noncopyable {
   BaseColumn& operator=(BaseColumn&&) = default;
 
   // returns the value at a given position
-  virtual const AllTypeVariant operator[](const size_t i) const = 0;
+  virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
   // appends the value at the end of the column
   virtual void append(const AllTypeVariant& val) = 0;

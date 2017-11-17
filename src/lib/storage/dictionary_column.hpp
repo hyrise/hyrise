@@ -26,10 +26,10 @@ class DictionaryColumn : public BaseDictionaryColumn {
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  const AllTypeVariant operator[](const size_t i) const override;
+  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   // return the value at a certain position.
-  const T get(const size_t i) const;
+  const T get(const ChunkOffset chunk_offset) const;
 
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override;

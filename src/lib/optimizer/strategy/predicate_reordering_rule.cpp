@@ -59,8 +59,8 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   const auto parents = predicates.front()->parents();
   const auto child_sides = predicates.front()->get_child_sides();
 
-  const auto sort_predicate = [&](auto& l, auto& r) {
-    return l->derive_statistics_from(child)->row_count() > r->derive_statistics_from(child)->row_count();
+  const auto sort_predicate = [&](auto& left, auto& right) {
+    return left->derive_statistics_from(child)->row_count() > right->derive_statistics_from(child)->row_count();
   };
 
   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {

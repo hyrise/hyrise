@@ -9,32 +9,32 @@
 namespace opossum {
 
 ProcessingUnit::ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator,
-                               CpuID cpuID)
-    : _queue(queue), _worker_id_allocator(worker_id_allocator), _cpuID(cpuID) {
+                               CpuID cpu_id)
+    : _queue(queue), _worker_id_allocator(worker_id_allocator), _cpu_id(cpu_id) {
   // Do not start worker yet, the object is still under construction and no shared_ptr of it is held right now -
   // shared_from_this will fail!
 }
 
-bool ProcessingUnit::try_acquire_active_worker_token(WorkerID workerID) {
+bool ProcessingUnit::try_acquire_active_worker_token(WorkerID worker_id) {
   // Are we already the active worker?
-  auto o_workerID = workerID;
-  auto already_active = _active_worker_token.compare_exchange_strong(o_workerID, workerID);
+  auto expected_worked_id = worker_id;
+  auto already_active = _active_worker_token.compare_exchange_strong(expected_worked_id, worker_id);
   if (already_active) {
     // The worker kept the token
     return true;
   }
 
   // No one else active?
-  o_workerID = INVALID_WORKER_ID;
-  auto no_one_active = _active_worker_token.compare_exchange_strong(o_workerID, workerID);
+  expected_worked_id = INVALID_WORKER_ID;
+  auto no_one_active = _active_worker_token.compare_exchange_strong(expected_worked_id, worker_id);
 
   // no_one_active == true means the worker successfully acquired the token
 
   return no_one_active;
 }
 
-void ProcessingUnit::yield_active_worker_token(WorkerID workerID) {
-  _active_worker_token.compare_exchange_strong(workerID, INVALID_WORKER_ID);
+void ProcessingUnit::yield_active_worker_token(WorkerID worker_id) {
+  _active_worker_token.compare_exchange_strong(worker_id, INVALID_WORKER_ID);
 }
 
 void ProcessingUnit::hibernate_calling_worker() {
@@ -51,7 +51,7 @@ void ProcessingUnit::wake_or_create_worker() {
   if (_num_hibernated_workers == 0) {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpuID);
+    auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id);
     _workers.emplace_back(worker);
 
     auto fn = std::bind(&Worker::operator(), worker.get());

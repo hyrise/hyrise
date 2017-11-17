@@ -9,9 +9,9 @@
 namespace opossum {
 
 struct TopologyCpu final {
-  explicit TopologyCpu(CpuID cpuID) : cpuID(cpuID) {}
+  explicit TopologyCpu(CpuID cpu_id) : cpu_id(cpu_id) {}
 
-  CpuID cpuID = INVALID_CPU_ID;
+  CpuID cpu_id = INVALID_CPU_ID;
 };
 
 struct TopologyNode final {

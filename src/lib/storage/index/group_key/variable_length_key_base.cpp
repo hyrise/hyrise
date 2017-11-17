@@ -27,12 +27,12 @@ namespace opossum {
 VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* data, CompositeKeyLength size)
     : _data(data), _size(size) {}
 
-VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t rhs) {
+VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
   static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
-  auto raw_rhs = reinterpret_cast<VariableLengthKeyWord*>(&rhs);
-  auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(rhs)), _size);
+  auto raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
+  auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), _size);
   for (CompositeKeyLength i = 0; i < operation_width; ++i) {
-    _data[i] |= raw_rhs[i];
+    _data[i] |= raw_other[i];
   }
   return *this;
 }
@@ -69,32 +69,32 @@ VariableLengthKeyBase& VariableLengthKeyBase::shift_and_set(uint64_t value, uint
   return *this;
 }
 
-bool operator==(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) {
-  return lhs._size == rhs._size && std::memcmp(lhs._data, rhs._data, lhs._size) == 0;
+bool operator==(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
+  return left._size == right._size && std::memcmp(left._data, right._data, left._size) == 0;
 }
 
-bool operator!=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return !(lhs == rhs); }
+bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left == right); }
 
-bool operator<(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) {
+bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
   static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
-  if (lhs._size != rhs._size) return lhs._size < rhs._size;
+  if (left._size != right._size) return left._size < right._size;
 
   // compare right to left since most significant byte is on the right
   // memcmp can not be used since it performs lexical comparision
-  // loop overflows after iteration with i == 0, so i becomes greater than lhs._size
-  for (CompositeKeyLength i = lhs._size - 1; i < lhs._size; --i) {
-    if (lhs._data[i] == rhs._data[i]) continue;
-    return lhs._data[i] < rhs._data[i];
+  // loop overflows after iteration with i == 0, so i becomes greater than left._size
+  for (CompositeKeyLength i = left._size - 1; i < left._size; --i) {
+    if (left._data[i] == right._data[i]) continue;
+    return left._data[i] < right._data[i];
   }
 
   return false;
 }
 
-bool operator<=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return lhs < rhs || lhs == rhs; }
+bool operator<=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return left < right || left == right; }
 
-bool operator>(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return !(lhs <= rhs); }
+bool operator>(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left <= right); }
 
-bool operator>=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return !(lhs < rhs); }
+bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left < right); }
 
 std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key) {
   os << std::hex << std::setfill('0');

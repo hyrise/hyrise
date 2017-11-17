@@ -27,7 +27,7 @@ class Table : private Noncopyable {
   /**
    * @returns whether both tables contain the same columns (in name and type) in the same order
    */
-  static bool layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b);
+  static bool layouts_equal(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right);
 
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size

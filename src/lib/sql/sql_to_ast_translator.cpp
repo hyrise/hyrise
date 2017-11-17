@@ -321,9 +321,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
          "Right arg of join condition must be column ref");
 
   const auto left_named_column_reference =
-      SQLExpressionTranslator::get_named_column_reference_for_column_ref(*condition.expr);
+      SQLExpressionTranslator::get_named_column_reference_for_column_reference(*condition.expr);
   const auto right_named_column_reference =
-      SQLExpressionTranslator::get_named_column_reference_for_column_ref(*condition.expr2);
+      SQLExpressionTranslator::get_named_column_reference_for_column_reference(*condition.expr2);
 
   /**
    * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node

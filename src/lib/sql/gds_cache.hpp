@@ -11,13 +11,13 @@ namespace opossum {
 
 // Generic cache implementation using the GDS policy.
 // Note: This implementation is not thread-safe.
-template <typename key_t, typename val_t>
-class GDSCache : public AbstractCache<key_t, val_t> {
+template <typename Key, typename Value>
+class GDSCache : public AbstractCache<Key, Value> {
  public:
   // Entries within the GDS cache.
   struct GDSCacheEntry {
-    key_t key;
-    val_t value;
+    Key key;
+    Value value;
     double cost;
     double size;
     double priority;
@@ -30,9 +30,9 @@ class GDSCache : public AbstractCache<key_t, val_t> {
   typedef GDSCacheEntry entry_t;
   typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
 
-  explicit GDSCache(size_t capacity) : AbstractCache<key_t, val_t>(capacity), _inflation(0.0) {}
+  explicit GDSCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
-  void set(const key_t& key, const val_t& value, double cost = 1.0, double size = 1.0) {
+  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -64,7 +64,7 @@ class GDSCache : public AbstractCache<key_t, val_t> {
     _map[key] = handle;
   }
 
-  val_t& get(const key_t& key) {
+  Value& get(const Key& key) {
     auto it = _map.find(key);
     handle_t handle = it->second;
     entry_t& entry = (*handle);
@@ -73,7 +73,7 @@ class GDSCache : public AbstractCache<key_t, val_t> {
     return entry.value;
   }
 
-  bool has(const key_t& key) const { return _map.find(key) != _map.end(); }
+  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
 
   size_t size() const { return _map.size(); }
 
@@ -91,7 +91,7 @@ class GDSCache : public AbstractCache<key_t, val_t> {
 
   double inflation() const { return _inflation; }
 
-  double priority(const key_t& key) const {
+  double priority(const Key& key) const {
     auto it = _map.find(key);
     return (*it->second).priority;
   }
@@ -101,7 +101,7 @@ class GDSCache : public AbstractCache<key_t, val_t> {
   boost::heap::fibonacci_heap<entry_t> _queue;
 
   // Map to point towards element in the list.
-  std::unordered_map<key_t, handle_t> _map;
+  std::unordered_map<Key, handle_t> _map;
 
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;

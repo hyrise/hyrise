@@ -19,13 +19,13 @@ std::shared_ptr<const Table> Product::_on_execute() {
   auto output = std::make_shared<Table>();
 
   // add columns from left table to output
-  for (ColumnID col_id{0}; col_id < _input_table_left()->column_count(); ++col_id) {
-    output->add_column_definition(_input_table_left()->column_name(col_id), _input_table_left()->column_type(col_id));
+  for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
+    output->add_column_definition(_input_table_left()->column_name(column_id), _input_table_left()->column_type(column_id));
   }
 
   // add columns from right table to output
-  for (ColumnID col_id{0}; col_id < _input_table_right()->column_count(); ++col_id) {
-    output->add_column_definition(_input_table_right()->column_name(col_id), _input_table_right()->column_type(col_id));
+  for (ColumnID column_id{0}; column_id < _input_table_right()->column_count(); ++column_id) {
+    output->add_column_definition(_input_table_right()->column_name(column_id), _input_table_right()->column_type(column_id));
   }
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _input_table_left()->chunk_count(); ++chunk_id_left) {
