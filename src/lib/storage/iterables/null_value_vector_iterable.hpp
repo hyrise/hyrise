@@ -17,17 +17,17 @@ class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable
   explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
-  void _on_with_iterators(const Functor& f) const {
+  void _on_with_iterators(const Functor& functor) const {
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
-    f(begin, end);
+    functor(begin, end);
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
     auto begin = IndexedIterator{_null_values, mapped_chunk_offsets.cbegin()};
     auto end = IndexedIterator{_null_values, mapped_chunk_offsets.cend()};
-    f(begin, end);
+    functor(begin, end);
   }
 
  private:

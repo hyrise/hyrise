@@ -24,7 +24,7 @@ class ReferenceColumn : public BaseColumn {
   ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const ColumnID referenced_column_id,
                   const std::shared_ptr<const PosList> pos);
 
-  const AllTypeVariant operator[](const size_t i) const override;
+  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   void append(const AllTypeVariant&) override;
 
@@ -109,8 +109,8 @@ class ReferenceColumn : public BaseColumn {
       auto& chunk = _referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(_referenced_column_id);
 
-      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
-      referenced_column->visit(visitable, c);
+      auto context = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
+      referenced_column->visit(visitable, context);
     }
   }
 

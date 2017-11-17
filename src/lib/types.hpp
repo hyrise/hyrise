@@ -87,13 +87,13 @@ struct RowID {
   ChunkOffset chunk_offset;
 
   // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID& rhs) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
+  bool operator<(const RowID& other) const {
+    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
   }
 
   // Useful when comparing a row ID to NULL_ROW_ID
-  bool operator==(const RowID& rhs) const {
-    return std::tie(chunk_id, chunk_offset) == std::tie(rhs.chunk_id, rhs.chunk_offset);
+  bool operator==(const RowID& other) const {
+    return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
   }
 };
 
@@ -149,7 +149,7 @@ class ValuePlaceholder {
     return o;
   }
 
-  bool operator==(const ValuePlaceholder& rhs) const { return _index == rhs._index; }
+  bool operator==(const ValuePlaceholder& other) const { return _index == other._index; }
 
  private:
   uint16_t _index;
@@ -163,7 +163,7 @@ enum class ScanType {
   OpLessThanEquals,
   OpGreaterThan,
   OpGreaterThanEquals,
-  OpBetween,  // Currently, OpBetween is not handled by a single scan. The ASTToOperatorTranslator creates two scans.
+  OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
   OpLike
 };
 

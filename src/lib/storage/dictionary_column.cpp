@@ -25,12 +25,12 @@ DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dict
     : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
+const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _attribute_vector->get(i);
+  const auto value_id = _attribute_vector->get(chunk_offset);
 
   if (value_id == NULL_VALUE_ID) {
     return NULL_VALUE;
@@ -40,12 +40,12 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
 }
 
 template <typename T>
-const T DictionaryColumn<T>::get(const size_t i) const {
-  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
+  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _attribute_vector->get(i);
+  const auto value_id = _attribute_vector->get(chunk_offset);
 
-  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(i) + " is null.");
+  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(chunk_offset) + " is null.");
 
   return (*_dictionary)[value_id];
 }
@@ -134,7 +134,10 @@ template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
   // buffering value at chunk_offset
-  T value = _dictionary->at(_attribute_vector->get(chunk_offset));
+  auto value_id = _attribute_vector->get(chunk_offset);
+  Assert(value_id != NULL_VALUE_ID, "This operation does not support NULL values.");
+
+  T value = _dictionary->at(value_id);
   buffer << value;
   uint32_t length = buffer.str().length();
   // writing byte representation of length

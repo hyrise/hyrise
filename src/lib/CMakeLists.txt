@@ -92,46 +92,46 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/abstract_syntax_tree/abstract_ast_node.cpp
-    optimizer/abstract_syntax_tree/abstract_ast_node.hpp
-    optimizer/abstract_syntax_tree/abstract_non_optimizable_ast_node.cpp
-    optimizer/abstract_syntax_tree/abstract_non_optimizable_ast_node.hpp
-    optimizer/abstract_syntax_tree/aggregate_node.cpp
-    optimizer/abstract_syntax_tree/aggregate_node.hpp
-    optimizer/abstract_syntax_tree/ast_root_node.cpp
-    optimizer/abstract_syntax_tree/ast_root_node.hpp
-    optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp
-    optimizer/abstract_syntax_tree/ast_to_operator_translator.cpp
-    optimizer/abstract_syntax_tree/delete_node.cpp
-    optimizer/abstract_syntax_tree/delete_node.hpp
-    optimizer/abstract_syntax_tree/dummy_table_node.cpp
-    optimizer/abstract_syntax_tree/dummy_table_node.hpp
-    optimizer/abstract_syntax_tree/join_node.cpp
-    optimizer/abstract_syntax_tree/join_node.hpp
-    optimizer/abstract_syntax_tree/insert_node.cpp
-    optimizer/abstract_syntax_tree/insert_node.hpp
-    optimizer/abstract_syntax_tree/limit_node.cpp
-    optimizer/abstract_syntax_tree/limit_node.hpp
-    optimizer/abstract_syntax_tree/mock_node.cpp
-    optimizer/abstract_syntax_tree/mock_node.hpp
-    optimizer/abstract_syntax_tree/predicate_node.cpp
-    optimizer/abstract_syntax_tree/predicate_node.hpp
-    optimizer/abstract_syntax_tree/projection_node.cpp
-    optimizer/abstract_syntax_tree/projection_node.hpp
-    optimizer/abstract_syntax_tree/show_columns_node.cpp
-    optimizer/abstract_syntax_tree/show_columns_node.hpp
-    optimizer/abstract_syntax_tree/show_tables_node.cpp
-    optimizer/abstract_syntax_tree/show_tables_node.hpp
-    optimizer/abstract_syntax_tree/sort_node.cpp
-    optimizer/abstract_syntax_tree/sort_node.hpp
-    optimizer/abstract_syntax_tree/stored_table_node.cpp
-    optimizer/abstract_syntax_tree/stored_table_node.hpp
-    optimizer/abstract_syntax_tree/union_node.cpp
-    optimizer/abstract_syntax_tree/union_node.hpp
-    optimizer/abstract_syntax_tree/update_node.cpp
-    optimizer/abstract_syntax_tree/update_node.hpp
-    optimizer/abstract_syntax_tree/validate_node.cpp
-    optimizer/abstract_syntax_tree/validate_node.hpp
+    logical_query_plan/abstract_lqp_node.cpp
+    logical_query_plan/abstract_lqp_node.hpp
+    logical_query_plan/abstract_non_optimizable_lqp_node.cpp
+    logical_query_plan/abstract_non_optimizable_lqp_node.hpp
+    logical_query_plan/aggregate_node.cpp
+    logical_query_plan/aggregate_node.hpp
+    logical_query_plan/logical_plan_root_node.cpp
+    logical_query_plan/logical_plan_root_node.hpp
+    logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_translator.cpp
+    logical_query_plan/delete_node.cpp
+    logical_query_plan/delete_node.hpp
+    logical_query_plan/dummy_table_node.cpp
+    logical_query_plan/dummy_table_node.hpp
+    logical_query_plan/join_node.cpp
+    logical_query_plan/join_node.hpp
+    logical_query_plan/insert_node.cpp
+    logical_query_plan/insert_node.hpp
+    logical_query_plan/limit_node.cpp
+    logical_query_plan/limit_node.hpp
+    logical_query_plan/mock_node.cpp
+    logical_query_plan/mock_node.hpp
+    logical_query_plan/predicate_node.cpp
+    logical_query_plan/predicate_node.hpp
+    logical_query_plan/projection_node.cpp
+    logical_query_plan/projection_node.hpp
+    logical_query_plan/show_columns_node.cpp
+    logical_query_plan/show_columns_node.hpp
+    logical_query_plan/show_tables_node.cpp
+    logical_query_plan/show_tables_node.hpp
+    logical_query_plan/sort_node.cpp
+    logical_query_plan/sort_node.hpp
+    logical_query_plan/stored_table_node.cpp
+    logical_query_plan/stored_table_node.hpp
+    logical_query_plan/union_node.cpp
+    logical_query_plan/union_node.hpp
+    logical_query_plan/update_node.cpp
+    logical_query_plan/update_node.hpp
+    logical_query_plan/validate_node.cpp
+    logical_query_plan/validate_node.hpp
     optimizer/base_column_statistics.cpp
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
@@ -148,8 +148,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
-    planviz/ast_visualizer.cpp
-    planviz/ast_visualizer.hpp
+    planviz/lqp_visualizer.cpp
+    planviz/lqp_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
@@ -185,8 +185,8 @@ set(
     sql/sql_query_plan.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
-    sql/sql_to_ast_translator.cpp
-    sql/sql_to_ast_translator.hpp
+    sql/sql_translator.cpp
+    sql/sql_translator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/chunk.cpp

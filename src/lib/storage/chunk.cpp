@@ -129,8 +129,8 @@ bool Chunk::references_exactly_one_table() const {
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (ColumnID i{1}; i < column_count(); ++i) {
-    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(i));
+  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
+    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(column_id));
     if (column == nullptr) return false;
 
     if (first_referenced_table != column->referenced_table()) return false;

@@ -7,6 +7,11 @@ if [ -z "$1" ]
     exit 1
 fi
 
+cd $1
+cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
+make hyriseCoverage -j $((cores / 2))
+cd -
+
 ./$1/hyriseCoverage
 rm -fr coverage; mkdir coverage
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112

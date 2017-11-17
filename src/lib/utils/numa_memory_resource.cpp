@@ -13,20 +13,20 @@ namespace opossum {
 
 #if HYRISE_NUMA_SUPPORT
 NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name)
-    : _mem_source(numa::MemSource::create(node_id, NUMA_MEMORY_RESOURCE_ARENA_SIZE, name.c_str())) {}
+    : _memory_source(numa::MemSource::create(node_id, NUMA_MEMORY_RESOURCE_ARENA_SIZE, name.c_str())) {}
 
 void* NUMAMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
-  return _mem_source.allocAligned(boost::math::lcm(_alignment, alignment), bytes);
+  return _memory_source.allocAligned(boost::math::lcm(_alignment, alignment), bytes);
 }
 
-void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { _mem_source.free(p); }
+void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { _memory_source.free(p); }
 
 bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
   const auto other_numa_resource = dynamic_cast<const NUMAMemoryResource*>(&other);
   if (other_numa_resource == NULL) {
     return false;
   } else {
-    return other_numa_resource->_mem_source == _mem_source;
+    return other_numa_resource->_memory_source == _memory_source;
   }
 }
 

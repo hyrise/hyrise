@@ -365,11 +365,11 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
     We choose int8_t for column type and aggregate type because it's small.
     */
-    auto ctx = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType>>();
-    ctx->results =
+    auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType>>();
+    context->results =
         std::make_shared<std::map<AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>>>();
 
-    _contexts_per_column.push_back(ctx);
+    _contexts_per_column.push_back(context);
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
@@ -399,9 +399,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
        * Obviously this implementation is also used for plain GroupBy's.
        */
 
-      auto ctx = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(
+      auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(
           _contexts_per_column[0]);
-      auto& results = *ctx->results;
+      auto& results = *context->results;
       for (auto& chunk : _keys_per_chunk) {
         for (auto& keys : *chunk) {
           // insert dummy value to make sure we have the key in our map
@@ -425,16 +425,16 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
                 std::make_shared<AggregateContext<CountColumnType, CountAggregateType>>();
           }
 
-          auto ctx = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType>>(
+          auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType>>(
               _contexts_per_column[column_index]);
 
-          if (!ctx->results) {
+          if (!context->results) {
             // create result map for the first time if necessary
-            ctx->results =
+            context->results =
                 std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>>>();
           }
 
-          auto& results = *ctx->results;
+          auto& results = *context->results;
 
           // count occurrences for each group key
           for (const auto& hash_key : *hash_keys) {
@@ -505,9 +505,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
    * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
    **/
   if (_aggregates.empty()) {
-    auto ctx =
+    auto context =
         std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(_contexts_per_column[0]);
-    for (auto& map : *ctx->results) {
+    for (auto& map : *context->results) {
       for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
         _groupby_columns[group_column_index]->append(map.first[group_column_index]);
       }
@@ -677,12 +677,12 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(needs_null);
 
-  auto ctx = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
+  auto context = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
 
   // write all group keys into the respective columns
   if (column_index == 0) {
-    for (auto& map : *ctx->results) {
+    for (auto& map : *context->results) {
       for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
         _groupby_columns[group_column_index]->append(map.first[group_column_index]);
       }
@@ -690,7 +690,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the column
-  _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, ctx->results);
+  _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
   _out_chunk.add_column(col);
 }
 

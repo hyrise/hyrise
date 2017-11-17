@@ -8,8 +8,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_dictionary_column.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/iterables/value_column_iterable.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
@@ -29,14 +27,14 @@ template <typename T>
 class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
-    auto casted_col = std::dynamic_pointer_cast<ValueColumn<T>>(column);
-    DebugAssert(static_cast<bool>(casted_col), "Type mismatch");
-    auto& vect = casted_col->values();
+    auto val_column = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    DebugAssert(static_cast<bool>(val_column), "Type mismatch");
+    auto& values = val_column->values();
 
-    vect.resize(new_size);
+    values.resize(new_size);
 
-    if (casted_col->is_nullable()) {
-      casted_col->null_values().resize(new_size);
+    if (val_column->is_nullable()) {
+      val_column->null_values().resize(new_size);
     }
   }
 
@@ -45,12 +43,12 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
                  std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
-    auto& vect = casted_target->values();
+    auto& values = casted_target->values();
 
     auto target_is_nullable = casted_target->is_nullable();
 
     if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
-      std::copy_n(casted_source->values().begin() + source_start_index, length, vect.begin() + target_start_index);
+      std::copy_n(casted_source->values().begin() + source_start_index, length, values.begin() + target_start_index);
 
       if (casted_source->is_nullable()) {
         // Values to insert contain null, copy them
@@ -77,10 +75,10 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
         auto ref_value = (*source)[source_start_index + i];
         if (is_null(ref_value)) {
           Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
-          vect[target_start_index + i] = T{};
+          values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;
         } else {
-          vect[target_start_index + i] = type_cast<T>(ref_value);
+          values[target_start_index + i] = type_cast<T>(ref_value);
         }
       }
     }
@@ -93,7 +91,7 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<Abstr
 const std::string Insert::name() const { return "Insert"; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  context->register_rw_operator(shared_from_this());
+  context->register_read_write_operator(shared_from_this());
 
   _target_table = StorageManager::get().get_table(_target_table_name);
 
@@ -166,11 +164,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
        target_chunk_id++) {
     auto& target_chunk = _target_table->get_chunk(target_chunk_id);
 
-    const auto curr_num_rows_to_insert =
+    const auto current_num_rows_to_insert =
         std::min(target_chunk.size() - start_index, total_rows_to_insert - input_offset);
 
     auto target_start_index = start_index;
-    auto still_to_insert = curr_num_rows_to_insert;
+    auto still_to_insert = current_num_rows_to_insert;
 
     // while target chunk is not full
     while (target_start_index != target_chunk.size()) {
@@ -193,7 +191,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       }
     }
 
-    for (auto i = start_index; i < start_index + curr_num_rows_to_insert; i++) {
+    for (auto i = start_index; i < start_index + current_num_rows_to_insert; i++) {
       // we do not need to check whether other operators have locked the rows, we have just created them
       // and they are not visible for other operators.
       // the transaction IDs are set here and not during the resize, because
@@ -203,7 +201,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       _inserted_rows.emplace_back(RowID{target_chunk_id, i});
     }
 
-    input_offset += curr_num_rows_to_insert;
+    input_offset += current_num_rows_to_insert;
     start_index = 0u;
   }
 

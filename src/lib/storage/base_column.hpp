@@ -24,7 +24,7 @@ class BaseColumn : private Noncopyable {
   BaseColumn& operator=(BaseColumn&&) = default;
 
   // returns the value at a given position
-  virtual const AllTypeVariant operator[](const size_t i) const = 0;
+  virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
   // appends the value at the end of the column
   virtual void append(const AllTypeVariant& val) = 0;
@@ -35,7 +35,7 @@ class BaseColumn : private Noncopyable {
   // calls the column-specific handler in an operator (visitor pattern)
   virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const = 0;
 
-  // writes the length and value at the chunk_offset to the end off row_string
+  // writes the length and value at the chunk_offset to the end of row_string
   virtual void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const = 0;
 
   // copies one of its own values to a different ValueColumn - mainly used for materialization

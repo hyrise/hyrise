@@ -23,10 +23,10 @@ class ValueColumn : public BaseValueColumn {
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
-  const AllTypeVariant operator[](const size_t i) const override;
+  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
-  const T get(const size_t i) const;
+  const T get(const ChunkOffset chunk_offset) const;
 
   // Add a value to the end of the column.
   void append(const AllTypeVariant& val) override;

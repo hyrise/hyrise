@@ -28,33 +28,33 @@ class VariableLengthKey {
   explicit VariableLengthKey(CompositeKeyLength bytes_per_key);
 
   /**
-   * Deep copies the data of rhs.
+   * Deep copies the data of other.
    */
-  VariableLengthKey(const VariableLengthKey& rhs);
-  VariableLengthKey& operator=(const VariableLengthKey& rhs);
+  VariableLengthKey(const VariableLengthKey& other);
+  VariableLengthKey& operator=(const VariableLengthKey& other);
 
-  VariableLengthKey(VariableLengthKey&& rhs) = default;
-  VariableLengthKey& operator=(VariableLengthKey&& rhs) = default;
+  VariableLengthKey(VariableLengthKey&& other) = default;
+  VariableLengthKey& operator=(VariableLengthKey&& other) = default;
 
   CompositeKeyLength bytes_per_key() const;
 
-  bool operator==(const VariableLengthKey& rhs) const;
-  bool operator==(const VariableLengthKeyConstProxy& rhs) const;
-  bool operator!=(const VariableLengthKey& rhs) const;
-  bool operator!=(const VariableLengthKeyConstProxy& rhs) const;
-  bool operator<(const VariableLengthKey& rhs) const;
-  bool operator<(const VariableLengthKeyConstProxy& rhs) const;
+  bool operator==(const VariableLengthKey& other) const;
+  bool operator==(const VariableLengthKeyConstProxy& other) const;
+  bool operator!=(const VariableLengthKey& other) const;
+  bool operator!=(const VariableLengthKeyConstProxy& other) const;
+  bool operator<(const VariableLengthKey& other) const;
+  bool operator<(const VariableLengthKeyConstProxy& other) const;
 
   VariableLengthKey& operator<<=(CompositeKeyLength shift);
-  VariableLengthKey& operator|=(uint64_t rhs);
+  VariableLengthKey& operator|=(uint64_t other);
 
   VariableLengthKey& shift_and_set(uint64_t value, uint8_t bits_to_set);
 
   friend std::ostream& operator<<(std::ostream& os, const VariableLengthKey& key);
 
  private:
-  explicit VariableLengthKey(const VariableLengthKeyBase& rhs);
-  VariableLengthKey& operator=(const VariableLengthKeyBase& rhs);
+  explicit VariableLengthKey(const VariableLengthKeyBase& other);
+  VariableLengthKey& operator=(const VariableLengthKeyBase& other);
 
  private:
   std::unique_ptr<VariableLengthKeyWord[]> _owned_data;

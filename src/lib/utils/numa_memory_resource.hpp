@@ -26,7 +26,7 @@ class NUMAMemoryResource : public boost::container::pmr::memory_resource {
 
  private:
 #if HYRISE_NUMA_SUPPORT
-  const numa::MemSource _mem_source;
+  const numa::MemSource _memory_source;
   const size_t _alignment = 1;
 #endif
 };
