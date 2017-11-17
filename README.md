@@ -105,6 +105,7 @@ Contact: firstname.lastname@hpi.de
 -	Jan      Mattfeld
 -	Arne     Mayer
 -	Torben   Meyer
+-   Leander  Neiß
 -	David    Schumann
 -	Daniel   Stolpe
 -	Jonathan Striebel
