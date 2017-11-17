@@ -228,6 +228,10 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
+    storage/numa_placement_manager.cpp
+    storage/numa_placement_manager.hpp
+    storage/proxy_chunk.cpp
+    storage/proxy_chunk.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
     storage/scoped_locking_ptr.hpp
@@ -241,6 +245,12 @@ set(
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
+    tasks/chunk_migration_task.cpp
+    tasks/chunk_migration_task.hpp
+    tasks/chunk_metrics_collection_task.cpp
+    tasks/chunk_metrics_collection_task.hpp
+    tasks/migration_preparation_task.cpp
+    tasks/migration_preparation_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
@@ -254,6 +264,8 @@ set(
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
+    utils/pausable_loop_thread.cpp
+    utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
 )

@@ -20,6 +20,11 @@ DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
+DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+    : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
+
+template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
@@ -157,6 +162,14 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
 
     values_out.push_back(value_by_value_id(value_id));
   }
+}
+
+template <typename T>
+std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
+  const pmr_vector<T> new_dictionary(*_dictionary, alloc);
+  return std::allocate_shared<DictionaryColumn<T>>(
+      alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
 EXPLICITLY_INSTANTIATE_COLUMN_TYPES(DictionaryColumn);

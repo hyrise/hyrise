@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "types.hpp"
 
 namespace opossum {
@@ -26,5 +28,10 @@ class BaseAttributeVector : private Noncopyable {
 
   // returns the width of the values in bytes
   virtual AttributeVectorWidth width() const = 0;
+
+  // Copies an attribute vector using a new allocator.
+  // This is useful for placing then attribute vector on a new NUMA node.
+  virtual std::shared_ptr<BaseAttributeVector> copy_using_allocator(
+      const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 }  // namespace opossum

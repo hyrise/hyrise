@@ -8,6 +8,7 @@
 
 #include "base_column.hpp"
 #include "chunk.hpp"
+#include "proxy_chunk.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -59,6 +60,8 @@ class Table : private Noncopyable {
   // returns the chunk with the given id
   Chunk& get_chunk(ChunkID chunk_id);
   const Chunk& get_chunk(ChunkID chunk_id) const;
+  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
+  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
   void emplace_chunk(Chunk chunk);

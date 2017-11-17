@@ -15,8 +15,6 @@ namespace opossum {
 std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
   auto max_num_threads = std::thread::hardware_concurrency();
 
-  std::cout << "max num threads: " << max_num_threads << std::endl;
-
   /**
    * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
    */
