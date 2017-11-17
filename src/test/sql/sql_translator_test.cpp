@@ -274,6 +274,31 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0});
 }
 
+TEST_F(SQLTranslatorTest, SelectInnerJoinWithAnd) {
+  const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a AND a.b = b.b;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_EQ(projection_node->output_column_count(), 4u);
+  std::vector<std::string> output_columns = {"a", "b", "a", "b"};
+  EXPECT_EQ(projection_node->output_column_names(), output_columns);
+
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
+  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
+  EXPECT_EQ(predicate_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(predicate_node->output_column_count(), 4u);
+  EXPECT_EQ(predicate_node->column_id(), ColumnID{1});
+  EXPECT_EQ(predicate_node->value(), AllParameterVariant{ColumnID{3}});
+
+  EXPECT_EQ(result_node->left_child()->left_child()->type(), LQPNodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child()->left_child());
+  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
+  EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0});
+  EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0});
+}
+
 // Verifies that LEFT/RIGHT JOIN are handled correctly and LEFT/RIGHT OUTER JOIN identically
 TEST_F(SQLTranslatorTest, SelectLeftRightOuterJoins) {
   using namespace std::string_literals;  // NOLINT (Linter does not know about using namespace)

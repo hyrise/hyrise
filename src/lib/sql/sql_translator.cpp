@@ -300,11 +300,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
 
-  const hsql::Expr& condition = *join.condition;
+  // We have to use a pointer here so that we can change the condition to be the first of a number of AND conditions
+  // without duplicating the expression (which would lead to double frees later on)
+  hsql::Expr* condition = join.condition;
 
-  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
+  // If we have a JOIN ... ON ... AND, this holds the next predicate.
+  hsql::Expr* and_condition;
+
+  Assert(condition->type == hsql::kExprOperator, "Join condition must be operator.");
   // The Join operators only support simple comparisons for now.
-  switch (condition.opType) {
+  switch (condition->opType) {
     case hsql::kOpEquals:
     case hsql::kOpNotEquals:
     case hsql::kOpLess:
@@ -312,18 +317,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
     case hsql::kOpGreater:
     case hsql::kOpGreaterEq:
       break;
+    case hsql::kOpAnd:
+      // Use the first condition for the join. The join order algorithms might change this later. We will add the
+      // second condition at the end of this method.
+      and_condition = condition->expr2;
+      condition = condition->expr;
+      break;
     default:
-      Fail("Join condition must be a simple comparison operator.");
+      Fail("Join condition not supported.");
   }
-  Assert(condition.expr && condition.expr->type == hsql::kExprColumnRef,
+  Assert(condition->expr && condition->expr->type == hsql::kExprColumnRef,
          "Left arg of join condition must be column ref");
-  Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
+  Assert(condition->expr2 && condition->expr2->type == hsql::kExprColumnRef,
          "Right arg of join condition must be column ref");
 
   const auto left_named_column_reference =
-      SQLExpressionTranslator::get_named_column_reference_for_column_reference(*condition.expr);
+      SQLExpressionTranslator::get_named_column_reference_for_column_reference(*condition->expr);
   const auto right_named_column_reference =
-      SQLExpressionTranslator::get_named_column_reference_for_column_reference(*condition.expr2);
+      SQLExpressionTranslator::get_named_column_reference_for_column_reference(*condition->expr2);
 
   /**
    * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
@@ -355,11 +366,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   }
 
   // Joins currently only support one simple condition (i.e., not multiple conditions).
-  auto scan_type = translate_operator_type_to_scan_type(condition.opType);
+  auto scan_type = translate_operator_type_to_scan_type(condition->opType);
 
   auto join_node = std::make_shared<JoinNode>(join_mode, column_ids, scan_type);
   join_node->set_left_child(left_node);
   join_node->set_right_child(right_node);
+
+  if (and_condition) {
+    return _translate_where(*and_condition, join_node);
+  }
 
   return join_node;
 }
