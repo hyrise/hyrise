@@ -132,6 +132,9 @@ class AbstractLogicalQueryPlanNode : public std::enable_shared_from_this<Abstrac
       const std::shared_ptr<AbstractLogicalQueryPlanNode>& right_child = nullptr) const;
   // @}
 
+  /**
+   * @returns the names of the columns this node outputs without any alias added by this node
+   */
   virtual const std::vector<std::string>& output_column_names() const;
 
   /**
