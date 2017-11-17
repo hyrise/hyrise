@@ -305,7 +305,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   hsql::Expr* condition = join.condition;
 
   // If we have a JOIN ... ON ... AND, this holds the next predicate.
-  hsql::Expr* and_condition;
+  hsql::Expr* and_condition = nullptr;
 
   Assert(condition->type == hsql::kExprOperator, "Join condition must be operator.");
   // The Join operators only support simple comparisons for now.
