@@ -32,6 +32,11 @@ class TaskQueue {
    */
   std::shared_ptr<AbstractTask> pull();
 
+  /**
+   * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues
+   */
+  std::shared_ptr<AbstractTask> steal();
+
  private:
   NodeID _node_id;
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
