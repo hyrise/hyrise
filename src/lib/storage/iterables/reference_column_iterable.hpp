@@ -16,7 +16,7 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
   explicit ReferenceColumnIterable(const ReferenceColumn& column) : _column{column} {}
 
   template <typename Functor>
-  void _on_with_iterators(const Functor& f) const {
+  void _on_with_iterators(const Functor& functor) const {
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
@@ -25,7 +25,7 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
 
     auto begin = Iterator{table, column_id, begin_it, begin_it};
     auto end = Iterator{table, column_id, begin_it, end_it};
-    f(begin, end);
+    functor(begin, end);
   }
 
  private:

@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -16,15 +16,15 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   auto reordered = false;
 
-  if (node->type() == ASTNodeType::Predicate) {
+  if (node->type() == LQPNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (current_node->type() == ASTNodeType::Predicate) {
+    while (current_node->type() == LQPNodeType::Predicate) {
       // Once a node has multiple parents, we're not talking about a Predicate chain anymore
       if (current_node->parents().size() > 1) {
         break;
@@ -59,15 +59,15 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   const auto parents = predicates.front()->parents();
   const auto child_sides = predicates.front()->get_child_sides();
 
-  const auto sort_predicate = [&](auto& l, auto& r) {
-    return l->derive_statistics_from(child)->row_count() > r->derive_statistics_from(child)->row_count();
+  const auto sort_predicate = [&](auto& left, auto& right) {
+    return left->derive_statistics_from(child)->row_count() > right->derive_statistics_from(child)->row_count();
   };
 
   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
     return false;
   }
 
-  // Untie predicates from AST, so we can freely retie them
+  // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
     predicate->remove_from_tree();
   }

@@ -69,6 +69,6 @@ void to_json(nlohmann::json& json, const CsvMeta& meta);
 /*
  * Equals-operator for convenience and use in tests.
  */
-bool operator==(const CsvMeta& lhs, const CsvMeta& rhs);
+bool operator==(const CsvMeta& left, const CsvMeta& right);
 
 }  // namespace opossum

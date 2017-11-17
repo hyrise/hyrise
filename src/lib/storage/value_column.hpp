@@ -23,10 +23,10 @@ class ValueColumn : public BaseValueColumn {
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
-  const AllTypeVariant operator[](const size_t i) const override;
+  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
-  const T get(const size_t i) const;
+  const T get(const ChunkOffset chunk_offset) const;
 
   // Add a value to the end of the column.
   void append(const AllTypeVariant& val) override;
@@ -60,11 +60,15 @@ class ValueColumn : public BaseValueColumn {
   // We cannot always use the materialize method below because sort results might come from different BaseColumns.
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
+  // Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
+  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+
  protected:
   pmr_concurrent_vector<T> _values;
-  std::optional<pmr_concurrent_vector<bool>> _null_values;
+
   // While a ValueColumn knows if it is nullable or not by looking at this optional, a DictionaryColumn does not.
   // For this reason, we need to store the nullable information separately in the table's definition.
+  std::optional<pmr_concurrent_vector<bool>> _null_values;
 };
 
 }  // namespace opossum

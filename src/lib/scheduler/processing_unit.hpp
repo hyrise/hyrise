@@ -21,7 +21,7 @@ class Worker;
  */
 class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit> {
  public:
-  ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator, CpuID cpuID);
+  ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator, CpuID cpu_id);
 
   bool shutdown_flag() const;
 
@@ -29,14 +29,14 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
    * In order to be allowed to pull new Tasks, a Worker must be the active worker, i.e. call this method with its id
    * and receive true from it.
    */
-  bool try_acquire_active_worker_token(WorkerID workerID);
+  bool try_acquire_active_worker_token(WorkerID worked_id);
 
   /**
-   * If @workerID owns the active worker token, it yields it, otherwise nothing happens.
+   * If @worked_id owns the active worker token, it yields it, otherwise nothing happens.
    * It's okay for Workers to call this without actually owning the token, think of Tasks waiting for multiple
    * batches of jobs.
    */
-  void yield_active_worker_token(WorkerID workerID);
+  void yield_active_worker_token(WorkerID worked_id);
 
   /**
    * Put the Worker into hibernation state, which means it will only wake up when the Scheduler is shutting down or
@@ -65,7 +65,7 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
  private:
   std::shared_ptr<TaskQueue> _queue;
   std::shared_ptr<UidAllocator> _worker_id_allocator;
-  CpuID _cpuID;
+  CpuID _cpu_id;
   std::mutex _mutex;  // Synchronizes access to _threads, _workers
   std::vector<std::thread> _threads;
   std::vector<std::shared_ptr<Worker>> _workers;

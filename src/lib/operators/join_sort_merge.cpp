@@ -239,7 +239,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Emits a combination of a lhs row id and a rhs row id to the join output.
+  * Emits a combination of a left row id and a right row id to the join output.
   **/
   void _emit_combination(size_t output_cluster, RowID left, RowID right) {
     _output_pos_lists_left[output_cluster]->push_back(left);
@@ -448,28 +448,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
     if (_op == ScanType::OpLessThan) {
-      // Look for the first rhs value that is bigger than the smallest lhs value.
+      // Look for the first right value that is bigger than the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
       if (result.has_value()) {
         _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
-      // Look for the first rhs value that is bigger or equal to the smallest lhs value.
+      // Look for the first right value that is bigger or equal to the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
       if (result.has_value()) {
         _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_op == ScanType::OpGreaterThan) {
-      // Look for the first rhs value that is smaller than the biggest lhs value.
+      // Look for the first right value that is smaller than the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value < left_max_value; });
       if (result.has_value()) {
         _emit_left_null_combinations(0, (*result).to(end_of_right_table));
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
-      // Look for the first rhs value that is smaller or equal to the biggest lhs value.
+      // Look for the first right value that is smaller or equal to the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value <= left_max_value; });
       if (result.has_value()) {
@@ -489,28 +489,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto end_of_left_table = _end_of_table(_sorted_left_table);
 
     if (_op == ScanType::OpLessThan) {
-      // Look for the last lhs value that is smaller than the biggest rhs value.
+      // Look for the last left value that is smaller than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value < right_max_value; });
       if (result.has_value()) {
         _emit_right_null_combinations(0, (*result).to(end_of_left_table));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
-      // Look for the last lhs value that is smaller or equal than the biggest rhs value.
+      // Look for the last left value that is smaller or equal than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value <= right_max_value; });
       if (result.has_value()) {
         _emit_right_null_combinations(0, (*result).to(end_of_left_table));
       }
     } else if (_op == ScanType::OpGreaterThan) {
-      // Look for the first lhs value that is bigger than the smallest rhs value.
+      // Look for the first left value that is bigger than the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
       if (result.has_value()) {
         _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
-      // Look for the first lhs value that is bigger or equal to the smallest rhs value.
+      // Look for the first left value that is bigger or equal to the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
       if (result.has_value()) {

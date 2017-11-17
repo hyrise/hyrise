@@ -15,6 +15,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
+#include "storage/proxy_chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
@@ -85,10 +86,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+      const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of ColumnScanBase
       const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
 
-      Chunk chunk_out;
+      // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
+      // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
+      // original chunk.
+      Chunk chunk_out(chunk_guard->get_allocator(), chunk_guard->access_counter());
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can

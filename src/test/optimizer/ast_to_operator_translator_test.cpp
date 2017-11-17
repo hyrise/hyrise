@@ -7,6 +7,16 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_tables_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -17,21 +27,11 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
-#include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
-#include "optimizer/abstract_syntax_tree/join_node.hpp"
-#include "optimizer/abstract_syntax_tree/limit_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
-#include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
-#include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
-#include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-class ASTToOperatorTranslatorTest : public BaseTest {
+class LQPTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("table_int_float",
@@ -45,20 +45,20 @@ class ASTToOperatorTranslatorTest : public BaseTest {
   void TearDown() override { StorageManager::get().reset(); }
 };
 
-TEST_F(ASTToOperatorTranslatorTest, StoredTableNode) {
+TEST_F(LQPTranslatorTest, StoredTableNode) {
   const auto node = std::make_shared<StoredTableNode>("table_int_float");
-  const auto op = ASTToOperatorTranslator{}.translate_node(node);
+  const auto op = LQPTranslator{}.translate_node(node);
 
   const auto get_table_op = std::dynamic_pointer_cast<GetTable>(op);
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
-TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
+TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, 42);
   predicate_node->set_left_child(stored_table_node);
-  const auto op = ASTToOperatorTranslator{}.translate_node(predicate_node);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
@@ -68,12 +68,12 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
   EXPECT_FALSE(table_scan_op->right_value2());
 }
 
-TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
+TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node =
       std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpBetween, AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
-  const auto op = ASTToOperatorTranslator{}.translate_node(predicate_node);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op2);
@@ -90,12 +90,12 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
   EXPECT_EQ(table_scan_op->right_value2(), std::nullopt);
 }
 
-TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
+TEST_F(LQPTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   const auto expressions = std::vector<std::shared_ptr<Expression>>{Expression::create_column(ColumnID{0}, {"a"})};
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);
-  const auto op = ASTToOperatorTranslator{}.translate_node(projection_node);
+  const auto op = LQPTranslator{}.translate_node(projection_node);
 
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
@@ -104,11 +104,11 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   EXPECT_EQ(*projection_op->column_expressions()[0]->alias(), "a");
 }
 
-TEST_F(ASTToOperatorTranslatorTest, SortNode) {
+TEST_F(LQPTranslatorTest, SortNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
-  const auto op = ASTToOperatorTranslator{}.translate_node(sort_node);
+  const auto op = LQPTranslator{}.translate_node(sort_node);
 
   const auto sort_op = std::dynamic_pointer_cast<Sort>(op);
   ASSERT_TRUE(sort_op);
@@ -116,14 +116,14 @@ TEST_F(ASTToOperatorTranslatorTest, SortNode) {
   EXPECT_EQ(sort_op->order_by_mode(), OrderByMode::Ascending);
 }
 
-TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
+TEST_F(LQPTranslatorTest, JoinNode) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto join_node =
       std::make_shared<JoinNode>(JoinMode::Outer, std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
-  const auto op = ASTToOperatorTranslator{}.translate_node(join_node);
+  const auto op = LQPTranslator{}.translate_node(join_node);
 
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
@@ -132,25 +132,25 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   EXPECT_EQ(join_op->mode(), JoinMode::Outer);
 }
 
-TEST_F(ASTToOperatorTranslatorTest, ShowTablesNode) {
+TEST_F(LQPTranslatorTest, ShowTablesNode) {
   const auto show_tables_node = std::make_shared<ShowTablesNode>();
-  const auto op = ASTToOperatorTranslator{}.translate_node(show_tables_node);
+  const auto op = LQPTranslator{}.translate_node(show_tables_node);
 
   const auto show_tables_op = std::dynamic_pointer_cast<ShowTables>(op);
   ASSERT_TRUE(show_tables_op);
   EXPECT_EQ(show_tables_op->name(), "ShowTables");
 }
 
-TEST_F(ASTToOperatorTranslatorTest, ShowColumnsNode) {
+TEST_F(LQPTranslatorTest, ShowColumnsNode) {
   const auto show_column_node = std::make_shared<ShowColumnsNode>("table_a");
-  const auto op = ASTToOperatorTranslator{}.translate_node(show_column_node);
+  const auto op = LQPTranslator{}.translate_node(show_column_node);
 
   const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
   ASSERT_TRUE(show_columns_op);
   EXPECT_EQ(show_columns_op->name(), "ShowColumns");
 }
 
-TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
+TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression = Expression::create_aggregate_function(AggregateFunction::Sum,
@@ -160,7 +160,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
                                                         std::vector<ColumnID>{});
   aggregate_node->set_left_child(stored_table_node);
 
-  const auto op = ASTToOperatorTranslator{}.translate_node(aggregate_node);
+  const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
   const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
   ASSERT_TRUE(aggregate_op);
@@ -173,7 +173,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_a"));
 }
 
-TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
+TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
@@ -192,7 +192,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
                                                         std::vector<ColumnID>{ColumnID{0}});
   aggregate_node->set_left_child(stored_table_node);
 
-  const auto op = ASTToOperatorTranslator{}.translate_node(aggregate_node);
+  const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
   // Check aggregate operator.
   const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
@@ -227,7 +227,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(column_expression1->alias(), std::nullopt);
 }
 
-TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
+TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node_left = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
@@ -242,7 +242,7 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 
-  const auto op = ASTToOperatorTranslator{}.translate_node(join_node);
+  const auto op = LQPTranslator{}.translate_node(join_node);
 
   const auto join_op = std::dynamic_pointer_cast<const JoinHash>(op);
   ASSERT_TRUE(join_op);
@@ -264,14 +264,14 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
   EXPECT_EQ(get_table_op_right->table_name(), "table_int_float2");
 }
 
-TEST_F(ASTToOperatorTranslatorTest, LimitNode) {
+TEST_F(LQPTranslatorTest, LimitNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   const auto num_rows = 2u;
   auto limit_node = std::make_shared<LimitNode>(num_rows);
   limit_node->set_left_child(stored_table_node);
 
-  const auto op = ASTToOperatorTranslator{}.translate_node(limit_node);
+  const auto op = LQPTranslator{}.translate_node(limit_node);
   const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
   ASSERT_TRUE(limit_op);
   EXPECT_EQ(limit_op->num_rows(), num_rows);

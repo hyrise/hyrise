@@ -7,11 +7,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "tpch/tpch_queries.hpp"
@@ -50,13 +50,13 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
       throw std::runtime_error("Query is not valid.");
     }
 
-    auto result_node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
+    auto result_node = SQLTranslator{false}.translate_parse_result(parse_result)[0];
 
     if (optimize) {
       result_node = Optimizer::get().optimize(result_node);
     }
 
-    return ASTToOperatorTranslator{}.translate_node(result_node);
+    return LQPTranslator{}.translate_node(result_node);
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query, bool optimize) {

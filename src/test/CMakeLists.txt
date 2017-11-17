@@ -43,23 +43,23 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/abstract_syntax_tree/abstract_syntax_tree_test.cpp
-    optimizer/abstract_syntax_tree/aggregate_node_test.cpp
-    optimizer/abstract_syntax_tree/delete_node_test.cpp
-    optimizer/abstract_syntax_tree/dummy_table_node_test.cpp
-    optimizer/abstract_syntax_tree/insert_node_test.cpp
-    optimizer/abstract_syntax_tree/join_node_test.cpp
-    optimizer/abstract_syntax_tree/limit_node_test.cpp
-    optimizer/abstract_syntax_tree/mock_node_test.cpp
-    optimizer/abstract_syntax_tree/stored_table_node_test.cpp
-    optimizer/abstract_syntax_tree/predicate_node_test.cpp
-    optimizer/abstract_syntax_tree/projection_node_test.cpp
-    optimizer/abstract_syntax_tree/show_columns_node_test.cpp
-    optimizer/abstract_syntax_tree/show_tables_node_test.cpp
-    optimizer/abstract_syntax_tree/sort_node_test.cpp
-    optimizer/abstract_syntax_tree/union_node_test.cpp
-    optimizer/abstract_syntax_tree/update_node_test.cpp
-    optimizer/abstract_syntax_tree/validate_node_test.cpp
+    logical_query_plan/logical_query_plan_test.cpp
+    logical_query_plan/aggregate_node_test.cpp
+    logical_query_plan/delete_node_test.cpp
+    logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/insert_node_test.cpp
+    logical_query_plan/join_node_test.cpp
+    logical_query_plan/limit_node_test.cpp
+    logical_query_plan/mock_node_test.cpp
+    logical_query_plan/stored_table_node_test.cpp
+    logical_query_plan/predicate_node_test.cpp
+    logical_query_plan/projection_node_test.cpp
+    logical_query_plan/show_columns_node_test.cpp
+    logical_query_plan/show_tables_node_test.cpp
+    logical_query_plan/sort_node_test.cpp
+    logical_query_plan/union_node_test.cpp
+    logical_query_plan/update_node_test.cpp
+    logical_query_plan/validate_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
@@ -77,7 +77,7 @@ set(
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
-    sql/sql_to_ast_translator_test.cpp
+    sql/sql_translator_test.cpp
     sql/sql_to_result_test.cpp
     sql/tpch_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
@@ -90,6 +90,7 @@ set(
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
+    storage/numa_placement_test.cpp
     storage/reference_column_test.cpp
     storage/single_column_index_test.cpp
     storage/storage_manager_test.cpp
@@ -135,7 +136,7 @@ set(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
-add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
+    add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
 target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
 add_coverage_executable(hyriseCoverage "${HYRISE_TEST_SOURCES}" "hyriseCoverageLib;hyriseBenchmarkCoverageLib;${LIBRARIES}")

@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base_attribute_vector.hpp"
@@ -36,8 +37,8 @@ class FittedAttributeVector : public BaseAttributeVector {
    * Returns the ValueID for a given record
    * Note: max(uintX_t) is converted to NULL_VALUE_ID
    */
-  ValueID get(const size_t i) const final {
-    auto value_id = _attributes[i];
+  ValueID get(const ChunkOffset chunk_offset) const final {
+    auto value_id = _attributes[chunk_offset];
     return (value_id == CLAMPED_NULL_VALUE_ID) ? NULL_VALUE_ID : static_cast<ValueID>(value_id);
   }
 
@@ -45,9 +46,9 @@ class FittedAttributeVector : public BaseAttributeVector {
    * Sets the value_id at a given position
    * Note: NULL_VALUE_ID is converted to max(uintX_t)
    */
-  void set(const size_t i, const ValueID value_id) final {
+  void set(const ChunkOffset chunk_offset, const ValueID value_id) final {
     DebugAssert(value_id < CLAMPED_NULL_VALUE_ID || value_id == NULL_VALUE_ID, "value_id to large to fit into uintX_t");
-    _attributes[i] = static_cast<uintX_t>(value_id);
+    _attributes[chunk_offset] = static_cast<uintX_t>(value_id);
   }
 
   // returns all attributes
@@ -57,6 +58,13 @@ class FittedAttributeVector : public BaseAttributeVector {
   size_t size() const final { return _attributes.size(); }
 
   AttributeVectorWidth width() const final { return sizeof(uintX_t); }
+
+  std::shared_ptr<BaseAttributeVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final {
+    pmr_vector<uintX_t> new_attributes(_attributes, alloc);
+    const auto new_attribute_vector =
+        std::allocate_shared<FittedAttributeVector<uintX_t>>(alloc, std::move(new_attributes));
+    return new_attribute_vector;
+  }
 
  private:
   pmr_vector<uintX_t> _attributes;

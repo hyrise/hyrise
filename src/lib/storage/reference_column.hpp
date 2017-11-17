@@ -24,7 +24,7 @@ class ReferenceColumn : public BaseColumn {
   ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const ColumnID referenced_column_id,
                   const std::shared_ptr<const PosList> pos);
 
-  const AllTypeVariant operator[](const size_t i) const override;
+  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   void append(const AllTypeVariant&) override;
 
@@ -109,14 +109,16 @@ class ReferenceColumn : public BaseColumn {
       auto& chunk = _referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(_referenced_column_id);
 
-      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
-      referenced_column->visit(visitable, c);
+      auto context = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
+      referenced_column->visit(visitable, context);
     }
   }
 
   // copies one of its own values to a different ValueColumn - mainly used for materialization
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn&, ChunkOffset) const override;
+
+  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need
