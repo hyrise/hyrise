@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "planviz/abstract_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
