@@ -10,9 +10,9 @@ namespace opossum {
 /**
  * This class wraps the translation of a parse result to an Operator tree.
  * This includes four steps:
- * - translate parse result to AST
- * - optimize AST
- * - translate AST to operators
+ * - translate parse result to LQP
+ * - optimize LQP
+ * - translate LQP to operators
  * - wrap operators in SQLQueryPlan
  */
 class SQLPlanner final : public Noncopyable {

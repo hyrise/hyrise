@@ -16,7 +16,7 @@
 namespace opossum {
 
 std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
+    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
   auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
@@ -104,15 +104,15 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       /**
        * Current problem with Subselect:
        *
-       * For now we split Expressions and ASTNodes into two separate trees.
+       * For now we split Expressions and LQP Nodes into two separate trees.
        * The only connection is the PredicateNode that contains an Expression.
        *
        * When we translate Subselects, the naive approach would be to add another member to the Expression,
-       * which is a Pointer to the root node of the AST of the Subselect, so usually a ProjectionNode.
+       * which is a Pointer to the root node of the LQP of the Subselect, so usually a ProjectionNode.
        *
        * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
        */
-      // TODO(mp): translate as soon as SQLToASTTranslator is merged
+      // TODO(mp): translate as soon as SQLTranslator is merged
       throw std::runtime_error("Subselects are not supported yet.");
     default:
       throw std::runtime_error("Unsupported expression type");
@@ -131,7 +131,7 @@ NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_col
 }
 
 ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr& hsql_expr,
-                                                               const std::shared_ptr<AbstractASTNode>& input_node) {
+                                                               const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
   return input_node->get_column_id_by_named_column_reference(

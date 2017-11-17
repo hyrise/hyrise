@@ -155,7 +155,7 @@ enum class ScanType {
   OpLessThanEquals,
   OpGreaterThan,
   OpGreaterThanEquals,
-  OpBetween,  // Currently, OpBetween is not handled by a single scan. The ASTToOperatorTranslator creates two scans.
+  OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
   OpLike
 };
 
