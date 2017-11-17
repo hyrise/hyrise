@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
+#include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
 
@@ -63,15 +64,21 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
   pmr_concurrent_vector(PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, alloc) {}  // NOLINT
   pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})                             // NOLINT
       : pmr_concurrent_vector(0, T{}, alloc) {}
-  pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})
-      : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
-  pmr_concurrent_vector(tbb::concurrent_vector<T> other) : tbb::concurrent_vector<T>(other) {}  // NOLINT
+  pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})  // NOLINT
+      : tbb::concurrent_vector<T>(n, val),
+        _alloc(alloc) {}
+  pmr_concurrent_vector(tbb::concurrent_vector<T> other, PolymorphicAllocator<T> alloc = {})  // NOLINT
+      : tbb::concurrent_vector<T>(other),
+        _alloc(alloc) {}
 
   PolymorphicAllocator<T>& get_allocator() { return _alloc; }
 
  protected:
   PolymorphicAllocator<T> _alloc;
 };
+
+template <typename T>
+using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 
@@ -123,8 +130,9 @@ constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
-  Normal = 1,  // Schedule task at the end of the queue
-  High = 0     // Schedule task at the beginning of the queue
+  Unstealable = 2,  // Schedule task at the end of the queue with disabled workstealing
+  Normal = 1,       // Schedule task at the end of the queue
+  High = 0          // Schedule task at the beginning of the queue
 };
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.

@@ -172,6 +172,17 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
   }
 }
 
+template <typename T>
+std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  pmr_concurrent_vector<T> new_values(_values, alloc);
+  if (is_nullable()) {
+    pmr_concurrent_vector<bool> new_null_values(_null_values.value(), alloc);
+    return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), std::move(new_null_values));
+  } else {
+    return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));
+  }
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);
 
 }  // namespace opossum

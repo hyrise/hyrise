@@ -30,6 +30,8 @@ bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcep
   }
 }
 
+int NUMAMemoryResource::get_node_id() const { return _memory_source.getPhysicalNode(); }
+
 #else
 
 NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name) {}
@@ -43,9 +45,8 @@ void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t a
 }
 
 bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcept { return true; }
+
+int NUMAMemoryResource::get_node_id() const { return UNDEFINED_NODE_ID; }
 #endif
 
-static NUMAMemoryResource default_resource = NUMAMemoryResource(1, "default");
-
-NUMAMemoryResource* NUMAMemoryResource::get_default_resource() { return &default_resource; }
 }  // namespace opossum

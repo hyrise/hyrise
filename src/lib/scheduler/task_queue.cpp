@@ -39,4 +39,18 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
   return nullptr;
 }
 
+std::shared_ptr<AbstractTask> TaskQueue::steal() {
+  std::shared_ptr<AbstractTask> task;
+  for (auto i : {SchedulePriority::High, SchedulePriority::Normal}) {
+    auto& queue = _queues[static_cast<uint32_t>(i)];
+    queue.try_pop(task);
+
+    if (task) {
+      _num_tasks--;
+      return task;
+    }
+  }
+  return nullptr;
+}
+
 }  // namespace opossum

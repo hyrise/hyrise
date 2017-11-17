@@ -6,6 +6,11 @@
 #include "uid_allocator.hpp"
 #include "worker.hpp"
 
+// It is important to limit the number of workers per core to avoid
+// resource depletion. This number is an arbitrary pick, but has been reached
+// and exceeded in experiments.
+static constexpr size_t MAX_WORKERS_PER_CORE = 200;
+
 namespace opossum {
 
 ProcessingUnit::ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator,
@@ -51,11 +56,13 @@ void ProcessingUnit::wake_or_create_worker() {
   if (_num_hibernated_workers == 0) {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id);
-    _workers.emplace_back(worker);
+    if (_workers.size() < MAX_WORKERS_PER_CORE) {
+      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id);
+      _workers.emplace_back(worker);
 
-    auto fn = std::bind(&Worker::operator(), worker.get());
-    _threads.emplace_back(fn);
+      auto fn = std::bind(&Worker::operator(), worker.get());
+      _threads.emplace_back(fn);
+    }
   } else {
     std::unique_lock<std::mutex> lock(_hibernation_mutex);
     _hibernation_cv.notify_one();

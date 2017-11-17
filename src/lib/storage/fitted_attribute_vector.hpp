@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base_attribute_vector.hpp"
@@ -57,6 +58,13 @@ class FittedAttributeVector : public BaseAttributeVector {
   size_t size() const final { return _attributes.size(); }
 
   AttributeVectorWidth width() const final { return sizeof(uintX_t); }
+
+  std::shared_ptr<BaseAttributeVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final {
+    pmr_vector<uintX_t> new_attributes(_attributes, alloc);
+    const auto new_attribute_vector =
+        std::allocate_shared<FittedAttributeVector<uintX_t>>(alloc, std::move(new_attributes));
+    return new_attribute_vector;
+  }
 
  private:
   pmr_vector<uintX_t> _attributes;

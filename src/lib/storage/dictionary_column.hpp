@@ -25,6 +25,9 @@ class DictionaryColumn : public BaseDictionaryColumn {
   explicit DictionaryColumn(const pmr_vector<T>&& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
+  explicit DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                            const std::shared_ptr<BaseAttributeVector>& attribute_vector);
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
@@ -75,6 +78,9 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // copies one of its own values to a different ValueColumn - mainly used for materialization
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
+
+  // Copies a DictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
+  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;

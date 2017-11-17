@@ -147,6 +147,16 @@ const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
+ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
+}
+
+const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
+}
+
 void Table::emplace_chunk(Chunk chunk) {
   if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
     // the initial chunk was not used yet

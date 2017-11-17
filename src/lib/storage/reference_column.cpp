@@ -61,4 +61,11 @@ void ReferenceColumn::copy_value_to_value_column(BaseColumn&, ChunkOffset) const
   Fail("It is not allowed to copy directly from a reference column");
 }
 
+std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  // ReferenceColumns are considered as intermediate datastructures and are
+  // therefore not subject to NUMA-aware chunk migrations.
+  Fail("Cannot migrate a ReferenceColumn");
+  return nullptr;
+}
+
 }  // namespace opossum
