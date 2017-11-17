@@ -21,10 +21,10 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
 #endif
 }
 
-const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
+const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  auto chunk_info = _pos_list->at(i);
+  auto chunk_info = _pos_list->at(chunk_offset);
 
   if (chunk_info == NULL_ROW_ID) return NULL_VALUE;
 

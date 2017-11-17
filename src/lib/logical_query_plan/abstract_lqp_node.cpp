@@ -393,7 +393,7 @@ void AbstractLQPNode::_child_changed() {
 
 void AbstractLQPNode::_remove_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent) {
   const auto iter =
-      std::find_if(_parents.begin(), _parents.end(), [&](const auto& rhs) { return parent == rhs.lock(); });
+      std::find_if(_parents.begin(), _parents.end(), [&](const auto& other) { return parent == other.lock(); });
   DebugAssert(iter != _parents.end(), "Specified parent node is not actually a parent node of this node.");
 
   /**
@@ -406,7 +406,7 @@ void AbstractLQPNode::_remove_parent_pointer(const std::shared_ptr<AbstractLQPNo
 void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent) {
 #if IS_DEBUG
   const auto iter =
-      std::find_if(_parents.begin(), _parents.end(), [&](const auto& rhs) { return parent == rhs.lock(); });
+      std::find_if(_parents.begin(), _parents.end(), [&](const auto& other) { return parent == other.lock(); });
   DebugAssert(iter == _parents.end(), "Specified new parent node is already a parent node.");
 #endif
   _parents.emplace_back(parent);

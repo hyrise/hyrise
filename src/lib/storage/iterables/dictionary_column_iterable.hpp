@@ -15,17 +15,17 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
   explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
-  void _on_with_iterators(const Functor& f) const {
+  void _on_with_iterators(const Functor& functor) const {
     auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
     auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
-    f(begin, end);
+    functor(begin, end);
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
     auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cbegin()};
     auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cend()};
-    f(begin, end);
+    functor(begin, end);
   }
 
  private:

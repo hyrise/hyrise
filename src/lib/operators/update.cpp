@@ -93,10 +93,10 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   }
 
   // 4. call insert using insert_table.
-  auto helper_op = std::make_shared<TableWrapper>(insert_table);
-  helper_op->execute();
+  auto helper_operator = std::make_shared<TableWrapper>(insert_table);
+  helper_operator->execute();
 
-  _insert = std::make_shared<Insert>(_table_to_update_name, helper_op);
+  _insert = std::make_shared<Insert>(_table_to_update_name, helper_operator);
   _insert->set_transaction_context(context);
 
   _insert->execute();

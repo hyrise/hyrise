@@ -11,7 +11,7 @@
 namespace opossum {
 
 class BaseColumn;
-class Node;
+class ARTNode;
 class BaseDictionaryColumn;
 
 /**
@@ -74,18 +74,18 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   Iterator _cend() const final;
 
-  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
+  std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
 
-  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth,
-                                     Iterator& it);
+  std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,
+                                        size_t depth, Iterator& it);
 
   std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
 
   const std::shared_ptr<const BaseDictionaryColumn> _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
-  std::shared_ptr<Node> _root;
+  std::shared_ptr<ARTNode> _root;
 };
 
-bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& lhs,
-                const AdaptiveRadixTreeIndex::BinaryComparable& rhs);
+bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
+                const AdaptiveRadixTreeIndex::BinaryComparable& right);
 }  // namespace opossum

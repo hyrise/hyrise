@@ -16,7 +16,7 @@ class SQLExpressionTranslator {
                                                           const std::shared_ptr<AbstractLQPNode>& input_node);
 
   // Helper. Asserts that hsql_expr is a ColumnRef, constructs a NamedColumnReference from it
-  static NamedColumnReference get_named_column_reference_for_column_ref(const hsql::Expr& hsql_expr);
+  static NamedColumnReference get_named_column_reference_for_column_reference(const hsql::Expr& hsql_expr);
 
   // Helper. Converts hsql_expr into Expression and looks for it in input_node's output
   static ColumnID get_column_id_for_expression(const hsql::Expr& hsql_expr,

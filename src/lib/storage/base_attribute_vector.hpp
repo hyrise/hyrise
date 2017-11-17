@@ -16,10 +16,10 @@ class BaseAttributeVector : private Noncopyable {
   BaseAttributeVector(BaseAttributeVector&&) = default;
   BaseAttributeVector& operator=(BaseAttributeVector&&) = default;
 
-  virtual ValueID get(const size_t i) const = 0;
+  virtual ValueID get(const ChunkOffset chunk_offset) const = 0;
 
   // sets the value_id at a given position
-  virtual void set(const size_t i, const ValueID value_id) = 0;
+  virtual void set(const ChunkOffset chunk_offset, const ValueID value_id) = 0;
 
   // returns the number of values
   virtual size_t size() const = 0;

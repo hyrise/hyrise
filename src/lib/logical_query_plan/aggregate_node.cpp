@@ -191,18 +191,20 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
    *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
    */
   if (expression->type() == ExpressionType::Column) {
-    const auto iter = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
-                                   [&](const auto& rhs) { return expression->column_id() == rhs; });
+    const auto iter =
+        std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+                     [&](const auto& groupby_column_id) { return expression->column_id() == groupby_column_id; });
 
     if (iter != _groupby_column_ids.end()) {
       const auto idx = std::distance(_groupby_column_ids.begin(), iter);
       return ColumnID{static_cast<ColumnID::base_type>(idx)};
     }
   } else if (expression->type() == ExpressionType::Function) {
-    const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
-      DebugAssert(rhs, "Aggregate expressions can not be nullptr!");
-      return *expression == *rhs;
-    });
+    const auto iter =
+        std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& other) {
+          DebugAssert(other, "Aggregate expressions can not be nullptr!");
+          return *expression == *other;
+        });
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);

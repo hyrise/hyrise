@@ -20,12 +20,12 @@ DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
+const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _attribute_vector->get(i);
+  const auto value_id = _attribute_vector->get(chunk_offset);
 
   if (value_id == NULL_VALUE_ID) {
     return NULL_VALUE;
@@ -35,12 +35,12 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
 }
 
 template <typename T>
-const T DictionaryColumn<T>::get(const size_t i) const {
-  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
+  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _attribute_vector->get(i);
+  const auto value_id = _attribute_vector->get(chunk_offset);
 
-  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(i) + " is null.");
+  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(chunk_offset) + " is null.");
 
   return (*_dictionary)[value_id];
 }

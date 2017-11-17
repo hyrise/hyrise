@@ -193,11 +193,11 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  template <typename Comp>
+  template <typename Comparator>
   void sort_with_operator() {
-    Comp comp;
+    Comparator comparator;
     std::stable_sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
-                     [comp](RowIDValuePair a, RowIDValuePair b) { return comp(a.second, b.second); });
+                     [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
   }
 
   const std::shared_ptr<const Table> _table_in;

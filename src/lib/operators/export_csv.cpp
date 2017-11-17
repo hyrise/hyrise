@@ -33,11 +33,11 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   meta.chunk_size = table->chunk_size();
 
   // Column Types
-  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     ColumnMeta column_meta;
-    column_meta.name = table->column_name(col_id);
-    column_meta.type = table->column_type(col_id);
-    column_meta.nullable = table->column_is_nullable(col_id);
+    column_meta.name = table->column_name(column_id);
+    column_meta.type = table->column_type(column_id);
+    column_meta.nullable = table->column_is_nullable(column_id);
 
     meta.columns.push_back(column_meta);
   }
@@ -64,9 +64,9 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
   // Create visitors for every column, so that we do not have to do that more than once.
   std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->column_count());
-  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
-    auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(col_id));
-    visitors[col_id] = std::move(visitor);
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(column_id));
+    visitors[column_id] = std::move(visitor);
   }
 
   auto context = std::make_shared<ExportCsvContext>(writer);
@@ -81,8 +81,8 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
     auto& chunk = table->get_chunk(chunk_id);
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
       context->currentRow = row;
-      for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
-        chunk.get_column(col_id)->visit(*(visitors[col_id]), context);
+      for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+        chunk.get_column(column_id)->visit(*(visitors[column_id]), context);
       }
       writer.end_line();
     }
