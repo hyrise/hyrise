@@ -90,7 +90,9 @@ bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& r
   return false;
 }
 
-bool operator<=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return left < right || left == right; }
+bool operator<=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
+  return left < right || left == right;
+}
 
 bool operator>(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left <= right); }
 

@@ -93,34 +93,46 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     switch (_scan_type) {
       case ScanType::OpEquals: {
         _value_comparator = [casted_value](T value) { return value == casted_value; };
-        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) { return found_value_id == search_value_id; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id == search_value_id;
+        };
         break;
       }
       case ScanType::OpNotEquals: {
         _value_comparator = [casted_value](T value) { return value != casted_value; };
-        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) { return found_value_id != search_value_id; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id != search_value_id;
+        };
         break;
       }
       case ScanType::OpLessThan: {
         _value_comparator = [casted_value](T value) { return value < casted_value; };
-        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) { return found_value_id < search_value_id; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id < search_value_id;
+        };
         break;
       }
       case ScanType::OpLessThanEquals: {
         _value_comparator = [casted_value](T value) { return value <= casted_value; };
-        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) { return found_value_id < search_value_id; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id < search_value_id;
+        };
         //                                                                                           ^
         //                                                               sic! see handle_dictionary_column for details
         break;
       }
       case ScanType::OpGreaterThan: {
         _value_comparator = [casted_value](T value) { return value > casted_value; };
-        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) { return found_value_id >= search_value_id; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id >= search_value_id;
+        };
         break;
       }
       case ScanType::OpGreaterThanEquals: {
         _value_comparator = [casted_value](T value) { return value >= casted_value; };
-        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) { return found_value_id >= search_value_id; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id >= search_value_id;
+        };
         break;
       }
       case ScanType::OpBetween: {
@@ -350,7 +362,8 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
       if (context->chunk_offsets_in) {
         for (const ChunkOffset& offset_in_dictionary_column : *(context->chunk_offsets_in)) {
-          if (_value_id_comparator(attribute_vector.get(offset_in_dictionary_column), search_value_id, search_value_id2)) {
+          if (_value_id_comparator(attribute_vector.get(offset_in_dictionary_column), search_value_id,
+                                   search_value_id2)) {
             matches_out.emplace_back(RowID{context->chunk_id, offset_in_dictionary_column});
           }
         }

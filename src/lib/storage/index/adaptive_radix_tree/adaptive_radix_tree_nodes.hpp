@@ -124,9 +124,9 @@ class ARTNode48 final : public ARTNode {
   Iterator end() const override;
 
  private:
-  Iterator _delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                              std::function<Iterator(uint8_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)>
-                                  function) const;
+  Iterator _delegate_to_child(
+      const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+      std::function<Iterator(uint8_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)> function) const;
 
   std::array<uint8_t, 256> _index_to_child;
   std::array<std::shared_ptr<ARTNode>, 48> _children;

@@ -13,7 +13,8 @@ namespace opossum {
 
 namespace {
 
-bool is_row_visible(CommitID our_tid, CommitID our_last_cid, ChunkOffset chunk_offset, const Chunk::MvccColumns& columns) {
+bool is_row_visible(CommitID our_tid, CommitID our_last_cid, ChunkOffset chunk_offset,
+                    const Chunk::MvccColumns& columns) {
   const auto row_tid = columns.tids[chunk_offset].load();
   const auto begin_cid = columns.begin_cids[chunk_offset];
   const auto end_cid = columns.end_cids[chunk_offset];

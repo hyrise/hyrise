@@ -20,12 +20,14 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
   // add columns from left table to output
   for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    output->add_column_definition(_input_table_left()->column_name(column_id), _input_table_left()->column_type(column_id));
+    output->add_column_definition(_input_table_left()->column_name(column_id),
+                                  _input_table_left()->column_type(column_id));
   }
 
   // add columns from right table to output
   for (ColumnID column_id{0}; column_id < _input_table_right()->column_count(); ++column_id) {
-    output->add_column_definition(_input_table_right()->column_name(column_id), _input_table_right()->column_type(column_id));
+    output->add_column_definition(_input_table_right()->column_name(column_id),
+                                  _input_table_right()->column_type(column_id));
   }
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _input_table_left()->chunk_count(); ++chunk_id_left) {
