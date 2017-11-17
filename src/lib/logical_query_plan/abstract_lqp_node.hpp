@@ -66,11 +66,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   explicit AbstractLQPNode(LQPNodeType node_type);
 
-  /**
-   * @returns whether the Optimizer should consider this node
-   */
-  virtual bool is_optimizable() const;
-
   // @{
   /**
    * Set and get the parents/children of this node.
