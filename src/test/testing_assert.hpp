@@ -43,9 +43,6 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode);
 
-bool check_aggregate_function_expression(const std::shared_ptr<const Expression>& expression,
-                                         AggregateFunction aggregate_function, ColumnID column_id);
-
 // @}
 
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,
