@@ -24,10 +24,10 @@
 #include "operators/print.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "planviz/ast_visualizer.hpp"
+#include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -204,7 +204,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   std::string args = cmd.substr(first + 1, last - (first + 1));
 
   // Remove whitespace duplicates in args
-  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
   args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
 
   return static_cast<int>(func(args));
@@ -377,8 +377,8 @@ int Console::help(const std::string&) {
   out("  print TABLENAME         - Fully print the given table (including MVCC columns)\n");
   out("  visualize [options] SQL - Visualize a SQL query\n");
   out("             noexec          - without executing the query\n");
-  out("             ast             - print the raw abstract syntax tree\n");
-  out("             astopt          - print the optimized abstract syntax tree\n");
+  out("             lqp             - print the raw logical query plans\n");
+  out("             lqpopt          - print the optimized abstract syntax tree\n");
   out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
   out("  rollback             - Roll back a manually created transaction\n");
   out("  commit               - Commit a manually created transaction\n");
@@ -486,7 +486,7 @@ int Console::print_table(const std::string& args) {
 int Console::visualize(const std::string& input) {
   auto first_word = input.substr(0, input.find_first_of(" \n"));
   std::string mode, sql, dot_filename, img_filename;
-  if (first_word == "noexec" || first_word == "ast" || first_word == "astopt") {
+  if (first_word == "noexec" || first_word == "lqp" || first_word == "lqpopt") {
     mode = first_word;
   }
 
@@ -509,21 +509,21 @@ int Console::visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  if (mode == "ast" || mode == "astopt") {
+  if (mode == "lqp" || mode == "lqpopt") {
     try {
-      auto ast_roots = SQLToASTTranslator{}.translate_parse_result(parse_result);
+      auto lqp_roots = SQLTranslator{}.translate_parse_result(parse_result);
 
-      if (mode == "astopt") {
-        for (auto& root : ast_roots) {
+      if (mode == "lqpopt") {
+        for (auto& root : lqp_roots) {
           root = Optimizer::get().optimize(root);
         }
       }
 
       dot_filename = "." + mode + ".dot";
       img_filename = mode + ".png";
-      ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
+      LQPVisualizer::visualize(lqp_roots, dot_filename, img_filename);
     } catch (const std::exception& exception) {
-      out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
+      out("Exception while creating query plan:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
@@ -683,7 +683,7 @@ char** Console::command_completion(const char* text, int start, int end) {
   std::string input(rl_line_buffer);
 
   // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
   input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
 
   std::vector<std::string> tokens;

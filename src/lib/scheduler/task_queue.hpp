@@ -17,7 +17,7 @@ class AbstractTask;
  */
 class TaskQueue {
  public:
-  static constexpr uint32_t NUM_PRIORITY_LEVELS = 2;
+  static constexpr uint32_t NUM_PRIORITY_LEVELS = 3;
 
   explicit TaskQueue(NodeID node_id);
 
@@ -31,6 +31,11 @@ class TaskQueue {
    * Returns a Tasks that is ready to be executed and removes it from the queue
    */
   std::shared_ptr<AbstractTask> pull();
+
+  /**
+   * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues
+   */
+  std::shared_ptr<AbstractTask> steal();
 
  private:
   NodeID _node_id;

@@ -56,7 +56,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
-std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
+std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
@@ -64,7 +64,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
   return _bulk_insert(values, static_cast<size_t>(0u), begin);
 }
 
-std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
+std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, BaseIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
@@ -73,14 +73,14 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
     // copy the Iterator in the _chunk_offsets - vector --> this is the lower_bound of the leaf
     Iterator lower = it;
     // insert the ChunkOffsets into the vector and push the Iterator further
-    auto cap = _chunk_offsets.capacity();
+    auto old_capacity = _chunk_offsets.capacity();
     for (const auto& pair : values) {
       _chunk_offsets.emplace_back(pair.second);
     }
     std::advance(it, values.size());
-    auto cap2 = _chunk_offsets.capacity();
+    auto new_capacity = _chunk_offsets.capacity();
     // we are not allowed to change the size of the vector as it would invalidate all our Iterators
-    Assert(cap == cap2, "_chunk_offsets capacity changes, all Iterators are invalidated");
+    Assert(old_capacity == new_capacity, "_chunk_offsets capacity changes, all Iterators are invalidated");
 
     // "it" points to the position after the last inserted ChunkOffset --> this is the upper_bound of the leave
     Iterator upper = it;
@@ -94,7 +94,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 
   // call recursively for each non-empty partition and gather the children
-  std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> children;
+  std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>> children;
 
   for (uint16_t partition_id = 0; partition_id < partitions.size(); ++partition_id) {
     if (!partitions[partition_id].empty()) {
@@ -103,15 +103,15 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
       children.emplace_back(std::move(child));
     }
   }
-  // finally create the appropriate Node according to the size of the children
+  // finally create the appropriate ARTNode according to the size of the children
   if (children.size() <= 4) {
-    return std::make_shared<Node4>(children);
+    return std::make_shared<ARTNode4>(children);
   } else if (children.size() <= 16) {
-    return std::make_shared<Node16>(children);
+    return std::make_shared<ARTNode16>(children);
   } else if (children.size() <= 48) {
-    return std::make_shared<Node48>(children);
+    return std::make_shared<ARTNode48>(children);
   } else {
-    return std::make_shared<Node256>(children);
+    return std::make_shared<ARTNode256>(children);
   }
 }
 
@@ -136,11 +136,11 @@ uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) co
   return _parts[position];
 }
 
-bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& lhs,
-                const AdaptiveRadixTreeIndex::BinaryComparable& rhs) {
-  if (lhs.size() != rhs.size()) return false;
-  for (size_t i = 0; i < lhs.size(); ++i) {
-    if (lhs[i] != rhs[i]) return false;
+bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
+                const AdaptiveRadixTreeIndex::BinaryComparable& right) {
+  if (left.size() != right.size()) return false;
+  for (size_t i = 0; i < left.size(); ++i) {
+    if (left[i] != right[i]) return false;
   }
   return true;
 }

@@ -39,7 +39,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
   /**
    * Commits the operator and triggers any potential work following commits.
    */
-  void commit_records(const CommitID cid);
+  void commit_records(const CommitID commit_id);
 
   /**
    * Rolls back the operator by unlocking all modified rows. No other action is necessary since commit_records should
@@ -73,7 +73,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike _on_execute, where failures are expected, the commit operation cannot fail.
    */
-  virtual void _on_commit_records(const CommitID cid) = 0;
+  virtual void _on_commit_records(const CommitID commit_id) = 0;
 
   /**
    * Called immediately after commit_records().

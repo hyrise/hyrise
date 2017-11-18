@@ -91,6 +91,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 
 -	Yannick  Bäumer
+-	Lawrence Benson
 -	Timo     Djürken
 -	Fabian   Dumke
 -	Moritz   Eyssen
@@ -104,6 +105,7 @@ Contact: firstname.lastname@hpi.de
 -	Jan      Mattfeld
 -	Arne     Mayer
 -	Torben   Meyer
+-	Leander  Neiß
 -	David    Schumann
 -	Daniel   Stolpe
 -	Jonathan Striebel

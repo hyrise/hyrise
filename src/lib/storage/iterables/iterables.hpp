@@ -99,21 +99,21 @@ class IndexableIterable : public Iterable<Derived> {
   using Iterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
-  void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& f) const {
+  void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
     if (mapped_chunk_offsets == nullptr) {
-      _self()._on_with_iterators(f);
+      _self()._on_with_iterators(functor);
     } else {
-      _self()._on_with_iterators(*mapped_chunk_offsets, f);
+      _self()._on_with_iterators(*mapped_chunk_offsets, functor);
     }
   }
 
   using Iterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
-  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& f) {
-    with_iterators(mapped_chunk_offsets, [&f](auto it, auto end) {
+  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) {
+    with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
-        f(*it);
+        functor(*it);
       }
     });
   }

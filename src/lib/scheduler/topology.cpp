@@ -29,14 +29,14 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   std::vector<TopologyNode> nodes;
   nodes.reserve(num_nodes);
 
-  CpuID cpuID{0};
+  CpuID cpu_id{0};
 
   for (auto n = 0u; n < num_nodes; n++) {
     std::vector<TopologyCpu> cpus;
 
-    for (auto w = 0u; w < workers_per_node && cpuID < num_workers; w++) {
-      cpus.emplace_back(TopologyCpu(cpuID));
-      cpuID++;
+    for (auto w = 0u; w < workers_per_node && cpu_id < num_workers; w++) {
+      cpus.emplace_back(TopologyCpu(cpu_id));
+      cpu_id++;
     }
 
     TopologyNode node(std::move(cpus));
@@ -69,10 +69,10 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
 
       numa_node_to_cpus(n, cpu_bitmask);
 
-      for (CpuID c{0}; c < num_configured_cpus; c++) {
-        if (numa_bitmask_isbitset(cpu_bitmask, c)) {
+      for (CpuID cpu_id{0}; cpu_id < num_configured_cpus; ++cpu_id) {
+        if (numa_bitmask_isbitset(cpu_bitmask, cpu_id)) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
-            cpus.emplace_back(TopologyCpu(c));
+            cpus.emplace_back(TopologyCpu(cpu_id));
           }
           core_count++;
         }

@@ -48,7 +48,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
 
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
   std::shared_ptr<BaseColumn> dict_col1 = nullptr;
-  std::shared_ptr<Node> root = nullptr;
+  std::shared_ptr<ARTNode> root = nullptr;
   std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
   std::vector<ValueID> keys1;
   std::vector<ChunkOffset> values1;
@@ -70,25 +70,25 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
   EXPECT_FALSE(std::dynamic_pointer_cast<Leaf>(root));
   EXPECT_EQ(index1->_chunk_offsets, expectedChunkOffets);
 
-  auto root4 = std::dynamic_pointer_cast<Node4>(root);
+  auto root4 = std::dynamic_pointer_cast<ARTNode4>(root);
   EXPECT_EQ(root4->_partial_keys[0], static_cast<uint8_t>(0x01u));
   EXPECT_EQ(root4->_partial_keys[1], static_cast<uint8_t>(0x02u));
   EXPECT_EQ(root4->_partial_keys[2], static_cast<uint8_t>(0xffu));
   EXPECT_EQ(root4->_partial_keys[3], static_cast<uint8_t>(0xffu));
 
-  auto child01 = std::dynamic_pointer_cast<Node4>(root4->_children[0]);
+  auto child01 = std::dynamic_pointer_cast<ARTNode4>(root4->_children[0]);
   EXPECT_EQ(child01->_partial_keys[0], static_cast<uint8_t>(0x01u));
   EXPECT_EQ(child01->_partial_keys[1], static_cast<uint8_t>(0x02u));
   EXPECT_EQ(child01->_partial_keys[2], static_cast<uint8_t>(0xffu));
   EXPECT_EQ(child01->_partial_keys[3], static_cast<uint8_t>(0xffu));
 
-  auto child0101 = std::dynamic_pointer_cast<Node4>(child01->_children[0]);
+  auto child0101 = std::dynamic_pointer_cast<ARTNode4>(child01->_children[0]);
   EXPECT_EQ(child0101->_partial_keys[0], static_cast<uint8_t>(0x01u));
   EXPECT_EQ(child0101->_partial_keys[1], static_cast<uint8_t>(0x02u));
   EXPECT_EQ(child0101->_partial_keys[2], static_cast<uint8_t>(0xffu));
   EXPECT_EQ(child0101->_partial_keys[3], static_cast<uint8_t>(0xffu));
 
-  auto child010101 = std::dynamic_pointer_cast<Node4>(child0101->_children[0]);
+  auto child010101 = std::dynamic_pointer_cast<ARTNode4>(child0101->_children[0]);
   EXPECT_EQ(child0101->_partial_keys[0], static_cast<uint8_t>(0x01u));
   EXPECT_EQ(child0101->_partial_keys[1], static_cast<uint8_t>(0x02u));
   EXPECT_EQ(child0101->_partial_keys[2], static_cast<uint8_t>(0xffu));

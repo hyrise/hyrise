@@ -85,7 +85,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
    */
   struct VirtualPosListCmpContext {
     ReferenceMatrix& reference_matrix;
-    bool operator()(size_t lhs, size_t rhs) const;
+    bool operator()(size_t left, size_t right) const;
   };
 
   std::shared_ptr<const Table> _on_execute() override;
@@ -103,8 +103,8 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _prepare_operator();
 
   UnionPositions::ReferenceMatrix _build_reference_matrix(const std::shared_ptr<const Table>& input_table) const;
-  bool _cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a, const ReferenceMatrix& matrix_b,
-                                  size_t row_idx_b) const;
+  bool _compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
+                                      const ReferenceMatrix& right_matrix, size_t right_row_idx) const;
 
   // See the "About ColumnSegments" doc in the cpp
   std::vector<ColumnID> _column_segment_offsets;

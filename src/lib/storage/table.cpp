@@ -30,16 +30,16 @@ std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<cons
   return new_table;
 }
 
-bool Table::layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b) {
-  if (table_a->column_count() != table_b->column_count()) {
+bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right) {
+  if (left->column_count() != right->column_count()) {
     return false;
   }
 
-  for (auto column_id = ColumnID{0}; column_id < table_a->column_count(); ++column_id) {
-    if (table_a->column_type(column_id) != table_b->column_type(column_id)) {
+  for (auto column_id = ColumnID{0}; column_id < left->column_count(); ++column_id) {
+    if (left->column_type(column_id) != right->column_type(column_id)) {
       return false;
     }
-    if (table_a->column_name(column_id) != table_b->column_name(column_id)) {
+    if (left->column_name(column_id) != right->column_name(column_id)) {
       return false;
     }
   }
@@ -93,7 +93,7 @@ uint16_t Table::column_count() const { return _column_types.size(); }
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
-  for (auto&& chunk : _chunks) {
+  for (const auto& chunk : _chunks) {
     ret += chunk.size();
   }
   return ret;
@@ -145,6 +145,16 @@ Chunk& Table::get_chunk(ChunkID chunk_id) {
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
+}
+
+ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
+}
+
+const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
 }
 
 void Table::emplace_chunk(Chunk chunk) {

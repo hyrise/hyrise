@@ -6,12 +6,12 @@
 
 #include "gtest/gtest.h"
 
-#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class AbstractASTNode;
+class AbstractLQPNode;
 class Table;
 
 /**
@@ -45,13 +45,13 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
 // @}
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scanType, ColumnID left_column_id,
                             ColumnID right_column_id);
 
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node);
+void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 
-bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChildSide child_side,
-                   const std::shared_ptr<const AbstractASTNode>& child);
+bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
+                   const std::shared_ptr<const AbstractLQPNode>& child);
 }  // namespace opossum
 
 /**
@@ -75,9 +75,6 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
-#define ASSERT_AST_TIE(parent, child_side, child) \
-  if (!opossum::check_ast_tie(parent, child_side, child)) FAIL();
-
 /**
  * Checks whether test_value differs at max `reference_value * rel_error` from reference_value.
  */
@@ -88,7 +85,7 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
  * Assert that a LQP `node` is a StoredTableNode referring to Table `table_name`
  */
 #define ASSERT_STORED_TABLE_NODE(node, actual_table_name) \
-  ASSERT_EQ(node->type(), ASTNodeType::StoredTable);      \
+  ASSERT_EQ(node->type(), LQPNodeType::StoredTable);      \
   ASSERT_EQ(std::dynamic_pointer_cast<const StoredTableNode>(node)->table_name(), actual_table_name);
 
 /**
@@ -107,3 +104,7 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
   ASSERT_EQ(expression->expression_list().size(), 1u);                                                \
   ASSERT_EQ(expression->expression_list()[0]->type(), ExpressionType::Column);                        \
   ASSERT_EQ(expression->expression_list()[0]->column_id(), actual_column_id);
+
+#define ASSERT_LQP_TIE(parent, child_side, child) \
+  if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
+
