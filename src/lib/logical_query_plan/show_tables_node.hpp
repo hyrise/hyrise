@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "abstract_non_optimizable_lqp_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
