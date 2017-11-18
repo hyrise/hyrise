@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -28,7 +29,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-#include "constant_mappings.hpp"
 #include "util/sqlhelper.h"
 #include "utils/assert.hpp"
 

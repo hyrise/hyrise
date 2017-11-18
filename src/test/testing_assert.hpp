@@ -107,4 +107,3 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChil
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
-
