@@ -17,6 +17,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
+#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -497,10 +498,10 @@ TEST_F(SQLToASTTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_EQ(result->type(), ASTNodeType::Projection);
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result);
   ASSERT_EQ(projection_node->column_expressions().size(), 4u);
-  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], ColumnID{2});
-  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], ColumnID{4});
-  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], ColumnID{0});
-  EXPECT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], ColumnID{3});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], ColumnID{2});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], ColumnID{4});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], ColumnID{0});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], ColumnID{3});
 
   /**
    * Assert the Aggregate
@@ -515,16 +516,16 @@ TEST_F(SQLToASTTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const auto sum_expression = aggregate_node->aggregate_expressions()[0];
   ASSERT_EQ(sum_expression->type(), ExpressionType::Function);
-  EXPECT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum, ColumnID{2});
+  ASSERT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum, ColumnID{2});
 
   /**
    * Assert rest of the AST
    */
   ASSERT_CROSS_JOIN_NODE(aggregate_node->left_child());
   ASSERT_CROSS_JOIN_NODE(aggregate_node->left_child()->left_child());
-  EXPECT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->left_child(), "table_b");
-  EXPECT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->right_child(), "table_c");
-  EXPECT_STORED_TABLE_NODE(aggregate_node->left_child()->right_child(), "table_a");
+  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->left_child(), "table_b");
+  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->right_child(), "table_c");
+  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->right_child(), "table_a");
 }
 
 }  // namespace opossum

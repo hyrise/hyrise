@@ -181,30 +181,6 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   return true;
 }
 
-bool check_stored_table_node(const std::shared_ptr<const AbstractASTNode>& node, const std::string& table_name) {
-  if (node->type() != ASTNodeType::StoredTable) {
-    return false;
-  }
-
-  return std::dynamic_pointer_cast<const StoredTableNode>(node)->table_name() == table_name;
-}
-
-bool check_column_expression(const std::shared_ptr<const Expression>& expression, ColumnID column_id) {
-  if (expression->type() != ExpressionType::Column) {
-    return false;
-  }
-
-  return expression->column_id() == column_id;
-}
-
-bool check_aggregate_function_expression(const std::shared_ptr<const Expression>& expression,
-                                         AggregateFunction aggregate_function, ColumnID column_id) {
-  return expression->type() == ExpressionType::Function && expression->aggregate_function() == aggregate_function &&
-         expression->expression_list().size() == 1u &&
-         expression->expression_list()[0]->type() == ExpressionType::Column &&
-         expression->expression_list()[0]->column_id() == column_id;
-}
-
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,
                             ColumnID right_column_id) {
   ASSERT_EQ(node->type(), ASTNodeType::Join);  // Can't cast otherwise

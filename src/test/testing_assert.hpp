@@ -43,10 +43,6 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode);
 
-bool check_stored_table_node(const std::shared_ptr<const AbstractASTNode>& node, const std::string& table_name);
-
-bool check_column_expression(const std::shared_ptr<const Expression>& expression, ColumnID column_id);
-
 bool check_aggregate_function_expression(const std::shared_ptr<const Expression>& expression,
                                          AggregateFunction aggregate_function, ColumnID column_id);
 
@@ -61,14 +57,23 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
                    const std::shared_ptr<const AbstractASTNode>& child);
 }  // namespace opossum
 
+/**
+ * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
+ */
 #define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode) \
   EXPECT_TRUE(                                                                                                  \
       check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode));
 
+/**
+ * Specialised version of EXPECT_TABLE_EQ
+ */
 #define EXPECT_TABLE_EQ_UNORDERED(opossum_table, expected_table)                            \
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
+/**
+ * Specialised version of EXPECT_TABLE_EQ
+ */
 #define EXPECT_TABLE_EQ_ORDERED(opossum_table, expected_table)                               \
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
@@ -82,9 +87,26 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
 #define EXPECT_REL_NEAR(test_value, reference_value, rel_error) \
   EXPECT_NEAR(test_value, reference_value, std::fabs(reference_value* rel_error))
 
-#define EXPECT_STORED_TABLE_NODE(node, table_name) EXPECT_TRUE(check_stored_table_node(node, table_name))
+/**
+ * Assert that a LQP `node` is a StoredTableNode referring to Table `table_name`
+ */
+#define ASSERT_STORED_TABLE_NODE(node, actual_table_name) \
+  ASSERT_EQ(node->type(), ASTNodeType::StoredTable); \
+  ASSERT_EQ(std::dynamic_pointer_cast<const StoredTableNode>(node)->table_name(), actual_table_name);
 
-#define EXPECT_COLUMN_EXPRESSION(expression, column_id) EXPECT_TRUE(check_column_expression(expression, column_id))
+/**
+ * Assert that the `expression` is a Column Expression referring to `actual_column_id`
+ */
+#define ASSERT_COLUMN_EXPRESSION(expression, actual_column_id) \
+  ASSERT_EQ(expression->type(), ExpressionType::Column); \
+  ASSERT_EQ(expression->column_id(), actual_column_id);
 
-#define EXPECT_AGGREGATE_FUNCTION_EXPRESSION(expression, aggregate_function, column_id) \
-  EXPECT_TRUE(check_aggregate_function_expression(expression, aggregate_function, column_id));
+/**
+ * Assert that `expression` models an Aggregate Function operating on `actual_column_id`
+ */
+#define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_id) \
+  ASSERT_EQ(expression->type(), ExpressionType::Function); \
+  ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function); \
+  ASSERT_EQ(expression->expression_list().size(), 1u); \
+  ASSERT_EQ(expression->expression_list()[0]->type(), ExpressionType::Column); \
+  ASSERT_EQ(expression->expression_list()[0]->column_id(), actual_column_id);
