@@ -61,12 +61,7 @@ std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
   if (!named_column_reference_without_local_alias) {
     return {};
   }
-
-  // UnionNode can't resolve NamedColumnReference with table_name
-  if (named_column_reference_without_local_alias->table_name) {
-    return {};
-  }
-
+  
   const auto column_id_in_left =
       left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
 #if IS_DEBUG
