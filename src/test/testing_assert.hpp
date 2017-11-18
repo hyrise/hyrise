@@ -88,22 +88,22 @@ bool check_ast_tie(const std::shared_ptr<const AbstractASTNode>& parent, ASTChil
  * Assert that a LQP `node` is a StoredTableNode referring to Table `table_name`
  */
 #define ASSERT_STORED_TABLE_NODE(node, actual_table_name) \
-  ASSERT_EQ(node->type(), ASTNodeType::StoredTable); \
+  ASSERT_EQ(node->type(), ASTNodeType::StoredTable);      \
   ASSERT_EQ(std::dynamic_pointer_cast<const StoredTableNode>(node)->table_name(), actual_table_name);
 
 /**
  * Assert that the `expression` is a Column Expression referring to `actual_column_id`
  */
 #define ASSERT_COLUMN_EXPRESSION(expression, actual_column_id) \
-  ASSERT_EQ(expression->type(), ExpressionType::Column); \
+  ASSERT_EQ(expression->type(), ExpressionType::Column);       \
   ASSERT_EQ(expression->column_id(), actual_column_id);
 
 /**
  * Assert that `expression` models an Aggregate Function operating on `actual_column_id`
  */
 #define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_id) \
-  ASSERT_EQ(expression->type(), ExpressionType::Function); \
-  ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function); \
-  ASSERT_EQ(expression->expression_list().size(), 1u); \
-  ASSERT_EQ(expression->expression_list()[0]->type(), ExpressionType::Column); \
+  ASSERT_EQ(expression->type(), ExpressionType::Function);                                            \
+  ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                             \
+  ASSERT_EQ(expression->expression_list().size(), 1u);                                                \
+  ASSERT_EQ(expression->expression_list()[0]->type(), ExpressionType::Column);                        \
   ASSERT_EQ(expression->expression_list()[0]->column_id(), actual_column_id);
