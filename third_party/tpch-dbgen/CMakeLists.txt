@@ -1,0 +1,33 @@
+set(DATABASE ORACLE)
+set(MACHINE MAC)
+set(WORKLOAD TPCH)
+
+add_library(tpch_dbgen
+    STATIC
+    build.c
+    driver.c
+    bm_utils.c
+    rnd.c
+    print.c
+    load_stub.c
+    bcd2.c
+    speed_seed.c
+    text.c
+    permute.c
+    rng64.c
+    )
+
+target_include_directories(tpch_dbgen
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_compile_definitions(
+    tpch_dbgen
+    PUBLIC
+    -DDBNAME="dss"
+    -D${MACHINE}
+    -D${DATABASE}
+    -D${WORKLOAD}
+    -DRNG_TEST
+    -D_FILE_OFFSET_BITS=64
+)

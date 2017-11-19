@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_table_generator.hpp"
+#include "tpch/tpch_db_generator.hpp"
 
 int main() {
   std::cout << "TPCH" << std::endl;
