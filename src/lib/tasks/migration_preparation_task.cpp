@@ -1,3 +1,5 @@
+#if HYRISE_NUMA_SUPPORT
+
 #include "migration_preparation_task.hpp"
 
 #include <numa.h>
@@ -18,8 +20,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/numa_memory_resource.hpp"
-
-#if HYRISE_NUMA_SUPPORT
 
 namespace opossum {
 
