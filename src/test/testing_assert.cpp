@@ -16,19 +16,19 @@ namespace {
 
 using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
 
-Matrix _table_to_matrix(const opossum::Table& t) {
+Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<opossum::AllTypeVariant>(t.column_count()));
+  Matrix matrix(t->row_count(), std::vector<opossum::AllTypeVariant>(t->column_count()));
 
   // set values
   unsigned row_offset = 0;
-  for (opossum::ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
-    const opossum::Chunk& chunk = t.get_chunk(chunk_id);
+  for (opossum::ChunkID chunk_id{0}; chunk_id < t->chunk_count(); chunk_id++) {
+    const opossum::Chunk& chunk = t->get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (opossum::ColumnID col_id{0}; col_id < t.column_count(); ++col_id) {
+    for (opossum::ColumnID col_id{0}; col_id < t->column_count(); ++col_id) {
       const auto column = chunk.get_column(col_id);
 
       for (opossum::ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
@@ -41,47 +41,54 @@ Matrix _table_to_matrix(const opossum::Table& t) {
   return matrix;
 }
 
-void _print_matrix(const Matrix& m) {
-  std::cout << "-------------" << std::endl;
+std::string _matrix_to_string(const std::string& title, const Matrix& m) {
+  std::stringstream stream;
+  stream << "-------" << title << "-------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
     for (opossum::ColumnID col{0}; col < m[row].size(); col++) {
-      std::cout << std::setw(8) << m[row][col] << " ";
+      stream << std::setw(8) << m[row][col] << " ";
     }
-    std::cout << std::endl;
+    stream << std::endl;
   }
-  std::cout << "-------------" << std::endl;
+  stream << "---------------------------" << std::endl;
+  return stream.str();
 }
 }  // namespace
 
 namespace opossum {
 
-::testing::AssertionResult check_table_equal(const Table& tleft, const Table& tright, bool order_sensitive,
-                                             bool strict_types) {
-  Matrix left = _table_to_matrix(tleft);
-  Matrix right = _table_to_matrix(tright);
+bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+                       const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
+                       TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+  auto opossum_matrix = _table_to_matrix(opossum_table);
+  auto expected_matrix = _table_to_matrix(expected_table);
 
-  const auto print_tables = [&]() {
-    std::cout << "== Tables are not equal ==" << std::endl;
-    _print_matrix(left);
-    _print_matrix(right);
-    std::cout << "==========================" << std::endl;
+  const auto generate_table_comparison = [&]() {
+    std::stringstream stream;
+    stream << "========= Tables are not equal =========" << std::endl;
+    stream << _matrix_to_string("Actual Result", opossum_matrix);
+    stream << std::endl;
+    stream << _matrix_to_string("Expected Result", expected_matrix);
+    stream << "========================================" << std::endl;
+    return stream.str();
   };
 
   // compare schema of tables
   //  - column count
-  if (tleft.column_count() != tright.column_count()) {
-    print_tables();
-    return ::testing::AssertionFailure() << "Number of columns is different. " << tleft.column_count()
-                                         << " != " << tright.column_count();
+  if (opossum_table->column_count() != expected_table->column_count()) {
+    std::cout << generate_table_comparison() << "Number of columns is different. " << std::endl
+              << "Actual result: " << opossum_table->column_count()
+              << ", Expected result: " << expected_table->column_count();
+    return false;
   }
 
   //  - column names and types
   std::string left_col_type, right_col_type;
-  for (ColumnID col_id{0}; col_id < tright.column_count(); ++col_id) {
-    left_col_type = tleft.column_type(col_id);
-    right_col_type = tright.column_type(col_id);
+  for (ColumnID col_id{0}; col_id < expected_table->column_count(); ++col_id) {
+    left_col_type = opossum_table->column_type(col_id);
+    right_col_type = expected_table->column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
-    if (!strict_types) {
+    if (type_cmp_mode == TypeCmpMode::Lenient) {
       if (left_col_type == "double") {
         left_col_type = "float";
       } else if (left_col_type == "long") {
@@ -94,88 +101,82 @@ namespace opossum {
         right_col_type = "int";
       }
     }
-    if (left_col_type != right_col_type || tleft.column_name(col_id) != tright.column_name(col_id)) {
-      std::cout << "Column with ID " << col_id << " is different" << std::endl;
-      std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
-      std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;
-      print_tables();
-      return ::testing::AssertionFailure() << "Table schema is different.";
+    if (left_col_type != right_col_type || opossum_table->column_name(col_id) != expected_table->column_name(col_id)) {
+      std::cout << generate_table_comparison() << "Table schema is different."
+                << "Column with ID " << col_id << " is different" << std::endl
+                << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_table->column_type(col_id) << ")"
+                << std::endl
+                << "Expected: " << expected_table->column_name(col_id) << " (" << expected_table->column_type(col_id)
+                << ")" << std::endl;
+      return false;
     }
   }
 
   // compare content of tables
   //  - row count for fast failure
-  if (tleft.row_count() != tright.row_count()) {
-    std::cout << "Got: " << tleft.row_count() << " rows" << std::endl;
-    std::cout << "Expected: " << tright.row_count() << " rows" << std::endl;
-    print_tables();
-    return ::testing::AssertionFailure() << "Number of rows is different.";
+  if (opossum_table->row_count() != expected_table->row_count()) {
+    std::cout << "Number of rows is different." << std::endl
+              << "Got: " << opossum_table->row_count() << " rows" << std::endl
+              << "Expected: " << expected_table->row_count() << " rows" << generate_table_comparison() << std::endl;
+    return false;
   }
 
   // sort if order does not matter
-  if (!order_sensitive) {
-    std::sort(left.begin(), left.end());
-    std::sort(right.begin(), right.end());
+  if (order_sensitivity == OrderSensitivity::No) {
+    std::sort(opossum_matrix.begin(), opossum_matrix.end());
+    std::sort(expected_matrix.begin(), expected_matrix.end());
   }
 
-  for (unsigned row = 0; row < left.size(); row++)
-    for (ColumnID col{0}; col < left[row].size(); col++) {
-      if (is_null(left[row][col]) || is_null(right[row][col])) {
-        EXPECT_TRUE(is_null(left[row][col]) && is_null(right[row][col]));
-      } else if (tleft.column_type(col) == "float") {
-        auto left_val = type_cast<float>(left[row][col]);
-        auto right_val = type_cast<float>(right[row][col]);
+  for (unsigned row = 0; row < opossum_matrix.size(); row++)
+    for (ColumnID col{0}; col < opossum_matrix[row].size(); col++) {
+      if (is_null(opossum_matrix[row][col]) || is_null(expected_matrix[row][col])) {
+        EXPECT_TRUE(is_null(opossum_matrix[row][col]) && is_null(expected_matrix[row][col]));
+      } else if (opossum_table->column_type(col) == "float") {
+        auto left_val = type_cast<float>(opossum_matrix[row][col]);
+        auto right_val = type_cast<float>(expected_matrix[row][col]);
 
-        if (strict_types) {
-          EXPECT_EQ(tright.column_type(col), "float");
+        if (type_cmp_mode == TypeCmpMode::Strict) {
+          EXPECT_EQ(expected_table->column_type(col), "float");
         } else {
-          EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+          EXPECT_TRUE(expected_table->column_type(col) == "float" || expected_table->column_type(col) == "double");
         }
-        EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
-      } else if (tleft.column_type(col) == "double") {
-        auto left_val = type_cast<double>(left[row][col]);
-        auto right_val = type_cast<double>(right[row][col]);
+        if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
+          EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        } else {
+          EXPECT_REL_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        }
+      } else if (opossum_table->column_type(col) == "double") {
+        auto left_val = type_cast<double>(opossum_matrix[row][col]);
+        auto right_val = type_cast<double>(expected_matrix[row][col]);
 
-        if (strict_types) {
-          EXPECT_EQ(tright.column_type(col), "double");
+        if (type_cmp_mode == TypeCmpMode::Strict) {
+          EXPECT_EQ(expected_table->column_type(col), "double");
         } else {
-          EXPECT_TRUE(tright.column_type(col) == "float" || tright.column_type(col) == "double");
+          EXPECT_TRUE(expected_table->column_type(col) == "float" || expected_table->column_type(col) == "double");
         }
-        EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
+          EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        } else {
+          EXPECT_REL_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
+        }
       } else {
-        if (!strict_types && (tleft.column_type(col) == "int" || tleft.column_type(col) == "long")) {
-          auto left_val = type_cast<int64_t>(left[row][col]);
-          auto right_val = type_cast<int64_t>(right[row][col]);
+        if (type_cmp_mode == TypeCmpMode::Lenient &&
+            (opossum_table->column_type(col) == "int" || opossum_table->column_type(col) == "long")) {
+          auto left_val = type_cast<int64_t>(opossum_matrix[row][col]);
+          auto right_val = type_cast<int64_t>(expected_matrix[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;
         } else {
-          EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
+          EXPECT_EQ(opossum_matrix[row][col], expected_matrix[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
         }
       }
     }
 
   if (::testing::Test::HasFailure()) {
-    print_tables();
+    std::cout << generate_table_comparison();
+    return false;
   }
 
-  return ::testing::AssertionSuccess();
-}
-
-void EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
-  EXPECT_TRUE(check_table_equal(tleft, tright, order_sensitive, strict_types));
-}
-
-void ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
-  ASSERT_TRUE(check_table_equal(tleft, tright, order_sensitive, strict_types));
-}
-
-void EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright, bool order_sensitive,
-                     bool strict_types) {
-  EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
-}
-
-void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright, bool order_sensitive,
-                     bool strict_types) {
-  ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
+  return true;
 }
 
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scanType, ColumnID left_column_id,

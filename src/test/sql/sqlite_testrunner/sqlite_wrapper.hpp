@@ -13,7 +13,7 @@ namespace opossum {
  * This class wraps the sqlite3 library for opossum. It creates an in-memory sqlite database on construction.
  * When executing a sql query, the wrapper converts the result into an opossum Table.
  */
-class SQLiteWrapper {
+class SQLiteWrapper final {
  public:
   SQLiteWrapper();
   ~SQLiteWrapper();

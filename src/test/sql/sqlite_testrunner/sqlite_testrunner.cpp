@@ -103,15 +103,18 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   ASSERT_TRUE(result_table->row_count() > 0 && sqlite_result_table->row_count() > 0)
       << "The SQLiteTestRunner cannot handle queries without results";
 
-  bool order_sensitive = false;
+  auto order_sensitivity = OrderSensitivity::No;
 
   if (parse_result.getStatements().back()->is(hsql::kStmtSelect)) {
     auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatements().back());
-    order_sensitive = (select_statement->order != nullptr);
+    if (select_statement->order != nullptr) {
+      order_sensitivity = OrderSensitivity::Yes;
+    }
   }
 
-  ASSERT_TRUE(check_table_equal(*result_table, *sqlite_result_table, order_sensitive, false)) << "Query failed: "
-                                                                                              << query;
+  ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
+                                FloatComparisonMode::RelativeDifference))
+      << "Query failed: " << query;
 }
 
 auto formatter = [](const testing::TestParamInfo<std::string>) {

@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -27,10 +28,8 @@
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
-#include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "types.hpp"
+#include "util/sqlhelper.h"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
@@ -520,9 +519,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
    *
    * input_node -> aggregate_node -> {having_node}* -> projection_node
    *
-   * The aggregate_node creates aggregate and groupby columns, the having_nodes apply the predicates in the optional
-   * HAVING clause and the projection_node establishes the correct column order (since AggregateNode outputs all groupby
-   * columns first and then all aggregate columns)
+   * - the aggregate_node creates aggregate and groupby columns.
+   * - the having_nodes apply the predicates in the optional HAVING clause
+   * - the projection_node establishes the correct column order (since AggregateNode outputs all groupby columns first
+   *        and then all aggregate columns)
    */
 
   const auto& select_list = *select.selectList;
@@ -535,10 +535,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
 
   /**
    * The Aggregate Operator outputs all groupby columns first, and then all aggregates.
-   * Therefore we need to work with two different offsets when constructing the projection list.
+   * Therefore use this offset when setting up the ColumnIDs for the Projection that puts the columns in the right order.
    */
   auto aggregate_offset = group_by ? ColumnID{static_cast<uint16_t>(group_by->columns->size())} : ColumnID{0};
-  ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
     std::optional<std::string> alias;
@@ -561,10 +560,38 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       auto is_in_group_by_clause = false;
-      for (const auto* groupby_expr : *group_by->columns) {
+      auto selected_group_by_idx = size_t{0};
+      for (size_t group_by_idx = 0; group_by_idx < group_by->columns->size(); ++group_by_idx) {
+        const auto* groupby_expr = (*group_by->columns)[group_by_idx];
+
+        // @{
+        /**
+         * Hack to avoid, e.g. groupby_expr "table_a.b" to be matched with column_id "table_b.b", just because their
+         * column name is the same.
+         * TODO(anybody) Just checking for column_expr->table == groupby_expr->table is not enough since, e.g., the
+         *  SELECT might use the table prefix and the groupby might not, yet they might still refer to the same column.
+         */
+
+        std::optional<std::string> column_expr_table;
+        if (column_expr->table) {
+          column_expr_table = std::string(column_expr->table);
+        }
+
+        std::optional<std::string> groupby_expr_table;
+        if (groupby_expr->table) {
+          groupby_expr_table = std::string(groupby_expr->table);
+        }
+
+        if (column_expr_table != groupby_expr_table) {
+          continue;
+        }
+
+        // @}
+
         if ((column_expr->name && groupby_expr->name && strcmp(column_expr->name, groupby_expr->name) == 0) ||
             (column_expr->alias && groupby_expr->name && strcmp(column_expr->alias, groupby_expr->name) == 0)) {
           is_in_group_by_clause = true;
+          selected_group_by_idx = group_by_idx;
           break;
         }
       }
@@ -572,7 +599,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       Assert(is_in_group_by_clause, std::string("Column '") + column_expr->getName() +
                                         "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}, alias));
+      projections.push_back(Expression::create_column(static_cast<ColumnID>(selected_group_by_idx), alias));
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }

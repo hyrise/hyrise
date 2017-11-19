@@ -17,6 +17,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -34,16 +35,6 @@ class SQLTranslatorTest : public BaseTest {
 
     std::shared_ptr<Table> table_c = load_table("src/test/tables/int_float5.tbl", 2);
     StorageManager::get().add_table("table_c", std::move(table_c));
-
-    // TPCH
-    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
-    StorageManager::get().add_table("customer", customer);
-
-    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
-    StorageManager::get().add_table("orders", orders);
-
-    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
-    StorageManager::get().add_table("lineitem", lineitem);
   }
 
   std::shared_ptr<AbstractLQPNode> compile_query(const std::string& query) {
@@ -471,6 +462,70 @@ TEST_F(SQLTranslatorTest, Update) {
   EXPECT_FLOAT_EQ(boost::get<float>(expressions[1]->value()), 3.2);
   EXPECT_TRUE(expressions[1]->alias());
   EXPECT_EQ(*expressions[1]->alias(), "b");
+}
+
+TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
+  /**
+   * Test:
+   *    - Select list can contain both GroupBy and Aggregate Columns in any order
+   *    - The order of GroupBy Columns in the SelectList can differ from the order in the GroupByList
+   */
+
+  const auto query = R"(SELECT
+                          table_b.a, SUM(table_c.a), table_a.b, table_b.b
+                        FROM
+                          table_a, table_b, table_c
+                        GROUP BY
+                          table_a.b, table_a.a, table_b.a, table_b.b)";
+
+  /**
+   * Expect this AST:
+   *
+   * [Projection] table_a.a, SUM(table_c.a), table_a.b, table_a.b
+   *  |_[Aggregate] SUM(table_c.a) GROUP BY [table_a.b, table_a.a, table_b.a, table_b.b]
+   *     |_[Cross Join]
+   *        |_[Cross Join]
+   *         |  |_[StoredTable] Name: 'table_b'
+   *         |  |_[StoredTable] Name: 'table_c'
+   *         |_[StoredTable] Name: 'table_a'
+   */
+
+  auto result = compile_query(query);
+
+  /**
+   * Assert the Projection
+   */
+  ASSERT_EQ(result->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result);
+  ASSERT_EQ(projection_node->column_expressions().size(), 4u);
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], ColumnID{2});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], ColumnID{4});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], ColumnID{0});
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], ColumnID{3});
+
+  /**
+   * Assert the Aggregate
+   */
+  ASSERT_EQ(projection_node->left_child()->type(), LQPNodeType::Aggregate);
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(projection_node->left_child());
+  ASSERT_EQ(aggregate_node->groupby_column_ids().size(), 4u);
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[0], ColumnID{5});
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[1], ColumnID{4});
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[2], ColumnID{0});
+  EXPECT_EQ(aggregate_node->groupby_column_ids()[3], ColumnID{1});
+  ASSERT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
+  const auto sum_expression = aggregate_node->aggregate_expressions()[0];
+  ASSERT_EQ(sum_expression->type(), ExpressionType::Function);
+  ASSERT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum, ColumnID{2});
+
+  /**
+   * Assert rest of the AST
+   */
+  ASSERT_CROSS_JOIN_NODE(aggregate_node->left_child());
+  ASSERT_CROSS_JOIN_NODE(aggregate_node->left_child()->left_child());
+  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->left_child(), "table_b");
+  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->right_child(), "table_c");
+  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->right_child(), "table_a");
 }
 
 }  // namespace opossum

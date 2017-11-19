@@ -40,7 +40,8 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   auto compression_task3 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{3});
   compression_task3->execute();
 
-  ASSERT_TABLE_EQ(table, table_dict);
+  ASSERT_TRUE(check_table_equal(table, table_dict, OrderSensitivity::No, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
 
   constexpr auto chunk_count = 4u;
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {

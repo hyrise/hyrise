@@ -1,6 +1,6 @@
 # This file is loosely related to src/benchmarklib/tpcc/constants.hpp and contains constants specified in the
 # TPCC benchmark
-# These constants are used for TPCC request generation for the hyriseTestTPCC-Suite
+# These constants are used for TPCC request generation for the hyriseSystemTest-Suite
 
 ORIGINAL_STRING = "ORIGINAL"
 NUM_DISTRICTS_PER_WAREHOUSE = 10
