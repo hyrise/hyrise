@@ -182,6 +182,10 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
 
   if (!no_result) {
     for (int i = 0; i < column_count; ++i) {
+      if (col_types[i].empty()) {
+        // Hyrise does not have explicit NULL columns
+        col_types[i] = "int";
+      }
       table->add_column(col_names[i], col_types[i], col_nullable[i]);
     }
   }

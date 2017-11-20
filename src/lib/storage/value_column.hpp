@@ -25,6 +25,10 @@ class ValueColumn : public BaseValueColumn {
   // Use values() and null_values() to get the vectors and check the content yourself.
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
+  // Returns whether a value is NULL
+  bool is_null(const ChunkOffset chunk_offset) const;
+
+  // return the value at a certain position.
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
@@ -36,6 +40,9 @@ class ValueColumn : public BaseValueColumn {
   // e.g. auto& values = col.values(); and then: values.at(i); in your loop.
   const pmr_concurrent_vector<T>& values() const;
   pmr_concurrent_vector<T>& values();
+
+  // return a generated vector of all values (or nulls)
+  const pmr_concurrent_vector<std::optional<T>> materialize_values() const;
 
   // Return whether column supports null values.
   bool is_nullable() const final;

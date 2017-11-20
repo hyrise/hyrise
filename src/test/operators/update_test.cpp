@@ -151,7 +151,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
-TEST_F(OperatorsUpdateTest, EmptyChunks) {
+TEST_F(OperatorsUpdateTest, MissingChunks) {
   auto t = load_table("src/test/tables/int.tbl", 1u);
   std::string table_name = "updateTestTable";
   StorageManager::get().add_table(table_name, t);
@@ -161,7 +161,7 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
 
-  // table scan will produce two leading empty chunks
+  // table scan will leave out first two chunks
   auto table_scan1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, "12345");
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();

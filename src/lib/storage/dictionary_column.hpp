@@ -31,7 +31,11 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
+  // Returns whether a value is NULL
+  bool is_null(const ChunkOffset chunk_offset) const;
+
   // return the value at a certain position.
+  // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
   // dictionary columns are immutable
@@ -43,8 +47,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final;
 
-  // return a generated vector of all values
-  const pmr_concurrent_vector<T> materialize_values() const;
+  // return a generated vector of all values (or nulls)
+  const pmr_concurrent_vector<std::optional<T>> materialize_values() const;
 
   // return the value represented by a given ValueID
   const T& value_by_value_id(ValueID value_id) const;

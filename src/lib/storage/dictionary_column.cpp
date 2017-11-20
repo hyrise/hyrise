@@ -40,6 +40,11 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
+bool DictionaryColumn<T>::is_null(const ChunkOffset chunk_offset) const {
+  return _attribute_vector->get(chunk_offset) == NULL_VALUE_ID;
+}
+
+template <typename T>
 const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
@@ -67,10 +72,11 @@ std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector
 
 // TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
-const pmr_concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
-  pmr_concurrent_vector<T> values(_attribute_vector->size(), T(), _dictionary->get_allocator());
+const pmr_concurrent_vector<std::optional<T>> DictionaryColumn<T>::materialize_values() const {
+  pmr_concurrent_vector<std::optional<T>> values(_attribute_vector->size(), std::nullopt, _dictionary->get_allocator());
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
+    if (is_null(chunk_offset)) continue;
     values[chunk_offset] = (*_dictionary)[_attribute_vector->get(chunk_offset)];
   }
 
@@ -93,7 +99,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(!is_null(value), "Null value passed.");
+  DebugAssert(!opossum::is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return static_cast<ValueID>(lower_bound(typed_value));
@@ -108,7 +114,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(!is_null(value), "Null value passed.");
+  DebugAssert(!opossum::is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return static_cast<ValueID>(upper_bound(typed_value));

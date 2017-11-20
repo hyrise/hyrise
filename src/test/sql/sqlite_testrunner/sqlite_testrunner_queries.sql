@@ -17,6 +17,7 @@ SELECT a FROM int_float;
 SELECT a as b FROM int_float;
 SELECT a, 4+6 as b FROM int_float;
 SELECT a*b/c AS calc FROM int_int_int;
+SELECT a, b, a+b AS e, a+b+NULL AS f FROM int_int_int_null;
 
 -- ORDER BY
 SELECT * FROM int_float ORDER BY a DESC;
@@ -43,6 +44,7 @@ SELECT * FROM int_float NATURAL JOIN (SELECT d, a FROM int_float5) AS T2;
 
 -- JOIN multiple tables
 SELECT * FROM int_float AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;
+SELECT * FROM int_float_null AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;
 
 -- Make sure that name-to-id-resolving works fine.
 SELECT t1.a, t1.b, t2.b, t3.b FROM int_float AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;
