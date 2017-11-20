@@ -449,7 +449,7 @@ const char* const tpch_query_12 =
  *    FROM customer left outer join orders
  *    on
  *        c_custkey = o_custkey
- *        AND o_comment not like '%[WORD1]%[WORD2]%'
+ *        AND o_comment not like '%special%requests%'
  *    GROUP BY c_custkey
  *    ) as c_orders (c_custkey, c_count)
  * GROUP BY c_count
