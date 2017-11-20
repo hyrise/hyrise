@@ -30,12 +30,7 @@ node {
 
       stage("Linting") {
         sh '''
-          scripts/lint.sh
-
-          if [ $? != 0 ]; then
-            echo "ERROR: Linting error occured. Execute \"scripts/lint.sh\" for details!"
-            exit 1
-          fi
+          scripts/lint.sh pre
         '''
       }
 
@@ -99,6 +94,17 @@ node {
       }, memcheck: {
         stage("valgrind-memcheck") {
           sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+        }
+      }, moreLint: {
+        stage("Linting") {
+          script {
+            lintFails = sh script: "./scripts/lint.sh post", returnStdout: true
+            if (lintFails?.trim()) {
+              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            } else {
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins for details"
+            }
+          }
         }
       }
 
