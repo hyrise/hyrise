@@ -442,7 +442,7 @@ int Console::load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      auto table = opossum::load_table(filepath, 0);
+      auto table = opossum::load_table(filepath, Chunk::MAX_SIZE);
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
