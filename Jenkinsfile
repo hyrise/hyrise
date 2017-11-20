@@ -51,7 +51,7 @@ node {
               echo lintFails
               writeFile file: "post_lint.txt", text: lintFails
               archive "post_lint.txt"
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins Step moreLint for details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Click Details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
             } else {
               githubNotify context: 'Strict Lint', status: 'SUCCESS'
             }
