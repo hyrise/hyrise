@@ -105,6 +105,7 @@ node {
           script {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
             githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
           }
         }
       }, memcheck: {
