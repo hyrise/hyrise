@@ -225,7 +225,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnNoChunkSizeLimit.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnMaxChunkSize.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {

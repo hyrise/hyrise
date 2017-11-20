@@ -125,14 +125,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
       auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
-      auto rows_to_insert_this_loop = std::min(_target_table->chunk_size() - current_chunk.size(), remaining_rows);
-
-      if (_target_table->chunk_size() == 0) {
-        // If the chunk's size is unlimited we want to add all remaining rows.
-        // The std::min above will not work if the table is empty and has unlimited size
-        // -> 0 - 0 = 0 < remaining_rows will result in an endless loop OR 0 - X = uint underflow
-        rows_to_insert_this_loop = remaining_rows;
-      }
+      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);

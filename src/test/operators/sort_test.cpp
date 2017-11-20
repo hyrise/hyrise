@@ -220,8 +220,9 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
   auto sort = std::make_shared<Sort>(union_all, ColumnID{1});
   sort->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(sort->get_output(),
-                          load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0));
+  EXPECT_TABLE_EQ_ORDERED(
+      sort->get_output(),
+      load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", Chunk::MAX_SIZE));
 }
 
 }  // namespace opossum

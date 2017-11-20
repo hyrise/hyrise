@@ -25,7 +25,7 @@ class OperatorsInsertTest : public BaseTest {
 
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
-  auto t = load_table("src/test/tables/float_int.tbl", 0u);
+  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   StorageManager::get().add_table(table_name, t);
 
@@ -60,7 +60,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", 0u);
+  auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -113,7 +113,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   opossum::DictionaryCompression::compress_table(*t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", 0u);
+  auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);

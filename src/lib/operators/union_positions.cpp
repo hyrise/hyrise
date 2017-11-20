@@ -104,7 +104,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_right = virtual_pos_list_right.size();
 
   // Somewhat random way to decide on a chunk size.
-  const auto out_chunk_size = std::max(_input_table_left()->chunk_size(), _input_table_right()->chunk_size());
+  const auto out_chunk_size = std::max(_input_table_left()->max_chunk_size(), _input_table_right()->max_chunk_size());
 
   auto out_table = Table::create_with_layout_from(_input_table_left(), out_chunk_size);
 
