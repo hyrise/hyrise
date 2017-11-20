@@ -22,7 +22,7 @@ fi
 if [ $# -eq 0 ] || [ $1 = "post" ]
 then
 	# All disabled tests should have an issue number
-	grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/\(:[0-9]+\):.*/  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/'
+	grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/'
 	let "exitcode |= $?"
 
 	# Check for variable names in camel case. Exceptions may have to be added here for calls to external libraries.

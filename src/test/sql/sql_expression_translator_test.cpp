@@ -217,7 +217,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn /* #279 */) {
 }
 
 // TODO(mp): Subselects are not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist) {
+TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist /* #279 */) {
   const auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b)";
   auto expression = compile_where_expression(query);
 
