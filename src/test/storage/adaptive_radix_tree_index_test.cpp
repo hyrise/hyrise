@@ -65,10 +65,10 @@ TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
-  std::vector<ChunkOffset> expectedChunkOffets = {0x00000001u, 0x00000007u, 0x00000002u, 0x00000003u,
-                                                  0x00000004u, 0x00000005u, 0x00000006u};
+  std::vector<ChunkOffset> expected_chunk_offsets = {0x00000001u, 0x00000007u, 0x00000002u, 0x00000003u,
+                                                     0x00000004u, 0x00000005u, 0x00000006u};
   EXPECT_FALSE(std::dynamic_pointer_cast<Leaf>(root));
-  EXPECT_EQ(index1->_chunk_offsets, expectedChunkOffets);
+  EXPECT_EQ(index1->_chunk_offsets, expected_chunk_offsets);
 
   auto root4 = std::dynamic_pointer_cast<ARTNode4>(root);
   EXPECT_EQ(root4->_partial_keys[0], static_cast<uint8_t>(0x01u));

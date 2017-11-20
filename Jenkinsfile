@@ -49,7 +49,7 @@ node {
             lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
             if (lintFails?.trim()) {
               echo lintFails
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins for details"
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins Step moreLint for details"
             } else {
               githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
             }

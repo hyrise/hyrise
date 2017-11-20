@@ -13,10 +13,10 @@
 namespace {
 template <typename uintX_t>
 std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, opossum::CompositeKeyLength bits) {
-  const auto bitsOfType = sizeof(uintX_t) * CHAR_BIT;
-  assert(bits <= bitsOfType);
+  const auto bits_for_type = sizeof(uintX_t) * CHAR_BIT;
+  assert(bits <= bits_for_type);
   auto borrow = value;
-  borrow >>= bitsOfType - bits;
+  borrow >>= bits_for_type - bits;
   auto shifted_value = value << bits;
   return {shifted_value, borrow};
 }

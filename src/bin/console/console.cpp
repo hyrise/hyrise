@@ -59,12 +59,12 @@ std::string current_timestamp() {
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
   // matches any characters that need to be escaped in RegEx except for '|'
-  std::regex specialChars{R"([-[\]{}()*+?.,\^$#\s])"};
+  std::regex special_chars{R"([-[\]{}()*+?.,\^$#\s])"};
   std::string sequences = "\x1B[31m|\x1B[32m|\x1B[0m|\001|\002";
   if (remove_rl_codes_only) {
     sequences = "\001|\002";
   }
-  std::string sanitized_sequences = std::regex_replace(sequences, specialChars, R"(\$&)");
+  std::string sanitized_sequences = std::regex_replace(sequences, special_chars, R"(\$&)");
 
   // Remove coloring commands and escape sequences before writing to logfile
   std::regex expression{"(" + sanitized_sequences + ")"};
@@ -175,9 +175,9 @@ int Console::_eval(const std::string& input) {
 
   // Regard query as complete if last character is semicolon, regardless of multiline or not
   if (input.back() == ';') {
-    int retCode = _eval_sql(_multiline_input + input);
+    int return_code = _eval_sql(_multiline_input + input);
     _multiline_input = "";
-    return retCode;
+    return return_code;
   }
 
   // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
@@ -311,7 +311,7 @@ void Console::register_command(const std::string& name, const CommandFunction& f
 
 Console::RegisteredCommands Console::commands() { return _commands; }
 
-void Console::setPrompt(const std::string& prompt) {
+void Console::set_prompt(const std::string& prompt) {
   if (IS_DEBUG) {
     _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
@@ -319,11 +319,11 @@ void Console::setPrompt(const std::string& prompt) {
   }
 }
 
-void Console::setLogfile(const std::string& logfile) {
+void Console::set_logfile(const std::string& logfile) {
   _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
 }
 
-void Console::loadHistory(const std::string& history_file) {
+void Console::load_history(const std::string& history_file) {
   _history_file = history_file;
 
   // Check if history file exist, create empty history file if not
@@ -571,7 +571,7 @@ int Console::visualize(const std::string& input) {
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");
   if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
+    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};  // NOLINT
     msg += img_filename + "\n";
     out(msg);
 
@@ -598,16 +598,16 @@ int Console::exec_script(const std::string& script_file) {
   out("Executing script file: " + filepath + "\n");
   _verbose = true;
   std::string command;
-  int retCode = ReturnCode::Ok;
+  int return_code = ReturnCode::Ok;
   while (std::getline(script, command)) {
-    retCode = _eval(command);
-    if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit) {
+    return_code = _eval(command);
+    if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
       break;
     }
   }
   out("Executing script file done\n");
   _verbose = false;
-  return retCode;
+  return return_code;
 }
 
 void Console::handle_signal(int sig) {
@@ -616,7 +616,7 @@ void Console::handle_signal(int sig) {
     auto& console = Console::get();
     console._out << "\n";
     console._multiline_input = "";
-    console.setPrompt("!> ");
+    console.set_prompt("!> ");
     console._verbose = false;
     // Restore program state stored in jmp_env set with sigsetjmp(2)
     siglongjmp(jmp_env, 1);
@@ -765,20 +765,20 @@ int main(int argc, char** argv) {
   // Bind CTRL-C to behaviour specified in opossum::Console::handle_signal
   std::signal(SIGINT, &opossum::Console::handle_signal);
 
-  console.setPrompt("> ");
-  console.setLogfile("console.log");
+  console.set_prompt("> ");
+  console.set_logfile("console.log");
 
   // Load command history
-  console.loadHistory(".repl_history");
+  console.load_history(".repl_history");
 
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
-  int retCode = Return::Ok;
+  int return_code = Return::Ok;
 
   // Display Usage if too many arguments are provided
   if (argc > 2) {
-    retCode = Return::Quit;
+    return_code = Return::Quit;
     console.out("Usage:\n");
     console.out("  ./hyriseConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
     console.out("                                 Execute script if specified by SCRIPTFILE.\n");
@@ -786,10 +786,10 @@ int main(int argc, char** argv) {
 
   // Execute .sql script if specified
   if (argc == 2) {
-    retCode = console.execute_script(std::string(argv[1]));
+    return_code = console.execute_script(std::string(argv[1]));
     // Terminate Console if an error occured during script execution
-    if (retCode == Return::Error) {
-      retCode = Return::Quit;
+    if (return_code == Return::Error) {
+      return_code = Return::Quit;
     }
   }
 
@@ -813,14 +813,14 @@ int main(int argc, char** argv) {
   }
 
   // Main REPL loop
-  while (retCode != Return::Quit) {
-    retCode = console.read();
-    if (retCode == Return::Ok) {
-      console.setPrompt("> ");
-    } else if (retCode == Return::Multiline) {
-      console.setPrompt("... ");
+  while (return_code != Return::Quit) {
+    return_code = console.read();
+    if (return_code == Return::Ok) {
+      console.set_prompt("> ");
+    } else if (return_code == Return::Multiline) {
+      console.set_prompt("... ");
     } else {
-      console.setPrompt("!> ");
+      console.set_prompt("!> ");
     }
   }
 

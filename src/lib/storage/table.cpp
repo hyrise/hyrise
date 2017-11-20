@@ -80,15 +80,15 @@ void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count +=
 
 void Table::create_new_chunk() {
   // Create chunk with mvcc columns
-  Chunk newChunk{ChunkUseMvcc::Yes};
+  Chunk new_chunk{ChunkUseMvcc::Yes};
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
     const auto& type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
-    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    new_chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
   }
-  _chunks.push_back(std::move(newChunk));
+  _chunks.push_back(std::move(new_chunk));
 }
 
 uint16_t Table::column_count() const { return _column_types.size(); }
