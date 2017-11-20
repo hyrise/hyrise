@@ -47,11 +47,11 @@ node {
         stage("Stricter Linting") {
           script {
             lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
-            echo lintFails
             if (lintFails?.trim()) {
-              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
-            } else {
+              echo lintFails
               githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins for details"
+            } else {
+              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
             }
           }
         }
