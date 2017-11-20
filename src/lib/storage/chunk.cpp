@@ -16,7 +16,7 @@
 namespace opossum {
 
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
-const ChunkOffset Chunk::MAX_ALLOWED_SIZE = std::numeric_limits<ChunkOffset>::max();
+const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max();
 
 Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
 

@@ -23,7 +23,7 @@ class Table : private Noncopyable {
  public:
   // Creates a new table that has the same layout (column-{types, names}) as the input table
   static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table>& in_table,
-                                                        const uint32_t max_chunk_size = Chunk::MAX_ALLOWED_SIZE);
+                                                        const uint32_t max_chunk_size = Chunk::MAX_SIZE);
 
   /**
    * @returns whether both tables contain the same columns (in name and type) in the same order
@@ -33,7 +33,7 @@ class Table : private Noncopyable {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default is the maximum allowed chunk size. A table holds always at least one chunk
-  explicit Table(const uint32_t max_chunk_size = Chunk::MAX_ALLOWED_SIZE);
+  explicit Table(const uint32_t max_chunk_size = Chunk::MAX_SIZE);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

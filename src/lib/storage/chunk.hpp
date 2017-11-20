@@ -34,7 +34,7 @@ enum class ChunkUseAccessCounter { Yes, No };
 class Chunk : private Noncopyable {
  public:
   static const CommitID MAX_COMMIT_ID;
-  static const ChunkOffset MAX_ALLOWED_SIZE;
+  static const ChunkOffset MAX_SIZE;
 
   /**
    * Columns storing visibility information

@@ -47,7 +47,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   class DummyTable : public Table {
    public:
-    DummyTable() : Table(Chunk::MAX_ALLOWED_SIZE) {
+    DummyTable() : Table(Chunk::MAX_SIZE) {
       add_column("dummy", "int");
       append(std::vector<AllTypeVariant>{0});
     }

@@ -20,8 +20,8 @@ namespace opossum {
 class LogicalQueryPlanTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_ALLOWED_SIZE));
-    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_ALLOWED_SIZE));
+    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
 
     /**
      * Init complex graph. This one is hard to visualize in ASCII. I suggest drawing it from the initialization below,

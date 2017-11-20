@@ -221,7 +221,7 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(),
-                          load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", Chunk::MAX_ALLOWED_SIZE));
+                          load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", Chunk::MAX_SIZE));
 }
 
 }  // namespace opossum

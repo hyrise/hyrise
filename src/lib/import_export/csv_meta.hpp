@@ -40,7 +40,7 @@ struct ParseConfig {
  * columns       column meta information (name, type, nullable) for each column
  */
 struct CsvMeta {
-  size_t chunk_size = Chunk::MAX_ALLOWED_SIZE;
+  size_t chunk_size = Chunk::MAX_SIZE;
   bool auto_compress = false;
   ParseConfig config;
   std::vector<ColumnMeta> columns;
