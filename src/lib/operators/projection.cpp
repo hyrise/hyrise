@@ -55,8 +55,8 @@ void Projection::_create_column(boost::hana::basic_type<T> type, Chunk& chunk, c
     null_values.reserve(values.size());
 
     for (const auto value : values) {
-      non_null_values.emplace_back(value ? *value : T{});
-      null_values.emplace_back(value == std::nullopt);
+      non_null_values.push_back(value ? *value : T{});
+      null_values.push_back(value == std::nullopt);
     }
 
     column = std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
