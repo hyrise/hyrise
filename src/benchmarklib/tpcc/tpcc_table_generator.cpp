@@ -54,9 +54,9 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
     std::string data = _random_gen.astring(26, 50);
     bool is_original = original_ids.find(indices[0]) != original_ids.end();
     if (is_original) {
-      std::string originalString("ORIGINAL");
-      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - originalString.length());
-      data.replace(start_pos, originalString.length(), originalString);
+      std::string original_string("ORIGINAL");
+      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
+      data.replace(start_pos, original_string.length(), original_string);
     }
     return data;
   });
@@ -129,9 +129,9 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
     std::string data = _random_gen.astring(26, 50);
     bool is_original = original_ids.find(indices[1]) != original_ids.end();
     if (is_original) {
-      std::string originalString("ORIGINAL");
-      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - originalString.length());
-      data.replace(start_pos, originalString.length(), originalString);
+      std::string original_string("ORIGINAL");
+      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
+      data.replace(start_pos, original_string.length(), original_string);
     }
     return data;
   });

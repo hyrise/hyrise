@@ -26,7 +26,7 @@ class OperatorsExportBinaryTest : public BaseTest {
 
   void TearDown() override { std::remove(filename.c_str()); }
 
-  bool fileExists(const std::string& name) {
+  bool file_exists(const std::string& name) {
     std::ifstream file{name};
     return file.good();
   }
@@ -63,7 +63,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/TwoColumnsNoValues.bin", filename));
 }
 
@@ -79,7 +79,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatColumn.bin", filename));
 }
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
@@ -94,7 +94,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/MultipleChunkSingleFloatColumn.bin", filename));
 }
 
@@ -111,7 +111,7 @@ TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/StringValueColumn.bin", filename));
 }
 
@@ -130,7 +130,7 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
 }
 
@@ -151,7 +151,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
 }
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
@@ -174,7 +174,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionaryColumn.bin", filename));
 }
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
@@ -196,7 +196,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesMixColumn.bin", filename));
 }
 
@@ -224,7 +224,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnMaxChunkSize.bin", filename));
 }
 
@@ -243,7 +243,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsValueColumn.bin", filename));
 }
 
@@ -264,7 +264,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsDictionaryColumn.bin", filename));
 }
 
@@ -288,7 +288,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesNullValues.bin", filename));
 }
 
@@ -314,7 +314,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
+  EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionaryNullValues.bin", filename));
 }
 

@@ -30,12 +30,7 @@ node {
 
       stage("Linting") {
         sh '''
-          scripts/lint.sh
-
-          if [ $? != 0 ]; then
-            echo "ERROR: Linting error occured. Execute \"scripts/lint.sh\" for details!"
-            exit 1
-          fi
+          scripts/lint.sh pre
         '''
       }
 
@@ -47,6 +42,18 @@ node {
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+        }
+      }, moreLint: {
+        stage("Stricter Linting") {
+          script {
+            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
+            if (lintFails?.trim()) {
+              echo lintFails
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins Step moreLint for details"
+            } else {
+              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            }
+          }
         }
       }
 
