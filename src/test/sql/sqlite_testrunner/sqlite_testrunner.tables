@@ -1,6 +1,7 @@
 src/test/tables/int_float.tbl int_float
 src/test/tables/int_float2.tbl int_float2
 src/test/tables/int_float4.tbl int_float4
+src/test/tables/int_float5.tbl int_float5
 src/test/tables/int_float6.tbl int_float6
 src/test/tables/int_string2.tbl int_string2
 src/test/tables/int_int3.tbl int_int3

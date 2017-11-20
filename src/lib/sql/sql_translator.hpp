@@ -88,6 +88,7 @@ class SQLTranslator final : public Noncopyable {
                                                        const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& select);
 
   std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 

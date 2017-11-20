@@ -37,6 +37,9 @@ SELECT "left".a, "left".b, "right".a, "right".b FROM int_float AS "left",  int_f
 SELECT "left".a, "left".b, "right".a, "right".b FROM int_float AS "left" JOIN int_float2 AS "right" ON "left".a = "right".a;
 -- SELECT * FROM int_float AS "left" LEFT JOIN int_float2 AS "right" ON "left".a = "right".a;
 SELECT * FROM int_float AS "left" INNER JOIN int_float2 AS "right" ON "left".a = "right".a;
+SELECT * FROM int_float4 NATURAL JOIN int_float6;
+SELECT * FROM int_float NATURAL JOIN (SELECT d, a FROM int_float5) AS T2;
+-- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables
 SELECT * FROM int_float AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;
