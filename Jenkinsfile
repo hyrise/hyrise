@@ -92,6 +92,7 @@ node {
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
           archive 'coverage.xml'
+          archive 'coverage_diff.html'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
