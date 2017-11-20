@@ -149,8 +149,11 @@ set(
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     planviz/abstract_visualizer.hpp
+    planviz/abstract_visualizer.cpp
     planviz/ast_visualizer.hpp
+    planviz/ast_visualizer.cpp
     planviz/graphviz_config.hpp
+    planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
@@ -255,7 +258,8 @@ set(
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/performance_warning.cpp
-    utils/performance_warning.hpp)
+    utils/performance_warning.hpp
+)
 
 set(
     LIBRARIES
