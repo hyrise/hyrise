@@ -43,6 +43,17 @@ node {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
         }
+      }, moreLint: {
+        stage("Stricter Linting") {
+          script {
+            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
+            if (lintFails?.trim()) {
+              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            } else {
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins for details"
+            }
+          }
+        }
       }
 
       parallel clangDebugRun: {
@@ -94,17 +105,6 @@ node {
       }, memcheck: {
         stage("valgrind-memcheck") {
           sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-        }
-      }, moreLint: {
-        stage("Stricter Linting") {
-          script {
-            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
-            if (lintFails?.trim()) {
-              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
-            } else {
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins for details"
-            }
-          }
         }
       }
 
