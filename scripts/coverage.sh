@@ -16,11 +16,16 @@ cd -
 rm -fr coverage; mkdir coverage
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
-gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --html --html-details -o coverage/index.html > coverage_output.txt
+
+# generate HTML
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k -g --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
 if [ ! -z "$2" ]
 then
+    # generate XML for pycobertura
+    gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --xml > coverage.xml
+
     # coverage badge generation
     coverage_percent=$(cat coverage_output.txt | grep lines: | sed -e 's/lines: //; s/% .*$//')
     echo $coverage_percent > coverage_percent.txt

@@ -15,6 +15,7 @@
 | libnuma1         | any              |    Linux |                 Yes (numa) |
 | llvm             | any              |    All   |      Yes (code sanitizers) |
 | parallel         | any              |    All   |                        Yes |
+| pycobertura      | any              |    All   |       Yes (coverage on CI) |
 | python           | >= 2.7 && < 3    |    All   |              Yes (linting) |
 | readline         | >= 7             |    All   |                         No |
 | sqlite3          | >= 3             |    All   |                         No |

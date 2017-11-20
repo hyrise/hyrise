@@ -90,6 +90,7 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
+          archive 'coverage.xml'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
