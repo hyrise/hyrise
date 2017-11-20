@@ -16,8 +16,8 @@
 namespace opossum {
 
 std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<const Table>& in_table,
-                                                      const uint32_t chunk_size) {
-  auto new_table = std::make_shared<Table>(chunk_size);
+                                                      const uint32_t max_chunk_size) {
+  auto new_table = std::make_shared<Table>(max_chunk_size);
 
   for (ColumnID::base_type column_idx = 0; column_idx < in_table->column_count(); ++column_idx) {
     const auto type = in_table->column_type(ColumnID{column_idx});
@@ -30,16 +30,16 @@ std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<cons
   return new_table;
 }
 
-bool Table::layouts_equal(const std::shared_ptr<const Table>& table_a, const std::shared_ptr<const Table>& table_b) {
-  if (table_a->column_count() != table_b->column_count()) {
+bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right) {
+  if (left->column_count() != right->column_count()) {
     return false;
   }
 
-  for (auto column_id = ColumnID{0}; column_id < table_a->column_count(); ++column_id) {
-    if (table_a->column_type(column_id) != table_b->column_type(column_id)) {
+  for (auto column_id = ColumnID{0}; column_id < left->column_count(); ++column_id) {
+    if (left->column_type(column_id) != right->column_type(column_id)) {
       return false;
     }
-    if (table_a->column_name(column_id) != table_b->column_name(column_id)) {
+    if (left->column_name(column_id) != right->column_name(column_id)) {
       return false;
     }
   }
@@ -47,7 +47,9 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& table_a, const std
   return true;
 }
 
-Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+Table::Table(const uint32_t max_chunk_size)
+    : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+  Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
@@ -69,7 +71,7 @@ void Table::add_column(const std::string& name, const std::string& type, bool nu
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) create_new_chunk();
+  if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
 }
@@ -93,7 +95,7 @@ uint16_t Table::column_count() const { return _column_types.size(); }
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
-  for (auto&& chunk : _chunks) {
+  for (const auto& chunk : _chunks) {
     ret += chunk.size();
   }
   return ret;
@@ -114,7 +116,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return {};
 }
 
-uint32_t Table::chunk_size() const { return _chunk_size; }
+uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 
@@ -145,6 +147,16 @@ Chunk& Table::get_chunk(ChunkID chunk_id) {
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
+}
+
+ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
+}
+
+const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
 }
 
 void Table::emplace_chunk(Chunk chunk) {

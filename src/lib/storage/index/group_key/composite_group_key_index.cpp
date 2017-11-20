@@ -22,11 +22,11 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   if (IS_DEBUG) {
     auto firstSize = indexed_columns.front()->size();
-    [[gnu::unused]] auto haveAllColumnsSameSize =
+    [[gnu::unused]] auto all_column_have_same_size =
         std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
                     [firstSize](const auto& column) { return column->size() == firstSize; });
 
-    DebugAssert(haveAllColumnsSameSize,
+    DebugAssert(all_column_have_same_size,
                 "CompositeGroupKey requires same length of all columns that should be indexed.");
   }
 
@@ -49,30 +49,30 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   auto keys = std::vector<VariableLengthKey>(column_size);
   _position_list.resize(column_size);
 
-  for (ChunkOffset chunkOffset = 0; chunkOffset < column_size; ++chunkOffset) {
+  for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
     for (const auto& column : _indexed_columns) {
       const auto& attribute_vector = column->attribute_vector();
-      concatenated_key.shift_and_set(attribute_vector->get(chunkOffset), attribute_vector->width() * CHAR_BIT);
+      concatenated_key.shift_and_set(attribute_vector->get(chunk_offset), attribute_vector->width() * CHAR_BIT);
     }
-    keys[chunkOffset] = std::move(concatenated_key);
-    _position_list[chunkOffset] = chunkOffset;
+    keys[chunk_offset] = std::move(concatenated_key);
+    _position_list[chunk_offset] = chunk_offset;
   }
 
   // sort keys and their positions
   std::sort(_position_list.begin(), _position_list.end(),
-            [&keys](auto lhs, auto rhs) { return keys[lhs] < keys[rhs]; });
+            [&keys](auto left, auto right) { return keys[left] < keys[right]; });
 
   _keys = VariableLengthKeyStore(column_size, bytes_per_key);
-  for (ChunkOffset chunkOffset = 0; chunkOffset < column_size; ++chunkOffset) {
-    _keys[chunkOffset] = keys[_position_list[chunkOffset]];
+  for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
+    _keys[chunk_offset] = keys[_position_list[chunk_offset]];
   }
 
   // create offsets to unique keys
   _key_offsets.reserve(column_size);
   _key_offsets.emplace_back(0);
-  for (ChunkOffset chunkOffset = 1; chunkOffset < column_size; ++chunkOffset) {
-    if (_keys[chunkOffset] != _keys[chunkOffset - 1]) _key_offsets.emplace_back(chunkOffset);
+  for (ChunkOffset chunk_offset = 1; chunk_offset < column_size; ++chunk_offset) {
+    if (_keys[chunk_offset] != _keys[chunk_offset - 1]) _key_offsets.emplace_back(chunk_offset);
   }
   _key_offsets.shrink_to_fit();
 
@@ -127,19 +127,19 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey& key) const {
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
-  auto key_iter = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
-  if (key_iter == _keys.cend()) return _position_list.cend();
+  auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
+  if (key_it == _keys.cend()) return _position_list.cend();
 
   // get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
   // (which is at the same position as the iterator for the key in the keystore)
-  auto offset_iter = _key_offsets.cbegin();
-  std::advance(offset_iter, std::distance(_keys.cbegin(), key_iter));
+  auto offset_it = _key_offsets.cbegin();
+  std::advance(offset_it, std::distance(_keys.cbegin(), key_it));
 
   // get an iterator pointing to that start position
-  auto position_iter = _position_list.cbegin();
-  std::advance(position_iter, *offset_iter);
+  auto position_it = _position_list.cbegin();
+  std::advance(position_it, *offset_it);
 
-  return position_iter;
+  return position_it;
 }
 
 std::vector<std::shared_ptr<const BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {

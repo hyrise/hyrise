@@ -14,30 +14,30 @@ class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
   explicit ValueColumnIterable(const ValueColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
-  void _on_with_iterators(const Functor& f) const {
+  void _on_with_iterators(const Functor& functor) const {
     if (_column.is_nullable()) {
       auto begin =
           NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
       auto end = NullableIterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
-      f(begin, end);
+      functor(begin, end);
       return;
     }
 
     auto begin = Iterator{_column.values().cbegin(), _column.values().cbegin()};
     auto end = Iterator{_column.values().cend(), _column.values().cend()};
-    f(begin, end);
+    functor(begin, end);
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
     if (_column.is_nullable()) {
       auto begin = NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cbegin()};
       auto end = NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cend()};
-      f(begin, end);
+      functor(begin, end);
     } else {
       auto begin = IndexedIterator{_column.values(), mapped_chunk_offsets.cbegin()};
       auto end = IndexedIterator{_column.values(), mapped_chunk_offsets.cend()};
-      f(begin, end);
+      functor(begin, end);
     }
   }
 

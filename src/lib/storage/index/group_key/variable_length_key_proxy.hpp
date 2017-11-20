@@ -18,8 +18,8 @@ class VariableLengthKeyConstProxy {
  public:
   VariableLengthKeyConstProxy() = default;
 
-  VariableLengthKeyConstProxy(const VariableLengthKeyConstProxy& rhs) = default;
-  VariableLengthKeyConstProxy& operator=(const VariableLengthKeyConstProxy& rhs) = delete;
+  VariableLengthKeyConstProxy(const VariableLengthKeyConstProxy& other) = default;
+  VariableLengthKeyConstProxy& operator=(const VariableLengthKeyConstProxy& other) = delete;
 
   virtual ~VariableLengthKeyConstProxy() = default;
 
@@ -30,12 +30,12 @@ class VariableLengthKeyConstProxy {
 
   CompositeKeyLength bytes_per_key() const;
 
-  bool operator==(const VariableLengthKeyConstProxy& rhs) const;
-  bool operator==(const VariableLengthKey& rhs) const;
-  bool operator!=(const VariableLengthKeyConstProxy& rhs) const;
-  bool operator!=(const VariableLengthKey& rhs) const;
-  bool operator<(const VariableLengthKeyConstProxy& rhs) const;
-  bool operator<(const VariableLengthKey& rhs) const;
+  bool operator==(const VariableLengthKeyConstProxy& other) const;
+  bool operator==(const VariableLengthKey& other) const;
+  bool operator!=(const VariableLengthKeyConstProxy& other) const;
+  bool operator!=(const VariableLengthKey& other) const;
+  bool operator<(const VariableLengthKeyConstProxy& other) const;
+  bool operator<(const VariableLengthKey& other) const;
 
   friend std::ostream& operator<<(std::ostream& os, const VariableLengthKeyConstProxy& key);
 
@@ -62,19 +62,19 @@ class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
  public:
   VariableLengthKeyProxy() = default;
 
-  VariableLengthKeyProxy(const VariableLengthKeyProxy& rhs) = default;
-  VariableLengthKeyProxy& operator=(const VariableLengthKeyProxy& rhs);
-  VariableLengthKeyProxy& operator=(const VariableLengthKeyConstProxy& rhs);
+  VariableLengthKeyProxy(const VariableLengthKeyProxy& other) = default;
+  VariableLengthKeyProxy& operator=(const VariableLengthKeyProxy& other);
+  VariableLengthKeyProxy& operator=(const VariableLengthKeyConstProxy& other);
 
   VariableLengthKeyProxy& operator=(const VariableLengthKey& key);
   VariableLengthKeyProxy& operator<<=(CompositeKeyLength shift);
-  VariableLengthKeyProxy& operator|=(uint64_t rhs);
+  VariableLengthKeyProxy& operator|=(uint64_t other);
 
   VariableLengthKeyProxy& shift_and_set(uint64_t value, uint8_t bits_to_set);
 
  private:
   explicit VariableLengthKeyProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);
-  VariableLengthKeyProxy& operator=(const VariableLengthKeyBase& rhs);
+  VariableLengthKeyProxy& operator=(const VariableLengthKeyBase& other);
 };
 
 }  // namespace opossum

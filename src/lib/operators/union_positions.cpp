@@ -104,7 +104,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_right = virtual_pos_list_right.size();
 
   // Somewhat random way to decide on a chunk size.
-  const auto out_chunk_size = std::max(_input_table_left()->chunk_size(), _input_table_right()->chunk_size());
+  const auto out_chunk_size = std::max(_input_table_left()->max_chunk_size(), _input_table_right()->max_chunk_size());
 
   auto out_table = Table::create_with_layout_from(_input_table_left(), out_chunk_size);
 
@@ -153,15 +153,15 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     } else if (right_idx == num_rows_right) {
       emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
       ++left_idx;
-    } else if (_cmp_reference_matrix_rows(reference_matrix_right, virtual_pos_list_right[right_idx],
-                                          reference_matrix_left, virtual_pos_list_left[left_idx])) {
+    } else if (_compare_reference_matrix_rows(reference_matrix_right, virtual_pos_list_right[right_idx],
+                                              reference_matrix_left, virtual_pos_list_left[left_idx])) {
       emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
       ++right_idx;
     } else {
       emit_row(reference_matrix_left, virtual_pos_list_left[left_idx]);
 
-      if (!_cmp_reference_matrix_rows(reference_matrix_left, virtual_pos_list_left[left_idx], reference_matrix_right,
-                                      virtual_pos_list_right[right_idx])) {
+      if (!_compare_reference_matrix_rows(reference_matrix_left, virtual_pos_list_left[left_idx],
+                                          reference_matrix_right, virtual_pos_list_right[right_idx])) {
         ++right_idx;
       }
       ++left_idx;
@@ -331,19 +331,19 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
   return reference_matrix;
 }
 
-bool UnionPositions::_cmp_reference_matrix_rows(const ReferenceMatrix& matrix_a, size_t row_idx_a,
-                                                const ReferenceMatrix& matrix_b, size_t row_idx_b) const {
-  for (size_t column_idx = 0; column_idx < matrix_a.size(); ++column_idx) {
-    if (matrix_a[column_idx][row_idx_a] < matrix_b[column_idx][row_idx_b]) return true;
-    if (matrix_b[column_idx][row_idx_b] < matrix_a[column_idx][row_idx_a]) return false;
+bool UnionPositions::_compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
+                                                    const ReferenceMatrix& right_matrix, size_t right_row_idx) const {
+  for (size_t column_idx = 0; column_idx < left_matrix.size(); ++column_idx) {
+    if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) return true;
+    if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) return false;
   }
   return false;
 }
 
-bool UnionPositions::VirtualPosListCmpContext::operator()(size_t lhs, size_t rhs) const {
+bool UnionPositions::VirtualPosListCmpContext::operator()(size_t left, size_t right) const {
   for (const auto& reference_matrix_column : reference_matrix) {
-    const auto left_row_id = reference_matrix_column[lhs];
-    const auto right_row_id = reference_matrix_column[rhs];
+    const auto left_row_id = reference_matrix_column[left];
+    const auto right_row_id = reference_matrix_column[right];
 
     if (left_row_id < right_row_id) return true;
     if (right_row_id < left_row_id) return false;

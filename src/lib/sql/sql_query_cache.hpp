@@ -15,15 +15,15 @@ namespace opossum {
 
 // Cache that stores instances of SQLParserResult.
 // Per-default, uses the GDFS cache as underlying storage.
-template <typename val_t, typename key_t = std::string>
+template <typename Value, typename Key = std::string>
 class SQLQueryCache {
  public:
-  explicit SQLQueryCache(size_t capacity) : _cache(std::move(std::make_unique<GDFSCache<key_t, val_t>>(capacity))) {}
+  explicit SQLQueryCache(size_t capacity) : _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
   virtual ~SQLQueryCache() {}
 
   // Adds or refreshes the cache entry [query, value].
-  void set(const key_t& query, const val_t& value) {
+  void set(const Key& query, const Value& value) {
     if (_cache->capacity() == 0) return;
 
     std::lock_guard<std::mutex> lock(_mutex);
@@ -32,7 +32,7 @@ class SQLQueryCache {
 
   // Tries to fetch the cache entry for the query into the result object.
   // Returns true if the entry was found, false otherwise.
-  std::optional<val_t> try_get(const key_t& query) {
+  std::optional<Value> try_get(const Key& query) {
     if (_cache->capacity() == 0) return {};
 
     std::lock_guard<std::mutex> lock(_mutex);
@@ -43,11 +43,11 @@ class SQLQueryCache {
   }
 
   // Checks whether an entry for the query exists.
-  bool has(const key_t& query) const { return _cache->has(query); }
+  bool has(const Key& query) const { return _cache->has(query); }
 
   // Returns and refreshes the cache entry for the given query.
   // Causes undefined behavior if the query is not in the cache.
-  val_t get(const key_t& query) {
+  Value get(const Key& query) {
     std::lock_guard<std::mutex> lock(_mutex);
     return _cache->get(query);
   }
@@ -61,7 +61,7 @@ class SQLQueryCache {
   size_t size() const { return _cache->size(); }
 
   // Returns a reference to the underlying cache.
-  AbstractCache<key_t, val_t>& cache() { return *_cache; }
+  AbstractCache<Key, Value>& cache() { return *_cache; }
 
   // Replaces the underlying cache by creating a new object
   // of the given cache type.
@@ -72,7 +72,7 @@ class SQLQueryCache {
 
  protected:
   // Underlying cache strategy.
-  std::unique_ptr<AbstractCache<key_t, val_t>> _cache;
+  std::unique_ptr<AbstractCache<Key, Value>> _cache;
 
   std::mutex _mutex;
 };

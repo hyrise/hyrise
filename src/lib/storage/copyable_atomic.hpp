@@ -28,14 +28,14 @@ class copyable_atomic {
  public:
   copyable_atomic() noexcept = default;
 
-  copyable_atomic(const copyable_atomic<T>& rhs) { _atomic.store(rhs._atomic.load()); }
+  copyable_atomic(const copyable_atomic<T>& other) { _atomic.store(other._atomic.load()); }
 
   constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
 
   T operator=(T desired) noexcept { return _atomic.operator=(desired); }
 
-  copyable_atomic& operator=(const copyable_atomic<T>& rhs) {
-    _atomic.store(rhs._atomic.load());
+  copyable_atomic& operator=(const copyable_atomic<T>& other) {
+    _atomic.store(other._atomic.load());
     return *this;
   }
 

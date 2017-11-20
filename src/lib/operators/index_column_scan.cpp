@@ -92,45 +92,57 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
     switch (_scan_type) {
       case ScanType::OpEquals: {
-        _value_comparator = [casted_value](T val) { return val == casted_value; };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
+        _value_comparator = [casted_value](T value) { return value == casted_value; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id == search_value_id;
+        };
         break;
       }
       case ScanType::OpNotEquals: {
-        _value_comparator = [casted_value](T val) { return val != casted_value; };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
+        _value_comparator = [casted_value](T value) { return value != casted_value; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id != search_value_id;
+        };
         break;
       }
       case ScanType::OpLessThan: {
-        _value_comparator = [casted_value](T val) { return val < casted_value; };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
+        _value_comparator = [casted_value](T value) { return value < casted_value; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id < search_value_id;
+        };
         break;
       }
       case ScanType::OpLessThanEquals: {
-        _value_comparator = [casted_value](T val) { return val <= casted_value; };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
+        _value_comparator = [casted_value](T value) { return value <= casted_value; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id < search_value_id;
+        };
         //                                                                                           ^
         //                                                               sic! see handle_dictionary_column for details
         break;
       }
       case ScanType::OpGreaterThan: {
-        _value_comparator = [casted_value](T val) { return val > casted_value; };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
+        _value_comparator = [casted_value](T value) { return value > casted_value; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id >= search_value_id;
+        };
         break;
       }
       case ScanType::OpGreaterThanEquals: {
-        _value_comparator = [casted_value](T val) { return val >= casted_value; };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
+        _value_comparator = [casted_value](T value) { return value >= casted_value; };
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID) {
+          return found_value_id >= search_value_id;
+        };
         break;
       }
       case ScanType::OpBetween: {
         DebugAssert(static_cast<bool>(_casted_value2), "No second value for BETWEEN comparison given");
         T casted_value2 = _casted_value2.value_or(T());
-        _value_comparator = [casted_value, casted_value2](T val) {
-          return casted_value <= val && val <= casted_value2;
+        _value_comparator = [casted_value, casted_value2](T value) {
+          return casted_value <= value && value <= casted_value2;
         };
-        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
-          return search_vid <= found_vid && found_vid < search_vid2;
+        _value_id_comparator = [](ValueID found_value_id, ValueID search_value_id, ValueID search_value_id2) {
+          return search_value_id <= found_value_id && found_value_id < search_value_id2;
         };
         break;
       }
@@ -171,14 +183,14 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         // nullptr.
         std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
         for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
-          auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in.get_column(column_id));
+          auto ref_column_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in.get_column(column_id));
           std::shared_ptr<const PosList> pos_list_in;
           std::shared_ptr<const Table> referenced_table_out;
           ColumnID referenced_column_id;
-          if (ref_col_in) {
-            pos_list_in = ref_col_in->pos_list();
-            referenced_table_out = ref_col_in->referenced_table();
-            referenced_column_id = ref_col_in->referenced_column_id();
+          if (ref_column_in) {
+            pos_list_in = ref_column_in->pos_list();
+            referenced_table_out = ref_column_in->referenced_table();
+            referenced_column_id = ref_column_in->referenced_column_id();
           } else {
             referenced_table_out = in_table;
             referenced_column_id = column_id;
@@ -272,8 +284,8 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     // get the indices for this column
     auto in_table = _in_operator->get_output();
     const Chunk& chunk_in = in_table->get_chunk(context->chunk_id);
-    auto col = chunk_in.get_column(_column_id);
-    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<const BaseColumn>>{col});
+    auto dict_column = chunk_in.get_column(_column_id);
+    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<const BaseColumn>>{dict_column});
 
     if (!indices.empty()) {
       // with index
@@ -307,50 +319,51 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     } else {
       // without index
 
-      ValueID search_vid;
-      ValueID search_vid2 = INVALID_VALUE_ID;
+      ValueID search_value_id;
+      ValueID search_value_id2 = INVALID_VALUE_ID;
 
       switch (_scan_type) {
         case ScanType::OpEquals:
         case ScanType::OpNotEquals:
         case ScanType::OpLessThan:
         case ScanType::OpGreaterThanEquals: {
-          search_vid = column.lower_bound(_casted_value);
+          search_value_id = column.lower_bound(_casted_value);
           break;
         }
         case ScanType::OpLessThanEquals:
         case ScanType::OpGreaterThan: {
-          search_vid = column.upper_bound(_casted_value);
+          search_value_id = column.upper_bound(_casted_value);
           break;
         }
         case ScanType::OpBetween: {
-          search_vid = column.lower_bound(_casted_value);
-          search_vid2 = column.upper_bound(*_casted_value2);
+          search_value_id = column.lower_bound(_casted_value);
+          search_value_id2 = column.upper_bound(*_casted_value2);
           break;
         }
         default:
           Fail("Unknown comparison type encountered");
       }
 
-      Assert(search_vid != NULL_VALUE_ID, "Cannot perform IndexColumnScan on NULL values.");
+      Assert(search_value_id != NULL_VALUE_ID, "Cannot perform IndexColumnScan on NULL values.");
 
-      if (_scan_type == ScanType::OpEquals && search_vid != INVALID_VALUE_ID &&
-          column.value_by_value_id(search_vid) != _casted_value) {
+      if (_scan_type == ScanType::OpEquals && search_value_id != INVALID_VALUE_ID &&
+          column.value_by_value_id(search_value_id) != _casted_value) {
         // the value is not in the dictionary and cannot be in the table
         return;
       }
 
-      if (_scan_type == ScanType::OpNotEquals && search_vid != INVALID_VALUE_ID &&
-          column.value_by_value_id(search_vid) != _casted_value) {
+      if (_scan_type == ScanType::OpNotEquals && search_value_id != INVALID_VALUE_ID &&
+          column.value_by_value_id(search_value_id) != _casted_value) {
         // the value is not in the dictionary and cannot be in the table
-        search_vid = INVALID_VALUE_ID;
+        search_value_id = INVALID_VALUE_ID;
       }
 
       const BaseAttributeVector& attribute_vector = *(column.attribute_vector());
 
       if (context->chunk_offsets_in) {
         for (const ChunkOffset& offset_in_dictionary_column : *(context->chunk_offsets_in)) {
-          if (_value_id_comparator(attribute_vector.get(offset_in_dictionary_column), search_vid, search_vid2)) {
+          if (_value_id_comparator(attribute_vector.get(offset_in_dictionary_column), search_value_id,
+                                   search_value_id2)) {
             matches_out.emplace_back(RowID{context->chunk_id, offset_in_dictionary_column});
           }
         }
@@ -358,7 +371,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
         // rows.
         for (ChunkOffset chunk_offset = 0; chunk_offset < column.size(); ++chunk_offset) {
-          if (_value_id_comparator(attribute_vector.get(chunk_offset), search_vid, search_vid2)) {
+          if (_value_id_comparator(attribute_vector.get(chunk_offset), search_value_id, search_value_id2)) {
             matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
           }
         }

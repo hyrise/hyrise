@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "json.hpp"
+#include "storage/chunk.hpp"
 
 namespace opossum {
 
@@ -39,7 +40,7 @@ struct ParseConfig {
  * columns       column meta information (name, type, nullable) for each column
  */
 struct CsvMeta {
-  size_t chunk_size;
+  size_t chunk_size = Chunk::MAX_SIZE;
   bool auto_compress = false;
   ParseConfig config;
   std::vector<ColumnMeta> columns;
@@ -68,6 +69,6 @@ void to_json(nlohmann::json& json, const CsvMeta& meta);
 /*
  * Equals-operator for convenience and use in tests.
  */
-bool operator==(const CsvMeta& lhs, const CsvMeta& rhs);
+bool operator==(const CsvMeta& left, const CsvMeta& right);
 
 }  // namespace opossum

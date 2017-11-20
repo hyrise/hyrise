@@ -1,5 +1,8 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>
+#include <boost/container/pmr/memory_resource.hpp>
+
 // the linter wants this to be above everything else
 #include <shared_mutex>
 
@@ -19,6 +22,7 @@ class BaseIndex;
 class BaseColumn;
 
 enum class ChunkUseMvcc { Yes, No };
+enum class ChunkUseAccessCounter { Yes, No };
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -30,6 +34,7 @@ enum class ChunkUseMvcc { Yes, No };
 class Chunk : private Noncopyable {
  public:
   static const CommitID MAX_COMMIT_ID;
+  static const ChunkOffset MAX_SIZE;
 
   /**
    * Columns storing visibility information
@@ -54,12 +59,48 @@ class Chunk : private Noncopyable {
     std::shared_mutex _mutex;
   };
 
- public:
-  // Use the default allocator
-  explicit Chunk(ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No);
+  /**
+   * Data structure for storing chunk access times
+   *
+   * The chunk access times are tracked using ProxyChunk objects
+   * that measure the cycles they were in scope using the RDTSC instructions.
+   * The access times are added to a counter. The ChunkMetricCollection tasks
+   * is regularly scheduled by the NUMAPlacementManager. This tasks takes a snapshot
+   * of the current counter values and places them in a history. The history is
+   * stored in a ring buffer, so that only a limited number of history items are
+   * preserved.
+   */
+  struct AccessCounter {
+    friend class Chunk;
 
-  // Use the specified allocator
-  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No);
+   public:
+    explicit AccessCounter(const PolymorphicAllocator<uint64_t>& alloc) : _history(_capacity, alloc) {}
+
+    void increment() { _counter++; }
+    void increment(uint64_t value) { _counter.fetch_add(value); }
+
+    // Takes a snapshot of the current counter and adds it to the history
+    void process() { _history.push_back(_counter); }
+
+    // Returns the access time of the chunk during the specified number of
+    // recent history sample iterations.
+    uint64_t history_sample(size_t lookback) const;
+
+    uint64_t counter() const { return _counter; }
+
+   private:
+    const size_t _capacity = 100;
+    std::atomic<std::uint64_t> _counter{0};
+    pmr_ring_buffer<uint64_t> _history;
+  };
+
+ public:
+  explicit Chunk(ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No, ChunkUseAccessCounter = ChunkUseAccessCounter::No);
+  // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
+  // As such, it cannot have MVCC information.
+  Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter);
+  Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
+        const ChunkUseAccessCounter counter_mode);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -96,6 +137,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
+  bool has_access_counter() const;
 
   /**
    * The locking pointer locks the columns non-exclusively
@@ -141,11 +183,21 @@ class Chunk : private Noncopyable {
     return index;
   }
 
+  void migrate(boost::container::pmr::memory_resource* memory_source);
+
+  std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
+
   bool references_exactly_one_table() const;
 
+  size_t byte_size() const { return 0; }
+
+  const PolymorphicAllocator<Chunk>& get_allocator() const;
+
  protected:
+  PolymorphicAllocator<Chunk> _alloc;
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::shared_ptr<MvccColumns> _mvcc_columns;
+  std::shared_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 

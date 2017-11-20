@@ -57,13 +57,11 @@ void StorageManager::print(std::ostream& out) const {
   out << "==================" << std::endl;
   out << "===== Tables =====" << std::endl << std::endl;
 
-  auto cnt = 0;
-  for (auto const& tab : _tables) {
-    out << "==== table >> " << tab.first << " <<";
-    out << " (" << tab.second->column_count() << " columns, " << tab.second->row_count() << " rows in "
-        << tab.second->chunk_count() << " chunks)";
+  for (auto const& table : _tables) {
+    out << "==== table >> " << table.first << " <<";
+    out << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
+        << table.second->chunk_count() << " chunks)";
     out << std::endl << std::endl;
-    cnt++;
   }
 }
 

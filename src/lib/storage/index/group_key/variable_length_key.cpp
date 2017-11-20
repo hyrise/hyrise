@@ -13,37 +13,37 @@ namespace opossum {
 VariableLengthKey::VariableLengthKey(CompositeKeyLength bytes_per_key)
     : _owned_data(std::make_unique<VariableLengthKeyWord[]>(bytes_per_key)), _impl(_owned_data.get(), bytes_per_key) {}
 
-VariableLengthKey::VariableLengthKey(const VariableLengthKeyBase& rhs)
-    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(rhs._size)), _impl(_owned_data.get(), rhs._size) {
-  std::copy(rhs._data, rhs._data + rhs._size, _impl._data);
+VariableLengthKey::VariableLengthKey(const VariableLengthKeyBase& other)
+    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(other._size)), _impl(_owned_data.get(), other._size) {
+  std::copy(other._data, other._data + other._size, _impl._data);
 }
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKey& other) : VariableLengthKey(other._impl) {}
 
-VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKeyBase& rhs) {
-  auto temp = VariableLengthKey(rhs);
+VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKeyBase& other) {
+  auto temp = VariableLengthKey(other);
   std::swap(*this, temp);
   return *this;
 }
 
-VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKey& rhs) { return operator=(rhs._impl); }
+VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKey& other) { return operator=(other._impl); }
 
-bool VariableLengthKey::operator==(const VariableLengthKey& rhs) const { return _impl == rhs._impl; }
-bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& rhs) const { return _impl == rhs._impl; }
+bool VariableLengthKey::operator==(const VariableLengthKey& other) const { return _impl == other._impl; }
+bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& other) const { return _impl == other._impl; }
 
-bool VariableLengthKey::operator!=(const VariableLengthKey& rhs) const { return _impl != rhs._impl; }
-bool VariableLengthKey::operator!=(const VariableLengthKeyConstProxy& rhs) const { return _impl != rhs._impl; }
+bool VariableLengthKey::operator!=(const VariableLengthKey& other) const { return _impl != other._impl; }
+bool VariableLengthKey::operator!=(const VariableLengthKeyConstProxy& other) const { return _impl != other._impl; }
 
-bool VariableLengthKey::operator<(const VariableLengthKey& rhs) const { return _impl < rhs._impl; }
-bool VariableLengthKey::operator<(const VariableLengthKeyConstProxy& rhs) const { return _impl < rhs._impl; }
+bool VariableLengthKey::operator<(const VariableLengthKey& other) const { return _impl < other._impl; }
+bool VariableLengthKey::operator<(const VariableLengthKeyConstProxy& other) const { return _impl < other._impl; }
 
 VariableLengthKey& VariableLengthKey::operator<<=(CompositeKeyLength shift) {
   _impl <<= shift;
   return *this;
 }
 
-VariableLengthKey& VariableLengthKey::operator|=(uint64_t rhs) {
-  _impl |= rhs;
+VariableLengthKey& VariableLengthKey::operator|=(uint64_t other) {
+  _impl |= other;
   return *this;
 }
 

@@ -64,9 +64,9 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./gcc-release/hyriseTest"
         }
-      }, tpcc: {
-        stage("TPCC Test") {
-            sh "./scripts/test_tpcc.sh clang-release"
+      }, systemTest: {
+        stage("System Test") {
+            sh "./scripts/run_system_test.sh clang-release"
         }
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
@@ -118,3 +118,4 @@ node {
   }
 
 }
+

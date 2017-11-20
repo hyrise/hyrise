@@ -24,7 +24,7 @@ class BaseColumn : private Noncopyable {
   BaseColumn& operator=(BaseColumn&&) = default;
 
   // returns the value at a given position
-  virtual const AllTypeVariant operator[](const size_t i) const = 0;
+  virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
   // appends the value at the end of the column
   virtual void append(const AllTypeVariant& val) = 0;
@@ -41,5 +41,8 @@ class BaseColumn : private Noncopyable {
   // copies one of its own values to a different ValueColumn - mainly used for materialization
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   virtual void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const = 0;
+
+  // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
+  virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 }  // namespace opossum

@@ -31,11 +31,13 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
-  auto chunk_size = json.at("chunk_size");
-  Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size),
-         "CSV meta file, chunk_size must be an integer.");
-  Assert(static_cast<int64_t>(chunk_size) >= 0, "CSV meta file, chunk_size must not be negative.");
-  meta.chunk_size = chunk_size;
+  if (json.find("chunk_size") != json.end()) {
+    auto chunk_size = json.at("chunk_size");
+    Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size),
+           "CSV meta file, chunk_size must be an integer.");
+    Assert(static_cast<int64_t>(chunk_size) > 0, "CSV meta file, chunk_size must greater than 0.");
+    meta.chunk_size = chunk_size;
+  }
 
   assign_if_exists(meta.auto_compress, json, "auto_compress");
 
@@ -82,24 +84,30 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
-  json = nlohmann::json{
-      {"chunk_size", meta.chunk_size}, {"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
+  if (meta.chunk_size == Chunk::MAX_SIZE) {
+    json = nlohmann::json{{"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
+  } else {
+    json = nlohmann::json{{"chunk_size", meta.chunk_size},
+                          {"auto_compress", meta.auto_compress},
+                          {"config", config},
+                          {"columns", columns}};
+  }
 }
 
-bool operator==(const ColumnMeta& lhs, const ColumnMeta& rhs) {
-  return std::tie(lhs.name, lhs.type, lhs.nullable) == std::tie(rhs.name, rhs.type, rhs.nullable);
+bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
+  return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);
 }
 
-bool operator==(const ParseConfig& lhs, const ParseConfig& rhs) {
-  return std::tie(lhs.delimiter, lhs.separator, lhs.quote, lhs.escape, lhs.delimiter_escape,
-                  lhs.reject_quoted_nonstrings,
-                  lhs.rfc_mode) == std::tie(rhs.delimiter, rhs.separator, rhs.quote, rhs.escape, rhs.delimiter_escape,
-                                            rhs.reject_quoted_nonstrings, rhs.rfc_mode);
+bool operator==(const ParseConfig& left, const ParseConfig& right) {
+  return std::tie(left.delimiter, left.separator, left.quote, left.escape, left.delimiter_escape,
+                  left.reject_quoted_nonstrings,
+                  left.rfc_mode) == std::tie(right.delimiter, right.separator, right.quote, right.escape,
+                                             right.delimiter_escape, right.reject_quoted_nonstrings, right.rfc_mode);
 }
 
-bool operator==(const CsvMeta& lhs, const CsvMeta& rhs) {
-  return std::tie(lhs.chunk_size, lhs.auto_compress, lhs.config, lhs.columns) ==
-         std::tie(rhs.chunk_size, rhs.auto_compress, rhs.config, rhs.columns);
+bool operator==(const CsvMeta& left, const CsvMeta& right) {
+  return std::tie(left.chunk_size, left.auto_compress, left.config, left.columns) ==
+         std::tie(right.chunk_size, right.auto_compress, right.config, right.columns);
 }
 
 }  // namespace opossum
