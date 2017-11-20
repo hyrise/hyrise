@@ -78,24 +78,24 @@ std::string AggregateNode::description() const {
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
-  if (column_id < _aggregate_expressions.size()) {
-    const auto& aggregate_expression = _aggregate_expressions[column_id];
-
-    if (aggregate_expression->alias()) {
-      return *aggregate_expression->alias();
-    }
-
-    if (left_child()) {
-      return aggregate_expression->to_string(left_child()->get_verbose_column_names());
-    } else {
-      return aggregate_expression->to_string();
-    }
+  if (column_id < _groupby_column_ids.size()) {
+    return left_child()->get_verbose_column_name(_groupby_column_ids[column_id]);
   }
 
-  const auto group_by_column_id = column_id - _aggregate_expressions.size();
-  DebugAssert(group_by_column_id < _groupby_column_ids.size(), "ColumnID out of range");
+  const auto aggregate_column_id = column_id - _groupby_column_ids.size();
+  DebugAssert(aggregate_column_id < _aggregate_expressions.size(), "ColumnID out of range");
 
-  return left_child()->get_verbose_column_name(_groupby_column_ids[group_by_column_id]);
+  const auto& aggregate_expression = _aggregate_expressions[aggregate_column_id];
+
+  if (aggregate_expression->alias()) {
+    return *aggregate_expression->alias();
+  }
+
+  if (left_child()) {
+    return aggregate_expression->to_string(left_child()->get_verbose_column_names());
+  } else {
+    return aggregate_expression->to_string();
+  }
 }
 
 void AggregateNode::_on_child_changed() {

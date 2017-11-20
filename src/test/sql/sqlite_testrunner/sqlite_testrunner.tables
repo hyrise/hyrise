@@ -20,6 +20,6 @@ src/test/tables/int_int3_limit_1.tbl int_int_for_insert_2
 src/test/tables/int_int3_updated.tbl int_int_for_update
 src/test/tables/int_int_int.tbl int_int_int
 
-src/test/tables/tpch/customer.tbl customer
-src/test/tables/tpch/orders.tbl orders
-src/test/tables/tpch/lineitem.tbl lineitem
+src/test/tables/tpch/minimal/customer.tbl customer
+src/test/tables/tpch/minimal/orders.tbl orders
+src/test/tables/tpch/minimal/lineitem.tbl lineitem

@@ -43,7 +43,7 @@ class AggregateNode;
  *
  *
  * ## Usage
- * Refer to sql_to_result_test.cpp for an example of the SQLTranslator in proper action.
+ * Refer to the SQLPlanner for an example of the SQLToASTTranslator in proper action.
  *
  * The basic usage looks like this:
  *

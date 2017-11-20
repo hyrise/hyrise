@@ -7,13 +7,25 @@ namespace {
  *
  * Original:
  *
- * SELECT l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price,
- * sum(l_extendedprice*(1-l_discount)) as sum_disc_price, sum(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge,
- * avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order
- * FROM lineitem
- * WHERE l_shipdate <= date '1998-12-01' - interval '[DELTA]' day (3)
- * GROUP BY l_returnflag, l_linestatus
- * ORDER BY l_returnflag, l_linestatus
+ * SELECT
+ *      l_returnflag,
+ *      l_linestatus,
+ *      sum(l_quantity) as sum_qty,
+ *      sum(l_extendedprice) as sum_base_price,
+ *      sum(l_extendedprice*(1-l_discount)) as sum_disc_price,
+ *      sum(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge,
+ *      avg(l_quantity) as avg_qty,
+ *      avg(l_extendedprice) as avg_price,
+ *      avg(l_discount) as avg_disc,
+ *      count(*) as count_order
+ * FROM
+ *      lineitem
+ * WHERE
+ *      l_shipdate <= date '1998-12-01' - interval '[DELTA]' day (3)
+ * GROUP BY
+ *      l_returnflag, l_linestatus
+ * ORDER BY
+ *      l_returnflag, l_linestatus
  *
  * Changes:
  *  1. dates are not supported
@@ -126,8 +138,8 @@ const char* const tpch_query_3 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_4 =
-    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1993-07-01' AND
-      o_orderdate < '1993-10-01' AND exists (
+    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
+      o_orderdate < '1996-10-01' AND exists (
       SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
       GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
 
@@ -136,14 +148,30 @@ const char* const tpch_query_4 =
  *
  * Original:
  *
- * SELECT n_name, sum(l_extendedprice * (1 - l_discount)) as revenue
- * FROM customer, orders, lineitem, supplier, nation, region
- * WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND l_suppkey = s_suppkey AND c_nationkey = s_nationkey
- * AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = '[REGION]' AND o_orderdate >= date
- * '[DATE]'
- * AND o_orderdate < date '[DATE]' + interval '1' year
- * GROUP BY n_name
- * ORDER BY revenue DESC;
+ * SELECT
+ *      n_name,
+ *      sum(l_extendedprice * (1 - l_discount)) as revenue
+ * FROM
+ *      customer,
+ *      orders,
+ *      lineitem,
+ *      supplier,
+ *      nation,
+ *      region
+ * WHERE
+ *      c_custkey = o_custkey AND
+ *      l_orderkey = o_orderkey AND
+ *      l_suppkey = s_suppkey AND
+ *      c_nationkey = s_nationkey AND
+ *      s_nationkey = n_nationkey AND
+ *      n_regionkey = r_regionkey AND
+ *      r_name = '[REGION]' AND
+ *      o_orderdate >= date '[DATE]' AND
+ *      o_orderdate < date '[DATE]' + interval '1' year
+ * GROUP BY
+ *      n_name
+ * ORDER BY
+ *      revenue DESC;
  *
  * Changes:
  *  1. Random values are hardcoded
@@ -157,7 +185,7 @@ const char* const tpch_query_5 =
     R"(SELECT n_name, SUM(l_extendedprice * (1.0 - l_discount)) as revenue
       FROM customer, orders, lineitem, supplier, nation, region
       WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND l_suppkey = s_suppkey AND c_nationkey = s_nationkey
-      AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'ASIA' AND o_orderdate >= '1994-01-01'
+      AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'AMERICA' AND o_orderdate >= '1994-01-01'
       AND o_orderdate < '1995-01-01'
       GROUP BY n_name
       ORDER BY revenue DESC;)";
@@ -219,16 +247,42 @@ const char* const tpch_query_6 =
  *    b. pre-calculate date operation
  *  3. Extract is not supported
  *    a. Use full date instead
+ *  4. implicit type conversions for arithmetic operations are not supported
+ *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_7 =
-    R"(SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue FROM (SELECT n1.n_name as supp_nation,
-      n2.n_name as cust_nation, l_shipdate as l_year, l_extendedprice * (1 - l_discount) as volume
-      FROM supplier, lineitem, orders, customer, nation n1, nation n2 WHERE s_suppkey = l_suppkey AND
-      o_orderkey = l_orderkey AND c_custkey = o_custkey AND s_nationkey = n1.n_nationkey AND
-      c_nationkey = n2.n_nationkey AND ((n1.n_name = 'GERMANY' AND n2.n_name = 'FRANCE') or
-      (n1.n_name = 'FRANCE' AND n2.n_name = 'GERMANY')) AND l_shipdate between '1995-01-01' AND
-      '1996-12-31') as shipping GROUP BY supp_nation, cust_nation, l_year
-      ORDER BY supp_nation, cust_nation, l_year;)";
+    R"(SELECT
+          supp_nation,
+          cust_nation,
+          l_year,
+          SUM(volume) as revenue
+      FROM
+          (SELECT
+              n1.n_name as supp_nation,
+              n2.n_name as cust_nation,
+              l_shipdate as l_year,
+              l_extendedprice * (1.0 - l_discount) as volume
+          FROM
+              supplier,
+              lineitem,
+              orders,
+              customer,
+              nation n1,
+              nation n2
+          WHERE
+              s_suppkey = l_suppkey AND
+              o_orderkey = l_orderkey AND
+              c_custkey = o_custkey AND
+              s_nationkey = n1.n_nationkey AND
+              c_nationkey = n2.n_nationkey AND
+              ((n1.n_name = 'IRAN' AND n2.n_name = 'IRAQ') OR
+               (n1.n_name = 'IRAQ' AND n2.n_name = 'IRAN')) AND
+              l_shipdate BETWEEN '1995-01-01' AND '1996-12-31'
+          ) as shipping
+      GROUP BY
+          supp_nation, cust_nation, l_year
+      ORDER BY
+          supp_nation, cust_nation, l_year;)";
 
 /**
  * TPC-H 8
@@ -334,13 +388,37 @@ const char* const tpch_query_9 =
  *
  * Original:
  *
- * SELECT c_custkey, c_name, sum(l_extendedprice * (1 - l_discount)) as revenue, c_acctbal, n_name, c_address,
- * c_phone, c_comment
- * FROM customer, orders, lineitem, nation
- * WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate >= date '[DATE]'
- * AND o_orderdate < date '[DATE]' + interval '3' month AND l_returnflag = 'R' AND c_nationkey = n_nationkey
- * GROUP BY c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment
- * ORDER BY revenue DESC;
+ * SELECT
+ *      c_custkey,
+ *      c_name,
+ *      sum(l_extendedprice * (1 - l_discount)) as revenue,
+ *      c_acctbal,
+ *      n_name,
+ *      c_address,
+ *      c_phone,
+ *      c_comment
+ * FROM
+ *      customer,
+ *      orders,
+ *      lineitem,
+ *      nation
+ * WHERE
+ *      c_custkey = o_custkey AND
+ *      l_orderkey = o_orderkey AND
+ *      o_orderdate >= date '[DATE]' AND
+ *      o_orderdate < date '[DATE]' + interval '3' month AND
+ *      l_returnflag = 'R' AND
+ *      c_nationkey = n_nationkey
+ * GROUP BY
+ *      c_custkey,
+ *      c_name,
+ *      c_acctbal,
+ *      c_phone,
+ *      n_name,
+ *      c_address,
+ *      c_comment
+ * ORDER BY
+ *      revenue DESC;
  *
  * Changes:
  *  1. Random values are hardcoded
@@ -428,7 +506,6 @@ const char* const tpch_query_11 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
-
  */
 const char* const tpch_query_12 =
     R"(SELECT l_shipmode, SUM(case when o_orderpriority ='1-URGENT' or o_orderpriority ='2-HIGH' then 1 else 0 end)

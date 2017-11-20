@@ -59,21 +59,19 @@ std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
   auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
 
   if (!named_column_reference_without_local_alias) {
-    return {};
-  }
-
-  // UnionNode can't resolve NamedColumnReference with table_name
-  if (named_column_reference_without_local_alias->table_name) {
-    return {};
+    return std::nullopt;
   }
 
   const auto column_id_in_left =
       left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
-#if IS_DEBUG
+
   const auto column_id_in_right =
       right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
-  DebugAssert(column_id_in_left == column_id_in_right, "Input layouts don't match");
-#endif
+
+  if (column_id_in_left != column_id_in_right) {
+    return std::nullopt;
+  }
+
   return column_id_in_left;
 }
 

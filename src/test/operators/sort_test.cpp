@@ -48,7 +48,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, AscendingSortOFilteredColumn) {
@@ -63,7 +63,7 @@ TEST_F(OperatorsSortTest, AscendingSortOFilteredColumn) {
   auto sort = std::make_shared<Sort>(scan, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
@@ -72,7 +72,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Ascending);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
@@ -84,7 +84,7 @@ TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
   auto sort2 = std::make_shared<Sort>(sort1, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort2->execute();
 
-  EXPECT_TABLE_EQ(sort2->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort2->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
@@ -93,7 +93,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, MultipleColumnSortIsStable) {
@@ -110,7 +110,7 @@ TEST_F(OperatorsSortTest, MultipleColumnSortIsStable) {
   auto sort_after_a = std::make_shared<Sort>(sort_after_b, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort_after_a->execute();
 
-  EXPECT_TABLE_EQ(sort_after_a->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort_after_a->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
@@ -127,7 +127,7 @@ TEST_F(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   auto sort_after_a = std::make_shared<Sort>(sort_after_b, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort_after_a->execute();
 
-  EXPECT_TABLE_EQ(sort_after_a->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort_after_a->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
@@ -136,7 +136,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
@@ -145,7 +145,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
@@ -154,7 +154,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::AscendingNullsLast, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
@@ -163,7 +163,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::DescendingNullsLast, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
@@ -172,7 +172,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
   auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
@@ -181,7 +181,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
   auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumn) {
@@ -190,7 +190,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumn) {
   auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumn) {
@@ -199,7 +199,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumn) {
   auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
 
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
@@ -214,14 +214,14 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
   auto union_all = std::make_shared<UnionAll>(table_wrapper1, ts2);
   union_all->execute();
 
-  EXPECT_TABLE_EQ(union_all->get_output(), load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
+  EXPECT_TABLE_EQ_UNORDERED(union_all->get_output(),
+                            load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
 
   auto sort = std::make_shared<Sort>(union_all, ColumnID{1});
   sort->execute();
 
-  EXPECT_TABLE_EQ(
-      sort->get_output(),
-      load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", Chunk::MAX_ALLOWED_SIZE), true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(),
+                          load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", Chunk::MAX_ALLOWED_SIZE));
 }
 
 }  // namespace opossum
