@@ -96,9 +96,9 @@ node {
           sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
         }
       }, moreLint: {
-        stage("Linting") {
+        stage("Stricter Linting") {
           script {
-            lintFails = sh script: "./scripts/lint.sh post", returnStdout: true
+            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
             if (lintFails?.trim()) {
               githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
             } else {
