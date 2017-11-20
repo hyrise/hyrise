@@ -321,7 +321,7 @@ TEST_F(SQLTranslatorTest, SelectOuterJoin) {
   EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
 }
 
-TEST_F(SQLToASTTranslatorTest, SelectNaturalJoin) {
+TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
   const auto query = "SELECT * FROM table_a NATURAL JOIN table_c;";
   auto result_node = compile_query(query);
 
