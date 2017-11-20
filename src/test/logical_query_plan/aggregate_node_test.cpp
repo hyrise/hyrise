@@ -38,8 +38,6 @@ class AggregateNodeTest : public BaseTest {
     _aggregate_node->set_left_child(_stored_table_node);
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<AggregateNode> _aggregate_node;
 };

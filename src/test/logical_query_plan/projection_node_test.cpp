@@ -31,8 +31,6 @@ class ProjectionNodeTest : public BaseTest {
     _projection_node->set_left_child(_stored_table_node);
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<ProjectionNode> _projection_node;
 };

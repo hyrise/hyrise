@@ -18,8 +18,6 @@ class StoredTableNodeTest : public BaseTest {
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   std::shared_ptr<StoredTableNode> _stored_table_node;
 };
 

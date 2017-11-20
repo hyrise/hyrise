@@ -39,8 +39,6 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     }
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);

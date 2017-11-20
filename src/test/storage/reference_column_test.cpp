@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
@@ -20,7 +21,7 @@
 
 namespace opossum {
 
-class ReferenceColumnTest : public ::testing::Test {
+class ReferenceColumnTest : public BaseTest {
   virtual void SetUp() {
     _test_table = std::make_shared<opossum::Table>(opossum::Table(3));
     _test_table->add_column("a", "int", true);

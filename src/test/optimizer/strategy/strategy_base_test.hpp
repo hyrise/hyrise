@@ -12,8 +12,6 @@ class AbstractRule;
 
 class StrategyBaseTest : public BaseTest {
  protected:
-  void TearDown() override {}
-
   /**
    * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and returns its child
    * after applying the rule

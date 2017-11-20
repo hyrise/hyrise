@@ -30,10 +30,6 @@ class SQLQueryOperatorTest : public BaseTest {
     SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
     SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
   }
-
-  void TearDown() override {
-    CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
-  }
 };
 
 TEST_F(SQLQueryOperatorTest, BasicTest) {
