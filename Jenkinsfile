@@ -50,7 +50,8 @@ node {
             if (lintFails?.trim()) {
               echo lintFails
               writeFile file: "post_lint.txt", text: lintFails
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins Step moreLint for details", targetUrl: "${env.BUILD_URL}/RCov_Report/artifacts/post_lint.txt"
+              archive "post_lint.txt"
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins Step moreLint for details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
             } else {
               githubNotify context: 'Strict Lint', status: 'SUCCESS'
             }
