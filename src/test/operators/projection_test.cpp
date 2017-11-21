@@ -27,6 +27,9 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_int = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_int.tbl", 2));
     _table_wrapper_int->execute();
 
+    _table_wrapper_int_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_int_null.tbl", 2));
+    _table_wrapper_int_null->execute();
+
     _table_wrapper_string = std::make_shared<TableWrapper>(load_table("src/test/tables/string.tbl", 2));
     _table_wrapper_string->execute();
 
@@ -35,9 +38,13 @@ class OperatorsProjectionTest : public BaseTest {
 
     std::shared_ptr<Table> test_table_dict = load_table("src/test/tables/int_int_int.tbl", 2);
     DictionaryCompression::compress_table(*test_table_dict);
-
     _table_wrapper_int_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
     _table_wrapper_int_dict->execute();
+
+    std::shared_ptr<Table> test_table_dict_null = load_table("src/test/tables/int_int_int.tbl", 2);
+    DictionaryCompression::compress_table(*test_table_dict_null);
+    _table_wrapper_int_dict_null = std::make_shared<TableWrapper>(std::move(test_table_dict_null));
+    _table_wrapper_int_dict_null->execute();
 
     _dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
     _dummy_wrapper->execute();
@@ -81,6 +88,11 @@ class OperatorsProjectionTest : public BaseTest {
     // Projection Expression: a + 'hallo' AS b
     _concat_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
         ExpressionType::Addition, Expression::create_column(ColumnID{0}), Expression::create_literal("hallo"), {"b"})};
+
+    // Projection Expression: a + NULL AS b
+    _add_null_expr = Projection::ColumnExpressions{
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                           Expression::create_literal(NullValue{}), {"b"})};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;
@@ -92,8 +104,9 @@ class OperatorsProjectionTest : public BaseTest {
   Projection::ColumnExpressions _a_b_expr;
   Projection::ColumnExpressions _literal_expr;
   Projection::ColumnExpressions _concat_expr;
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_dict, _table_wrapper_float,
-      _dummy_wrapper, _table_wrapper_string;
+  Projection::ColumnExpressions _add_null_expr;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_null, _table_wrapper_int_dict,
+      _table_wrapper_int_dict_null, _table_wrapper_float, _dummy_wrapper, _table_wrapper_string;
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumnInt) {
@@ -178,10 +191,28 @@ TEST_F(OperatorsProjectionTest, StringConcat) {
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
 }
 
+TEST_F(OperatorsProjectionTest, AddNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/string_concatenated_null.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper_string, _add_null_expr);
+  projection->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
+}
+
 TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionA) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_multiplication.tbl", 2);
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int, _mul_a_b_c_expr);
+  projection->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionWithNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_multiplication_null.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper_int_null, _mul_a_b_c_expr);
   projection->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
@@ -200,6 +231,15 @@ TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionWithDictA) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition.tbl", 2);
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int_dict, _sum_a_b_c_expr);
+  projection->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionWithDictAndNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition_null.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper_int_dict_null, _sum_a_b_c_expr);
   projection->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);

@@ -52,9 +52,14 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 
       if (casted_source->is_nullable()) {
         // Values to insert contain null, copy them
-        Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
-        std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                    casted_target->null_values().begin() + target_start_index);
+        if (target_is_nullable) {
+          std::copy_n(casted_source->null_values().begin() + source_start_index, length,
+                      casted_target->null_values().begin() + target_start_index);
+        } else {
+          for (const auto null_value : casted_source->null_values()) {
+            Assert(!null_value, "Trying to insert NULL into non-NULL column");
+          }
+        }
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueColumn<int32_t>>(source)) {
       // We use the column type of the Dummy table used to insert a single null value.
@@ -73,7 +78,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
       // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
-        if (is_null(ref_value)) {
+        if (variant_is_null(ref_value)) {
           Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
           values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;

@@ -178,7 +178,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   EXPECT_EQ(t->row_count(), 8u);
 
   auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[2];
-  EXPECT_TRUE(is_null(null_val));
+  EXPECT_TRUE(variant_is_null(null_val));
 }
 
 TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
@@ -204,10 +204,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   EXPECT_EQ(t->row_count(), 8u);
 
   auto null_val_int = (*(t->get_chunk(ChunkID{2}).get_column(ColumnID{0})))[0];
-  EXPECT_TRUE(is_null(null_val_int));
+  EXPECT_TRUE(variant_is_null(null_val_int));
 
   auto null_val_float = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{1})))[2];
-  EXPECT_TRUE(is_null(null_val_float));
+  EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
@@ -233,7 +233,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   EXPECT_EQ(t->row_count(), 5u);
 
   auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[0];
-  EXPECT_TRUE(is_null(null_val));
+  EXPECT_TRUE(variant_is_null(null_val));
 }
 
 }  // namespace opossum

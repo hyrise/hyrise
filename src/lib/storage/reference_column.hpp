@@ -28,41 +28,41 @@ class ReferenceColumn : public BaseColumn {
 
   void append(const AllTypeVariant&) override;
 
-  // return generated vector of all values
+  // return generated vector of all values (or nulls)
   template <typename T>
-  const pmr_concurrent_vector<T> materialize_values() const {
-    pmr_concurrent_vector<T> values;
+  const pmr_concurrent_vector<std::optional<T>> materialize_values() const {
+    pmr_concurrent_vector<std::optional<T>> values;
     values.reserve(_pos_list->size());
 
-    std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> value_columns;
-    std::map<ChunkID, std::shared_ptr<const DictionaryColumn<T>>> dict_columns;
-
     for (const RowID& row : *_pos_list) {
-      auto search = value_columns.find(row.chunk_id);
-      if (search != value_columns.end()) {
-        values.push_back(search->second->get(row.chunk_offset));
-        continue;
-      }
-      auto search_dict = dict_columns.find(row.chunk_id);
-      if (search_dict != dict_columns.end()) {
-        values.push_back(search_dict->second->get(row.chunk_offset));
-        continue;
-      }
-
       auto& chunk = _referenced_table->get_chunk(row.chunk_id);
       std::shared_ptr<const BaseColumn> column = chunk.get_column(_referenced_column_id);
 
+      if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+        values.push_back(std::nullopt);
+        continue;
+      }
+
+      // Can't avoid Code Duplication here because get() is part of a templated class
+
       if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-        value_columns[row.chunk_id] = value_column;
-        values.push_back(value_column->get(row.chunk_offset));
+        if (value_column->is_null(row.chunk_offset)) {
+          values.push_back(std::nullopt);
+        } else {
+          values.push_back(value_column->get(row.chunk_offset));
+        }
         continue;
       }
 
       if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
-        dict_columns[row.chunk_id] = dict_column;
-        values.push_back(dict_column->get(row.chunk_offset));
+        if (dict_column->is_null(row.chunk_offset)) {
+          values.push_back(std::nullopt);
+        } else {
+          values.push_back(dict_column->get(row.chunk_offset));
+        }
         continue;
       }
+
       Fail("column is no dictionary or value column");
     }
 

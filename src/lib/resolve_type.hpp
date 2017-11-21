@@ -270,7 +270,7 @@ std::string type_string_from_type() {
 inline std::string type_string_from_all_type_variant(const AllTypeVariant& all_type_variant) {
   // Special case for NullValue data type
   if (all_type_variant.which() == 0) {
-    return "None";
+    return "NULL";
   }
 
   // iterate over column_types

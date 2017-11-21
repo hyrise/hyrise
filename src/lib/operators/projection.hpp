@@ -71,9 +71,8 @@ class Projection : public AbstractReadOnlyOperator {
    * It returns a vector containing the materialized values resulting from the expression.
    */
   template <typename T>
-  static const tbb::concurrent_vector<T> _evaluate_expression(const std::shared_ptr<Expression>& expression,
-                                                              const std::shared_ptr<const Table> table,
-                                                              const ChunkID chunk_id);
+  static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
+      const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id);
 
   /**
    * Operators that all numerical types support.
