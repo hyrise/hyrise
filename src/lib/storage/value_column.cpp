@@ -144,7 +144,6 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
   visitable.handle_value_column(*this, std::move(context));
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;

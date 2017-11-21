@@ -70,7 +70,6 @@ std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector
   return _attribute_vector;
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 const pmr_concurrent_vector<std::optional<T>> DictionaryColumn<T>::materialize_values() const {
   pmr_concurrent_vector<std::optional<T>> values(_attribute_vector->size(), std::nullopt, _dictionary->get_allocator());
@@ -135,7 +134,6 @@ void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<Colu
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
