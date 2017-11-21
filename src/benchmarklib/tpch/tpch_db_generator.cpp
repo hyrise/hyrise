@@ -10,15 +10,28 @@ extern "C" {
 
 #include "storage/chunk.hpp"
 
-void NthElement (DSS_HUGE N, DSS_HUGE *StartSeed);
+extern "C" {
+
+void NthElement(DSS_HUGE N, DSS_HUGE *StartSeed);
 DSS_HUGE set_state(int table, long sf, long procs, long step, DSS_HUGE *extra_rows);
+void load_dists (void);
+
+}
 
 namespace opossum {
 
 TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size):
   _scale_factor(scale_factor),
-  _customer_builder(chunk_size)
+  _chunk_size(chunk_size)
 {
+  load_dists();
+
+//  tdefs[ORDER].base *=
+//  ORDERS_PER_CUST;			/* have to do this after init */
+//  tdefs[LINE].base *=
+//  ORDERS_PER_CUST;			/* have to do this after init */
+//  tdefs[ORDER_LINE].base *=
+//  ORDERS_PER_CUST;			/* have to do this after init */
 }
 
 std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generate() {
@@ -38,6 +51,17 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
 //}
 
 std::shared_ptr<Table> TpchDbGenerator::_generate_customer_table() {
+  TableBuilder<
+  int64_t,
+  std::string,
+  std::string,
+  int64_t,
+  std::string,
+  int64_t,
+  std::string,
+  std::string
+  > customer_builder;
+
   size_t row_count = static_cast<size_t>(tdefs[TpchTable_Customer].base * _scale_factor);
 
   for (size_t row_idx = 1; row_idx <= row_count; row_idx++) {

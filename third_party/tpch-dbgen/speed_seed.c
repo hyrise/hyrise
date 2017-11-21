@@ -66,6 +66,7 @@ extern seed_t Seed[];
 void fakeVStr(int nAvg, long nSeed, DSS_HUGE nCount);
 void NthElement (DSS_HUGE N, DSS_HUGE *StartSeed);
 
+static char lnoise[4] = {'|', '/', '-', '\\' };
 
 void 
 advanceStream(int nStream, DSS_HUGE nCalls, int bUse64Bit)

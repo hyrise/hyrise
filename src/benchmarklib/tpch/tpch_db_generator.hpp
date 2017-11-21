@@ -5,8 +5,9 @@
 #include <memory>
 #include <vector>
 
-#include "boost/hana.hpp"
 #include "boost/hana/integral_constant.hpp"
+#include "boost/hana/for_each.hpp"
+#include "boost/hana/zip_with.hpp"
 
 #include "storage/chunk.hpp"
 #include "storage/value_column.hpp"
@@ -87,17 +88,8 @@ class TpchDbGenerator final {
 
  private:
   float _scale_factor;
+  size_t _chunk_size;
 
-  TableBuilder<
-    int64_t,
-    std::string,
-    std::string,
-    int64_t,
-    std::string,
-    int64_t,
-    std::string,
-    std::string
-  > _customer_builder;
 
   void _row_start();
   void _row_stop(TpchTable table);

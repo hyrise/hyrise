@@ -303,7 +303,7 @@ void
 
 	for (i = start; count; count--, i++)
 	{
-		LIFENOISE (1000, i);
+//		LIFENOISE (1000, i);
 		row_start(tnum);
 
 		switch (tnum)
