@@ -67,7 +67,6 @@ struct Unpack128Bit {
       _mm_storeu_si128(out++, out_reg);
     } else {
       in_reg = _mm_loadu_si128(in++);
-      _mm_storeu_si128(out++, out_reg);
     }
 
     constexpr auto new_carry_over = next_offset < _32_bit ? bit_size - num_first_bits : 0u;

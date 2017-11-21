@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_attribute_encoder.hpp"
+#include "base_ns_encoder.hpp"
 #include "fixed_size_byte_aligned_vector.hpp"
 
 #include "types.hpp"
@@ -9,7 +9,7 @@
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedEncoder : public BaseAttributeEncoder {
+class FixedSizeByteAlignedEncoder : public BaseNsEncoder {
  public:
   void init(size_t size) final;
   void append(uint32_t value) final;

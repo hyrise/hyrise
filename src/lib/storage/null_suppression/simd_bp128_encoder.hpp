@@ -4,13 +4,13 @@
 
 #include <array>
 
-#include "base_attribute_encoder.hpp"
+#include "base_ns_encoder.hpp"
 #include "simd_bp128_packing.hpp"
 
 
 namespace opossum {
 
-class SimdBp128Encoder : public BaseAttributeEncoder {
+class SimdBp128Encoder : public BaseNsEncoder {
  public:
   void init(size_t size) final;
   void append(uint32_t value) final;

@@ -7,9 +7,9 @@
 
 namespace opossum {
 
-class BaseAttributeEncoder {
+class BaseNsEncoder {
  public:
-  virtual ~BaseAttributeEncoder() = default;
+  virtual ~BaseNsEncoder() = default;
 
   virtual void init(size_t size) = 0;
   virtual void append(uint32_t value) = 0;
