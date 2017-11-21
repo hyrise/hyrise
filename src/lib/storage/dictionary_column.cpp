@@ -98,7 +98,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(!opossum::is_null(value), "Null value passed.");
+  DebugAssert(!variant_is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return static_cast<ValueID>(lower_bound(typed_value));
@@ -113,7 +113,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(!opossum::is_null(value), "Null value passed.");
+  DebugAssert(!variant_is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return static_cast<ValueID>(upper_bound(typed_value));

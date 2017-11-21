@@ -59,7 +59,7 @@ const T ValueColumn<T>::get(const ChunkOffset chunk_offset) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
-  bool is_null = opossum::is_null(val);
+  bool is_null = variant_is_null(val);
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
@@ -74,7 +74,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  bool is_null = opossum::is_null(val);
+  bool is_null = variant_is_null(val);
 
   if (is_nullable()) {
     _null_values->push_back(is_null);

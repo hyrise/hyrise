@@ -72,14 +72,14 @@ static constexpr auto column_types = detail::column_types;
 using AllTypeVariant = detail::AllTypeVariant;
 
 // Function to check if AllTypeVariant is null
-inline bool is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
 
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
  *     whenever a null value needs to be represented
  *   - comparing any AllTypeVariant to NULL_VALUE returns false in accordance with the ternary logic
- *   - use is_null() if you want to check if an AllTypeVariant is null
+ *   - use variant_is_null() if you want to check if an AllTypeVariant is null
  */
 static const auto NULL_VALUE = AllTypeVariant{};
 

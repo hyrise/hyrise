@@ -185,7 +185,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
   const auto left_is_literal = left->type() == ExpressionType::Literal;
   const auto right_is_literal = right->type() == ExpressionType::Literal;
 
-  if ((left_is_literal && is_null(left->value())) || (right_is_literal && is_null(right->value()))) {
+  if ((left_is_literal && variant_is_null(left->value())) || (right_is_literal && variant_is_null(right->value()))) {
     // one of the operands is a literal null - early out.
     std::fill(values.begin(), values.end(), std::nullopt);
   } else if (left_is_literal && right_is_literal) {

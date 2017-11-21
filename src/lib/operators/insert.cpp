@@ -78,7 +78,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
       // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
-        if (is_null(ref_value)) {
+        if (variant_is_null(ref_value)) {
           Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
           values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;

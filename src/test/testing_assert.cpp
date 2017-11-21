@@ -129,8 +129,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
   for (unsigned row = 0; row < opossum_matrix.size(); row++)
     for (ColumnID col{0}; col < opossum_matrix[row].size(); col++) {
-      if (is_null(opossum_matrix[row][col]) || is_null(expected_matrix[row][col])) {
-        EXPECT_TRUE(is_null(opossum_matrix[row][col]) && is_null(expected_matrix[row][col]));
+      if (variant_is_null(opossum_matrix[row][col]) || variant_is_null(expected_matrix[row][col])) {
+        EXPECT_TRUE(variant_is_null(opossum_matrix[row][col]) && variant_is_null(expected_matrix[row][col]));
       } else if (opossum_table->column_type(col) == "float") {
         auto left_val = type_cast<float>(opossum_matrix[row][col]);
         auto right_val = type_cast<float>(expected_matrix[row][col]);
