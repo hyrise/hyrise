@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "planviz/abstract_visualizer.hpp"
@@ -26,9 +25,7 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
 
   void _build_subtree(const std::shared_ptr<AbstractLQPNode>& node);
 
-  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                  const std::shared_ptr<AbstractLQPNode>& to);
-
+  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to);
 };
 
 }  // namespace opossum

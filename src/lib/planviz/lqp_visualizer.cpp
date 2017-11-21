@@ -14,7 +14,6 @@ LQPVisualizer::LQPVisualizer() : AbstractVisualizer() {
   _default_vertex.shape = "parallelogram";
 }
 
-
 LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
                              VizEdgeInfo edge_info)
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
