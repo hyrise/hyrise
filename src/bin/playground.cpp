@@ -1,17 +1,19 @@
 #include <iostream>
 
+#include "operators/print.hpp"
+#include "storage/table.hpp"
 #include "tpch/tpch_db_generator.hpp"
 
 int main() {
-  //opossum::TpchDbGenerator gen(0.001f, 10);
+  opossum::TpchDbGenerator gen(0.001f, 10);
 
+  auto tables = gen.generate();
 
-  opossum::ChunkBuilder<int, float, int> cb;
-
-  cb.append_row(5, 6.7, 8);
-  std::cout << "Size: " << cb.row_count() << std::endl;
-  auto chunk = cb.emit_chunk();
-  std::cout << "Size: " << cb.row_count() << std::endl;
+  for (auto & pair : tables) {
+    std::cout << "Table '" << pair.first << "'" << std::endl;
+    opossum::Print::print(pair.second);
+    std::cout << "\n";
+  }
 
   return 0;
 }

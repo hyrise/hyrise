@@ -6,80 +6,103 @@
 #include <vector>
 
 #include "boost/hana.hpp"
+#include "boost/hana/integral_constant.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/value_column.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
 class Chunk;
 class Table;
 
-template<typename ... Args>
-class ChunkBuilder {
+template<typename ... ColumnTypes>
+class TableBuilder {
  public:
-  void append_row(Args &&... args) {
-    _append_row<0>(std::forward<Args>(args)...);
+  explicit TableBuilder(size_t chunk_size) {
+    _table = std::make_shared<Table>(chunk_size);
   }
 
-  Chunk emit_chunk() {
-    Chunk chunk;
+  std::shared_ptr<Table> finish_table() {
+    if (_current_chunk_row_count() > 0) {
+      _emit_chunk();
+    }
 
-    hana::for_each([&] (auto vector) {
-      chunk.add_column(std::make_shared<ValueColumn<decltype(vector)>>(vector));
-    }, _column_vectors);
-
-    return chunk;
+    return _table;
   }
 
-  size_t row_count() const {
-    return std::get<0>(_column_vectors).size();
+  void append_row(ColumnTypes &&... column_values) {
+    boost::hana::zip_with([](auto &vector, auto&& value) { vector.push_back(value); return 0; },
+    _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
+
+    if (_table->chunk_size() != 0 && _current_chunk_row_count() >= _table->chunk_size()) {
+      _emit_chunk();
+    }
   }
 
  private:
-  boost::hana::tuple<std::vector<Args>...> _column_vectors;
+  std::shared_ptr<Table> _table;
+  boost::hana::tuple<pmr_concurrent_vector<ColumnTypes>...> _column_vectors;
 
-  template<size_t index, typename Head, typename ... Tail>
-  void _append_row(Head head, Tail ... tail) {
-    std::get<index>(_column_vectors).emplace_back(head);
-    _append_row<index + 1, Tail...>(tail...);
+  size_t _current_chunk_row_count() const {
+    return _column_vectors[boost::hana::llong_c<0>].size();
   }
 
-  template<size_t index, typename Head>
-  void _append_row(Head head) {
-    std::get<index>(_column_vectors).emplace_back(head);
+  void _emit_chunk() {
+    Chunk chunk;
+
+    hana::for_each(_column_vectors, [&] (auto&& vector) {
+      using T = typename std::decay_t<decltype(vector)>::value_type;
+      chunk.add_column(std::make_shared<ValueColumn<T>>(std::move(vector)));
+      vector = typename std::decay_t<decltype(vector)>();
+    });
+    _table->emplace_chunk(std::move(chunk));
   }
+};
+
+enum TpchTable {
+  TpchTable_Part = 0,
+  TpchTable_PartSupplier,
+  TpchTable_Supplier,
+  TpchTable_Customer,
+  TpchTable_Order,
+  TpchTable_Line,
+  TpchTable_OrderLine,
+  TpchTable_PartPartSupplier,
+  TpchTable_Nation,
+  TpchTable_Region,
+  TpchTable_Update,
+
+  TpchTable_Count // Meta
 };
 
 class TpchDbGenerator final {
  public:
-  TpchDbGenerator(float scale_factor, uint32_t chunk_size = 0);
+  explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = 0);
 
   std::unordered_map<std::string, std::shared_ptr<Table>> generate();
 //  void generate_and_store();
 //  void generate_and_export(const std::string &path);
 
  private:
-  uint32_t _chunk_size;
-//
-//  std::shared_ptr<Table> _customer_table;
-//
-//  /**
-//   * CUSTOMER current chunk population
-//   */
-//  std::vector<int64_t> _c_custkeys;
-//  std::vector<std::string> _c_names;
-//  std::vector<std::string> _c_addresses;
-//  std::vector<int64_t> _c_nation_codes;
-//  std::vector<std::string> _c_phones;
-//  std::vector<int64_t> _c_acctbals;
-//  std::vector<std::string> _c_mktsegments;
-//  std::vector<std::string> _c_comments;
+  float _scale_factor;
 
-//  void _store_customer(const customer_t &customer);
-//  void _emit_customer_chunk();
-//
-//  template<typename T>
-//  void _add_column_to_chunk(Chunk &chunk, std::vector<T> && data);
+  TableBuilder<
+    int64_t,
+    std::string,
+    std::string,
+    int64_t,
+    std::string,
+    int64_t,
+    std::string,
+    std::string
+  > _customer_builder;
+
+  void _row_start();
+  void _row_stop(TpchTable table);
+
+  std::shared_ptr<Table> _generate_customer_table();
 };
 
 }

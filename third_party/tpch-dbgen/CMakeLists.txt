@@ -1,5 +1,5 @@
 set(DATABASE ORACLE)
-set(MACHINE MAC)
+set(MACHINE LINUX)
 set(WORKLOAD TPCH)
 
 add_library(tpch_dbgen
@@ -28,6 +28,6 @@ target_compile_definitions(
     -D${MACHINE}
     -D${DATABASE}
     -D${WORKLOAD}
-    -DRNG_TEST
+    #-DRNG_TEST
     -D_FILE_OFFSET_BITS=64
 )
