@@ -2,12 +2,12 @@
 
 #include <emmintrin.h>
 
-#include "base_encoded_vector.hpp"
+#include "base_ns_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class SimdBp128Vector : public BaseEncodedVector {
+class SimdBp128Vector : public BaseNsVector {
  public:
   explicit SimdBp128Vector(pmr_vector<__m128i> vector, size_t size);
   ~SimdBp128Vector() = default;

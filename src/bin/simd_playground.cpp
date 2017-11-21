@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
 
   encoder.finish();
 
-  auto base_vector = std::shared_ptr<opossum::BaseEncodedVector>{encoder.get_vector()};
+  auto base_vector = std::shared_ptr<opossum::BaseNsVector>{encoder.get_vector()};
   auto vector = std::static_pointer_cast<opossum::SimdBp128Vector>(base_vector);
 
   auto data = vector->data();
@@ -35,9 +35,9 @@ int main(int argc, char const *argv[])
 
   auto decoder = opossum::SimdBp128Decoder{*vector};
 
-//  for (auto i = 0u; i < decoder.size(); ++i) {
-//    std::cout << decoder.get(i) << std::endl;
-//  }
+  for (auto i = 0u; i < decoder.size(); ++i) {
+    std::cout << decoder.get(i) << std::endl;
+  }
 
   std::cout << "--------" << std::endl;
 

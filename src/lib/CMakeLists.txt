@@ -230,8 +230,8 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
-    storage/null_suppression/base_encoded_vector.hpp
-        storage/null_suppression/base_ns_encoder.hpp
+    storage/null_suppression/base_ns_vector.hpp
+    storage/null_suppression/base_ns_encoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_vector.hpp

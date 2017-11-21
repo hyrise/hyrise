@@ -42,7 +42,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
       return _get_within_cached_meta_block(i);
     }
 
-    if (_cached_meta_block_first_index + Packing::meta_block_size <= i) {
+    if (_is_index_after_cached_meta_block(i)) {
       const auto relative_index = _index_within_cached_meta_block(i);
       const auto relative_meta_block_index = relative_index / Packing::meta_block_size;
 
@@ -88,6 +88,10 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
 
   size_t _index_within_cached_meta_block(size_t index) {
     return index - _cached_meta_block_first_index;
+  }
+
+  bool _is_index_after_cached_meta_block(size_t index) {
+    return (_cached_meta_block_first_index + Packing::meta_block_size) <= index;
   }
 
   uint32_t _get_within_cached_block(size_t index) {

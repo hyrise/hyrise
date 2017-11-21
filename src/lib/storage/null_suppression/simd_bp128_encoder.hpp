@@ -15,7 +15,7 @@ class SimdBp128Encoder : public BaseNsEncoder {
   void init(size_t size) final;
   void append(uint32_t value) final;
   void finish() final;
-  std::unique_ptr<BaseEncodedVector> get_vector() final;
+  std::unique_ptr<BaseNsVector> get_vector() final;
 
  private:
   using Packing = SimdBp128Packing;

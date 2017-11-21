@@ -14,7 +14,7 @@ class FixedSizeByteAlignedEncoder : public BaseNsEncoder {
   void init(size_t size) final;
   void append(uint32_t value) final;
   void finish() final;
-  std::unique_ptr<BaseEncodedVector> get_vector() final;
+  std::unique_ptr<BaseNsVector> get_vector() final;
 
  private:
   pmr_vector<UnsignedIntType> _data;
@@ -35,7 +35,7 @@ template <typename UnsignedIntType>
 void FixedSizeByteAlignedEncoder::finish() final {}
 
 template <typename UnsignedIntType>
-std::unique_ptr<BaseEncodedVector> FixedSizeByteAlignedEncoder::get_vector() {
+std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder::get_vector() {
   return std::make_unique<FixedSizeByteAlignedVector>(std::move(_data));
 }
 

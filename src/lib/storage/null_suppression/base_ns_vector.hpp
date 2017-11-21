@@ -4,9 +4,9 @@
 
 namespace opossum {
 
-class BaseEncodedVector : private Noncopyable {
+class BaseNsVector : private Noncopyable {
  public:
-  virtual ~BaseEncodedVector() = default;
+  virtual ~BaseNsVector() = default;
 
   virtual uint32_t get(const size_t i) const = 0;
 

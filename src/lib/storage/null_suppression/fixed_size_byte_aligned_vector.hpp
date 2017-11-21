@@ -1,12 +1,12 @@
 #pragma once
 
-#include "base_encoded_vector.hpp"
+#include "base_ns_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedVector : public BaseEncodedVector {
+class FixedSizeByteAlignedVector : public BaseNsVector {
  public:
   FixedSizeByteAlignedVector(pmr_vector<uint32_t> vector);
   ~FixedSizeByteAligned() override = default;
