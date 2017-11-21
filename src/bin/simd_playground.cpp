@@ -12,9 +12,9 @@ int main(int argc, char const *argv[])
 {
   auto encoder = opossum::SimdBp128Encoder{};
 
-  encoder.init(136);
+  encoder.init(256);
 
-  for (auto i = 1024; i < 1160; ++i) {
+  for (auto i = 0; i < 256; ++i) {
     encoder.append(i);
   }
 
@@ -35,11 +35,14 @@ int main(int argc, char const *argv[])
 
   auto decoder = opossum::SimdBp128Decoder{*vector};
 
-  auto decoded_vector = decoder.decode();
+//  for (auto i = 0u; i < decoder.size(); ++i) {
+//    std::cout << decoder.get(i) << std::endl;
+//  }
 
-  std::cout << std::endl;
-  for (auto var : decoded_vector) {
-    std::cout << var << std::endl;
+  std::cout << "--------" << std::endl;
+
+  for (auto val : decoder.decode()) {
+    std::cout << val << std::endl;
   }
 
   return 0;

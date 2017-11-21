@@ -12,7 +12,7 @@ namespace opossum {
  */
 class BaseNsDecoder {
  public:
-  virtual uint32_t get(size_t i) const = 0;
+  virtual uint32_t get(size_t i) = 0;
   virtual size_t size() const = 0;
   virtual pmr_vector<uint32_t> decode() const = 0;
 };
@@ -26,7 +26,7 @@ using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_
 template <typename Derived>
 class NsDecoder : public BaseNsDecoder {
  public:
-  uint32_t get(size_t i) const final {
+  uint32_t get(size_t i) final {
     return _self()._on_get(i);
   }
 
@@ -64,6 +64,7 @@ class NsDecoder : public BaseNsDecoder {
   }
 
  private:
+  Derived& _self() { return static_cast<Derived&>(*this); }
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 };
 

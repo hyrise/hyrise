@@ -21,7 +21,7 @@ class FixedSizeByteAlignedDecoder : public NsDecoder<FixedSizeByteAlignedDecoder
  public:
   explicit FixedSizeByteAlignedDecoder(const Vector& vector) : _vector{vector} {}
 
-  uint32_t _on_get(size_t i) const {
+  uint32_t _on_get(size_t i) {
     return _vector.data()[i];
   }
 
