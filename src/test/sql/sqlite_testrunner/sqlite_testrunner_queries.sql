@@ -15,7 +15,7 @@ SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0 OR (b > 457.0 AND b < 458.
 -- Projection
 SELECT a FROM int_float;
 SELECT a as b FROM int_float;
-SELECT a, 4+6 as b FROM int_float;
+SELECT a, 4+6 as b, a+4 AS c, 5.0+b AS d FROM int_float;
 SELECT a*b/c AS calc FROM int_int_int;
 SELECT a, b, a+b AS e, a+b+NULL AS f FROM int_int_int_null;
 
