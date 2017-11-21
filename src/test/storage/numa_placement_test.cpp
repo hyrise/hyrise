@@ -42,8 +42,6 @@ class NUMAPlacementTest : public BaseTest {
     _node_count = NUMAPlacementManager::get().topology()->nodes().size();
   }
 
-  void TearDown() override { StorageManager::get().drop_table("table"); }
-
   // Returns a vector that contains the counts of chunks per node.
   // The index of the vector represents the NodeID.
   std::vector<size_t> count_chunks_by_node(const std::shared_ptr<Table>& table) {

@@ -12,7 +12,6 @@
 namespace opossum {
 
 class OperatorsImportBinaryTest : public BaseTest {
-  void TearDown() override { StorageManager::get().reset(); }
 };
 
 TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {

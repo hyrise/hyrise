@@ -27,8 +27,6 @@ class SQLQueryPlanCacheTest : public SQLBaseTest {
     parse_tree_cache_hits = 0;
     query_plan_cache_hits = 0;
   }
-
-  void TearDown() override {}
 };
 
 TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {

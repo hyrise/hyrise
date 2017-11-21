@@ -102,10 +102,6 @@ class SchedulerTest : public BaseTest {
       tasks.emplace_back(task);
     }
   }
-
-  void TearDown() override {
-    CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
-  }
 };
 
 /**

@@ -14,8 +14,6 @@ class OperatorTask;
 // The fixture for testing class GetTable.
 class SQLBaseTest : public BaseTest {
  protected:
-  void TearDown() override {}
-
   std::shared_ptr<OperatorTask> execute_query_task(const std::string& query, bool schedule_plan = false);
 
   void schedule_query_task(const std::string& query);

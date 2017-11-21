@@ -44,8 +44,6 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[0]->set_left_child(_nodes[1]);
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   std::array<std::shared_ptr<MockNode>, 8> _nodes;
 };
 

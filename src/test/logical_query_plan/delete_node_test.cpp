@@ -12,8 +12,6 @@ class DeleteNodeTest : public BaseTest {
  protected:
   void SetUp() override { _delete_node = std::make_shared<DeleteNode>("table_a"); }
 
-  void TearDown() override {}
-
   std::shared_ptr<DeleteNode> _delete_node;
 };
 
