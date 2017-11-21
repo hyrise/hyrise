@@ -31,8 +31,6 @@ class JoinNodeTest : public BaseTest {
     _inner_join_node->set_right_child(_stored_table_node_b);
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   std::shared_ptr<StoredTableNode> _stored_table_node_a;
   std::shared_ptr<StoredTableNode> _stored_table_node_b;
   std::shared_ptr<JoinNode> _join_node, _inner_join_node;

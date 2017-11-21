@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-class TPCHTest : public ::testing::TestWithParam<size_t> {
+class TPCHTest : public BaseTestWithParam<size_t> {
  protected:
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
@@ -38,8 +38,6 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
     hsql::SQLParserResult parse_result;

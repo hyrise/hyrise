@@ -39,8 +39,6 @@ class LQPTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_alias_name",
                                     load_table("src/test/tables/table_alias_name.tbl", Chunk::MAX_SIZE));
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {

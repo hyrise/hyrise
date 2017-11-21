@@ -122,8 +122,6 @@ class TpccRefTest : public BaseTest {
     }
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
  protected:
   std::unordered_map<std::string, std::shared_ptr<TransactionTestImpl>> _transaction_impls;
 };

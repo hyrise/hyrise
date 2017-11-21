@@ -19,8 +19,6 @@ class TransactionContextTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  void TearDown() override { TransactionManager::reset(); }
-
   TransactionManager& manager() { return TransactionManager::get(); }
 };
 
