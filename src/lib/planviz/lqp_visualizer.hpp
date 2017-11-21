@@ -1,22 +1,31 @@
 #pragma once
 
+#include <boost/algorithm/string.hpp>
+#include <iomanip>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "optimizer/table_statistics.hpp"
+#include "planviz/abstract_visualizer.hpp"
 
 namespace opossum {
 
-class LQPVisualizer {
+class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractLQPNode>>> {
  public:
-  static void visualize(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots, const std::string& dot_filename,
-                        const std::string& img_filename);
+  LQPVisualizer();
+
+  LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                VizEdgeInfo edge_info);
 
  protected:
-  static void _visualize_subtree(const std::shared_ptr<AbstractLQPNode>& node, std::ofstream& file);
-  static void _visualize_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                  const std::shared_ptr<AbstractLQPNode>& to, std::ofstream& file);
+  void _build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) override;
+
+  void _build_subtree(const std::shared_ptr<AbstractLQPNode>& node);
+
+  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to);
 };
 
 }  // namespace opossum
