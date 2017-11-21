@@ -232,6 +232,9 @@ set(
     storage/iterables/value_column_iterable.hpp
     storage/null_suppression/base_ns_vector.hpp
     storage/null_suppression/base_ns_encoder.hpp
+    storage/null_suppression/ns_type.hpp
+    storage/null_suppression/ns_utils.cpp
+    storage/null_suppression/ns_utils.hpp
     storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_vector.hpp

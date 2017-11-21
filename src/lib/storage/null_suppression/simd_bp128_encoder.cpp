@@ -5,10 +5,30 @@
 
 #include "simd_bp128_vector.hpp"
 
+#include <array>
+
 #include "utils/assert.hpp"
 
 
 namespace opossum {
+
+std::array<std::bitset<32>, 4> print(__m128i* in) {
+  auto data_ptr = reinterpret_cast<uint32_t*>(in);
+
+  auto bitsets = std::array<std::bitset<32>, 4>{{ data_ptr[3], data_ptr[2], data_ptr[1], data_ptr[0] }};
+
+  for (const auto& bitset : bitsets) {
+    std::cout << bitset << "|";
+  }
+
+  std::cout << std::endl;
+
+  return bitsets;
+}
+
+std::array<std::bitset<32>, 4> print(__m128i in) {
+  return print(&in);
+}
 
 void SimdBp128Encoder::init(size_t size) {
   _data = pmr_vector<__m128i>((size + 3u) / 4u);
@@ -35,7 +55,7 @@ void SimdBp128Encoder::finish() {
   _data.shrink_to_fit();
 }
 
-std::unique_ptr<BaseEncodedVector> SimdBp128Encoder::get_vector() {
+std::unique_ptr<BaseNsVector> SimdBp128Encoder::get_vector() {
   return std::make_unique<SimdBp128Vector>(std::move(_data), _size);
 }
 

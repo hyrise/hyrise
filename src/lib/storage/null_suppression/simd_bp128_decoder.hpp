@@ -33,6 +33,18 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
         _cached_block_first_index{std::numeric_limits<size_t>::max()},
         _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>()} {}
 
+  SimdBp128Decoder(const SimdBp128Decoder& other)
+      : _data{other._data},
+        _size{other._size},
+        _cached_meta_info_offset{other._cached_meta_info_offset},
+        _cached_meta_block_first_index{other._cached_meta_block_first_index},
+        _cached_meta_info{other._cached_meta_info},
+        _cached_block_first_index{other._cached_block_first_index},
+        _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
+
+  SimdBp128Decoder(SimdBp128Decoder&& other) = default;
+  ~SimdBp128Decoder() = default;
+
   uint32_t _on_get(size_t i) {
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);

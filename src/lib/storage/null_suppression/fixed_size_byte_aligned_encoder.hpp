@@ -21,22 +21,22 @@ class FixedSizeByteAlignedEncoder : public BaseNsEncoder {
 };
 
 template <typename UnsignedIntType>
-void FixedSizeByteAlignedEncoder::init(size_t size) {
+void FixedSizeByteAlignedEncoder<UnsignedIntType>::init(size_t size) {
   _data = pmr_vector<UnsignedIntType>{};
   _data.reserve(size);
 }
 
 template <typename UnsignedIntType>
-void FixedSizeByteAlignedEncoder::append(uint32_t value) {
+void FixedSizeByteAlignedEncoder<UnsignedIntType>::append(uint32_t value) {
   _data.push_back(static_cast<UnsignedIntType>(value));
 }
 
 template <typename UnsignedIntType>
-void FixedSizeByteAlignedEncoder::finish() final {}
+void FixedSizeByteAlignedEncoder<UnsignedIntType>::finish() {}
 
 template <typename UnsignedIntType>
-std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder::get_vector() {
-  return std::make_unique<FixedSizeByteAlignedVector>(std::move(_data));
+std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::get_vector() {
+  return std::make_unique<FixedSizeByteAlignedVector<UnsignedIntType>>(std::move(_data));
 }
 
 }  // namespace opossum
