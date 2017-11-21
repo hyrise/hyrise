@@ -2,7 +2,6 @@
 
 #include <cstdint>
 
-
 namespace opossum {
 
 enum class NsType : uint8_t {

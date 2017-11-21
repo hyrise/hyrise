@@ -85,7 +85,8 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
    */
 
   const auto& attribute_vector = *left_column.attribute_vector();
-  auto left_iterable = AttributeVectorIterable{attribute_vector};
+  const auto null_value_id = left_column.null_value_id();
+  auto left_iterable = AttributeVectorIterable{attribute_vector, null_value_id};
 
   if (_right_value_matches_all(left_column, search_value_id)) {
     left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {

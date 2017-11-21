@@ -5,7 +5,6 @@
 
 #include "types.hpp"
 
-
 namespace opossum {
 
 template <typename UnsignedIntType>

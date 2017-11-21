@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-
 namespace opossum {
 
 void SimdBp128Decoder::_read_meta_info(size_t meta_info_offset) {
@@ -11,7 +10,8 @@ void SimdBp128Decoder::_read_meta_info(size_t meta_info_offset) {
 
 void SimdBp128Decoder::_unpack_block(uint8_t block_index) {
   static const auto meta_info_data_size = 1u;  // One 128 bit block
-  const auto relative_data_offset = meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.begin() + block_index, 0u);
+  const auto relative_data_offset =
+      meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.begin() + block_index, 0u);
   const auto data_offset = _cached_meta_info_offset + relative_data_offset;
   const auto in = _data->data() + data_offset;
   auto out = _cached_block->data();

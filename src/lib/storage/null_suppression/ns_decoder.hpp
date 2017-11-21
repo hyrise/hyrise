@@ -26,13 +26,9 @@ using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_
 template <typename Derived>
 class NsDecoder : public BaseNsDecoder {
  public:
-  uint32_t get(size_t i) final {
-    return _self()._on_get(i);
-  }
+  uint32_t get(size_t i) final { return _self()._on_get(i); }
 
-  size_t size() const final {
-    return _self()._on_size();
-  }
+  size_t size() const final { return _self()._on_size(); }
 
   pmr_vector<uint32_t> decode() const final {
     auto decoded_vector = pmr_vector<uint32_t>{};
@@ -51,17 +47,13 @@ class NsDecoder : public BaseNsDecoder {
    * @brief Returns an iterator to the beginning
    * @return a constant forward iterator that inherits from BaseNsIterator
    */
-  auto cbegin() const {
-    return _self()._on_cbegin();
-  }
+  auto cbegin() const { return _self()._on_cbegin(); }
 
   /**
    * @brief Returns an iterator to the end
    * @return a constant forward iterator that inherits from BaseNsIterator
    */
-  auto cend() const {
-    return _self()._on_cend();
-  }
+  auto cend() const { return _self()._on_cend(); }
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }

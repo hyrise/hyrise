@@ -4,7 +4,6 @@
 
 #include <cstdint>
 
-
 namespace opossum {
 
 class SimdBp128Packing {

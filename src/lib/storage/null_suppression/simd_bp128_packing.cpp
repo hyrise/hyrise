@@ -2,7 +2,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 template <uint8_t bit_size, uint8_t carry_over = 0u, uint8_t remaining_recursions = bit_size>
@@ -92,7 +91,6 @@ void SimdBp128Packing::read_meta_info(const __m128i* in, uint8_t* out) {
   auto meta_info_block_rgtr = _mm_loadu_si128(in);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(out), meta_info_block_rgtr);
 }
-
 
 void SimdBp128Packing::pack_block(const uint32_t* _in, __m128i* out, const uint8_t bit_size) {
   auto in = reinterpret_cast<const __m128i*>(_in);

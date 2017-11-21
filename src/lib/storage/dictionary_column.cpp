@@ -15,9 +15,11 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
-                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-    : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
+DictionaryColumn<T>::DictionaryColumn(std::shared_ptr<const pmr_vector<T>> dictionary,
+                                      std::shared_ptr<const BaseNsVector> attribute_vector, ValueID null_value_id)
+    : _dictionary(std::move(dictionary)),
+      _attribute_vector(std::move(attribute_vector)),
+      _null_value_id{null_value_id} {}
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
@@ -56,7 +58,7 @@ std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
 }
 
 template <typename T>
-std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector() const {
+std::shared_ptr<const BaseNsVector> DictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
@@ -117,6 +119,11 @@ size_t DictionaryColumn<T>::unique_values_count() const {
 template <typename T>
 size_t DictionaryColumn<T>::size() const {
   return _attribute_vector->size();
+}
+
+template <typename T>
+ValueID DictionaryColumn<T>::null_value_id() const {
+  return _null_value_id;
 }
 
 template <typename T>

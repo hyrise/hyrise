@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class BaseAttributeVector;
+class BaseNsVector;
 
 // TODO(anyone): Right now, INVALID_VALUE_ID and NULL_VALUE_ID are the same
 // Even though ValueIDs do not have to use the full width of ValueID (uint32_t), this will also work for smaller ValueID
@@ -22,6 +22,7 @@ class BaseDictionaryColumn : public BaseColumn {
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;
   virtual size_t unique_values_count() const = 0;
-  virtual std::shared_ptr<const BaseAttributeVector> attribute_vector() const = 0;
+  virtual std::shared_ptr<const BaseNsVector> attribute_vector() const = 0;
+  virtual ValueID null_value_id() const = 0;
 };
 }  // namespace opossum

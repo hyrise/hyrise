@@ -9,13 +9,12 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 std::array<std::bitset<32>, 4> print(__m128i* in) {
   auto data_ptr = reinterpret_cast<uint32_t*>(in);
 
-  auto bitsets = std::array<std::bitset<32>, 4>{{ data_ptr[3], data_ptr[2], data_ptr[1], data_ptr[0] }};
+  auto bitsets = std::array<std::bitset<32>, 4>{{data_ptr[3], data_ptr[2], data_ptr[1], data_ptr[0]}};
 
   for (const auto& bitset : bitsets) {
     std::cout << bitset << "|";
@@ -26,9 +25,7 @@ std::array<std::bitset<32>, 4> print(__m128i* in) {
   return bitsets;
 }
 
-std::array<std::bitset<32>, 4> print(__m128i in) {
-  return print(&in);
-}
+std::array<std::bitset<32>, 4> print(__m128i in) { return print(&in); }
 
 void SimdBp128Encoder::init(size_t size) {
   _data = pmr_vector<__m128i>((size + 3u) / 4u);
@@ -59,9 +56,7 @@ std::unique_ptr<BaseNsVector> SimdBp128Encoder::get_vector() {
   return std::make_unique<SimdBp128Vector>(std::move(_data), _size);
 }
 
-bool SimdBp128Encoder::meta_block_complete() {
-  return (Packing::meta_block_size - _meta_block_index) <= 1u;
-}
+bool SimdBp128Encoder::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 1u; }
 
 void SimdBp128Encoder::pack_meta_block() {
   const auto bits_needed = bits_needed_per_block();
@@ -95,7 +90,9 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Packing::b
       bit_collector |= _pending_meta_block[block_offset + index];
     }
 
-    for (;bit_collector != 0; bits_needed[block_index]++) { bit_collector >>= 1u; }
+    for (; bit_collector != 0; bits_needed[block_index]++) {
+      bit_collector >>= 1u;
+    }
   }
 
   return bits_needed;

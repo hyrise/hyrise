@@ -1,8 +1,8 @@
 #pragma once
 
+#include <boost/hana/at_key.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/tuple.hpp>
-#include <boost/hana/at_key.hpp>
 
 #include "base_ns_vector.hpp"
 #include "types.hpp"
@@ -13,10 +13,10 @@ namespace hana = boost::hana;
 
 namespace detail {
 
-constexpr auto ns_type_for_uint_type = hana::make_map(
-  hana::make_pair(hana::type_c<uint32_t>, NsType::FixedSize32ByteAligned),
-  hana::make_pair(hana::type_c<uint16_t>, NsType::FixedSize16ByteAligned),
-  hana::make_pair(hana::type_c<uint8_t>, NsType::FixedSize8ByteAligned));
+constexpr auto ns_type_for_uint_type =
+    hana::make_map(hana::make_pair(hana::type_c<uint32_t>, NsType::FixedSize32ByteAligned),
+                   hana::make_pair(hana::type_c<uint16_t>, NsType::FixedSize16ByteAligned),
+                   hana::make_pair(hana::type_c<uint8_t>, NsType::FixedSize8ByteAligned));
 
 }  // namespace detail
 

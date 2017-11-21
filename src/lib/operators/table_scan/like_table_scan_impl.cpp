@@ -61,7 +61,8 @@ void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& bas
   const auto& dictionary_matches = result.second;
 
   const auto& attribute_vector = *left_column.attribute_vector();
-  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
+  const auto null_value_id = left_column.null_value_id();
+  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, null_value_id};
 
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {

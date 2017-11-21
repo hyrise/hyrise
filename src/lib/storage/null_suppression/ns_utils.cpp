@@ -10,7 +10,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 std::unique_ptr<BaseNsEncoder> create_encoder_for_ns_type(NsType type) {

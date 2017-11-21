@@ -9,12 +9,13 @@
 
 #include "chunk.hpp"
 #include "dictionary_column.hpp"
-#include "fitted_attribute_vector.hpp"
 #include "resolve_type.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_column.hpp"
+
+#include "null_suppression/ns_utils.hpp"
 
 namespace opossum {
 
@@ -23,13 +24,13 @@ class ColumnCompressorBase {
   virtual std::shared_ptr<BaseColumn> compress_column(const std::shared_ptr<BaseColumn>& column) = 0;
 
  protected:
-  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
+  static std::unique_ptr<BaseNsEncoder> _create_ns_encoder(size_t unique_values_count, size_t size) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint8_t>>(size);
+      return create_encoder_from_ns_type(NsType::FixedSize8ByteAligned);
     } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint16_t>>(size);
+      return create_encoder_from_ns_type(NsType::FixedSize16ByteAligned);
     } else {
-      return std::make_shared<FittedAttributeVector<uint32_t>>(size);
+      return create_encoder_from_ns_type(NsType::FixedSize32ByteAligned);
     }
   }
 };
@@ -69,7 +70,10 @@ class ColumnCompressor : public ColumnCompressorBase {
     dictionary.shrink_to_fit();
 
     // We need to increment the dictionary size here because of possible null values.
-    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size());
+    auto ns_encoder = _create_ns_encoder(dictionary.size() + 1u, values.size());
+    ns_encoder->init(values.size());
+
+    const auto null_value_id = ValueID{dictionary.size()};
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -80,26 +84,28 @@ class ColumnCompressor : public ColumnCompressorBase {
        */
       auto value_it = values.cbegin();
       auto null_value_it = null_values.cbegin();
-      auto index = 0u;
-      for (; value_it != values.cend(); ++value_it, ++null_value_it, ++index) {
+      for (; value_it != values.cend(); ++value_it, ++null_value_it) {
         if (*null_value_it) {
-          attribute_vector->set(index, NULL_VALUE_ID);
+          ns_encoder->append(null_value_id);
           continue;
         }
 
         auto value_id = get_value_id(dictionary, *value_it);
-        attribute_vector->set(index, value_id);
+        ns_encoder->append(value_id);
       }
     } else {
       auto value_it = values.cbegin();
-      auto index = 0u;
-      for (; value_it != values.cend(); ++value_it, ++index) {
+      for (; value_it != values.cend(); ++value_it) {
         auto value_id = get_value_id(dictionary, *value_it);
-        attribute_vector->set(index, value_id);
+        ns_encoder->append(value_id);
       }
     }
 
-    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
+    ns_encoder->finish();
+
+    auto dictionary_ptr = std::make_shared<const pmr_vector<T>>(std::move(dictionary));
+    auto attribute_vector_sptr = std::shared_ptr<const BaseNsVector>{std::move(ns_encoder->get_vector())};
+    return std::make_shared<DictionaryColumn<T>>(dictionary_ptr, attribute_vector_sptr, null_value_id);
   }
 
   ValueID get_value_id(const pmr_vector<T>& dictionary, const T& value) {

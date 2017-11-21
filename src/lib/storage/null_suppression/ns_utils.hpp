@@ -9,7 +9,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 class BaseNsEncoder;

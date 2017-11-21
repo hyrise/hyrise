@@ -1,15 +1,14 @@
 
-#include <iostream>
 #include <emmintrin.h>
-#include <cstdint>
 #include <bitset>
+#include <cstdint>
+#include <iostream>
 
 #include "storage/null_suppression/simd_bp128_decoder.hpp"
 #include "storage/null_suppression/simd_bp128_encoder.hpp"
 #include "storage/null_suppression/simd_bp128_vector.hpp"
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const* argv[]) {
   auto encoder = opossum::SimdBp128Encoder{};
 
   encoder.init(256);
@@ -24,7 +23,7 @@ int main(int argc, char const *argv[])
   auto vector = std::static_pointer_cast<opossum::SimdBp128Vector>(base_vector);
 
   auto data = vector->data();
-  auto data_ptr = reinterpret_cast<const uint32_t *>(data.data());
+  auto data_ptr = reinterpret_cast<const uint32_t*>(data.data());
 
   for (auto i = 0u; i < data.size(); ++i) {
     std::cout << std::bitset<32>{data_ptr[i * 4 + 3]} << "|";

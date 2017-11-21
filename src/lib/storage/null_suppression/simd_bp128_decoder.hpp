@@ -3,19 +3,17 @@
 #include <emmintrin.h>
 
 #include <array>
-#include <limits>
-#include <numeric>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <numeric>
 #include <utility>
 
-
 #include "ns_decoder.hpp"
-#include "simd_bp128_vector.hpp"
 #include "simd_bp128_packing.hpp"
+#include "simd_bp128_vector.hpp"
 
 #include "types.hpp"
-
 
 namespace opossum {
 
@@ -69,17 +67,11 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
     return _get_within_cached_meta_block(i);
   }
 
-  size_t _on_size() const {
-    return _size;
-  }
+  size_t _on_size() const { return _size; }
 
-  auto _on_cbegin() const {
-    return ConstIterator{_data, _size};
-  }
+  auto _on_cbegin() const { return Iterator{_data, _size}; }
 
-  auto _on_cend() const {
-    return ConstIterator{nullptr, _size, _size};
-  }
+  auto _on_cend() const { return Iterator{nullptr, _size, _size}; }
 
  private:
   bool _is_index_within_cached_block(size_t index) {
@@ -88,9 +80,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
     return begin <= index && index < end;
   }
 
-  size_t _index_within_cached_block(size_t index) {
-    return index - _cached_block_first_index;
-  }
+  size_t _index_within_cached_block(size_t index) { return index - _cached_block_first_index; }
 
   bool _is_index_within_cached_meta_block(size_t index) {
     const auto begin = _cached_meta_block_first_index;
@@ -98,17 +88,13 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
     return begin <= index && index < end;
   }
 
-  size_t _index_within_cached_meta_block(size_t index) {
-    return index - _cached_meta_block_first_index;
-  }
+  size_t _index_within_cached_meta_block(size_t index) { return index - _cached_meta_block_first_index; }
 
   bool _is_index_after_cached_meta_block(size_t index) {
     return (_cached_meta_block_first_index + Packing::meta_block_size) <= index;
   }
 
-  uint32_t _get_within_cached_block(size_t index) {
-    return (*_cached_block)[_index_within_cached_block(index)];
-  }
+  uint32_t _get_within_cached_block(size_t index) { return (*_cached_block)[_index_within_cached_block(index)]; }
 
   uint32_t _get_within_cached_meta_block(size_t index) {
     const auto block_index = _index_within_cached_meta_block(index) / Packing::block_size;
@@ -121,7 +107,8 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
     auto meta_info_offset = _cached_meta_info_offset;
     for (auto i = 0u; i < meta_block_index; ++i) {
       static const auto meta_info_data_size = 1u;  // One 128 bit block
-      const auto meta_block_data_size = meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.end(), 0u);
+      const auto meta_block_data_size =
+          meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.end(), 0u);
       meta_info_offset += meta_block_data_size;
       _read_meta_info(meta_info_offset);
     }
@@ -150,9 +137,9 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
   const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
 
  public:
-  class ConstIterator : public BaseNsIterator<ConstIterator> {
+  class Iterator : public BaseNsIterator<Iterator> {
    public:
-    ConstIterator(const pmr_vector<__m128i>* data, size_t size, size_t absolute_index = 0u)
+    Iterator(const pmr_vector<__m128i>* data, size_t size, size_t absolute_index = 0u)
         : _data{data},
           _size{size},
           _data_index{0u},
@@ -166,7 +153,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
       }
     }
 
-    ConstIterator(const ConstIterator& other)
+    Iterator(const Iterator& other)
         : _data{other._data},
           _size{other._size},
           _data_index{other._data_index},
@@ -176,9 +163,8 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
           _current_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._current_block)},
           _current_block_index{other._current_block_index} {}
 
-
-    ConstIterator(ConstIterator&& other) = default;
-    ~ConstIterator() = default;
+    Iterator(Iterator&& other) = default;
+    ~Iterator() = default;
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -199,11 +185,9 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
       }
     }
 
-    bool equal(const ConstIterator& other) const { return _absolute_index == other._absolute_index; }
+    bool equal(const Iterator& other) const { return _absolute_index == other._absolute_index; }
 
-    uint32_t dereference() const {
-      return (*_current_block)[_current_block_index];
-    }
+    uint32_t dereference() const { return (*_current_block)[_current_block_index]; }
 
    private:
     void _read_meta_info();
