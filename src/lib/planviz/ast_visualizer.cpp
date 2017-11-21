@@ -11,7 +11,7 @@ namespace opossum {
 
 ASTVisualizer::ASTVisualizer() : AbstractVisualizer() {
   // Set defaults for this visualizer
-  _default_vertex.shape = GraphvizShape::Parallelogram;
+  _default_vertex.shape = "parallelogram";
 }
 
 ASTVisualizer::ASTVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
@@ -45,7 +45,7 @@ void ASTVisualizer::_build_subtree(const std::shared_ptr<AbstractASTNode>& node)
 void ASTVisualizer::_build_dataflow(const std::shared_ptr<AbstractASTNode>& from,
                                     const std::shared_ptr<AbstractASTNode>& to) {
   float row_count, row_percentage = 100.0f;
-  uint8_t pen_width;
+  double pen_width;
 
   try {
     row_count = from->get_statistics()->row_count();
@@ -53,7 +53,7 @@ void ASTVisualizer::_build_dataflow(const std::shared_ptr<AbstractASTNode>& from
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;
-    pen_width = 1;
+    pen_width = 1.0;
   }
 
   if (from->left_child()) {

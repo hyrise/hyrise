@@ -149,11 +149,9 @@ set(
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     planviz/abstract_visualizer.hpp
-    planviz/abstract_visualizer.cpp
-    planviz/ast_visualizer.hpp
+        planviz/ast_visualizer.hpp
     planviz/ast_visualizer.cpp
-    planviz/graphviz_config.hpp
-    planviz/sql_query_plan_visualizer.cpp
+        planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp

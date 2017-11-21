@@ -11,7 +11,7 @@ namespace opossum {
 
 class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
  public:
-  SQLQueryPlanVisualizer() : AbstractVisualizer();
+  SQLQueryPlanVisualizer();
 
   SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
                          VizEdgeInfo edge_info);

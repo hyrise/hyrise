@@ -15,7 +15,7 @@ namespace opossum {
 
 class ASTVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractASTNode>>> {
  public:
-  ASTVisualizer() : AbstractVisualizer();
+  ASTVisualizer();
 
   ASTVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
                 VizEdgeInfo edge_info);
