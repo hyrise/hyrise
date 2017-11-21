@@ -59,6 +59,9 @@ SELECT t1.a, t1.b, t2.b, t3.b, t4.b FROM int_float AS t1 INNER JOIN int_float2 A
 -- Join three tables and perform a scan
 SELECT * FROM int_float AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a WHERE t2.b > 457.0 AND t3.b = 'C';
 
+-- Join with AND
+SELECT * FROM int_float4 T1 JOIN int_float6 T2 ON T1.a = T2.a AND T1.b = T2.b
+
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM int_float;
 
