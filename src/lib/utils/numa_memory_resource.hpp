@@ -20,11 +20,13 @@ class NUMAMemoryResource : public boost::container::pmr::memory_resource {
 
   virtual bool do_is_equal(const memory_resource& other) const noexcept;
 
-  static NUMAMemoryResource* get_default_resource();
+  int get_node_id() const;
+
+  static constexpr int UNDEFINED_NODE_ID = -1;
 
  private:
 #if HYRISE_NUMA_SUPPORT
-  const numa::MemSource _mem_source;
+  const numa::MemSource _memory_source;
   const size_t _alignment = 1;
 #endif
 };

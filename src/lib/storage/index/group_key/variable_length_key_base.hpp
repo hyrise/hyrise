@@ -31,7 +31,7 @@ class VariableLengthKeyBase {
    * has to
    * be performed.
    */
-  VariableLengthKeyBase& operator|=(uint64_t rhs);
+  VariableLengthKeyBase& operator|=(uint64_t other);
 
   /**
    * Shifts the data shift bits into the direction of the most significant bits. Empty positions are filled with zeros.
@@ -53,12 +53,12 @@ class VariableLengthKeyBase {
 /**
  * Compare keys, interpreting the data in memory as unsigned integer numbers.
  */
-bool operator==(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs);
-bool operator!=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs);
-bool operator<(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs);
-bool operator<=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs);
-bool operator>(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs);
-bool operator>=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs);
+bool operator==(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right);
+bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right);
+bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right);
+bool operator<=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right);
+bool operator>(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right);
+bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right);
 
 /**
  * Prints the data as hex number.

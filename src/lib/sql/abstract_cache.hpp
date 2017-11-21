@@ -5,10 +5,10 @@
 namespace opossum {
 
 // Generic template for a cache implementation.
-template <typename key_t, typename val_t>
+template <typename Key, typename Value>
 class AbstractCache {
  public:
-  typedef typename std::pair<key_t, val_t> kv_pair_t;
+  typedef typename std::pair<Key, Value> KeyValuePair;
 
   explicit AbstractCache(size_t capacity) : _capacity(capacity) {}
 
@@ -18,14 +18,14 @@ class AbstractCache {
   // If the new size exceeds the capacity an item will be evicted.
   // Depending on the underlying strategy, the parameters for cost and size may be used.
   // If they are not intended to be used, we specify constant default values here.
-  virtual void set(const key_t& key, const val_t& value, double cost = 1.0, double size = 1.0) = 0;
+  virtual void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) = 0;
 
   // Get the cached value at the given key.
   // Causes undefined behavior if the item is not in the cache.
-  virtual val_t& get(const key_t& key) = 0;
+  virtual Value& get(const Key& key) = 0;
 
   // Returns true if the cache holds an item at the given key.
-  virtual bool has(const key_t& key) const = 0;
+  virtual bool has(const Key& key) const = 0;
 
   // Returns the number of elements currently held in the cache.
   virtual size_t size() const = 0;

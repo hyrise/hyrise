@@ -10,16 +10,16 @@ namespace opossum {
 
 // Generic implementation of a least-recently-used cache.
 // Note: This implementation is not thread-safe.
-template <typename key_t, typename val_t>
-class LRUCache : public AbstractCache<key_t, val_t> {
+template <typename Key, typename Value>
+class LRUCache : public AbstractCache<Key, Value> {
  public:
-  typedef typename std::pair<key_t, val_t> kv_pair_t;
+  typedef typename std::pair<Key, Value> KeyValuePair;
 
-  explicit LRUCache(size_t capacity) : AbstractCache<key_t, val_t>(capacity) {}
+  explicit LRUCache(size_t capacity) : AbstractCache<Key, Value>(capacity) {}
 
   // Sets the value to be cached at the given key.
-  void set(const key_t& key, const val_t& value, double cost = 1.0, double size = 1.0) {
-    _list.push_front(kv_pair_t(key, std::move(value)));
+  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+    _list.push_front(KeyValuePair(key, std::move(value)));
 
     // Override old element at that key, if it exists.
     auto it = _map.find(key);
@@ -41,16 +41,16 @@ class LRUCache : public AbstractCache<key_t, val_t> {
 
   // Retrieves the value cached at the key.
   // Causes undefined behavior if the key is not in the cache.
-  val_t& get(const key_t& key) {
+  Value& get(const Key& key) {
     auto it = _map.find(key);
     _list.splice(_list.begin(), _list, it->second);
     return it->second->second;
   }
 
-  bool has(const key_t& key) const { return _map.find(key) != _map.end(); }
+  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
 
   // Returns the underlying list of all elements in the cache.
-  std::list<kv_pair_t>& list() { return _list; }
+  std::list<KeyValuePair>& list() { return _list; }
 
   size_t size() const { return _map.size(); }
 
@@ -66,10 +66,10 @@ class LRUCache : public AbstractCache<key_t, val_t> {
 
  protected:
   // Doubly-linked list to hold all elements.
-  std::list<kv_pair_t> _list;
+  std::list<KeyValuePair> _list;
 
   // Map to point towards element in the list.
-  std::unordered_map<key_t, typename std::list<kv_pair_t>::iterator> _map;
+  std::unordered_map<Key, typename std::list<KeyValuePair>::iterator> _map;
 };
 
 }  // namespace opossum

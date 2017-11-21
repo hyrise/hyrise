@@ -4,9 +4,9 @@
 #include "../benchmark_basic_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "sql/sql_query_operator.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
@@ -26,9 +26,9 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();
-    storage_manager.add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 0));
-    storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 0));
-    storage_manager.add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 0));
+    storage_manager.add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl", Chunk::MAX_SIZE));
+    storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl", Chunk::MAX_SIZE));
+    storage_manager.add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", Chunk::MAX_SIZE));
   }
 
   void TearDown(benchmark::State& st) override {}
@@ -38,8 +38,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLToASTTranslator{false}.translate_parse_result(result)[0];
-      ASTToOperatorTranslator{}.translate_node(result_node);
+      auto result_node = SQLTranslator{false}.translate_parse_result(result)[0];
+      LQPTranslator{}.translate_node(result_node);
     }
   }
 
@@ -56,8 +56,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
-      auto result_node = SQLToASTTranslator{false}.translate_parse_result(result)[0];
-      ASTToOperatorTranslator{}.translate_node(result_node);
+      auto result_node = SQLTranslator{false}.translate_parse_result(result)[0];
+      LQPTranslator{}.translate_node(result_node);
     }
   }
 

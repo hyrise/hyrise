@@ -118,7 +118,7 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
   EXPECT_EQ((*dict)[1], 4);
 
   // Test retrieval of null value
-  EXPECT_TRUE(is_null((*dict_col)[4]));
+  EXPECT_TRUE(variant_is_null((*dict_col)[4]));
 }
 
 TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {

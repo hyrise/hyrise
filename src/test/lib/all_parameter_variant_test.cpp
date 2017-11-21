@@ -11,7 +11,7 @@ namespace opossum {
 
 class AllParameterVariantTest : public BaseTest {};
 
-TEST_F(AllParameterVariantTest, getCurrentType) {
+TEST_F(AllParameterVariantTest, GetCurrentType) {
   {
     AllParameterVariant parameter(ColumnID{0});
     EXPECT_EQ(parameter.type(), typeid(ColumnID));
@@ -44,7 +44,7 @@ TEST_F(AllParameterVariantTest, getCurrentType) {
   }
 }
 
-TEST_F(AllParameterVariantTest, getCurrentValue) {
+TEST_F(AllParameterVariantTest, GetCurrentValue) {
   {
     AllParameterVariant parameter(ColumnID{0});
     EXPECT_EQ(static_cast<std::uint16_t>(boost::get<ColumnID>(parameter)), static_cast<std::uint16_t>(0u));

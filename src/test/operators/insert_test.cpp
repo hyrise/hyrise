@@ -25,7 +25,7 @@ class OperatorsInsertTest : public BaseTest {
 
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
-  auto t = load_table("src/test/tables/float_int.tbl", 0u);
+  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   StorageManager::get().add_table(table_name, t);
 
@@ -60,7 +60,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", 0u);
+  auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -113,7 +113,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   opossum::DictionaryCompression::compress_table(*t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", 0u);
+  auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -178,7 +178,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   EXPECT_EQ(t->row_count(), 8u);
 
   auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[2];
-  EXPECT_TRUE(is_null(null_val));
+  EXPECT_TRUE(variant_is_null(null_val));
 }
 
 TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
@@ -204,10 +204,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   EXPECT_EQ(t->row_count(), 8u);
 
   auto null_val_int = (*(t->get_chunk(ChunkID{2}).get_column(ColumnID{0})))[0];
-  EXPECT_TRUE(is_null(null_val_int));
+  EXPECT_TRUE(variant_is_null(null_val_int));
 
   auto null_val_float = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{1})))[2];
-  EXPECT_TRUE(is_null(null_val_float));
+  EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
@@ -233,7 +233,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   EXPECT_EQ(t->row_count(), 5u);
 
   auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[0];
-  EXPECT_TRUE(is_null(null_val));
+  EXPECT_TRUE(variant_is_null(null_val));
 }
 
 }  // namespace opossum

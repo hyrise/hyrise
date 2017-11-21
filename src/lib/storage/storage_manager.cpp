@@ -20,6 +20,8 @@ StorageManager& StorageManager::get() {
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
+  Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
+
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     Assert(table->get_chunk(chunk_id).has_mvcc_columns(), "Table must have MVCC columns.");
   }
@@ -57,13 +59,11 @@ void StorageManager::print(std::ostream& out) const {
   out << "==================" << std::endl;
   out << "===== Tables =====" << std::endl << std::endl;
 
-  auto cnt = 0;
-  for (auto const& tab : _tables) {
-    out << "==== table >> " << tab.first << " <<";
-    out << " (" << tab.second->column_count() << " columns, " << tab.second->row_count() << " rows in "
-        << tab.second->chunk_count() << " chunks)";
+  for (auto const& table : _tables) {
+    out << "==== table >> " << table.first << " <<";
+    out << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
+        << table.second->chunk_count() << " chunks)";
     out << std::endl << std::endl;
-    cnt++;
   }
 }
 

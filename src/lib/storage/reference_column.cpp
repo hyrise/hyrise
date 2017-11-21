@@ -21,10 +21,10 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
 #endif
 }
 
-const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
+const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  auto chunk_info = _pos_list->at(i);
+  auto chunk_info = _pos_list->at(chunk_offset);
 
   if (chunk_info == NULL_ROW_ID) return NULL_VALUE;
 
@@ -59,6 +59,13 @@ void ReferenceColumn::write_string_representation(std::string& row_string, const
 // we cannot always use the materialize method below because sort results might come from different BaseColumns
 void ReferenceColumn::copy_value_to_value_column(BaseColumn&, ChunkOffset) const {
   Fail("It is not allowed to copy directly from a reference column");
+}
+
+std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  // ReferenceColumns are considered as intermediate datastructures and are
+  // therefore not subject to NUMA-aware chunk migrations.
+  Fail("Cannot migrate a ReferenceColumn");
+  return nullptr;
 }
 
 }  // namespace opossum

@@ -20,12 +20,17 @@ DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
+DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+    : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
+
+template <typename T>
+const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _attribute_vector->get(i);
+  const auto value_id = _attribute_vector->get(chunk_offset);
 
   if (value_id == NULL_VALUE_ID) {
     return NULL_VALUE;
@@ -35,12 +40,17 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
 }
 
 template <typename T>
-const T DictionaryColumn<T>::get(const size_t i) const {
-  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+bool DictionaryColumn<T>::is_null(const ChunkOffset chunk_offset) const {
+  return _attribute_vector->get(chunk_offset) == NULL_VALUE_ID;
+}
 
-  const auto value_id = _attribute_vector->get(i);
+template <typename T>
+const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
+  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(i) + " is null.");
+  const auto value_id = _attribute_vector->get(chunk_offset);
+
+  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(chunk_offset) + " is null.");
 
   return (*_dictionary)[value_id];
 }
@@ -60,12 +70,12 @@ std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector
   return _attribute_vector;
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
-const pmr_concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
-  pmr_concurrent_vector<T> values(_attribute_vector->size(), T(), _dictionary->get_allocator());
+const pmr_concurrent_vector<std::optional<T>> DictionaryColumn<T>::materialize_values() const {
+  pmr_concurrent_vector<std::optional<T>> values(_attribute_vector->size(), std::nullopt, _dictionary->get_allocator());
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
+    if (is_null(chunk_offset)) continue;
     values[chunk_offset] = (*_dictionary)[_attribute_vector->get(chunk_offset)];
   }
 
@@ -88,7 +98,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(!is_null(value), "Null value passed.");
+  DebugAssert(!variant_is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return static_cast<ValueID>(lower_bound(typed_value));
@@ -103,7 +113,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(!is_null(value), "Null value passed.");
+  DebugAssert(!variant_is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return static_cast<ValueID>(upper_bound(typed_value));
@@ -124,7 +134,6 @@ void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<Colu
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -157,6 +166,14 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
 
     values_out.push_back(value_by_value_id(value_id));
   }
+}
+
+template <typename T>
+std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
+  const pmr_vector<T> new_dictionary(*_dictionary, alloc);
+  return std::allocate_shared<DictionaryColumn<T>>(
+      alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
 EXPLICITLY_INSTANTIATE_COLUMN_TYPES(DictionaryColumn);

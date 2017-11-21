@@ -27,8 +27,6 @@ class SQLQueryPlanCacheTest : public SQLBaseTest {
     parse_tree_cache_hits = 0;
     query_plan_cache_hits = 0;
   }
-
-  void TearDown() override {}
 };
 
 TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
@@ -53,7 +51,8 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   for (auto task : task_list1) task->execute();
   for (auto task : task_list2) task->execute();
 
-  EXPECT_TABLE_EQ(task_list1.back()->get_operator()->get_output(), task_list2.back()->get_operator()->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(task_list1.back()->get_operator()->get_output(),
+                            task_list2.back()->get_operator()->get_output());
 }
 
 // Test query plan cache with LRU implementation.

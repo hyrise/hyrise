@@ -27,14 +27,14 @@ template <typename T>
 class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
-    auto casted_col = std::dynamic_pointer_cast<ValueColumn<T>>(column);
-    DebugAssert(static_cast<bool>(casted_col), "Type mismatch");
-    auto& vect = casted_col->values();
+    auto val_column = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    DebugAssert(static_cast<bool>(val_column), "Type mismatch");
+    auto& values = val_column->values();
 
-    vect.resize(new_size);
+    values.resize(new_size);
 
-    if (casted_col->is_nullable()) {
-      casted_col->null_values().resize(new_size);
+    if (val_column->is_nullable()) {
+      val_column->null_values().resize(new_size);
     }
   }
 
@@ -43,18 +43,23 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
                  std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
-    auto& vect = casted_target->values();
+    auto& values = casted_target->values();
 
     auto target_is_nullable = casted_target->is_nullable();
 
     if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
-      std::copy_n(casted_source->values().begin() + source_start_index, length, vect.begin() + target_start_index);
+      std::copy_n(casted_source->values().begin() + source_start_index, length, values.begin() + target_start_index);
 
       if (casted_source->is_nullable()) {
         // Values to insert contain null, copy them
-        Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
-        std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                    casted_target->null_values().begin() + target_start_index);
+        if (target_is_nullable) {
+          std::copy_n(casted_source->null_values().begin() + source_start_index, length,
+                      casted_target->null_values().begin() + target_start_index);
+        } else {
+          for (const auto null_value : casted_source->null_values()) {
+            Assert(!null_value, "Trying to insert NULL into non-NULL column");
+          }
+        }
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueColumn<int32_t>>(source)) {
       // We use the column type of the Dummy table used to insert a single null value.
@@ -73,12 +78,12 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
       // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
-        if (is_null(ref_value)) {
+        if (variant_is_null(ref_value)) {
           Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
-          vect[target_start_index + i] = T{};
+          values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;
         } else {
-          vect[target_start_index + i] = type_cast<T>(ref_value);
+          values[target_start_index + i] = type_cast<T>(ref_value);
         }
       }
     }
@@ -91,7 +96,7 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<Abstr
 const std::string Insert::name() const { return "Insert"; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  context->register_rw_operator(shared_from_this());
+  context->register_read_write_operator(shared_from_this());
 
   _target_table = StorageManager::get().get_table(_target_table_name);
 
@@ -125,14 +130,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
       auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
-      auto rows_to_insert_this_loop = std::min(_target_table->chunk_size() - current_chunk.size(), remaining_rows);
-
-      if (_target_table->chunk_size() == 0) {
-        // If the chunk's size is unlimited we want to add all remaining rows.
-        // The std::min above will not work if the table is empty and has unlimited size
-        // -> 0 - 0 = 0 < remaining_rows will result in an endless loop OR 0 - X = uint underflow
-        rows_to_insert_this_loop = remaining_rows;
-      }
+      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
@@ -164,11 +162,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
        target_chunk_id++) {
     auto& target_chunk = _target_table->get_chunk(target_chunk_id);
 
-    const auto curr_num_rows_to_insert =
+    const auto current_num_rows_to_insert =
         std::min(target_chunk.size() - start_index, total_rows_to_insert - input_offset);
 
     auto target_start_index = start_index;
-    auto still_to_insert = curr_num_rows_to_insert;
+    auto still_to_insert = current_num_rows_to_insert;
 
     // while target chunk is not full
     while (target_start_index != target_chunk.size()) {
@@ -191,7 +189,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       }
     }
 
-    for (auto i = start_index; i < start_index + curr_num_rows_to_insert; i++) {
+    for (auto i = start_index; i < start_index + current_num_rows_to_insert; i++) {
       // we do not need to check whether other operators have locked the rows, we have just created them
       // and they are not visible for other operators.
       // the transaction IDs are set here and not during the resize, because
@@ -201,7 +199,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       _inserted_rows.emplace_back(RowID{target_chunk_id, i});
     }
 
-    input_offset += curr_num_rows_to_insert;
+    input_offset += current_num_rows_to_insert;
     start_index = 0u;
   }
 

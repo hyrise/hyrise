@@ -30,14 +30,14 @@ std::shared_ptr<const Table> ExportCsv::_on_execute() {
 
 void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {
   CsvMeta meta{};
-  meta.chunk_size = table->chunk_size();
+  meta.chunk_size = table->max_chunk_size();
 
   // Column Types
-  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     ColumnMeta column_meta;
-    column_meta.name = table->column_name(col_id);
-    column_meta.type = table->column_type(col_id);
-    column_meta.nullable = table->column_is_nullable(col_id);
+    column_meta.name = table->column_name(column_id);
+    column_meta.type = table->column_type(column_id);
+    column_meta.nullable = table->column_is_nullable(column_id);
 
     meta.columns.push_back(column_meta);
   }
@@ -64,9 +64,9 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
   // Create visitors for every column, so that we do not have to do that more than once.
   std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->column_count());
-  for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
-    auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(col_id));
-    visitors[col_id] = std::move(visitor);
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(column_id));
+    visitors[column_id] = std::move(visitor);
   }
 
   auto context = std::make_shared<ExportCsvContext>(writer);
@@ -80,9 +80,9 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto& chunk = table->get_chunk(chunk_id);
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
-      context->currentRow = row;
-      for (ColumnID col_id{0}; col_id < table->column_count(); ++col_id) {
-        chunk.get_column(col_id)->visit(*(visitors[col_id]), context);
+      context->current_row = row;
+      for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+        chunk.get_column(column_id)->visit(*(visitors[column_id]), context);
       }
       writer.end_line();
     }
@@ -96,13 +96,13 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
     const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
-    auto row = context->currentRow;
+    auto row = context->current_row;
 
     if (column.is_nullable() && column.null_values()[row]) {
       // Write an empty field for a null value
-      context->csvWriter.write("");
+      context->csv_writer.write("");
     } else {
-      context->csvWriter.write(column.values()[row]);
+      context->csv_writer.write(column.values()[row]);
     }
   }
 
@@ -110,7 +110,7 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
                                std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
 
-    context->csvWriter.write(ref_column[context->currentRow]);
+    context->csv_writer.write(ref_column[context->current_row]);
   }
 
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
@@ -118,7 +118,7 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
     const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
 
-    context->csvWriter.write((*column.dictionary())[(column.attribute_vector()->get(context->currentRow))]);
+    context->csv_writer.write((*column.dictionary())[(column.attribute_vector()->get(context->current_row))]);
   }
 };
 
