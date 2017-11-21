@@ -49,9 +49,11 @@ node {
             lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
             if (lintFails?.trim()) {
               echo lintFails
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Check Jenkins Step moreLint for details"
+              writeFile file: "post_lint.txt", text: lintFails
+              archive "post_lint.txt"
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Click Details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
             } else {
-              githubNotify context: 'Strict Lint', status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+              githubNotify context: 'Strict Lint', status: 'SUCCESS'
             }
           }
         }
@@ -90,6 +92,8 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
+          archive 'coverage.xml'
+          archive 'coverage_diff.html'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
@@ -101,6 +105,7 @@ node {
           script {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
             githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
           }
         }
       }, memcheck: {
