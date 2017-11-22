@@ -1,8 +1,24 @@
 #include "simd_bp128_decoder.hpp"
 
-#include <iostream>
 
 namespace opossum {
+
+SimdBp128Decoder::SimdBp128Decoder(const Vector& vector)
+    : _data{&vector.data()},
+      _size{vector.size()},
+      _cached_meta_info_offset{0u},
+      _cached_meta_block_first_index{std::numeric_limits<size_t>::max()},
+      _cached_block_first_index{std::numeric_limits<size_t>::max()},
+      _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>()} {}
+
+SimdBp128Decoder::SimdBp128Decoder(const SimdBp128Decoder& other)
+    : _data{other._data},
+      _size{other._size},
+      _cached_meta_info_offset{other._cached_meta_info_offset},
+      _cached_meta_block_first_index{other._cached_meta_block_first_index},
+      _cached_meta_info{other._cached_meta_info},
+      _cached_block_first_index{other._cached_block_first_index},
+      _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
 
 void SimdBp128Decoder::_read_meta_info(size_t meta_info_offset) {
   Packing::read_meta_info(_data->data() + meta_info_offset, _cached_meta_info.data());
@@ -20,22 +36,6 @@ void SimdBp128Decoder::_unpack_block(uint8_t block_index) {
   Packing::unpack_block(in, out, bit_size);
 
   _cached_block_first_index = _cached_meta_block_first_index + block_index * Packing::block_size;
-}
-
-void SimdBp128Decoder::ConstIterator::_read_meta_info() {
-  Packing::read_meta_info(_data->data() + _data_index++, _current_meta_info.data());
-  _current_meta_info_index = 0u;
-}
-
-void SimdBp128Decoder::ConstIterator::_unpack_block() {
-  const auto in = _data->data() + _data_index;
-  auto out = _current_block->data();
-  const auto bit_size = _current_meta_info[_current_meta_info_index];
-
-  Packing::unpack_block(in, out, bit_size);
-
-  _data_index += bit_size;
-  _current_block_index = 0u;
 }
 
 }  // namespace opossum

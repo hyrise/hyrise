@@ -23,16 +23,14 @@ constexpr auto ns_type_for_uint_type =
 template <typename UnsignedIntType>
 class FixedSizeByteAlignedVector : public BaseNsVector {
  public:
-  FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> vector)
-      : BaseNsVector{detail::ns_type_for_uint_type[hana::type_c<UnsignedIntType>]}, _data{std::move(vector)} {}
-
-  ~FixedSizeByteAlignedVector() override = default;
+  FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
+  ~FixedSizeByteAlignedVector() final = default;
 
   size_t size() const final { return _data.size(); }
+  size_t data_size() const final { return sizeof(UnsignedIntType) * _data.size(); }
+  NsType type() const final { return detail::ns_type_for_uint_type[hana::type_c<UnsignedIntType>]; }
 
   const pmr_vector<UnsignedIntType>& data() const;
-
-  size_t data_size() const override { return sizeof(UnsignedIntType) * _data.size(); }
 
  private:
   const pmr_vector<UnsignedIntType> _data;

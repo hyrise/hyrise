@@ -36,4 +36,6 @@ void with_ns_decoder(const BaseNsVector& vector, const Functor& func) {
   }
 }
 
+std::unique_ptr<BaseNsDecoder> create_ns_decoder(const BaseNsVector& vector);
+
 }  // namespace opossum

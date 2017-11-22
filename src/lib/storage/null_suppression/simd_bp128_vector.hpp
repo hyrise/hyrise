@@ -14,6 +14,7 @@ class SimdBp128Vector : public BaseNsVector {
 
   size_t size() const final;
   size_t data_size() const final;
+  NsType type() const final;
 
   const pmr_vector<__m128i>& data() const;
 

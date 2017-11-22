@@ -1,9 +1,11 @@
 #pragma once
 
+#include <boost/iterator/transform_iterator.hpp>
+
 #include <type_traits>
 
 #include "fixed_size_byte_aligned_vector.hpp"
-#include "ns_decoder.hpp"
+#include "base_ns_decoder.hpp"
 
 #include "types.hpp"
 
@@ -24,33 +26,19 @@ class FixedSizeByteAlignedDecoder : public NsDecoder<FixedSizeByteAlignedDecoder
 
   size_t _on_size() const { return _vector.size(); }
 
-  auto _on_cbegin() const { return Iterator{_vector.data().cbegin()}; }
+  auto _on_cbegin() const {
+    return boost::make_transform_iterator(_vector.data().cbegin(), cast_to_uint32);
+  }
 
-  auto _on_cend() const { return Iterator{_vector.data().cend()}; }
+  auto _on_cend() const {
+    return boost::make_transform_iterator(_vector.data().cend(), cast_to_uint32);
+  }
+
+ private:
+  static uint32_t cast_to_uint32(UnsignedIntType value) { return static_cast<uint32_t>(value); }
 
  private:
   const Vector& _vector;
-
- public:
-  class Iterator : public BaseNsIterator<Iterator> {
-   public:
-    using ValueIterator = typename pmr_vector<UnsignedIntType>::const_iterator;
-
-   public:
-    Iterator(const ValueIterator& value_it) : _value_it{value_it} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
-    void increment() { ++_value_it; }
-
-    bool equal(const Iterator& other) const { return _value_it == other._value_it; }
-
-    uint32_t dereference() const { return *_value_it; }
-
-   private:
-    ValueIterator _value_it;
-  };
 };
 
 }  // namespace opossum

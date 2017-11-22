@@ -9,9 +9,10 @@
 #include <numeric>
 #include <utility>
 
-#include "ns_decoder.hpp"
+#include "base_ns_decoder.hpp"
 #include "simd_bp128_packing.hpp"
 #include "simd_bp128_vector.hpp"
+#include "simd_bp128_iterator.hpp"
 
 #include "types.hpp"
 
@@ -21,24 +22,11 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
  public:
   using Packing = SimdBp128Packing;
   using Vector = SimdBp128Vector;
+  using Iterator = SimdBp128Iterator;
 
  public:
-  explicit SimdBp128Decoder(const Vector& vector)
-      : _data{&vector.data()},
-        _size{vector.size()},
-        _cached_meta_info_offset{0u},
-        _cached_meta_block_first_index{std::numeric_limits<size_t>::max()},
-        _cached_block_first_index{std::numeric_limits<size_t>::max()},
-        _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>()} {}
-
-  SimdBp128Decoder(const SimdBp128Decoder& other)
-      : _data{other._data},
-        _size{other._size},
-        _cached_meta_info_offset{other._cached_meta_info_offset},
-        _cached_meta_block_first_index{other._cached_meta_block_first_index},
-        _cached_meta_info{other._cached_meta_info},
-        _cached_block_first_index{other._cached_block_first_index},
-        _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
+  explicit SimdBp128Decoder(const Vector& vector);
+  SimdBp128Decoder(const SimdBp128Decoder& other);
 
   SimdBp128Decoder(SimdBp128Decoder&& other) = default;
   ~SimdBp128Decoder() = default;
@@ -69,7 +57,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
 
   size_t _on_size() const { return _size; }
 
-  auto _on_cbegin() const { return Iterator{_data, _size}; }
+  auto _on_cbegin() const { return Iterator{_data, _size, 0u}; }
 
   auto _on_cend() const { return Iterator{nullptr, _size, _size}; }
 
@@ -135,77 +123,6 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
 
   size_t _cached_block_first_index;
   const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
-
- public:
-  class Iterator : public BaseNsIterator<Iterator> {
-   public:
-    Iterator(const pmr_vector<__m128i>* data, size_t size, size_t absolute_index = 0u)
-        : _data{data},
-          _size{size},
-          _data_index{0u},
-          _absolute_index{absolute_index},
-          _current_meta_info_index{0u},
-          _current_block{std::make_unique<std::array<uint32_t, Packing::block_size>>()},
-          _current_block_index{0u} {
-      if (data) {
-        _read_meta_info();
-        _unpack_block();
-      }
-    }
-
-    Iterator(const Iterator& other)
-        : _data{other._data},
-          _size{other._size},
-          _data_index{other._data_index},
-          _absolute_index{other._absolute_index},
-          _current_meta_info{other._current_meta_info},
-          _current_meta_info_index{other._current_meta_info_index},
-          _current_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._current_block)},
-          _current_block_index{other._current_block_index} {}
-
-    Iterator(Iterator&& other) = default;
-    ~Iterator() = default;
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
-    void increment() {
-      ++_absolute_index;
-      ++_current_block_index;
-
-      if (_current_block_index >= Packing::block_size && _absolute_index < _size) {
-        ++_current_meta_info_index;
-
-        if (_current_meta_info_index >= Packing::blocks_in_meta_block) {
-          _read_meta_info();
-          _unpack_block();
-        } else {
-          _unpack_block();
-        }
-      }
-    }
-
-    bool equal(const Iterator& other) const { return _absolute_index == other._absolute_index; }
-
-    uint32_t dereference() const { return (*_current_block)[_current_block_index]; }
-
-   private:
-    void _read_meta_info();
-    void _unpack_block();
-
-   private:
-    const pmr_vector<__m128i>* _data;
-    const size_t _size;
-
-    size_t _data_index;
-    size_t _absolute_index;
-
-    std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info;
-    size_t _current_meta_info_index;
-
-    const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _current_block;
-    size_t _current_block_index;
-  };
 };
 
 }  // namespace opossum

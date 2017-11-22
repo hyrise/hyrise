@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_attribute_vector.hpp"
+#include "null_suppression/base_ns_vector.hpp"
 #include "column_visitable.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
@@ -20,6 +20,9 @@ DictionaryColumn<T>::DictionaryColumn(std::shared_ptr<const pmr_vector<T>> dicti
     : _dictionary(std::move(dictionary)),
       _attribute_vector(std::move(attribute_vector)),
       _null_value_id{null_value_id} {}
+
+template <typename T>
+DictionaryColumn<T>::~DictionaryColumn() = default;
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {

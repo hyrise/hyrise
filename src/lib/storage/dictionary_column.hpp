@@ -25,6 +25,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
   DictionaryColumn(std::shared_ptr<const pmr_vector<T>> dictionary,
                    std::shared_ptr<const BaseNsVector> attribute_vector, ValueID null_value_id);
 
+  ~DictionaryColumn();
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override;
 
