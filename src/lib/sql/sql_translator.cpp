@@ -43,6 +43,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
       {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
+      {hsql::kOpNotLike, ScanType::OpNotLike},
   };
 
   auto it = operator_to_scan_type.find(operator_type);
