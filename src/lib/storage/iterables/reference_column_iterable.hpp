@@ -6,9 +6,9 @@
 #include <vector>
 
 #include "iterables.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/null_suppression/ns_utils.hpp"
 #include "storage/null_suppression/base_ns_decoder.hpp"
+#include "storage/null_suppression/ns_utils.hpp"
+#include "storage/reference_column.hpp"
 
 namespace opossum {
 
@@ -114,7 +114,8 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
       auto decoder_it = _attribute_vector_decoders.find(attribute_vector.get());
       if (decoder_it == _attribute_vector_decoders.end()) {
         auto new_decoder = create_ns_decoder(*attribute_vector);
-        std::tie(decoder_it, std::ignore) = _attribute_vector_decoders.emplace(attribute_vector.get(), std::move(new_decoder));
+        std::tie(decoder_it, std::ignore) =
+            _attribute_vector_decoders.emplace(attribute_vector.get(), std::move(new_decoder));
       }
 
       auto& decoder = decoder_it->second;
@@ -140,7 +141,7 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
 
     mutable std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> _value_columns;
     mutable std::map<ChunkID, std::shared_ptr<const DictionaryColumn<T>>> _dictionary_columns;
-    mutable std::map<const BaseNsVector *, std::unique_ptr<BaseNsDecoder>> _attribute_vector_decoders;
+    mutable std::map<const BaseNsVector*, std::unique_ptr<BaseNsDecoder>> _attribute_vector_decoders;
   };
 };
 

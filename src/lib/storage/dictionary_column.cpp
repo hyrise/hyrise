@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "null_suppression/base_ns_vector.hpp"
 #include "column_visitable.hpp"
+#include "null_suppression/base_ns_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

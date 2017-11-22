@@ -4,8 +4,8 @@
 
 #include <type_traits>
 
-#include "fixed_size_byte_aligned_vector.hpp"
 #include "base_ns_decoder.hpp"
+#include "fixed_size_byte_aligned_vector.hpp"
 
 #include "types.hpp"
 
@@ -26,13 +26,9 @@ class FixedSizeByteAlignedDecoder : public NsDecoder<FixedSizeByteAlignedDecoder
 
   size_t _on_size() const { return _vector.size(); }
 
-  auto _on_cbegin() const {
-    return boost::make_transform_iterator(_vector.data().cbegin(), cast_to_uint32);
-  }
+  auto _on_cbegin() const { return boost::make_transform_iterator(_vector.data().cbegin(), cast_to_uint32); }
 
-  auto _on_cend() const {
-    return boost::make_transform_iterator(_vector.data().cend(), cast_to_uint32);
-  }
+  auto _on_cend() const { return boost::make_transform_iterator(_vector.data().cend(), cast_to_uint32); }
 
  private:
   static uint32_t cast_to_uint32(UnsignedIntType value) { return static_cast<uint32_t>(value); }

@@ -10,9 +10,9 @@
 #include <utility>
 
 #include "base_ns_decoder.hpp"
+#include "simd_bp128_iterator.hpp"
 #include "simd_bp128_packing.hpp"
 #include "simd_bp128_vector.hpp"
-#include "simd_bp128_iterator.hpp"
 
 #include "types.hpp"
 
