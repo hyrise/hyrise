@@ -76,7 +76,7 @@ enum TpchTable {
   TpchTable_Supplier,
   TpchTable_Customer,
   TpchTable_Order,
-  TpchTable_Line,
+  TpchTable_LineItem,
   TpchTable_OrderLine,
   TpchTable_PartPartSupplier,
   TpchTable_Nation,
@@ -98,11 +98,9 @@ class TpchDbGenerator final {
   float _scale_factor;
   size_t _chunk_size;
 
-
   void _row_start();
   void _row_stop(TpchTable table);
 
-  std::shared_ptr<Table> _generate_customer_table();
 };
 
 }
