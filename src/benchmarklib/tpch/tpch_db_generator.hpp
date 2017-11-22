@@ -12,6 +12,8 @@
 #include "storage/chunk.hpp"
 #include "storage/value_column.hpp"
 #include "storage/table.hpp"
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -21,8 +23,14 @@ class Table;
 template<typename ... ColumnTypes>
 class TableBuilder {
  public:
-  explicit TableBuilder(size_t chunk_size) {
+  template<typename ... Strings>
+  explicit TableBuilder(size_t chunk_size, boost::hana::tuple<Strings...> column_names) {
     _table = std::make_shared<Table>(chunk_size);
+
+    boost::hana::zip_with([&] (auto column_type, auto column_name) {
+      _table->add_column_definition(column_name, type_string_from_type<decltype(column_type)>());
+      return 0;
+    }, boost::hana::tuple<ColumnTypes...>(), column_names);
   }
 
   std::shared_ptr<Table> finish_table() {

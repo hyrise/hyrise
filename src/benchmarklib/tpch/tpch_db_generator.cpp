@@ -60,7 +60,7 @@ std::shared_ptr<Table> TpchDbGenerator::_generate_customer_table() {
   int64_t,
   std::string,
   std::string
-  > customer_builder;
+  > customer_builder(_chunk_size, boost::hana::make_tuple("c_custkey", "c_name", "c_address", "c_nation_code", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"));
 
   size_t row_count = static_cast<size_t>(tdefs[TpchTable_Customer].base * _scale_factor);
 
@@ -69,7 +69,7 @@ std::shared_ptr<Table> TpchDbGenerator::_generate_customer_table() {
 
     customer_t customer;
     mk_cust (row_idx, &customer);
-    _customer_builder.append_row(
+    customer_builder.append_row(
       customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone, customer.acctbal,
       customer.mktsegment, customer.comment
     );
@@ -77,7 +77,7 @@ std::shared_ptr<Table> TpchDbGenerator::_generate_customer_table() {
     row_stop(table);
   }
 
-  return _customer_builder.finish_table();
+  return customer_builder.finish_table();
 }
 
 void
