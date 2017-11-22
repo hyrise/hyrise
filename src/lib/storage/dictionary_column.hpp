@@ -28,9 +28,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   ~DictionaryColumn();
 
-  explicit DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<BaseAttributeVector>& attribute_vector);
-
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 

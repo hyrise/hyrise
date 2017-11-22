@@ -25,11 +25,6 @@ template <typename T>
 DictionaryColumn<T>::~DictionaryColumn() = default;
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
-                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-    : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
-
-template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
