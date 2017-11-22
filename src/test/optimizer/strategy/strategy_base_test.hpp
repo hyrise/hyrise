@@ -7,19 +7,17 @@
 
 namespace opossum {
 
-class AbstractASTNode;
+class AbstractLQPNode;
 class AbstractRule;
 
 class StrategyBaseTest : public BaseTest {
  protected:
-  void TearDown() override {}
-
   /**
-   * Helper method for applying a single rule to an AST. Creates the temporary ASTRootNode and returns its child
+   * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and returns its child
    * after applying the rule
    */
-  std::shared_ptr<AbstractASTNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                              const std::shared_ptr<AbstractASTNode>& input);
+  std::shared_ptr<AbstractLQPNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
+                                              const std::shared_ptr<AbstractLQPNode>& input);
 };
 
 }  // namespace opossum

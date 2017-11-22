@@ -13,7 +13,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -125,7 +125,7 @@ class OperatorsAggregateTest : public BaseTest {
       auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_column_ids);
       EXPECT_NE(aggregate, nullptr) << "Could not build Aggregate";
       aggregate->execute();
-      EXPECT_TABLE_EQ(aggregate->get_output(), expected_result);
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
     }
   }
 
@@ -525,8 +525,8 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
 
 TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
   auto join =
-      std::make_shared<JoinNestedLoopA>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
-                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpLessThan);
+      std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
+                                       std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpLessThan);
   join->execute();
 
   this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

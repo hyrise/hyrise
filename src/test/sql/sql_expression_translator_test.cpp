@@ -5,9 +5,9 @@
 
 #include "../base_test.hpp"
 
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
-#include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
 #include "sql/SQLStatement.h"
 #include "sql/sql_expression_translator.hpp"
@@ -19,7 +19,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     // We need a base table to be able to lookup column names for ColumnIDs.
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 0));
+    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
     _stored_table_node = std::make_shared<StoredTableNode>("table_a");
   }
 
@@ -79,7 +79,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
   }
 
   SQLExpressionTranslator _translator;
-  std::shared_ptr<AbstractASTNode> _stored_table_node;
+  std::shared_ptr<AbstractLQPNode> _stored_table_node;
 };
 
 TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {
@@ -207,7 +207,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
 }
 
 // TODO(mp): Subselects are not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
+TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn /* #279 */) {
   const auto query = "SELECT * FROM table_a WHERE a in (SELECT a FROM table_b)";
   auto expression = compile_where_expression(query);
 
@@ -217,7 +217,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
 }
 
 // TODO(mp): Subselects are not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist) {
+TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist /* #279 */) {
   const auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b)";
   auto expression = compile_where_expression(query);
 
@@ -226,7 +226,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist) {
 }
 
 // TODO(mp): implement, CASE not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionCase) {
+TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionCase /* #493 */) {
   const auto query = "SELECT CASE WHEN a = 'something' THEN 'yes' ELSE 'no' END AS a_new FROM table_a";
   auto expressions = compile_select_expression(query);
 }

@@ -1,2 +1,0 @@
-c_custkey|c_name|COUNT(o_orderkey)
-int|string|long

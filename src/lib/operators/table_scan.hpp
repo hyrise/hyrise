@@ -38,9 +38,6 @@ class TableScan : public AbstractReadOnlyOperator {
 
   void _init_scan();
 
-  // TODO(anyone): This is only a very temporary solution! Whoever reads this first must replace it.
-  std::shared_ptr<const Table> __on_execute_between();
-
  private:
   const ColumnID _left_column_id;
   const ScanType _scan_type;

@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "abstract_syntax_tree/ast_root_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 
@@ -18,14 +18,14 @@ Optimizer::Optimizer() {
   _rules.emplace_back(std::make_shared<JoinDetectionRule>());
 }
 
-std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<AbstractASTNode>& input) const {
+std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
-  const auto root_node = std::make_shared<ASTRootNode>();
+  const auto root_node = std::make_shared<LogicalPlanRootNode>();
   root_node->set_left_child(input);
 
   /**
-   * Apply all optimization over and over until all of them stopped changing the AST or the max number of
+   * Apply all optimization over and over until all of them stopped changing the LQP or the max number of
    * iterations is reached
    */
   for (uint32_t iter_index = 0; iter_index < _max_num_iterations; ++iter_index) {
@@ -38,7 +38,7 @@ std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<Abstr
     if (!ast_changed) break;
   }
 
-  // Remove ASTRootNode
+  // Remove LogicalPlanRootNode
   const auto optimized_node = root_node->left_child();
   optimized_node->clear_parents();
 

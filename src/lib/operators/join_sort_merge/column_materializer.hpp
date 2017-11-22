@@ -57,7 +57,7 @@ class ColumnMaterializer : public ColumnVisitable {
   std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id) {
-    return std::make_shared<JobTask>([this, &output, &input, &column_id, chunk_id] {
+    return std::make_shared<JobTask>([this, &output, input, column_id, chunk_id] {
       auto column = input->get_chunk(chunk_id).get_column(column_id);
       auto context = std::make_shared<MaterializationContext>(chunk_id);
       column->visit(*this, context);
@@ -129,9 +129,9 @@ class ColumnMaterializer : public ColumnVisitable {
       // value_count is used as an inverted index
       auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
 
-      // Presize the vectors by assuming a uniform distribution
-      for (size_t index = 0; index < rows_with_value.size(); index++) {
-        rows_with_value[index].resize(value_ids->size() / dict->size());
+      // Reserve correct size of the vectors by assuming a uniform distribution
+      for (auto& row : rows_with_value) {
+        row.reserve(value_ids->size() / dict->size());
       }
 
       // Collect the rows for each value id

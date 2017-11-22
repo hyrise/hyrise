@@ -38,9 +38,9 @@ class HashTable : private Noncopyable {
     // Check whether value is already in hashtable, then just add row id
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<T>(i, value);
-      auto elem = _hashtables[i][position];
-      if (elem != nullptr && value_equal(elem->value, value)) {
-        elem->row_ids->push_back(row_id);
+      auto element = _hashtables[i][position];
+      if (element != nullptr && value_equal(element->value, value)) {
+        element->row_ids->push_back(row_id);
         return;
       }
     }
@@ -57,9 +57,9 @@ class HashTable : private Noncopyable {
   std::shared_ptr<PosList> get(S value) {
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<S>(i, value);
-      auto elem = _hashtables[i][position];
-      if (elem != nullptr && value_equal(elem->value, value)) {
-        return elem->row_ids;
+      auto element = _hashtables[i][position];
+      if (element != nullptr && value_equal(element->value, value)) {
+        return element->row_ids;
       }
     }
     return nullptr;

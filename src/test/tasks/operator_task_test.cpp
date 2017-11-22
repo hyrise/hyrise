@@ -34,7 +34,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   auto result_task = tasks.back();
   result_task->schedule();
 
-  EXPECT_TABLE_EQ(_test_table_a, result_task->get_operator()->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(_test_table_a, result_task->get_operator()->get_output());
 }
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
@@ -47,7 +47,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   }
 
   auto expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
-  EXPECT_TABLE_EQ(expected_result, tasks.back()->get_operator()->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 }
 
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
@@ -62,6 +62,6 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   }
 
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
-  EXPECT_TABLE_EQ(expected_result, tasks.back()->get_operator()->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 }
 }  // namespace opossum

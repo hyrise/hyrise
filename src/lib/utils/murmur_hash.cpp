@@ -5,7 +5,7 @@
 namespace opossum {
 
 //-----------------------------------------------------------------------------
-// MurmurHash2, by Austin Appleby
+// murmur_hash2, by Austin Appleby
 
 // Note - This code makes a few assumptions about how your machine behaves -
 
@@ -18,7 +18,7 @@ namespace opossum {
 // 2. It will not produce the same results on little-endian and big-endian
 //    machines.
 
-unsigned int MurmurHash2(const void* key, int len, unsigned int seed) {
+unsigned int murmur_hash2(const void* key, int len, unsigned int seed) {
   // 'm' and 'r' are mixing constants generated offline.
   // They're not really 'magic', they just happen to work well.
 

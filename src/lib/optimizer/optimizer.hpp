@@ -6,10 +6,10 @@
 namespace opossum {
 
 class AbstractRule;
-class AbstractASTNode;
+class AbstractLQPNode;
 
 /**
- * Applies (currently: all) optimization rules to an AST.
+ * Applies (currently: all) optimization rules to an LQP.
  */
 class Optimizer final {
  public:
@@ -17,7 +17,7 @@ class Optimizer final {
 
   Optimizer();
 
-  std::shared_ptr<AbstractASTNode> optimize(const std::shared_ptr<AbstractASTNode>& input) const;
+  std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;
 
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;

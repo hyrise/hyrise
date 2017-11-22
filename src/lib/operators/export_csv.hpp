@@ -101,9 +101,9 @@ class ExportCsv : public AbstractReadOnlyOperator {
   class ExportCsvVisitor;
 
   struct ExportCsvContext : ColumnVisitableContext {
-    explicit ExportCsvContext(CsvWriter& csvWriter) : csvWriter(csvWriter) {}
-    CsvWriter& csvWriter;
-    ChunkOffset currentRow;
+    explicit ExportCsvContext(CsvWriter& csv_writer) : csv_writer(csv_writer) {}
+    CsvWriter& csv_writer;
+    ChunkOffset current_row;
   };
 };
 }  // namespace opossum

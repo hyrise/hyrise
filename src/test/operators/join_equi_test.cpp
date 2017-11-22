@@ -12,8 +12,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_nested_loop_a.hpp"
-#include "operators/join_nested_loop_b.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
@@ -31,7 +30,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinHash, JoinSortMerge>;
+using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
@@ -60,8 +59,10 @@ TYPED_TEST(JoinEquiTest, RightJoin) {
       ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-// Currently not implemented for Hash Join, thus disabled
-TYPED_TEST(JoinEquiTest, DISABLED_OuterJoin) {
+TYPED_TEST(JoinEquiTest, OuterJoin) {
+  if (std::is_same<TypeParam, JoinHash>::value) {
+    return;
+  }
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
@@ -280,21 +281,10 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
+TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
   auto join =
-      std::make_shared<JoinNestedLoopA>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
-                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
-  join->execute();
-
-  this->template test_join_output<TypeParam>(
-      join, this->_table_wrapper_h, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-      JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
-}
-
-TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
-  auto join =
-      std::make_shared<JoinNestedLoopB>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
-                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+      std::make_shared<JoinNestedLoop>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                       std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -312,13 +302,7 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
-    // todo(anyone): Fix for other joins
-    return;
-  }
-
   // scan that returns all rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
@@ -328,13 +312,7 @@ TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
       JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
-    // todo(anyone): Fix for other joins
-    return;
-  }
-
   // scan that returns all rows
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
@@ -344,13 +322,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
       JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
-    // todo(anyone): Fix for other joins
-    return;
-  }
-
   // scan that returns no rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpEquals, 0);
   scan_a->execute();
@@ -360,13 +332,7 @@ TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
       JoinMode::Right, "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
-// TODO(anyone): https://github.com/hyrise/hyrise/issues/306
 TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
-    // todo(anyone): Fix for other joins
-    return;
-  }
-
   // scan that returns no rows
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpEquals, 0);
   scan_b->execute();
@@ -377,7 +343,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
-TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion) {
+TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
   //  Filtering to generate RefColumns
   auto filtered_left =
       std::make_shared<opossum::TableScan>(this->_table_wrapper_e, ColumnID{0}, ScanType::OpLessThanEquals, 10);

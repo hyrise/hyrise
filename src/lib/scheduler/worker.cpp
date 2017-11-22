@@ -77,7 +77,7 @@ void Worker::operator()() {
           continue;
         }
 
-        task = queue->pull();
+        task = queue->steal();
         if (task) {
           task->set_node_id(_queue->node_id());
           work_stealing_successful = true;

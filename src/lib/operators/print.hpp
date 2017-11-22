@@ -12,8 +12,6 @@ enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
 
 /**
  * operator to print the table with its data
- *
- * Note: Print does not support null values at the moment
  */
 class Print : public AbstractReadOnlyOperator {
  public:

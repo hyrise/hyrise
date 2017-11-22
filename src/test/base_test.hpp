@@ -8,6 +8,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
@@ -19,7 +20,7 @@
 
 namespace opossum {
 
-class AbstractASTNode;
+class AbstractLQPNode;
 class Table;
 
 template <typename ParamType>
@@ -46,6 +47,12 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
   ~BaseTestWithParam() override {
     StorageManager::reset();
     TransactionManager::reset();
+  }
+
+  void TearDown() override {
+    StorageManager::reset();
+    TransactionManager::reset();
+    CurrentScheduler::set(nullptr);
   }
 };
 

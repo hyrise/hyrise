@@ -16,9 +16,9 @@ benchmark.json
 console.log
 .repl_history
 .queryplan.dot
-.queryplan.png
-.ast*.dot
-ast*.png
+queryplan.png
+.lqp*.dot
+lqp*.png
 compile_times.txt
 
 # Ignore generated TPC{CH} tables.

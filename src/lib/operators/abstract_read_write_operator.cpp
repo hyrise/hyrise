@@ -29,10 +29,10 @@ void AbstractReadWriteOperator::execute() {
   _state = ReadWriteOperatorState::Executed;
 }
 
-void AbstractReadWriteOperator::commit_records(const CommitID cid) {
+void AbstractReadWriteOperator::commit_records(const CommitID commit_id) {
   Assert(_state == ReadWriteOperatorState::Executed, "Operator needs to have state Executed in order to be committed.");
 
-  _on_commit_records(cid);
+  _on_commit_records(commit_id);
   _finish_commit();
 
   _state = ReadWriteOperatorState::Committed;

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -15,13 +16,18 @@
 namespace opossum {
 
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
+const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max();
 
-Chunk::Chunk(ChunkUseMvcc mvcc_mode): Chunk({}, mvcc_mode) {}
+Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
 
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, ChunkUseMvcc mvcc_mode): _columns(alloc), _indices(alloc) {
-  if (mvcc_mode == ChunkUseMvcc::Yes) {
-    _mvcc_columns = std::make_shared<MvccColumns>();
-  }
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter)
+    : _alloc(alloc), _access_counter(access_counter) {}
+
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
+             const ChunkUseAccessCounter counter_mode)
+    : _alloc(alloc), _columns(alloc), _indices(alloc) {
+  if (mvcc_mode == ChunkUseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
+  if (counter_mode == ChunkUseAccessCounter::Yes) _access_counter = std::make_shared<AccessCounter>(alloc);
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
@@ -84,6 +90,7 @@ void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
+bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
 SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
@@ -123,8 +130,8 @@ bool Chunk::references_exactly_one_table() const {
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (ColumnID i{1}; i < column_count(); ++i) {
-    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(i));
+  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
+    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(column_id));
     if (column == nullptr) return false;
 
     if (first_referenced_table != column->referenced_table()) return false;
@@ -133,6 +140,31 @@ bool Chunk::references_exactly_one_table() const {
   }
 
   return true;
+}
+
+void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
+  // Migrating chunks with indices is not implemented yet.
+  if (_indices.size() > 0) {
+    Fail("Cannot migrate Chunk with Indices.");
+  }
+
+  _alloc = PolymorphicAllocator<size_t>(memory_source);
+  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
+  for (size_t i = 0; i < _columns.size(); i++) {
+    new_columns.push_back(_columns.at(i)->copy_using_allocator(_alloc));
+  }
+  _columns = std::move(new_columns);
+}
+
+const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
+
+uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
+  if (_history.size() < 2 || lookback == 0) return 0;
+  const auto last = _history.back();
+  const auto prelast_index =
+      std::max(static_cast<int64_t>(0), static_cast<int64_t>(_history.size()) - static_cast<int64_t>(lookback));
+  const auto prelast = _history.at(prelast_index);
+  return last - prelast;
 }
 
 }  // namespace opossum

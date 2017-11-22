@@ -5,7 +5,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
 
@@ -21,7 +21,7 @@ class TableStatisticsJoinTest : public BaseTest {
   };
 
   void SetUp() override {
-    auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", 0);
+    auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
     _table_uniform_distribution_with_stats.statistics = std::make_shared<TableStatistics>(table_uniform_distribution);
     table_uniform_distribution->set_table_statistics(_table_uniform_distribution_with_stats.statistics);
     _table_uniform_distribution_with_stats.table = table_uniform_distribution;
@@ -40,7 +40,7 @@ class TableStatisticsJoinTest : public BaseTest {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
             table_with_statistics.statistics, mode, column_ids, scan_type);
-        auto join = std::make_shared<JoinNestedLoopA>(table_wrapper, table_wrapper, mode, column_ids, scan_type);
+        auto join = std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, scan_type);
         join->execute();
         auto result = join->get_output();
         EXPECT_FLOAT_EQ(result->row_count(), join_stats->row_count());
@@ -109,20 +109,21 @@ TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
   }
 }
 
-// Test is disabled due to long runtime (2s), same as InnerJoinTest without cached join result size.
-TEST_F(TableStatisticsJoinTest, DISABLED_InnerJoinRealDataTest) {
-  // test selectivity calculations for join_modes which do not produce null values in the result, scan types and column
-  // combinations of int_equal_distribution.tbl
-  std::vector<JoinMode> join_modes{JoinMode::Inner, JoinMode::Self};
-  std::vector<ScanType> scan_types{ScanType::OpEquals,         ScanType::OpNotEquals,   ScanType::OpLessThan,
-                                   ScanType::OpLessThanEquals, ScanType::OpGreaterThan, ScanType::OpGreaterThanEquals};
+// This is what InnerJoinTest would look like without cached join result size:
+// TEST_F(TableStatisticsJoinTest, InnerJoinRealDataTest) {
+//   // test selectivity calculations for join_modes which do not produce null values in the result, scan types and
+//   // column combinations of int_equal_distribution.tbl
+//   std::vector<JoinMode> join_modes{JoinMode::Inner, JoinMode::Self};
+//   std::vector<ScanType> scan_types{ScanType::OpEquals,         ScanType::OpNotEquals,   ScanType::OpLessThan,
+//                                    ScanType::OpLessThanEquals, ScanType::OpGreaterThan,
+//                                    ScanType::OpGreaterThanEquals};
 
-  for (const auto join_mode : join_modes) {
-    for (const auto scan_type : scan_types) {
-      predict_join_row_counts_and_compare(_table_uniform_distribution_with_stats, join_mode, scan_type);
-    }
-  }
-}
+//   for (const auto join_mode : join_modes) {
+//     for (const auto scan_type : scan_types) {
+//       predict_join_row_counts_and_compare(_table_uniform_distribution_with_stats, join_mode, scan_type);
+//     }
+//   }
+// }
 
 TEST_F(TableStatisticsJoinTest, CrossJoinTest) {
   auto table_row_count = _table_uniform_distribution_with_stats.table->row_count();
@@ -132,13 +133,13 @@ TEST_F(TableStatisticsJoinTest, CrossJoinTest) {
 }
 
 TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
-  // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and column
-  // combinations of int_equal_distribution.tbl
+  // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and
+  // column combinations of int_equal_distribution.tbl
 
   // Currently, the statistics component produces in some cases for a two column predicate with ScanType::OpLessThan
   // and ScanType::OpGreaterThan a column statistics with a too high distinct count. (See comment column_statistics.hpp
-  // for details). Null value calculations depend on the calculated distinct counts of the columns. Therefore, tests for
-  // the mentioned scan types with null values are skipped.
+  // for details). Null value calculations depend on the calculated distinct counts of the columns. Therefore, tests
+  // for the mentioned scan types with null values are skipped.
 
   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
   std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThanEquals,
@@ -183,25 +184,25 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
   }
 }
 
-// Test is disabled due to long runtime (8s), same as OuterJoinsTest without cached join result size.
-TEST_F(TableStatisticsJoinTest, DISABLED_OuterJoinsRealDataTest) {
-  // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and column
-  // combinations of int_equal_distribution.tbl
+// This is what OuterJoinsTest would look like without cached join result size:
+// TEST_F(TableStatisticsJoinTest, OuterJoinsRealDataTest) {
+//   // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and
+//   // column combinations of int_equal_distribution.tbl
 
-  // Currently, the statistics component produces in some cases for a two column predicate with ScanType::OpLessThan
-  // and ScanType::OpGreaterThan a column statistics with a too high distinct count. (See comment column_statistics.hpp
-  // for details). Null value calculations depend on the calculated distinct counts of the columns. Therefore, tests for
-  // the mentioned scan types with null values are skipped.
+//   // Currently, the statistics component produces in some cases for a two column predicate with ScanType::OpLessThan
+//   // and ScanType::OpGreaterThan a column statistics with a too high distinct count. (See comment
+//   // column_statistics.hpp for details). Null value calculations depend on the calculated distinct counts of the
+//   // columns. Therefore, tests for the mentioned scan types with null values are skipped.
 
-  std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
-  std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThanEquals,
-                                   ScanType::OpGreaterThanEquals};  // ScanType::OpLessThan, ScanType::OpGreaterThan,
+//   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
+//   std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThanEquals,
+//                                    ScanType::OpGreaterThanEquals};
 
-  for (const auto join_mode : join_modes) {
-    for (const auto scan_type : scan_types) {
-      predict_join_row_counts_and_compare(_table_uniform_distribution_with_stats, join_mode, scan_type);
-    }
-  }
-}
+//   for (const auto join_mode : join_modes) {
+//     for (const auto scan_type : scan_types) {
+//       predict_join_row_counts_and_compare(_table_uniform_distribution_with_stats, join_mode, scan_type);
+//     }
+//   }
+// }
 
 }  // namespace opossum

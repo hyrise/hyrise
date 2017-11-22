@@ -30,10 +30,6 @@ class SQLQueryOperatorTest : public BaseTest {
     SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
     SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
   }
-
-  void TearDown() override {
-    CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
-  }
 };
 
 TEST_F(SQLQueryOperatorTest, BasicTest) {
@@ -46,7 +42,7 @@ TEST_F(SQLQueryOperatorTest, BasicTest) {
 
   auto sql_result_task = sql_op->get_result_task();
   auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
-  EXPECT_TABLE_EQ(sql_result_task->get_operator()->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(sql_result_task->get_operator()->get_output(), expected_result);
 }
 
 TEST_F(SQLQueryOperatorTest, NextTaskTest) {
@@ -68,7 +64,7 @@ TEST_F(SQLQueryOperatorTest, NextTaskTest) {
   CurrentScheduler::get()->finish();
 
   auto expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
-  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 }  // namespace opossum

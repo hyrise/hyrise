@@ -15,7 +15,7 @@ namespace opossum {
 class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", 0);
+    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     _column_statistics_int =
         std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, _table_with_different_column_types);
     _column_statistics_float =
@@ -25,7 +25,7 @@ class ColumnStatisticsTest : public BaseTest {
     _column_statistics_string =
         std::make_shared<ColumnStatistics<std::string>>(ColumnID{3}, _table_with_different_column_types);
 
-    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", 0);
+    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
     _column_statistics_uniform_columns = {
         std::make_shared<ColumnStatistics<int32_t>>(ColumnID(0), _table_uniform_distribution),
         std::make_shared<ColumnStatistics<int32_t>>(ColumnID(1), _table_uniform_distribution),

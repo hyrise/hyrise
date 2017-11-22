@@ -20,20 +20,20 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
   explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
-  void _on_with_iterators(const Functor& f) const {
+  void _on_with_iterators(const Functor& functor) const {
     with_ns_decoder(*_column.attribute_vector(), [&](auto decoder) {
       auto begin = create_iterator(decoder.cbegin(), ChunkOffset{0u});
       auto end = create_iterator(decoder.cend(), static_cast<ChunkOffset>(decoder.size()));
-      f(begin, end);
+      functor(begin, end);
     });
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
     with_ns_decoder(*_column.attribute_vector(), [&](auto decoder) {
       auto begin = create_indexed_iterator(mapped_chunk_offsets.cbegin(), decoder);
       auto end = create_indexed_iterator(mapped_chunk_offsets.cend(), decoder);
-      f(begin, end);
+      functor(begin, end);
     });
   }
 

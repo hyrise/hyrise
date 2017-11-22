@@ -16,7 +16,7 @@ namespace opossum {
 using Iterator = std::vector<ChunkOffset>::const_iterator;
 
 /**
- * This file declares the Node-types needed for the Adaptive-Radix-Tree (ART)
+ * This file declares the ARTNode-types needed for the Adaptive-Radix-Tree (ART)
  * In order to store its partial keys, the ART uses 4 different node-types, which can hold up to 4, 16, 48 and 256
  * partial keys respectively.
  * Each node has an array which contains pointers to its children and (if needed) an index array in order to map
@@ -24,11 +24,11 @@ using Iterator = std::vector<ChunkOffset>::const_iterator;
  *
  */
 
-class Node : private Noncopyable {
+class ARTNode : private Noncopyable {
  public:
-  Node() = default;
+  ARTNode() = default;
 
-  virtual ~Node() = default;
+  virtual ~ARTNode() = default;
 
   virtual Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const = 0;
   virtual Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const = 0;
@@ -38,7 +38,7 @@ class Node : private Noncopyable {
 
 /**
  *
- * Node4 has two arrays of length 4:
+ * ARTNode4 has two arrays of length 4:
  *  - _partial_keys stores the contained partial_keys of its children
  *  - _children stores pointers to the children
  *
@@ -46,11 +46,11 @@ class Node : private Noncopyable {
  *
  * The default value of the _partial_keys array is 255u
  */
-class Node4 final : public Node {
+class ARTNode4 final : public ARTNode {
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;
 
  public:
-  explicit Node4(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>>& children);
+  explicit ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
   Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
@@ -67,12 +67,12 @@ class Node4 final : public Node {
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       std::function<Iterator(size_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)> function) const;
   std::array<uint8_t, 4> _partial_keys;
-  std::array<std::shared_ptr<Node>, 4> _children;
+  std::array<std::shared_ptr<ARTNode>, 4> _children;
 };
 
 /**
  *
- * Node16 has two arrays of length 16, very similar to Node4:
+ * ARTNode16 has two arrays of length 16, very similar to ARTNode4:
  *  - _partial_keys stores the contained partial_keys of its children
  *  - _children stores pointers to the children
  *
@@ -82,9 +82,9 @@ class Node4 final : public Node {
  *
  */
 
-class Node16 final : public Node {
+class ARTNode16 final : public ARTNode {
  public:
-  explicit Node16(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>>& children);
+  explicit ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
   Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
@@ -95,17 +95,15 @@ class Node16 final : public Node {
   Iterator _delegate_to_child(
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       std::function<Iterator(std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type,
-                             const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)
-
-                    >
+                             const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)>
           function) const;
   std::array<uint8_t, 16> _partial_keys;
-  std::array<std::shared_ptr<Node>, 16> _children;
+  std::array<std::shared_ptr<ARTNode>, 16> _children;
 };
 
 /**
  *
- * Node48 has two arrays:
+ * ARTNode48 has two arrays:
  *  - _index_to_child of length 256 that can be directly addressed
  *  - _children of length 48 stores pointers to the children
  *
@@ -116,9 +114,9 @@ class Node16 final : public Node {
  * be
  * 47 as this is the maximum index for _children.
  */
-class Node48 final : public Node {
+class ARTNode48 final : public ARTNode {
  public:
-  explicit Node48(const std::vector<std::pair<uint8_t, std::shared_ptr<Node>>>& children);
+  explicit ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
   Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
@@ -126,24 +124,22 @@ class Node48 final : public Node {
   Iterator end() const override;
 
  private:
-  Iterator _delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                              std::function<Iterator(uint8_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)
-
-                                            >
-                                  function) const;
+  Iterator _delegate_to_child(
+      const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+      std::function<Iterator(uint8_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)> function) const;
 
   std::array<uint8_t, 256> _index_to_child;
-  std::array<std::shared_ptr<Node>, 48> _children;
+  std::array<std::shared_ptr<ARTNode>, 48> _children;
 };
 
 /**
  *
- * Node256 has only one array: _children; which stores pointers to the children and can be directly addressed.
+ * ARTNode256 has only one array: _children; which stores pointers to the children and can be directly addressed.
  *
  */
-class Node256 final : public Node {
+class ARTNode256 final : public ARTNode {
  public:
-  explicit Node256(const std::vector<std::pair<uint8_t, std::shared_ptr<Node>>>& children);
+  explicit ARTNode256(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
   Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
@@ -155,7 +151,7 @@ class Node256 final : public Node {
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       std::function<Iterator(uint8_t, AdaptiveRadixTreeIndex::BinaryComparable, size_t)> function) const;
 
-  std::array<std::shared_ptr<Node>, 256> _children;
+  std::array<std::shared_ptr<ARTNode>, 256> _children;
 };
 
 /**
@@ -184,7 +180,7 @@ class Node256 final : public Node {
  *
  * lower_bound() nets the same as begin(), upper_bound the same as end()
  */
-class Leaf final : public Node {
+class Leaf final : public ARTNode {
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;
 
  public:
