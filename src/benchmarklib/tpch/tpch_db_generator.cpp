@@ -1,6 +1,7 @@
 #include "tpch_db_generator.hpp"
 
 #include <utility>
+#include <dsstypes.h>
 
 extern "C" {
 #include "dss.h"
@@ -48,9 +49,9 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
                      boost::hana::make_tuple("c_custkey", "c_name", "c_address", "c_nation_code", "c_phone",
                                              "c_acctbal", "c_mktsegment", "c_comment"));
 
-  auto row_count = static_cast<size_t>(tdefs[TpchTable_Customer].base * _scale_factor);
+  auto customer_count = static_cast<size_t>(tdefs[TpchTable_Customer].base * _scale_factor);
 
-  for (size_t row_idx = 1; row_idx <= row_count; row_idx++) {
+  for (size_t row_idx = 1; row_idx <= customer_count; row_idx++) {
     _row_start();
 
     customer_t customer;
@@ -68,16 +69,45 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
    */
   TableBuilder<int64_t, int64_t, std::string, float, std::string, std::string, std::string, int32_t, std::string>
   order_builder(_chunk_size,
-                boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"));
+                boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate",
+                                        "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"));
 
   TableBuilder<int32_t, int32_t, int32_t, int32_t, float, float, float, float, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string>
-    lineitem_builder(_chunk_size, "orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment")
+    lineitem_builder(_chunk_size, "orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity",
+                     "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate",
+                     "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment")
 
-  
-  
+  auto order_count = static_cast<size_t>(tdefs[TpchTable_Order].base * _scale_factor);
+
+  DSS_HUGE rows_per_segment=0;
+  DSS_HUGE rows_this_segment=-1;
+
+  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
+    order_t order;
+    mk_order(order_idx, &order, update_num);
+
+    if((++rows_this_segment) >= rows_per_segment)
+    {
+      rows_this_segment=0;
+      upd_num += 10000;
+    }
+
+    order_builder.append_row(order.okey, order.custkey, order.orderstatus, order.totalprice, order.odate,
+                             order.opriority, order.clerk, order.spriority, o->comment);
+
+    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
+      const auto& lineitem = order.l[line_idx];
+
+      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
+        lineitem.eprice, lineitem.discount, lineitem.tax, lineitem.rflag[0], lineitem.lstatus[0], lineitem.sdate,
+        lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+    }
+  }
   
   return {
-  {"customer", customer_builder.finish_table()}
+  {"customer", customer_builder.finish_table()},
+  {"order", order_builder.finish_table()},
+  {"lineitem_builder", lineitem_builder.finish_table()}
   };
 
 }
