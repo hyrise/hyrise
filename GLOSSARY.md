@@ -37,7 +37,7 @@ This explains high-level terms that have a specific meaning within Hyrise and th
 | Name                       | Description                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Abstract Syntax Tree (AST) | The old name of the *Logical Query Plan*. It was renamed when the LQP stopped being a tree and became a DAG. Shoot this old term on sight.                                 |
-| Chunk                      | Each table in Hyrise is horizontally partitioned into one more [chunks](https://github.com/hyrise/hyrise/wiki/chunk-concept).                                              |
+| Chunk                      | Each table in Hyrise is horizontally partitioned into one or more [chunks](https://github.com/hyrise/hyrise/wiki/chunk-concept).                                              |
 | Column Type                | Type of a class inheriting from BaseColumn (mostly used as template parameter name)                                                                                        |
 | Data Type                  | One of the currently four supported column data types (int, long, float, double, std::string)                                                                              |
 | Expression                 | Any type of SQL expression that is either logical or creates a new column (e.g., `col_a = 3`, `col_a + 4`).                                                                |
