@@ -675,8 +675,8 @@ int Console::print_transaction_info(const std::string& input) {
   }
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  const auto as_of_commit_id = std::to_string(_explicitly_created_transaction_context->as_of_commit_id());
-  out("Active transaction: { transaction id = " + transaction_id + ", as-of commit id = " + as_of_commit_id + " }\n");
+  const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
+  out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id + " }\n");
   return ReturnCode::Ok;
 }
 

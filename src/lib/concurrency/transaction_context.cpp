@@ -10,9 +10,9 @@
 
 namespace opossum {
 
-TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID as_of_commit_id)
+TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id)
     : _transaction_id{transaction_id},
-      _as_of_commit_id{as_of_commit_id},
+      _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {}
 
@@ -41,7 +41,7 @@ TransactionContext::~TransactionContext() {
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
-CommitID TransactionContext::as_of_commit_id() const { return _as_of_commit_id; }
+CommitID TransactionContext::snapshot_commit_id() const { return _snapshot_commit_id; }
 
 CommitID TransactionContext::commit_id() const {
   Assert((_commit_context != nullptr), "TransactionContext cid only available after commit context has been created.");

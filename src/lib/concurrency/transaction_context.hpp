@@ -51,7 +51,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  TransactionContext(const TransactionID transaction_id, const CommitID as_of_commit_id);
+  TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id);
   ~TransactionContext();
 
   /**
@@ -60,10 +60,10 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   TransactionID transaction_id() const;
 
   /**
-   * The as-of commit id represents the snapshot in time of the database
+   * The snapshot commit id represents the snapshot in time of the database
    * that the transaction is able to see and access.
    */
-  CommitID as_of_commit_id() const;
+  CommitID snapshot_commit_id() const;
 
   /**
    * The commit id that this transaction has once it is committed. This is the one that is written to the
@@ -173,7 +173,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
  private:
   const TransactionID _transaction_id;
-  const CommitID _as_of_commit_id;
+  const CommitID _snapshot_commit_id;
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
 
   std::atomic<TransactionPhase> _phase;
