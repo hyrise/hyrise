@@ -55,8 +55,8 @@ std::unique_ptr<Base> make_unique_by_data_type(TypeSymbol type_symbol, Construct
     if (hana::first(x) == type_symbol) {
       // The + before hana::second - which returns a reference - converts its return value
       // into a value so that we can access ::type
-      using DataType = typename decltype(+hana::second(x))::type;
-      ret = std::make_unique<Impl<DataType, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+      using ColumnDataType = typename decltype(+hana::second(x))::type;
+      ret = std::make_unique<Impl<ColumnDataType, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
       return;
     }
   });
@@ -86,9 +86,9 @@ std::unique_ptr<Base> make_unique_by_data_types(TypeSymbol type_symbol1, TypeSym
     if (hana::first(x) == type_symbol1) {
       hana::for_each(data_types_and_symbols, [&ret, &type_symbol2, &args...](auto y) {
         if (hana::first(y) == type_symbol2) {
-          using DataType1 = typename decltype(+hana::second(x))::type;
-          using DataType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<DataType1, DataType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+          using ColumnDataType1 = typename decltype(+hana::second(x))::type;
+          using ColumnDataType2 = typename decltype(+hana::second(y))::type;
+          ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
           return;
         }
       });
@@ -192,12 +192,12 @@ void resolve_data_type(TypeSymbol type_symbol, const Functor& func) {
 template <typename In, typename Out>
 using ConstOutIfConstInt = std::conditional_t<std::is_const<In>::value, const Out, Out>;
 
-template <typename DataType, typename BaseColumnType, typename Functor>
+template <typename ColumnDataType, typename BaseColumnType, typename Functor>
 // BaseColumnType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
     /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
-  using ValueColumnPtr = ConstOutIfConstInt<BaseColumnType, ValueColumn<DataType>>*;
-  using DictionaryColumnPtr = ConstOutIfConstInt<BaseColumnType, DictionaryColumn<DataType>>*;
+  using ValueColumnPtr = ConstOutIfConstInt<BaseColumnType, ValueColumn<ColumnDataType>>*;
+  using DictionaryColumnPtr = ConstOutIfConstInt<BaseColumnType, DictionaryColumn<ColumnDataType>>*;
   using ReferenceColumnPtr = ConstOutIfConstInt<BaseColumnType, ReferenceColumn>*;
 
   if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
@@ -238,9 +238,9 @@ template <typename Functor, typename BaseColumnType>  // BaseColumnType allows c
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
     /*void*/ resolve_data_and_column_type(TypeSymbol type_symbol, BaseColumnType& column, const Functor& func) {
   resolve_data_type(type_symbol, [&](auto type) {
-    using DataType = typename decltype(type)::type;
+    using ColumnDataType = typename decltype(type)::type;
 
-    resolve_column_type<DataType>(column, [&](auto& typed_column) { func(type, typed_column); });
+    resolve_column_type<ColumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
   });
 }
 
