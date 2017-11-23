@@ -79,30 +79,30 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
 
   auto order_count = static_cast<size_t>(tdefs[TpchTable_Order].base * _scale_factor);
 
-  DSS_HUGE rows_per_segment=0;
-  DSS_HUGE rows_this_segment=-1;
-
-  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-    order_t order;
-    mk_order(order_idx, &order, update_num);
-
-    if((++rows_this_segment) >= rows_per_segment)
-    {
-      rows_this_segment=0;
-      upd_num += 10000;
-    }
-
-    order_builder.append_row(order.okey, order.custkey, order.orderstatus, order.totalprice, order.odate,
-                             order.opriority, order.clerk, order.spriority, o->comment);
-
-    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
-      const auto& lineitem = order.l[line_idx];
-
-      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-        lineitem.eprice, lineitem.discount, lineitem.tax, lineitem.rflag[0], lineitem.lstatus[0], lineitem.sdate,
-        lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
-    }
-  }
+//  DSS_HUGE rows_per_segment=0;
+//  DSS_HUGE rows_this_segment=-1;
+//
+//  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
+//    order_t order;
+//    mk_order(order_idx, &order, update_num);
+//
+//    if((++rows_this_segment) >= rows_per_segment)
+//    {
+//      rows_this_segment=0;
+//      upd_num += 10000;
+//    }
+//
+//    order_builder.append_row(order.okey, order.custkey, order.orderstatus, order.totalprice, order.odate,
+//                             order.opriority, order.clerk, order.spriority, o->comment);
+//
+//    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
+//      const auto& lineitem = order.l[line_idx];
+//
+//      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
+//        lineitem.eprice, lineitem.discount, lineitem.tax, lineitem.rflag[0], lineitem.lstatus[0], lineitem.sdate,
+//        lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+//    }
+//  }
   
   return {
   {"customer", customer_builder.finish_table()},
