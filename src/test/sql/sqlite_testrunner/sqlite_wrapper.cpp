@@ -117,10 +117,10 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
 
   if (rc != SQLITE_OK) {
+    auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db));
     sqlite3_finalize(result_row);
     sqlite3_close(_db);
-    throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) +
-                             "\n");
+    throw std::runtime_error(error_message);
   }
 
   _create_columns(result_table, result_row, sqlite3_column_count(result_row));
