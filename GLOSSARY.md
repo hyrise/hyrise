@@ -13,7 +13,7 @@ We limit the use of abbreviations to very few cases. Unless an abbreviation is l
 
 | Name        | Short for                                                              |
 | ----------- | ---------------------------------------------------------------------- |
-| ART         | Abstract Radix Tree (only for internal use of that data structure)     |
+| ART         | Adaptive Radix Tree (only for internal use of that data structure)     |
 | cid         | Commit-ID (used for MVCC)                                              |
 | dict_column | Dictionary Column                                                      |
 | expr        | Expression, but only ok if used for an *expression* as described below |
@@ -40,6 +40,6 @@ This explains high-level terms that have a specific meaning within Hyrise and th
 | Node (LQP)                 | A node in a logical query plan.                                                                                                                                            |
 | Node (NUMA)                | A NUMA memory node (usually a CPU socket).                                                                                                                                 |
 | Physical Query Plan        | The physical representation of a query plan. It holds the actual *operators* used to execute the query. Usually created by a translator from the LQP.                      |
-| Operator                   | A class that usually takes 0-2 input tables and creates one output table. Example: TableScan, Join, Input.                                                                 |
+| Operator                   | A class that usually takes 0-2 input tables and creates one output table. Example: TableScan, Join, Insert.                                                                |
 | Rule                       | A rule in our optimizer. For instance, pushing all predicates as far down as possible is a rule.                                                                           |
 | Task                       | Everything that can be scheduled.                                                                                                                                          |
