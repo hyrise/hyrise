@@ -41,14 +41,12 @@
   } /* NOLINT */                                                                                                  \
                                                                                                                   \
   namespace std {                                                                                                 \
-  template <>                                                                                                     \
-  struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
-    size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
-  };                                                                                                              \
-  } /* NOLINT */                                                                                                  \
-                                                                                                                  \
-  namespace std {                                                                                                 \
     template <>                                                                                                   \
+    struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                     \
+      size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                     \
+    };                                                                                                            \
+    template <>                                                                                                   \
+                                                                                                                  \
     struct numeric_limits<::opossum::D> {                                                                         \
       static typename std::enable_if_t<std::is_arithmetic<T>::value, ::opossum::D> min() {                        \
         return ::opossum::D(numeric_limits<T>::min());                                                            \
