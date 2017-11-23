@@ -127,7 +127,7 @@ typedef struct
 }               part_t;
 
 /* parts.c */
-long mk_part   PROTO((DSS_HUGE index, part_t * p));
+long mk_part   PROTO((DSS_HUGE index, part_t * p, float scale));
 int pr_part    PROTO((part_t * part, int mode));
 int ld_part    PROTO((part_t * part, int mode));
 

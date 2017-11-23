@@ -99,24 +99,23 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
   /**
    * PART and PARTSUPP
    */
-  
+  TableBuilder<int32_t, std::string, std::string, std::string, std::string, int32_t, std::string, int32_t, std::string>
+  part_builder(_chunk_size, boost::hana::make_tuple("p_partkey", "p_name", "p_mfgr", "p_brand", "p_type", "p_size", "p_container", "p_retailsize", "p_comment"));
+
+  TableBuilder<int32_t, int32_t, int32_t, float, std::string>
+  partsupp_builder(_chunk_size, boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"));
 
   auto part_count = static_cast<size_t>(tdefs[TpchTable_Part].base * _scale_factor);
 
-  for (size_t order_idx = 0; order_idx < part_count; ++order_idx) {
-    order_t order;
-    mk_order(order_idx, &order, 0, _scale_factor);
+  for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
+    part_t part;
+    mk_part(part_idx, &part, _scale_factor);
 
-    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus), order.totalprice, order.odate,
-                             order.opriority, order.clerk, order.spriority, order.comment);
+    part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container, part.retailprice, part.comment);
 
-    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
-      const auto& lineitem = order.l[line_idx];
-
-      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-                                  lineitem.eprice, lineitem.discount, lineitem.tax, std::string(1,lineitem.rflag[0]),
-                                  std::string(1, lineitem.lstatus[0]), lineitem.sdate,
-                                  lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+    for (size_t partsupp_idx = 0; partsupp_idx < SUPP_PER_PART; ++partsupp_idx) {
+      auto& partsupp = part.s[partsupp_idx];
+      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, partsupp.scost, partsupp.comment);
     }
   }
 
@@ -125,7 +124,9 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
   return {
   {"customer", customer_builder.finish_table()},
   {"order", order_builder.finish_table()},
-  {"lineitem", lineitem_builder.finish_table()}
+  {"lineitem", lineitem_builder.finish_table()},
+  {"part", part_builder.finish_table()},
+  {"partsupp", partsupp_builder.finish_table()}
   };
 
 }

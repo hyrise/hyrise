@@ -269,7 +269,7 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 }
 
 long
-mk_part(DSS_HUGE index, part_t * p)
+mk_part(DSS_HUGE index, part_t * p, float scale)
 {
 	DSS_HUGE        temp;
 	long            snum;

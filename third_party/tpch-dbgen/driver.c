@@ -347,7 +347,7 @@ void
 		case PSUPP:
 		case PART:
   		case PART_PSUPP: 
-			mk_part (i, &part);
+			mk_part (i, &part, scale);
 			if (set_seeds == 0)
 				tdefs[tnum].loader(&part, upd_num);
 			break;
