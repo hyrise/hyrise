@@ -43,7 +43,7 @@ class AggregateNode;
  *
  *
  * ## Usage
- * Refer to sql_to_result_test.cpp for an example of the SQLTranslator in proper action.
+ * Refer to the SQLPlanner for an example of the SQLToASTTranslator in proper action.
  *
  * The basic usage looks like this:
  *
@@ -88,6 +88,7 @@ class SQLTranslator final : public Noncopyable {
                                                        const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& select);
 
   std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 

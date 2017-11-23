@@ -70,7 +70,7 @@ TEST_F(StorageTableTest, GetColumnIdByName) {
   EXPECT_THROW(t.column_id_by_name("no_column_name"), std::exception);
 }
 
-TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.chunk_size(), 2u); }
+TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.max_chunk_size(), 2u); }
 
 TEST_F(StorageTableTest, GetValue) {
   t.append({4, "Hello,"});
@@ -173,5 +173,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   t.emplace_chunk(std::move(c2));
   EXPECT_EQ(t.chunk_count(), 3u);
 }
+
+TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logic_error); }
 
 }  // namespace opossum

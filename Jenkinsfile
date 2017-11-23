@@ -30,12 +30,7 @@ node {
 
       stage("Linting") {
         sh '''
-          scripts/lint.sh
-
-          if [ $? != 0 ]; then
-            echo "ERROR: Linting error occured. Execute \"scripts/lint.sh\" for details!"
-            exit 1
-          fi
+          scripts/lint.sh pre
         '''
       }
 
@@ -47,6 +42,20 @@ node {
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+        }
+      }, moreLint: {
+        stage("Stricter Linting") {
+          script {
+            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
+            if (lintFails?.trim()) {
+              echo lintFails
+              writeFile file: "post_lint.txt", text: lintFails
+              archive "post_lint.txt"
+              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Click Details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
+            } else {
+              githubNotify context: 'Strict Lint', status: 'SUCCESS'
+            }
+          }
         }
       }
 
@@ -64,9 +73,9 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./gcc-release/hyriseTest"
         }
-      }, tpcc: {
-        stage("TPCC Test") {
-            sh "./scripts/test_tpcc.sh clang-release"
+      }, systemTest: {
+        stage("System Test") {
+            sh "./scripts/run_system_test.sh clang-release"
         }
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
@@ -83,6 +92,8 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
+          archive 'coverage.xml'
+          archive 'coverage_diff.html'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
@@ -94,6 +105,7 @@ node {
           script {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
             githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
           }
         }
       }, memcheck: {
@@ -118,3 +130,4 @@ node {
   }
 
 }
+

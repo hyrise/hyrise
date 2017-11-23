@@ -70,7 +70,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param chunkId The id of the chunk that is to be worked on now
    *
    */
-  static void _write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream, const ChunkID& chunkId);
+  static void _write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
   template <typename T>
   class ExportBinaryVisitor;

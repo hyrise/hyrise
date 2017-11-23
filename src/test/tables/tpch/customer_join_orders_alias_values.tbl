@@ -1,3 +1,0 @@
-customer.c_custkey|customer.c_name|COUNT(orderitems.orders.o_orderkey)
-int|string|long
-0|Max Mustermann|3

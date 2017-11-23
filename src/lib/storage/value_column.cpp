@@ -37,11 +37,16 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   PerformanceWarning("operator[] used");
 
   // Column supports null values and value is null
-  if (is_nullable() && (*_null_values).at(chunk_offset)) {
+  if (is_nullable() && _null_values->at(chunk_offset)) {
     return NULL_VALUE;
   }
 
   return _values.at(chunk_offset);
+}
+
+template <typename T>
+bool ValueColumn<T>::is_null(const ChunkOffset chunk_offset) const {
+  return is_nullable() && (*_null_values)[chunk_offset];
 }
 
 template <typename T>
@@ -54,7 +59,7 @@ const T ValueColumn<T>::get(const ChunkOffset chunk_offset) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
-  bool is_null = opossum::is_null(val);
+  bool is_null = variant_is_null(val);
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
@@ -69,7 +74,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  bool is_null = opossum::is_null(val);
+  bool is_null = variant_is_null(val);
 
   if (is_nullable()) {
     _null_values->push_back(is_null);
@@ -96,6 +101,18 @@ const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
 template <typename T>
 pmr_concurrent_vector<T>& ValueColumn<T>::values() {
   return _values;
+}
+
+template <typename T>
+const pmr_concurrent_vector<std::optional<T>> ValueColumn<T>::materialize_values() const {
+  pmr_concurrent_vector<std::optional<T>> values(_values.size(), std::nullopt, _values.get_allocator());
+
+  for (ChunkOffset chunk_offset = 0; chunk_offset < _values.size(); ++chunk_offset) {
+    if (is_null(chunk_offset)) continue;
+    values[chunk_offset] = _values[chunk_offset];
+  }
+
+  return values;
 }
 
 template <typename T>
@@ -127,7 +144,6 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
   visitable.handle_value_column(*this, std::move(context));
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -176,7 +192,7 @@ template <typename T>
 std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);
   if (is_nullable()) {
-    pmr_concurrent_vector<bool> new_null_values(_null_values.value(), alloc);
+    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), std::move(new_null_values));
   } else {
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));

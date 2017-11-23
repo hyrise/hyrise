@@ -102,10 +102,6 @@ class SchedulerTest : public BaseTest {
       tasks.emplace_back(task);
     }
   }
-
-  void TearDown() override {
-    CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
-  }
 };
 
 /**
@@ -204,7 +200,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   CurrentScheduler::get()->finish();
 
   auto expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
-  EXPECT_TABLE_EQ(ts->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
 }
 
 }  // namespace opossum

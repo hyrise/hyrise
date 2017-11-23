@@ -14,8 +14,9 @@ namespace opossum {
 class JoinNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_int_int.tbl", 0));
-    StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float_alt_column_names.tbl", 0));
+    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("t_b",
+                                    load_table("src/test/tables/int_float_alt_column_names.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node_a = std::make_shared<StoredTableNode>("t_a");
     _stored_table_node_b = std::make_shared<StoredTableNode>("t_b");
@@ -29,8 +30,6 @@ class JoinNodeTest : public BaseTest {
     _inner_join_node->set_left_child(_stored_table_node_a);
     _inner_join_node->set_right_child(_stored_table_node_b);
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<StoredTableNode> _stored_table_node_a;
   std::shared_ptr<StoredTableNode> _stored_table_node_b;

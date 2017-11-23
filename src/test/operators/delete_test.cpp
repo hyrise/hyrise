@@ -24,7 +24,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/float_int.tbl", 0u);
+    _table = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
@@ -127,7 +127,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 
   validate->execute();
 
-  EXPECT_TABLE_EQ(validate->get_output(), expected_result->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result->get_output());
 }
 
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {

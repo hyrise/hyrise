@@ -163,7 +163,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
 
-  if (_scan_type == ScanType::OpLike) {
+  if (_scan_type == ScanType::OpLike || _scan_type == ScanType::OpNotLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
@@ -171,11 +171,11 @@ void TableScan::_init_scan() {
 
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    DebugAssert(!is_null(right_value), "Right value must not be NULL.");
+    DebugAssert(!variant_is_null(right_value), "Right value must not be NULL.");
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
-    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, right_wildcard);
+    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, _scan_type, right_wildcard);
 
     return;
   }
@@ -183,7 +183,7 @@ void TableScan::_init_scan() {
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    if (is_null(right_value)) {
+    if (variant_is_null(right_value)) {
       _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
 
       return;

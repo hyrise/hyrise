@@ -49,17 +49,17 @@ class Console {
   /*
    * Set prompt which is shown at the beginning of each line.
    */
-  void setPrompt(const std::string& prompt);
+  void set_prompt(const std::string& prompt);
 
   /*
    * Set logfile path.
    */
-  void setLogfile(const std::string& logfile);
+  void set_logfile(const std::string& logfile);
 
   /*
    * Load command history from history file.
    */
-  void loadHistory(const std::string& history_file);
+  void load_history(const std::string& history_file);
 
   /*
    * Prints to the log_file (and the console).

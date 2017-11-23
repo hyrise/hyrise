@@ -58,7 +58,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   validate->set_transaction_context(t_context);
   validate->execute();
 
-  EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 
   // The new validated table should have the same number of (valid) rows as before.
   EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
@@ -74,7 +74,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 }
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
-  auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   // Update operator works on the StorageManager
   StorageManager::get().add_table("updateTestTable", t);
 
@@ -85,13 +85,13 @@ TEST_F(OperatorsUpdateTest, SelfUpdate) {
 }
 
 TEST_F(OperatorsUpdateTest, NormalUpdate) {
-  auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table("updateTestTable", t);
 
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", 0u);
+  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
@@ -108,7 +108,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", 0u);
+  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
@@ -119,7 +119,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
 }
 
 TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
-  auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table("updateTestTable", t);
 
   auto gt = std::make_shared<GetTable>("updateTestTable");
@@ -151,7 +151,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
-TEST_F(OperatorsUpdateTest, EmptyChunks) {
+TEST_F(OperatorsUpdateTest, MissingChunks) {
   auto t = load_table("src/test/tables/int.tbl", 1u);
   std::string table_name = "updateTestTable";
   StorageManager::get().add_table(table_name, t);
@@ -161,7 +161,7 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
 
-  // table scan will produce two leading empty chunks
+  // table scan will leave out first two chunks
   auto table_scan1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, "12345");
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();

@@ -47,7 +47,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
   return true;
 }
 
-Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+Table::Table(const uint32_t chunk_size) : _max_chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
@@ -69,7 +69,7 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) create_new_chunk();
+  if (_max_chunk_size > 0 && _chunks.back().size() == _max_chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
 }
@@ -114,7 +114,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return {};
 }
 
-uint32_t Table::chunk_size() const { return _chunk_size; }
+uint32_t Table::chunk_size() const { return _max_chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 

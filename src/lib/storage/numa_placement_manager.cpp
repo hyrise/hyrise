@@ -1,3 +1,5 @@
+#if HYRISE_NUMA_SUPPORT
+
 #include "numa_placement_manager.hpp"
 
 #include <numa.h>
@@ -13,8 +15,6 @@
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
 #include "utils/assert.hpp"
-
-#if HYRISE_NUMA_SUPPORT
 
 namespace opossum {
 

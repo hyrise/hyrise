@@ -27,6 +27,7 @@ const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanT
     {ScanType::OpGreaterThanEquals, ">="},
     {ScanType::OpBetween, "BETWEEN"},
     {ScanType::OpLike, "LIKE"},
+    {ScanType::OpNotLike, "NOT LIKE"},
 });
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {

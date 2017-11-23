@@ -100,7 +100,7 @@ class JoinTest : public BaseTest {
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 
-    EXPECT_TABLE_EQ(join->get_output(), expected_result);
+    EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,

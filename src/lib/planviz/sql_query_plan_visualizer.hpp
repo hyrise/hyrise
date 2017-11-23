@@ -2,19 +2,29 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
+#include "planviz/abstract_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
 
 namespace opossum {
 
-class SQLQueryPlanVisualizer {
+class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
  public:
-  static void visualize(const SQLQueryPlan& plan, const std::string& dot_filename, const std::string& img_filename);
+  SQLQueryPlanVisualizer();
+
+  SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                         VizEdgeInfo edge_info);
 
  protected:
-  static void _visualize_subtree(const std::shared_ptr<const AbstractOperator>& op, std::ofstream& file);
-  static void _visualize_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                  const std::shared_ptr<const AbstractOperator>& to, std::ofstream& file);
+  void _build_graph(const SQLQueryPlan& plan) override;
+
+  void _build_subtree(const std::shared_ptr<const AbstractOperator>& op);
+
+  void _build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
+                       const std::shared_ptr<const AbstractOperator>& to);
+
+  void _add_operator(const std::shared_ptr<const AbstractOperator>& op);
 };
 
 }  // namespace opossum

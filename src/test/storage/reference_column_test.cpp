@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
@@ -20,7 +21,7 @@
 
 namespace opossum {
 
-class ReferenceColumnTest : public ::testing::Test {
+class ReferenceColumnTest : public BaseTest {
   virtual void SetUp() {
     _test_table = std::make_shared<opossum::Table>(opossum::Table(3));
     _test_table->add_column("a", DataType::Int, true);
@@ -90,7 +91,7 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
   auto& column_2 = *(_test_table->get_chunk(ChunkID{1}).get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column_1[2]);
-  EXPECT_TRUE(is_null(ref_column[1]) && is_null(column_2[0]));
+  EXPECT_TRUE(variant_is_null(ref_column[1]) && variant_is_null(column_2[0]));
   EXPECT_EQ(ref_column[2], column_2[1]);
 }
 
@@ -106,7 +107,7 @@ TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
 
   EXPECT_EQ(ref_column[0], column[0]);
   EXPECT_EQ(ref_column[1], column[1]);
-  EXPECT_TRUE(is_null(ref_column[2]));
+  EXPECT_TRUE(variant_is_null(ref_column[2]));
   EXPECT_EQ(ref_column[3], column[2]);
 }
 

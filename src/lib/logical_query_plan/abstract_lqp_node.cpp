@@ -18,8 +18,6 @@ class TableStatistics;
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
-bool AbstractLQPNode::is_optimizable() const { return true; }
-
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> parents;
   parents.reserve(_parents.size());

@@ -52,9 +52,14 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 
       if (casted_source->is_nullable()) {
         // Values to insert contain null, copy them
-        Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
-        std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                    casted_target->null_values().begin() + target_start_index);
+        if (target_is_nullable) {
+          std::copy_n(casted_source->null_values().begin() + source_start_index, length,
+                      casted_target->null_values().begin() + target_start_index);
+        } else {
+          for (const auto null_value : casted_source->null_values()) {
+            Assert(!null_value, "Trying to insert NULL into non-NULL column");
+          }
+        }
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueColumn<int32_t>>(source)) {
       // We use the column type of the Dummy table used to insert a single null value.
@@ -73,7 +78,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
       // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
-        if (is_null(ref_value)) {
+        if (variant_is_null(ref_value)) {
           Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
           values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;
@@ -125,14 +130,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
       auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
-      auto rows_to_insert_this_loop = std::min(_target_table->chunk_size() - current_chunk.size(), remaining_rows);
-
-      if (_target_table->chunk_size() == 0) {
-        // If the chunk's size is unlimited we want to add all remaining rows.
-        // The std::min above will not work if the table is empty and has unlimited size
-        // -> 0 - 0 = 0 < remaining_rows will result in an endless loop OR 0 - X = uint underflow
-        rows_to_insert_this_loop = remaining_rows;
-      }
+      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);

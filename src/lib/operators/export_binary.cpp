@@ -131,7 +131,7 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
 }
 
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
-  _export_value(ofstream, static_cast<ChunkOffset>(table->chunk_size()));
+  _export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
   _export_value(ofstream, static_cast<ColumnID>(table->column_count()));
 
@@ -151,8 +151,8 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 }
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
-                                const ChunkID& chunkId) {
-  const auto& chunk = table->get_chunk(chunkId);
+                                const ChunkID& chunk_id) {
+  const auto& chunk = table->get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
 
   _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));

@@ -109,7 +109,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   size_t pos, from = 0;
   unsigned int rows = 0, field_count = 1;
   bool in_quotes = false;
-  while (rows < table.chunk_size() || 0 == table.chunk_size()) {
+  while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
     pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {

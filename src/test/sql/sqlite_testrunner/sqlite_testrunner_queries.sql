@@ -15,8 +15,9 @@ SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0 OR (b > 457.0 AND b < 458.
 -- Projection
 SELECT a FROM int_float;
 SELECT a as b FROM int_float;
-SELECT a, 4+6 as b FROM int_float;
+SELECT a, 4+6 as b, a+4 AS c, 5.0+b AS d FROM int_float;
 SELECT a*b/c AS calc FROM int_int_int;
+SELECT a, b, a+b AS e, a+b+NULL AS f FROM int_int_int_null;
 
 -- ORDER BY
 SELECT * FROM int_float ORDER BY a DESC;
@@ -37,9 +38,13 @@ SELECT "left".a, "left".b, "right".a, "right".b FROM int_float AS "left",  int_f
 SELECT "left".a, "left".b, "right".a, "right".b FROM int_float AS "left" JOIN int_float2 AS "right" ON "left".a = "right".a;
 -- SELECT * FROM int_float AS "left" LEFT JOIN int_float2 AS "right" ON "left".a = "right".a;
 SELECT * FROM int_float AS "left" INNER JOIN int_float2 AS "right" ON "left".a = "right".a;
+SELECT * FROM int_float4 NATURAL JOIN int_float6;
+SELECT * FROM int_float NATURAL JOIN (SELECT d, a FROM int_float5) AS T2;
+-- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables
 SELECT * FROM int_float AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;
+SELECT * FROM int_float_null AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;
 
 -- Make sure that name-to-id-resolving works fine.
 SELECT t1.a, t1.b, t2.b, t3.b FROM int_float AS t1 INNER JOIN int_float2 AS t2 ON t1.a = t2.a INNER JOIN int_string2 AS t3 ON t1.a = t3.a;

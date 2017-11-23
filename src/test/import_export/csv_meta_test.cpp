@@ -23,30 +23,8 @@ TEST_F(CsvMetaTest, ProcessCsvMetaFileMissing) {
   EXPECT_THROW(process_csv_meta_file("src/test/import_export/missing_file.csv.json"), std::logic_error);
 }
 
-TEST_F(CsvMetaTest, MinimalMetaInformation) {
-  auto json_meta = nlohmann::json::parse(R"(
-    {
-      "chunk_size": 0
-    }
-  )");
-
-  auto meta_expected = CsvMeta{};
-  meta_expected.chunk_size = 0;
-
-  EXPECT_EQ(meta_expected, static_cast<CsvMeta>(json_meta));
-}
-
 TEST_F(CsvMetaTest, JsonSyntaxError) {
   EXPECT_THROW(process_csv_meta_file("src/test/import_export/json_syntax_error.csv.json"), nlohmann::json::exception);
-}
-
-TEST_F(CsvMetaTest, MustProvideChunkSize) {
-  auto json_meta = nlohmann::json::parse(R"(
-    {}
-  )");
-
-  CsvMeta meta;
-  EXPECT_THROW(from_json(json_meta, meta), nlohmann::json::exception);
 }
 
 TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {

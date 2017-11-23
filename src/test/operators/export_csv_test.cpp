@@ -33,7 +33,7 @@ class OperatorsExportCsvTest : public BaseTest {
     std::remove(meta_filename.c_str());
   }
 
-  bool fileExists(const std::string& name) {
+  bool file_exists(const std::string& name) {
     std::ifstream file{name};
     return file.good();
   }
@@ -68,8 +68,8 @@ TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename, "1,\"Hallo\",3.5\n"));
 }
 
@@ -80,8 +80,8 @@ TEST_F(OperatorsExportCsvTest, EscapeString) {
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename, "1,\"Sie sagte: \"\"Mir geht's gut, und dir?\"\"\",3.5\n"));
 }
 
@@ -97,8 +97,8 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "1,\"Hallo\",3.5\n"
                            "2,\"Welt!\",3.5\n"
@@ -120,8 +120,8 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "1,\"Hallo\",3.5\n"
                            "1,\"Hallo\",3.5\n"
@@ -140,8 +140,8 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "1,\"abc\",1.1\n"
                            "2,\"asdf\",2.2\n"
@@ -162,8 +162,8 @@ TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename, "1,\"Hallo\",3.5,12,2.333\n"));
 }
 
@@ -182,8 +182,8 @@ TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
   auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "12345,458.7\n"
                            "123,\n"
@@ -198,8 +198,8 @@ TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
   auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "\"xxx\"\n"
                            "\"www\"\n"
@@ -214,8 +214,8 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
   auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
   ex->execute();
 
-  EXPECT_TRUE(fileExists(filename));
-  EXPECT_TRUE(fileExists(meta_filename));
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
 
   auto meta_information = process_csv_meta_file(meta_filename);
   EXPECT_TRUE(meta_information.columns.at(0).nullable);

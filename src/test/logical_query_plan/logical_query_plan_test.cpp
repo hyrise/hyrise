@@ -20,8 +20,8 @@ namespace opossum {
 class LogicalQueryPlanTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
-    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", 0));
+    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
 
     /**
      * Init complex graph. This one is hard to visualize in ASCII. I suggest drawing it from the initialization below,
@@ -43,8 +43,6 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[1]->set_left_child(_nodes[2]);
     _nodes[0]->set_left_child(_nodes[1]);
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 
   std::array<std::shared_ptr<MockNode>, 8> _nodes;
 };

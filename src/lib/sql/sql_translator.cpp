@@ -1,5 +1,6 @@
 #include "sql_translator.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -7,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -27,10 +29,8 @@
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
-#include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "types.hpp"
+#include "util/sqlhelper.h"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
@@ -43,6 +43,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
       {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
+      {hsql::kOpNotLike, ScanType::OpNotLike},
   };
 
   auto it = operator_to_scan_type.find(operator_type);
@@ -294,8 +295,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::Se
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_type_to_join_mode(join.type);
 
-  // TODO(anybody): both operator and translator support are missing.
-  DebugAssert(join_mode != JoinMode::Natural, "Natural Joins are currently not supported.");
+  if (join_mode == JoinMode::Natural) {
+    return _translate_natural_join(join);
+  }
 
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
@@ -362,6 +364,58 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   join_node->set_right_child(right_node);
 
   return join_node;
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
+  DebugAssert(translate_join_type_to_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
+
+  const auto& left_node = _translate_table_ref(*join.left);
+  const auto& right_node = _translate_table_ref(*join.right);
+
+  // we need copies that we can sort on.
+  auto left_column_names = left_node->output_column_names();
+  auto right_column_names = right_node->output_column_names();
+
+  std::sort(left_column_names.begin(), left_column_names.end());
+  std::sort(right_column_names.begin(), right_column_names.end());
+
+  std::vector<std::string> join_column_names;
+  std::set_intersection(left_column_names.begin(), left_column_names.end(), right_column_names.begin(),
+                        right_column_names.end(), std::back_inserter(join_column_names));
+
+  Assert(!join_column_names.empty(), "No matching columns for natural join found");
+
+  std::shared_ptr<AbstractLQPNode> return_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  return_node->set_left_child(left_node);
+  return_node->set_right_child(right_node);
+
+  for (const auto& join_column_name : join_column_names) {
+    auto left_column_id = left_node->get_column_id_by_named_column_reference({join_column_name});
+    auto right_column_id = right_node->get_column_id_by_named_column_reference({join_column_name});
+    auto right_column_id_in_cross = static_cast<ColumnID>(right_column_id + left_node->output_column_count());
+    auto predicate = std::make_shared<PredicateNode>(left_column_id, ScanType::OpEquals, right_column_id_in_cross);
+    predicate->set_left_child(return_node);
+    return_node = predicate;
+  }
+
+  // We need to collect the column ids so that we can remove the duplicate columns used in the join condition
+  std::vector<ColumnID> column_ids;
+  for (auto column_idx = 0u; column_idx < return_node->output_column_count(); ++column_idx) {
+    if (column_idx >= left_node->output_column_count()) {
+      if (std::find(join_column_names.cbegin(), join_column_names.cend(),
+                    return_node->output_column_names()[column_idx]) != join_column_names.cend()) {
+        continue;
+      }
+    }
+    column_ids.emplace_back(column_idx);
+  }
+
+  const auto& column_references = Expression::create_columns(column_ids);
+
+  auto projection = std::make_shared<ProjectionNode>(column_references);
+  projection->set_left_child(return_node);
+
+  return projection;
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
@@ -520,9 +574,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
    *
    * input_node -> aggregate_node -> {having_node}* -> projection_node
    *
-   * The aggregate_node creates aggregate and groupby columns, the having_nodes apply the predicates in the optional
-   * HAVING clause and the projection_node establishes the correct column order (since AggregateNode outputs all groupby
-   * columns first and then all aggregate columns)
+   * - the aggregate_node creates aggregate and groupby columns.
+   * - the having_nodes apply the predicates in the optional HAVING clause
+   * - the projection_node establishes the correct column order (since AggregateNode outputs all groupby columns first
+   *        and then all aggregate columns)
    */
 
   const auto& select_list = *select.selectList;
@@ -535,10 +590,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
 
   /**
    * The Aggregate Operator outputs all groupby columns first, and then all aggregates.
-   * Therefore we need to work with two different offsets when constructing the projection list.
+   * Therefore use this offset when setting up the ColumnIDs for the Projection that puts the columns in the right order.
    */
   auto aggregate_offset = group_by ? ColumnID{static_cast<uint16_t>(group_by->columns->size())} : ColumnID{0};
-  ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
     std::optional<std::string> alias;
@@ -561,10 +615,38 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       auto is_in_group_by_clause = false;
-      for (const auto* groupby_expr : *group_by->columns) {
+      auto selected_group_by_idx = size_t{0};
+      for (size_t group_by_idx = 0; group_by_idx < group_by->columns->size(); ++group_by_idx) {
+        const auto* groupby_expr = (*group_by->columns)[group_by_idx];
+
+        // @{
+        /**
+         * Hack to avoid, e.g. groupby_expr "table_a.b" to be matched with column_id "table_b.b", just because their
+         * column name is the same.
+         * TODO(anybody) Just checking for column_expr->table == groupby_expr->table is not enough since, e.g., the
+         *  SELECT might use the table prefix and the groupby might not, yet they might still refer to the same column.
+         */
+
+        std::optional<std::string> column_expr_table;
+        if (column_expr->table) {
+          column_expr_table = std::string(column_expr->table);
+        }
+
+        std::optional<std::string> groupby_expr_table;
+        if (groupby_expr->table) {
+          groupby_expr_table = std::string(groupby_expr->table);
+        }
+
+        if (column_expr_table != groupby_expr_table) {
+          continue;
+        }
+
+        // @}
+
         if ((column_expr->name && groupby_expr->name && strcmp(column_expr->name, groupby_expr->name) == 0) ||
             (column_expr->alias && groupby_expr->name && strcmp(column_expr->alias, groupby_expr->name) == 0)) {
           is_in_group_by_clause = true;
+          selected_group_by_idx = group_by_idx;
           break;
         }
       }
@@ -572,7 +654,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       Assert(is_in_group_by_clause, std::string("Column '") + column_expr->getName() +
                                         "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}, alias));
+      projections.push_back(Expression::create_column(static_cast<ColumnID>(selected_group_by_idx), alias));
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }

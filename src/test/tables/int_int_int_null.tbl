@@ -1,0 +1,6 @@
+a|b|c
+int_null|int_null|int_null
+9|10|11
+null|10|10
+11|null|11
+9|null|null
