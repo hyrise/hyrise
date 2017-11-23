@@ -149,15 +149,15 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
-  std::shared_ptr<Table> newTable = std::make_shared<Table>(2);
-  newTable->add_column("a", DataType::Int);
-  newTable->add_column("b", DataType::String);
-  newTable->add_column("c", DataType::Float);
-  newTable->add_column("d", DataType::Long);
-  newTable->add_column("e", DataType::Double);
-  newTable->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
+  std::shared_ptr<Table> new_table = std::make_shared<Table>(2);
+  new_table->add_column("a", DataType::Int);
+  new_table->add_column("b", DataType::String);
+  new_table->add_column("c", DataType::Float);
+  new_table->add_column("d", DataType::Long);
+  new_table->add_column("e", DataType::Double);
+  new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(newTable));
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(new_table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();

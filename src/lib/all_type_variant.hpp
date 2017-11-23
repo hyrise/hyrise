@@ -26,7 +26,7 @@ namespace detail {
 #define EXPAND_TO_HANA_TYPE(s, data, elem) boost::hana::type_c<elem>
 
 // clang-format off
-#define DATA_TYPES                     (int32_t) (int64_t) (float)  (double)  (std::string)  // NOLINT
+#define DATA_TYPES                   (int32_t) (int64_t) (float)  (double)  (std::string)  // NOLINT
 enum class DataType : uint8_t { Null, Int,      Long,     Float,   Double,   String };     // NOLINT
 // clang-format on
 

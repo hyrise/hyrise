@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include "resolve_type.hpp"
 #include "constant_mappings.hpp"
+#include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {

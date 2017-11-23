@@ -11,8 +11,7 @@
 
 namespace opossum {
 
-class OperatorsImportBinaryTest : public BaseTest {
-};
+class OperatorsImportBinaryTest : public BaseTest {};
 
 TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
   auto expected_table = std::make_shared<Table>(5);

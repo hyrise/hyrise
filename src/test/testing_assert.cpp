@@ -109,10 +109,9 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
       std::cout << generate_table_comparison() << "Table schema is different."
                 << "Column with ID " << col_id << " is different" << std::endl
-                << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_column_data_type << ")"
-                << std::endl
-                << "Expected: " << expected_table->column_name(col_id) << " (" << expected_column_data_type
-                << ")" << std::endl;
+                << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_column_data_type << ")" << std::endl
+                << "Expected: " << expected_table->column_name(col_id) << " (" << expected_column_data_type << ")"
+                << std::endl;
       return false;
     }
   }
@@ -143,7 +142,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
         if (type_cmp_mode == TypeCmpMode::Strict) {
           EXPECT_EQ(expected_table->column_type(col), DataType::Float);
         } else {
-          EXPECT_TRUE(expected_table->column_type(col) == DataType::Float || expected_table->column_type(col) == DataType::Double);
+          EXPECT_TRUE(expected_table->column_type(col) == DataType::Float ||
+                      expected_table->column_type(col) == DataType::Double);
         }
         if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
           EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
@@ -157,7 +157,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
         if (type_cmp_mode == TypeCmpMode::Strict) {
           EXPECT_EQ(expected_table->column_type(col), DataType::Double);
         } else {
-          EXPECT_TRUE(expected_table->column_type(col) == DataType::Float || expected_table->column_type(col) == DataType::Double);
+          EXPECT_TRUE(expected_table->column_type(col) == DataType::Float ||
+                      expected_table->column_type(col) == DataType::Double);
         }
         if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
           EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
