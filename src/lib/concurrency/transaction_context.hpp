@@ -66,6 +66,8 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   CommitID as_of_commit_id() const;
 
   /**
+   * The commit id that this transaction has once it is committed. This is the one that is written to the
+   * begin/end commit ids of rows modified by this transaction.
    * Only available after TransactionManager::prepare_commit has been called
    */
   CommitID commit_id() const;
