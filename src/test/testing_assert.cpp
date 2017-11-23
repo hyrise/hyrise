@@ -148,8 +148,7 @@ namespace opossum {
         }
         EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
       } else {
-        if (!strict_types &&
-            (tleft.column_type(col) == DataType::Int || tleft.column_type(col) == DataType::Long)) {
+        if (!strict_types && (tleft.column_type(col) == DataType::Int || tleft.column_type(col) == DataType::Long)) {
           auto left_val = type_cast<int64_t>(left[row][col]);
           auto right_val = type_cast<int64_t>(right[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;

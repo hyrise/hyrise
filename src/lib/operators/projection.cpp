@@ -102,7 +102,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 }
 
 DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& expression,
-                                               const std::shared_ptr<const Table>& table) {
+                                             const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
   }

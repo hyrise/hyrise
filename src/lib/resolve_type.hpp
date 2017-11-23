@@ -76,8 +76,7 @@ std::unique_ptr<Base> make_unique_by_data_type(DataType data_type, ConstructorAr
  *       http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
  */
 template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType data_type2,
-                                                ConstructorArgs&&... args) {
+std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType data_type2, ConstructorArgs&&... args) {
   DebugAssert(data_type1 != DataType::Null, "data_type1 cannot be null.");
   DebugAssert(data_type2 != DataType::Null, "data_type2 cannot be null.");
 
@@ -88,7 +87,8 @@ std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType da
         if (hana::first(y) == data_type2) {
           using ColumnDataType1 = typename decltype(+hana::second(x))::type;
           using ColumnDataType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+          ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(
+              std::forward<ConstructorArgs>(args)...);
           return;
         }
       });

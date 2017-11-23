@@ -128,9 +128,9 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
 
 const boost::bimap<DataType, std::string> data_type_to_string =
     make_bimap<DataType, std::string>({{DataType::Int, "int"},
-                                         {DataType::Long, "long"},
-                                         {DataType::Float, "float"},
-                                         {DataType::Double, "double"},
-                                         {DataType::String, "string"}});
+                                       {DataType::Long, "long"},
+                                       {DataType::Float, "float"},
+                                       {DataType::Double, "double"},
+                                       {DataType::String, "string"}});
 
 }  // namespace opossum

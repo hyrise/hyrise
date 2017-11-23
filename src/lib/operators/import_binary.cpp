@@ -128,8 +128,8 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
   return chunk;
 }
 
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count,
-                                                         DataType data_type, bool is_nullable) {
+std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+                                                         bool is_nullable) {
   std::shared_ptr<BaseColumn> result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnType = typename decltype(type)::type;

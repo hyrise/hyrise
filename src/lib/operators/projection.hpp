@@ -64,7 +64,7 @@ class Projection : public AbstractReadOnlyOperator {
                              std::shared_ptr<const Table> input_table_left);
 
   static DataType _get_type_of_expression(const std::shared_ptr<Expression>& expression,
-                                            const std::shared_ptr<const Table>& table);
+                                          const std::shared_ptr<const Table>& table);
 
   /**
    * This function evaluates the given expression on a single chunk.
