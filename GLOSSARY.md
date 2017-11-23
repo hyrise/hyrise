@@ -11,21 +11,24 @@
 
 We limit the use of abbreviations to very few cases. Unless an abbreviation is listed here or is something that we can expect every Computer Science Graduate to know (e.g., CSV, NUMA), do not use it in interfaces, code, or documentation.
 
-| Name        | Short for                                                              |
-| ----------- | ---------------------------------------------------------------------- |
-| ART         | Adaptive Radix Tree (only for internal use of that data structure)     |
-| cid         | Commit-ID (used for MVCC)                                              |
-| dict_column | Dictionary Column                                                      |
-| expr        | Expression, but only ok if used for an *expression* as described below |
-| impl        | Implementation, mainly used for the Pimpl Pattern                      |
-| *_it        | Iterator (in variable names)                                           |
-| LQP         | *Logical Query Plan*                                                   |
-| MVCC        | Multi-Version Concurrency Control                                      |
-| PMR         | Polymorphic Memory Resource (see types.hpp)                            |
-| PosList     | Position List (as used in ReferenceColumns)                            |
-| ref_column  | Reference Column                                                       |
-| tid         | Transaction ID (used for MVCC)                                         |
-| val_column  | Value Column                                                           |
+| Name        | Short for                                                                |
+| ----------- | ------------------------------------------------------------------------ |
+| ART         | Adaptive Radix Tree (only for internal use of that data structure)       |
+| cid         | Commit-ID (used for MVCC)                                                |
+| dict_column | Dictionary Column                                                        |
+| expr        | *Expression*, but only ok if used for an *expression* as described below |
+| impl        | Implementation, mainly used for the [Pimpl] Pattern                      |
+| *_it        | Iterator (in variable names)                                             |
+| LQP         | *Logical Query Plan*                                                     |
+| MVCC        | Multi-Version Concurrency Control                                        |
+| PMR         | Polymorphic Memory Resource (see types.hpp)                              |
+| PQP         | *Physical Query Plan*                                                    |
+| PosList     | Position List (as used in ReferenceColumns)                              |
+| ref_column  | Reference Column                                                         |
+| tid         | Transaction ID (used for MVCC)                                           |
+| val_column  | Value Column                                                             |
+
+[Pimpl]: http://en.cppreference.com/w/cpp/language/pimpl
 
 # Glossary
 
