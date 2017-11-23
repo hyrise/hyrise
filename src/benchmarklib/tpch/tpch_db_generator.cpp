@@ -1,7 +1,6 @@
 #include "tpch_db_generator.hpp"
 
 #include <utility>
-#include <dsstypes.h>
 
 extern "C" {
 #include "dss.h"
@@ -72,42 +71,61 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
                 boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate",
                                         "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"));
 
-  TableBuilder<int32_t, int32_t, int32_t, int32_t, float, float, float, float, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string>
-    lineitem_builder(_chunk_size, "orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity",
+  TableBuilder<int32_t, int32_t, int32_t, int32_t, float, float, float, float, std::string, std::string, std::string,
+    std::string, std::string, std::string, std::string, std::string>
+     lineitem_builder(_chunk_size, boost::hana::make_tuple("o_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity",
                      "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate",
-                     "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment")
+                     "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"));
 
   auto order_count = static_cast<size_t>(tdefs[TpchTable_Order].base * _scale_factor);
 
-//  DSS_HUGE rows_per_segment=0;
-//  DSS_HUGE rows_this_segment=-1;
-//
-//  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-//    order_t order;
-//    mk_order(order_idx, &order, update_num);
-//
-//    if((++rows_this_segment) >= rows_per_segment)
-//    {
-//      rows_this_segment=0;
-//      upd_num += 10000;
-//    }
-//
-//    order_builder.append_row(order.okey, order.custkey, order.orderstatus, order.totalprice, order.odate,
-//                             order.opriority, order.clerk, order.spriority, o->comment);
-//
-//    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
-//      const auto& lineitem = order.l[line_idx];
-//
-//      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-//        lineitem.eprice, lineitem.discount, lineitem.tax, lineitem.rflag[0], lineitem.lstatus[0], lineitem.sdate,
-//        lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
-//    }
-//  }
+  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
+    order_t order;
+    mk_order(order_idx, &order, 0, _scale_factor);
+
+    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus), order.totalprice, order.odate,
+                             order.opriority, order.clerk, order.spriority, order.comment);
+
+    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
+      const auto& lineitem = order.l[line_idx];
+
+      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
+        lineitem.eprice, lineitem.discount, lineitem.tax, std::string(1,lineitem.rflag[0]),
+                                  std::string(1, lineitem.lstatus[0]), lineitem.sdate,
+        lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+    }
+  }
+
+  /**
+   * PART and PARTSUPP
+   */
   
+
+  auto part_count = static_cast<size_t>(tdefs[TpchTable_Part].base * _scale_factor);
+
+  for (size_t order_idx = 0; order_idx < part_count; ++order_idx) {
+    order_t order;
+    mk_order(order_idx, &order, 0, _scale_factor);
+
+    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus), order.totalprice, order.odate,
+                             order.opriority, order.clerk, order.spriority, order.comment);
+
+    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
+      const auto& lineitem = order.l[line_idx];
+
+      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
+                                  lineitem.eprice, lineitem.discount, lineitem.tax, std::string(1,lineitem.rflag[0]),
+                                  std::string(1, lineitem.lstatus[0]), lineitem.sdate,
+                                  lineitem.cdate, lineitem.rdate, lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+    }
+  }
+
+
+
   return {
   {"customer", customer_builder.finish_table()},
   {"order", order_builder.finish_table()},
-  {"lineitem_builder", lineitem_builder.finish_table()}
+  {"lineitem", lineitem_builder.finish_table()}
   };
 
 }
@@ -119,11 +137,6 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
 //void TpchDbGenerator::generate_and_export(const std::string &path) {
 //
 //}
-
-std::shared_ptr<Table> TpchDbGenerator::_generate_customer_table() {
-
-
-}
 
 void
 TpchDbGenerator::_row_start() {
@@ -140,7 +153,7 @@ TpchDbGenerator::_row_stop(TpchTable table) {
   if (table == TpchTable_PartSupplier) table = TpchTable_Part;
 
   for (i = 0; i <= MAX_STREAM; i++)
-    if ((Seed[i].table == table) ", "", " (Seed[i].table == tdefs[table].child)) {
+    if ((Seed[i].table == table) || (Seed[i].table == tdefs[table].child)) {
       if (Seed[i].usage > Seed[i].boundary) {
         Seed[i].boundary = Seed[i].usage;
       } else {

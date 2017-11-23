@@ -311,7 +311,7 @@ void
 		case LINE:
 		case ORDER:
   		case ORDER_LINE: 
-			mk_order (i, &o, upd_num % 10000);
+			mk_order (i, &o, upd_num % 10000, scale);
 
 		  if (insert_segments  && (upd_num > 0))
 			if((upd_num / 10000) < residual_rows)

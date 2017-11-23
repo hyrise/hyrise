@@ -146,7 +146,7 @@ mk_sparse(DSS_HUGE i, DSS_HUGE * ok, long seq)
 }
 
 long
-mk_order(DSS_HUGE index, order_t * o, long upd_num)
+mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 {
 	DSS_HUGE        lcnt;
 	DSS_HUGE        rprice;
