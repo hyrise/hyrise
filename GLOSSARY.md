@@ -37,6 +37,7 @@ This explains high-level terms that have a specific meaning within Hyrise and th
 | Name                       | Description                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Abstract Syntax Tree (AST) | The old name of the *Logical Query Plan*. It was renamed when the LQP stopped being a tree and became a DAG. Shoot this old term on sight.                                 |
+| Chunk                 | Each table in Hyrise is horizontally partitioned into one more [chunks](https://github.com/hyrise/hyrise/wiki/chunk-concept).
 | Expression                 | Any type of SQL expression that is either logical or creates a new column (e.g., `col_a = 3`, `col_a + 4`).                                                                |
 | Iterable                   | A good way to iterate over different types of columns. See `base_iterators.hpp` to start.                                                                                  |
 | Logical Query Plan         | The logical representation of a query plan. It includes nodes like "Predicate" (a filter) or "Join" but does not describe what implementation is used for executing these. |
