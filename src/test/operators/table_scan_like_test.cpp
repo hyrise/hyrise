@@ -229,5 +229,4 @@ TEST_F(OperatorsTableScanLikeTest, ScanNotLikeUnderscoreWildcardOnDict) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-
 }  // namespace opossum

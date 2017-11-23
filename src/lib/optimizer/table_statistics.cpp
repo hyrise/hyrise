@@ -42,7 +42,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
     auto selectivity = DEFAULT_LIKE_SELECTIVITY;
-    if(scan_type == ScanType::OpNotLike) selectivity = 1.0 - selectivity;
+    if (scan_type == ScanType::OpNotLike) selectivity = 1.0 - selectivity;
     clone->_row_count = _row_count * selectivity;
     return clone;
   }

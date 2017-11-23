@@ -26,8 +26,8 @@ class Table;
  */
 class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                    const ScanType scan_type, const std::string& right_wildcard);
+  LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type,
+                    const std::string& right_wildcard);
 
   void handle_value_column(const BaseValueColumn& base_column,
                            std::shared_ptr<ColumnVisitableContext> base_context) override;

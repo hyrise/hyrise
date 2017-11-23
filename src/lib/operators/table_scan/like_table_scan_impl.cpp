@@ -22,7 +22,9 @@ namespace opossum {
 
 LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                                      const ScanType scan_type, const std::string& right_wildcard)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type}, _right_wildcard{right_wildcard}, _invert_results(scan_type == ScanType::OpNotLike) {
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type},
+      _right_wildcard{right_wildcard},
+      _invert_results(scan_type == ScanType::OpNotLike) {
   // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
   auto regex_string = _sqllike_to_regex(_right_wildcard);
   _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
