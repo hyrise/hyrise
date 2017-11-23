@@ -23,10 +23,10 @@ template <typename DerivedIndex>
 class SingleColumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_col_int = BaseTest::create_dict_column_by_type<int>(TypeSymbol::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
+    dict_col_int = BaseTest::create_dict_column_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col_int}));
 
-    dict_col_str = BaseTest::create_dict_column_by_type<std::string>(TypeSymbol::String,
+    dict_col_str = BaseTest::create_dict_column_by_type<std::string>(DataType::String,
                                                                      {"hello", "world", "test", "foo", "bar", "foo"});
     index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col_str}));
   }
@@ -173,7 +173,7 @@ TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
 
 TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
   if (!IS_DEBUG) return;
-  auto vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(TypeSymbol::Int);
+  auto vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   vc_int->append(4);
 
   EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseColumn>>({vc_int})), std::logic_error);

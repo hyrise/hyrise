@@ -276,9 +276,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
   auto table_left = std::make_shared<Table>(3);
-  table_left->add_column_definition("a", TypeSymbol::Int);
-  table_left->add_column_definition("b", TypeSymbol::Float);
-  table_left->add_column_definition("c", TypeSymbol::Int);
+  table_left->add_column_definition("a", DataType::Int);
+  table_left->add_column_definition("b", DataType::Float);
+  table_left->add_column_definition("c", DataType::Int);
 
   Chunk chunk_left_0;
   chunk_left_0.add_column(column_left_0_0);
@@ -293,9 +293,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   table_left->emplace_chunk(std::move(chunk_left_1));
 
   auto table_right = std::make_shared<Table>(4);
-  table_right->add_column_definition("a", TypeSymbol::Int);
-  table_right->add_column_definition("b", TypeSymbol::Float);
-  table_right->add_column_definition("c", TypeSymbol::Int);
+  table_right->add_column_definition("a", DataType::Int);
+  table_right->add_column_definition("b", DataType::Float);
+  table_right->add_column_definition("c", DataType::Int);
 
   Chunk chunk_right_0;
   chunk_right_0.add_column(column_right_0_0);

@@ -183,8 +183,8 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
 
   if (!no_result) {
     for (int i = 0; i < column_count; ++i) {
-      const auto type_symbol = type_symbol_to_string.right.at(col_types[i]);
-      table->add_column(col_names[i], type_symbol, col_nullable[i]);
+      const auto data_type = data_type_to_string.right.at(col_types[i]);
+      table->add_column(col_names[i], data_type, col_nullable[i]);
     }
   }
 }

@@ -73,13 +73,13 @@ class Table : private Noncopyable {
   const std::string& column_name(ColumnID column_id) const;
 
   // returns the data type of the nth column
-  TypeSymbol column_type(ColumnID column_id) const;
+  DataType column_type(ColumnID column_id) const;
 
   // return whether nth column is nullable
   bool column_is_nullable(ColumnID column_id) const;
 
   // returns the vector of column types
-  const std::vector<TypeSymbol>& column_types() const;
+  const std::vector<DataType>& column_types() const;
 
   // returns the vector of column nullables
   const std::vector<bool>& column_nullables() const;
@@ -93,10 +93,10 @@ class Table : private Noncopyable {
   uint32_t chunk_size() const;
 
   // adds column definition without creating the actual columns
-  void add_column_definition(const std::string& name, TypeSymbol type_symbol, bool nullable = false);
+  void add_column_definition(const std::string& name, DataType data_type, bool nullable = false);
 
   // adds a column to the end, i.e., right, of the table
-  void add_column(const std::string& name, TypeSymbol type_symbol, bool nullable = false);
+  void add_column(const std::string& name, DataType data_type, bool nullable = false);
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -153,7 +153,7 @@ class Table : private Noncopyable {
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
-  std::vector<TypeSymbol> _column_types;
+  std::vector<DataType> _column_types;
   std::vector<bool> _column_nullable;
 
   std::shared_ptr<TableStatistics> _table_statistics;

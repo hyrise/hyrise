@@ -109,9 +109,9 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 
   // Add columns to table
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto type_symbol = type_symbol_to_string.right.at(data_types[column_id]);
+    const auto data_type = data_type_to_string.right.at(data_types[column_id]);
 
-    table->add_column_definition(column_names[column_id], type_symbol, column_nullables[column_id]);
+    table->add_column_definition(column_names[column_id], data_type, column_nullables[column_id]);
   }
 
   return std::make_pair(table, chunk_count);
@@ -129,9 +129,9 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
 }
 
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count,
-                                                         TypeSymbol type_symbol, bool is_nullable) {
+                                                         DataType data_type, bool is_nullable) {
   std::shared_ptr<BaseColumn> result;
-  resolve_data_type(type_symbol, [&](auto type) {
+  resolve_data_type(data_type, [&](auto type) {
     using ColumnType = typename decltype(type)::type;
     result = _import_column<ColumnType>(file, row_count, is_nullable);
   });
@@ -139,15 +139,15 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
   return result;
 }
 
-template <typename DataType>
+template <typename ColumnDataType>
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
   const auto column_type = _read_value<BinaryColumnType>(file);
 
   switch (column_type) {
     case BinaryColumnType::value_column:
-      return _import_value_column<DataType>(file, row_count, is_nullable);
+      return _import_value_column<ColumnDataType>(file, row_count, is_nullable);
     case BinaryColumnType::dictionary_column:
-      return _import_dictionary_column<DataType>(file, row_count);
+      return _import_dictionary_column<ColumnDataType>(file, row_count);
     default:
       // This case happens if the read column type is not a valid BinaryColumnType.
       Fail("Cannot import column: invalid column type");

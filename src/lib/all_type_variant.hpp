@@ -27,25 +27,25 @@ namespace detail {
 
 // clang-format off
 #define DATA_TYPES                     (int32_t) (int64_t) (float)  (double)  (std::string)  // NOLINT
-enum class TypeSymbol : uint8_t { Null, Int,      Long,     Float,   Double,   String };     // NOLINT
+enum class DataType : uint8_t { Null, Int,      Long,     Float,   Double,   String };     // NOLINT
 // clang-format on
 
-static constexpr auto type_symbols =
-    hana::make_tuple(TypeSymbol::Int, TypeSymbol::Long, TypeSymbol::Float, TypeSymbol::Double, TypeSymbol::String);
+static constexpr auto data_type_enum_values =
+    hana::make_tuple(DataType::Int, DataType::Long, DataType::Float, DataType::Double, DataType::String);
 
 // Extends to hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, ...);
 static constexpr auto data_types =
     hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(EXPAND_TO_HANA_TYPE, _, DATA_TYPES)));
 
 /**
- * Holds pairs of all types and their respective string representation.
+ * Holds pairs of all types and their respective enum representation.
  *
  * Equivalent to:
- * hana::make_tuple(hana::make_tuple(TypeSymbol::Int, hana::type_c<int32_t>),
- *                  hana::make_tuple(TypeSymbol::Long, hana::type_c<int64_t>),
+ * hana::make_tuple(hana::make_tuple(DataType::Int, hana::type_c<int32_t>),
+ *                  hana::make_tuple(DataType::Long, hana::type_c<int64_t>),
  *                  ...);
  */
-static constexpr auto data_types_and_symbols_as_tuples = hana::zip(type_symbols, data_types);
+static constexpr auto data_type_pairs_as_tuples = hana::zip(data_type_enum_values, data_types);
 
 struct to_pair {
   template <typename T>
@@ -55,7 +55,7 @@ struct to_pair {
 };
 
 // Converts the tuples into pairs
-static constexpr auto data_types_and_symbols = hana::transform(data_types_and_symbols_as_tuples, to_pair{});  // NOLINT
+static constexpr auto data_type_pairs = hana::transform(data_type_pairs_as_tuples, to_pair{});  // NOLINT
 
 // Prepends NullValue to tuple of types
 static constexpr auto data_types_including_null = hana::prepend(data_types, hana::type_c<NullValue>);
@@ -70,9 +70,9 @@ using AllTypeVariant = typename boost::make_variant_over<detail::TypesAsMplVecto
 
 static constexpr auto data_types = detail::data_types;
 static constexpr auto data_types_including_null = detail::data_types_including_null;
-static constexpr auto data_types_and_symbols = detail::data_types_and_symbols;
+static constexpr auto data_type_pairs = detail::data_type_pairs;
 
-using TypeSymbol = detail::TypeSymbol;
+using DataType = detail::DataType;
 using AllTypeVariant = detail::AllTypeVariant;
 
 // Function to check if AllTypeVariant is null

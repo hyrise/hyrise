@@ -28,8 +28,8 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper->execute();
 
     std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(5);
-    test_even_dict->add_column("a", TypeSymbol::Int);
-    test_even_dict->add_column("b", TypeSymbol::Int);
+    test_even_dict->add_column("a", DataType::Int);
+    test_even_dict->add_column("b", DataType::Int);
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
     DictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}});
 
@@ -39,8 +39,8 @@ class OperatorsTableScanTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> get_table_op_part_dict() {
     auto table = std::make_shared<Table>(5);
-    table->add_column("a", TypeSymbol::Int);
-    table->add_column("b", TypeSymbol::Float);
+    table->add_column("a", DataType::Int);
+    table->add_column("b", DataType::Float);
 
     for (int i = 1; i < 20; ++i) {
       table->append({i, 100.1 + i});
@@ -56,8 +56,8 @@ class OperatorsTableScanTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> get_table_op_filtered() {
     auto table = std::make_shared<Table>(5);
-    table->add_column_definition("a", TypeSymbol::Int);
-    table->add_column_definition("b", TypeSymbol::Float);
+    table->add_column_definition("a", DataType::Int);
+    table->add_column_definition("b", DataType::Float);
 
     const auto test_table_part_dict = get_table_op_part_dict()->get_output();
 
@@ -89,8 +89,8 @@ class OperatorsTableScanTest : public BaseTest {
   std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
     auto table = std::make_shared<opossum::Table>(0);
-    table->add_column("a", TypeSymbol::Int);
-    table->add_column("b", TypeSymbol::Float);
+    table->add_column("a", DataType::Int);
+    table->add_column("b", DataType::Float);
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i, 100.0f + i});
@@ -146,8 +146,8 @@ class OperatorsTableScanTest : public BaseTest {
     auto ref_column_b = std::make_shared<ReferenceColumn>(table, ColumnID{1u}, pos_list_b);
 
     auto ref_table = std::make_shared<Table>();
-    ref_table->add_column_definition("a", TypeSymbol::Int, true);
-    ref_table->add_column_definition("b", TypeSymbol::Float, true);
+    ref_table->add_column_definition("a", DataType::Int, true);
+    ref_table->add_column_definition("b", DataType::Float, true);
 
     auto chunk = Chunk{};
     chunk.add_column(ref_column_a);

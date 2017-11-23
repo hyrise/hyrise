@@ -17,7 +17,7 @@ class OperatorsImportBinaryTest : public BaseTest {
 
 TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", TypeSymbol::Float);
+  expected_table->add_column("a", DataType::Float);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -30,7 +30,7 @@ TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
   auto expected_table = std::make_shared<Table>(2);
-  expected_table->add_column("a", TypeSymbol::Float);
+  expected_table->add_column("a", DataType::Float);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -44,7 +44,7 @@ TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsImportBinaryTest, StringValueColumn) {
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", TypeSymbol::String);
+  expected_table->add_column("a", DataType::String);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -58,7 +58,7 @@ TEST_F(OperatorsImportBinaryTest, StringValueColumn) {
 
 TEST_F(OperatorsImportBinaryTest, StringDictionaryColumn) {
   auto expected_table = std::make_shared<Table>(10);
-  expected_table->add_column("a", TypeSymbol::String);
+  expected_table->add_column("a", DataType::String);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -76,11 +76,11 @@ TEST_F(OperatorsImportBinaryTest, StringDictionaryColumn) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumn) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  expected_table->add_column("a", TypeSymbol::String);
-  expected_table->add_column("b", TypeSymbol::Int);
-  expected_table->add_column("c", TypeSymbol::Long);
-  expected_table->add_column("d", TypeSymbol::Float);
-  expected_table->add_column("e", TypeSymbol::Double);
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -94,11 +94,11 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueColumn) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryColumn) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  expected_table->add_column("a", TypeSymbol::String);
-  expected_table->add_column("b", TypeSymbol::Int);
-  expected_table->add_column("c", TypeSymbol::Long);
-  expected_table->add_column("d", TypeSymbol::Float);
-  expected_table->add_column("e", TypeSymbol::Double);
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -116,11 +116,11 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryColumn) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  expected_table->add_column("a", TypeSymbol::String);
-  expected_table->add_column("b", TypeSymbol::Int);
-  expected_table->add_column("c", TypeSymbol::Long);
-  expected_table->add_column("d", TypeSymbol::Float);
-  expected_table->add_column("e", TypeSymbol::Double);
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -151,8 +151,8 @@ TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
 
 TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
   auto expected_table = std::make_shared<opossum::Table>(30000);
-  expected_table->add_column("FirstColumn", TypeSymbol::Int);
-  expected_table->add_column("SecondColumn", TypeSymbol::String);
+  expected_table->add_column("FirstColumn", DataType::Int);
+  expected_table->add_column("SecondColumn", DataType::String);
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/TwoColumnsNoValues.bin");
   importer->execute();
@@ -162,7 +162,7 @@ TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
 
 TEST_F(OperatorsImportBinaryTest, EmptyStringsValueColumn) {
   auto expected_table = std::make_shared<opossum::Table>(10);
-  expected_table->add_column("a", TypeSymbol::String);
+  expected_table->add_column("a", DataType::String);
   expected_table->append({""});
   expected_table->append({""});
   expected_table->append({""});
@@ -177,7 +177,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsValueColumn) {
 
 TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionaryColumn) {
   auto expected_table = std::make_shared<opossum::Table>(10);
-  expected_table->add_column("a", TypeSymbol::String);
+  expected_table->add_column("a", DataType::String);
   expected_table->append({""});
   expected_table->append({""});
   expected_table->append({""});
@@ -223,11 +223,11 @@ TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesNullValues) {
   auto expected_table = std::make_shared<opossum::Table>();
-  expected_table->add_column("a", TypeSymbol::Int, true);
-  expected_table->add_column("b", TypeSymbol::Float, true);
-  expected_table->add_column("c", TypeSymbol::Long, true);
-  expected_table->add_column("d", TypeSymbol::String, true);
-  expected_table->add_column("e", TypeSymbol::Double, true);
+  expected_table->add_column("a", DataType::Int, true);
+  expected_table->add_column("b", DataType::Float, true);
+  expected_table->add_column("c", DataType::Long, true);
+  expected_table->add_column("d", DataType::String, true);
+  expected_table->add_column("e", DataType::Double, true);
 
   expected_table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   expected_table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -243,11 +243,11 @@ TEST_F(OperatorsImportBinaryTest, AllTypesNullValues) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
   auto expected_table = std::make_shared<opossum::Table>();
-  expected_table->add_column("a", TypeSymbol::Int, true);
-  expected_table->add_column("b", TypeSymbol::Float, true);
-  expected_table->add_column("c", TypeSymbol::Long, true);
-  expected_table->add_column("d", TypeSymbol::String, true);
-  expected_table->add_column("e", TypeSymbol::Double, true);
+  expected_table->add_column("a", DataType::Int, true);
+  expected_table->add_column("b", DataType::Float, true);
+  expected_table->add_column("c", DataType::Long, true);
+  expected_table->add_column("d", DataType::String, true);
+  expected_table->add_column("e", DataType::Double, true);
 
   expected_table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   expected_table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

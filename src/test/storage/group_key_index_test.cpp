@@ -20,7 +20,7 @@ class GroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_col = BaseTest::create_dict_column_by_type<std::string>(
-        TypeSymbol::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
+        DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
     index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col}));
 
     index_offsets = &(index->_index_offsets);

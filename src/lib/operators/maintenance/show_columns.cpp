@@ -26,9 +26,9 @@ std::shared_ptr<AbstractOperator> ShowColumns::recreate(const std::vector<AllPar
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
   auto out_table = std::make_shared<Table>();
-  out_table->add_column_definition("column_name", TypeSymbol::String);
-  out_table->add_column_definition("column_type", TypeSymbol::String);
-  out_table->add_column_definition("is_nullable", TypeSymbol::Int);
+  out_table->add_column_definition("column_name", DataType::String);
+  out_table->add_column_definition("column_type", DataType::String);
+  out_table->add_column_definition("is_nullable", DataType::Int);
 
   const auto table = StorageManager::get().get_table(_table_name);
   Chunk chunk;
@@ -40,12 +40,12 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
 
   const auto& column_types = table->column_types();
 
-  auto type_strings = tbb::concurrent_vector<std::string>{};
+  auto data_types = tbb::concurrent_vector<std::string>{};
   for (const auto column_type : column_types) {
-    type_strings.push_back(type_symbol_to_string.left.at(column_type));
+    data_types.push_back(data_type_to_string.left.at(column_type));
   }
 
-  const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(type_strings));
+  const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(data_types));
   chunk.add_column(vc_types);
 
   const auto& column_nullables = table->column_nullables();

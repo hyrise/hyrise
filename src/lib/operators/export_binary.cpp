@@ -141,7 +141,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = type_symbol_to_string.left.at(table->column_type(column_id));
+    column_types[column_id] = data_type_to_string.left.at(table->column_type(column_id));
     column_names[column_id] = table->column_name(column_id);
     column_nullables[column_id] = table->column_is_nullable(column_id);
   }

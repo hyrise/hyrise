@@ -59,7 +59,7 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
      */
     _referenced_table = std::make_shared<Table>();
     for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
-      _referenced_table->add_column("c" + std::to_string(column_idx), TypeSymbol::Int);
+      _referenced_table->add_column("c" + std::to_string(column_idx), DataType::Int);
     }
 
     /**
@@ -83,7 +83,7 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
 
     auto table = std::make_shared<Table>();
     for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
-      table->add_column_definition("c" + std::to_string(column_idx), TypeSymbol::Int);
+      table->add_column_definition("c" + std::to_string(column_idx), DataType::Int);
     }
 
     for (size_t row_idx = 0; row_idx < num_rows;) {

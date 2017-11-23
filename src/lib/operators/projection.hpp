@@ -48,7 +48,7 @@ class Projection : public AbstractReadOnlyOperator {
   class DummyTable : public Table {
    public:
     DummyTable() : Table(0) {
-      add_column("dummy", TypeSymbol::Int);
+      add_column("dummy", DataType::Int);
       append(std::vector<AllTypeVariant>{0});
     }
   };
@@ -63,7 +63,7 @@ class Projection : public AbstractReadOnlyOperator {
                              const std::shared_ptr<Expression>& expression,
                              std::shared_ptr<const Table> input_table_left);
 
-  static TypeSymbol _get_type_of_expression(const std::shared_ptr<Expression>& expression,
+  static DataType _get_type_of_expression(const std::shared_ptr<Expression>& expression,
                                             const std::shared_ptr<const Table>& table);
 
   /**

@@ -16,8 +16,8 @@ class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
     t = std::make_shared<Table>(Table(chunk_size));
-    t->add_column("col_1", TypeSymbol::Int);
-    t->add_column("col_2", TypeSymbol::String);
+    t->add_column("col_1", DataType::Int);
+    t->add_column("col_2", DataType::String);
     StorageManager::get().add_table(table_name, t);
 
     gt = std::make_shared<GetTable>(table_name);

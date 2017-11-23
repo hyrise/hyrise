@@ -37,7 +37,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     ColumnMeta column_meta;
     column_meta.name = table->column_name(column_id);
-    column_meta.type = type_symbol_to_string.left.at(table->column_type(column_id));
+    column_meta.type = data_type_to_string.left.at(table->column_type(column_id));
     column_meta.nullable = table->column_is_nullable(column_id);
 
     meta.columns.push_back(column_meta);

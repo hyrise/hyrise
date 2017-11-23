@@ -22,7 +22,7 @@ std::shared_ptr<AbstractOperator> ShowTables::recreate(const std::vector<AllPara
 
 std::shared_ptr<const Table> ShowTables::_on_execute() {
   auto table = std::make_shared<Table>();
-  table->add_column_definition("table_name", TypeSymbol::String);
+  table->add_column_definition("table_name", DataType::String);
 
   const auto table_names = StorageManager::get().table_names();
   const auto column = std::make_shared<ValueColumn<std::string>>(

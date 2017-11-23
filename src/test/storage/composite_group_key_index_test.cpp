@@ -57,9 +57,9 @@ namespace opossum {
 class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    _column_int = create_dict_column_by_type<int32_t>(TypeSymbol::Int, {2, 1, 0, 1, 0, 3, 2, 3});
+    _column_int = create_dict_column_by_type<int32_t>(DataType::Int, {2, 1, 0, 1, 0, 3, 2, 3});
     _column_str = create_dict_column_by_type<std::string>(
-        TypeSymbol::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
+        DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str = std::make_shared<CompositeGroupKeyIndex>(
         std::vector<std::shared_ptr<const BaseColumn>>{_column_int, _column_str});

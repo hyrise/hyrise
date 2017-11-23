@@ -126,11 +126,11 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
     });
 
-const boost::bimap<TypeSymbol, std::string> type_symbol_to_string =
-    make_bimap<TypeSymbol, std::string>({{TypeSymbol::Int, "int"},
-                                         {TypeSymbol::Long, "long"},
-                                         {TypeSymbol::Float, "float"},
-                                         {TypeSymbol::Double, "double"},
-                                         {TypeSymbol::String, "string"}});
+const boost::bimap<DataType, std::string> data_type_to_string =
+    make_bimap<DataType, std::string>({{DataType::Int, "int"},
+                                         {DataType::Long, "long"},
+                                         {DataType::Float, "float"},
+                                         {DataType::Double, "double"},
+                                         {DataType::String, "string"}});
 
 }  // namespace opossum

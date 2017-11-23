@@ -20,10 +20,10 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * Resolves a type symbol by creating an instance of a templated class and
+ * Resolves a data type by creating an instance of a templated class and
  * returning it as a unique_ptr of its non-templated base class.
  *
- * @param type_symbol is a symbol of any of the supported data types
+ * @param data_type is an enum value of any of the supported data types
  * @param args is a list of constructor arguments
  *
  *
@@ -43,16 +43,16 @@ namespace hana = boost::hana;
  *   };
  *
  *   constexpr auto var = 12;
- *   auto impl = make_unique_by_data_type<BaseImpl, Impl>(TypeSymbol::String, var);
+ *   auto impl = make_unique_by_data_type<BaseImpl, Impl>(DataType::String, var);
  *   impl->execute();
  */
 template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_type(TypeSymbol type_symbol, ConstructorArgs&&... args) {
-  DebugAssert(type_symbol != TypeSymbol::Null, "type_symbol cannot be null.");
+std::unique_ptr<Base> make_unique_by_data_type(DataType data_type, ConstructorArgs&&... args) {
+  DebugAssert(data_type != DataType::Null, "data_type cannot be null.");
 
   std::unique_ptr<Base> ret = nullptr;
-  hana::for_each(data_types_and_symbols, [&](auto x) {
-    if (hana::first(x) == type_symbol) {
+  hana::for_each(data_type_pairs, [&](auto x) {
+    if (hana::first(x) == data_type) {
       // The + before hana::second - which returns a reference - converts its return value
       // into a value so that we can access ::type
       using ColumnDataType = typename decltype(+hana::second(x))::type;
@@ -64,28 +64,28 @@ std::unique_ptr<Base> make_unique_by_data_type(TypeSymbol type_symbol, Construct
 }
 
 /**
- * Resolves two type symbols by creating an instance of a templated class and
+ * Resolves two data types by creating an instance of a templated class and
  * returning it as a unique_ptr of its non-templated base class.
- * It does the same as make_unique_by_data_type but with two symbols.
+ * It does the same as make_unique_by_data_type but with two data types.
  *
- * @param type_symbol1 is a symbol of any of the supported column types
- * @param type_symbol2 is a symbol of any of the supported column types
+ * @param data_type1 is an enum value of any of the supported column types
+ * @param data_type2 is an enum value of any of the supported column types
  * @param args is a list of constructor arguments
  *
  * Note: We need to pass parameter packs explicitly for GCC due to the following bug:
  *       http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
  */
 template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_types(TypeSymbol type_symbol1, TypeSymbol type_symbol2,
+std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType data_type2,
                                                 ConstructorArgs&&... args) {
-  DebugAssert(type_symbol1 != TypeSymbol::Null, "type_symbol1 cannot be null.");
-  DebugAssert(type_symbol2 != TypeSymbol::Null, "type_symbol2 cannot be null.");
+  DebugAssert(data_type1 != DataType::Null, "data_type1 cannot be null.");
+  DebugAssert(data_type2 != DataType::Null, "data_type2 cannot be null.");
 
   std::unique_ptr<Base> ret = nullptr;
-  hana::for_each(data_types_and_symbols, [&ret, &type_symbol1, &type_symbol2, &args...](auto x) {
-    if (hana::first(x) == type_symbol1) {
-      hana::for_each(data_types_and_symbols, [&ret, &type_symbol2, &args...](auto y) {
-        if (hana::first(y) == type_symbol2) {
+  hana::for_each(data_type_pairs, [&ret, &data_type1, &data_type2, &args...](auto x) {
+    if (hana::first(x) == data_type1) {
+      hana::for_each(data_type_pairs, [&ret, &data_type2, &args...](auto y) {
+        if (hana::first(y) == data_type2) {
           using ColumnDataType1 = typename decltype(+hana::second(x))::type;
           using ColumnDataType2 = typename decltype(+hana::second(y))::type;
           ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
@@ -102,14 +102,14 @@ std::unique_ptr<Base> make_unique_by_data_types(TypeSymbol type_symbol1, TypeSym
  * Convenience function. Calls make_unique_by_data_type and casts the result into a shared_ptr.
  */
 template <class Base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
-std::shared_ptr<Base> make_shared_by_data_type(TypeSymbol type_symbol, ConstructorArgs&&... args) {
-  return make_unique_by_data_type<Base, impl, TemplateArgs...>(type_symbol, std::forward<ConstructorArgs>(args)...);
+std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorArgs&&... args) {
+  return make_unique_by_data_type<Base, impl, TemplateArgs...>(data_type, std::forward<ConstructorArgs>(args)...);
 }
 
 /**
- * Resolves a type symbol by passing a hana::type object on to a generic lambda
+ * Resolves a data type by passing a hana::type object on to a generic lambda
  *
- * @param type_symbol is a symbol of any of the supported column types
+ * @param data_type is an enum value of any of the supported column types
  * @param func is a generic lambda or similar accepting a hana::type object
  *
  *
@@ -147,7 +147,7 @@ std::shared_ptr<Base> make_shared_by_data_type(TypeSymbol type_symbol, Construct
  *   template <typename T>
  *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
- *   resolve_data_type(type_symbol, [&](auto type) {
+ *   resolve_data_type(data_type, [&](auto type) {
  *     using Type = typename decltype(type)::type;
  *     const auto var = type_cast<Type>(variant_from_elsewhere);
  *     process_variant(var);
@@ -156,11 +156,11 @@ std::shared_ptr<Base> make_shared_by_data_type(TypeSymbol type_symbol, Construct
  *   });
  */
 template <typename Functor>
-void resolve_data_type(TypeSymbol type_symbol, const Functor& func) {
-  DebugAssert(type_symbol != TypeSymbol::Null, "type_symbol cannot be null.");
+void resolve_data_type(DataType data_type, const Functor& func) {
+  DebugAssert(data_type != DataType::Null, "data_type cannot be null.");
 
-  hana::for_each(data_types_and_symbols, [&](auto x) {
-    if (hana::first(x) == type_symbol) {
+  hana::for_each(data_type_pairs, [&](auto x) {
+    if (hana::first(x) == data_type) {
       // The + before hana::second - which returns a reference - converts its return value into a value
       func(+hana::second(x));
       return;
@@ -212,9 +212,9 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
 }
 
 /**
- * Resolves a type symbol by passing a hana::type object and the downcasted column on to a generic lambda
+ * Resolves a data type by passing a hana::type object and the downcasted column on to a generic lambda
  *
- * @param type_symbol is a symbol of any of the supported column types
+ * @param data_type is an enum value of any of the supported column types
  * @param func is a generic lambda or similar accepting two parameters: a hana::type object and
  *   a reference to a specialized column (value, dictionary, reference)
  *
@@ -230,14 +230,14 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
  *   template <typename T>
  *   void process_column(hana::basic_type<T> type, ReferenceColumn& column);
  *
- *   resolve_data_and_column_type(type_symbol, base_column, [&](auto type, auto& typed_column) {
+ *   resolve_data_and_column_type(data_type, base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
 template <typename Functor, typename BaseColumnType>  // BaseColumnType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-    /*void*/ resolve_data_and_column_type(TypeSymbol type_symbol, BaseColumnType& column, const Functor& func) {
-  resolve_data_type(type_symbol, [&](auto type) {
+    /*void*/ resolve_data_and_column_type(DataType data_type, BaseColumnType& column, const Functor& func) {
+  resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
     resolve_column_type<ColumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
@@ -245,31 +245,31 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
 }
 
 /**
- * This function returns the symbol of a data type based on the definition in data_types_and_symbols.
+ * This function returns the DataType of a data type based on the definition in data_type_pairs.
  */
 template <typename T>
-TypeSymbol type_symbol_from_type() {
+DataType data_type_from_type() {
   static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
 
-  return hana::fold_left(data_types_and_symbols, TypeSymbol{},
-                         [](auto type_symbol, auto type_tuple) {
+  return hana::fold_left(data_type_pairs, DataType{},
+                         [](auto data_type, auto type_tuple) {
                            // check whether T is one of the column types
                            if (hana::type_c<T> == hana::second(type_tuple)) {
                              return hana::first(type_tuple);
                            }
 
-                           return type_symbol;
+                           return data_type;
                          });
 }
 
 /**
- * This function returns the symbol of an AllTypeVariant
+ * This function returns the DataType of an AllTypeVariant
  *
- * Note: TypeSymbol and AllTypeVariant are defined in a way such that
- *       the indices in TypeSymbol and AllTypeVariant match.
+ * Note: DataType and AllTypeVariant are defined in a way such that
+ *       the indices in DataType and AllTypeVariant match.
  */
-inline TypeSymbol type_symbol_from_all_type_variant(const AllTypeVariant& all_type_variant) {
-  return static_cast<TypeSymbol>(all_type_variant.which());
+inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
+  return static_cast<DataType>(all_type_variant.which());
 }
 
 }  // namespace opossum

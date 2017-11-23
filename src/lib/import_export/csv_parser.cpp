@@ -89,9 +89,9 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
     auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
 
-    const auto type_symbol = type_symbol_to_string.right.at(column_type);
+    const auto data_type = data_type_to_string.right.at(column_type);
 
-    table->add_column_definition(column_name, type_symbol, column_meta.nullable);
+    table->add_column_definition(column_name, data_type, column_meta.nullable);
   }
 
   return table;

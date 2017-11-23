@@ -51,19 +51,19 @@ Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
-void Table::add_column_definition(const std::string& name, TypeSymbol type_symbol, bool nullable) {
+void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {
   Assert((name.size() < std::numeric_limits<ColumnNameLength>::max()), "Cannot add column. Column name is too long.");
 
   _column_names.push_back(name);
-  _column_types.push_back(type_symbol);
+  _column_types.push_back(data_type);
   _column_nullable.push_back(nullable);
 }
 
-void Table::add_column(const std::string& name, TypeSymbol type_symbol, bool nullable) {
-  add_column_definition(name, type_symbol, nullable);
+void Table::add_column(const std::string& name, DataType data_type, bool nullable) {
+  add_column_definition(name, data_type, nullable);
 
   for (auto& chunk : _chunks) {
-    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type_symbol, nullable));
+    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 }
 
@@ -123,7 +123,7 @@ const std::string& Table::column_name(ColumnID column_id) const {
   return _column_names[column_id];
 }
 
-TypeSymbol Table::column_type(ColumnID column_id) const {
+DataType Table::column_type(ColumnID column_id) const {
   DebugAssert(column_id < _column_names.size(), "ColumnID " + std::to_string(column_id) + " out of range");
   return _column_types[column_id];
 }
@@ -133,7 +133,7 @@ bool Table::column_is_nullable(ColumnID column_id) const {
   return _column_nullable[column_id];
 }
 
-const std::vector<TypeSymbol>& Table::column_types() const { return _column_types; }
+const std::vector<DataType>& Table::column_types() const { return _column_types; }
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
