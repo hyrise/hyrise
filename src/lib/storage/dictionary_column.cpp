@@ -15,7 +15,7 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
+DictionaryColumn<T>::DictionaryColumn(pmr_vector<T>&& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
