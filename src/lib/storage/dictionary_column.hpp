@@ -23,7 +23,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
    * Creates a Dictionary column from a given dictionary and attribute vector.
    * See dictionary_compression.cpp for more.
    */
-  explicit DictionaryColumn(const pmr_vector<T>&& dictionary,
+  explicit DictionaryColumn(pmr_vector<T>&& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   explicit DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
