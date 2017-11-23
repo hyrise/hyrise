@@ -189,8 +189,8 @@ std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std
                                                                              ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  const auto dictionary = _read_values<T>(file, dictionary_size);
-  const auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
+  auto dictionary = _read_values<T>(file, dictionary_size);
+  auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
   return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
 }
 
