@@ -104,6 +104,8 @@ class BaseIndex : private Noncopyable {
    */
   Iterator cend() const;
 
+  ColumnIndexType type() const;
+
  protected:
   /**
    * Seperate the public interface of the index from the interface for programmers implementing own
@@ -114,5 +116,6 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
+  virtual ColumnIndexType _type() const = 0;
 };
 }  // namespace opossum

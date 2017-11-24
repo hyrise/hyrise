@@ -87,7 +87,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
-      // The actual scan happens in the sub classes of ColumnScanBase
+      // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
 
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is

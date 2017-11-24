@@ -33,4 +33,6 @@ BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
 
+ColumnIndexType BaseIndex::type() const { return _type(); }
+
 }  // namespace opossum

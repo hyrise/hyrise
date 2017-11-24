@@ -74,6 +74,8 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   Iterator _cend() const final;
 
+  ColumnIndexType _type() const final;
+
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
 
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,

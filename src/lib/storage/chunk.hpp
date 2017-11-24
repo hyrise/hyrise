@@ -175,6 +175,12 @@ class Chunk : private Noncopyable {
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
+  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(const std::vector<ColumnID> column_ids) const;
+
+  std::shared_ptr<BaseIndex> get_index_for(const ColumnIndexType index_type,
+                                           const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
+  std::shared_ptr<BaseIndex> get_index_for(const ColumnIndexType index_type,
+                                           const std::vector<ColumnID> column_ids) const;
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {

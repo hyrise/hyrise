@@ -58,6 +58,8 @@ set(
     operators/import_csv.hpp
     operators/index_column_scan.cpp
     operators/index_column_scan.hpp
+    operators/index_scan.cpp
+    operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
     operators/join_hash.cpp
@@ -203,6 +205,7 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
     storage/index/base_index.cpp
     storage/index/base_index.hpp
+    storage/index/column_index_type.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
