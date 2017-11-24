@@ -375,15 +375,18 @@ int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 int Console::help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate [TABLENAME]         - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  out("  load FILE TABLENAME          - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  out("  generate [TABLENAME]         - Generate available TPC-C tables, or a specific table if TABLENAME is "
+      "specified\n");
+  out("  load FILE TABLENAME          - Load table from disc specified by filepath FILE, store it with name "
+      "TABLENAME\n");
   out("  script SCRIPTFILE            - Execute script specified by SCRIPTFILE\n");
   out("  print TABLENAME              - Fully print the given table (including MVCC columns)\n");
   out("  visualize [options] SQL      - Visualize a SQL query\n");
   out("             noexec               - without executing the query\n");
   out("             lqp                  - print the raw logical query plans\n");
   out("             lqpopt               - print the optimized abstract syntax tree\n");
-  out("  begin                        - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
+  out("  begin                        - Manually create a new transaction (Auto-commit is active unless begin is "
+      "called)\n");
   out("  rollback                     - Roll back a manually created transaction\n");
   out("  commit                       - Commit a manually created transaction\n");
   out("  txinfo                       - Print information on the current transaction\n");
@@ -598,9 +601,10 @@ int Console::change_runtime_setting(const std::string& input) {
   auto property = input.substr(0, input.find_first_of(" \n"));
   auto value = input.substr(input.find_first_of(" \n") + 1, input.size());
 
-  if(property == "scheduler") {
-    if(value == "on") {
-      opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+  if (property == "scheduler") {
+    if (value == "on") {
+      opossum::CurrentScheduler::set(
+          std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
       out("Scheduler turned on\n");
     } else if (value == "off") {
       opossum::CurrentScheduler::set(nullptr);
@@ -615,7 +619,6 @@ int Console::change_runtime_setting(const std::string& input) {
   out("Unknown property\n");
   return 1;
 }
-
 
 int Console::exec_script(const std::string& script_file) {
   auto filepath = script_file;

@@ -18,8 +18,8 @@
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/topology.hpp"
 #include "sql/sql_planner.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -57,7 +57,8 @@ class SQLiteTestRunner : public testing::TestWithParam<std::string> {
       StorageManager::get().add_table(table_name, std::move(table));
     }
 
-    opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+    opossum::CurrentScheduler::set(
+        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
   }
 
   std::unique_ptr<SQLiteWrapper> _sqlite;

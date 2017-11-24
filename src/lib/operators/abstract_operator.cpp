@@ -79,7 +79,7 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
                                  std::weak_ptr<TransactionContext>{}.owner_before(_transaction_context);
 
   DebugAssert(!transaction_context_set || !_transaction_context.expired(),
-              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name () + ")");
+              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
   return _transaction_context.lock();
 }
 
