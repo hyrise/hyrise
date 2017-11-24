@@ -76,7 +76,7 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { retu
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
   // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
   DebugAssert(
-      [context=_transaction_context]() {
+      [context = _transaction_context]() {
         bool transaction_context_set = context.owner_before(std::weak_ptr<TransactionContext>{}) ||
                                        std::weak_ptr<TransactionContext>{}.owner_before(context);
         return !transaction_context_set || !context.expired();
