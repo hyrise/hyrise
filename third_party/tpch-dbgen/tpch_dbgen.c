@@ -308,7 +308,7 @@ distribution p_types_set = {
   p_types_set_list,
   NULL
 };
-set_member nations_list[] = {
+set_member nations_list[NATIONS_COUNT] = {
   {0, "ALGERIA"},
   {1, "ARGENTINA"},
   {1, "BRAZIL"},
@@ -336,12 +336,12 @@ set_member nations_list[] = {
   {1, "UNITED STATES"},
 };
 distribution nations = {
-  25,
+  NATIONS_COUNT,
   1,
   nations_list,
   NULL
 };
-set_member regions_list[] = {
+set_member regions_list[REGIONS_COUNT] = {
   {1, "AFRICA"},
   {2, "AMERICA"},
   {3, "ASIA"},
@@ -349,7 +349,7 @@ set_member regions_list[] = {
   {5, "MIDDLE EAST"},
 };
 distribution regions = {
-  5,
+  REGIONS_COUNT,
   5,
   regions_list,
   NULL

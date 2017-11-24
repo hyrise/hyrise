@@ -1,5 +1,8 @@
 #pragma once
 
+#define NATIONS_COUNT 25
+#define REGIONS_COUNT 5
+
 typedef struct
 {
   long      weight;

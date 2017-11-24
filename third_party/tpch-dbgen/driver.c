@@ -102,6 +102,7 @@
 
 #include "dss.h"
 #include "dsstypes.h"
+#include "tpch_dbgen.h"
 
 /*
 * Function prototypes
@@ -186,17 +187,17 @@ tdef tdefs[] =
 		pr_supp, sd_supp, NONE, 0},
 	{"customer.tbl", "customers table", 150000,
 		pr_cust, sd_cust, NONE, 0},
-	{"orders.tbl", "order table", 150000,
+	{"orders.tbl", "order table", 150000 * ORDERS_PER_CUST,
 		pr_order, sd_order, LINE, 0},
-	{"lineitem.tbl", "lineitem table", 150000,
+	{"lineitem.tbl", "lineitem table", 150000 * ORDERS_PER_CUST,
 		pr_line, sd_line, NONE, 0},
-	{"orders.tbl", "orders/lineitem tables", 150000,
+	{"orders.tbl", "orders/lineitem tables", 150000 * ORDERS_PER_CUST,
 		pr_order_line, sd_order, LINE, 0},
 	{"part.tbl", "part/partsupplier tables", 200000,
 		pr_part_psupp, sd_part, PSUPP, 0},
-	{"nation.tbl", "nation table", NATIONS_MAX,
+	{"nation.tbl", "nation table", NATIONS_COUNT,
 		pr_nation, NO_LFUNC, NONE, 0},
-	{"region.tbl", "region table", NATIONS_MAX,
+	{"region.tbl", "region table", REGIONS_COUNT,
 		pr_region, NO_LFUNC, NONE, 0},
 };
 
