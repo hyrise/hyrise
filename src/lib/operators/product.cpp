@@ -32,14 +32,15 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _input_table_left()->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _input_table_right()->chunk_count(); ++chunk_id_right) {
-      add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
+      _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
   }
 
   return output;
 }
 
-void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right) {
+void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, const ChunkID chunk_id_left,
+                                         const ChunkID chunk_id_right) {
   const auto& chunk_left = _input_table_left()->get_chunk(chunk_id_left);
   const auto& chunk_right = _input_table_right()->get_chunk(chunk_id_right);
 

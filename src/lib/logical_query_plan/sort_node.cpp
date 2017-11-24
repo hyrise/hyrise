@@ -12,7 +12,7 @@ namespace opossum {
 OrderByDefinition::OrderByDefinition(const ColumnID column_id, const OrderByMode order_by_mode)
     : column_id(column_id), order_by_mode(order_by_mode) {}
 
-SortNode::SortNode(const std::vector<OrderByDefinition>& order_by_definitions)
+SortNode::SortNode(std::vector<OrderByDefinition>&& order_by_definitions)
     : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
 std::string SortNode::description() const {

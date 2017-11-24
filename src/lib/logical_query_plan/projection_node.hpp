@@ -18,7 +18,7 @@ struct ColumnID;
  */
 class ProjectionNode : public AbstractLQPNode {
  public:
-  explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
+  explicit ProjectionNode(std::vector<std::shared_ptr<Expression>>&& column_expressions);
 
   const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
@@ -31,7 +31,7 @@ class ProjectionNode : public AbstractLQPNode {
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string get_verbose_column_name(const ColumnID column_id) const override;
 
  protected:
   void _on_child_changed() override;

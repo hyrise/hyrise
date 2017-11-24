@@ -12,8 +12,8 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
-                             const std::optional<AllTypeVariant>& value2)
+PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant value,
+                             const std::optional<AllTypeVariant> value2)
     : AbstractLQPNode(LQPNodeType::Predicate),
       _column_id(column_id),
       _scan_type(scan_type),

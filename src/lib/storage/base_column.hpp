@@ -33,7 +33,8 @@ class BaseColumn : private Noncopyable {
   virtual size_t size() const = 0;
 
   // calls the column-specific handler in an operator (visitor pattern)
-  virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const = 0;
+  virtual void visit(ColumnVisitable& visitable,
+                     const std::shared_ptr<ColumnVisitableContext>& context = nullptr) const = 0;
 
   // writes the length and value at the chunk_offset to the end of row_string
   virtual void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const = 0;

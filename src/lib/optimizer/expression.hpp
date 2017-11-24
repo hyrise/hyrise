@@ -143,7 +143,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   const std::optional<std::string>& table_name() const;
   const std::optional<std::string>& alias() const;
 
-  void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
+  void set_expression_list(std::vector<std::shared_ptr<Expression>>&& expression_list);
 
   void set_alias(const std::string& alias);
 

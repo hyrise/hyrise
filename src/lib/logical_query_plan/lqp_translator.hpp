@@ -20,7 +20,7 @@ class LQPTranslator final : private Noncopyable {
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
  private:
-  std::shared_ptr<AbstractOperator> _translate_by_node_type(LQPNodeType type,
+  std::shared_ptr<AbstractOperator> _translate_by_node_type(const LQPNodeType type,
                                                             const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // SQL operators

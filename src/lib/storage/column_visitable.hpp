@@ -17,11 +17,12 @@ class ColumnVisitableContext {};
 class ColumnVisitable {
  public:
   virtual ~ColumnVisitable() = default;
-  virtual void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
+  virtual void handle_value_column(const BaseValueColumn& column,
+                                   const std::shared_ptr<ColumnVisitableContext>& context) = 0;
   virtual void handle_dictionary_column(const BaseDictionaryColumn& column,
-                                        std::shared_ptr<ColumnVisitableContext> context) = 0;
+                                        const std::shared_ptr<ColumnVisitableContext>& context) = 0;
   virtual void handle_reference_column(const ReferenceColumn& column,
-                                       std::shared_ptr<ColumnVisitableContext> context) = 0;
+                                       const std::shared_ptr<ColumnVisitableContext>& context) = 0;
 };
 
 }  // namespace opossum

@@ -30,10 +30,10 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
                     const std::string& right_wildcard);
 
   void handle_value_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) override;
+                           const std::shared_ptr<ColumnVisitableContext>& base_context) override;
 
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+                                const std::shared_ptr<ColumnVisitableContext>& base_context) override;
 
  private:
   /**

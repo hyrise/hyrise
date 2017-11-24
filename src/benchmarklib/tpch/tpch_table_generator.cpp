@@ -214,7 +214,7 @@ TpchTableGenerator::order_lines_type TpchTableGenerator::generate_order_lines() 
 }
 
 std::shared_ptr<opossum::Table> TpchTableGenerator::generate_orders_table(
-    TpchTableGenerator::order_lines_type order_lines) {
+    const TpchTableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
   size_t table_size = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
@@ -272,7 +272,7 @@ std::shared_ptr<opossum::Table> TpchTableGenerator::generate_orders_table(
 }
 
 std::shared_ptr<opossum::Table> TpchTableGenerator::generate_lineitems_table(
-    TpchTableGenerator::order_lines_type order_lines) {
+    const TpchTableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
   size_t table_size = 0;
   std::vector<OrderLine> flattened_orderlines;

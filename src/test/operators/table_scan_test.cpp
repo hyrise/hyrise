@@ -158,7 +158,7 @@ class OperatorsTableScanTest : public BaseTest {
     return ref_table;
   }
 
-  void scan_for_null_values(const std::shared_ptr<AbstractOperator> in,
+  void scan_for_null_values(const std::shared_ptr<AbstractOperator>& in,
                             const std::map<ScanType, std::vector<AllTypeVariant>>& tests) {
     for (const auto& test : tests) {
       const auto scan_type = test.first;
@@ -172,7 +172,7 @@ class OperatorsTableScanTest : public BaseTest {
     }
   }
 
-  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
+  void ASSERT_COLUMN_EQ(const std::shared_ptr<const Table>& table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);

@@ -21,11 +21,11 @@ class TextFieldGenerator {
    */
   explicit TextFieldGenerator(benchmark_utilities::RandomGenerator random_generator);
 
-  std::string text_string(size_t lower_length, size_t upper_length);
-  std::string v_string(size_t lower_length, size_t upper_length);
-  std::string generate_phone_number(uint32_t nationkey);
+  std::string text_string(const size_t lower_length, const size_t upper_length);
+  std::string v_string(const size_t lower_length, const size_t upper_length);
+  std::string generate_phone_number(const uint32_t nationkey);
 
-  static std::string pad_int_with_zeroes(size_t number, size_t length);
+  static std::string pad_int_with_zeroes(const size_t number, const size_t length);
 
   std::string generate_name_of_part();
   std::string generate_type_of_part();

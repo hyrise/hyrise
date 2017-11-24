@@ -37,7 +37,7 @@ class StoredTableNode : public AbstractLQPNode {
   std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string get_verbose_column_name(const ColumnID column_id) const override;
 
  protected:
   void _on_child_changed() override;

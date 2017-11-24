@@ -96,6 +96,10 @@ bool TransactionContext::commit() {
   return true;
 }
 
+void TransactionContext::register_read_write_operator(const std::shared_ptr<AbstractReadWriteOperator>& op) {
+  _rw_operators.push_back(op);
+}
+
 bool TransactionContext::_abort() {
   const auto from_phase = TransactionPhase::Active;
   const auto to_phase = TransactionPhase::Aborted;
@@ -142,7 +146,7 @@ bool TransactionContext::_prepare_commit() {
   return true;
 }
 
-void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
+void TransactionContext::_mark_as_pending_and_try_commit(const std::function<void(TransactionID)> callback) {
   DebugAssert(([this]() {
                 for (const auto& op : _rw_operators) {
                   if (op->state() != ReadWriteOperatorState::Committed) return false;
@@ -181,8 +185,8 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
 }
 
-bool TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase,
-                                     TransactionPhase end_phase) {
+bool TransactionContext::_transition(const TransactionPhase from_phase, const TransactionPhase to_phase,
+                                     const TransactionPhase end_phase) {
   auto expected = from_phase;
   const auto success = _phase.compare_exchange_strong(expected, to_phase);
 

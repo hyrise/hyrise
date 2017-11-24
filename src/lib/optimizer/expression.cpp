@@ -326,7 +326,7 @@ std::string Expression::to_string(const std::vector<std::string>& input_column_n
 
 const std::vector<std::shared_ptr<Expression>>& Expression::expression_list() const { return _expression_list; }
 
-void Expression::set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list) {
+void Expression::set_expression_list(std::vector<std::shared_ptr<Expression>>&& expression_list) {
   _expression_list = expression_list;
 }
 

@@ -95,7 +95,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * @param callback called when transaction is actually committed
    * @return false if called a second time
    */
-  bool commit_async(std::function<void(TransactionID)> callback);
+  bool commit_async(const std::function<void(TransactionID)> callback);
 
   /**
    * Commits the transaction.
@@ -110,7 +110,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * Add an operator to the list of read-write operators.
    * Update must not call this because it consists of a Delete and an Insert, which call this themselves.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
+  void register_read_write_operator(const std::shared_ptr<AbstractReadWriteOperator>& op);
 
   /**
    * @defgroup Update the counter of active operators
@@ -159,7 +159,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    *
    * @param callback called when transaction is committed
    */
-  void _mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback);
+  void _mark_as_pending_and_try_commit(const std::function<void(TransactionID)> callback);
 
   /**@}*/
 
@@ -169,7 +169,8 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * Throws an exception if the transition fails and
    * has not been already in phase to_phase or end_phase.
    */
-  bool _transition(TransactionPhase from_phase, TransactionPhase to_phase, TransactionPhase end_phase);
+  bool _transition(const TransactionPhase from_phase, const TransactionPhase to_phase,
+                   const TransactionPhase end_phase);
 
  private:
   const TransactionID _transaction_id;

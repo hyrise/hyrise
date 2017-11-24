@@ -21,8 +21,8 @@ class Expression;
  */
 class AggregateNode : public AbstractLQPNode {
  public:
-  explicit AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregates,
-                         const std::vector<ColumnID>& groupby_column_ids);
+  explicit AggregateNode(std::vector<std::shared_ptr<Expression>>&& aggregates,
+                         std::vector<ColumnID>&& groupby_column_ids);
 
   const std::vector<std::shared_ptr<Expression>>& aggregate_expressions() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
@@ -49,20 +49,20 @@ class AggregateNode : public AbstractLQPNode {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
-  ColumnID get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
+  std::optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<const Expression>& expression) const;
+  ColumnID get_column_id_for_expression(const std::shared_ptr<const Expression>& expression) const;
   // @}
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string get_verbose_column_name(const ColumnID column_id) const override;
 
  protected:
   void _on_child_changed() override;
 
  private:
-  std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
-  std::vector<ColumnID> _groupby_column_ids;
+  const std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
+  const std::vector<ColumnID> _groupby_column_ids;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

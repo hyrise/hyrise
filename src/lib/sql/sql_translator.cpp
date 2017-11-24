@@ -176,7 +176,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     }
 
     // create projection and add to the node chain
-    auto projection_node = std::make_shared<ProjectionNode>(projections);
+    auto projection_node = std::make_shared<ProjectionNode>(std::move(projections));
     projection_node->set_left_child(current_result_node);
 
     current_result_node = projection_node;
@@ -231,7 +231,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     update_expressions[*column_id] = expr;
   }
 
-  std::shared_ptr<AbstractLQPNode> update_node = std::make_shared<UpdateNode>((update.table)->name, update_expressions);
+  std::shared_ptr<AbstractLQPNode> update_node =
+      std::make_shared<UpdateNode>((update.table)->name, std::move(update_expressions));
   update_node->set_left_child(current_values_node);
 
   return update_node;
@@ -410,9 +411,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
     column_ids.emplace_back(column_idx);
   }
 
-  const auto& column_references = Expression::create_columns(column_ids);
-
-  auto projection = std::make_shared<ProjectionNode>(column_references);
+  auto column_references = Expression::create_columns(column_ids);
+  auto projection = std::make_shared<ProjectionNode>(std::move(column_references));
   projection->set_left_child(return_node);
 
   return projection;
@@ -709,11 +709,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
     }
   }
 
-  auto aggregate_node = std::make_shared<AggregateNode>(aggregate_expressions, groupby_columns);
+  auto aggregate_node = std::make_shared<AggregateNode>(std::move(aggregate_expressions), std::move(groupby_columns));
   aggregate_node->set_left_child(input_node);
 
   // Create a projection node for the correct column order
-  auto projection_node = std::make_shared<ProjectionNode>(projections);
+  auto projection_node = std::make_shared<ProjectionNode>(std::move(projections));
 
   if (has_having) {
     auto having_node = _translate_having(*group_by->having, aggregate_node, aggregate_node);
@@ -757,7 +757,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
     }
   }
 
-  auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
+  auto projection_node = std::make_shared<ProjectionNode>(std::move(column_expressions));
   projection_node->set_left_child(input_node);
 
   return projection_node;
@@ -784,7 +784,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
     order_by_definitions.emplace_back(column_id, order_by_mode);
   }
 
-  auto sort_node = std::make_shared<SortNode>(order_by_definitions);
+  auto sort_node = std::make_shared<SortNode>(std::move(order_by_definitions));
   sort_node->set_left_child(input_node);
 
   return sort_node;

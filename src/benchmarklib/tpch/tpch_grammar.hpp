@@ -16,7 +16,7 @@ class TpchGrammar {
  public:
   explicit TpchGrammar(benchmark_utilities::RandomGenerator generator);
 
-  std::string random_text(std::streampos min_size);
+  std::string random_text(const std::streampos min_size);
 
   std::string random_word(const std::vector<std::string>& word_vector);
 

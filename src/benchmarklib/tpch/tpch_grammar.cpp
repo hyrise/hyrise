@@ -46,7 +46,7 @@ namespace tpch {
 
 TpchGrammar::TpchGrammar(benchmark_utilities::RandomGenerator generator) : _random_gen(generator) {}
 
-std::string TpchGrammar::random_text(std::streampos min_size) {
+std::string TpchGrammar::random_text(const std::streampos min_size) {
   std::stringstream text = sentence();
   while (text.tellp() < min_size) {
     text << " " << sentence().rdbuf();

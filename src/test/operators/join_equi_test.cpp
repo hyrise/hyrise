@@ -342,31 +342,4 @@ TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
       JoinMode::Left, "src/test/tables/joinoperators/int_join_empty_left.tbl", 1);
 }
 
-// Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
-TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
-  //  Filtering to generate RefColumns
-  auto filtered_left =
-      std::make_shared<opossum::TableScan>(this->_table_wrapper_e, ColumnID{0}, ScanType::OpLessThanEquals, 10);
-  filtered_left->execute();
-  auto filtered_left2 =
-      std::make_shared<opossum::TableScan>(this->_table_wrapper_f, ColumnID{0}, ScanType::OpLessThanEquals, 10);
-  filtered_left2->execute();
-  auto filtered_right =
-      std::make_shared<opossum::TableScan>(this->_table_wrapper_g, ColumnID{0}, ScanType::OpLessThanEquals, 10);
-  filtered_right->execute();
-  auto filtered_right2 =
-      std::make_shared<opossum::TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpLessThanEquals, 10);
-  filtered_right2->execute();
-
-  // Union left and right
-  auto union_left = std::make_shared<opossum::UnionAll>(filtered_left, filtered_left2);
-  union_left->execute();
-  auto union_right = std::make_shared<opossum::UnionAll>(filtered_right, filtered_right2);
-  union_right->execute();
-
-  this->template test_join_output<TypeParam>(
-      union_left, union_right, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-      JoinMode::Inner, "src/test/tables/joinoperators/expected_join_result_1.tbl", 1);
-}
-
 }  // namespace opossum

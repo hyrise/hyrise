@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions)
+ProjectionNode::ProjectionNode(std::vector<std::shared_ptr<Expression>>&& column_expressions)
     : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
@@ -162,7 +162,7 @@ std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std:
   return output_column_ids_for_table;
 }
 
-std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
+std::string ProjectionNode::get_verbose_column_name(const ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
   DebugAssert(column_id < _column_expressions.size(), "ColumnID out of range");
 

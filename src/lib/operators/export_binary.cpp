@@ -164,8 +164,8 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(const BaseValueColumn& base_column,
-                                                               std::shared_ptr<ColumnVisitableContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(
+    const BaseValueColumn& base_column, const std::shared_ptr<ColumnVisitableContext>& base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
@@ -180,7 +180,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(const BaseValueCo
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_reference_column(
-    const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const ReferenceColumn& ref_column, const std::shared_ptr<ColumnVisitableContext>& base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -196,7 +196,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_reference_column(
 // handle_reference_column implementation for string columns
 template <>
 void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
-    const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const ReferenceColumn& ref_column, const std::shared_ptr<ColumnVisitableContext>& base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -222,7 +222,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
-    const BaseDictionaryColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const BaseDictionaryColumn& base_column, const std::shared_ptr<ColumnVisitableContext>& base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
 

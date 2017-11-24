@@ -19,12 +19,13 @@ namespace opossum {
 class OperatorsUpdateTest : public BaseTest {
  protected:
   void SetUp() override {}
-  void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
-              std::shared_ptr<Table> expected_result);
+  void helper(const std::shared_ptr<GetTable>& table_to_update, const std::shared_ptr<GetTable>& update_values,
+              const std::shared_ptr<Table>& expected_result);
 };
 
-void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
-                                 std::shared_ptr<Table> expected_result) {
+void OperatorsUpdateTest::helper(const std::shared_ptr<GetTable>& table_to_update,
+                                 const std::shared_ptr<GetTable>& update_values,
+                                 const std::shared_ptr<Table>& expected_result) {
   auto t_context = TransactionManager::get().new_transaction_context();
 
   // Make input left actually referenced. Projection does NOT generate ReferenceColumns.

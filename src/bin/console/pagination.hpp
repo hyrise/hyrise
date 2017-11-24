@@ -26,7 +26,7 @@ class Pagination {
    *
    * @param first_line Line which should be started from, i.e. which will be the first line on the screen.
    */
-  void _print_page(size_t first_line);
+  void _print_page(const size_t first_line);
 
   /*
    * Prints the help screen, which shows all available commands.

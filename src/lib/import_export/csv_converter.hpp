@@ -28,7 +28,7 @@ class BaseCsvConverter {
   virtual ~BaseCsvConverter() = default;
 
   // Converts value to the underlying data type and saves it at the given position.
-  virtual void insert(std::string& value, ChunkOffset position) = 0;
+  virtual void insert(std::string& modifiable_value, const ChunkOffset position) = 0;
 
   // Returns the Column which contains the previously converted values.
   // After the call of finish, no other operation should be called.
@@ -46,31 +46,31 @@ class BaseCsvConverter {
 template <typename T>
 class CsvConverter : public BaseCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const ParseConfig& config = {}, bool is_nullable = false)
+  explicit CsvConverter(const ChunkOffset size, const ParseConfig& config = {}, const bool is_nullable = false)
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
-  void insert(std::string& value, ChunkOffset position) override {
-    if (_is_nullable && value.length() == 0) {
+  void insert(std::string& modifiable_value, const ChunkOffset position) override {
+    if (_is_nullable && modifiable_value.length() == 0) {
       _null_values[position] = true;
       return;
     }
-    Assert(boost::to_lower_copy(value) != ParseConfig::NULL_STRING,
+    Assert(boost::to_lower_copy(modifiable_value) != ParseConfig::NULL_STRING,
            "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
 
     // clang-format off
     if constexpr(std::is_same_v<T, std::string>) {
-      unescape(value, _config);
+      unescape(modifiable_value, _config);
     } else {  // NOLINT
       // clang-format on
       if (_config.reject_quoted_nonstrings) {
-        Assert(value == unescape_copy(value, _config),
-               "Unexpected quoted string " + value + " encountered in non-string column");
+        Assert(modifiable_value == unescape_copy(modifiable_value, _config),
+               "Unexpected quoted string " + modifiable_value + " encountered in non-string column");
       } else {
-        unescape(value, _config);
+        unescape(modifiable_value, _config);
       }
     }
 
-    _parsed_values[position] = _get_conversion_function()(value);
+    _parsed_values[position] = _get_conversion_function()(modifiable_value);
   }
 
   std::unique_ptr<BaseColumn> finish() override {
@@ -92,7 +92,7 @@ class CsvConverter : public BaseCsvConverter {
   tbb::concurrent_vector<T> _parsed_values;
   tbb::concurrent_vector<bool> _null_values;
   const bool _is_nullable;
-  ParseConfig _config;
+  const ParseConfig _config;
 };
 
 template <>

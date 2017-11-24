@@ -43,12 +43,12 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<Chunk> chunks;
+  std::list<std::shared_ptr<Chunk>> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
-    chunks.emplace_back(ChunkUseMvcc::Yes);
+    chunks.emplace_back(std::make_shared<Chunk>(ChunkUseMvcc::Yes));
     auto& chunk = chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
@@ -58,10 +58,10 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, chunk);
-      if (_meta.auto_compress && chunk.size() == _meta.chunk_size) {
-        DictionaryCompression::compress_chunk(table->column_types(), chunk);
+    tasks.emplace_back(std::make_shared<JobTask>([ meta = _meta, relevant_content, field_ends, table, chunk ]() {
+      _parse_into_chunk(meta, relevant_content, field_ends, *table, chunk);
+      if (meta.auto_compress && chunk->size() == meta.chunk_size) {
+        DictionaryCompression::compress_chunk(table->column_types(), *chunk);
       }
     }));
     tasks.back()->schedule();
@@ -72,7 +72,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   }
 
   for (auto& chunk : chunks) {
-    table->emplace_chunk(std::move(chunk));
+    table->emplace_chunk(std::move(*chunk));
   }
 
   return table;
@@ -94,7 +94,7 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
   return table;
 }
 
-bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,
+bool CsvParser::_find_fields_in_chunk(const std::string_view csv_content, const Table& table,
                                       std::vector<size_t>& field_ends) {
   field_ends.clear();
   if (csv_content.empty()) {
@@ -145,8 +145,9 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   return true;
 }
 
-void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  Chunk& chunk) {
+void CsvParser::_parse_into_chunk(const CsvMeta& csv_meta, const std::string_view csv_chunk,
+                                  const std::vector<size_t>& field_ends, const Table& table,
+                                  const std::shared_ptr<Chunk>& chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
@@ -156,8 +157,8 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
     const auto is_nullable = table.column_is_nullable(column_id);
     const auto column_type = table.column_type(column_id);
 
-    converters.emplace_back(
-        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
+    converters.emplace_back(make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count,
+                                                                                       csv_meta.config, is_nullable));
   }
 
   size_t start = 0;
@@ -167,9 +168,9 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
       auto field = std::string{csv_chunk.substr(start, end - start)};
       start = end + 1;
 
-      if (!_meta.config.rfc_mode) {
+      if (!csv_meta.config.rfc_mode) {
         // CSV fields not following RFC 4810 might need some preprocessing
-        _sanitize_field(field);
+        _sanitize_field(csv_meta, field);
       }
 
       try {
@@ -183,14 +184,14 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
 
   // Transform the field_offsets to columns and add columns to chunk.
   for (auto& converter : converters) {
-    chunk.add_column(converter->finish());
+    chunk->add_column(converter->finish());
   }
 }
 
-void CsvParser::_sanitize_field(std::string& field) {
-  const std::string linebreak(1, _meta.config.delimiter);
+void CsvParser::_sanitize_field(const CsvMeta& csv_meta, std::string& field) {
+  const std::string linebreak(1, csv_meta.config.delimiter);
   const std::string escaped_linebreak =
-      std::string(1, _meta.config.delimiter_escape) + std::string(1, _meta.config.delimiter);
+      std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
 
   std::string::size_type pos = 0;
   while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos) {

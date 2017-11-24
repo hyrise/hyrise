@@ -58,7 +58,8 @@ class ValueColumn : public BaseValueColumn {
   size_t size() const override;
 
   // Visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+  void visit(ColumnVisitable& visitable,
+             const std::shared_ptr<ColumnVisitableContext>& context = nullptr) const override;
 
   // Write the length and value at the chunk_offset to the end of row_string.
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
