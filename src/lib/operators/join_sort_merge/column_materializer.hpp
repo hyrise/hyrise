@@ -9,6 +9,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -83,14 +84,10 @@ class ColumnMaterializer {
 
     auto iterable = create_iterable_from_column<T>(column);
 
-    iterable.with_iterators([&](auto it, auto end) {
-      for (; it != end; ++it) {
-        const auto column_value = *it;
-
-        // Null values are skipped
-        if (column_value.is_null()) continue;
-        output.emplace_back(RowID{chunk_id, column_value.chunk_offset()}, column_value.value());
-      }
+    iterable.for_each([&](const auto& column_value) {
+      // Null values are skipped
+      if (column_value.is_null()) return;
+      output.emplace_back(RowID{chunk_id, column_value.chunk_offset()}, column_value.value());
     });
 
     if (_sort) {
@@ -142,13 +139,13 @@ class ColumnMaterializer {
         }
       }
     } else {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < column.size(); ++chunk_offset) {
-        auto row_id = RowID{chunk_id, chunk_offset};
-        auto value_id = value_ids->get(chunk_offset);
-        if (value_id != NULL_VALUE_ID) {
-          output.emplace_back(row_id, (*dict)[value_id]);
-        }
-      }
+      auto iterable = create_iterable_from_column(column);
+      iterable.for_each([&](const auto& column_value) {
+        if (column_value.is_null()) return;
+
+        const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
+        output.emplace_back(row_id, column_value.value());
+      });
     }
 
     return std::make_shared<MaterializedColumn<T>>(std::move(output));
