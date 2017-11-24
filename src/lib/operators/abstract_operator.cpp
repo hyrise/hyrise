@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -33,7 +34,9 @@ void AbstractOperator::execute() {
     _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
   } else {
-    _output = _on_execute(transaction_context);
+    auto read_only_operator = dynamic_cast<AbstractReadOnlyOperator*>(this);
+    DebugAssert(read_only_operator, "Trying to execute read write operator without transaction context");
+    _output = read_only_operator->_on_execute();
   }
 
   // release any temporary data if possible
@@ -71,6 +74,12 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
+  // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
+  bool transaction_context_set = _transaction_context.owner_before(std::weak_ptr<TransactionContext>{}) ||
+                                 std::weak_ptr<TransactionContext>{}.owner_before(_transaction_context);
+
+  DebugAssert(!transaction_context_set || !_transaction_context.expired(),
+              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name () + ")");
   return _transaction_context.lock();
 }
 
