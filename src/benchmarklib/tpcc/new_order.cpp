@@ -348,7 +348,7 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(const int32_t o_id, const
    * VALUES (?, ?, ?);
    */
 
-  auto target_table_name = std::string("NEW-ORDER");
+  auto target_table_name = std::string("NEW_ORDER");
   const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
   auto new_table = std::make_shared<opossum::Table>();
@@ -514,7 +514,7 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
    *  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
    */
 
-  auto target_table_name = std::string("ORDER-LINE");
+  auto target_table_name = std::string("ORDER_LINE");
   const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
   auto new_table = std::make_shared<opossum::Table>();

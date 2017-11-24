@@ -249,7 +249,7 @@ TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, c
    * FROM order_line
    * WHERE ol_o_id=:o_id AND ol_d_id=:d_id AND ol_w_id=:w_id;
    */
-  auto gt_order_lines = std::make_shared<opossum::GetTable>("ORDER-LINE");
+  auto gt_order_lines = std::make_shared<opossum::GetTable>("ORDER_LINE");
   auto validate = std::make_shared<opossum::Validate>(gt_order_lines);
 
   auto first_filter = std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{0} /* "OL_O_ID" */,
