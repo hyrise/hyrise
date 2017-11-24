@@ -75,11 +75,13 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { retu
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
   // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
-  bool transaction_context_set = _transaction_context.owner_before(std::weak_ptr<TransactionContext>{}) ||
-                                 std::weak_ptr<TransactionContext>{}.owner_before(_transaction_context);
-
-  DebugAssert(!transaction_context_set || !_transaction_context.expired(),
-              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
+  DebugAssert(
+      [context=_transaction_context]() {
+        bool transaction_context_set = context.owner_before(std::weak_ptr<TransactionContext>{}) ||
+                                       std::weak_ptr<TransactionContext>{}.owner_before(context);
+        return !transaction_context_set || !context.expired();
+      }(),
+      "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
   return _transaction_context.lock();
 }
 
