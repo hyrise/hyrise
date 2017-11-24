@@ -42,7 +42,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     Projection::ColumnExpressions columns = {Expression::create_column(ColumnID{0} /* "NO_O_ID" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    auto sort = std::make_shared<Sort>(projection, ColumnID{0} /* "NO_O_ID" */, OrderByMode::Ascending, 0);
+    auto sort = std::make_shared<Sort>(projection, ColumnID{0} /* "NO_O_ID" */, OrderByMode::Ascending);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
     auto t_ts1 = std::make_shared<OperatorTask>(ts1);
