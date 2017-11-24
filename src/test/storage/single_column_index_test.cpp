@@ -32,7 +32,8 @@ class SingleColumnIndexTest : public BaseTest {
   }
 
   template <class Iterator>
-  static std::vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseColumn> col, Iterator begin, Iterator end) {
+  static std::vector<AllTypeVariant> result_as_vector(const std::shared_ptr<BaseColumn>& col, Iterator begin,
+                                                      Iterator end) {
     std::vector<AllTypeVariant> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       result.emplace_back((*col)[*iter]);

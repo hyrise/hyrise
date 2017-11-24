@@ -23,7 +23,7 @@ const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_o
   return tasks;
 }
 
-void OperatorTask::_add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
+void OperatorTask::_add_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op,
                                             std::vector<std::shared_ptr<OperatorTask>>& tasks) {
   auto task = std::make_shared<OperatorTask>(op);
 

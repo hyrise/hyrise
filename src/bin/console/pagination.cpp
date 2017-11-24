@@ -117,7 +117,7 @@ void Pagination::display() {
   endwin();
 }
 
-void Pagination::_print_page(size_t first_line) {
+void Pagination::_print_page(const size_t first_line) {
   clear();
 
   for (size_t i = first_line; i < first_line + _size_y; ++i) {

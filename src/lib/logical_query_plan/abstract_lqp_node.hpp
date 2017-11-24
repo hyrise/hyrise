@@ -39,7 +39,7 @@ enum class LQPNodeType {
 enum class LQPChildSide { Left, Right };
 
 struct NamedColumnReference {
-  std::string column_name;
+  const std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
 
   std::string as_string() const;
@@ -64,7 +64,7 @@ struct NamedColumnReference {
  */
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  explicit AbstractLQPNode(LQPNodeType node_type);
+  explicit AbstractLQPNode(const LQPNodeType node_type);
 
   // @{
   /**
@@ -88,7 +88,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @pre this has a parent
    * @return whether this is its parents left or right child.
    */
-  LQPChildSide get_child_side(const std::shared_ptr<AbstractLQPNode>& parent) const;
+  LQPChildSide get_child_side(const std::shared_ptr<const AbstractLQPNode>& parent) const;
 
   /**
    * @returns {get_child_side(parents()[0], ..., get_child_side(parents()[n-1])}
@@ -101,9 +101,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::shared_ptr<AbstractLQPNode> right_child() const;
   void set_right_child(const std::shared_ptr<AbstractLQPNode>& right);
 
-  std::shared_ptr<AbstractLQPNode> child(LQPChildSide side) const;
+  std::shared_ptr<AbstractLQPNode> child(const LQPChildSide side) const;
 
-  void set_child(LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child);
+  void set_child(const LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child);
   // @}
 
   LQPNodeType type() const;
@@ -244,7 +244,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * Generate a name for a column that contains all aliases it went through as well as the name of the table that it
    * originally came from, if any
    */
-  virtual std::string get_verbose_column_name(ColumnID column_id) const;
+  virtual std::string get_verbose_column_name(const ColumnID column_id) const;
 
   /**
    * @returns {get_verbose_column_name(0), ..., get_verbose_column_name(n-1)}
@@ -260,7 +260,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual void _on_child_changed() {}
 
   // Used to easily differentiate between node types without pointer casts.
-  LQPNodeType _type;
+  const LQPNodeType _type;
 
   /**
    * Each subtree can be a subselect. A subselect can be given an alias:

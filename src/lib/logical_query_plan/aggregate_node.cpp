@@ -13,8 +13,8 @@
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregate_expressions,
-                             const std::vector<ColumnID>& groupby_column_ids)
+AggregateNode::AggregateNode(std::vector<std::shared_ptr<Expression>>&& aggregate_expressions,
+                             std::vector<ColumnID>&& groupby_column_ids)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_ids(groupby_column_ids) {
@@ -39,7 +39,7 @@ std::string AggregateNode::description() const {
     verbose_column_names = left_child()->get_verbose_column_names();
   }
 
-  auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
+  auto stream_aggregate = [&](const std::shared_ptr<const Expression>& aggregate_expr) {
     s << aggregate_expr->to_string(verbose_column_names);
 
     if (aggregate_expr->alias()) {
@@ -47,13 +47,13 @@ std::string AggregateNode::description() const {
     }
   };
 
-  auto aggregates_it = _aggregate_expressions.begin();
-  if (aggregates_it != _aggregate_expressions.end()) {
+  auto aggregates_it = _aggregate_expressions.cbegin();
+  if (aggregates_it != _aggregate_expressions.cend()) {
     stream_aggregate(*aggregates_it);
     ++aggregates_it;
   }
 
-  for (; aggregates_it != _aggregate_expressions.end(); ++aggregates_it) {
+  for (; aggregates_it != _aggregate_expressions.cend(); ++aggregates_it) {
     s << ", ";
     stream_aggregate(*aggregates_it);
   }
@@ -75,7 +75,7 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
+std::string AggregateNode::get_verbose_column_name(const ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
   if (column_id < _groupby_column_ids.size()) {
@@ -157,9 +157,9 @@ std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
   const auto column_id_child =
       left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
   if (column_id_child) {
-    const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
-    if (iter != _groupby_column_ids.end()) {
-      column_id_groupby = ColumnID{static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter))};
+    const auto iter = std::find(_groupby_column_ids.cbegin(), _groupby_column_ids.cend(), *column_id_child);
+    if (iter != _groupby_column_ids.cend()) {
+      column_id_groupby = ColumnID{static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.cbegin(), iter))};
     }
   }
 
@@ -175,14 +175,14 @@ std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
   return column_id_groupby;
 }
 
-ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
+ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<const Expression>& expression) const {
   const auto column_id = find_column_id_for_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
 std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
-    const std::shared_ptr<Expression>& expression) const {
+    const std::shared_ptr<const Expression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
@@ -192,22 +192,22 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
    */
   if (expression->type() == ExpressionType::Column) {
     const auto iter =
-        std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+        std::find_if(_groupby_column_ids.cbegin(), _groupby_column_ids.cend(),
                      [&](const auto& groupby_column_id) { return expression->column_id() == groupby_column_id; });
 
-    if (iter != _groupby_column_ids.end()) {
-      const auto idx = std::distance(_groupby_column_ids.begin(), iter);
+    if (iter != _groupby_column_ids.cend()) {
+      const auto idx = std::distance(_groupby_column_ids.cbegin(), iter);
       return ColumnID{static_cast<ColumnID::base_type>(idx)};
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =
-        std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& other) {
+        std::find_if(_aggregate_expressions.cbegin(), _aggregate_expressions.cend(), [&](const auto& other) {
           DebugAssert(other, "Aggregate expressions can not be nullptr!");
           return *expression == *other;
         });
 
-    if (iter != _aggregate_expressions.end()) {
-      const auto idx = std::distance(_aggregate_expressions.begin(), iter);
+    if (iter != _aggregate_expressions.cend()) {
+      const auto idx = std::distance(_aggregate_expressions.cbegin(), iter);
       return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
     }
   } else {
@@ -234,10 +234,10 @@ std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::
   std::vector<ColumnID> output_column_ids_for_table;
 
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), input_column_id);
+    const auto iter = std::find(_groupby_column_ids.cbegin(), _groupby_column_ids.cend(), input_column_id);
 
-    if (iter != _groupby_column_ids.end()) {
-      const auto index = std::distance(_groupby_column_ids.begin(), iter);
+    if (iter != _groupby_column_ids.cend()) {
+      const auto index = std::distance(_groupby_column_ids.cbegin(), iter);
       output_column_ids_for_table.emplace_back(static_cast<ColumnID::base_type>(index));
     }
   }

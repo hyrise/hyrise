@@ -88,8 +88,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  const auto expressions = std::vector<std::shared_ptr<Expression>>{Expression::create_column(ColumnID{0}, {"a"})};
-  auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  auto expressions = std::vector<std::shared_ptr<Expression>>{Expression::create_column(ColumnID{0}, {"a"})};
+  auto projection_node = std::make_shared<ProjectionNode>(std::move(expressions));
   projection_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
 

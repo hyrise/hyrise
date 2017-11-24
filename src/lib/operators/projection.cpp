@@ -27,7 +27,7 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 
 template <typename T>
 void Projection::_create_column(boost::hana::basic_type<T> type, Chunk& chunk, const ChunkID chunk_id,
-                                const std::shared_ptr<Expression>& expression,
+                                const std::shared_ptr<const Expression>& expression,
                                 std::shared_ptr<const Table> input_table_left) {
   // check whether term is a just a simple column and bypass this column
   if (expression->type() == ExpressionType::Column) {
@@ -113,7 +113,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   return output;
 }
 
-DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& expression,
+DataType Projection::_get_type_of_expression(const std::shared_ptr<const Expression>& expression,
                                              const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
@@ -143,7 +143,8 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& 
 
 template <typename T>
 const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
-    const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id) {
+    const std::shared_ptr<const Expression>& expression, const std::shared_ptr<const Table> table,
+    const ChunkID chunk_id) {
   /**
    * Handle Literal
    * This is only used if the Literal represents a constant column, e.g. in 'SELECT 5 FROM table_a'.

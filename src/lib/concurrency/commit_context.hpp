@@ -29,7 +29,7 @@ class CommitContext : private Noncopyable {
    *
    * @param callback called when transaction is committed
    */
-  void make_pending(const TransactionID transaction_id, std::function<void(TransactionID)> callback = nullptr);
+  void make_pending(const TransactionID transaction_id, const std::function<void(TransactionID)> callback = nullptr);
 
   /**
    * Calls the callback of make_pending

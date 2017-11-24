@@ -24,7 +24,7 @@ struct OrderByDefinition {
  */
 class SortNode : public AbstractLQPNode {
  public:
-  explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
+  explicit SortNode(std::vector<OrderByDefinition>&& order_by_definitions);
 
   std::string description() const override;
 

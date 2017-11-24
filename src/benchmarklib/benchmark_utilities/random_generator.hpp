@@ -20,7 +20,7 @@ class RandomGenerator {
    * @return            a random number
    */
   template <class IntType = uint32_t, typename LowerType, typename UpperType>
-  IntType random_number(LowerType lower, UpperType upper) {
+  IntType random_number(const LowerType lower, const UpperType upper) {
     std::uniform_int_distribution<IntType> dist(lower, upper);
     return dist(engine);
   }
@@ -32,7 +32,7 @@ class RandomGenerator {
    * @param id_length       maximum number in the set
    * @return                a set of unique numbers
    */
-  std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
+  std::set<size_t> select_unique_ids(const size_t num_unique, const size_t id_length) {
     std::set<size_t> rows;
     opossum::Assert(num_unique <= id_length, "There are not enough ids to be selected!");
     for (size_t i = 0; i < num_unique; ++i) {

@@ -26,8 +26,8 @@ static const uint8_t INVALID_INDEX = 255u;
 
 ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
   std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
+            [](const std::pair<uint8_t, const std::shared_ptr<ARTNode>>& left,
+               const std::pair<uint8_t, const std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
   _partial_keys.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;

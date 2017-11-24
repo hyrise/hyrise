@@ -16,7 +16,7 @@ TextFieldGenerator::TextFieldGenerator(benchmark_utilities::RandomGenerator rand
       _grammar(TpchGrammar(random_generator)),
       _text(_grammar.random_text(300'000'000)) {}
 
-std::string TextFieldGenerator::text_string(size_t lower_length, size_t upper_length) {
+std::string TextFieldGenerator::text_string(const size_t lower_length, const size_t upper_length) {
   auto length = _random_gen.random_number(lower_length, upper_length);
   auto start = _random_gen.random_number(0, _text.size() - length);
   return _text.substr(start, length);
@@ -28,8 +28,8 @@ std::string TextFieldGenerator::text_string(size_t lower_length, size_t upper_le
  * of at least 64 characters. The length of the string should be between lower_length
  * and upper_length (inclusive).
  */
-std::string TextFieldGenerator::v_string(size_t lower_length, size_t upper_length) {
-  size_t length = _random_gen.random_number(lower_length, upper_length);
+std::string TextFieldGenerator::v_string(const size_t lower_length, const size_t upper_length) {
+  const size_t length = _random_gen.random_number(lower_length, upper_length);
   std::string s;
   s.reserve(length);
   for (size_t i = 0; i < length; i++) {
@@ -75,7 +75,7 @@ std::string TextFieldGenerator::v_string(size_t lower_length, size_t upper_lengt
  * The phone number string is obtained by concatenating the following sub-strings:
  * country_code, "-", local_number1, "-", local_number2, "-", local_number3
  */
-std::string TextFieldGenerator::generate_phone_number(uint32_t nationkey) {
+std::string TextFieldGenerator::generate_phone_number(const uint32_t nationkey) {
   std::stringstream ss;
   auto country_code = nationkey + 10;
   ss << country_code << "-" << _random_gen.random_number(100, 999) << "-" << _random_gen.random_number(100, 999);
@@ -83,7 +83,7 @@ std::string TextFieldGenerator::generate_phone_number(uint32_t nationkey) {
   return ss.str();
 }
 
-std::string TextFieldGenerator::pad_int_with_zeroes(size_t number, size_t length) {
+std::string TextFieldGenerator::pad_int_with_zeroes(const size_t number, const size_t length) {
   std::stringstream ss;
   ss << std::setfill('0') << std::setw(length) << number;
   return ss.str();

@@ -28,6 +28,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Don't write `this->` if you don't have to
 - Use C++11 for loops when possible: `for (const auto& item : items) {...}`
 - When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and allocations
+- Use [these flowcharts](https://github.com/hyrise/hyrise/wiki/Code-Style) to decide how to accept arguments (e.g., reference, pointer, ...).
 
 ## Naming Conventions
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp

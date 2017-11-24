@@ -16,7 +16,7 @@ UnionMode UnionNode::union_mode() const { return _union_mode; }
 
 std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode); }
 
-std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
+std::string UnionNode::get_verbose_column_name(const ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need children to determine Column name");
   Assert(column_id < left_child()->output_column_names().size(), "ColumnID out of range");
   Assert(right_child()->output_column_names().size() == left_child()->output_column_names().size(),

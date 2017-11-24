@@ -40,15 +40,15 @@ class JoinNode : public AbstractLQPNode {
   std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  std::string get_verbose_column_name(const ColumnID column_id) const override;
 
  protected:
   void _on_child_changed() override;
 
  private:
-  JoinMode _join_mode;
-  std::optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
-  std::optional<ScanType> _scan_type;
+  const JoinMode _join_mode;
+  const std::optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
+  const std::optional<ScanType> _scan_type;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

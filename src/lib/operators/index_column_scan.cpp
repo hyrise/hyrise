@@ -59,7 +59,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
     // constructor for use in ReferenceColumn::visit_dereferenced
     ScanContext(std::shared_ptr<const BaseColumn>, const std::shared_ptr<const Table> referenced_table,
-                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
+                const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
         : table_in(referenced_table),
           chunk_id(chunk_id),
@@ -227,7 +227,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   }
 
   void handle_value_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) override {
+                           const std::shared_ptr<ColumnVisitableContext>& base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
     const auto& column = static_cast<const ValueColumn<T>&>(base_column);
     Assert(!column.is_nullable(), "Cannot perform IndexColumnScan on nullable column.");
@@ -254,12 +254,12 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   }
 
   void handle_reference_column(const ReferenceColumn& column,
-                               std::shared_ptr<ColumnVisitableContext> base_context) override {
+                               const std::shared_ptr<ColumnVisitableContext>& base_context) override {
     column.visit_dereferenced<ScanContext>(*this, base_context);
   }
 
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override {
+                                const std::shared_ptr<ColumnVisitableContext>& base_context) override {
     /*
      ValueID x;
      T A;

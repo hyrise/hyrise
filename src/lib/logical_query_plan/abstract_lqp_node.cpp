@@ -16,7 +16,7 @@ namespace opossum {
 
 class TableStatistics;
 
-AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
+AbstractLQPNode::AbstractLQPNode(const LQPNodeType node_type) : _type(node_type) {}
 
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> parents;
@@ -45,7 +45,7 @@ void AbstractLQPNode::clear_parents() {
   }
 }
 
-LQPChildSide AbstractLQPNode::get_child_side(const std::shared_ptr<AbstractLQPNode>& parent) const {
+LQPChildSide AbstractLQPNode::get_child_side(const std::shared_ptr<const AbstractLQPNode>& parent) const {
   if (parent->_children[0].get() == this) {
     return LQPChildSide::Left;
   } else if (parent->_children[1].get() == this) {
@@ -81,12 +81,12 @@ void AbstractLQPNode::set_right_child(const std::shared_ptr<AbstractLQPNode>& ri
   set_child(LQPChildSide::Right, right);
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::child(LQPChildSide side) const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::child(const LQPChildSide side) const {
   const auto child_index = static_cast<int>(side);
   return _children[child_index];
 }
 
-void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child) {
+void AbstractLQPNode::set_child(const LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child) {
   // We need a reference to _children[child_index], so not calling this->child(side)
   auto& current_child = _children[static_cast<int>(side)];
 
@@ -285,7 +285,7 @@ void AbstractLQPNode::print(std::ostream& out) const {
   _print_impl(out, levels, id_by_node, id_counter);
 }
 
-std::string AbstractLQPNode::get_verbose_column_name(ColumnID column_id) const {
+std::string AbstractLQPNode::get_verbose_column_name(const ColumnID column_id) const {
   DebugAssert(!right_child(), "Node with right child needs to override this function.");
 
   /**

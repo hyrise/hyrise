@@ -175,7 +175,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
    *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
-    Projection::ColumnExpressions column_expressions = Expression::create_columns(groupby_columns);
+    auto column_expressions = Expression::create_columns(groupby_columns);
     column_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
@@ -310,7 +310,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
-    LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
+    const LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // SQL operators
     case LQPNodeType::StoredTable:

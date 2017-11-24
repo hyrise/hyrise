@@ -30,7 +30,7 @@ class OperatorTask : public AbstractTask {
   /**
    * Create tasks recursively. Called by `make_tasks_from_operator`.
    */
-  static void _add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
+  static void _add_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op,
                                        std::vector<std::shared_ptr<OperatorTask>>& tasks);
 
  private:

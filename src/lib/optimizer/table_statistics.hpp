@@ -111,7 +111,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * @return Number of additional null values for columns of table 2.
    */
   float _calculate_added_null_values_for_outer_join(const float row_count,
-                                                    const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                                    const std::shared_ptr<BaseColumnStatistics>& col_stats,
                                                     const float predicate_column_distinct_count) const;
 
   /**

@@ -18,15 +18,16 @@ namespace opossum {
 // We need these classes to perform the dynamic cast into a templated ValueColumn
 class AbstractTypedColumnProcessor {
  public:
-  virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
-  virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                         std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) = 0;
+  virtual void resize_vector(const std::shared_ptr<BaseColumn>& column, const size_t new_size) = 0;
+  virtual void copy_data(const std::shared_ptr<const BaseColumn>& source, const size_t source_start_index,
+                         const std::shared_ptr<BaseColumn>& target, const size_t target_start_index,
+                         const size_t length) = 0;
 };
 
 template <typename T>
 class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
-  void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
+  void resize_vector(const std::shared_ptr<BaseColumn>& column, const size_t new_size) override {
     auto val_column = std::dynamic_pointer_cast<ValueColumn<T>>(column);
     DebugAssert(static_cast<bool>(val_column), "Type mismatch");
     auto& values = val_column->values();
@@ -39,8 +40,9 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   }
 
   // this copies
-  void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                 std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) override {
+  void copy_data(const std::shared_ptr<const BaseColumn>& source, const size_t source_start_index,
+                 const std::shared_ptr<BaseColumn>& target, const size_t target_start_index,
+                 const size_t length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
     auto& values = casted_target->values();

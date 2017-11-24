@@ -132,8 +132,8 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(cross_join_node);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  auto columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -166,8 +166,8 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  auto columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(cross_join_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -205,8 +205,8 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});
   predicate_node->set_left_child(cross_join_node);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -244,8 +244,8 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(join_node);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -297,8 +297,8 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(join_node2);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -397,8 +397,8 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{4}, ScanType::OpEquals, ColumnID{0});
   predicate_node->set_left_child(join_node2);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -439,9 +439,9 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
-                                                            Expression::create_column(ColumnID{2})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
+                                                      Expression::create_column(ColumnID{2})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(join_node);
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});
@@ -479,9 +479,9 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
-                                                            Expression::create_column(ColumnID{2})};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
+                                                      Expression::create_column(ColumnID{2})};
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(join_node);
 
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});

@@ -341,7 +341,7 @@ void Console::load_history(const std::string& history_file) {
   }
 }
 
-void Console::out(const std::string& output, bool console_print) {
+void Console::out(const std::string& output, const bool console_print) {
   if (console_print) {
     _out << output;
   }
@@ -350,7 +350,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, const uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 

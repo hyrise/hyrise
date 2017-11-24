@@ -130,7 +130,8 @@ size_t DictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
+void DictionaryColumn<T>::visit(ColumnVisitable& visitable,
+                                const std::shared_ptr<ColumnVisitableContext>& context) const {
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 

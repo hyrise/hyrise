@@ -123,8 +123,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   predicate_node_2->set_left_child(predicate_node_1);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = Expression::create_columns(column_ids);
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  auto expressions = Expression::create_columns(column_ids);
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(expressions));
   projection_node->set_left_child(predicate_node_2);
 
   auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
@@ -169,8 +169,8 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   predicate_node_3->set_left_child(predicate_node_2);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = Expression::create_columns(column_ids);
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  auto expressions = Expression::create_columns(column_ids);
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(expressions));
   projection_node->set_left_child(predicate_node_3);
 
   projection_node->get_statistics();

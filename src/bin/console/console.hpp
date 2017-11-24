@@ -67,7 +67,7 @@ class Console {
    * @param output        The text that should be printed.
    * @param console_print If set to false, then \p output gets printed ONLY to the log_file.
    */
-  void out(const std::string& output, bool console_print = true);
+  void out(const std::string& output, const bool console_print = true);
 
   /*
    * Outputs a table, either directly to the _out stream if it is small enough, or using pagination.
@@ -75,7 +75,7 @@ class Console {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(std::shared_ptr<const Table> table, uint32_t flags = 0);
+  void out(const std::shared_ptr<const Table>& table, const uint32_t flags = 0);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).

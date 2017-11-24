@@ -63,8 +63,8 @@ TEST_F(LogicalQueryPlanTest, SimpleParentTest) {
   ASSERT_TRUE(predicate_node->parents().empty());
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = Expression::create_columns(column_ids);
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  auto expressions = Expression::create_columns(column_ids);
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(expressions));
   projection_node->set_left_child(predicate_node);
 
   ASSERT_EQ(predicate_node->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{projection_node});
@@ -118,8 +118,8 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
   ASSERT_TRUE(predicate_node_2->parents().empty());
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = Expression::create_columns(column_ids);
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  auto expressions = Expression::create_columns(column_ids);
+  const auto projection_node = std::make_shared<ProjectionNode>(std::move(expressions));
   projection_node->set_left_child(predicate_node_2);
 
   ASSERT_EQ(predicate_node_2->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{projection_node});

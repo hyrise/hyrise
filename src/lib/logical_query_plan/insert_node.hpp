@@ -13,7 +13,7 @@ namespace opossum {
  */
 class InsertNode : public AbstractLQPNode {
  public:
-  explicit InsertNode(const std::string table_name);
+  explicit InsertNode(const std::string& table_name);
 
   std::string description() const override;
 

@@ -11,7 +11,8 @@ CommitID CommitContext::commit_id() const { return _commit_id; }
 
 bool CommitContext::is_pending() const { return _pending; }
 
-void CommitContext::make_pending(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
+void CommitContext::make_pending(const TransactionID transaction_id,
+                                 const std::function<void(TransactionID)> callback) {
   _pending = true;
 
   if (callback) {

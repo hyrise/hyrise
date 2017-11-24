@@ -102,7 +102,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnType>
   static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
                                         std::shared_ptr<ColumnVisitable>& builder,
-                                        std::shared_ptr<ColumnVisitableContext> context,
+                                        const std::shared_ptr<ColumnVisitableContext>& context,
                                         std::shared_ptr<GroupByContext> groupby_context, AggregateFunction function);
 
   template <typename ColumnType>

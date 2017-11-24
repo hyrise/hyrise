@@ -13,8 +13,7 @@ namespace opossum {
  */
 class UpdateNode : public AbstractLQPNode {
  public:
-  explicit UpdateNode(const std::string& table_name,
-                      const std::vector<std::shared_ptr<Expression>>& column_expressions);
+  explicit UpdateNode(const std::string& table_name, std::vector<std::shared_ptr<Expression>>&& column_expressions);
 
   std::string description() const override;
 

@@ -77,7 +77,8 @@ class ReferenceColumn : public BaseColumn {
   ColumnID referenced_column_id() const;
 
   // visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+  void visit(ColumnVisitable& visitable,
+             const std::shared_ptr<ColumnVisitableContext>& context = nullptr) const override;
 
   // writes the length and value at the chunk_offset to the end off row_string
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;

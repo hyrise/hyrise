@@ -200,7 +200,7 @@ const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; 
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
-std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
+std::string JoinNode::get_verbose_column_name(const ColumnID column_id) const {
   Assert(left_child() && right_child(), "Can't generate column names without children being set");
 
   if (column_id < left_child()->output_column_count()) {

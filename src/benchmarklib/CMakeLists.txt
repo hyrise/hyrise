@@ -19,7 +19,7 @@ set(
     tpch/constants.hpp
     tpch/text_field_generator.cpp
     tpch/text_field_generator.hpp
-    tpch/tpch_grammer.cpp
+    tpch/tpch_grammar.cpp
     tpch/tpch_grammar.hpp
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
