@@ -126,7 +126,7 @@ extern seed_t Seed[];
  * value; otherwise return the default supplied
  */
 char     *
-env_config(char *var, char *dflt)
+ env_config(char *var, char *dflt)
 {
    static char *evar;
 
@@ -290,7 +290,7 @@ julian(long date)
 * should be rewritten to allow multiple dists in a file
 */
 void
-read_dist(char *path, char *name, distribution *target)
+read_dist(char *path, char *name, distribution *target, const char * realname)
 {
 FILE     *fp;
 char      line[256],
@@ -335,7 +335,7 @@ long      weight,
             if (!dssncasecmp(line, "END", 3))
                 {
                 fclose(fp);
-                return;
+                goto over;
                 }
             }
 
@@ -370,6 +370,23 @@ long      weight,
         }
 	target->permute = (long *)NULL;
     fclose(fp);
+
+over:
+  printf("set_member %s_list[] = {\n", realname);
+  for (size_t i=0;i<target->count;++i) {
+    printf("  {%i, \"%s\"},\n", (int)target->list[i].weight, target->list[i].text);
+  }
+  printf("};\n");
+
+  printf("distribution %s = {\n", realname);
+  printf("  %i,\n", target->count);
+  printf("  %i,\n", target->max);
+  printf("  %s_list,\n", realname);
+  printf("  NULL\n");
+  printf("};\n");
+
+
+
     return;
 }
 

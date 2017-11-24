@@ -80,6 +80,7 @@
 
 #include "config.h"
 #include "shared.h"
+#include "tpch_dbgen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,22 +147,7 @@
 
 #define RANDOM(tgt, lower, upper, stream)	dss_random(&tgt, lower, upper, stream)
 #define RANDOM64(tgt, lower, upper, stream)	dss_random64(&tgt, lower, upper, stream)
-	
-     
 
-typedef struct
-{
-   long      weight;
-   char     *text;
-}         set_member;
-
-typedef struct
-{
-   int      count;
-   int      max;
-   set_member *list;
-   long *permute;
-}         distribution;
 /*
  * some handy access functions 
  */
@@ -209,7 +195,7 @@ long	dssncasecmp PROTO((char *s1, char *s2, int n));
 long	dsscasecmp PROTO((char *s1, char *s2));
 int		pick_str PROTO((distribution * s, int c, char *target));
 void	agg_str PROTO((distribution *set, long count, long col, char *dest));
-void	read_dist PROTO((char *path, char *name, distribution * target));
+void	read_dist PROTO((char *path, char *name, distribution * target, const char * realname));
 void	embed_str PROTO((distribution *d, int min, int max, int stream, char *dest));
 #ifndef STDLIB_HAS_GETOPT
 int		getopt PROTO((int arg_cnt, char **arg_vect, char *oprions));
@@ -238,31 +224,6 @@ void		dbg_text PROTO((char * t, int min, int max, int s));
 #endif            /* DECLARER */
 
 
-EXTERN distribution nations;
-EXTERN distribution nations2;
-EXTERN distribution regions;
-EXTERN distribution o_priority_set;
-EXTERN distribution l_instruct_set;
-EXTERN distribution l_smode_set;
-EXTERN distribution l_category_set;
-EXTERN distribution l_rflag_set;
-EXTERN distribution c_mseg_set;
-EXTERN distribution colors;
-EXTERN distribution p_types_set;
-EXTERN distribution p_cntr_set;
-
-/* distributions that control text generation */
-EXTERN distribution articles;
-EXTERN distribution nouns;
-EXTERN distribution adjectives;
-EXTERN distribution adverbs;
-EXTERN distribution prepositions;
-EXTERN distribution verbs;
-EXTERN distribution terminators;
-EXTERN distribution auxillaries;
-EXTERN distribution np;
-EXTERN distribution vp;
-EXTERN distribution grammar;
 
 
 EXTERN long scale;

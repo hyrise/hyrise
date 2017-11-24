@@ -247,33 +247,33 @@ child_table:
 void
 load_dists (void)
 {
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "p_cntr", &p_cntr_set);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "colors", &colors);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "p_types", &p_types_set);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "nations", &nations);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "regions", &regions);
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "p_cntr", &p_cntr_set, "p_cntr_set");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "colors", &colors, "colors");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "p_types", &p_types_set, "p_types_set");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "nations", &nations, "nations");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "regions", &regions, "regions");
 	read_dist (env_config (DIST_TAG, DIST_DFLT), "o_oprio",
-		&o_priority_set);
+		&o_priority_set, "o_priority_set");
 	read_dist (env_config (DIST_TAG, DIST_DFLT), "instruct",
-		&l_instruct_set);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "smode", &l_smode_set);
+		&l_instruct_set, "l_instruct_set");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "smode", &l_smode_set, "l_smode_set");
 	read_dist (env_config (DIST_TAG, DIST_DFLT), "category",
-		&l_category_set);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "rflag", &l_rflag_set);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "msegmnt", &c_mseg_set);
+		&l_category_set, "l_category_set");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "rflag", &l_rflag_set, "l_rflag_set");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "msegmnt", &c_mseg_set, "c_mseg_set");
 
 	/* load the distributions that contain text generation */
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "nouns", &nouns);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "verbs", &verbs);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "adjectives", &adjectives);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "adverbs", &adverbs);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "auxillaries", &auxillaries);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "terminators", &terminators);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "articles", &articles);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "prepositions", &prepositions);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "grammar", &grammar);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "np", &np);
-	read_dist (env_config (DIST_TAG, DIST_DFLT), "vp", &vp);
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "nouns", &nouns, "nouns");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "verbs", &verbs, "verbs");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "adjectives", &adjectives, "adjectives");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "adverbs", &adverbs, "adverbs");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "auxillaries", &auxillaries, "auxillaries");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "terminators", &terminators, "terminators");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "articles", &articles, "articles");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "prepositions", &prepositions, "prepositions");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "grammar", &grammar, "grammar");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "np", &np, "np");
+	read_dist (env_config (DIST_TAG, DIST_DFLT), "vp", &vp, "vp");
 	
 }
 

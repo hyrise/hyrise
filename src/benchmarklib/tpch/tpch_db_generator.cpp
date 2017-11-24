@@ -23,17 +23,12 @@ namespace opossum {
 TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size) :
 _scale_factor(scale_factor),
 _chunk_size(chunk_size) {
-  load_dists();
 
   tdefs[TpchTable_Nation].base = nations.count;
   tdefs[TpchTable_Region].base = regions.count;
-
-//  tdefs[ORDER].base *=
-//  ORDERS_PER_CUST;			/* have to do this after init */
-//  tdefs[LINE].base *=
-//  ORDERS_PER_CUST;			/* have to do this after init */
-//  tdefs[ORDER_LINE].base *=
-//  ORDERS_PER_CUST;			/* have to do this after init */
+  tdefs[ORDER].base *=  ORDERS_PER_CUST;
+  tdefs[LINE].base *= ORDERS_PER_CUST;
+  tdefs[ORDER_LINE].base *= ORDERS_PER_CUST;
 }
 
 std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generate() {
