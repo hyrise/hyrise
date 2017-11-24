@@ -48,7 +48,7 @@ class Projection : public AbstractReadOnlyOperator {
   class DummyTable : public Table {
    public:
     DummyTable() : Table(Chunk::MAX_SIZE) {
-      add_column("dummy", "int");
+      add_column("dummy", DataType::Int);
       append(std::vector<AllTypeVariant>{0});
     }
   };
@@ -63,8 +63,8 @@ class Projection : public AbstractReadOnlyOperator {
                              const std::shared_ptr<const Expression>& expression,
                              std::shared_ptr<const Table> input_table_left);
 
-  static const std::string _get_type_of_expression(const std::shared_ptr<const Expression>& expression,
-                                                   const std::shared_ptr<const Table>& table);
+  static DataType _get_type_of_expression(const std::shared_ptr<const Expression>& expression,
+                                          const std::shared_ptr<const Table>& table);
 
   /**
    * This function evaluates the given expression on a single chunk.

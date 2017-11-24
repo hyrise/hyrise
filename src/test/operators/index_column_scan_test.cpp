@@ -30,8 +30,8 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
 
     std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
-    test_table_dict->add_column("a", "int");
-    test_table_dict->add_column("b", "int");
+    test_table_dict->add_column("a", DataType::Int);
+    test_table_dict->add_column("b", DataType::Int);
 
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
 

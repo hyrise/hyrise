@@ -165,7 +165,7 @@ void TableScan::_init_scan() {
 
   if (_scan_type == ScanType::OpLike || _scan_type == ScanType::OpNotLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
-    Assert((left_column_type == "string"), "LIKE operator only applicable on string columns.");
+    Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
     DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
 

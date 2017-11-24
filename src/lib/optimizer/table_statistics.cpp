@@ -258,7 +258,7 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_s
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
   auto column_type = table->column_type(column_id);
   auto column_statistics =
-      make_shared_by_column_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
+      make_shared_by_data_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
   _column_statistics[column_id] = column_statistics;
   return _column_statistics[column_id];
 }

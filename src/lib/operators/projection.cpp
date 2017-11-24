@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
 
@@ -83,9 +84,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
 
     const auto type = _get_type_of_expression(column_expression, _input_table_left());
-    if (type == "NULL") {
+    if (type == DataType::Null) {
       // in case of a NULL literal, simply add a nullable int column
-      output->add_column_definition(name, "int", true);
+      output->add_column_definition(name, DataType::Int, true);
     } else {
       output->add_column_definition(name, type);
     }
@@ -112,10 +113,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   return output;
 }
 
-const std::string Projection::_get_type_of_expression(const std::shared_ptr<const Expression>& expression,
-                                                      const std::shared_ptr<const Table>& table) {
+DataType Projection::_get_type_of_expression(const std::shared_ptr<const Expression>& expression,
+                                             const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
-    return type_string_from_all_type_variant(expression->value());
+    return data_type_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::Column) {
     return table->column_type(expression->column_id());
@@ -127,13 +128,16 @@ const std::string Projection::_get_type_of_expression(const std::shared_ptr<cons
   const auto type_left = _get_type_of_expression(expression->left_child(), table);
   const auto type_right = _get_type_of_expression(expression->right_child(), table);
 
-  if (type_left == "NULL") return type_right;
-  if (type_right == "NULL") return type_left;
+  if (type_left == DataType::Null) return type_right;
+  if (type_right == DataType::Null) return type_left;
+
+  const auto type_string_left = data_type_to_string.left.at(type_left);
+  const auto type_string_right = data_type_to_string.left.at(type_right);
 
   // TODO(anybody): int + float = float etc...
   // This is currently not supported by `_evaluate_expression()` because it is only templated once.
   Assert(type_left == type_right, "Projection currently only supports expressions with same type on both sides (" +
-                                      type_left + " vs " + type_right + ")");
+                                      type_string_left + " vs " + type_string_right + ")");
   return type_left;
 }
 

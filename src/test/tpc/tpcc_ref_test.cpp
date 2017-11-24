@@ -111,8 +111,8 @@ class TpccRefTest : public BaseTest {
 
  protected:
   void SetUp() override {
-    const auto TABLE_NAMES = {"CUSTOMER",   "DISTRICT", "HISTORY", "ITEM",     "NEW-ORDER",
-                              "ORDER-LINE", "ORDER",    "STOCK",   "WAREHOUSE"};
+    const auto TABLE_NAMES = {"CUSTOMER",   "DISTRICT", "HISTORY", "ITEM",     "NEW_ORDER",
+                              "ORDER_LINE", "ORDER",    "STOCK",   "WAREHOUSE"};
 
     CsvParser parser;
 

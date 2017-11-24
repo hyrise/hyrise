@@ -17,8 +17,8 @@ class OperatorsValidateVisibilityTest : public BaseTest {
  protected:
   void SetUp() override {
     t = std::make_shared<Table>(Table(chunk_size));
-    t->add_column("col_1", "int");
-    t->add_column("col_2", "int");
+    t->add_column("col_1", DataType::Int);
+    t->add_column("col_2", DataType::Int);
     t->append({123, 456});
 
     StorageManager::get().add_table(table_name, t);

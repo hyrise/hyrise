@@ -440,7 +440,7 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   join_node->set_right_child(_table_node_b);
 
   std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
-                                                            Expression::create_column(ColumnID{2})};
+                                                      Expression::create_column(ColumnID{2})};
   const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(join_node);
 
@@ -480,7 +480,7 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
   join_node->set_right_child(_table_node_b);
 
   std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
-                                                            Expression::create_column(ColumnID{2})};
+                                                      Expression::create_column(ColumnID{2})};
   const auto projection_node = std::make_shared<ProjectionNode>(std::move(columns));
   projection_node->set_left_child(join_node);
 

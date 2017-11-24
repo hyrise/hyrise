@@ -36,11 +36,11 @@ For implementation details, please check the wiki: https://github.com/hyrise/hyr
 Current aggregated value and the number of rows that were used.
 The latter is used for AVG and COUNT.
 */
-template <typename AggregateType, typename DataType>
+template <typename AggregateType, typename ColumnDataType>
 struct AggregateResult {
   std::optional<AggregateType> current_aggregate;
   size_t aggregate_count = 0;
-  std::set<DataType> distinct_values;
+  std::set<ColumnDataType> distinct_values;
 };
 
 /*
@@ -109,7 +109,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
                                AggregateFunction function);
 
-  template <typename DataType, AggregateFunction function>
+  template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
   const std::vector<AggregateDefinition> _aggregates;
