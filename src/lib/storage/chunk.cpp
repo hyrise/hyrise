@@ -121,16 +121,16 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
     const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(columns) });
+               [&](const auto& index) { return index->is_index_for(columns); });
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk:: : get_indices_for(const std::vector<ColumnID> column_ids) const {
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(const std::vector<ColumnID> column_ids) const {
   auto columns = std::vector<std::shared_ptr<const BaseColumn>>{};
   std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(columns),
                  [&](const auto& column_id) { return get_column(column_id); });
 
-  return get_indices_for(columns, index_type);
+  return get_indices_for(columns);
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index_for(const ColumnIndexType index_type,

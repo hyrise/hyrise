@@ -11,9 +11,11 @@
 #include <string>
 #include <vector>
 
-#include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
 #include "scoped_locking_ptr.hpp"
+#include "index/column_index_type.hpp"
+
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {

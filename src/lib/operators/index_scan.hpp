@@ -5,6 +5,7 @@
 #include "abstract_read_only_operator.hpp"
 
 #include "storage/index/column_index_type.hpp"
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {

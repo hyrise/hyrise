@@ -2,6 +2,13 @@
 
 #include <algorithm>
 
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+
+#include "storage/index/base_index.hpp"
+#include "storage/reference_column.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -15,9 +22,7 @@ IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType
       _left_column_ids{left_column_ids},
       _scan_type{scan_type},
       _right_values{right_values},
-      _right_values2{right_values2} {
-  DebugAssert(_left_column_ids.size() == _right_values.size());
-}
+      _right_values2{right_values2} {}
 
 const std::string IndexScan::name() const { return "IndexScan"; }
 
@@ -34,7 +39,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   jobs.reserve(_chunk_ids.size());
 
   for (auto chunk_id : _chunk_ids) {
-    jobs.push_back(std::make_shared<JobTask>([&]() {
+    auto job_task = std::make_shared<JobTask>([&]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
 
       const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
@@ -50,15 +55,16 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      _output_table->emplace_chunk(std::move(chunk_out));
-    }));
+      _out_table->emplace_chunk(std::move(chunk_out));
+    });
 
+    jobs.push_back(job_task);
     job_task->schedule();
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return _output_table;
+  return _out_table;
 }
 
 void IndexScan::_on_cleanup() {}
@@ -67,17 +73,17 @@ void IndexScan::_validate_input() {
   Assert(_scan_type != ScanType::OpLike, "Scan type not supported by index scan.");
   Assert(_scan_type != ScanType::OpNotLike, "Scan type not supported by index scan.");
 
-  Assert(left_column_ids.size() == right_values.size(),
+  Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
   if (_scan_type == ScanType::OpBetween) {
-    Assert(left_column_ids.size() == right_values2.size(),
+    Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
 
   Assert(_in_table->get_type() == TableType::Data, "IndexScan does only support persistent tables right now.");
 }
 
-PosList _scan_chunk(const ChunkID chunk_id) {
+PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
   auto range_begin = BaseIndex::Iterator{};
@@ -86,7 +92,7 @@ PosList _scan_chunk(const ChunkID chunk_id) {
   const auto& chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};
 
-  const auto index = chunk.get_index_for(_left_column_ids, _index_type);
+  const auto index = chunk.get_index_for(_index_type, _left_column_ids);
   DebugAssert(index != nullptr, "Index of specified type not found for column (vector).");
 
   switch (_scan_type) {
