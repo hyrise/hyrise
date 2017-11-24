@@ -9,12 +9,12 @@ extern "C" {
 }
 
 #include "storage/chunk.hpp"
+#include "storage/storage_manager.hpp"
 
 extern "C" {
 
 void NthElement(DSS_HUGE N, DSS_HUGE *StartSeed);
 DSS_HUGE set_state(int table, long sf, long procs, long step, DSS_HUGE *extra_rows);
-void load_dists(void);
 
 }
 
@@ -173,13 +173,17 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
 
 }
 
-//void TpchDbGenerator::generate_and_store() {
-//
-//}
-//
-//void TpchDbGenerator::generate_and_export(const std::string &path) {
-//
-//}
+void TpchDbGenerator::generate_and_store() {
+  const auto tables_by_names = generate();
+
+  for (auto & name_and_table : tables_by_names) {
+    StorageManager::get().add_table(name_and_table.first, name_and_table.second);
+  }
+}
+
+void TpchDbGenerator::generate_and_export_csv(const std::string &path) {
+
+}
 
 void
 TpchDbGenerator::_row_start() {

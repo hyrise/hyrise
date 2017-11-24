@@ -91,8 +91,8 @@ class TpchDbGenerator final {
   explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = 0);
 
   std::unordered_map<std::string, std::shared_ptr<Table>> generate();
-//  void generate_and_store();
-//  void generate_and_export(const std::string &path);
+  void generate_and_store();
+  void generate_and_export_csv(const std::string &path);
 
  private:
   float _scale_factor;
