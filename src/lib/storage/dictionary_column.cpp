@@ -176,6 +176,6 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const Poly
       alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
-EXPLICITLY_INSTANTIATE_COLUMN_TYPES(DictionaryColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 
 }  // namespace opossum

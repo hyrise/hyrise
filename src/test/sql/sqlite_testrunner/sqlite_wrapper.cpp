@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -186,7 +187,9 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
         // Hyrise does not have explicit NULL columns
         col_types[i] = "int";
       }
-      table->add_column(col_names[i], col_types[i], col_nullable[i]);
+
+      const auto data_type = data_type_to_string.right.at(col_types[i]);
+      table->add_column(col_names[i], data_type, col_nullable[i]);
     }
   }
 }

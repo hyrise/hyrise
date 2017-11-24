@@ -104,7 +104,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
   for (const auto& column_type : _target_table->column_types()) {
     typed_column_processors.emplace_back(
-        make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
+        make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
   }
 
   auto total_rows_to_insert = static_cast<uint32_t>(_input_table_left()->row_count());

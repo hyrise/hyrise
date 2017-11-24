@@ -51,7 +51,7 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "string");
+  expected_table->add_column("a", DataType::String);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -95,9 +95,9 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "string");
-  expected_table->add_column("b", "string");
-  expected_table->add_column("c", "string");
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::String);
+  expected_table->add_column("c", DataType::String);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({"", "", ""});
   }
@@ -111,8 +111,8 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
   importer->schedule();
 
   auto expected_table = std::make_shared<Table>(20);
-  expected_table->add_column("b", "float");
-  expected_table->add_column("a", "int");
+  expected_table->add_column("b", DataType::Float);
+  expected_table->add_column("a", DataType::Int);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -131,9 +131,9 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "int");
-  expected_table->add_column("b", "int");
-  expected_table->add_column("c", "int");
+  expected_table->add_column("a", DataType::Int);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Int);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({1, 2, 3});
   }
@@ -167,8 +167,8 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
 
   auto expected_table = std::make_shared<Table>(20);
-  expected_table->add_column("b", "float");
-  expected_table->add_column("a", "int");
+  expected_table->add_column("b", DataType::Float);
+  expected_table->add_column("a", DataType::Int);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -185,7 +185,7 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "string");
+  expected_table->add_column("a", DataType::String);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -199,9 +199,9 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(3);
-  expected_table->add_column("a", "float", true);
-  expected_table->add_column("b", "int", false);
-  expected_table->add_column("c", "int", true);
+  expected_table->add_column("a", DataType::Float, true);
+  expected_table->add_column("b", DataType::Int, false);
+  expected_table->add_column("c", DataType::Int, true);
 
   expected_table->append({458.7f, 12345, NULL_VALUE});
   expected_table->append({NULL_VALUE, 123, 456});
@@ -215,7 +215,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "string", true);
+  expected_table->add_column("a", DataType::String, true);
 
   expected_table->append({"xxx"});
   expected_table->append({"www"});
@@ -239,14 +239,14 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "string");
-  expected_table->add_column("b", "int");
-  expected_table->add_column("c", "float");
-  expected_table->add_column("d", "double");
-  expected_table->add_column("e", "string");
-  expected_table->add_column("f", "int");
-  expected_table->add_column("g", "float");
-  expected_table->add_column("h", "double");
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Float);
+  expected_table->add_column("d", DataType::Double);
+  expected_table->add_column("e", DataType::String);
+  expected_table->add_column("f", DataType::Int);
+  expected_table->add_column("g", DataType::Float);
+  expected_table->add_column("h", DataType::Double);
   expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
   expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
 
@@ -261,7 +261,7 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", "string");
+  expected_table->add_column("a", DataType::String);
   expected_table->append({"xxx\\\"xyz\\\""});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -280,8 +280,8 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   importer->execute();
 
   auto expected_table = std::make_shared<Table>(20);
-  expected_table->add_column("b", "float");
-  expected_table->add_column("a", "int");
+  expected_table->add_column("b", DataType::Float);
+  expected_table->add_column("a", DataType::Int);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});

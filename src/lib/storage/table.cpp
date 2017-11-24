@@ -53,19 +53,19 @@ Table::Table(const uint32_t max_chunk_size)
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
-void Table::add_column_definition(const std::string& name, const std::string& type, bool nullable) {
+void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {
   Assert((name.size() < std::numeric_limits<ColumnNameLength>::max()), "Cannot add column. Column name is too long.");
 
   _column_names.push_back(name);
-  _column_types.push_back(type);
+  _column_types.push_back(data_type);
   _column_nullable.push_back(nullable);
 }
 
-void Table::add_column(const std::string& name, const std::string& type, bool nullable) {
-  add_column_definition(name, type, nullable);
+void Table::add_column(const std::string& name, DataType data_type, bool nullable) {
+  add_column_definition(name, data_type, nullable);
 
   for (auto& chunk : _chunks) {
-    chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 }
 
@@ -83,10 +83,10 @@ void Table::create_new_chunk() {
   Chunk new_chunk{ChunkUseMvcc::Yes};
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
-    const auto& type = _column_types[column_id];
+    const auto type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
-    new_chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    new_chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
   _chunks.push_back(std::move(new_chunk));
 }
@@ -125,7 +125,7 @@ const std::string& Table::column_name(ColumnID column_id) const {
   return _column_names[column_id];
 }
 
-const std::string& Table::column_type(ColumnID column_id) const {
+DataType Table::column_type(ColumnID column_id) const {
   DebugAssert(column_id < _column_names.size(), "ColumnID " + std::to_string(column_id) + " out of range");
   return _column_types[column_id];
 }
@@ -135,7 +135,7 @@ bool Table::column_is_nullable(ColumnID column_id) const {
   return _column_nullable[column_id];
 }
 
-const std::vector<std::string>& Table::column_types() const { return _column_types; }
+const std::vector<DataType>& Table::column_types() const { return _column_types; }
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 

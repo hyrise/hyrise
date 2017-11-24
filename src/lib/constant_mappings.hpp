@@ -5,6 +5,7 @@
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -18,5 +19,6 @@ extern const std::unordered_map<ExpressionType, std::string> expression_type_to_
 extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
+extern const boost::bimap<DataType, std::string> data_type_to_string;
 
 }  // namespace opossum

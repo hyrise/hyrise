@@ -13,12 +13,12 @@ namespace opossum {
 class StorageChunkTest : public BaseTest {
  protected:
   void SetUp() override {
-    vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
+    vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
     vc_int->append(4);
     vc_int->append(6);
     vc_int->append(3);
 
-    vc_str = make_shared_by_column_type<BaseColumn, ValueColumn>("string");
+    vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
     vc_str->append("Hello,");
     vc_str->append("world");
     vc_str->append("!");
@@ -61,7 +61,7 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
 TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
   if (IS_DEBUG) {
-    auto wrapper = []() { make_shared_by_column_type<BaseColumn, ValueColumn>("weird_type"); };
+    auto wrapper = []() { make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Null); };
     EXPECT_THROW(wrapper(), std::logic_error);
   }
 }
