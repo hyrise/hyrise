@@ -53,6 +53,7 @@ void OperatorTask::_on_execute() {
       case TransactionPhase::Aborted:
       case TransactionPhase::RolledBack:
         // The transaction already failed. No need to execute this.
+        return;
         break;
 
       case TransactionPhase::Committing:
