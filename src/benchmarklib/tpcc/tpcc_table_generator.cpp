@@ -12,9 +12,6 @@
 #include <vector>
 
 #include "constants.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
@@ -31,8 +28,6 @@ TpccTableGenerator::TpccTableGenerator(const opossum::ChunkOffset chunk_size, co
       _random_gen(TpccRandomGenerator()) {}
 
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
-  opossum::CurrentScheduler::set(
-      std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology(10)));
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
