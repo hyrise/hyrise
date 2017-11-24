@@ -59,10 +59,10 @@ struct GroupByContext : ColumnVisitableContext {
         chunk_offsets_in(chunk_offsets) {}
 
   const std::shared_ptr<const Table>& table_in;
-  const ChunkID chunk_id;
+  ChunkID chunk_id;
   const ColumnID column_id;
   const std::shared_ptr<std::vector<AggregateKey>>& hash_keys;
-  const std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
+  std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
 };
 
 /*
