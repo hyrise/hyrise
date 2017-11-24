@@ -44,20 +44,22 @@ const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { re
 
 void OperatorTask::_on_execute() {
   auto context = _op->transaction_context();
-  switch (context->phase()) {
-    case TransactionPhase::Active:
-      // the expected default case
-      break;
+  if (context) {
+    switch (context->phase()) {
+      case TransactionPhase::Active:
+        // the expected default case
+        break;
 
-    case TransactionPhase::Aborted:
-    case TransactionPhase::RolledBack:
-      // The transaction already failed. No need to execute this.
-      break;
+      case TransactionPhase::Aborted:
+      case TransactionPhase::RolledBack:
+        // The transaction already failed. No need to execute this.
+        break;
 
-    case TransactionPhase::Committing:
-    case TransactionPhase::Committed:
-      Fail("Trying to execute operators for a transaction that is already committed");
-      break;
+      case TransactionPhase::Committing:
+      case TransactionPhase::Committed:
+        Fail("Trying to execute operators for a transaction that is already committed");
+        break;
+    }
   }
 
   _op->execute();
