@@ -29,10 +29,10 @@ class OperatorTask : public AbstractTask {
   void _on_execute() override;
 
   /**
-   * Create tasks recursively. Called by `make_tasks_from_operator`.
+   * Create tasks recursively. Called by `make_tasks_from_operator`. Returns the root of the subtree that was added.
    */
-  static void _add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
-                                       std::vector<std::shared_ptr<OperatorTask>>& tasks);
+  static std::shared_ptr<OperatorTask> _add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
+                                           std::vector<std::shared_ptr<OperatorTask>>& tasks);
 
  private:
   std::shared_ptr<AbstractOperator> _op;

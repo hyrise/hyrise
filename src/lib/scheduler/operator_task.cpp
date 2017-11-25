@@ -27,21 +27,28 @@ const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_o
   return tasks;
 }
 
-void OperatorTask::_add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
+std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
                                             std::vector<std::shared_ptr<OperatorTask>>& tasks) {
-  auto task = std::make_shared<OperatorTask>(op);
+  std::shared_ptr<OperatorTask> task = op->operator_task();
+  if (!task) {
+    // We need to make sure that we don't create two tasks for the same operator. This could happen if the same
+    // operator is used as input for two other operators.
+    task = std::make_shared<OperatorTask>(op);
+    op->set_operator_task(task);
+    tasks.push_back(task);
+  }
 
   if (auto left = op->mutable_input_left()) {
-    OperatorTask::_add_tasks_from_operator(left, tasks);
-    tasks.back()->set_as_predecessor_of(task);
+    auto subtree_root = OperatorTask::_add_tasks_from_operator(left, tasks);
+    subtree_root->set_as_predecessor_of(task);
   }
 
   if (auto right = op->mutable_input_right()) {
-    OperatorTask::_add_tasks_from_operator(right, tasks);
-    tasks.back()->set_as_predecessor_of(task);
+    auto subtree_root = OperatorTask::_add_tasks_from_operator(right, tasks);
+    subtree_root->set_as_predecessor_of(task);
   }
 
-  tasks.push_back(task);
+  return task;
 }
 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
