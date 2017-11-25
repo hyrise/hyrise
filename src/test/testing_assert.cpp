@@ -121,7 +121,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   if (opossum_table->row_count() != expected_table->row_count()) {
     std::cout << "Number of rows is different." << std::endl
               << "Got: " << opossum_table->row_count() << " rows" << std::endl
-              << "Expected: " << expected_table->row_count() << " rows" << generate_table_comparison() << std::endl;
+              << "Expected: " << expected_table->row_count() << " rows" << std::endl
+              << generate_table_comparison() << std::endl;
     return false;
   }
 

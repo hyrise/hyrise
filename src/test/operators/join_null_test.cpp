@@ -65,7 +65,7 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullDict) {
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
   if (std::is_same<TypeParam, JoinSortMerge>::value) {
     // todo(anyone): Remove this as soon as SMJ fixes this
-    return;
+    //return;
   }
 
   this->template test_join_output<TypeParam>(
