@@ -315,8 +315,12 @@ class RadixClusterSort {
   std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> execute() {
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> column_materializer(!_equi_case);
-    auto materialized_left_columns = column_materializer.materialize(_input_table_left, _left_column_id);
-    auto materialized_right_columns = column_materializer.materialize(_input_table_right, _right_column_id);
+    auto materialization_left = column_materializer.materialize(_input_table_left, _left_column_id);
+    auto materialized_left_columns = materialization_left.first;
+    auto null_rows_left = materialization_left.second;
+    auto materialization_right = column_materializer.materialize(_input_table_right, _right_column_id);
+    auto materialized_right_columns = materialization_right.first;
+    auto null_rows_right = materialization_right.second;
 
     std::unique_ptr<MaterializedColumnList<T>> output_left;
     std::unique_ptr<MaterializedColumnList<T>> output_right;
