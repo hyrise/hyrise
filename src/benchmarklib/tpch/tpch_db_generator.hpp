@@ -28,7 +28,7 @@ class TableBuilder {
     _table = std::make_shared<Table>(chunk_size);
 
     boost::hana::zip_with([&] (auto column_type, auto column_name) {
-      _table->add_column_definition(column_name, type_string_from_type<decltype(column_type)>());
+      _table->add_column_definition(column_name, data_type_from_type<decltype(column_type)>());
       return 0;
     }, boost::hana::tuple<ColumnTypes...>(), column_names);
   }
@@ -45,7 +45,7 @@ class TableBuilder {
     boost::hana::zip_with([](auto &vector, auto&& value) { vector.push_back(value); return 0; },
     _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
 
-    if (_table->chunk_size() != 0 && _current_chunk_row_count() >= _table->chunk_size()) {
+    if (_current_chunk_row_count() >= _table->max_chunk_size()) {
       _emit_chunk();
     }
   }
@@ -70,29 +70,25 @@ class TableBuilder {
   }
 };
 
-enum TpchTable {
-  TpchTable_Part = 0,
-  TpchTable_PartSupplier,
-  TpchTable_Supplier,
-  TpchTable_Customer,
-  TpchTable_Order,
-  TpchTable_LineItem,
-  TpchTable_OrderLine,
-  TpchTable_PartPartSupplier,
-  TpchTable_Nation,
-  TpchTable_Region,
-  TpchTable_Update,
-
-  TpchTable_Count // Meta
+enum class TpchTable {
+  Part,
+  PartSupplier,
+  Supplier,
+  Customer,
+  Order,
+  LineItem,
+  Nation,
+  Region
 };
+
+extern std::unordered_map<TpchTable, std::string> tpch_table_names;
 
 class TpchDbGenerator final {
  public:
   explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = 0);
 
-  std::unordered_map<std::string, std::shared_ptr<Table>> generate();
+  std::unordered_map<TpchTable, std::shared_ptr<Table>> generate();
   void generate_and_store();
-  void generate_and_export_csv(const std::string &path);
 
  private:
   float _scale_factor;
@@ -100,7 +96,6 @@ class TpchDbGenerator final {
 
   void _row_start();
   void _row_stop(TpchTable table);
-
 };
 
 }

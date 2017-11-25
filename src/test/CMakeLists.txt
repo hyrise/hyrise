@@ -107,6 +107,7 @@ set (
     ${SHARED_SOURCES}
     tpc/tpcc_ref_test.cpp
     tpc/tpch_test.cpp
+    tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
 )
 
@@ -146,3 +147,4 @@ add_sanitizers_executable(hyriseSanitizers "${HYRISE_UNIT_TEST_SOURCES}" "hyrise
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 add_dependencies(hyriseSystemTest tpccTableGenerator)
+

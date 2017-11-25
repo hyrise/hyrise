@@ -18,14 +18,40 @@ DSS_HUGE set_state(int table, long sf, long procs, long step, DSS_HUGE *extra_ro
 
 }
 
+namespace {
+
+std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
+  {opossum::TpchTable::Part, PART},
+  {opossum::TpchTable::PartSupplier, PSUPP},
+  {opossum::TpchTable::Supplier, SUPP},
+  {opossum::TpchTable::Customer, CUST},
+  {opossum::TpchTable::Order, ORDER},
+  {opossum::TpchTable::LineItem, LINE},
+  {opossum::TpchTable::Nation, NATION},
+  {opossum::TpchTable::Region, REGION}
+};
+
+}
+
 namespace opossum {
+
+std::unordered_map<TpchTable, std::string> tpch_table_names = {
+  {TpchTable::Part, "part"},
+  {TpchTable::PartSupplier, "partsupp"},
+  {TpchTable::Supplier, "supplier"},
+  {TpchTable::Customer, "customer"},
+  {TpchTable::Order, "order"},
+  {TpchTable::LineItem, "lineitem"},
+  {TpchTable::Nation, "nation"},
+  {TpchTable::Region, "region"}
+};
 
 TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size) :
 _scale_factor(scale_factor),
 _chunk_size(chunk_size) {
 }
 
-std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generate() {
+std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
   /**
    * CUSTOMER
    */
@@ -40,7 +66,7 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
                      boost::hana::make_tuple("c_custkey", "c_name", "c_address", "c_nation_code", "c_phone",
                                              "c_acctbal", "c_mktsegment", "c_comment"));
 
-  const auto customer_count = static_cast<size_t>(tdefs[TpchTable_Customer].base * _scale_factor);
+  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
 
   for (size_t row_idx = 1; row_idx <= customer_count; row_idx++) {
     _row_start();
@@ -69,7 +95,7 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
                      "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate",
                      "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"));
 
-  const auto order_count = static_cast<size_t>(tdefs[TpchTable_Order].base * _scale_factor);
+  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
 
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
     order_t order;
@@ -97,7 +123,7 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
   TableBuilder<int32_t, int32_t, int32_t, float, std::string>
   partsupp_builder(_chunk_size, boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"));
 
-  const auto part_count = static_cast<size_t>(tdefs[TpchTable_Part].base * _scale_factor);
+  const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
 
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
     part_t part;
@@ -117,7 +143,7 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
   TableBuilder<int32_t, std::string, std::string, int32_t, std::string, float, std::string>
     supplier_builder(_chunk_size, boost::hana::make_tuple("s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"));
 
-  const auto supplier_count = static_cast<size_t>(tdefs[TpchTable_Supplier].base * _scale_factor);
+  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * _scale_factor);
 
   for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
     supplier_t supplier;
@@ -133,7 +159,7 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
   TableBuilder<int32_t, std::string, int32_t, std::string>
     nation_builder(_chunk_size, boost::hana::make_tuple("n_nationkey", "n_name", "n_regionkey", "n_comment"));
 
-  const auto nation_count = static_cast<size_t>(tdefs[TpchTable_Nation].base);
+  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
 
   for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
     code_t nation;
@@ -148,7 +174,7 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
   TableBuilder<int32_t, std::string, std::string>
     region_builder(_chunk_size, boost::hana::make_tuple("r_regionkey", "r_name", "r_comment"));
 
-  const auto region_count = static_cast<size_t>(tdefs[TpchTable_Region].base);
+  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
   for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
     code_t region;
@@ -157,32 +183,25 @@ std::unordered_map<std::string, std::shared_ptr<Table>> TpchDbGenerator::generat
     region_builder.append_row(region.code, region.text, region.comment);
   }
 
-
-
-
   return {
-  {"customer", customer_builder.finish_table()},
-  {"order", order_builder.finish_table()},
-  {"lineitem", lineitem_builder.finish_table()},
-  {"part", part_builder.finish_table()},
-  {"partsupp", partsupp_builder.finish_table()},
-  {"supplier", supplier_builder.finish_table()},
-  {"nation", nation_builder.finish_table()},
-  {"region", region_builder.finish_table()}
+    {TpchTable::Customer, customer_builder.finish_table()},
+    {TpchTable::Order, order_builder.finish_table()},
+    {TpchTable::LineItem, lineitem_builder.finish_table()},
+    {TpchTable::Part, part_builder.finish_table()},
+    {TpchTable::PartSupplier, partsupp_builder.finish_table()},
+    {TpchTable::Supplier, supplier_builder.finish_table()},
+    {TpchTable::Nation, nation_builder.finish_table()},
+    {TpchTable::Region, region_builder.finish_table()}
   };
 
 }
 
 void TpchDbGenerator::generate_and_store() {
-  const auto tables_by_names = generate();
+  const auto tables = generate();
 
-  for (auto & name_and_table : tables_by_names) {
-    StorageManager::get().add_table(name_and_table.first, name_and_table.second);
+  for (auto & table : tables) {
+    StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
   }
-}
-
-void TpchDbGenerator::generate_and_export_csv(const std::string &path) {
-
 }
 
 void
@@ -195,12 +214,9 @@ void
 TpchDbGenerator::_row_stop(TpchTable table) {
   int i;
 
-  /* need to allow for handling the master and detail together */
-  if (table == TpchTable_OrderLine) table = TpchTable_Order;
-  if (table == TpchTable_PartSupplier) table = TpchTable_Part;
-
-  for (i = 0; i <= MAX_STREAM; i++)
-    if ((Seed[i].table == table) || (Seed[i].table == tdefs[table].child)) {
+  for (i = 0; i <= MAX_STREAM; i++) {
+    const auto dbgen_table_id = tpch_table_to_dbgen_id.at(table);
+    if ((Seed[i].table == dbgen_table_id) || (Seed[i].table == tdefs[dbgen_table_id].child)) {
       if (Seed[i].usage > Seed[i].boundary) {
         Seed[i].boundary = Seed[i].usage;
       } else {
@@ -210,6 +226,7 @@ TpchDbGenerator::_row_stop(TpchTable table) {
 #endif
       }
     }
+  }
 }
 
 }
