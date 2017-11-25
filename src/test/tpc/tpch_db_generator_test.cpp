@@ -14,5 +14,4 @@ TEST(TpchDbGeneratorTest, RowCounts) {
 
   EXPECT_EQ(tables.at(TpchTable::Part)->row_count(), static_cast<size_t>(200'000 * scale_factor));
 }
-
 }

@@ -5,7 +5,7 @@
 #include "tpch/tpch_db_generator.hpp"
 
 extern "C" {
-void mk_sparse(long i, long *ok, long seq);
+void mk_sparse(long i, long* ok, long seq);
 }
 
 int main() {
@@ -13,7 +13,7 @@ int main() {
 
   auto tables = gen.generate();
 
-  for (auto & pair : tables) {
+  for (auto& pair : tables) {
     std::cout << "Table '" << pair.first << "'" << std::endl;
     opossum::Print::print(pair.second);
     std::cout << "\n";
