@@ -30,12 +30,13 @@ const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_o
 std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
     std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks) {
   std::shared_ptr<OperatorTask> task = op->operator_task();
+  bool add_task = false;
   if (!task) {
     // We need to make sure that we don't create two tasks for the same operator. This could happen if the same
     // operator is used as input for two other operators.
     task = std::make_shared<OperatorTask>(op);
     op->set_operator_task(task);
-    tasks.push_back(task);
+    add_task = true;
   }
 
   if (auto left = op->mutable_input_left()) {
@@ -47,6 +48,8 @@ std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
     auto subtree_root = OperatorTask::_add_tasks_from_operator(right, tasks);
     subtree_root->set_as_predecessor_of(task);
   }
+
+  if (add_task) tasks.push_back(task);
 
   return task;
 }
