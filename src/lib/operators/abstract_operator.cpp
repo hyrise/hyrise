@@ -7,6 +7,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "sql/sql_query_operator.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -34,9 +35,14 @@ void AbstractOperator::execute() {
     _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
   } else {
-    auto read_only_operator = dynamic_cast<AbstractReadOnlyOperator*>(this);
-    DebugAssert(read_only_operator, "Trying to execute read write operator without transaction context");
-    _output = read_only_operator->_on_execute();
+    if (dynamic_cast<SQLQueryOperator*>(this)) {
+      // TODO(anyone): Once the SQL Query Operator is refactored (#304), this should be removed
+      _output = _on_execute(nullptr);
+    } else {
+      auto read_only_operator = dynamic_cast<AbstractReadOnlyOperator*>(this);
+      DebugAssert(read_only_operator, "Trying to execute read write operator without transaction context");
+      _output = read_only_operator->_on_execute();
+    }
   }
 
   // release any temporary data if possible
@@ -58,6 +64,8 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
         return true;
       }(),
       "Empty chunk returned from operator " + description());
+
+  DebugAssert(!_output || _output->column_count() > 0, "Operator " + description() + " did not output any columns");
 
   return _output;
 }
@@ -109,6 +117,15 @@ const AbstractOperator::PerformanceData& AbstractOperator::performance_data() co
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
+  return _operator_task.lock();
+}
+
+void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
+  DebugAssert(!_operator_task.lock(), "_operator_task was already set");
+  _operator_task = operator_task;
+}
 
 void AbstractOperator::_on_cleanup() {}
 
