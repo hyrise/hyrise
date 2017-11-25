@@ -111,7 +111,6 @@ void	usage (void);
 void	kill_load (void);
 int		pload (int tbl);
 void	gen_tbl (int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num);
-int		pr_drange (int tbl, DSS_HUGE min, DSS_HUGE cnt, long num);
 int		set_files (int t, int pload);
 int		partial (int, int);
 
@@ -152,20 +151,6 @@ static int bTableSet = 0;
 */
 
 /*
-* flat file print functions; used with -F(lat) option
-*/
-int pr_cust (customer_t * c, int mode);
-int pr_line (order_t * o, int mode);
-int pr_order (order_t * o, int mode);
-int pr_part (part_t * p, int mode);
-int pr_psupp (part_t * p, int mode);
-int pr_supp (supplier_t * s, int mode);
-int pr_order_line (order_t * o, int mode);
-int pr_part_psupp (part_t * p, int mode);
-int pr_nation (code_t * c, int mode);
-int pr_region (code_t * c, int mode);
-
-/*
 * seed generation functions; used with '-O s' option
 */
 long sd_cust (int child, DSS_HUGE skip_count);
@@ -180,25 +165,25 @@ long sd_part_psupp (int child, DSS_HUGE skip_count);
 tdef tdefs[] =
 {
 	{"part.tbl", "part table", 200000,
-		pr_part, sd_part, PSUPP, 0},
+		NULL, sd_part, PSUPP, 0},
 	{"partsupp.tbl", "partsupplier table", 200000,
-		pr_psupp, sd_psupp, NONE, 0},
+		NULL, sd_psupp, NONE, 0},
 	{"supplier.tbl", "suppliers table", 10000,
-		pr_supp, sd_supp, NONE, 0},
+		NULL, sd_supp, NONE, 0},
 	{"customer.tbl", "customers table", 150000,
-		pr_cust, sd_cust, NONE, 0},
+		NULL, sd_cust, NONE, 0},
 	{"orders.tbl", "order table", 150000 * ORDERS_PER_CUST,
-		pr_order, sd_order, LINE, 0},
+		NULL, sd_order, LINE, 0},
 	{"lineitem.tbl", "lineitem table", 150000 * ORDERS_PER_CUST,
-		pr_line, sd_line, NONE, 0},
+		NULL, sd_line, NONE, 0},
 	{"orders.tbl", "orders/lineitem tables", 150000 * ORDERS_PER_CUST,
-		pr_order_line, sd_order, LINE, 0},
+		NULL, sd_order, LINE, 0},
 	{"part.tbl", "part/partsupplier tables", 200000,
-		pr_part_psupp, sd_part, PSUPP, 0},
+		NULL, sd_part, PSUPP, 0},
 	{"nation.tbl", "nation table", NATIONS_COUNT,
-		pr_nation, NO_LFUNC, NONE, 0},
+		NULL, NO_LFUNC, NONE, 0},
 	{"region.tbl", "region table", REGIONS_COUNT,
-		pr_region, NO_LFUNC, NONE, 0},
+		NULL, NO_LFUNC, NONE, 0},
 };
 
 /*
@@ -659,143 +644,143 @@ void validate_options(void)
 * assumes the existance of getopt() to clean up the command 
 * line handling
 */
-int
-not_main (int ac, char **av)
-{
-	DSS_HUGE i;
-	
-	table = (1 << CUST) |
-		(1 << SUPP) |
-		(1 << NATION) |
-		(1 << REGION) |
-		(1 << PART_PSUPP) |
-		(1 << ORDER_LINE);
-	force = 0;
-    insert_segments=0;
-    delete_segments=0;
-    insert_orders_segment=0;
-    insert_lineitem_segment=0;
-    delete_segment=0;
-	verbose = 0;
-	set_seeds = 0;
-	scale = 1;
-	flt_scale = 1.0;
-	updates = 0;
-	step = -1;
-	tdefs[ORDER].base *=
-		ORDERS_PER_CUST;			/* have to do this after init */
-	tdefs[LINE].base *=
-		ORDERS_PER_CUST;			/* have to do this after init */
-	tdefs[ORDER_LINE].base *=
-		ORDERS_PER_CUST;			/* have to do this after init */
-	children = 1;
-	d_path = NULL;
-	
-#ifdef NO_SUPPORT
-	signal (SIGINT, exit);
-#endif /* NO_SUPPORT */
-	process_options (ac, av);
-	validate_options();
-#if (defined(WIN32)&&!defined(_POSIX_))
-	for (i = 0; i < ac; i++)
-	{
-		spawn_args[i] = malloc (((int)strlen (av[i]) + 1) * sizeof (char));
-		MALLOC_CHECK (spawn_args[i]);
-		strcpy (spawn_args[i], av[i]);
-	}
-	spawn_args[ac] = NULL;
-#endif
-	
-	if (verbose >= 0)
-		{
-		fprintf (stderr,
-			"%s Population Generator (Version %d.%d.%d)\n",
-			NAME, VERSION, RELEASE, PATCH);
-		fprintf (stderr, "Copyright %s %s\n", TPC, C_DATES);
-		}
-	
-	load_dists ();
-#ifdef RNG_TEST
-	for (i=0; i <= MAX_STREAM; i++)
-		Seed[i].nCalls = 0;
-#endif
-	/* have to do this after init */
-	tdefs[NATION].base = nations.count;
-	tdefs[REGION].base = regions.count;
-	
-	/* 
-	* updates are never parallelized 
-	*/
-	if (updates)
-		{
-		/* 
-		 * set RNG to start generating rows beyond SF=scale
-		 */
-		set_state (ORDER, scale, 100, 101, &i); 
-		rowcnt = (int)(tdefs[ORDER_LINE].base / 10000 * scale * UPD_PCT);
-		if (step > 0)
-			{
-			/* 
-			 * adjust RNG for any prior update generation
-			 */
-	      for (i=1; i < step; i++)
-         {
-			sd_order(0, rowcnt);
-			sd_line(0, rowcnt);
-         }
-			upd_num = step - 1;
-			}
-		else
-			upd_num = 0;
-
-		while (upd_num < updates)
-			{
-			if (verbose > 0)
-				fprintf (stderr,
-				"Generating update pair #%ld for %s",
-				upd_num + 1, tdefs[ORDER_LINE].comment);
-			insert_orders_segment=0;
-			insert_lineitem_segment=0;
-			delete_segment=0;
-			minrow = upd_num * rowcnt + 1;
-			gen_tbl (ORDER_LINE, minrow, rowcnt, upd_num + 1);
-			if (verbose > 0)
-				fprintf (stderr, "done.\n");
-			pr_drange (ORDER_LINE, minrow, rowcnt, upd_num + 1);
-			upd_num++;
-			}
-
-		exit (0);
-		}
-	
-	/**
-	** actual data generation section starts here
-	**/
-
-	/*
-	* traverse the tables, invoking the appropriate data generation routine for any to be built
-	*/
-	for (i = PART; i <= REGION; i++)
-		if (table & (1 << i))
-		{
-			if (children > 1 && i < NATION)
-			{
-				partial ((int)i, step);
-			}
-			else
-			{
-				minrow = 1;
-				if (i < NATION)
-					rowcnt = tdefs[i].base * scale;
-				else
-					rowcnt = tdefs[i].base;
-				if (verbose > 0)
-					fprintf (stderr, "Generating data for %s", tdefs[i].comment);
-				gen_tbl ((int)i, minrow, rowcnt, upd_num);
-				if (verbose > 0)
-					fprintf (stderr, "done.\n");
-			}
-		}
-			
-		return (0);
-}
+//int
+//not_main (int ac, char **av)
+//{
+//	DSS_HUGE i;
+//
+//	table = (1 << CUST) |
+//		(1 << SUPP) |
+//		(1 << NATION) |
+//		(1 << REGION) |
+//		(1 << PART_PSUPP) |
+//		(1 << ORDER_LINE);
+//	force = 0;
+//    insert_segments=0;
+//    delete_segments=0;
+//    insert_orders_segment=0;
+//    insert_lineitem_segment=0;
+//    delete_segment=0;
+//	verbose = 0;
+//	set_seeds = 0;
+//	scale = 1;
+//	flt_scale = 1.0;
+//	updates = 0;
+//	step = -1;
+//	tdefs[ORDER].base *=
+//		ORDERS_PER_CUST;			/* have to do this after init */
+//	tdefs[LINE].base *=
+//		ORDERS_PER_CUST;			/* have to do this after init */
+//	tdefs[ORDER_LINE].base *=
+//		ORDERS_PER_CUST;			/* have to do this after init */
+//	children = 1;
+//	d_path = NULL;
+//
+//#ifdef NO_SUPPORT
+//	signal (SIGINT, exit);
+//#endif /* NO_SUPPORT */
+//	process_options (ac, av);
+//	validate_options();
+//#if (defined(WIN32)&&!defined(_POSIX_))
+//	for (i = 0; i < ac; i++)
+//	{
+//		spawn_args[i] = malloc (((int)strlen (av[i]) + 1) * sizeof (char));
+//		MALLOC_CHECK (spawn_args[i]);
+//		strcpy (spawn_args[i], av[i]);
+//	}
+//	spawn_args[ac] = NULL;
+//#endif
+//
+//	if (verbose >= 0)
+//		{
+//		fprintf (stderr,
+//			"%s Population Generator (Version %d.%d.%d)\n",
+//			NAME, VERSION, RELEASE, PATCH);
+//		fprintf (stderr, "Copyright %s %s\n", TPC, C_DATES);
+//		}
+//
+//	load_dists ();
+//#ifdef RNG_TEST
+//	for (i=0; i <= MAX_STREAM; i++)
+//		Seed[i].nCalls = 0;
+//#endif
+//	/* have to do this after init */
+//	tdefs[NATION].base = nations.count;
+//	tdefs[REGION].base = regions.count;
+//
+//	/*
+//	* updates are never parallelized
+//	*/
+//	if (updates)
+//		{
+//		/*
+//		 * set RNG to start generating rows beyond SF=scale
+//		 */
+//		set_state (ORDER, scale, 100, 101, &i);
+//		rowcnt = (int)(tdefs[ORDER_LINE].base / 10000 * scale * UPD_PCT);
+//		if (step > 0)
+//			{
+//			/*
+//			 * adjust RNG for any prior update generation
+//			 */
+//	      for (i=1; i < step; i++)
+//         {
+//			sd_order(0, rowcnt);
+//			sd_line(0, rowcnt);
+//         }
+//			upd_num = step - 1;
+//			}
+//		else
+//			upd_num = 0;
+//
+//		while (upd_num < updates)
+//			{
+//			if (verbose > 0)
+//				fprintf (stderr,
+//				"Generating update pair #%ld for %s",
+//				upd_num + 1, tdefs[ORDER_LINE].comment);
+//			insert_orders_segment=0;
+//			insert_lineitem_segment=0;
+//			delete_segment=0;
+//			minrow = upd_num * rowcnt + 1;
+//			gen_tbl (ORDER_LINE, minrow, rowcnt, upd_num + 1);
+//			if (verbose > 0)
+//				fprintf (stderr, "done.\n");
+//			pr_drange (ORDER_LINE, minrow, rowcnt, upd_num + 1);
+//			upd_num++;
+//			}
+//
+//		exit (0);
+//		}
+//
+//	/**
+//	** actual data generation section starts here
+//	**/
+//
+//	/*
+//	* traverse the tables, invoking the appropriate data generation routine for any to be built
+//	*/
+//	for (i = PART; i <= REGION; i++)
+//		if (table & (1 << i))
+//		{
+//			if (children > 1 && i < NATION)
+//			{
+//				partial ((int)i, step);
+//			}
+//			else
+//			{
+//				minrow = 1;
+//				if (i < NATION)
+//					rowcnt = tdefs[i].base * scale;
+//				else
+//					rowcnt = tdefs[i].base;
+//				if (verbose > 0)
+//					fprintf (stderr, "Generating data for %s", tdefs[i].comment);
+//				gen_tbl ((int)i, minrow, rowcnt, upd_num);
+//				if (verbose > 0)
+//					fprintf (stderr, "done.\n");
+//			}
+//		}
+//
+//		return (0);
+//}

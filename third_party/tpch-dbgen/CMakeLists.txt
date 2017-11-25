@@ -9,7 +9,6 @@ add_library(tpch_dbgen
     tpch_dbgen.c
     bm_utils.c
     rnd.c
-    print.c
     load_stub.c
     bcd2.c
     speed_seed.c
