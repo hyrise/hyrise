@@ -97,6 +97,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<MaterializedColumnList<T>> _sorted_left_table;
   std::unique_ptr<MaterializedColumnList<T>> _sorted_right_table;
 
+  // Contains the null value row ids if a join column is an outer join column
+  std::unique_ptr<PosList> _null_rows_left;
+  std::unique_ptr<PosList> _null_rows_right;
+
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
 
@@ -630,8 +634,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                             _sort_merge_join._column_ids, _op == ScanType::OpEquals, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
-    _sorted_left_table = std::move(sort_output.first);
-    _sorted_right_table = std::move(sort_output.second);
+    _sorted_left_table = std::move(sort_output.clusters_left);
+    _sorted_right_table = std::move(sort_output.clusters_right);
+    _null_rows_left = sort_output.null_rows_left;
+    _null_rows_right = sort_output.null_rows_right;
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
@@ -642,6 +648,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // merge the pos lists into single pos lists
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+
+    
 
     // Add the columns from both input tables to the output
     _add_output_columns(output_table, _sort_merge_join._input_table_left(), output_left);
