@@ -291,7 +291,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.reserve(chunk_offsets->size());
 
     for (ChunkID chunk_id{0}; chunk_id < chunk_offsets->size(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([chunk_id, chunk_offsets, histograms, keep_nulls, mask, materialized, num_partitions, output, pass, radix_bits = _radix_bits] {
+      jobs.emplace_back(std::make_shared<JobTask>([
+        chunk_id, chunk_offsets, histograms, keep_nulls, mask, materialized, num_partitions, output, pass,
+        radix_bits = _radix_bits
+      ] {
         // calculate output offsets for each partition
         auto output_offsets = std::vector<size_t>(num_partitions, 0);
 
@@ -356,7 +359,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       auto hashtable = std::make_shared<HashTable<LeftType>>(partition_size);
       hashtables[current_partition_id] = hashtable;
 
-      jobs.emplace_back(std::make_shared<JobTask>([partition_left = radix_container.elements, partition_left_begin, partition_left_end, partition_offsets, hashtable]() {
+      jobs.emplace_back(std::make_shared<JobTask>([
+        partition_left = radix_container.elements, partition_left_begin, partition_left_end, partition_offsets,
+        hashtable
+      ]() {
         // Prune empty partitions, so that we don't have too many empty hash tables
         for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end;
              ++partition_offset) {
@@ -376,7 +382,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   number of hash tables that need to be looked into to just 1.
   */
   void _probe(const RadixContainer<RightType>& radix_container,
-              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables, const std::shared_ptr<std::vector<PosList>>& pos_lists_left,
+              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables,
+              const std::shared_ptr<std::vector<PosList>>& pos_lists_left,
               const std::shared_ptr<std::vector<PosList>>& pos_lists_right) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -391,7 +398,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-
       // Get information from work queue
       const auto partition_begin = radix_container.partition_offsets[current_partition_id];
       const auto partition_end = radix_container.partition_offsets[current_partition_id + 1];
@@ -399,7 +405,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // Skip empty partitions to avoid empty output chunks
       if ((partition_end - partition_begin) == 0) continue;
 
-      jobs.emplace_back(std::make_shared<JobTask>([current_partition_id, hashtable = hashtables[current_partition_id], mode = _mode, partition = radix_container.elements, partition_begin, partition_end, pos_lists_left, pos_lists_right]() {
+      jobs.emplace_back(std::make_shared<JobTask>([
+        current_partition_id, hashtable = hashtables[current_partition_id], mode = _mode,
+        partition = radix_container.elements, partition_begin, partition_end, pos_lists_left, pos_lists_right
+      ]() {
         PosList pos_list_left_local;
         PosList pos_list_right_local;
 
@@ -471,7 +480,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // Skip empty partitions to avoid empty output chunks
       if ((partition_end - partition_begin) == 0) continue;
 
-      jobs.emplace_back(std::make_shared<JobTask>([current_partition_id, hashtable = hashtables[current_partition_id], mode = _mode, partition = radix_container.elements, partition_begin, partition_end, pos_lists]() {
+      jobs.emplace_back(std::make_shared<JobTask>([
+        current_partition_id, hashtable = hashtables[current_partition_id], mode = _mode,
+        partition = radix_container.elements, partition_begin, partition_end, pos_lists
+      ]() {
         // Get information from work queue
         PosList pos_list_local;
 

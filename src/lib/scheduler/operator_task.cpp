@@ -27,8 +27,8 @@ const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_o
   return tasks;
 }
 
-std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
-                                            std::vector<std::shared_ptr<OperatorTask>>& tasks) {
+std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
+    std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks) {
   std::shared_ptr<OperatorTask> task = op->operator_task();
   if (!task) {
     // We need to make sure that we don't create two tasks for the same operator. This could happen if the same

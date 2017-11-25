@@ -118,9 +118,7 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { r
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
 
-std::shared_ptr<OperatorTask> AbstractOperator::operator_task() {
-  return _operator_task.lock();
-}
+std::shared_ptr<OperatorTask> AbstractOperator::operator_task() { return _operator_task.lock(); }
 
 void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
   DebugAssert(!_operator_task.lock(), "_operator_task was already set");
