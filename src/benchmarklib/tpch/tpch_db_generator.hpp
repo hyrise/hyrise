@@ -20,63 +20,9 @@ namespace opossum {
 class Chunk;
 class Table;
 
-template <typename... ColumnTypes>
-class TableBuilder {
- public:
-  template <typename... Strings>
-  explicit TableBuilder(size_t chunk_size, boost::hana::tuple<Strings...> column_names) {
-    _table = std::make_shared<Table>(chunk_size);
+enum class TpchTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
-    boost::hana::zip_with(
-        [&](auto column_type, auto column_name) {
-          _table->add_column_definition(column_name, data_type_from_type<decltype(column_type)>());
-          return 0;
-        },
-        boost::hana::tuple<ColumnTypes...>(), column_names);
-  }
-
-  std::shared_ptr<Table> finish_table() {
-    if (_current_chunk_row_count() > 0) {
-      _emit_chunk();
-    }
-
-    return _table;
-  }
-
-  void append_row(ColumnTypes&&... column_values) {
-    boost::hana::zip_with(
-        [](auto& vector, auto&& value) {
-          vector.push_back(value);
-          return 0;
-        },
-        _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
-
-    if (_current_chunk_row_count() >= _table->max_chunk_size()) {
-      _emit_chunk();
-    }
-  }
-
- private:
-  std::shared_ptr<Table> _table;
-  boost::hana::tuple<pmr_concurrent_vector<ColumnTypes>...> _column_vectors;
-
-  size_t _current_chunk_row_count() const { return _column_vectors[boost::hana::llong_c<0>].size(); }
-
-  void _emit_chunk() {
-    Chunk chunk;
-
-    hana::for_each(_column_vectors, [&](auto&& vector) {
-      using T = typename std::decay_t<decltype(vector)>::value_type;
-      chunk.add_column(std::make_shared<ValueColumn<T>>(std::move(vector)));
-      vector = typename std::decay_t<decltype(vector)>();
-    });
-    _table->emplace_chunk(std::move(chunk));
-  }
-};
-
-enum class TpchTable { Part, PartSupplier, Supplier, Customer, Order, LineItem, Nation, Region };
-
-extern std::unordered_map<TpchTable, std::string> tpch_table_names;
+extern std::unordered_map<opossum::TpchTable, std::string> tpch_table_names;
 
 /**
  * NOT thread safe (internal malloc races)
@@ -92,7 +38,7 @@ class TpchDbGenerator final {
   float _scale_factor;
   size_t _chunk_size;
 
-  void _row_start();
-  void _row_stop(TpchTable table);
+  template<typename T, typename ...Args>
+  T _call_dbgen_mk(size_t idx, long (*mk_fn)(long long int, T * val, Args...), TpchTable table, Args ... args) const;
 };
 }
