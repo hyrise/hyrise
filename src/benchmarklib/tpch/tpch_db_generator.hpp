@@ -83,6 +83,9 @@ enum class TpchTable {
 
 extern std::unordered_map<TpchTable, std::string> tpch_table_names;
 
+/**
+ * NOT thread safe (internal malloc races)
+ */
 class TpchDbGenerator final {
  public:
   explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = 0);

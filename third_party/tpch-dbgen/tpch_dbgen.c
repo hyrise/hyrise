@@ -1,6 +1,9 @@
 #include "tpch_dbgen.h"
+#include "dss.h"
 
 #include <stdlib.h>
+
+extern char ** asc_date;
 
 set_member p_cntr_set_list[] = {
   {1, "SM CASE"},
@@ -747,3 +750,40 @@ distribution vp = {
   vp_list,
   NULL
 };
+
+static void free_and_null_permutations(distribution *d) {
+  free(d->permute);
+  d->permute = NULL;
+}
+
+void dbgen_cleanup() {
+  free_and_null_permutations(&nations);
+  free_and_null_permutations(&regions);
+  free_and_null_permutations(&o_priority_set);
+  free_and_null_permutations(&l_instruct_set);
+  free_and_null_permutations(&l_smode_set);
+  free_and_null_permutations(&l_category_set);
+  free_and_null_permutations(&l_rflag_set);
+  free_and_null_permutations(&c_mseg_set);
+  free_and_null_permutations(&colors);
+  free_and_null_permutations(&p_types_set);
+  free_and_null_permutations(&p_cntr_set);
+  free_and_null_permutations(&articles);
+  free_and_null_permutations(&nouns);
+  free_and_null_permutations(&adjectives);
+  free_and_null_permutations(&adverbs);
+  free_and_null_permutations(&prepositions);
+  free_and_null_permutations(&verbs);
+  free_and_null_permutations(&terminators);
+  free_and_null_permutations(&auxillaries);
+  free_and_null_permutations(&np);
+  free_and_null_permutations(&vp);
+  free_and_null_permutations(&grammar);
+  
+  if (asc_date != NULL) {
+    for (size_t idx = 0; idx < TOTDATE; ++idx) {
+      free(asc_date[idx]);
+    }
+    free(asc_date);
+  }
+}

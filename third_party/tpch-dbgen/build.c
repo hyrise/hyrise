@@ -65,6 +65,11 @@ extern adhoc_t  adhocs[];
 #define TEXT(avg, sd, tgt)  dbg_text(tgt, (int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd)
 static void gen_phone PROTO((DSS_HUGE ind, char *target, long seed));
 
+/**
+ * Made public so we can free the allocated memory later
+ */
+char **asc_date = NULL;
+
 DSS_HUGE
 rpb_routine(DSS_HUGE p)
 {
@@ -157,7 +162,6 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 	DSS_HUGE        c_date;
 	DSS_HUGE        clk_num;
 	DSS_HUGE        supp_num;
-	static char   **asc_date = NULL;
 	char            tmp_str[2];
 	char          **mk_ascdate PROTO((void));
 	int             delta = 1;

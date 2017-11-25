@@ -183,6 +183,11 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
     region_builder.append_row(region.code, region.text, region.comment);
   }
 
+  /**
+   * Clean up dbgen
+   */
+  dbgen_cleanup();
+
   return {
     {TpchTable::Customer, customer_builder.finish_table()},
     {TpchTable::Order, order_builder.finish_table()},
@@ -193,7 +198,6 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
     {TpchTable::Nation, nation_builder.finish_table()},
     {TpchTable::Region, region_builder.finish_table()}
   };
-
 }
 
 void TpchDbGenerator::generate_and_store() {

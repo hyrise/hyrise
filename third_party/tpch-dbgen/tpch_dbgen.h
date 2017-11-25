@@ -19,7 +19,6 @@ typedef struct
 
 
 extern distribution nations;
-extern distribution nations2;
 extern distribution regions;
 extern distribution o_priority_set;
 extern distribution l_instruct_set;
@@ -43,3 +42,8 @@ extern distribution auxillaries;
 extern distribution np;
 extern distribution vp;
 extern distribution grammar;
+
+/**
+ * Call this after using dbgen to avoid memory leaks
+ */
+void dbgen_cleanup();
