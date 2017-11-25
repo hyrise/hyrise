@@ -10,7 +10,6 @@ add_library(tpch_dbgen
     bm_utils.c
     rnd.c
     load_stub.c
-    bcd2.c
     speed_seed.c
     text.c
     permute.c
