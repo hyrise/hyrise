@@ -111,8 +111,8 @@ class TpccRefTest : public BaseTest {
 
  protected:
   void SetUp() override {
-    const auto TABLE_NAMES = {"CUSTOMER",   "DISTRICT", "HISTORY", "ITEM",     "NEW-ORDER",
-                              "ORDER-LINE", "ORDER",    "STOCK",   "WAREHOUSE"};
+    const auto TABLE_NAMES = {"CUSTOMER",   "DISTRICT", "HISTORY", "ITEM",     "NEW_ORDER",
+                              "ORDER_LINE", "ORDER",    "STOCK",   "WAREHOUSE"};
 
     CsvParser parser;
 
@@ -121,8 +121,6 @@ class TpccRefTest : public BaseTest {
       StorageManager::get().add_table(table_name, table);
     }
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 
  protected:
   std::unordered_map<std::string, std::shared_ptr<TransactionTestImpl>> _transaction_impls;

@@ -21,10 +21,10 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
   if (IS_DEBUG) {
-    auto firstSize = indexed_columns.front()->size();
+    auto first_size = indexed_columns.front()->size();
     [[gnu::unused]] auto all_column_have_same_size =
         std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
-                    [firstSize](const auto& column) { return column->size() == firstSize; });
+                    [first_size](const auto& column) { return column->size() == first_size; });
 
     DebugAssert(all_column_have_same_size,
                 "CompositeGroupKey requires same length of all columns that should be indexed.");

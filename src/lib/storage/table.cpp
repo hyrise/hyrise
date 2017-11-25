@@ -16,8 +16,8 @@
 namespace opossum {
 
 std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<const Table>& in_table,
-                                                      const uint32_t chunk_size) {
-  auto new_table = std::make_shared<Table>(chunk_size);
+                                                      const uint32_t max_chunk_size) {
+  auto new_table = std::make_shared<Table>(max_chunk_size);
 
   for (ColumnID::base_type column_idx = 0; column_idx < in_table->column_count(); ++column_idx) {
     const auto type = in_table->column_type(ColumnID{column_idx});
@@ -47,29 +47,31 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
   return true;
 }
 
-Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+Table::Table(const uint32_t max_chunk_size)
+    : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+  Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
-void Table::add_column_definition(const std::string& name, const std::string& type, bool nullable) {
+void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {
   Assert((name.size() < std::numeric_limits<ColumnNameLength>::max()), "Cannot add column. Column name is too long.");
 
   _column_names.push_back(name);
-  _column_types.push_back(type);
+  _column_types.push_back(data_type);
   _column_nullable.push_back(nullable);
 }
 
-void Table::add_column(const std::string& name, const std::string& type, bool nullable) {
-  add_column_definition(name, type, nullable);
+void Table::add_column(const std::string& name, DataType data_type, bool nullable) {
+  add_column_definition(name, data_type, nullable);
 
   for (auto& chunk : _chunks) {
-    chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) create_new_chunk();
+  if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
 }
@@ -78,15 +80,15 @@ void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count +=
 
 void Table::create_new_chunk() {
   // Create chunk with mvcc columns
-  Chunk newChunk{ChunkUseMvcc::Yes};
+  Chunk new_chunk{ChunkUseMvcc::Yes};
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
-    const auto& type = _column_types[column_id];
+    const auto type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
-    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    new_chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
-  _chunks.push_back(std::move(newChunk));
+  _chunks.push_back(std::move(new_chunk));
 }
 
 uint16_t Table::column_count() const { return _column_types.size(); }
@@ -114,7 +116,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return {};
 }
 
-uint32_t Table::chunk_size() const { return _chunk_size; }
+uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 
@@ -123,7 +125,7 @@ const std::string& Table::column_name(ColumnID column_id) const {
   return _column_names[column_id];
 }
 
-const std::string& Table::column_type(ColumnID column_id) const {
+DataType Table::column_type(ColumnID column_id) const {
   DebugAssert(column_id < _column_names.size(), "ColumnID " + std::to_string(column_id) + " out of range");
   return _column_types[column_id];
 }
@@ -133,7 +135,7 @@ bool Table::column_is_nullable(ColumnID column_id) const {
   return _column_nullable[column_id];
 }
 
-const std::vector<std::string>& Table::column_types() const { return _column_types; }
+const std::vector<DataType>& Table::column_types() const { return _column_types; }
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 

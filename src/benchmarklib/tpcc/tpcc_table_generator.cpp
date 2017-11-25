@@ -54,9 +54,9 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
     std::string data = _random_gen.astring(26, 50);
     bool is_original = original_ids.find(indices[0]) != original_ids.end();
     if (is_original) {
-      std::string originalString("ORIGINAL");
-      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - originalString.length());
-      data.replace(start_pos, originalString.length(), originalString);
+      std::string original_string("ORIGINAL");
+      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
+      data.replace(start_pos, original_string.length(), original_string);
     }
     return data;
   });
@@ -129,9 +129,9 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
     std::string data = _random_gen.astring(26, 50);
     bool is_original = original_ids.find(indices[1]) != original_ids.end();
     if (is_original) {
-      std::string originalString("ORIGINAL");
-      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - originalString.length());
-      data.replace(start_pos, originalString.length(), originalString);
+      std::string original_string("ORIGINAL");
+      size_t start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
+      data.replace(start_pos, original_string.length(), original_string);
     }
     return data;
   });
@@ -303,9 +303,9 @@ TpccTableGenerator::order_line_counts_type TpccTableGenerator::generate_order_li
 }
 
 /**
- * Generates a column for the 'ORDER-LINE' table. This is used in the specialization of add_column to insert vectors.
- * In contrast to other tables the ORDER-LINE table is NOT defined by saying, there are 10 order-line per order,
- * but instead there 5 to 15 order-lines per order.
+ * Generates a column for the 'ORDER_LINE' table. This is used in the specialization of add_column to insert vectors.
+ * In contrast to other tables the ORDER_LINE table is NOT defined by saying, there are 10 order_lines per order,
+ * but instead there 5 to 15 order_lines per order.
  * @tparam T
  * @param indices
  * @param order_line_counts
@@ -425,8 +425,8 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
                                                                  {"CUSTOMER", customer_table.get()},
                                                                  {"HISTORY", history_table.get()},
                                                                  {"ORDER", order_table.get()},
-                                                                 {"ORDER-LINE", order_line_table.get()},
-                                                                 {"NEW-ORDER", new_order_table.get()}});
+                                                                 {"ORDER_LINE", order_line_table.get()},
+                                                                 {"NEW_ORDER", new_order_table.get()}});
 }
 
 /*
@@ -443,12 +443,12 @@ TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions()
       {"CUSTOMER", []() { return tpcc::TpccTableGenerator().generate_customer_table(); }},
       {"HISTORY", []() { return tpcc::TpccTableGenerator().generate_history_table(); }},
       {"ORDER", []() { return tpcc::TpccTableGenerator().generate_new_order_table(); }},
-      {"NEW-ORDER",
+      {"NEW_ORDER",
        []() {
          auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
          return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
        }},
-      {"ORDER-LINE", []() {
+      {"ORDER_LINE", []() {
          auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
          return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
        }}};

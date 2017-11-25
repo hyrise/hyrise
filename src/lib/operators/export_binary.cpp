@@ -10,6 +10,7 @@
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 
+#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
@@ -130,7 +131,7 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
 }
 
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
-  _export_value(ofstream, static_cast<ChunkOffset>(table->chunk_size()));
+  _export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
   _export_value(ofstream, static_cast<ColumnID>(table->column_count()));
 
@@ -140,7 +141,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = table->column_type(column_id);
+    column_types[column_id] = data_type_to_string.left.at(table->column_type(column_id));
     column_names[column_id] = table->column_name(column_id);
     column_nullables[column_id] = table->column_is_nullable(column_id);
   }
@@ -150,15 +151,15 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 }
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
-                                const ChunkID& chunkId) {
-  const auto& chunk = table->get_chunk(chunkId);
+                                const ChunkID& chunk_id) {
+  const auto& chunk = table->get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
 
   _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID col_id{0}; col_id < chunk.column_count(); col_id++) {
-    auto visitor = make_unique_by_column_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
+    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
     chunk.get_column(col_id)->visit(*visitor, context);
   }
 }

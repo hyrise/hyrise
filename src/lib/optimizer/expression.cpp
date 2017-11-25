@@ -205,7 +205,9 @@ bool Expression::is_unary_operator() const {
   }
 }
 
-bool Expression::is_null_literal() const { return _type == ExpressionType::Literal && _value && is_null(*_value); }
+bool Expression::is_null_literal() const {
+  return _type == ExpressionType::Literal && _value && variant_is_null(*_value);
+}
 
 bool Expression::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
 

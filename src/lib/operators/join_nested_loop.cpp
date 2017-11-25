@@ -117,8 +117,8 @@ void JoinNestedLoop::_perform_join() {
     right_column_id = _left_column_id;
   }
 
-  auto left_type_string = left_table->column_type(left_column_id);
-  auto right_type_string = right_table->column_type(right_column_id);
+  auto left_data_type = left_table->column_type(left_column_id);
+  auto right_data_type = right_table->column_type(right_column_id);
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
@@ -140,8 +140,8 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-      resolve_data_and_column_type(left_type_string, *column_left, [&](auto left_type, auto& typed_left_column) {
-        resolve_data_and_column_type(right_type_string, *column_right, [&](auto right_type, auto& typed_right_column) {
+      resolve_data_and_column_type(left_data_type, *column_left, [&](auto left_type, auto& typed_left_column) {
+        resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
@@ -188,7 +188,7 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-      resolve_data_and_column_type(right_type_string, *column_right, [&](auto right_type, auto& typed_right_column) {
+      resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;
 
         auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);

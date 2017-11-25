@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "import_export/csv_converter.hpp"
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
@@ -88,7 +89,9 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
     auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
 
-    table->add_column_definition(column_name, column_type, column_meta.nullable);
+    const auto data_type = data_type_to_string.right.at(column_type);
+
+    table->add_column_definition(column_name, data_type, column_meta.nullable);
   }
 
   return table;
@@ -106,7 +109,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   size_t pos, from = 0;
   unsigned int rows = 0, field_count = 1;
   bool in_quotes = false;
-  while (rows < table.chunk_size() || 0 == table.chunk_size()) {
+  while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
     pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
@@ -157,7 +160,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
     const auto column_type = table.column_type(column_id);
 
     converters.emplace_back(
-        make_unique_by_column_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
+        make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
   }
 
   size_t start = 0;

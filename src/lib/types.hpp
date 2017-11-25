@@ -71,7 +71,7 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(other),
         _alloc(alloc) {}
 
-  PolymorphicAllocator<T>& get_allocator() { return _alloc; }
+  const PolymorphicAllocator<T>& get_allocator() const { return _alloc; }
 
  protected:
   PolymorphicAllocator<T> _alloc;
@@ -164,7 +164,8 @@ enum class ScanType {
   OpGreaterThan,
   OpGreaterThanEquals,
   OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
-  OpLike
+  OpLike,
+  OpNotLike
 };
 
 enum class ExpressionType {

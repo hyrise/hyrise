@@ -2,14 +2,14 @@
 
 #include <string>
 
-#include "abstract_non_optimizable_lqp_node.hpp"
+#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
 /**
  * This node type represents the SHOW TABLES management command.
  */
-class ShowTablesNode : public AbstractNonOptimizableLQPNode {
+class ShowTablesNode : public AbstractLQPNode {
  public:
   ShowTablesNode();
 

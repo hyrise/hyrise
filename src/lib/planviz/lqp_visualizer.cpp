@@ -1,67 +1,51 @@
 #include "lqp_visualizer.hpp"
 
 #include <boost/algorithm/string.hpp>
-#include <cmath>
-#include <cstdlib>
-#include <fstream>
 #include <iomanip>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
-
-#include "operators/abstract_operator.hpp"
-#include "optimizer/table_statistics.hpp"
-#include "sql/sql_query_plan.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 
-void LQPVisualizer::visualize(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots,
-                              const std::string& dot_filename, const std::string& img_filename) {
-  // Step 1: Generate graphviz dot file
-  std::ofstream file;
-  file.open(dot_filename);
-  file << "digraph {" << std::endl;
-  file << "rankdir=BT" << std::endl;
-  file << "bgcolor=transparent" << std::endl;
-  file << "ratio=0.5" << std::endl;
-  file << "node [color=white,fontcolor=white,shape=parallelogram]" << std::endl;
-  file << "edge [color=white,fontcolor=white]" << std::endl;
-  for (const auto& root : lqp_roots) {
-    _visualize_subtree(root, file);
-  }
-  file << "}" << std::endl;
-  file.close();
-
-  // Step 2: Generate png from dot file
-  auto cmd = std::string("dot -Tpng " + dot_filename + " > ") + img_filename;
-  auto ret = system(cmd.c_str());
-
-  Assert(ret == 0,
-         "Calling graphviz' dot failed. Have you installed graphviz "
-         "(apt-get install graphviz / brew install graphviz)?");
-  // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
+LQPVisualizer::LQPVisualizer() : AbstractVisualizer() {
+  // Set defaults for this visualizer
+  _default_vertex.shape = "parallelogram";
 }
 
-void LQPVisualizer::_visualize_subtree(const std::shared_ptr<AbstractLQPNode>& node, std::ofstream& file) {
-  file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
-       << boost::replace_all_copy(node->description(), "\"", "\\\"") << "\"]" << std::endl;
+LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                             VizEdgeInfo edge_info)
+    : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
+                         std::move(edge_info)) {}
 
+void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) {
+  for (const auto& root : lqp_roots) {
+    _add_vertex(root, root->description());
+    _build_subtree(root);
+  }
+}
+
+void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->left_child()) {
-    _visualize_dataflow(node->left_child(), node, file);
-    _visualize_subtree(node->left_child(), file);
+    auto left_child = node->left_child();
+    _add_vertex(left_child, left_child->description());
+    _build_dataflow(left_child, node);
+    _build_subtree(left_child);
   }
 
   if (node->right_child()) {
-    _visualize_dataflow(node->right_child(), node, file);
-    _visualize_subtree(node->right_child(), file);
+    auto right_child = node->right_child();
+    _add_vertex(right_child, right_child->description());
+    _build_dataflow(right_child, node);
+    _build_subtree(right_child);
   }
 }
 
-void LQPVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                        const std::shared_ptr<AbstractLQPNode>& to, std::ofstream& file) {
+void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
+                                    const std::shared_ptr<AbstractLQPNode>& to) {
   float row_count, row_percentage = 100.0f;
-  uint32_t pen_width;
+  double pen_width;
 
   try {
     row_count = from->get_statistics()->row_count();
@@ -69,7 +53,7 @@ void LQPVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLQPNode>& 
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;
-    pen_width = 1;
+    pen_width = 1.0;
   }
 
   if (from->left_child()) {
@@ -84,13 +68,19 @@ void LQPVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractLQPNode>& 
     }
   }
 
-  file << reinterpret_cast<uintptr_t>(from.get()) << " -> " << reinterpret_cast<uintptr_t>(to.get()) << "[label=\" ";
+  std::ostringstream label_stream;
   if (!isnan(row_count)) {
-    file << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage << "% estd.";
+    label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
+                 << "% estd.";
   } else {
-    file << "no est.";
+    label_stream << "no est.";
   }
-  file << "\",penwidth=" << pen_width << "]" << std::endl;
+
+  VizEdgeInfo info = _default_edge;
+  info.label = label_stream.str();
+  info.pen_width = pen_width;
+
+  _add_edge(from, to, info);
 }
 
 }  // namespace opossum

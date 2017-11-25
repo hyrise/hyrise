@@ -25,8 +25,6 @@ class UnionPositionsTest : public BaseTest {
     StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl", 2));
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   std::shared_ptr<Table> _table_10_ints;
   std::shared_ptr<Table> _table_int_float4;
 };
@@ -52,7 +50,7 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_a_op);
   union_unique_op->execute();
 
-  EXPECT_TABLE_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(table_scan_a_op->get_output(), union_unique_op->get_output());
 }
 
 TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
@@ -69,7 +67,8 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/10_ints_exclusive_ranges.tbl", 0));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
+                            load_table("src/test/tables/10_ints_exclusive_ranges.tbl", Chunk::MAX_SIZE));
 }
 
 TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
@@ -87,7 +86,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), _table_10_ints);
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), _table_10_ints);
 }
 
 TEST_F(UnionPositionsTest, EarlyResultLeft) {
@@ -103,7 +102,8 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float2.tbl", 0));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
+                            load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
   EXPECT_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
 }
 
@@ -120,7 +120,8 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float2.tbl", 0));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
+                            load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
 }
 
@@ -139,7 +140,8 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleColumns) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float4_overlapping_ranges.tbl", 0));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
+                            load_table("src/test/tables/int_float4_overlapping_ranges.tbl", Chunk::MAX_SIZE));
 }
 
 TEST_F(UnionPositionsTest, MultipleReferencedTables) {
@@ -190,8 +192,8 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   _execute_all({get_table_a_op, get_table_b_op, get_table_c_op, get_table_d_op, join_a, join_b, table_scan_a_op,
                 table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ(union_unique_op->get_output(),
-                  load_table("src/test/tables/int_float4_int_int_union_positions.tbl", 0));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
+                            load_table("src/test/tables/int_float4_int_int_union_positions.tbl", Chunk::MAX_SIZE));
 
   /**
    * Additionally check that Column 0 and 1 have the same pos list and that Column 2 and 3 have the same pos list to
@@ -276,9 +278,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
   auto table_left = std::make_shared<Table>(3);
-  table_left->add_column_definition("a", "int");
-  table_left->add_column_definition("b", "float");
-  table_left->add_column_definition("c", "int");
+  table_left->add_column_definition("a", DataType::Int);
+  table_left->add_column_definition("b", DataType::Float);
+  table_left->add_column_definition("c", DataType::Int);
 
   Chunk chunk_left_0;
   chunk_left_0.add_column(column_left_0_0);
@@ -293,9 +295,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   table_left->emplace_chunk(std::move(chunk_left_1));
 
   auto table_right = std::make_shared<Table>(4);
-  table_right->add_column_definition("a", "int");
-  table_right->add_column_definition("b", "float");
-  table_right->add_column_definition("c", "int");
+  table_right->add_column_definition("a", DataType::Int);
+  table_right->add_column_definition("b", DataType::Float);
+  table_right->add_column_definition("c", DataType::Int);
 
   Chunk chunk_right_0;
   chunk_right_0.add_column(column_right_0_0);
@@ -315,8 +317,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
-  EXPECT_TABLE_EQ(set_union_op->get_output(),
-                  load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", 0));
+  EXPECT_TABLE_EQ_UNORDERED(
+      set_union_op->get_output(),
+      load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", Chunk::MAX_SIZE));
 }
 
 }  // namespace opossum

@@ -17,7 +17,7 @@ namespace opossum {
 class AggregateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_int_int.tbl", 0));
+    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
 
@@ -37,8 +37,6 @@ class AggregateNodeTest : public BaseTest {
         std::vector<ColumnID>{ColumnID{0}, ColumnID{2}});
     _aggregate_node->set_left_child(_stored_table_node);
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<AggregateNode> _aggregate_node;
@@ -126,10 +124,10 @@ TEST_F(AggregateNodeTest, Description) {
 }
 
 TEST_F(AggregateNodeTest, VerboseColumnNames) {
-  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{0}), "SUM(t_a.a + t_a.b)");
-  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{1}), "some_sum");
-  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{2}), "t_a.a");
-  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{3}), "t_a.c");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{1}), "t_a.c");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{2}), "SUM(t_a.a + t_a.b)");
+  EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{3}), "some_sum");
 }
 
 TEST_F(AggregateNodeTest, ColumnInputMapping) {

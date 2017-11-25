@@ -12,31 +12,31 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_translator.hpp"
+#include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "tpch/tpch_queries.hpp"
 
 namespace opossum {
 
-class TPCHTest : public ::testing::TestWithParam<size_t> {
+class TPCHTest : public BaseTestWithParam<size_t> {
  protected:
+  std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
+
   void SetUp() override {
-    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 2);
-    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 2);
-    std::shared_ptr<Table> nation = load_table("src/test/tables/tpch/nation.tbl", 2);
-    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 2);
-    std::shared_ptr<Table> part = load_table("src/test/tables/tpch/part.tbl", 2);
-    std::shared_ptr<Table> partsupplier = load_table("src/test/tables/tpch/partsupplier.tbl", 2);
-    std::shared_ptr<Table> region = load_table("src/test/tables/tpch/region.tbl", 2);
-    std::shared_ptr<Table> supplier = load_table("src/test/tables/tpch/supplier.tbl", 2);
-    StorageManager::get().add_table("customer", std::move(customer));
-    StorageManager::get().add_table("lineitem", std::move(lineitem));
-    StorageManager::get().add_table("nation", std::move(nation));
-    StorageManager::get().add_table("orders", std::move(orders));
-    StorageManager::get().add_table("part", std::move(part));
-    StorageManager::get().add_table("partsupp", std::move(partsupplier));
-    StorageManager::get().add_table("region", std::move(region));
-    StorageManager::get().add_table("supplier", std::move(supplier));
+    // Chosen rather arbitrarily
+    const auto chunk_size = 100;
+
+    std::vector<std::string> tpch_table_names(
+        {"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"});
+
+    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
+
+    for (const auto& tpch_table_name : tpch_table_names) {
+      const auto tpch_table_path = std::string("src/test/tables/tpch/") + tpch_table_name + ".tbl";
+      StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
+      _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
+    }
   }
 
   std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
@@ -67,15 +67,6 @@ class TPCHTest : public ::testing::TestWithParam<size_t> {
     }
     return tasks.back();
   }
-
-  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
-                         bool order_sensitive = false) {
-    auto result_unoptimized = schedule_query_and_return_task(query, false)->get_operator()->get_output();
-    EXPECT_TABLE_EQ(result_unoptimized, expected_result, order_sensitive);
-
-    auto result_optimized = schedule_query_and_return_task(query, true)->get_operator()->get_output();
-    EXPECT_TABLE_EQ(result_optimized, expected_result, order_sensitive);
-  }
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
@@ -84,10 +75,11 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx + 1));
 
   const auto query = tpch_queries[query_idx];
-  const auto expected_result =
-      load_table("src/test/tables/tpch/results/tpch" + std::to_string(query_idx + 1) + ".tbl", 2);
+  const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
-  execute_and_check(query, expected_result, true);
+  auto result_table = schedule_query_and_return_task(query, true)->get_operator()->get_output();
+  EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
+                  FloatComparisonMode::RelativeDifference);
 }
 
 // clang-format off
@@ -98,7 +90,7 @@ INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
   // 3, /* Enable once we support Exists and Subselects in WHERE condition */
   4,
   5,
-  // 6, /* Enable once OR is supported in WHERE condition */
+  6,
   // 7, /* Enable once CASE and arithmetic operations of Aggregations are supported */
   8,
   9

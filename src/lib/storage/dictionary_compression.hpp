@@ -1,9 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -20,12 +20,11 @@ class DictionaryCompression {
    * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
    * only be called by the ChunkCompressionTask.
    *
-   * @param column_type string representation of its type
+   * @param data_type enum value of the column’s type
    * @param column needs to be of type ValueColumn<T>
    * @return a compressed column of type DictionaryColumn<T>
    */
-  static std::shared_ptr<BaseColumn> compress_column(const std::string& column_type,
-                                                     const std::shared_ptr<BaseColumn>& column);
+  static std::shared_ptr<BaseColumn> compress_column(DataType data_type, const std::shared_ptr<BaseColumn>& column);
 
   /**
    * @brief Compresses a chunk
@@ -40,7 +39,7 @@ class DictionaryCompression {
    * @param column_types from the chunk’s table
    * @param chunk to be compressed
    */
-  static void compress_chunk(const std::vector<std::string>& column_types, Chunk& chunk);
+  static void compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk);
 
   /**
    * @brief Compresses specified chunks of a table

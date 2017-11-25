@@ -5,11 +5,17 @@
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
+#include <boost/hana/core/to.hpp>
+
 #include <boost/mpl/push_front.hpp>
+
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
+#include <boost/preprocessor/seq/size.hpp>
+
 #include <boost/variant.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -23,63 +29,67 @@ namespace hana = boost::hana;
 
 namespace detail {
 
-#define EXPAND_TO_HANA_TYPE(s, data, elem) boost::hana::type_c<elem>
+#define DATA_TYPE_INFO                  \
+  ((int32_t,     Int,        "int"))    \
+  ((int64_t,     Long,       "long"))   \
+  ((float,       Float,      "float"))  \
+  ((double,      Double,     "double")) \
+  ((std::string, String,     "string"))
+// Type          Enum Value   String
 
-// clang-format off
-#define COLUMN_TYPES                                  (int32_t) (int64_t) (float)  (double)  (std::string)    // NOLINT
-static constexpr auto type_strings = hana::make_tuple("int",    "long",   "float", "double", "string"     );  // NOLINT
-// clang-format on
+#define NUM_DATA_TYPES BOOST_PP_SEQ_SIZE(DATA_TYPE_INFO)
 
-// Extends to hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, ...);
-static constexpr auto types =
-    hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(EXPAND_TO_HANA_TYPE, _, COLUMN_TYPES)));
+#define GET_ELEM(s, index, elem) BOOST_PP_TUPLE_ELEM(NUM_DATA_TYPES, index, elem)
+#define APPEND_ENUM_NAMESPACE(s, d, enum_value) DataType::enum_value
 
-/**
- * Holds pairs of all types and their respective string representation.
- *
- * Equivalent to:
- * hana::make_tuple(hana::make_tuple("int", hana::type_c<int32_t>),
- *                  hana::make_tuple("long", hana::type_c<int64_t>),
- *                  ...);
- */
-static constexpr auto column_types_as_tuples = hana::zip(type_strings, types);
+#define DATA_TYPES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 0, DATA_TYPE_INFO)
+#define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
+#define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-struct to_pair {
-  template <typename T>
-  constexpr auto operator()(T tuple) {
-    return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));  // NOLINT
-  }
-};
+enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES) };
 
-// Converts the tuples into pairs
-static constexpr auto column_types = hana::transform(column_types_as_tuples, to_pair{});  // NOLINT
+static constexpr auto data_types =
+    hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
+static constexpr auto data_type_enum_values =
+    hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(APPEND_ENUM_NAMESPACE, _, DATA_TYPE_ENUM_VALUES)));
+static constexpr auto data_type_strings =
+    hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
+
+constexpr auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };
+
+static constexpr auto data_type_enum_pairs =
+    hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
+static constexpr auto data_type_enum_string_pairs =
+    hana::transform(hana::zip(data_type_enum_values, data_type_strings), to_pair);
 
 // Prepends NullValue to tuple of types
-static constexpr auto types_including_null = hana::prepend(types, hana::type_c<NullValue>);
+static constexpr auto data_types_including_null = hana::prepend(data_types, hana::type_c<NullValue>);
 
 // Converts tuple to mpl vector
-using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types_including_null));
+using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(data_types_including_null));
 
 // Creates boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<detail::TypesAsMplVector>::type;
 
 }  // namespace detail
 
-static constexpr auto types = detail::types;
-static constexpr auto types_including_null = detail::types_including_null;
-static constexpr auto column_types = detail::column_types;
+static constexpr auto data_types = detail::data_types;
+static constexpr auto data_types_including_null = detail::data_types_including_null;
+static constexpr auto data_type_pairs = detail::data_type_enum_pairs;
+static constexpr auto data_type_enum_string_pairs = detail::data_type_enum_string_pairs;
 
+using DataType = detail::DataType;
 using AllTypeVariant = detail::AllTypeVariant;
 
 // Function to check if AllTypeVariant is null
-inline bool is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
 
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
  *     whenever a null value needs to be represented
  *   - comparing any AllTypeVariant to NULL_VALUE returns false in accordance with the ternary logic
- *   - use is_null() if you want to check if an AllTypeVariant is null
+ *   - use variant_is_null() if you want to check if an AllTypeVariant is null
  */
 static const auto NULL_VALUE = AllTypeVariant{};
 
@@ -89,16 +99,16 @@ static const auto NULL_VALUE = AllTypeVariant{};
  * In order to improve compile times, we explicitly instantiate
  * template classes which are going to be used with column types.
  * Because we do not want any redundant lists of column types spread
- * across the code base, we use EXPLICITLY_INSTANTIATE_COLUMN_TYPES.
+ * across the code base, we use EXPLICITLY_INSTANTIATE_DATA_TYPES.
  *
  * @{
  */
 
 #define EXPLICIT_INSTANTIATION(r, template_class, type) template class template_class<type>;
 
-// Explicitly instantiates the given template class for all types in COLUMN_TYPES
-#define EXPLICITLY_INSTANTIATE_COLUMN_TYPES(template_class)                   \
-  BOOST_PP_SEQ_FOR_EACH(EXPLICIT_INSTANTIATION, template_class, COLUMN_TYPES) \
+// Explicitly instantiates the given template class for all types in DATA_TYPES
+#define EXPLICITLY_INSTANTIATE_DATA_TYPES(template_class)                   \
+  BOOST_PP_SEQ_FOR_EACH(EXPLICIT_INSTANTIATION, template_class, DATA_TYPES) \
   static_assert(true, "End call of macro with a semicolon")
 
 /**@}*/

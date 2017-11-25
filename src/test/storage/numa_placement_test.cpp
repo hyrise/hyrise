@@ -42,8 +42,6 @@ class NUMAPlacementTest : public BaseTest {
     _node_count = NUMAPlacementManager::get().topology()->nodes().size();
   }
 
-  void TearDown() override { StorageManager::get().drop_table("table"); }
-
   // Returns a vector that contains the counts of chunks per node.
   // The index of the vector represents the NodeID.
   std::vector<size_t> count_chunks_by_node(const std::shared_ptr<Table>& table) {
@@ -60,7 +58,7 @@ class NUMAPlacementTest : public BaseTest {
   // Creates a table with a single column and increasing integers modulo 1000.
   std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
     auto table = std::make_shared<Table>(num_rows_per_chunk);
-    table->add_column("a", "int", false);
+    table->add_column("a", DataType::Int, false);
 
     for (size_t i = 0; i < num_chunks; i++) {
       const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));

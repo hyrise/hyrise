@@ -30,8 +30,8 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
 
     std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
-    test_table_dict->add_column("a", "int");
-    test_table_dict->add_column("b", "int");
+    test_table_dict->add_column("a", DataType::Int);
+    test_table_dict->add_column("b", DataType::Int);
 
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
 
@@ -66,7 +66,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, ColumnID{1}, ScanType::OpLessThan, 457.9);
   scan_2->execute();
 
-  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
@@ -86,7 +86,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
   auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   scan->execute();
 
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, LikeOperatorThrowsException) {

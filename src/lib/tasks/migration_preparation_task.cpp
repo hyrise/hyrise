@@ -1,3 +1,5 @@
+#if HYRISE_NUMA_SUPPORT
+
 #include "migration_preparation_task.hpp"
 
 #include <numa.h>
@@ -18,8 +20,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/numa_memory_resource.hpp"
-
-#if HYRISE_NUMA_SUPPORT
 
 namespace opossum {
 
@@ -141,7 +141,7 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
     const auto chunk_count = table.chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto& chunk = table.get_chunk(i);
-      if (ChunkMigrationTask::chunk_is_completed(chunk, table.chunk_size()) && chunk.has_access_counter()) {
+      if (ChunkMigrationTask::chunk_is_completed(chunk, table.max_chunk_size()) && chunk.has_access_counter()) {
         const double temperature = static_cast<double>(chunk.access_counter()->history_sample(lookback_samples));
         sum_temperature += temperature;
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,

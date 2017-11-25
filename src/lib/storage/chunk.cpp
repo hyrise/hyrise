@@ -15,7 +15,11 @@
 
 namespace opossum {
 
-const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
+// The last commit id is reserved for uncommitted changes
+const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
+
+// The last chunk offset is reserved for NULL as used in ReferenceColumns.
+const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
 Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
 

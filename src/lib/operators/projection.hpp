@@ -47,8 +47,8 @@ class Projection : public AbstractReadOnlyOperator {
    */
   class DummyTable : public Table {
    public:
-    DummyTable() : Table(0) {
-      add_column("dummy", "int");
+    DummyTable() : Table(Chunk::MAX_SIZE) {
+      add_column("dummy", DataType::Int);
       append(std::vector<AllTypeVariant>{0});
     }
   };
@@ -63,17 +63,16 @@ class Projection : public AbstractReadOnlyOperator {
                              const std::shared_ptr<Expression>& expression,
                              std::shared_ptr<const Table> input_table_left);
 
-  static const std::string _get_type_of_expression(const std::shared_ptr<Expression>& expression,
-                                                   const std::shared_ptr<const Table>& table);
+  static DataType _get_type_of_expression(const std::shared_ptr<Expression>& expression,
+                                          const std::shared_ptr<const Table>& table);
 
   /**
    * This function evaluates the given expression on a single chunk.
    * It returns a vector containing the materialized values resulting from the expression.
    */
   template <typename T>
-  static const tbb::concurrent_vector<T> _evaluate_expression(const std::shared_ptr<Expression>& expression,
-                                                              const std::shared_ptr<const Table> table,
-                                                              const ChunkID chunk_id);
+  static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
+      const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id);
 
   /**
    * Operators that all numerical types support.

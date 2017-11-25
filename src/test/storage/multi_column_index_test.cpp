@@ -19,9 +19,9 @@ template <typename DerivedIndex>
 class MultiColumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_col_int = BaseTest::create_dict_column_by_type<int>("int", {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
+    dict_col_int = BaseTest::create_dict_column_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
     dict_col_str = BaseTest::create_dict_column_by_type<std::string>(
-        "string", {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
+        DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dict_col_int, dict_col_str});

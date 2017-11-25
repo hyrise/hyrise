@@ -13,12 +13,10 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl", 0));
+    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
 };

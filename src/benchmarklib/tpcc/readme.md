@@ -2,7 +2,7 @@
 
 TPC-C is a transactional benchmark framework focusing on queries that typically select or update only a few rows
 from a table. The given schema consists of nine tables, namely WAREHOUSE, ITEMS, STOCK, DISTRICT, CUSTOMER, HISTORY,
-ORDER, ORDER-LINE, and NEW_ORDER. With all these tables TPC-C represents an enterprise system
+ORDER, ORDER_LINE, and NEW_ORDER. With all these tables TPC-C represents an enterprise system
 that handles incoming orders from customers for items.
 
 The definition of TPC-C provides a set of rules how to implement the benchmark correctly,
