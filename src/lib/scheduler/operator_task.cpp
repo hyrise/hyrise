@@ -16,6 +16,10 @@
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op) : _op(std::move(op)) {}
 
+std::string OperatorTask::description() const {
+  return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
+}
+
 const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
     std::shared_ptr<AbstractOperator> op) {
   std::vector<std::shared_ptr<OperatorTask>> tasks;

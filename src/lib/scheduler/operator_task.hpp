@@ -24,6 +24,7 @@ class OperatorTask : public AbstractTask {
 
   const std::shared_ptr<AbstractOperator>& get_operator() const;
 
+  std::string description() const override;
  protected:
   void _on_execute() override;
 
