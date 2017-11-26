@@ -629,12 +629,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() {
-    bool materialize_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
-    bool materialize_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
+    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
+    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(),
-                            _sort_merge_join._column_ids, _op == ScanType::OpEquals, materialize_null_left,
-                            materialize_null_right, _cluster_count);
+                            _sort_merge_join._column_ids, _op == ScanType::OpEquals, include_null_left,
+                            include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -651,6 +651,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // merge the pos lists into single pos lists
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+
+    if (include_null_left) {
+      for (auto row_id_left : *_null_rows_left) {
+        output_left->push_back(row_id_left);
+        output_right->push_back(NULL_ROW_ID);
+      }
+    }
+    if (include_null_right) {
+      for (auto row_id_right : *_null_rows_right) {
+        output_left->push_back(NULL_ROW_ID);
+        output_right->push_back(row_id_right);
+      }
+    }
 
     // Add the columns from both input tables to the output
     _add_output_columns(output_table, _sort_merge_join._input_table_left(), output_left);
