@@ -61,7 +61,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 # Add google test
-add_subdirectory(third_party/googletest)
+add_subdirectory(googletest)
 
 # Add PGASUS
 if(${NUMA_FOUND})
@@ -69,5 +69,5 @@ if(${NUMA_FOUND})
     set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-    add_subdirectory(third_party/pgasus EXCLUDE_FROM_ALL)
+    add_subdirectory(pgasus EXCLUDE_FROM_ALL)
 endif()
