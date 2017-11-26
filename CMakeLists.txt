@@ -17,14 +17,7 @@ else()
 endif()
 
 # Enable coverage if required
-option(HYRISE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: FALSE" OFF)
-if (${HYRISE_COVERAGE})
-    add_compile_options(-fprofile-arcs -ftest-coverage)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
-endif()
-
-# Enable coverage if required
-option(HYRISE_SANITIZERS "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: FALSE" OFF)
+option(HYRISE_SANITIZERS "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: OFF" OFF)
 if (${HYRISE_SANITIZERS})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplication the flags, but this is prbly the simplest solution.
