@@ -13,3 +13,10 @@ int_null|float_null|int_null|float_null
 12345|457.7|12345|456.7
 12345|457.7|12345|null
 12345|457.7|12345|457.7
+null|342|null|null
+null|234|null|null
+null|null|100|null
+null|null|100|null
+null|null|null|40
+null|null|null|5
+null|null|null|12
