@@ -283,6 +283,3 @@ endif()
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
-
-add_sanitizer_library(hyriseSanitizersLib "${SOURCES}" "${LIBRARIES}")
-add_coverage_library(hyriseCoverageLib "${SOURCES}" "${LIBRARIES}")

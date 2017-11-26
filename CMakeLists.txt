@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
+# Check whether the compiler fulfills our minimum requirements
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.2)
         message(FATAL_ERROR "Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
@@ -15,7 +16,21 @@ else()
     message(WARNING "You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang and GCC.")
 endif()
 
-# Set default build type
+# Enable coverage if required
+option(HYRISE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: FALSE" OFF)
+if (${HYRISE_COVERAGE})
+    add_compile_options(-fprofile-arcs -ftest-coverage)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+endif()
+
+# Enable coverage if required
+option(HYRISE_SANITIZERS "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: FALSE" OFF)
+if (${HYRISE_SANITIZERS})
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+endif()
+
+
+# Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
@@ -48,9 +63,6 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
-
-#
-include(cmake/helpers.cmake)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
