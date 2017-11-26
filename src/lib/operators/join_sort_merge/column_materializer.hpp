@@ -36,7 +36,7 @@ using MaterializedColumnList = std::vector<std::shared_ptr<MaterializedColumn<T>
 template <typename T>
 class ColumnMaterializer {
  public:
-  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null};
+  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
 
  public:
   /**
@@ -68,9 +68,8 @@ class ColumnMaterializer {
                                                              std::unique_ptr<PosList>& null_rows,
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id) {
-    return std::make_shared<JobTask>([this, &output, input, column_id, chunk_id] {
+    return std::make_shared<JobTask>([this, &output, &null_rows, input, column_id, chunk_id] {
       auto column = input->get_chunk(chunk_id).get_column(column_id);
-
       resolve_column_type<T>(*column, [&](auto& typed_column) {
         (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows);
       });
@@ -82,7 +81,7 @@ class ColumnMaterializer {
    */
   template <typename ColumnType>
   std::shared_ptr<MaterializedColumn<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,
-                                                             std::unique_ptr<Poslist>& null_rows) {
+                                                             std::unique_ptr<PosList>& null_rows) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
 
@@ -112,7 +111,7 @@ class ColumnMaterializer {
    * Specialization for dictionary columns
    */
   std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
-                                                             std::unique_ptr<Poslist>& null_rows) {
+                                                             std::unique_ptr<PosList>& null_rows) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
 

@@ -11,12 +11,13 @@
 
 namespace opossum {
 
+template <typename T>
 struct RadixClusterOutput {
   std::unique_ptr<MaterializedColumnList<T>> clusters_left;
   std::unique_ptr<MaterializedColumnList<T>> clusters_right;
   std::unique_ptr<PosList> null_rows_left;
   std::unique_ptr<PosList> null_rows_right;
-}
+};
 
 /*
 *
@@ -51,7 +52,9 @@ class RadixClusterSort {
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
         _equi_case{equi_case},
-        _cluster_count{cluster_count} {
+        _cluster_count{cluster_count},
+        _materialize_null_left{materialize_null_left},
+        _materialize_null_right{materialize_null_right} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
     DebugAssert(left != nullptr, "left input operator is null");
@@ -323,17 +326,18 @@ class RadixClusterSort {
   /**
   * Executes the clustering and sorting.
   **/
-  RadixClusterOutput execute() {
-    RadixClusterOutput output;
+  RadixClusterOutput<T> execute() {
+    RadixClusterOutput<T> output;
 
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> column_materializer(!_equi_case);
-    auto materialization_left = column_materializer.materialize(_input_table_left, _left_column_id);
-    auto materialization_right = column_materializer.materialize(_input_table_right, _right_column_id);
-    auto materialized_left_columns = materialization_left.first;
-    auto materialized_right_columns = materialization_right.first;
-    output.null_rows_left = materialization_left.second;
-    output.null_rows_right = materialization_right.second;
+    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
+    auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
+    auto materialized_left_columns = std::move(materialization_left.first);
+    auto materialized_right_columns = std::move(materialization_right.first);
+    output.null_rows_left = std::move(materialization_left.second);
+    output.null_rows_right = std::move(materialization_right.second);
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_columns);
