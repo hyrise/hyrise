@@ -26,7 +26,7 @@ endif()
 # Enable coverage if required
 option(HYRISE_SANITIZERS "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: FALSE" OFF)
 if (${HYRISE_SANITIZERS})
-    set(HYRISE_SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+    set(HYRISE_SANITIZER_FLAGS -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
     add_compile_options(${HYRISE_SANITIZER_FLAGS})
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${HYRISE_SANITIZER_FLAGS}")
 endif()
