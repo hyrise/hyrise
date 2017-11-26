@@ -120,7 +120,6 @@ node {
         // Clean up workspace.
         step([$class: 'WsCleanup'])
       }
-
     } catch (error) {
       stage "Cleanup after fail"
       throw error
