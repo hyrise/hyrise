@@ -87,7 +87,7 @@ node {
       }, clangReleaseSanitizersNoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseSanitizers"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest"
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {

@@ -111,7 +111,7 @@ set (
 )
 
 
-# Both hyriseTest and hyriseSanitizers link against these
+# Both hyriseTest and hyriseSystemTest link against these
 set(
     LIBRARIES
     gtest
@@ -124,12 +124,6 @@ include_directories(../../third_party/googletest/googletest/)
 set(
     GTEST_SOURCES
     ../../third_party/googletest/googletest/src/gtest-all.cc
-)
-
-set(
-    LIBRARIES_SANITIZERS
-    gtestSanitizers
-    sqlite3
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
