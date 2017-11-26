@@ -14,8 +14,8 @@ endif()
 
 # Enable coverage if required - this is only operating on Hyrise's source (src/) so we don't check coverage of
 # third_party stuff
-option(HYRISE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
-if (${HYRISE_COVERAGE})
+option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
+if (${ENABLE_COVERAGE})
     add_compile_options(-fprofile-arcs -ftest-coverage)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()

@@ -17,8 +17,8 @@ else()
 endif()
 
 # Enable coverage if required
-option(HYRISE_SANITIZERS "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: OFF" OFF)
-if (${HYRISE_SANITIZERS})
+option(ENABLE_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: OFF" OFF)
+if (${ENABLE_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplication the flags, but this is prbly the simplest solution.
     add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
