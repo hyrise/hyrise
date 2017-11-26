@@ -2,8 +2,8 @@
 
 | Name      | Meaning                                                                                                                                                                                                        |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Abstract* | An incomplete class used for *dynamic* polymorphism. It has pure virtual methods that need to be implemented by subclasses.                                                                                    |
-| Base*     | An incomplete class used for *static* polymorphism. It implements methods shared by all implementations. Mostly, it is used so that we have a non-templated superclass, which can be stored in e.g., a vector. |
+| Abstract* | An incomplete class used for *dynamic* polymorphism (i.e., OOP with run-time resolved virtual methods). It has pure virtual methods that need to be implemented by subclasses.                                                                                    |
+| Base*     | An incomplete class used for *static* polymorphism (i.e., compile-time resolved templates). It implements methods shared by all implementations. Mostly, it is used so that we have a non-templated superclass, which can be stored in e.g., a vector. |
 | *Node     | An entry in a Logical Query Plan, for example a Predicate or a Join.                                                                                                                                           |
 | *Operator | An entry in a Physical Query Plan, for example a Table Scan or a Sort-Merge Join. Currently, each operator is the physical representation of exactly one node. This is not a hard limitation.                  |
 
