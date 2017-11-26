@@ -34,7 +34,7 @@ target_include_directories(
 )
 
 
-#Build sql-parser
+# Build sql-parser
 add_library(
     sqlparser
 
@@ -58,4 +58,16 @@ target_compile_options(
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
+endif()
+
+# Add google test
+add_subdirectory(third_party/googletest)
+
+# Add PGASUS
+if(${NUMA_FOUND})
+    set(PGASUS_WITH_TASKING OFF CACHE BOOL "" FORCE)
+    set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
+    set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
+    add_subdirectory(third_party/pgasus EXCLUDE_FROM_ALL)
 endif()

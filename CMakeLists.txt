@@ -17,7 +17,7 @@ else()
 endif()
 
 # Enable coverage if required
-option(ENABLE_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Defaul: OFF" OFF)
+option(ENABLE_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
 if (${ENABLE_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplication the flags, but this is prbly the simplest solution.
@@ -62,16 +62,7 @@ find_package(Sqlite3 REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
-add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
 add_subdirectory(src)
-
-if(${NUMA_FOUND})
-    set(PGASUS_WITH_TASKING OFF CACHE BOOL "" FORCE)
-    set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
-    set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-    add_subdirectory(third_party/pgasus EXCLUDE_FROM_ALL)
-endif()
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort
