@@ -11,6 +11,9 @@
 
 namespace opossum {
 
+/**
+* The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
+*/
 template <typename T>
 struct RadixClusterOutput {
   std::unique_ptr<MaterializedColumnList<T>> clusters_left;

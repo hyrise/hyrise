@@ -65,13 +65,13 @@ class ColumnMaterializer {
    * Creates a job to materialize and sort a chunk.
    **/
   std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
-                                                             std::unique_ptr<PosList>& null_rows,
+                                                             std::unique_ptr<PosList>& null_rows_output,
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id) {
-    return std::make_shared<JobTask>([this, &output, &null_rows, input, column_id, chunk_id] {
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id] {
       auto column = input->get_chunk(chunk_id).get_column(column_id);
       resolve_column_type<T>(*column, [&](auto& typed_column) {
-        (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows);
+        (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output);
       });
     });
   }
@@ -81,7 +81,7 @@ class ColumnMaterializer {
    */
   template <typename ColumnType>
   std::shared_ptr<MaterializedColumn<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,
-                                                             std::unique_ptr<PosList>& null_rows) {
+                                                             std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
 
@@ -91,7 +91,7 @@ class ColumnMaterializer {
       const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
       if (column_value.is_null()) {
         if (_materialize_null) {
-          null_rows->emplace_back(row_id);
+          null_rows_output->emplace_back(row_id);
         }
       } else {
         output.emplace_back(row_id, column_value.value());
@@ -111,7 +111,7 @@ class ColumnMaterializer {
    * Specialization for dictionary columns
    */
   std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
-                                                             std::unique_ptr<PosList>& null_rows) {
+                                                             std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
 
@@ -137,7 +137,7 @@ class ColumnMaterializer {
           rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
         } else {
           if (_materialize_null) {
-            null_rows->emplace_back(RowID{chunk_id, chunk_offset});
+            null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
           }
         }
       }
@@ -156,7 +156,7 @@ class ColumnMaterializer {
         const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
         if (column_value.is_null()) {
           if (_materialize_null) {
-            null_rows->emplace_back(row_id);
+            null_rows_output->emplace_back(row_id);
           }
         } else {
           output.emplace_back(row_id, column_value.value());

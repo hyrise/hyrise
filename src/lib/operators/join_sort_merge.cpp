@@ -652,6 +652,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
 
+    // Add the outer join rows which had a null value in their join column
     if (include_null_left) {
       for (auto row_id_left : *_null_rows_left) {
         output_left->push_back(row_id_left);
