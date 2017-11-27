@@ -29,10 +29,10 @@ class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterf
 
   void load_tpch_tables() {
     StorageManager::get().add_table("customer",
-                                    load_table("src/test/tables/tpch/minimal/customer.tbl", Chunk::MAX_SIZE));
-    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", Chunk::MAX_SIZE));
+                                    load_table("src/test/tables/tpch/tpch-minimal/customer.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/tpch-minimal/orders.tbl", Chunk::MAX_SIZE));
     StorageManager::get().add_table("lineitem",
-                                    load_table("src/test/tables/tpch/minimal/lineitem.tbl", Chunk::MAX_SIZE));
+                                    load_table("src/test/tables/tpch/tpch-minimal/lineitem.tbl", Chunk::MAX_SIZE));
   }
 };
 
