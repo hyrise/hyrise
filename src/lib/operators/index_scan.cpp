@@ -11,6 +11,7 @@
 
 #include "utils/assert.hpp"
 
+
 namespace opossum {
 
 IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> chunk_ids,
