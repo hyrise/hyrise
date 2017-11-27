@@ -34,7 +34,7 @@ target_include_directories(
 )
 
 
-#Build sql-parser
+# Build sql-parser
 add_library(
     sqlparser
 
@@ -60,4 +60,15 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
 
+# Add Libraries with their own build setup
 add_subdirectory(tpch-dbgen)
+add_subdirectory(googletest)
+
+# Add PGASUS
+if(${NUMA_FOUND})
+    set(PGASUS_WITH_TASKING OFF CACHE BOOL "" FORCE)
+    set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
+    set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
+    add_subdirectory(pgasus )
+endif()

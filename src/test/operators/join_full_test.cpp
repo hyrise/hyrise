@@ -190,6 +190,12 @@ TYPED_TEST(JoinFullTest, OuterJoin) {
       ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, OuterJoinWithNull) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_m, this->_table_wrapper_n, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join_null.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, OuterJoinDict) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),

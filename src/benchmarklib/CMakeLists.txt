@@ -26,7 +26,3 @@ set(
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 target_link_libraries(hyriseBenchmarkLib hyrise tpch_dbgen)
-
-add_sanitizer_library(hyriseBenchmarkSanitizersLib "${SOURCES}" "hyriseSanitizersLib;tpch_dbgen")
-add_coverage_library(hyriseBenchmarkCoverageLib "${SOURCES}" "hyriseCoverageLib;tpch_dbgen")
-
