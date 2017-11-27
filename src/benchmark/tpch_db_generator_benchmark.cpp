@@ -21,4 +21,4 @@ static void BM_TpchDbGenerator(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_TpchDbGenerator)->Range(1, 512);
-}
+}  // namespace opossum

@@ -1,12 +1,12 @@
 #include "tpch_db_generator.hpp"
 
-#include <utility>
-
 extern "C" {
 #include <dss.h>
 #include <dsstypes.h>
 #include <rnd.h>
 }
+
+#include <utility>
 
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
@@ -143,9 +143,9 @@ DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Ar
 float _convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
-  return dollars + ((float)cents) / 100.0f;
+  return dollars + (static_cast<float>(cents)) / 100.0f;
 }
-}
+}  // namespace
 
 namespace opossum {
 

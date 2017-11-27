@@ -45,4 +45,4 @@ class TpchDbGenerator final {
   float _scale_factor;
   size_t _chunk_size;
 };
-}
+}  // namespace opossum
