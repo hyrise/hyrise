@@ -12,8 +12,6 @@ SQLQueryPlan::SQLQueryPlan() : _num_parameters(0) {}
 
 void SQLQueryPlan::add_tree_by_root(std::shared_ptr<AbstractOperator> op) { _roots.push_back(op); }
 
-size_t SQLQueryPlan::num_trees() const { return _roots.size(); }
-
 void SQLQueryPlan::append_plan(const SQLQueryPlan& other_plan) {
   _roots.insert(_roots.end(), other_plan._roots.begin(), other_plan._roots.end());
 }

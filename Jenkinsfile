@@ -65,6 +65,10 @@ node {
         stage("clang-debug:test") {
           sh "./clang-debug/hyriseTest"
         }
+      }, clangDebugRunShuffled: {
+        stage("clang-debug:test-shuffle") {
+          sh "./clang-debug/hyriseTest --gtest_repeat=5 --gtest_shuffle"
+        }
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
         sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"

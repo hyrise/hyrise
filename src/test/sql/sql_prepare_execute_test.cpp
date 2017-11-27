@@ -12,36 +12,32 @@
 
 namespace opossum {
 
-typedef std::tuple<uint32_t, std::string, size_t, std::string> SQLTestParam;
+typedef std::tuple<uint32_t, std::string, std::string> SQLTestParam;
 
 class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 2));
 
-    // Load TPC-H tables.
-    load_tpch_tables();
-
     // Disable automatic caching.
     SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
     SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-  }
+    SQLQueryOperator::get_prepared_statement_cache().clear_and_resize(1024);
 
-  void load_tpch_tables() {
-    StorageManager::get().add_table("customer",
-                                    load_table("src/test/tables/tpch/minimal/customer.tbl", Chunk::MAX_SIZE));
-    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", Chunk::MAX_SIZE));
-    StorageManager::get().add_table("lineitem",
-                                    load_table("src/test/tables/tpch/minimal/lineitem.tbl", Chunk::MAX_SIZE));
+    std::string prepare_statements[] = {"PREPARE a1 FROM 'SELECT * FROM table_a WHERE a >= 1234';",
+                                        "PREPARE a2 FROM 'SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9'",
+                                        "PREPARE a3 FROM 'SELECT * FROM table_a WHERE a >= ?;';",
+                                        "PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?';"};
+    for (const auto& prepare_statement : prepare_statements) {
+      std::make_shared<SQLQueryOperator>(prepare_statement, false, false)->execute();
+    }
   }
 };
 
 TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   const SQLTestParam param = GetParam();
   const std::string query = std::get<1>(param);
-  const size_t num_operators = std::get<2>(param);
-  const size_t num_trees = (num_operators > 0) ? 1u : 0u;
-  const std::string expected_result_file = std::get<3>(param);
+  const std::string expected_result_file = std::get<2>(param);
 
   auto op = std::make_shared<SQLQueryOperator>(query, false, false);
   op->execute();
@@ -50,8 +46,6 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   ASSERT_FALSE(op->query_plan_cache_hit());
 
   const SQLQueryPlan& plan = op->get_query_plan();
-
-  ASSERT_EQ(num_trees, plan.num_trees());
 
   auto tasks = plan.create_tasks();
   for (const auto& task : tasks) {
@@ -66,24 +60,18 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
 
 const SQLTestParam sql_query_tests[] = {
     // Unparameterized
-    SQLTestParam{__LINE__, "PREPARE a1 FROM 'SELECT * FROM table_a WHERE a >= 1234;'", 0u, ""},
-    SQLTestParam{__LINE__, "PREPARE a2 FROM 'SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9'", 0u, ""},
+    SQLTestParam{__LINE__, "EXECUTE a1;", "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a2;", "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a1;", "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a2;", "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a1;", "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a2;", "src/test/tables/int_float_filtered.tbl"},
 
-    SQLTestParam{__LINE__, "EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
-
-    // Parameteri__LINE__, zed
-    SQLTestParam{__LINE__, "PREPARE a3 FROM 'SELECT * FROM table_a WHERE a >= ?;'", 0u, ""},
-    SQLTestParam{__LINE__, "PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?'", 0u, ""},
-
-    SQLTestParam{__LINE__, "EXECUTE a3 (1234)", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a4 (1234, 457.9)", 3u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a4 (0, 500)", 3u, "src/test/tables/int_float.tbl"},
-    SQLTestParam{__LINE__, "EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
+    // Parameterized
+    SQLTestParam{__LINE__, "EXECUTE a3 (1234)", "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a4 (1234, 457.9)", "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a4 (0, 500)", "src/test/tables/int_float.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a4 (1234, 500)", "src/test/tables/int_float_filtered2.tbl"},
 };
 
 auto formatter = [](const testing::TestParamInfo<SQLTestParam> info) {

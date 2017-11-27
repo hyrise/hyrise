@@ -133,9 +133,7 @@ void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
 // Tries to fetch the referenced prepared statement and retrieve its cached data.
 void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execute_stmt) {
   std::optional<SQLQueryPlan> plan_template = _prepared_stmts.try_get(execute_stmt.name);
-  if (!plan_template) {
-    throw std::runtime_error("Requested prepared statement does not exist!");
-  }
+  Assert(plan_template, "Requested prepared statement does not exist!");
 
   // Get list of arguments from EXECUTE statement.
   std::vector<AllParameterVariant> arguments;

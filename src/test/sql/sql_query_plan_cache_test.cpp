@@ -23,9 +23,14 @@ class SQLQueryPlanCacheTest : public SQLBaseTest {
     auto table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
 
-    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
     parse_tree_cache_hits = 0;
     query_plan_cache_hits = 0;
+  }
+
+  void TearDown() override {
+    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
+    SQLQueryOperator::get_prepared_statement_cache().clear_and_resize(1024);
   }
 };
 
