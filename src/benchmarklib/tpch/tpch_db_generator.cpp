@@ -90,7 +90,7 @@ class TableBuilder {
       _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
 
     boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
-      vector_and_value[boost::hana::llong_c<0>].get().emplace_back(vector_and_value[boost::hana::llong_c<1>]);
+      vector_and_value[boost::hana::llong_c<0>].get().push_back(vector_and_value[boost::hana::llong_c<1>]);
     });
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
@@ -121,6 +121,33 @@ std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable
     {opossum::TpchTable::Supplier, SUPP}, {opossum::TpchTable::Customer, CUST},
     {opossum::TpchTable::Orders, ORDER},   {opossum::TpchTable::LineItem, LINE},
     {opossum::TpchTable::Nation, NATION}, {opossum::TpchTable::Region, REGION}};
+
+
+
+template<typename DSSType, typename MKRetType, typename ...Args>
+DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType *val, Args...), opossum::TpchTable table, Args ... args) {
+  /**
+   * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
+   */
+
+  const auto dbgen_table_id = tpch_table_to_dbgen_id.at(table);
+
+  row_start(dbgen_table_id);
+
+  DSSType value;
+  mk_fn(idx, &value, std::forward<Args>(args)...);
+
+  row_stop(dbgen_table_id);
+
+  return value;
+}
+
+float _convert_money(DSS_HUGE cents) {
+  const auto dollars = cents / 100;
+  cents %= 100;
+  return dollars + ((float)cents) / 100.0f;
+}
+
 }
 
 namespace opossum {
@@ -249,30 +276,6 @@ void TpchDbGenerator::generate_and_store() {
   for (auto &table : tables) {
     StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
   }
-}
-
-template<typename DSSType, typename MKRetType, typename ...Args>
-DSSType TpchDbGenerator::_call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(long long int, DSSType *val, Args...), TpchTable table, Args ... args) const {
-  /**
-   * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
-   */
-
-  const auto dbgen_table_id = tpch_table_to_dbgen_id.at(table);
-
-  row_start(dbgen_table_id);
-
-  DSSType value;
-  mk_fn(idx, &value, std::forward<Args>(args)...);
-
-  row_stop(dbgen_table_id);
-
-  return value;
-}
-
-float TpchDbGenerator::_convert_money(long long int cents) {
-  const auto dollars = cents / 100;
-  cents %= 100;
-  return dollars + ((float)cents) / 100.0f;
 }
 
 }  // namespace opossum
