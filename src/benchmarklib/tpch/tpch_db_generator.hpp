@@ -47,5 +47,7 @@ class TpchDbGenerator final {
 
   template<typename DSSType, typename MKRetType, typename ...Args>
   DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(long long int, DSSType * val, Args...), TpchTable table, Args ... args) const;
+
+  static float _convert_money(long long int cents);
 };
 }

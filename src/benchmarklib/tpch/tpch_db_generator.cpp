@@ -22,10 +22,10 @@ void row_stop(int t);
 namespace {
 
 // clang-format off
-const auto customer_column_types = boost::hana::tuple      <int64_t,    std::string, std::string, int64_t,         std::string, int64_t,     std::string,    std::string>();  // NOLINT
-const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nation_code", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
+const auto customer_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
+const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
 
-const auto order_column_types = boost::hana::tuple      <int64_t,     int64_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
+const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
 const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
 
 const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
@@ -83,12 +83,15 @@ class TableBuilder {
   }
 
   void append_row(ColumnTypes&&... column_values) {
-    boost::hana::zip_with(
+    auto vectors_and_values = boost::hana::zip_with(
       [](auto& vector, auto&& value) {
-        vector.push_back(value);
-        return 0; // Can't return void, because that makes boost::hana unhappy
+        return boost::hana::make_tuple(std::reference_wrapper(vector), value);
       },
       _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
+
+    boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
+      vector_and_value[boost::hana::llong_c<0>].get().emplace_back(vector_and_value[boost::hana::llong_c<1>]);
+    });
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
       _emit_chunk();
@@ -150,10 +153,10 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
    */
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
 
-  for (size_t row_idx = 1; row_idx <= customer_count; row_idx++) {
+  for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
     auto customer = _call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TpchTable::Customer);
     customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
-                                customer.acctbal, customer.mktsegment, customer.comment);
+                                _convert_money(customer.acctbal), customer.mktsegment, customer.comment);
   }
 
   /**
@@ -164,14 +167,14 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
     const auto order = _call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
 
-    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus), order.totalprice,
+    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus), _convert_money(order.totalprice),
                              order.odate, order.opriority, order.clerk, order.spriority, order.comment);
 
     for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
       const auto &lineitem = order.l[line_idx];
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-                                  lineitem.eprice, lineitem.discount, lineitem.tax, std::string(1, lineitem.rflag[0]),
+                                  _convert_money(lineitem.eprice), _convert_money(lineitem.discount), _convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
                                   std::string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
@@ -186,10 +189,10 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
     const auto part = _call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part, _scale_factor);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
-                            part.retailprice, part.comment);
+                            _convert_money(part.retailprice), part.comment);
 
     for (const auto& partsupp : part.s) {
-      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, partsupp.scost, partsupp.comment);
+      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, _convert_money(partsupp.scost), partsupp.comment);
     }
   }
 
@@ -202,7 +205,7 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
     const auto supplier = _call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TpchTable::Supplier);
 
     supplier_builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
-                                supplier.acctbal, supplier.comment);
+                                _convert_money(supplier.acctbal), supplier.comment);
   }
 
   /**
@@ -265,4 +268,11 @@ DSSType TpchDbGenerator::_call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(long long
 
   return value;
 }
+
+float TpchDbGenerator::_convert_money(long long int cents) {
+  const auto dollars = cents / 100;
+  cents %= 100;
+  return dollars + ((float)cents) / 100.0f;
+}
+
 }  // namespace opossum
