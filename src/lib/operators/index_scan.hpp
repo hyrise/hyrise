@@ -12,6 +12,11 @@ namespace opossum {
 
 class Table;
 
+/**
+ * Operator that performs a predicate search using indices
+ *
+ * Note: Scans only the set of chunks passed to the constructor
+ */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> chunk_ids, const ColumnIndexType index_type,
