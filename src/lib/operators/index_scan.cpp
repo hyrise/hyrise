@@ -39,7 +39,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   jobs.reserve(_chunk_ids.size());
 
   for (auto chunk_id : _chunk_ids) {
-    auto job_task = std::make_shared<JobTask>([&]() {
+    auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
 
       const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
