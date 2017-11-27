@@ -37,7 +37,7 @@ class OperatorsIndexScanTest : public BaseTest {
 
     for (const auto& chunk_id : _chunk_ids) {
       auto& chunk = table->get_chunk(chunk_id);
-      chunk.create_index<DerivedIndex>(_column_ids);
+      chunk.template create_index<DerivedIndex>(_column_ids);
     }
 
     _table_wrapper = std::make_shared<TableWrapper>(table);
