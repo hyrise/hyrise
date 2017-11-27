@@ -190,12 +190,14 @@ uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
   return last - prelast;
 }
 
-std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(const std::vector<ColumnID>& column_ids) const {
+std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
+    const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
-    for (auto column_id : column_ids)
-      if (column_id >= column_count()) return false;
-    return true;
-  }()), "Column IDs not within range [0, column_count()).");
+                for (auto column_id : column_ids)
+                  if (column_id >= column_count()) return false;
+                return true;
+              }()),
+              "Column IDs not within range [0, column_count()).");
 
   auto columns = std::vector<std::shared_ptr<const BaseColumn>>{};
   columns.reserve(column_ids.size());

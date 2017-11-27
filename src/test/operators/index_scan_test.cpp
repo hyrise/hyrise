@@ -1,18 +1,18 @@
-#include <numeric>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/table_wrapper.hpp"
 #include "operators/index_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -83,9 +83,9 @@ class OperatorsIndexScanTest : public BaseTest {
   ColumnIndexType _index_type;
 };
 
-typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* add further indices */> DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* add further indices */>
+    DerivedIndices;
 TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
-
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
@@ -103,8 +103,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   tests[ScanType::OpBetween] = {104, 106, 108};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_table_wrapper, this->_chunk_ids, this->_index_type, this->_column_ids,
-                                            test.first, right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_table_wrapper, this->_chunk_ids, this->_index_type,
+                                            this->_column_ids, test.first, right_values, right_values2);
 
     scan->execute();
 
@@ -169,19 +169,18 @@ TYPED_TEST(OperatorsIndexScanTest, ScanWithEmptyInput) {
 }
 
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
-  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_chunk_ids, this->_index_type,
-                                                   this->_column_ids, ScanType::OpGreaterThanEquals,
-                                                   std::vector<AllTypeVariant>{1234});
+  auto scan =
+      std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_chunk_ids, this->_index_type, this->_column_ids,
+                                           ScanType::OpGreaterThanEquals, std::vector<AllTypeVariant>{1234});
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
-  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_chunk_ids,
-                                                   ColumnIndexType::Invalid, this->_column_ids, ScanType::OpGreaterThan,
+  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_chunk_ids, ColumnIndexType::Invalid,
+                                                   this->_column_ids, ScanType::OpGreaterThan,
                                                    std::vector<AllTypeVariant>{123});
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
-
 
 }  // namespace opossum

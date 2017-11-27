@@ -18,10 +18,10 @@ class AdaptiveRadixTreeIndex;
 
 namespace detail {
 
-constexpr auto column_index_map = hana::make_map(
-  hana::make_pair(hana::type_c<GroupKeyIndex>, ColumnIndexType::GroupKey),
-  hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, ColumnIndexType::CompositeGroupKey),
-  hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, ColumnIndexType::AdaptiveRadixTree));
+constexpr auto column_index_map =
+    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, ColumnIndexType::GroupKey),
+                   hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, ColumnIndexType::CompositeGroupKey),
+                   hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, ColumnIndexType::AdaptiveRadixTree));
 
 }  // namespace detail
 

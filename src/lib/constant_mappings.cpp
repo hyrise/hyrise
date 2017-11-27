@@ -1,7 +1,7 @@
 #include "constant_mappings.hpp"
 
-#include <boost/hana/fold.hpp>
 #include <boost/bimap.hpp>
+#include <boost/hana/fold.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -130,9 +130,10 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
     });
 
 const boost::bimap<DataType, std::string> data_type_to_string =
-    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
-      map.insert({ hana::first(pair), std::string{hana::second(pair)} });
-      return map;
-    });
+    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{},
+               [](auto map, auto pair) {
+                 map.insert({hana::first(pair), std::string{hana::second(pair)}});
+                 return map;
+               });
 
 }  // namespace opossum
