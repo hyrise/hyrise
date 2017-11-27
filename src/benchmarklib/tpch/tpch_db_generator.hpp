@@ -25,7 +25,8 @@ enum class TpchTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nat
 extern std::unordered_map<opossum::TpchTable, std::string> tpch_table_names;
 
 /**
- * NOT thread safe (internal malloc races)
+ * Wrapper around the official tpch-dbgen tool, making it directly generate opossum::Table instances without having
+ * to generate and then load .tbl files.
  */
 class TpchDbGenerator final {
  public:
@@ -38,7 +39,7 @@ class TpchDbGenerator final {
   float _scale_factor;
   size_t _chunk_size;
 
-  template<typename T, typename ...Args>
-  T _call_dbgen_mk(size_t idx, long (*mk_fn)(long long int, T * val, Args...), TpchTable table, Args ... args) const;
+  template<typename DSSType, typename MKRetType, typename ...Args>
+  DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(long long int, DSSType * val, Args...), TpchTable table, Args ... args) const;
 };
 }

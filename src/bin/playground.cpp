@@ -14,7 +14,7 @@ int main() {
   auto tables = gen.generate();
 
   for (auto& pair : tables) {
-    std::cout << "Table '" << pair.first << "'" << std::endl;
+    std::cout << "Table '" << opossum::tpch_table_names.at(pair.first) << "'" << std::endl;
     opossum::Print::print(pair.second);
     std::cout << "\n";
   }
