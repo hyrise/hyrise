@@ -43,13 +43,13 @@ class TpchTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
 
   std::shared_ptr<opossum::Table> generate_customers_table();
 
-  typedef std::shared_ptr<std::vector<std::vector<OrderLine>>> order_lines_type;
+  typedef std::vector<std::vector<OrderLine>> OrderLines;
 
-  order_lines_type generate_order_lines();
+  OrderLines generate_order_lines();
 
-  std::shared_ptr<opossum::Table> generate_orders_table(const order_lines_type order_lines);
+  std::shared_ptr<opossum::Table> generate_orders_table(const OrderLines& order_lines);
 
-  std::shared_ptr<opossum::Table> generate_lineitems_table(const order_lines_type order_lines);
+  std::shared_ptr<opossum::Table> generate_lineitems_table(const OrderLines& order_lines);
 
   std::shared_ptr<opossum::Table> generate_nations_table();
 

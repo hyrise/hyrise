@@ -35,7 +35,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
       std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology(10)));
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
+  auto cardinalities = std::vector<size_t>(std::initializer_list<size_t>{NUM_ITEMS});
 
   /**
    * indices[0] = item
@@ -69,7 +69,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_warehouse_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size});
+  auto cardinalities = std::vector<size_t>(std::initializer_list<size_t>{_warehouse_size});
 
   /**
    * indices[0] = warehouse
@@ -102,8 +102,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_warehouse_table() {
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities =
-      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS});
+  auto cardinalities = std::vector<size_t>(std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS});
 
   /**
    * indices[0] = warehouse
@@ -143,8 +142,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
+  auto cardinalities = std::vector<size_t>(std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
 
   /**
    * indices[0] = warehouse
@@ -178,7 +176,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
+  auto cardinalities = std::vector<size_t>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT});
 
   /**
@@ -230,7 +228,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_history_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{
+  auto cardinalities = std::vector<size_t>(std::initializer_list<size_t>{
       _warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES});
 
   /**
@@ -256,8 +254,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
     TpccTableGenerator::order_line_counts_type order_line_counts) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
+  auto cardinalities =
+      std::vector<size_t>(std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
   /**
    * indices[0] = warehouse
@@ -331,7 +329,7 @@ std::vector<T> TpccTableGenerator::generate_inner_order_line_column(
 
 template <typename T>
 void TpccTableGenerator::add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
-                                               std::shared_ptr<std::vector<size_t>> cardinalities,
+                                               const std::vector<size_t>& cardinalities,
                                                TpccTableGenerator::order_line_counts_type order_line_counts,
                                                const std::function<T(std::vector<size_t>)>& generator_function) {
   const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
@@ -345,8 +343,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
     TpccTableGenerator::order_line_counts_type order_line_counts) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
+  auto cardinalities =
+      std::vector<size_t>(std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
   /**
    * indices[0] = warehouse
@@ -387,8 +385,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
+  auto cardinalities =
+      std::vector<size_t>(std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
   /**
    * indices[0] = warehouse

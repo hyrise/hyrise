@@ -68,8 +68,7 @@ class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
 
   template <typename T>
   void add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
-                             std::shared_ptr<std::vector<size_t>> cardinalities,
-                             order_line_counts_type order_line_counts,
+                             const std::vector<size_t>& cardinalities, order_line_counts_type order_line_counts,
                              const std::function<T(std::vector<size_t>)>& generator_function);
 
   TpccRandomGenerator _random_gen;

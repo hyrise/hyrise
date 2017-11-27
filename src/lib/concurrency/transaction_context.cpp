@@ -96,7 +96,7 @@ bool TransactionContext::commit() {
   return true;
 }
 
-void TransactionContext::register_read_write_operator(const std::shared_ptr<AbstractReadWriteOperator>& op) {
+void TransactionContext::register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) {
   _rw_operators.push_back(op);
 }
 

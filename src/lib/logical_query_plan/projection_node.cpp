@@ -14,7 +14,7 @@
 namespace opossum {
 
 ProjectionNode::ProjectionNode(std::vector<std::shared_ptr<Expression>>&& column_expressions)
-    : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
+    : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(std::move(column_expressions)) {}
 
 std::string ProjectionNode::description() const {
   std::ostringstream desc;

@@ -46,7 +46,11 @@ Visitor context for the partitioning/grouping visitor
 struct GroupByContext : ColumnVisitableContext {
   GroupByContext(const std::shared_ptr<const Table>& t, const ChunkID chunk, const ColumnID column,
                  const std::shared_ptr<std::vector<AggregateKey>>& keys)
-      : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys) {}
+      // TODO(anyone): remove shared_ptr<vector> here and anywhere else where it is not needed
+      : table_in(t),
+        chunk_id(chunk),
+        column_id(column),
+        hash_keys(keys) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
   GroupByContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>& referenced_table,

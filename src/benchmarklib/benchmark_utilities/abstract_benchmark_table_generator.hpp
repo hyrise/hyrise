@@ -52,7 +52,7 @@ class AbstractBenchmarkTableGenerator {
    */
   template <typename T>
   void add_column(const std::shared_ptr<opossum::Table>& table, std::string name,
-                  const std::shared_ptr<std::vector<size_t>>& cardinalities,
+                  const std::vector<size_t>& cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
     /**
      * We have to add Chunks when we add the first column.
@@ -69,7 +69,7 @@ class AbstractBenchmarkTableGenerator {
      * For the CUSTOMER table this calculates 1*10*3000
      */
     auto loop_count =
-        std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
+        std::accumulate(std::begin(cardinalities), std::end(cardinalities), 1u, std::multiplies<size_t>());
 
     tbb::concurrent_vector<T> column;
     column.reserve(_chunk_size);
@@ -80,7 +80,7 @@ class AbstractBenchmarkTableGenerator {
     size_t row_index = 0;
 
     for (size_t loop_index = 0; loop_index < loop_count; loop_index++) {
-      std::vector<size_t> indices(cardinalities->size());
+      std::vector<size_t> indices(cardinalities.size());
 
       /**
        * Calculate indices for internal loops
@@ -93,10 +93,10 @@ class AbstractBenchmarkTableGenerator {
        * WAREHOUSE_ID | DISTRICT_ID | CUSTOMER_ID
        * indices[0]   | indices[1]  | indices[2]
        */
-      for (size_t loop = 0; loop < cardinalities->size(); loop++) {
-        auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
+      for (size_t loop = 0; loop < cardinalities.size(); loop++) {
+        auto divisor = std::accumulate(std::begin(cardinalities) + loop + 1, std::end(cardinalities), 1u,
                                        std::multiplies<size_t>());
-        indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
+        indices[loop] = (loop_index / divisor) % cardinalities.at(loop);
       }
 
       /**
@@ -162,7 +162,7 @@ class AbstractBenchmarkTableGenerator {
    */
   template <typename T>
   void add_column(const std::shared_ptr<opossum::Table>& table, std::string name,
-                  const std::shared_ptr<std::vector<size_t>>& cardinalities,
+                  const std::vector<size_t>& cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };

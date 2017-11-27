@@ -16,8 +16,8 @@ namespace opossum {
 AggregateNode::AggregateNode(std::vector<std::shared_ptr<Expression>>&& aggregate_expressions,
                              std::vector<ColumnID>&& groupby_column_ids)
     : AbstractLQPNode(LQPNodeType::Aggregate),
-      _aggregate_expressions(aggregate_expressions),
-      _groupby_column_ids(groupby_column_ids) {
+      _aggregate_expressions(std::move(aggregate_expressions)),
+      _groupby_column_ids(std::move(groupby_column_ids)) {
   for ([[gnu::unused]] const auto& expression : aggregate_expressions) {
     DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
   }
