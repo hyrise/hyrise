@@ -90,8 +90,8 @@ TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  const auto right_values = std::vector<AllTypeVariant>{4};
-  const auto right_values2 = std::vector<AllTypeVariant>{9};
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
 
   std::map<ScanType, std::vector<AllTypeVariant>> tests;
   tests[ScanType::OpEquals] = {104};
@@ -116,8 +116,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
-  const auto right_values = std::vector<AllTypeVariant>{30};
-  const auto right_values2 = std::vector<AllTypeVariant>{34};
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
 
   std::map<ScanType, std::vector<AllTypeVariant>> tests;
   tests[ScanType::OpEquals] = no_rows;
@@ -140,8 +140,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
-  const auto right_values = std::vector<AllTypeVariant>{-10};
-  const auto right_values2 = std::vector<AllTypeVariant>{34};
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
 
   std::map<ScanType, std::vector<AllTypeVariant>> tests;
   tests[ScanType::OpEquals] = no_rows;
