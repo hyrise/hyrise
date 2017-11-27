@@ -56,8 +56,6 @@ set(
     operators/import_binary.hpp
     operators/import_csv.cpp
     operators/import_csv.hpp
-    operators/index_column_scan.cpp
-    operators/index_column_scan.hpp
     operators/index_scan.cpp
     operators/index_scan.hpp
     operators/insert.cpp
