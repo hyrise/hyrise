@@ -219,6 +219,12 @@ void Insert::_on_commit_records(const CommitID cid) {
 void Insert::_on_rollback_records() {
   for (auto row_id : _inserted_rows) {
     auto& chunk = _target_table->get_chunk(row_id.chunk_id);
+    // We set the begin and end cids to 0 (effectively making it invisible for everyone) so that the ChunkCompression
+    // does not think that this row is still incomplete. We need to make sure that the end is written before the begin.
+    chunk.mvcc_columns()->end_cids[row_id.chunk_offset] = 0u;
+    std::atomic_thread_fence(std::memory_order_release);
+    chunk.mvcc_columns()->begin_cids[row_id.chunk_offset] = 0u;
+
     chunk.mvcc_columns()->tids[row_id.chunk_offset] = 0u;
   }
 }
