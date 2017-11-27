@@ -62,12 +62,16 @@ class TableBuilder {
   TableBuilder(size_t chunk_size, const boost::hana::tuple<ColumnTypes...>& column_types, const boost::hana::tuple<Strings...>& column_names) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
-    boost::hana::zip_with(
+    const auto column_names_and_data_types = boost::hana::zip_with(
       [&](auto column_type, auto column_name) {
-        _table->add_column_definition(column_name, opossum::data_type_from_type<decltype(column_type)>());
-        return 0; // Can't return void, because that makes boost::hana unhappy
+        return boost::hana::make_tuple(column_name, opossum::data_type_from_type<decltype(column_type)>());
       },
       column_types, column_names);
+
+    boost::hana::fold_left(column_names_and_data_types, _table, [](auto table, auto column_name_and_type) {
+      table->add_column_definition(column_name_and_type[boost::hana::llong_c<0>], column_name_and_type[boost::hana::llong_c<1>]);
+      return table;
+    });
   }
 
   std::shared_ptr<opossum::Table> finish_table() {
