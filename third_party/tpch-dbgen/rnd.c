@@ -125,14 +125,18 @@ row_stop(int t)	\
 	
 	for (i=0; i <= MAX_STREAM; i++)
 		if ((Seed[i].table == t) || (Seed[i].table == tdefs[t].child))
-			{ 
-			if (set_seeds && (Seed[i].usage > Seed[i].boundary))
-				{
-				fprintf(stderr, "\nSEED CHANGE: seed[%d].usage = %ld\n", 
-					i, Seed[i].usage); 
-				Seed[i].boundary = Seed[i].usage;
-				} 
-			else 
+			{
+				/**
+				 * HYRISE: commented out because set_seeds is considered false for us.
+				 */
+
+//			if (set_seeds && (Seed[i].usage > Seed[i].boundary))
+//				{
+//				fprintf(stderr, "\nSEED CHANGE: seed[%d].usage = %ld\n",
+//					i, Seed[i].usage);
+//				Seed[i].boundary = Seed[i].usage;
+//				}
+//			else
 				{
 				NthElement((Seed[i].boundary - Seed[i].usage), &Seed[i].value);
 #ifdef RNG_TEST

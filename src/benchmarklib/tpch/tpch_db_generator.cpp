@@ -11,14 +11,42 @@ extern "C" {
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
+/**
+ * Declare tpch_dbgen function we use that are not exposed by tpch-dbgen via headers
+ */
 extern "C" {
-
-void NthElement(DSS_HUGE N, DSS_HUGE* StartSeed);
-DSS_HUGE set_state(int table, long sf, long procs, long step, DSS_HUGE* extra_rows);
+void row_start(int t);
+void row_stop(int t);
 }
 
 namespace {
 
+// clang-format off
+const auto customer_column_types = boost::hana::tuple      <int64_t,    std::string, std::string, int64_t,         std::string, int64_t,     std::string,    std::string>();  // NOLINT
+const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nation_code", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
+
+const auto order_column_types = boost::hana::tuple      <int64_t,     int64_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
+const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
+
+const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
+const auto lineitem_column_names = boost::hana::make_tuple("o_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
+
+const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   int32_t,        std::string>();  // NOLINT
+const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
+
+const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           std::string>();  // NOLINT
+const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
+
+const auto supplier_column_types = boost::hana::tuple<     int32_t,     std::string, std::string, int32_t,       std::string, float,       std::string>();  // NOLINT
+const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
+
+const auto nation_column_types = boost::hana::tuple<     int32_t,       std::string, int32_t,       std::string>();  // NOLINT
+const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
+
+const auto region_column_types = boost::hana::tuple<     int32_t,       std::string, std::string>();  // NOLINT
+const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
+
+// clang-format on
 
 /**
  * Helper to build a table with a static (specified by template args `ColumnTypes`) column type layout. Keeps a vector
@@ -27,11 +55,11 @@ namespace {
  *
  * No real need to tie this to TPCH, but atm it is only used here so that's where it resides.
  */
-template <typename... ColumnTypes>
+template <typename ... ColumnTypes>
 class TableBuilder {
  public:
   template <typename... Strings>
-  TableBuilder(size_t chunk_size, const boost::hana::tuple<Strings...>& column_names) {
+  TableBuilder(size_t chunk_size, const boost::hana::tuple<ColumnTypes...>& column_types, const boost::hana::tuple<Strings...>& column_names) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
     boost::hana::zip_with(
@@ -39,7 +67,7 @@ class TableBuilder {
         _table->add_column_definition(column_name, opossum::data_type_from_type<decltype(column_type)>());
         return 0; // Can't return void, because that makes boost::hana unhappy
       },
-      boost::hana::tuple<ColumnTypes...>(), column_names);
+      column_types, column_names);
   }
 
   std::shared_ptr<opossum::Table> finish_table() {
@@ -104,47 +132,18 @@ TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
   : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
-  /**
-   * Declare TableBuilders, i.e. the Table layouts
-   */
-  TableBuilder<int64_t, std::string, std::string, int64_t, std::string, int64_t, std::string, std::string>
-    customer_builder(_chunk_size, boost::hana::make_tuple("c_custkey", "c_name", "c_address", "c_nation_code",
-                                                          "c_phone", "c_acctbal", "c_mktsegment", "c_comment"));
-
-  TableBuilder<int64_t, int64_t, std::string, float, std::string, std::string, std::string, int32_t, std::string>
-    order_builder(_chunk_size,
-                  boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate",
-                                          "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"));
-
-  TableBuilder<int32_t, int32_t, int32_t, int32_t, float, float, float, float, std::string, std::string, std::string,
-    std::string, std::string, std::string, std::string, std::string>
-    lineitem_builder(_chunk_size,
-                     boost::hana::make_tuple("o_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity",
-                                             "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus",
-                                             "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct",
-                                             "l_shipmode", "l_comment"));
-
-  TableBuilder<int32_t, std::string, std::string, std::string, std::string, int32_t, std::string, int32_t, std::string>
-    part_builder(_chunk_size, boost::hana::make_tuple("p_partkey", "p_name", "p_mfgr", "p_brand", "p_type", "p_size",
-                                                      "p_container", "p_retailsize", "p_comment"));
-
-  TableBuilder<int32_t, int32_t, int32_t, float, std::string> partsupp_builder(
-    _chunk_size, boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"));
-
-  TableBuilder<int32_t, std::string, std::string, int32_t, std::string, float, std::string> supplier_builder(
-    _chunk_size,
-    boost::hana::make_tuple("s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"));
-
-  TableBuilder<int32_t, std::string, int32_t, std::string> nation_builder(
-    _chunk_size, boost::hana::make_tuple("n_nationkey", "n_name", "n_regionkey", "n_comment"));
-
-  TableBuilder<int32_t, std::string, std::string> region_builder(
-    _chunk_size, boost::hana::make_tuple("r_regionkey", "r_name", "r_comment"));
+  TableBuilder customer_builder(_chunk_size, customer_column_types, customer_column_names);
+  TableBuilder order_builder(_chunk_size, order_column_types, order_column_names);
+  TableBuilder lineitem_builder(_chunk_size, lineitem_column_types, lineitem_column_names);
+  TableBuilder part_builder(_chunk_size, part_column_types, part_column_names);
+  TableBuilder partsupp_builder(_chunk_size, partsupp_column_types, partsupp_column_names);
+  TableBuilder supplier_builder(_chunk_size, supplier_column_types, supplier_column_names);
+  TableBuilder nation_builder(_chunk_size, nation_column_types, nation_column_names);
+  TableBuilder region_builder(_chunk_size, region_column_types, region_column_names);
 
   /**
    * CUSTOMER
    */
-
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
 
   for (size_t row_idx = 1; row_idx <= customer_count; row_idx++) {
@@ -247,33 +246,18 @@ void TpchDbGenerator::generate_and_store() {
 
 template<typename DSSType, typename MKRetType, typename ...Args>
 DSSType TpchDbGenerator::_call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(long long int, DSSType *val, Args...), TpchTable table, Args ... args) const {
-  // dbgen's row_start()
-  for (int i = 0; i <= MAX_STREAM; i++) Seed[i].usage = 0;
-
   /**
-   * Call mk_*
+   * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
+
+  const auto dbgen_table_id = tpch_table_to_dbgen_id.at(table);
+
+  row_start(dbgen_table_id);
+
   DSSType value;
   mk_fn(idx, &value, std::forward<Args>(args)...);
 
-  /**
-   * dbgen's row_stop()
-   */
-  int i;
-
-  for (i = 0; i <= MAX_STREAM; i++) {
-    const auto dbgen_table_id = tpch_table_to_dbgen_id.at(table);
-    if ((Seed[i].table == dbgen_table_id) || (Seed[i].table == tdefs[dbgen_table_id].child)) {
-      if (Seed[i].usage > Seed[i].boundary) {
-        Seed[i].boundary = Seed[i].usage;
-      } else {
-        NthElement((Seed[i].boundary - Seed[i].usage), &Seed[i].value);
-#ifdef RNG_TEST
-        Seed[i].nCalls += Seed[i].boundary - Seed[i].usage;
-#endif
-      }
-    }
-  }
+  row_stop(dbgen_table_id);
 
   return value;
 }
