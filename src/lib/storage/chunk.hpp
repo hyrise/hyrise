@@ -191,6 +191,12 @@ class Chunk : private Noncopyable {
     return index;
   }
 
+  template <typename Index>
+  std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
+    const auto columns = get_columns_for_ids(column_ids);
+    return create_index<Index>(columns);
+  }
+
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
@@ -201,7 +207,10 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
- protected:
+ private:
+  std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
+
+ private:
   PolymorphicAllocator<Chunk> _alloc;
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::shared_ptr<MvccColumns> _mvcc_columns;

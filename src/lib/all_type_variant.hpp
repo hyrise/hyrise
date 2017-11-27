@@ -6,6 +6,7 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
 #include <boost/hana/core/to.hpp>
+#include <boost/hana/map.hpp>
 
 #include <boost/mpl/push_front.hpp>
 
