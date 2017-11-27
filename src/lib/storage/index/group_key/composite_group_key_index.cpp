@@ -86,7 +86,7 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-ColumnIndexType CompositeGroupKeyIndex::_type() const { return ColumnIndexType::CompositeGroupKey; }
+ColumnIndexType CompositeGroupKeyIndex::_type() const { return get_index_type_of<CompositeGroupKeyIndex>(); }
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);

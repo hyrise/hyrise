@@ -56,7 +56,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
-ColumnIndexType AdaptiveRadixTreeIndex::_type() const { return ColumnIndexType::AdaptiveRadixTree; }
+ColumnIndexType AdaptiveRadixTreeIndex::_type() const { return get_index_type_of<AdaptiveRadixTreeIndex>(); }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {

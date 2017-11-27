@@ -61,7 +61,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const { return _index_postings.
 
 GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _index_postings.cend(); }
 
-ColumnIndexType GroupKeyIndex::_type() const { return ColumnIndexType::GroupKey; }
+ColumnIndexType GroupKeyIndex::_type() const { return get_index_type_of<GroupKeyIndex>(); }
 
 /**
    *
