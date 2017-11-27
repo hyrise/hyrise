@@ -1,3 +1,8 @@
+/**
+ * tpch_dbgen.c/h among other things contain the data originating from dists.dss and are therefore subject to the TPCH
+ * license (see LICENSE)
+ */
+
 #include "tpch_dbgen.h"
 #include "dss.h"
 
@@ -786,4 +791,5 @@ void dbgen_cleanup() {
     }
     free(asc_date);
   }
+  asc_date = NULL;
 }
