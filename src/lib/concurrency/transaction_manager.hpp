@@ -82,7 +82,12 @@ class TransactionManager : private Noncopyable {
 
  private:
   std::atomic<TransactionID> _next_transaction_id;
+  static constexpr auto initial_transaction_id = TransactionID{0};
+
   std::atomic<CommitID> _last_commit_id;
+  // We use commit_id=0 for rows that were inserted and then rolled back. Also, this can be used for rows that have
+  // been there "from the beginning of time".
+  static constexpr auto initial_commit_id = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
 };
