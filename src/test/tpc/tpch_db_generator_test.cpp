@@ -24,7 +24,8 @@ TEST(TpchDbGeneratorTest, RowCounts) {
 
 TEST(TpchDbGeneratorTest, TableContents) {
   /**
-   * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
+   * Check whether that data TpchDbGenerator generates with a scale factor of 0.001 is the exact same that dbgen
+   *     generates
    */
   const auto scale_factor = 0.001f;
   const auto chunk_size = 1000;
