@@ -55,21 +55,23 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
  *
  * No real need to tie this to TPCH, but atm it is only used here so that's where it resides.
  */
-template <typename ... ColumnTypes>
+template <typename... ColumnTypes>
 class TableBuilder {
  public:
   template <typename... Strings>
-  TableBuilder(size_t chunk_size, const boost::hana::tuple<ColumnTypes...>& column_types, const boost::hana::tuple<Strings...>& column_names) {
+  TableBuilder(size_t chunk_size, const boost::hana::tuple<ColumnTypes...>& column_types,
+               const boost::hana::tuple<Strings...>& column_names) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
     const auto column_names_and_data_types = boost::hana::zip_with(
-      [&](auto column_type, auto column_name) {
-        return boost::hana::make_tuple(column_name, opossum::data_type_from_type<decltype(column_type)>());
-      },
-      column_types, column_names);
+        [&](auto column_type, auto column_name) {
+          return boost::hana::make_tuple(column_name, opossum::data_type_from_type<decltype(column_type)>());
+        },
+        column_types, column_names);
 
     boost::hana::fold_left(column_names_and_data_types, _table, [](auto table, auto column_name_and_type) {
-      table->add_column_definition(column_name_and_type[boost::hana::llong_c<0>], column_name_and_type[boost::hana::llong_c<1>]);
+      table->add_column_definition(column_name_and_type[boost::hana::llong_c<0>],
+                                   column_name_and_type[boost::hana::llong_c<1>]);
       return table;
     });
   }
@@ -84,10 +86,8 @@ class TableBuilder {
 
   void append_row(ColumnTypes&&... column_values) {
     auto vectors_and_values = boost::hana::zip_with(
-      [](auto& vector, auto&& value) {
-        return boost::hana::make_tuple(std::reference_wrapper(vector), value);
-      },
-      _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
+        [](auto& vector, auto&& value) { return boost::hana::make_tuple(std::reference_wrapper(vector), value); },
+        _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
 
     boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
       vector_and_value[boost::hana::llong_c<0>].get().push_back(vector_and_value[boost::hana::llong_c<1>]);
@@ -117,15 +117,13 @@ class TableBuilder {
 };
 
 std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
-    {opossum::TpchTable::Part, PART},     {opossum::TpchTable::PartSupp, PSUPP},
-    {opossum::TpchTable::Supplier, SUPP}, {opossum::TpchTable::Customer, CUST},
-    {opossum::TpchTable::Orders, ORDER},   {opossum::TpchTable::LineItem, LINE},
+    {opossum::TpchTable::Part, PART},     {opossum::TpchTable::PartSupp, PSUPP}, {opossum::TpchTable::Supplier, SUPP},
+    {opossum::TpchTable::Customer, CUST}, {opossum::TpchTable::Orders, ORDER},   {opossum::TpchTable::LineItem, LINE},
     {opossum::TpchTable::Nation, NATION}, {opossum::TpchTable::Region, REGION}};
 
-
-
-template<typename DSSType, typename MKRetType, typename ...Args>
-DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType *val, Args...), opossum::TpchTable table, Args ... args) {
+template <typename DSSType, typename MKRetType, typename... Args>
+DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TpchTable table,
+                       Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
@@ -147,23 +145,17 @@ float _convert_money(DSS_HUGE cents) {
   cents %= 100;
   return dollars + ((float)cents) / 100.0f;
 }
-
 }
 
 namespace opossum {
 
 std::unordered_map<TpchTable, std::string> tpch_table_names = {
-  {TpchTable::Part,     "part"},
-  {TpchTable::PartSupp, "partsupp"},
-  {TpchTable::Supplier, "supplier"},
-  {TpchTable::Customer, "customer"},
-  {TpchTable::Orders,   "order"},
-  {TpchTable::LineItem, "lineitem"},
-  {TpchTable::Nation,   "nation"},
-  {TpchTable::Region,   "region"}};
+    {TpchTable::Part, "part"},         {TpchTable::PartSupp, "partsupp"}, {TpchTable::Supplier, "supplier"},
+    {TpchTable::Customer, "customer"}, {TpchTable::Orders, "order"},      {TpchTable::LineItem, "lineitem"},
+    {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
 TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
-  : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
+    : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
   TableBuilder customer_builder(_chunk_size, customer_column_types, customer_column_names);
@@ -194,14 +186,16 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
     const auto order = _call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
 
-    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus), _convert_money(order.totalprice),
-                             order.odate, order.opriority, order.clerk, order.spriority, order.comment);
+    order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus),
+                             _convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
+                             order.spriority, order.comment);
 
     for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
-      const auto &lineitem = order.l[line_idx];
+      const auto& lineitem = order.l[line_idx];
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-                                  _convert_money(lineitem.eprice), _convert_money(lineitem.discount), _convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
+                                  _convert_money(lineitem.eprice), _convert_money(lineitem.discount),
+                                  _convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
                                   std::string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
@@ -219,7 +213,8 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
                             _convert_money(part.retailprice), part.comment);
 
     for (const auto& partsupp : part.s) {
-      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, _convert_money(partsupp.scost), partsupp.comment);
+      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, _convert_money(partsupp.scost),
+                                  partsupp.comment);
     }
   }
 
@@ -260,20 +255,17 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
    */
   dbgen_cleanup();
 
-  return {{TpchTable::Customer, customer_builder.finish_table()},
-          {TpchTable::Orders,   order_builder.finish_table()},
-          {TpchTable::LineItem, lineitem_builder.finish_table()},
-          {TpchTable::Part,     part_builder.finish_table()},
-          {TpchTable::PartSupp, partsupp_builder.finish_table()},
-          {TpchTable::Supplier, supplier_builder.finish_table()},
-          {TpchTable::Nation,   nation_builder.finish_table()},
-          {TpchTable::Region,   region_builder.finish_table()}};
+  return {
+      {TpchTable::Customer, customer_builder.finish_table()}, {TpchTable::Orders, order_builder.finish_table()},
+      {TpchTable::LineItem, lineitem_builder.finish_table()}, {TpchTable::Part, part_builder.finish_table()},
+      {TpchTable::PartSupp, partsupp_builder.finish_table()}, {TpchTable::Supplier, supplier_builder.finish_table()},
+      {TpchTable::Nation, nation_builder.finish_table()},     {TpchTable::Region, region_builder.finish_table()}};
 }
 
 void TpchDbGenerator::generate_and_store() {
   const auto tables = generate();
 
-  for (auto &table : tables) {
+  for (auto& table : tables) {
     StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
   }
 }
