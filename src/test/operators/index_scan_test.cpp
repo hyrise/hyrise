@@ -1,24 +1,18 @@
-#include <algorithm>
-#include <iostream>
 #include <numeric>
 #include <map>
 #include <memory>
-#include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/index_scan.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -55,33 +49,6 @@ class OperatorsIndexScanTest : public BaseTest {
 
     _empty_table_wrapper = std::make_shared<TableWrapper>(empty_table);
     _empty_table_wrapper->execute();
-  }
-
-  std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table) {
-    auto table_out = std::make_shared<Table>();
-
-    auto pos_list = std::make_shared<PosList>();
-    pos_list->reserve(table->row_count());
-
-    for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
-
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
-        pos_list->push_back(RowID{chunk_id, chunk_offset});
-      }
-    }
-
-    auto chunk_out = Chunk{};
-
-    for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
-      table_out->add_column_definition(table->column_name(column_id), table->column_type(column_id));
-
-      auto column_out = std::make_shared<ReferenceColumn>(table, column_id, pos_list);
-      chunk_out.add_column(column_out);
-    }
-
-    table_out->emplace_chunk(std::move(chunk_out));
-    return table_out;
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
