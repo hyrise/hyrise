@@ -13,12 +13,12 @@
 
 namespace opossum {
 
-IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
-                     std::vector<ChunkID> chunk_ids, std::vector<ColumnID> left_column_ids, const ScanType scan_type,
+IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> chunk_ids,
+                     const ColumnIndexType index_type, std::vector<ColumnID> left_column_ids, const ScanType scan_type,
                      std::vector<AllTypeVariant> right_values, std::vector<AllTypeVariant> right_values2)
     : AbstractReadOnlyOperator{in},
-      _index_type{index_type},
       _chunk_ids{chunk_ids},
+      _index_type{index_type},
       _left_column_ids{left_column_ids},
       _scan_type{scan_type},
       _right_values{right_values},

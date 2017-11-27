@@ -14,7 +14,7 @@ class Table;
 
 class IndexScan : public AbstractReadOnlyOperator {
  public:
-  IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type, std::vector<ChunkID> chunk_ids,
+  IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> chunk_ids, const ColumnIndexType index_type,
             std::vector<ColumnID> left_column_ids, const ScanType scan_type, std::vector<AllTypeVariant> right_values,
             std::vector<AllTypeVariant> right_values2 = {});
 
@@ -28,8 +28,8 @@ class IndexScan : public AbstractReadOnlyOperator {
   PosList _scan_chunk(const ChunkID chunk_id);
 
  private:
-  const ColumnIndexType _index_type;
   const std::vector<ChunkID> _chunk_ids;
+  const ColumnIndexType _index_type;
   const std::vector<ColumnID> _left_column_ids;
   const ScanType _scan_type;
   const std::vector<AllTypeVariant> _right_values;
