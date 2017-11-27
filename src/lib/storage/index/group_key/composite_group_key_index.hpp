@@ -55,7 +55,6 @@ class CompositeGroupKeyIndex : public BaseIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
-  ColumnIndexType _type() const final;
   std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const final;
 
   /**

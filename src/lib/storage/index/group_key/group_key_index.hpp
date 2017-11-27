@@ -63,8 +63,6 @@ class GroupKeyIndex : public BaseIndex {
 
   Iterator _cend() const final;
 
-  ColumnIndexType _type() const final;
-
   /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector

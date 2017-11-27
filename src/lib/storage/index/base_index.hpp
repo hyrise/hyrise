@@ -44,7 +44,8 @@ class BaseIndex : private Noncopyable {
    * leads to very different indices.
    */
 
-  BaseIndex() = default;
+  BaseIndex() = delete;
+  explicit BaseIndex(const ColumnIndexType type);
   BaseIndex(BaseIndex&&) = default;
   BaseIndex& operator=(BaseIndex&&) = default;
   virtual ~BaseIndex() = default;
@@ -117,6 +118,8 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
-  virtual ColumnIndexType _type() const = 0;
+
+ private:
+  const ColumnIndexType _type;
 };
 }  // namespace opossum
