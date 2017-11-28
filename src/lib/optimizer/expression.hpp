@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "logical_query_plan/column_origin.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -48,11 +49,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /**
    * Factory Methods to create Expressions of specific type
    */
-  static std::shared_ptr<Expression> create_column(const ColumnID column_id,
+  static std::shared_ptr<Expression> create_column(const ColumnOrigin& column_origin,
                                                    const std::optional<std::string>& alias = std::nullopt);
 
   static std::vector<std::shared_ptr<Expression>> create_columns(
-      const std::vector<ColumnID>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
+      const std::vector<ColumnOrigin>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
@@ -130,7 +131,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /**
    * Getters. Only call them if you are sure the type() has such a member
    */
-  const ColumnID column_id() const;
+  const ColumnOrigin& column_origin() const;
   AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
@@ -152,7 +153,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
    * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
-  std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
+  std::string to_string() const;
 
   bool operator==(const Expression& other) const;
 
@@ -177,7 +178,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   std::optional<std::string> _table_name;
 
   // a column that might be referenced
-  std::optional<ColumnID> _column_id;
+  std::optional<ColumnOrigin> _column_origin;
 
   // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
   std::optional<std::string> _alias;

@@ -22,8 +22,7 @@ class AggregateNode;
  * The elements of the vector returned by SQLTranslator::translate_parse_result(const hsql::SQLParserResult&)
  * point to the root/result nodes of the LQPs.
  *
- * An LQP can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
- * the LQPTranslator.
+ * An LQP can either be handed to the Optimizer, or it can be directly turned into Operators by the LQPTranslator.
  *
  *
  * ## ColumnID Resolution

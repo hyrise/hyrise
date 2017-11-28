@@ -14,10 +14,10 @@
 namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregate_expressions,
-                             const std::vector<ColumnID>& groupby_column_ids)
+                             const std::vector<ColumnOrigin>& groupby_column_origins)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
-      _groupby_column_ids(groupby_column_ids) {
+      _groupy_column_origins(groupby_column_origins) {
   for ([[gnu::unused]] const auto& expression : aggregate_expressions) {
     DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
   }
@@ -27,7 +27,7 @@ const std::vector<std::shared_ptr<Expression>>& AggregateNode::aggregate_express
   return _aggregate_expressions;
 }
 
-const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return _groupby_column_ids; }
+const std::vector<ColumnOrigin>& AggregateNode::groupby_column_origins() const { return _groupby_column_origins; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -58,15 +58,12 @@ std::string AggregateNode::description() const {
     stream_aggregate(*aggregates_it);
   }
 
-  if (!_groupby_column_ids.empty()) {
+  if (!_groupy_column_origins.empty()) {
     s << " GROUP BY [";
-
-    for (size_t group_by_idx = 0; group_by_idx < _groupby_column_ids.size(); ++group_by_idx) {
-      if (left_child()) {
-        s << left_child()->get_verbose_column_name(_groupby_column_ids[group_by_idx]);
-        if (group_by_idx + 1 < _groupby_column_ids.size()) {
-          s << ", ";
-        }
+    for (size_t group_by_idx = 0; group_by_idx < _groupy_column_origins.size(); ++group_by_idx) {
+      s << _groupy_column_origins[group_by_idx].get_verbose_name();
+      if (group_by_idx + 1 < _groupy_column_origins.size()) {
+        s << ", ";
       }
     }
     s << "]";
@@ -78,8 +75,8 @@ std::string AggregateNode::description() const {
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
-  if (column_id < _groupby_column_ids.size()) {
-    return left_child()->get_verbose_column_name(_groupby_column_ids[column_id]);
+  if (column_id < _groupy_column_origins.size()) {
+    return left_child()->get_verbose_column_name(_groupy_column_origins[column_id]);
   }
 
   const auto aggregate_column_id = column_id - _groupby_column_ids.size();
