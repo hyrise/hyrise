@@ -26,7 +26,7 @@
 
 namespace opossum {
 
-class SQLiteTestRunner : public testing::TestWithParam<std::string> {
+class SQLiteTestRunner : public BaseTestWithParam<std::string> {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
@@ -60,8 +60,6 @@ class SQLiteTestRunner : public testing::TestWithParam<std::string> {
     opossum::CurrentScheduler::set(
         std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
   }
-
-  void TearDown() override { opossum::CurrentScheduler::set(nullptr); }
 
   std::unique_ptr<SQLiteWrapper> _sqlite;
 };
