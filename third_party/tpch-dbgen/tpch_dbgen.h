@@ -47,3 +47,6 @@ extern distribution auxillaries;
 extern distribution np;
 extern distribution vp;
 extern distribution grammar;
+
+void dbgen_reset_seeds();
+

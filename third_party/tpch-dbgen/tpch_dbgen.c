@@ -5,6 +5,7 @@
 
 #include "tpch_dbgen.h"
 #include "dss.h"
+#include "rnd.h"
 
 #include <stdlib.h>
 
@@ -753,3 +754,59 @@ distribution vp = {
   vp_list,
   NULL
 };
+
+static seed_t mk_seed(long table, DSS_HUGE value, DSS_HUGE usage, DSS_HUGE boundary) {
+  seed_t seed = {.table=table, .value=value, .usage=usage, .boundary=boundary};
+  return seed;
+}
+
+void dbgen_reset_seeds() {
+  Seed[0] = mk_seed(PART,   1,          0,	1);					/* P_MFG_SD     0 */
+  Seed[1] = mk_seed(PART,   46831694,   0, 1);					/* P_BRND_SD    1 */
+  Seed[2] = mk_seed(PART,   1841581359, 0, 1);					/* P_TYPE_SD    2 */
+  Seed[3] = mk_seed(PART,   1193163244, 0, 1);					/* P_SIZE_SD    3 */
+  Seed[4] = mk_seed(PART,   727633698,  0, 1);					/* P_CNTR_SD    4 */
+  Seed[5] = mk_seed(NONE,   933588178,  0, 1);					/* text pregeneration  5 */
+  Seed[6] = mk_seed(PART,   804159733,  0, 2);	/* P_CMNT_SD    6 */
+  Seed[7] = mk_seed(PSUPP,  1671059989, 0, SUPP_PER_PART);     /* PS_QTY_SD    7 */
+  Seed[8] = mk_seed(PSUPP,  1051288424, 0, SUPP_PER_PART);     /* PS_SCST_SD   8 */
+  Seed[9] = mk_seed(PSUPP,  1961692154, 0, SUPP_PER_PART * 2);     /* PS_CMNT_SD   9 */
+  Seed[10] = mk_seed(ORDER,  1227283347, 0, 1);				    /* O_SUPP_SD    10 */
+  Seed[11] = mk_seed(ORDER,  1171034773, 0, 1);					/* O_CLRK_SD    11 */
+  Seed[12] = mk_seed(ORDER,  276090261,  0, 2);  /* O_CMNT_SD    12 */
+  Seed[13] = mk_seed(ORDER,  1066728069, 0, 1);					/* O_ODATE_SD   13 */
+  Seed[14] = mk_seed(LINE,   209208115,  0, O_LCNT_MAX);        /* L_QTY_SD     14 */
+  Seed[15] = mk_seed(LINE,   554590007,  0, O_LCNT_MAX);        /* L_DCNT_SD    15 */
+  Seed[16] = mk_seed(LINE,   721958466,  0, O_LCNT_MAX);        /* L_TAX_SD     16 */
+  Seed[17] = mk_seed(LINE,   1371272478, 0, O_LCNT_MAX);        /* L_SHIP_SD    17 */
+  Seed[18] = mk_seed(LINE,   675466456,  0, O_LCNT_MAX);        /* L_SMODE_SD   18 */
+  Seed[19] = mk_seed(LINE,   1808217256, 0, O_LCNT_MAX);      /* L_PKEY_SD    19 */
+  Seed[20] = mk_seed(LINE,   2095021727, 0, O_LCNT_MAX);      /* L_SKEY_SD    20 */
+  Seed[21] = mk_seed(LINE,   1769349045, 0, O_LCNT_MAX);      /* L_SDTE_SD    21 */
+  Seed[22] = mk_seed(LINE,   904914315,  0, O_LCNT_MAX);      /* L_CDTE_SD    22 */
+  Seed[23] = mk_seed(LINE,   373135028,  0, O_LCNT_MAX);      /* L_RDTE_SD    23 */
+  Seed[24] = mk_seed(LINE,   717419739,  0, O_LCNT_MAX);      /* L_RFLG_SD    24 */
+  Seed[25] = mk_seed(LINE,   1095462486, 0, O_LCNT_MAX * 2);   /* L_CMNT_SD    25 */
+  Seed[26] = mk_seed(CUST,   881155353,  0, 9);      /* C_ADDR_SD    26 */
+  Seed[27] = mk_seed(CUST,   1489529863, 0, 1);      /* C_NTRG_SD    27 */
+  Seed[28] = mk_seed(CUST,   1521138112, 0, 3);      /* C_PHNE_SD    28 */
+  Seed[29] = mk_seed(CUST,   298370230,  0, 1);      /* C_ABAL_SD    29 */
+  Seed[30] = mk_seed(CUST,   1140279430, 0, 1);      /* C_MSEG_SD    30 */
+  Seed[31] = mk_seed(CUST,   1335826707, 0, 2);     /* C_CMNT_SD    31 */
+  Seed[32] = mk_seed(SUPP,   706178559,  0, 9);      /* S_ADDR_SD    32 */
+  Seed[33] = mk_seed(SUPP,   110356601,  0, 1);      /* S_NTRG_SD    33 */
+  Seed[34] = mk_seed(SUPP,   884434366,  0, 3);      /* S_PHNE_SD    34 */
+  Seed[35] = mk_seed(SUPP,   962338209,  0, 1);      /* S_ABAL_SD    35 */
+  Seed[36] = mk_seed(SUPP,   1341315363, 0, 2);     /* S_CMNT_SD    36 */
+  Seed[37] = mk_seed(PART,   709314158,  0, 92);      /* P_NAME_SD    37 */
+  Seed[38] = mk_seed(ORDER,  591449447,  0, 1);      /* O_PRIO_SD    38 */
+  Seed[39] = mk_seed(LINE,   431918286,  0, 1);      /* HVAR_SD      39 */
+  Seed[40] = mk_seed(ORDER,  851767375,  0, 1);      /* O_CKEY_SD    40 */
+  Seed[41] = mk_seed(NATION, 606179079,  0, 2);      /* N_CMNT_SD    41 */
+  Seed[42] = mk_seed(REGION, 1500869201, 0, 2);      /* R_CMNT_SD    42 */
+  Seed[43] = mk_seed(ORDER,  1434868289, 0, 1);      /* O_LCNT_SD    43 */
+  Seed[44] = mk_seed(SUPP,   263032577,  0, 1);      /* BBB offset   44 */
+  Seed[45] = mk_seed(SUPP,   753643799,  0, 1);      /* BBB type     45 */
+  Seed[46] = mk_seed(SUPP,   202794285,  0, 1);      /* BBB comment  46 */
+  Seed[47] = mk_seed(SUPP,   715851524,  0, 1);       /* BBB junk     47 */
+}
