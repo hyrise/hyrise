@@ -40,7 +40,6 @@ void AbstractOperator::execute() {
       _output = _on_execute(nullptr);
     } else {
       auto read_only_operator = dynamic_cast<AbstractReadOnlyOperator*>(this);
-      DebugAssert(read_only_operator, "Trying to execute read write operator without transaction context");
       _output = read_only_operator->_on_execute();
     }
   }
