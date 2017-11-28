@@ -13,11 +13,10 @@
 
 namespace opossum {
 
-IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> chunk_ids,
-                     const ColumnIndexType index_type, std::vector<ColumnID> left_column_ids, const ScanType scan_type,
+IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
+                     std::vector<ColumnID> left_column_ids, const ScanType scan_type,
                      std::vector<AllTypeVariant> right_values, std::vector<AllTypeVariant> right_values2)
     : AbstractReadOnlyOperator{in},
-      _chunk_ids{chunk_ids},
       _index_type{index_type},
       _left_column_ids{left_column_ids},
       _scan_type{scan_type},
@@ -25,6 +24,10 @@ IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> 
       _right_values2{right_values2} {}
 
 const std::string IndexScan::name() const { return "IndexScan"; }
+
+void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) {
+  _included_chunk_ids = chunk_ids;
+}
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = _input_table_left();
@@ -36,34 +39,44 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   std::mutex output_mutex;
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_chunk_ids.size());
-
-  for (auto chunk_id : _chunk_ids) {
-    auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-      const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
-
-      const auto& chunk = _in_table->get_chunk(chunk_id);
-      // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
-      // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
-      // original chunk.
-      Chunk chunk_out{chunk.get_allocator(), chunk.access_counter()};
-
-      for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
-        auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-        chunk_out.add_column(ref_column_out);
-      }
-
-      std::lock_guard<std::mutex> lock(output_mutex);
-      _out_table->emplace_chunk(std::move(chunk_out));
-    });
-
-    jobs.push_back(job_task);
-    job_task->schedule();
+  if (_included_chunk_ids.empty()) {
+    jobs.reserve(_in_table->chunk_count());
+    for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+      jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+    }
+  } else {
+    jobs.reserve(_included_chunk_ids.size());
+    for (auto chunk_id : _included_chunk_ids) {
+      jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+    }
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
 
   return _out_table;
+}
+
+std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
+  auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+
+    const auto& chunk = _in_table->get_chunk(chunk_id);
+    // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
+    // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
+    // original chunk.
+    Chunk chunk_out{chunk.get_allocator(), chunk.access_counter()};
+
+    for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
+      auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
+      chunk_out.add_column(ref_column_out);
+    }
+
+    std::lock_guard<std::mutex> lock(output_mutex);
+    _out_table->emplace_chunk(std::move(chunk_out));
+  });
+
+  job_task->schedule();
+  return job_task;
 }
 
 void IndexScan::_on_cleanup() {}
