@@ -131,7 +131,7 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<Col
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
-                                                const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
+                                            const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
     return index->is_index_for(columns) && index->type() == index_type;
   });
@@ -140,7 +140,7 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
-                                                const std::vector<ColumnID> column_ids) const {
+                                            const std::vector<ColumnID> column_ids) const {
   auto columns = get_columns_for_ids(column_ids);
   return get_index(index_type, columns);
 }

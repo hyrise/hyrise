@@ -11,7 +11,6 @@
 
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, std::vector<ChunkID> chunk_ids,
@@ -43,19 +42,17 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
-     
-      const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
-
+      const auto& chunk = _in_table->get_chunk(chunk_id);
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
-      Chunk chunk_out{chunk_guard->get_allocator(), chunk_guard->access_counter()};
+      Chunk chunk_out{chunk.get_allocator(), chunk.access_counter()};
 
       for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
         auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
         chunk_out.add_column(ref_column_out);
       }
-     
+
       std::lock_guard<std::mutex> lock(output_mutex);
       _out_table->emplace_chunk(std::move(chunk_out));
     });
@@ -91,10 +88,10 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto range_begin = BaseIndex::Iterator{};
   auto range_end = BaseIndex::Iterator{};
 
-  const auto& chunk = _in_table->get_chunk(chunk_id);
+  const auto chunk = _in_table->get_chunk_with_access_counting(chunk_id);
   auto matches_out = PosList{};
 
-  const auto index = chunk.get_index(_index_type, _left_column_ids);
+  const auto index = chunk->get_index(_index_type, _left_column_ids);
   Assert(index != nullptr, "Index of specified type not found for column (vector).");
 
   switch (_scan_type) {

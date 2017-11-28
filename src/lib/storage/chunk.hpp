@@ -181,19 +181,19 @@ class Chunk : private Noncopyable {
   std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID> column_ids) const;
 
   std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type,
-                                           const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type,
-                                           const std::vector<ColumnID> column_ids) const;
+                                       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
+  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type, const std::vector<ColumnID> column_ids) const;
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {
     DebugAssert(([&]() {
-      for (auto column : index_columns) {
-        const auto column_it = std::find(_columns.cbegin(), _columns.cend(), column);
-        if (column_it == _columns.cend()) return false;
-      }
-      return true;
-    }()), "All columns must be part of the chunk.");
+                  for (auto column : index_columns) {
+                    const auto column_it = std::find(_columns.cbegin(), _columns.cend(), column);
+                    if (column_it == _columns.cend()) return false;
+                  }
+                  return true;
+                }()),
+                "All columns must be part of the chunk.");
 
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
