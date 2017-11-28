@@ -19,7 +19,7 @@ void row_start(int t);
 void row_stop(int t);
 }
 
-extern char ** asc_date;
+extern char** asc_date;
 extern seed_t Seed[];
 
 namespace {
@@ -149,7 +149,7 @@ float _convert_money(DSS_HUGE cents) {
   return dollars + (static_cast<float>(cents)) / 100.0f;
 }
 
-void _free_and_null_permutations(distribution *d) {
+void _free_and_null_permutations(distribution* d) {
   free(d->permute);
   d->permute = NULL;
 }
@@ -189,7 +189,6 @@ void _dbgen_cleanup() {
   }
   asc_date = NULL;
 }
-
 
 }  // namespace
 
