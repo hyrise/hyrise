@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
@@ -137,6 +138,7 @@ class Console {
   std::ofstream _log;
   bool _verbose;
 
+  std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
 };
 
