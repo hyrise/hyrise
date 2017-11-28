@@ -186,7 +186,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-        auto materialized_chunk = pmr_vector<std::pair<RowID, T>>();
+        auto materialized_chunk = std::vector<std::pair<RowID, T>>();
 
         // Materialize the chunk
         resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
