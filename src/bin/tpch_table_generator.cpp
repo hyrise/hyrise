@@ -6,11 +6,7 @@
 int main() {
   std::cout << "TPCH" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  auto tables = tpch::TpchTableGenerator().generate_all_tables();
-
-  for (auto& pair : tables) {
-    opossum::StorageManager::get().add_table(pair.first, pair.second);
-  }
+  opossum::TpchDbGenerator(1.0f, 1000).generate_and_store();
 
   std::cout << " > Dumping as CSV" << std::endl;
   opossum::StorageManager::get().export_all_tables_as_csv(".");
