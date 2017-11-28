@@ -41,20 +41,21 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   for (auto chunk_id : _chunk_ids) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-      const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
-
       const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+
+     
+      const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
 
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
-      Chunk chunk_out(chunk_guard->get_allocator(), chunk_guard->access_counter());
+      Chunk chunk_out{chunk_guard->get_allocator(), chunk_guard->access_counter()};
 
       for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
         auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
         chunk_out.add_column(ref_column_out);
       }
-
+     
       std::lock_guard<std::mutex> lock(output_mutex);
       _out_table->emplace_chunk(std::move(chunk_out));
     });
@@ -81,7 +82,7 @@ void IndexScan::_validate_input() {
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
 
-  Assert(_in_table->get_type() == TableType::Data, "IndexScan does only support persistent tables right now.");
+  Assert(_in_table->get_type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
 PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
@@ -93,7 +94,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto& chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};
 
-  const auto index = chunk.get_index_for(_index_type, _left_column_ids);
+  const auto index = chunk.get_index(_index_type, _left_column_ids);
   Assert(index != nullptr, "Index of specified type not found for column (vector).");
 
   switch (_scan_type) {
@@ -120,11 +121,6 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->lower_bound(_right_values);
       break;
     }
-    case ScanType::OpGreaterThanEquals: {
-      range_begin = index->lower_bound(_right_values);
-      range_end = index->cend();
-      break;
-    }
     case ScanType::OpLessThanEquals: {
       range_begin = index->cbegin();
       range_end = index->upper_bound(_right_values);
@@ -135,12 +131,16 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->cend();
       break;
     }
+    case ScanType::OpGreaterThanEquals: {
+      range_begin = index->lower_bound(_right_values);
+      range_end = index->cend();
+      break;
+    }
     case ScanType::OpBetween: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values2);
       break;
     }
-
     default:
       Fail("Unsupported comparison type encountered");
   }

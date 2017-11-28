@@ -6,6 +6,7 @@
 // the linter wants this to be above everything else
 #include <shared_mutex>
 
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -175,17 +176,25 @@ class Chunk : private Noncopyable {
    */
   void use_mvcc_columns_from(const Chunk& chunk);
 
-  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
+  std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(const std::vector<ColumnID> column_ids) const;
+  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID> column_ids) const;
 
-  std::shared_ptr<BaseIndex> get_index_for(const ColumnIndexType index_type,
+  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type,
                                            const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::shared_ptr<BaseIndex> get_index_for(const ColumnIndexType index_type,
+  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type,
                                            const std::vector<ColumnID> column_ids) const;
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {
+    DebugAssert(([&]() {
+      for (auto column : index_columns) {
+        const auto column_it = std::find(_columns.cbegin(), _columns.cend(), column);
+        if (column_it == _columns.cend()) return false;
+      }
+      return true;
+    }()), "All columns must be part of the chunk.");
+
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;

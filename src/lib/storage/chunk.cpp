@@ -117,7 +117,7 @@ void Chunk::shrink_mvcc_columns() {
   _mvcc_columns->end_cids.shrink_to_fit();
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
@@ -125,12 +125,12 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(const std::vector<ColumnID> column_ids) const {
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID> column_ids) const {
   auto columns = get_columns_for_ids(column_ids);
-  return get_indices_for(columns);
+  return get_indices(columns);
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index_for(const ColumnIndexType index_type,
+std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
                                                 const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
     return index->is_index_for(columns) && index->type() == index_type;
@@ -139,10 +139,10 @@ std::shared_ptr<BaseIndex> Chunk::get_index_for(const ColumnIndexType index_type
   return (index_it == _indices.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index_for(const ColumnIndexType index_type,
+std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
                                                 const std::vector<ColumnID> column_ids) const {
   auto columns = get_columns_for_ids(column_ids);
-  return get_index_for(index_type, columns);
+  return get_index(index_type, columns);
 }
 
 bool Chunk::references_exactly_one_table() const {
