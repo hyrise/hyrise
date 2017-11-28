@@ -45,12 +45,6 @@ void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor
 
 void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
-void AbstractTask::mark_as_scheduled() {
-  [[gnu::unused]] auto already_scheduled = _is_scheduled.exchange(true);
-
-  DebugAssert((!already_scheduled), "Task was already scheduled!");
-}
-
 bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
@@ -60,7 +54,7 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 }
 
 void AbstractTask::schedule(NodeID preferred_node_id, SchedulePriority priority) {
-  mark_as_scheduled();
+  _mark_as_scheduled();
 
   if (CurrentScheduler::is_set()) {
     CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, priority);
@@ -110,6 +104,12 @@ void AbstractTask::execute() {
     _done = true;
   }
   _done_condition_variable.notify_all();
+}
+
+void AbstractTask::_mark_as_scheduled() {
+  [[gnu::unused]] auto already_scheduled = _is_scheduled.exchange(true);
+
+  DebugAssert((!already_scheduled), "Task was already scheduled!");
 }
 
 void AbstractTask::_on_predecessor_added() { _predecessor_counter++; }
