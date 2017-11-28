@@ -47,13 +47,3 @@ extern distribution auxillaries;
 extern distribution np;
 extern distribution vp;
 extern distribution grammar;
-
-/**
- * Call every time before using dbgen - initializes global state
- */
-void dbgen_setup();
-
-/**
- * Call this after using dbgen to avoid memory leaks
- */
-void dbgen_cleanup();
