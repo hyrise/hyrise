@@ -35,13 +35,7 @@ void AbstractOperator::execute() {
     _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
   } else {
-    if (dynamic_cast<SQLQueryOperator*>(this)) {
-      // TODO(anyone): Once the SQL Query Operator is refactored (#304), this should be removed
-      _output = _on_execute(nullptr);
-    } else {
-      auto read_only_operator = dynamic_cast<AbstractReadOnlyOperator*>(this);
-      _output = read_only_operator->_on_execute();
-    }
+    _output = _on_execute(nullptr);
   }
 
   // release any temporary data if possible

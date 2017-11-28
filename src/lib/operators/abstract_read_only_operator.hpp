@@ -31,9 +31,6 @@ class AbstractReadOnlyOperator : public AbstractOperator {
     virtual ~AbstractReadOnlyOperatorImpl() = default;
     virtual std::shared_ptr<const Table> _on_execute() = 0;
   };
-
-  // for access to _on_execute
-  friend class AbstractOperator;
 };
 
 }  // namespace opossum
