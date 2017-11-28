@@ -40,25 +40,30 @@ class JoinTest : public BaseTest {
     _table_wrapper_k = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
     _table_wrapper_l = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
     _table_wrapper_m = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 1));
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
     _table_wrapper_n = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 1));
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
 
     // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
     DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
-
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float2.tbl", 2);
     DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
-
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float.tbl", 2);
     DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
-
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
+
+    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
+    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    _table_wrapper_m_dict = std::make_shared<TableWrapper>(std::move(table));
+
+    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    _table_wrapper_n_dict = std::make_shared<TableWrapper>(std::move(table));
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
@@ -78,6 +83,8 @@ class JoinTest : public BaseTest {
     _table_wrapper_a_dict->execute();
     _table_wrapper_b_dict->execute();
     _table_wrapper_c_dict->execute();
+    _table_wrapper_m_dict->execute();
+    _table_wrapper_n_dict->execute();
   }
 
   // builds and executes the given Join and checks correctness of the output
@@ -101,7 +108,7 @@ class JoinTest : public BaseTest {
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
       _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_a_dict,
-      _table_wrapper_b_dict, _table_wrapper_c_dict;
+      _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict, _table_wrapper_n_dict;
 };
 
 }  // namespace opossum

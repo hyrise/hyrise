@@ -74,12 +74,6 @@ TYPED_TEST(JoinEquiTest, InnerJoin) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, InnerJoinWithNull) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_m, this->_table_wrapper_n, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
-}
-
 TYPED_TEST(JoinEquiTest, InnerJoinOnString) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_c, this->_table_wrapper_d, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}),
