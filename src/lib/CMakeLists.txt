@@ -177,6 +177,8 @@ set(
     sql/sql_planner.hpp
     sql/sql_expression_translator.cpp
     sql/sql_expression_translator.hpp
+    sql/sql_pipeline.cpp
+    sql/sql_pipeline.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
