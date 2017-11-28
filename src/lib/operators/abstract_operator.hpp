@@ -9,6 +9,7 @@
 
 namespace opossum {
 
+class OperatorTask;
 class Table;
 class TransactionContext;
 
@@ -73,6 +74,10 @@ class AbstractOperator : private Noncopyable {
   };
   const AbstractOperator::PerformanceData& performance_data() const;
 
+  // Gets and sets the associated operator task (if any)
+  std::shared_ptr<OperatorTask> operator_task();
+  void set_operator_task(const std::shared_ptr<OperatorTask>&);
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -98,6 +103,8 @@ class AbstractOperator : private Noncopyable {
   std::weak_ptr<TransactionContext> _transaction_context;
 
   PerformanceData _performance_data;
+
+  std::weak_ptr<OperatorTask> _operator_task;
 };
 
 }  // namespace opossum

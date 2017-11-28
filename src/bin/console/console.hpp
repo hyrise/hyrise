@@ -117,6 +117,7 @@ class Console {
   int exec_script(const std::string& args);
   int print_table(const std::string& args);
   int visualize(const std::string& input);
+  int change_runtime_setting(const std::string& args);
 
   int begin_transaction(const std::string& input);
   int rollback_transaction(const std::string& input);

@@ -44,8 +44,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * Description for debugging purposes
    */
-  std::string description() const;
-  void set_description(const std::string& description);
+  virtual std::string description() const;
 
   /**
    * Task ids are determined on scheduling, no one else but the Scheduler should have any reason to call this

@@ -349,7 +349,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
         auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
         const auto& partition_left_begin = radix_container.partition_offsets[current_partition_id];
         const auto& partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
@@ -397,7 +397,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
         // Get information from work queue
         auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
         const auto& partition_begin = radix_container.partition_offsets[current_partition_id];
@@ -475,7 +475,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
         // Get information from work queue
         auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
         const auto& partition_begin = radix_container.partition_offsets[current_partition_id];

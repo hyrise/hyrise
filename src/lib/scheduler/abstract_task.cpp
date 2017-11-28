@@ -28,12 +28,6 @@ std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
 }
 
-void AbstractTask::set_description(const std::string& description) {
-  DebugAssert((!_is_scheduled), "Possible race: Don't set description after the Task was scheduled");
-
-  _description = description;
-}
-
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor) {

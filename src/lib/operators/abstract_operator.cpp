@@ -5,7 +5,9 @@
 #include <string>
 #include <vector>
 
+#include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "sql/sql_query_operator.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -33,7 +35,7 @@ void AbstractOperator::execute() {
     _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
   } else {
-    _output = _on_execute(transaction_context);
+    _output = _on_execute(nullptr);
   }
 
   // release any temporary data if possible
@@ -56,6 +58,9 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
       }(),
       "Empty chunk returned from operator " + description());
 
+  DebugAssert(!_output || _output->row_count() == 0 || _output->column_count() > 0,
+              "Operator " + description() + " did not output any columns");
+
   return _output;
 }
 
@@ -71,6 +76,14 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
+  // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
+  DebugAssert(
+      [context = _transaction_context]() {
+        bool transaction_context_set = context.owner_before(std::weak_ptr<TransactionContext>{}) ||
+                                       std::weak_ptr<TransactionContext>{}.owner_before(context);
+        return !transaction_context_set || !context.expired();
+      }(),
+      "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
   return _transaction_context.lock();
 }
 
@@ -98,6 +111,13 @@ const AbstractOperator::PerformanceData& AbstractOperator::performance_data() co
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+std::shared_ptr<OperatorTask> AbstractOperator::operator_task() { return _operator_task.lock(); }
+
+void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
+  DebugAssert(!_operator_task.lock(), "_operator_task was already set");
+  _operator_task = operator_task;
+}
 
 void AbstractOperator::_on_cleanup() {}
 
