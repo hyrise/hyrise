@@ -7,6 +7,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -42,7 +43,7 @@ class PrintWrapper : public Print {
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
-    return column_string_widths(min, max, tab);
+    return _column_string_widths(min, max, tab);
   }
 };
 
@@ -121,6 +122,21 @@ TEST_F(OperatorsPrintTest, OperatorName) {
   auto pr = std::make_shared<opossum::Print>(gt, output);
 
   EXPECT_EQ(pr->name(), "Print");
+}
+
+TEST_F(OperatorsPrintTest, TruncateLongValue) {
+  auto tab = StorageManager::get().get_table(table_name);
+
+  tab->append({0, "abcdefghijklmnopqrstuvwxyz"});
+
+  auto wrap = std::make_shared<TableWrapper>(tab);
+  wrap->execute();
+
+  auto printer = std::make_shared<Print>(wrap, output);
+  printer->execute();
+
+  auto output_str = output.str();
+  EXPECT_TRUE(output_str.find("abcdefghijklmnopq...") != std::string::npos);
 }
 
 }  // namespace opossum

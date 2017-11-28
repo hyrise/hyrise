@@ -33,7 +33,7 @@ void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostre
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = column_string_widths(8, 20, _input_table_left());
+  auto widths = _column_string_widths(8, 20, _input_table_left());
 
   // print column headers
   _out << "=== Columns" << std::endl;
@@ -73,7 +73,9 @@ std::shared_ptr<const Table> Print::_on_execute() {
       for (ColumnID col{0}; col < chunk.column_count(); ++col) {
         // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
-        _out << std::setw(widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
+        auto col_width = widths[col];
+        auto cell = _truncate_cell((*chunk.get_column(col))[row], col_width);
+        _out << std::setw(col_width) << cell << "|" << std::setw(0);
       }
 
       if (_flags & PrintMvcc && chunk.has_mvcc_columns()) {
@@ -102,7 +104,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
-std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
+std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
   std::vector<uint16_t> widths(t->column_count());
   // calculate the length of the column name
   for (ColumnID col{0}; col < t->column_count(); ++col) {
@@ -121,6 +123,14 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
     }
   }
   return widths;
+}
+
+std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
+  auto cell_str = type_cast<std::string>(cell);
+  if (cell_str.length() > max_width) {
+    return cell_str.substr(0, max_width - 3) + "...";
+  }
+  return cell_str;
 }
 
 }  // namespace opossum
