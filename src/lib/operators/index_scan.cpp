@@ -94,7 +94,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto matches_out = PosList{};
 
   const auto index = chunk.get_index_for(_index_type, _left_column_ids);
-  DebugAssert(index != nullptr, "Index of specified type not found for column (vector).");
+  Assert(index != nullptr, "Index of specified type not found for column (vector).");
 
   switch (_scan_type) {
     case ScanType::OpEquals: {
