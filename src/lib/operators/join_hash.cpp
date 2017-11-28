@@ -186,21 +186,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-        auto materialized_chunk = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
+        auto materialized_chunk = pmr_vector<std::pair<RowID, T>>();
 
         // Materialize the chunk
         resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
           auto iterable = create_iterable_from_column<T>(typed_column);
-          auto& materialized = *materialized_chunk;
 
           iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
             if (!value.is_null() || keep_nulls) {
-              materialized.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+              materialized_chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+            } else {
+              // We need to add this to avoid gaps in the list of offsets when we iterate later on
+              materialized_chunk.emplace_back(RowID{chunk_id, INVALID_CHUNK_OFFSET}, T{});
             }
           });
         });
 
-        const auto& materialized = *materialized_chunk;
         size_t row_id = output_offset;
 
         /*
@@ -212,18 +213,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
           // hash and add to the other elements
           ChunkOffset offset = 0;
-          for (auto&& elem : materialized) {
-            output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
+          for (auto&& elem : materialized_chunk) {
+            if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
+              output[row_id] =
+                  PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
 
-            const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
-            histogram[radix]++;
+              const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
+              histogram[radix]++;
 
-            row_id++;
+              row_id++;
+            }
+
             offset++;
           }
         } else {
           // hash and add to the other elements
-          for (auto&& elem : materialized) {
+          for (auto&& elem : materialized_chunk) {
+            if (elem.first.chunk_offset == INVALID_CHUNK_OFFSET) continue;
+
             output[row_id] = PartitionedElement<T>{elem.first, murmur2<T>(elem.second, seed), elem.second};
 
             const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;

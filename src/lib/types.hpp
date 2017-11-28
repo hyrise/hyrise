@@ -95,6 +95,11 @@ struct RowID {
   bool operator==(const RowID& other) const {
     return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
   }
+
+  friend std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
+    o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
+    return o;
+  }
 };
 
 using WorkerID = uint32_t;

@@ -76,7 +76,7 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, DISABLED_InnerJoinWithNullRef2 /* #538 */) {
+TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_m, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_n, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
