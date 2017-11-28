@@ -70,7 +70,7 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNull2) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
+TYPED_TEST(JoinNullTest, DISABLED_InnerJoinWithNullDict2 /* #538 */) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_m_dict, this->_table_wrapper_n_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
@@ -82,9 +82,9 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_n, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
-  this->template test_join_output<TypeParam>(
-      scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null_ref.tbl", 1);
+  this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_inner_join_null_ref.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
