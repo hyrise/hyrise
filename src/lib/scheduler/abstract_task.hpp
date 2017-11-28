@@ -83,9 +83,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void join();
 
   /**
-   * Atomically marks the Task as scheduled, thus making sure this happens only once
+   * @return The Task was scheduled
    */
-  void mark_as_scheduled();
   bool is_scheduled() const;
 
   /**
@@ -104,6 +103,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   virtual void _on_execute() = 0;
 
  private:
+  /**
+   * Atomically marks the Task as scheduled, thus making sure this happens only once
+   */
+  void _mark_as_scheduled();
+
   /**
    * Blocks the calling thread until the Task finished executing
    */
