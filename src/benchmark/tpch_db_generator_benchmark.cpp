@@ -20,5 +20,5 @@ static void BM_TpchDbGenerator(benchmark::State& state) {
     TpchDbGenerator(scale_factor, 1000).generate();
   }
 }
-BENCHMARK(BM_TpchDbGenerator)->Range(1, 512);
+BENCHMARK(BM_TpchDbGenerator)->Range(1, 1024);
 }  // namespace opossum

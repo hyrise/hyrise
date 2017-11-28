@@ -761,6 +761,10 @@ static void free_and_null_permutations(distribution *d) {
   d->permute = NULL;
 }
 
+void dbgen_setup() {
+
+}
+
 void dbgen_cleanup() {
   free_and_null_permutations(&nations);
   free_and_null_permutations(&regions);
