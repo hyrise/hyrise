@@ -58,11 +58,11 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
  *
  * No real need to tie this to TPCH, but atm it is only used here so that's where it resides.
  */
-template <typename... ColumnTypes>
+template <typename... DataTypes>
 class TableBuilder {
  public:
   template <typename... Strings>
-  TableBuilder(size_t chunk_size, const boost::hana::tuple<ColumnTypes...>& column_types,
+  TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
                const boost::hana::tuple<Strings...>& column_names) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
@@ -87,10 +87,10 @@ class TableBuilder {
     return _table;
   }
 
-  void append_row(ColumnTypes&&... column_values) {
+  void append_row(DataTypes&&... column_values) {
     auto vectors_and_values = boost::hana::zip_with(
         [](auto& vector, auto&& value) { return boost::hana::make_tuple(std::reference_wrapper(vector), value); },
-        _column_vectors, boost::hana::make_tuple(std::forward<ColumnTypes>(column_values)...));
+        _column_vectors, boost::hana::make_tuple(std::forward<DataTypes>(column_values)...));
 
     boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
       vector_and_value[boost::hana::llong_c<0>].get().push_back(vector_and_value[boost::hana::llong_c<1>]);
@@ -103,7 +103,7 @@ class TableBuilder {
 
  private:
   std::shared_ptr<opossum::Table> _table;
-  boost::hana::tuple<opossum::pmr_concurrent_vector<ColumnTypes>...> _column_vectors;
+  boost::hana::tuple<opossum::pmr_concurrent_vector<DataTypes>...> _column_vectors;
 
   size_t _current_chunk_row_count() const { return _column_vectors[boost::hana::llong_c<0>].size(); }
 
@@ -113,7 +113,7 @@ class TableBuilder {
     boost::hana::for_each(_column_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
       chunk.add_column(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
-      vector = typename std::decay_t<decltype(vector)>();
+      vector = std::decay_t<decltype(vector)>();
     });
     _table->emplace_chunk(std::move(chunk));
   }
@@ -149,45 +149,24 @@ float _convert_money(DSS_HUGE cents) {
   return dollars + (static_cast<float>(cents)) / 100.0f;
 }
 
-void _free_and_null_permutations(distribution* d) {
-  free(d->permute);
-  d->permute = NULL;
-}
-
 /**
  * Call this after using dbgen to avoid memory leaks
  */
 void _dbgen_cleanup() {
-  _free_and_null_permutations(&nations);
-  _free_and_null_permutations(&regions);
-  _free_and_null_permutations(&o_priority_set);
-  _free_and_null_permutations(&l_instruct_set);
-  _free_and_null_permutations(&l_smode_set);
-  _free_and_null_permutations(&l_category_set);
-  _free_and_null_permutations(&l_rflag_set);
-  _free_and_null_permutations(&c_mseg_set);
-  _free_and_null_permutations(&colors);
-  _free_and_null_permutations(&p_types_set);
-  _free_and_null_permutations(&p_cntr_set);
-  _free_and_null_permutations(&articles);
-  _free_and_null_permutations(&nouns);
-  _free_and_null_permutations(&adjectives);
-  _free_and_null_permutations(&adverbs);
-  _free_and_null_permutations(&prepositions);
-  _free_and_null_permutations(&verbs);
-  _free_and_null_permutations(&terminators);
-  _free_and_null_permutations(&auxillaries);
-  _free_and_null_permutations(&np);
-  _free_and_null_permutations(&vp);
-  _free_and_null_permutations(&grammar);
+  for (auto *distribution : {&nations, &regions, &o_priority_set, &l_instruct_set, &l_smode_set, &l_category_set, &l_rflag_set,
+    &c_mseg_set, &colors, &p_types_set, &p_cntr_set, &articles, &nouns, &adjectives, &adverbs, &prepositions, &verbs, &terminators,
+    &auxillaries, &np, &vp, &grammar}) {
+    free(distribution->permute);
+    distribution->permute = nullptr;
+  }
 
-  if (asc_date != NULL) {
+  if (asc_date != nullptr) {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
       free(asc_date[idx]);
     }
     free(asc_date);
   }
-  asc_date = NULL;
+  asc_date = nullptr;
 }
 
 }  // namespace
@@ -203,14 +182,14 @@ TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
     : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
-  TableBuilder customer_builder(_chunk_size, customer_column_types, customer_column_names);
-  TableBuilder order_builder(_chunk_size, order_column_types, order_column_names);
-  TableBuilder lineitem_builder(_chunk_size, lineitem_column_types, lineitem_column_names);
-  TableBuilder part_builder(_chunk_size, part_column_types, part_column_names);
-  TableBuilder partsupp_builder(_chunk_size, partsupp_column_types, partsupp_column_names);
-  TableBuilder supplier_builder(_chunk_size, supplier_column_types, supplier_column_names);
-  TableBuilder nation_builder(_chunk_size, nation_column_types, nation_column_names);
-  TableBuilder region_builder(_chunk_size, region_column_types, region_column_names);
+  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names};
+  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names};
+  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names};
+  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names};
+  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names};
+  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names};
+  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names};
+  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names};
 
   dbgen_reset_seeds();
 
