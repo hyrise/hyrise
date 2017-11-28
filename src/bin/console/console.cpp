@@ -15,9 +15,8 @@
 #include <regex>
 #include <string>
 #include <vector>
-#include <sql/sql_pipeline.hpp>
-
 #include "SQLParser.h"
+
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
@@ -27,6 +26,7 @@
 #include "pagination.hpp"
 #include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -78,14 +78,14 @@ namespace opossum {
 // Console implementation
 
 Console::Console()
-  : _prompt("> "),
-    _multiline_input(""),
-    _history_file(),
-    _commands(),
-    _tpcc_commands(),
-    _out(std::cout.rdbuf()),
-    _log("console.log", std::ios_base::app | std::ios_base::out),
-    _verbose(false) {
+    : _prompt("> "),
+      _multiline_input(""),
+      _history_file(),
+      _commands(),
+      _tpcc_commands(),
+      _out(std::cout.rdbuf()),
+      _log("console.log", std::ios_base::app | std::ios_base::out),
+      _verbose(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
@@ -268,7 +268,7 @@ int Console::_eval_sql(const std::string& sql) {
   }
   out("===\n");
   out(std::to_string(row_count) + " rows total (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
-    std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
+      std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   // Default auto-commit if no context is set explicitly
   if (!_explicitly_created_transaction_context) {
@@ -485,7 +485,6 @@ int Console::visualize(const std::string& input) {
   if (!sql.empty()) {
     _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
   }
-
 
   if (mode == "lqp" || mode == "lqpopt") {
     try {

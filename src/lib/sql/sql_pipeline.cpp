@@ -1,12 +1,12 @@
 #include <utility>
 
-#include "optimizer/optimizer.hpp"
 #include "SQLParser.h"
-#include "sql_pipeline.hpp"
-#include "utils/assert.hpp"
-#include "sql_translator.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
+#include "optimizer/optimizer.hpp"
+#include "sql_pipeline.hpp"
+#include "sql_translator.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -79,7 +79,7 @@ const SQLQueryPlan& SQLPipeline::get_query_plan() {
   }
 
   const auto& lqp_roots = get_logical_plan();
-  auto plan = std::make_unique<SQLQueryPlan>();\
+  auto plan = std::make_unique<SQLQueryPlan>();
 
   try {
     for (const auto& node : lqp_roots) {
@@ -131,8 +131,6 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   return _result_table;
 }
 
-const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() {
-  return _transaction_context;
-}
+const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() { return _transaction_context; }
 
-} // namespace opossum
+}  // namespace opossum

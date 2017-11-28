@@ -2,14 +2,13 @@
 
 #include <string>
 
-#include "storage/table.hpp"
 #include "SQLParserResult.h"
+#include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "sql/sql_query_plan.hpp"
-#include "concurrency/transaction_context.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
-
 
 class SQLPipeline : public Noncopyable {
  public:
@@ -43,7 +42,6 @@ class SQLPipeline : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
 
   std::shared_ptr<TransactionContext> _transaction_context;
-
 };
 
 }  // namespace opossum
