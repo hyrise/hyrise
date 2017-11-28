@@ -70,13 +70,13 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNull2) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, DISABLED_InnerJoinWithNullDict2 /* #538 */) {
+TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_m_dict, this->_table_wrapper_n_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
+TYPED_TEST(JoinNullTest, DISABLED_InnerJoinWithNullRef2 /* #538 */) {
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_m, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_n, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
