@@ -161,7 +161,7 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
 }
 
 TYPED_TEST(OperatorsIndexScanTest, ScanWithEmptyInput) {
-  const auto right_values = std::vector<AllTypeVariant>(AllTypeVariant{0u}, this->_column_ids.size());
+  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
   auto scan = std::make_shared<opossum::IndexScan>(this->_empty_table_wrapper, std::vector<ChunkID>{},
                                                    this->_index_type, this->_column_ids, ScanType::OpGreaterThan,
@@ -171,7 +171,7 @@ TYPED_TEST(OperatorsIndexScanTest, ScanWithEmptyInput) {
 }
 
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
-  const auto right_values = std::vector<AllTypeVariant>(AllTypeVariant{0u}, this->_column_ids.size());
+  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
   auto scan =
       std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_chunk_ids, this->_index_type, this->_column_ids,
@@ -181,7 +181,7 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
 }
 
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
-  const auto right_values = std::vector<AllTypeVariant>(AllTypeVariant{0u}, this->_column_ids.size());
+  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
   auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_chunk_ids, ColumnIndexType::Invalid,
                                                    this->_column_ids, ScanType::OpGreaterThan, right_values);
