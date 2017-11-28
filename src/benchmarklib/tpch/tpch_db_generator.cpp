@@ -66,12 +66,19 @@ class TableBuilder {
                const boost::hana::tuple<Strings...>& column_names) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
+    /**
+     * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
+     * columns.
+     * fold_left as below does this in order, I think boost::hana::zip_with() doesn't, which is why I'm doing two steps
+     * here.
+     */
     const auto column_names_and_data_types = boost::hana::zip_with(
         [&](auto column_type, auto column_name) {
           return boost::hana::make_tuple(column_name, opossum::data_type_from_type<decltype(column_type)>());
         },
         column_types, column_names);
 
+    // Iterate over the column types/names and create the columns.
     boost::hana::fold_left(column_names_and_data_types, _table, [](auto table, auto column_name_and_type) {
       table->add_column_definition(column_name_and_type[boost::hana::llong_c<0>],
                                    column_name_and_type[boost::hana::llong_c<1>]);
@@ -88,10 +95,12 @@ class TableBuilder {
   }
 
   void append_row(DataTypes&&... column_values) {
+    // Create a tuple ([&column_vector0, value0], ...)
     auto vectors_and_values = boost::hana::zip_with(
         [](auto& vector, auto&& value) { return boost::hana::make_tuple(std::reference_wrapper(vector), value); },
         _column_vectors, boost::hana::make_tuple(std::forward<DataTypes>(column_values)...));
 
+    // Add the values to their respective column vector
     boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
       vector_and_value[boost::hana::llong_c<0>].get().push_back(vector_and_value[boost::hana::llong_c<1>]);
     });
@@ -110,6 +119,7 @@ class TableBuilder {
   void _emit_chunk() {
     opossum::Chunk chunk;
 
+    // Create a column from each column vector and add it to the Chunk, then re-initialize the vector
     boost::hana::for_each(_column_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
       chunk.add_column(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
@@ -153,9 +163,12 @@ float _convert_money(DSS_HUGE cents) {
  * Call this after using dbgen to avoid memory leaks
  */
 void _dbgen_cleanup() {
-  for (auto *distribution : {&nations, &regions, &o_priority_set, &l_instruct_set, &l_smode_set, &l_category_set, &l_rflag_set,
-    &c_mseg_set, &colors, &p_types_set, &p_cntr_set, &articles, &nouns, &adjectives, &adverbs, &prepositions, &verbs, &terminators,
-    &auxillaries, &np, &vp, &grammar}) {
+  for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
+                             &l_smode_set, &l_category_set, &l_rflag_set,    &c_mseg_set,
+                             &colors,      &p_types_set,    &p_cntr_set,     &articles,
+                             &nouns,       &adjectives,     &adverbs,        &prepositions,
+                             &verbs,       &terminators,    &auxillaries,    &np,
+                             &vp,          &grammar}) {
     free(distribution->permute);
     distribution->permute = nullptr;
   }
