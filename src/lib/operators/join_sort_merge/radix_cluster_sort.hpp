@@ -11,6 +11,17 @@
 
 namespace opossum {
 
+/**
+* The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
+*/
+template <typename T>
+struct RadixClusterOutput {
+  std::unique_ptr<MaterializedColumnList<T>> clusters_left;
+  std::unique_ptr<MaterializedColumnList<T>> clusters_right;
+  std::unique_ptr<PosList> null_rows_left;
+  std::unique_ptr<PosList> null_rows_right;
+};
+
 /*
 *
 * Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis
@@ -37,13 +48,16 @@ template <typename T>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                   const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, size_t cluster_count)
+                   const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, const bool materialize_null_left,
+                   const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
         _equi_case{equi_case},
-        _cluster_count{cluster_count} {
+        _cluster_count{cluster_count},
+        _materialize_null_left{materialize_null_left},
+        _materialize_null_right{materialize_null_right} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
     DebugAssert(left != nullptr, "left input operator is null");
@@ -100,6 +114,9 @@ class RadixClusterSort {
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   // It is asserted to be a power of two in the constructor.
   size_t _cluster_count;
+
+  bool _materialize_null_left;
+  bool _materialize_null_right;
 
   // Radix calculation for arithmetic types
   template <typename T2>
@@ -312,33 +329,37 @@ class RadixClusterSort {
   /**
   * Executes the clustering and sorting.
   **/
-  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> execute() {
-    // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> column_materializer(!_equi_case);
-    auto materialized_left_columns = column_materializer.materialize(_input_table_left, _left_column_id);
-    auto materialized_right_columns = column_materializer.materialize(_input_table_right, _right_column_id);
+  RadixClusterOutput<T> execute() {
+    RadixClusterOutput<T> output;
 
-    std::unique_ptr<MaterializedColumnList<T>> output_left;
-    std::unique_ptr<MaterializedColumnList<T>> output_right;
+    // Sort the chunks of the input tables in the non-equi cases
+    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
+    auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
+    auto materialized_left_columns = std::move(materialization_left.first);
+    auto materialized_right_columns = std::move(materialization_right.first);
+    output.null_rows_left = std::move(materialization_left.second);
+    output.null_rows_right = std::move(materialization_right.second);
 
     if (_cluster_count == 1) {
-      output_left = _concatenate_chunks(materialized_left_columns);
-      output_right = _concatenate_chunks(materialized_right_columns);
+      output.clusters_left = _concatenate_chunks(materialized_left_columns);
+      output.clusters_right = _concatenate_chunks(materialized_right_columns);
     } else if (_equi_case) {
-      output_left = _radix_cluster(materialized_left_columns);
-      output_right = _radix_cluster(materialized_right_columns);
+      output.clusters_left = _radix_cluster(materialized_left_columns);
+      output.clusters_right = _radix_cluster(materialized_right_columns);
     } else {
       auto result = _range_cluster(materialized_left_columns, materialized_right_columns);
-      output_left = std::move(result.first);
-      output_right = std::move(result.second);
+      output.clusters_left = std::move(result.first);
+      output.clusters_right = std::move(result.second);
     }
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
     // an more efficient algorithm, if subparts are already sorted [InsertionSort?!])
-    _sort_clusters(output_left);
-    _sort_clusters(output_right);
+    _sort_clusters(output.clusters_left);
+    _sort_clusters(output.clusters_right);
 
-    return std::make_pair(std::move(output_left), std::move(output_right));
+    return output;
   }
 };
 

@@ -11,6 +11,8 @@ Papers that were published before October 2017 were based on the previous versio
 
 *Have a look at our [contributor guidelines](CONTRIBUTING.md)*
 
+You can find definitions of most of the terms and abbreviations used in the code in the [glossary](GLOSSARY.md). If you ca not find something that you are looking for, feel free to open an issue.
+
 The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
 
 ## Native Setup

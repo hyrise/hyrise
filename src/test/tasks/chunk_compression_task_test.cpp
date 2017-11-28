@@ -82,7 +82,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   }
 }
 
-TEST_F(ChunkCompressionTaskTest, DISABLED_CompressionWithAbortedInsert /* #492 */) {
+TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   auto table = load_table("src/test/tables/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_insert", table);
 

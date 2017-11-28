@@ -82,7 +82,13 @@ class TransactionManager : private Noncopyable {
 
  private:
   std::atomic<TransactionID> _next_transaction_id;
+  // TransactionID = 0 means "not set" in the MVCC columns
+  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+
   std::atomic<CommitID> _last_commit_id;
+  // We use commit_id=0 for rows that were inserted and then rolled back. Also, this can be used for rows that have
+  // been there "from the beginning of time".
+  static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
 };

@@ -23,9 +23,6 @@ class SQLQueryPlan {
   // Add a new operator tree to the query plan by adding the root operator.
   void add_tree_by_root(std::shared_ptr<AbstractOperator> op);
 
-  // Returns the number of trees in the plan.
-  size_t num_trees() const;
-
   // Append all operator trees from the other plan.
   void append_plan(const SQLQueryPlan& other_plan);
 
