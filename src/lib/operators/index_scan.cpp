@@ -79,8 +79,6 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
   return job_task;
 }
 
-void IndexScan::_on_cleanup() {}
-
 void IndexScan::_validate_input() {
   Assert(_scan_type != ScanType::OpLike, "Scan type not supported by index scan.");
   Assert(_scan_type != ScanType::OpNotLike, "Scan type not supported by index scan.");

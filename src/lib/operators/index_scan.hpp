@@ -33,7 +33,6 @@ class IndexScan : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
-  void _on_cleanup() final;
 
   void _validate_input();
   std::shared_ptr<JobTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
