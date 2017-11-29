@@ -237,10 +237,9 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" +
-      "PARSE: " + std::to_string(_sql_pipeline->parse_time_seconds()) + " s, " +
-      "COMPILE: " + std::to_string(_sql_pipeline->compile_time_seconds()) + " s, " +
-      "EXECUTE: " + std::to_string(_sql_pipeline->execution_time_seconds()) + " s (wall time))\n");
+  out(std::to_string(row_count) + " rows total (" + "PARSE: " + std::to_string(_sql_pipeline->parse_time_seconds()) +
+      " s, " + "COMPILE: " + std::to_string(_sql_pipeline->compile_time_seconds()) + " s, " + "EXECUTE: " +
+      std::to_string(_sql_pipeline->execution_time_seconds()) + " s (wall time))\n");
 
   return ReturnCode::Ok;
 }

@@ -11,7 +11,9 @@
 namespace opossum {
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context)
-    : _sql(sql), _use_mvcc(true), _auto_commit(false), _transaction_context(std::move(transaction_context)) {}
+    : _sql(sql), _use_mvcc(true), _auto_commit(false), _transaction_context(std::move(transaction_context)) {
+  DebugAssert(transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
+}
 
 SQLPipeline::SQLPipeline(const std::string& sql, const bool use_mvcc)
     : _sql(sql), _use_mvcc(use_mvcc), _auto_commit(_use_mvcc) {
@@ -135,7 +137,7 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
     return _result_table;
   }
 
-  DebugAssert(_use_mvcc, "Cannot execute query without a TransactionContext.");
+  DebugAssert(_use_mvcc, "Cannot execute query without a transaction context.");
 
   const auto& op_tasks = get_tasks();
 
