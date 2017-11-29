@@ -12,15 +12,16 @@ namespace opossum {
 
 class SQLPipeline : public Noncopyable {
  public:
-  explicit SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context = nullptr);
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
+  explicit SQLPipeline(const std::string& sql, bool use_mvcc = true);
 
-  const std::string get_sql_string() { return _sql; }
+  const std::string sql_string() { return _sql; }
 
   const hsql::SQLParserResult& get_parsed_sql();
 
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plan(bool validate = true);
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plan();
 
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_logical_plan(bool validate = true);
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plan();
 
   const SQLQueryPlan& get_query_plan();
 
@@ -30,17 +31,29 @@ class SQLPipeline : public Noncopyable {
 
   const std::shared_ptr<TransactionContext>& transaction_context();
 
+  double parse_time_seconds();
+  double compile_time_seconds();
+  double execution_time_seconds();
+
  private:
   const std::string _sql;
 
   // Execution results
   std::unique_ptr<hsql::SQLParserResult> _parsed_sql;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unopt_logical_plan;
-  std::vector<std::shared_ptr<AbstractLQPNode>> _logical_plan;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _opt_logical_plan;
   std::unique_ptr<SQLQueryPlan> _query_plan;
   std::vector<std::shared_ptr<OperatorTask>> _op_tasks;
   std::shared_ptr<const Table> _result_table;
 
+  // Execution times
+  double _parse_time_sec;
+  double _compile_time_sec;
+  double _execution_time_sec;
+
+  // Transaction related
+  const bool _use_mvcc;
+  const bool _auto_commit;
   std::shared_ptr<TransactionContext> _transaction_context;
 };
 

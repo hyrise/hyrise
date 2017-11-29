@@ -105,11 +105,6 @@ class Console {
    */
   int _eval_sql(const std::string& sql);
 
-  /*
-   * Executes the given SQL plan
-   */
-  int _execute_plan(const SQLQueryPlan& plan);
-
   // Command functions, registered to be called from the Console
   int exit(const std::string& args);
   int help(const std::string& args);

@@ -12,7 +12,7 @@ class AbstractOperator;
 class TransactionContext;
 
 /**
- * Translates a LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
+ * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
  * engine, which in return is represented by its root Operator.
  */
 class LQPTranslator final : private Noncopyable {
