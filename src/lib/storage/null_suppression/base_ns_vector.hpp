@@ -23,6 +23,8 @@ class BaseNsVector : private Noncopyable {
   virtual pmr_vector<uint32_t> decode() const = 0;
 
   virtual std::unique_ptr<BaseNsDecoder> create_base_decoder() const = 0;
+
+  virtual std::shared_ptr<BaseNsVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 
 /**
@@ -45,7 +47,7 @@ class NsVector : public BaseNsVector {
   size_t size() const final { return _self()._on_size(); }
   size_t data_size() const final { return _self()._on_data_size(); }
 
-  virtual NsType type() const final { return get_ns_type<Derived>(); }
+  NsType type() const final { return get_ns_type<Derived>(); }
 
   pmr_vector<uint32_t> decode() const final {
     auto decoded_vector = pmr_vector<uint32_t>{};
@@ -60,7 +62,12 @@ class NsVector : public BaseNsVector {
     return decoded_vector;
   }
 
-  virtual std::unique_ptr<BaseNsDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
+  std::unique_ptr<BaseNsDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
+
+  std::shared_ptr<BaseNsVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+    return _self()._on_copy_using_allocator(alloc);
+  }
+
   /**@}*/
 
  public:

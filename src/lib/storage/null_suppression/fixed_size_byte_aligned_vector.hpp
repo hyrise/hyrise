@@ -31,6 +31,11 @@ class FixedSizeByteAlignedVector : public NsVector<FixedSizeByteAlignedVector<Un
   auto _on_cbegin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
   auto _on_cend() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
 
+  std::shared_ptr<BaseNsVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+    auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
+    return std::allocate_shared<FixedSizeByteAlignedVector<UnsignedIntType>>(alloc, std::move(data_copy));
+  }
+
  private:
   static uint32_t cast_to_uint32(UnsignedIntType value) { return static_cast<uint32_t>(value); }
 

@@ -238,6 +238,12 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
 }
 
 template <typename T>
+void ExportBinary::ExportBinaryVisitor<T>::handle_immutable_column(
+    const BaseImmutableColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  Fail("Binary export not implemented for immutable columns.");
+}
+
+template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstream& ofstream,
                                                                     const BaseAttributeVector& attribute_vector) {
   switch (attribute_vector.width()) {

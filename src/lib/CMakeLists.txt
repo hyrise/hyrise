@@ -190,6 +190,9 @@ set(
     storage/base_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
+    storage/columns/base_immutable_column.hpp
+    storage/columns/new_dictionary_column.cpp
+    storage/columns/new_dictionary_column.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
     storage/dictionary_column.cpp
@@ -225,14 +228,18 @@ set(
     storage/iterables/constant_value_iterable.hpp
     storage/iterables/create_iterable_from_column.hpp
     storage/iterables/dictionary_column_iterable.hpp
+    storage/iterables/new_dictionary_column_iterable.hpp
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
     storage/null_suppression/base_ns_vector.hpp
     storage/null_suppression/base_ns_encoder.hpp
+    storage/null_suppression/ns_decoders.hpp
+    storage/null_suppression/ns_encoders.hpp
     storage/null_suppression/ns_type.hpp
     storage/null_suppression/ns_utils.cpp
     storage/null_suppression/ns_utils.hpp
+    storage/null_suppression/ns_vectors.hpp
     storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
     storage/null_suppression/fixed_size_byte_aligned_vector.hpp

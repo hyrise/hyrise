@@ -3,10 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "fixed_size_byte_aligned_encoder.hpp"
-#include "fixed_size_byte_aligned_vector.hpp"
-#include "simd_bp128_encoder.hpp"
-#include "simd_bp128_vector.hpp"
+#include "ns_vectors.hpp"
+#include "ns_encoders.hpp"
 
 #include "utils/assert.hpp"
 

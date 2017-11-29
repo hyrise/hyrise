@@ -4,41 +4,42 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/iterator/zip_iterator.hpp>
 
-#include <utility>
-#include <vector>
-
 #include "iterables.hpp"
-#include "storage/base_attribute_vector.hpp"
-#include "storage/dictionary_column.hpp"
+
+#include "storage/columns/new_dictionary_column.hpp"
+#include "storage/null_suppression/ns_decoders.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
+#include "storage/null_suppression/ns_vectors.hpp"
 
 namespace opossum {
 
 template <typename T>
-class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterable<T>> {
+class NewDictionaryColumnIterable : public IndexableIterable<NewDictionaryColumnIterable<T>> {
  public:
-  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
+  explicit NewDictionaryColumnIterable(const NewDictionaryColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    with_ns_decoder(*_column.attribute_vector(), [&](auto decoder) {
-      auto begin = create_iterator(decoder.cbegin(), ChunkOffset{0u});
-      auto end = create_iterator(decoder.cend(), static_cast<ChunkOffset>(decoder.size()));
+    resolve_ns_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+      auto begin = create_iterator(vector.cbegin(), ChunkOffset{0u});
+      auto end = create_iterator(vector.cend(), static_cast<ChunkOffset>(decoder.size()));
       functor(begin, end);
     });
   }
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    with_ns_decoder(*_column.attribute_vector(), [&](auto decoder) {
-      auto begin = create_indexed_iterator(mapped_chunk_offsets.cbegin(), decoder);
-      auto end = create_indexed_iterator(mapped_chunk_offsets.cend(), decoder);
+    with_ns_decoder(*_column.attribute_vector(), [&](const auto& vector) {
+      auto decoder = vector.create_decoder();
+
+      auto begin = create_indexed_iterator(mapped_chunk_offsets.cbegin(), *decoder);
+      auto end = create_indexed_iterator(mapped_chunk_offsets.cend(), *decoder);
       functor(begin, end);
     });
   }
 
  private:
-  const DictionaryColumn<T>& _column;
+  const NewDictionaryColumn<T>& _column;
 
  private:
   class IteratorLookup {

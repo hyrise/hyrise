@@ -28,6 +28,8 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
   ConstIterator _on_cbegin() const;
   ConstIterator _on_cend() const;
 
+  std::shared_ptr<BaseNsVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+
  private:
   friend class SimdBp128Decoder;
 

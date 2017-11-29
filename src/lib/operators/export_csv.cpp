@@ -121,6 +121,11 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
 
     context->csv_writer.write((*column.dictionary())[(column.attribute_vector()->get(context->current_row))]);
   }
+
+  void handle_immutable_column(const BaseImmutableColumn& base_column,
+                               std::shared_ptr<ColumnVisitableContext> base_context) final {
+    Fail("CSV export not implemented for immutable columns.");
+  }
 };
 
 }  // namespace opossum
