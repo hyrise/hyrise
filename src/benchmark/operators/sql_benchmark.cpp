@@ -27,10 +27,10 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();
     storage_manager.add_table("customer",
-                              load_table("src/test/tables/tpch/tpch-minimal/customer.tbl", Chunk::MAX_SIZE));
+                              load_table("src/test/tables/tpch/minimal/customer.tbl", Chunk::MAX_SIZE));
     storage_manager.add_table("lineitem",
-                              load_table("src/test/tables/tpch/tpch-minimal/lineitem.tbl", Chunk::MAX_SIZE));
-    storage_manager.add_table("orders", load_table("src/test/tables/tpch/tpch-minimal/orders.tbl", Chunk::MAX_SIZE));
+                              load_table("src/test/tables/tpch/minimal/lineitem.tbl", Chunk::MAX_SIZE));
+    storage_manager.add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", Chunk::MAX_SIZE));
   }
 
   void TearDown(benchmark::State& st) override {}

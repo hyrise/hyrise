@@ -33,7 +33,7 @@ class TPCHTest : public BaseTestWithParam<size_t> {
     _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
 
     for (const auto& tpch_table_name : tpch_table_names) {
-      const auto tpch_table_path = std::string("src/test/tables/tpch-sf-0001/") + tpch_table_name + ".tbl";
+      const auto tpch_table_path = std::string("src/test/tables/tpch/") + tpch_table_name + ".tbl";
       StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }

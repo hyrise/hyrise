@@ -31,18 +31,18 @@ TEST(TpchDbGeneratorTest, TableContents) {
   const auto chunk_size = 1000;
   const auto tables = TpchDbGenerator(scale_factor, chunk_size).generate();
 
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part), load_table("src/test/tables/tpch-sf-0001/part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part), load_table("src/test/tables/tpch/sf-0.001/part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Supplier),
-                          load_table("src/test/tables/tpch-sf-0001/supplier.tbl", chunk_size));
+                          load_table("src/test/tables/tpch/sf-0.001/supplier.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::PartSupp),
-                          load_table("src/test/tables/tpch-sf-0001/partsupp.tbl", chunk_size));
+                          load_table("src/test/tables/tpch/sf-0.001/partsupp.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Customer),
-                          load_table("src/test/tables/tpch-sf-0001/customer.tbl", chunk_size));
+                          load_table("src/test/tables/tpch/sf-0.001/customer.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Orders),
-                          load_table("src/test/tables/tpch-sf-0001/orders.tbl", chunk_size));
+                          load_table("src/test/tables/tpch/sf-0.001/orders.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Nation),
-                          load_table("src/test/tables/tpch-sf-0001/nation.tbl", chunk_size));
+                          load_table("src/test/tables/tpch/sf-0.001/nation.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Region),
-                          load_table("src/test/tables/tpch-sf-0001/region.tbl", chunk_size));
+                          load_table("src/test/tables/tpch/sf-0.001/region.tbl", chunk_size));
 }
 }  // namespace opossum
