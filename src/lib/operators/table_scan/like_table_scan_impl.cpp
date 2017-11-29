@@ -21,8 +21,10 @@
 namespace opossum {
 
 LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                     const std::string& right_wildcard)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, ScanType::OpLike}, _right_wildcard{right_wildcard} {
+                                     const ScanType scan_type, const std::string& right_wildcard)
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type},
+      _right_wildcard{right_wildcard},
+      _invert_results(scan_type == ScanType::OpNotLike) {
   // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
   auto regex_string = _sqllike_to_regex(_right_wildcard);
   _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
@@ -40,7 +42,7 @@ void LikeTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
   auto left_iterable = ValueColumnIterable<std::string>{left_column};
   auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
-  const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex); };
+  const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
@@ -61,8 +63,7 @@ void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& bas
   const auto& dictionary_matches = result.second;
 
   const auto& attribute_vector = *left_column.attribute_vector();
-  const auto null_value_id = left_column.null_value_id();
-  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, null_value_id};
+  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
 
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
@@ -95,7 +96,7 @@ std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_diction
   dictionary_matches.reserve(dictionary.size());
 
   for (const auto& value : dictionary) {
-    const auto result = std::regex_match(value, _regex);
+    const auto result = std::regex_match(value, _regex) ^ _invert_results;
     count += static_cast<size_t>(result);
     dictionary_matches.push_back(result);
   }

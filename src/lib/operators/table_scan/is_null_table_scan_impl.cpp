@@ -45,7 +45,7 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& b
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   auto& left_column = static_cast<const BaseDictionaryColumn&>(base_column);
 
-  auto left_column_iterable = AttributeVectorIterable{*left_column.attribute_vector(), left_column.null_value_id()};
+  auto left_column_iterable = AttributeVectorIterable{*left_column.attribute_vector()};
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
