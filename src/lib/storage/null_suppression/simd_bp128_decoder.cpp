@@ -1,5 +1,7 @@
 #include "simd_bp128_decoder.hpp"
 
+#include "simd_bp128_vector.hpp"
+
 namespace opossum {
 
 SimdBp128Decoder::SimdBp128Decoder(const Vector& vector)

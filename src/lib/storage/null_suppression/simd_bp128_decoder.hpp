@@ -10,28 +10,26 @@
 #include <utility>
 
 #include "base_ns_decoder.hpp"
-#include "simd_bp128_iterator.hpp"
 #include "simd_bp128_packing.hpp"
-#include "simd_bp128_vector.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
-class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
+class SimdBp128Vector;
+
+class SimdBp128Decoder : public BaseNsDecoder {
  public:
   using Packing = SimdBp128Packing;
-  using Vector = SimdBp128Vector;
-  using Iterator = SimdBp128Iterator;
 
  public:
-  explicit SimdBp128Decoder(const Vector& vector);
+  explicit SimdBp128Decoder(const SimdBp128Vector& vector);
   SimdBp128Decoder(const SimdBp128Decoder& other);
 
   SimdBp128Decoder(SimdBp128Decoder&& other) = default;
   ~SimdBp128Decoder() = default;
 
-  uint32_t _on_get(size_t i) {
+  uint32_t get(size_t i) final {
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);
     }
@@ -55,11 +53,7 @@ class SimdBp128Decoder : public NsDecoder<SimdBp128Decoder> {
     return _get_within_cached_meta_block(i);
   }
 
-  size_t _on_size() const { return _size; }
-
-  auto _on_cbegin() const { return Iterator{_data, _size, 0u}; }
-
-  auto _on_cend() const { return Iterator{nullptr, _size, _size}; }
+  size_t size() const final { return _size; }
 
  private:
   bool _is_index_within_cached_block(size_t index) {

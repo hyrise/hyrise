@@ -40,23 +40,4 @@ std::unique_ptr<BaseNsVector> encode_by_ns_type(NsType type, const std::vector<u
   return encoder->get_vector();
 }
 
-std::unique_ptr<BaseNsDecoder> create_ns_decoder(const BaseNsVector& vector) {
-  switch (vector.type()) {
-    case NsType::FixedSize32ByteAligned:
-      return std::make_unique<FixedSizeByteAlignedDecoder<uint32_t>>(
-          static_cast<const FixedSizeByteAlignedVector<uint32_t>&>(vector));
-    case NsType::FixedSize16ByteAligned:
-      return std::make_unique<FixedSizeByteAlignedDecoder<uint16_t>>(
-          static_cast<const FixedSizeByteAlignedVector<uint16_t>&>(vector));
-    case NsType::FixedSize8ByteAligned:
-      return std::make_unique<FixedSizeByteAlignedDecoder<uint8_t>>(
-          static_cast<const FixedSizeByteAlignedVector<uint8_t>&>(vector));
-    case NsType::SimdBp128:
-      return std::make_unique<SimdBp128Decoder>(static_cast<const SimdBp128Vector&>(vector));
-    default:
-      Fail("Unrecognized NsType encountered.");
-      return nullptr;
-  }
-}
-
 }  // namespace opossum

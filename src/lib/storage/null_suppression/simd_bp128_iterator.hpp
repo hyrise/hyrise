@@ -3,11 +3,8 @@
 #include <emmintrin.h>
 
 #include <array>
-#include <functional>
-#include <limits>
 #include <memory>
 #include <numeric>
-#include <utility>
 
 #include "base_ns_vector.hpp"
 #include "simd_bp128_packing.hpp"

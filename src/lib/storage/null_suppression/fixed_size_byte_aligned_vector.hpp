@@ -1,36 +1,34 @@
 #pragma once
 
-#include <boost/hana/at_key.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/tuple.hpp>
+#include <boost/iterator/transform_iterator.hpp>
+
+#include <memory>
 
 #include "base_ns_vector.hpp"
+#include "fixed_size_byte_aligned_decoder.hpp"
+
 #include "types.hpp"
 
 namespace opossum {
 
-namespace hana = boost::hana;
-
-namespace detail {
-
-constexpr auto ns_type_for_uint_type =
-    hana::make_map(hana::make_pair(hana::type_c<uint32_t>, NsType::FixedSize32ByteAligned),
-                   hana::make_pair(hana::type_c<uint16_t>, NsType::FixedSize16ByteAligned),
-                   hana::make_pair(hana::type_c<uint8_t>, NsType::FixedSize8ByteAligned));
-
-}  // namespace detail
-
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedVector : public BaseNsVector {
+class FixedSizeByteAlignedVector : public NsVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
  public:
   FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
-  ~FixedSizeByteAlignedVector() final = default;
+  ~FixedSizeByteAlignedVector() = default;
 
-  size_t size() const final { return _data.size(); }
-  size_t data_size() const final { return sizeof(UnsignedIntType) * _data.size(); }
-  NsType type() const final { return detail::ns_type_for_uint_type[hana::type_c<UnsignedIntType>]; }
+  size_t _on_size() const { return _data.size(); }
+  size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
-  const pmr_vector<UnsignedIntType>& data() const;
+  auto _on_create_decoder() const {
+    return std::make_unique<FixedSizeByteAlignedDecoder<UnsignedIntType>>(*this);
+  }
+
+  auto _on_cbegin() const { return boost::make_transform_iterator(_vector.data().cbegin(), cast_to_uint32); }
+  auto _on_cend() const { return boost::make_transform_iterator(_vector.data().cend(), cast_to_uint32); }
+
+ private:
+  static uint32_t cast_to_uint32(UnsignedIntType value) { return static_cast<uint32_t>(value); }
 
  private:
   const pmr_vector<UnsignedIntType> _data;
