@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <memory>
 
-#include "base_ns_vector.hpp"
-
 namespace opossum {
+
+class BaseNsVector;
 
 class BaseNsEncoder {
  public:

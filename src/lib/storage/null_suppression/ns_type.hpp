@@ -3,6 +3,7 @@
 #include <boost/hana/pair.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/fold.hpp>
+#include <boost/hana/equal.hpp>
 
 #include <cstdint>
 

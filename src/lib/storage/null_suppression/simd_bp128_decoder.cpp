@@ -4,9 +4,9 @@
 
 namespace opossum {
 
-SimdBp128Decoder::SimdBp128Decoder(const Vector& vector)
-    : _data{&vector.data()},
-      _size{vector.size()},
+SimdBp128Decoder::SimdBp128Decoder(const SimdBp128Vector& vector)
+    : _data{&vector._data},
+      _size{vector._size},
       _cached_meta_info_offset{0u},
       _cached_meta_block_first_index{std::numeric_limits<size_t>::max()},
       _cached_block_first_index{std::numeric_limits<size_t>::max()},

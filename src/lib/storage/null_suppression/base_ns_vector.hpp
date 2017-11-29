@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "ns_type.hpp"
+#include "base_ns_decoder.hpp"
 
 #include "types.hpp"
 
@@ -59,7 +60,7 @@ class NsVector : public BaseNsVector {
     return decoded_vector;
   }
 
-  virtual std::unique_ptr<BaseNsDecoder> create_base_decoder() const final { return create_decoder(); }
+  virtual std::unique_ptr<BaseNsDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
   /**@}*/
 
  public:

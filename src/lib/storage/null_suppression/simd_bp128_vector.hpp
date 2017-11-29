@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class SimdBp128Decoder;
+
 class SimdBp128Vector : public NsVector<SimdBp128Vector> {
  public:
   using ConstIterator = SimdBp128Iterator;
@@ -20,12 +22,15 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
   size_t _on_size() const;
   size_t _on_data_size() const;
 
+  std::unique_ptr<BaseNsDecoder> _on_create_base_decoder() const;
   std::unique_ptr<SimdBp128Decoder> _on_create_decoder() const;
 
   ConstIterator _on_cbegin() const;
   ConstIterator _on_cend() const;
 
  private:
+  friend class SimdBp128Decoder;
+
   const pmr_vector<__m128i> _data;
   const size_t _size;
 };

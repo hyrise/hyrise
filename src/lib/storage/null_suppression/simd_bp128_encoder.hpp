@@ -7,6 +7,9 @@
 #include "base_ns_encoder.hpp"
 #include "simd_bp128_packing.hpp"
 
+#include "types.hpp"
+
+
 namespace opossum {
 
 class SimdBp128Encoder : public BaseNsEncoder {

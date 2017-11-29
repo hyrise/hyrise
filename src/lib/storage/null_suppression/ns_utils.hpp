@@ -5,12 +5,12 @@
 #include <vector>
 
 #include "ns_type.hpp"
+#include "base_ns_vector.hpp"
 
 
 namespace opossum {
 
 class BaseNsEncoder;
-class BaseNsVector;
 
 std::unique_ptr<BaseNsEncoder> create_encoder_for_ns_type(NsType type);
 std::unique_ptr<BaseNsVector> encode_by_ns_type(NsType type, const std::vector<uint32_t>& vector);

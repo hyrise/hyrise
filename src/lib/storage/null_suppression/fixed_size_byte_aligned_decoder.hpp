@@ -1,25 +1,22 @@
 #pragma once
 
 #include "base_ns_decoder.hpp"
-#include "fixed_size_byte_aligned_vector.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedDecoder : BaseNsDecoder {
+class FixedSizeByteAlignedDecoder : public BaseNsDecoder {
  public:
-  using Vector = FixedSizeByteAlignedVector<UnsignedIntType>;
+  explicit FixedSizeByteAlignedDecoder(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
+  ~FixedSizeByteAlignedDecoder() final = default;
 
- public:
-  explicit FixedSizeByteAlignedDecoder(const Vector& vector) : _vector{vector} {}
-
-  uint32_t get(size_t i) final { return _vector.data()[i]; }
-  size_t size() const final { return _vector.size(); }
+  uint32_t get(size_t i) final { return _data[i]; }
+  size_t size() const final { return _data.size(); }
 
  private:
-  const Vector& _vector;
+  const pmr_vector<UnsignedIntType>& _data;
 };
 
 }  // namespace opossum
