@@ -20,8 +20,8 @@ class default_resource_impl : public memory_resource {
 
 memory_resource* get_default_resource() BOOST_NOEXCEPT {
   // Yes, this leaks. We have had SO many problems with the default memory resource going out of scope
-  // before the other things were cleaned up that we decided to live with the leak, rather than 
-  // running into races over and over again. 
+  // before the other things were cleaned up that we decided to live with the leak, rather than
+  // running into races over and over again.
   static default_resource_impl* default_resource_instance = new default_resource_impl();
   return default_resource_instance;
 }
