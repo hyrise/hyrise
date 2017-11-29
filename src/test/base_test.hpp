@@ -46,22 +46,26 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
 
  public:
   BaseTestWithParam() {
+#if HYRISE_NUMA_SUPPORT
     // Set options with very short cycle times
     auto options = NUMAPlacementManager::Options();
     options.counter_history_interval = std::chrono::milliseconds(1);
     options.counter_history_range = std::chrono::milliseconds(70);
     options.migration_interval = std::chrono::milliseconds(100);
     NUMAPlacementManager::get().set_options(options);
+#endif
   }
 
   ~BaseTestWithParam() {
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
 
+#if HYRISE_NUMA_SUPPORT
     // Also make sure that the tasks in the NUMAPlacementManager are not running anymore. We don't restart it here.
     // If you want the NUMAPlacementManager in your test, start it yourself. This is to prevent migrations where we
     // don't expect them
     NUMAPlacementManager::get().pause();
+#endif
 
     StorageManager::reset();
     TransactionManager::reset();
