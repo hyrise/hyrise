@@ -6,3 +6,4 @@ load src/test/tables/tpch/sf-0.001/part.tbl part
 load src/test/tables/tpch/sf-0.001/partsupp.tbl partsupp
 load src/test/tables/tpch/sf-0.001/region.tbl region
 load src/test/tables/tpch/sf-0.001/supplier.tbl supplier
+    
