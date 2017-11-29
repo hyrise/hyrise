@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "base_attribute_vector.hpp"
 #include "column_visitable.hpp"
-#include "null_suppression/base_ns_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -15,14 +15,14 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(std::shared_ptr<const pmr_vector<T>> dictionary,
-                                      std::shared_ptr<const BaseNsVector> attribute_vector, ValueID null_value_id)
-    : _dictionary(std::move(dictionary)),
-      _attribute_vector(std::move(attribute_vector)),
-      _null_value_id{null_value_id} {}
+DictionaryColumn<T>::DictionaryColumn(pmr_vector<T>&& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+    : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-DictionaryColumn<T>::~DictionaryColumn() = default;
+DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+    : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -66,7 +66,7 @@ std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
 }
 
 template <typename T>
-std::shared_ptr<const BaseNsVector> DictionaryColumn<T>::attribute_vector() const {
+std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
@@ -130,11 +130,6 @@ size_t DictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::null_value_id() const {
-  return _null_value_id;
-}
-
-template <typename T>
 void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_dictionary_column(*this, std::move(context));
 }
@@ -181,6 +176,6 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const Poly
       alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
-EXPLICITLY_INSTANTIATE_COLUMN_TYPES(DictionaryColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 
 }  // namespace opossum

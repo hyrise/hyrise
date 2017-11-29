@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-class BaseNsVector;
+class BaseAttributeVector;
 class BaseColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
@@ -23,10 +23,10 @@ class DictionaryColumn : public BaseDictionaryColumn {
    * Creates a Dictionary column from a given dictionary and attribute vector.
    * See dictionary_compression.cpp for more.
    */
-  DictionaryColumn(std::shared_ptr<const pmr_vector<T>> dictionary,
-                   std::shared_ptr<const BaseNsVector> attribute_vector, ValueID null_value_id);
+  explicit DictionaryColumn(pmr_vector<T>&& dictionary, const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
-  ~DictionaryColumn();
+  explicit DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                            const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
@@ -45,7 +45,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
 
   // returns an underlying data structure
-  std::shared_ptr<const BaseNsVector> attribute_vector() const final;
+  std::shared_ptr<const BaseAttributeVector> attribute_vector() const final;
 
   // return a generated vector of all values (or nulls)
   const pmr_concurrent_vector<std::optional<T>> materialize_values() const;
@@ -73,8 +73,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // return the number of entries
   size_t size() const override;
 
-  ValueID null_value_id() const final;
-
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
@@ -89,9 +87,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::shared_ptr<const BaseNsVector> _attribute_vector;
-  const ValueID _null_value_id;
+  std::shared_ptr<pmr_vector<T>> _dictionary;
+  std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };
 
 }  // namespace opossum
