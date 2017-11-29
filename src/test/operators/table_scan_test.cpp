@@ -28,8 +28,8 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper->execute();
 
     std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(5);
-    test_even_dict->add_column("a", "int");
-    test_even_dict->add_column("b", "int");
+    test_even_dict->add_column("a", DataType::Int);
+    test_even_dict->add_column("b", DataType::Int);
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
     DictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}});
 
@@ -39,8 +39,8 @@ class OperatorsTableScanTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> get_table_op_part_dict() {
     auto table = std::make_shared<Table>(5);
-    table->add_column("a", "int");
-    table->add_column("b", "float");
+    table->add_column("a", DataType::Int);
+    table->add_column("b", DataType::Float);
 
     for (int i = 1; i < 20; ++i) {
       table->append({i, 100.1 + i});
@@ -56,8 +56,8 @@ class OperatorsTableScanTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> get_table_op_filtered() {
     auto table = std::make_shared<Table>(5);
-    table->add_column_definition("a", "int");
-    table->add_column_definition("b", "float");
+    table->add_column_definition("a", DataType::Int);
+    table->add_column_definition("b", DataType::Float);
 
     const auto test_table_part_dict = get_table_op_part_dict()->get_output();
 
@@ -89,8 +89,8 @@ class OperatorsTableScanTest : public BaseTest {
   std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
     auto table = std::make_shared<opossum::Table>();
-    table->add_column("a", "int");
-    table->add_column("b", "float");
+    table->add_column("a", DataType::Int);
+    table->add_column("b", DataType::Float);
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i, 100.0f + i});
@@ -146,8 +146,8 @@ class OperatorsTableScanTest : public BaseTest {
     auto ref_column_b = std::make_shared<ReferenceColumn>(table, ColumnID{1u}, pos_list_b);
 
     auto ref_table = std::make_shared<Table>();
-    ref_table->add_column_definition("a", "int", true);
-    ref_table->add_column_definition("b", "float", true);
+    ref_table->add_column_definition("a", DataType::Int, true);
+    ref_table->add_column_definition("b", DataType::Float, true);
 
     auto chunk = Chunk{};
     chunk.add_column(ref_column_a);
@@ -242,8 +242,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[ScanType::OpBetween] = {};  // Will throw
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4,
-                                            std::optional<AllTypeVariant>(9));
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4);
 
     if (test.first == ScanType::OpBetween) {
       EXPECT_THROW(scan->execute(), std::logic_error);
@@ -272,7 +271,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
     auto scan1 = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{1}, ScanType::OpLessThan, 108);
     scan1->execute();
 
-    auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4, std::optional<AllTypeVariant>(9));
+    auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4);
 
     if (test.first == ScanType::OpBetween) {
       EXPECT_THROW(scan2->execute(), std::logic_error);
@@ -318,8 +317,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValu
   tests[ScanType::OpGreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 30,
-                                            std::optional<AllTypeVariant>(34));
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 30);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -339,8 +337,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) 
   tests[ScanType::OpGreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0} /* "a" */, test.first, -10,
-                                            std::optional<AllTypeVariant>(34));
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0} /* "a" */, test.first, -10);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -417,8 +414,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   tests[ScanType::OpNotEquals] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 0,
-                                                     std::optional<AllTypeVariant>(10));
+    auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 0);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);

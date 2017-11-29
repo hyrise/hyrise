@@ -4,6 +4,9 @@
 #include <vector>
 
 namespace opossum {
+
+BaseIndex::BaseIndex(const ColumnIndexType type) : _type{type} {}
+
 bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto index_columns = _get_index_columns();
   if (columns.size() > index_columns.size()) return false;
@@ -32,5 +35,7 @@ BaseIndex::Iterator BaseIndex::upper_bound(const std::vector<AllTypeVariant>& va
 BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
+
+ColumnIndexType BaseIndex::type() const { return _type; }
 
 }  // namespace opossum

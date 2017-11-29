@@ -22,7 +22,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   void SetUp() override {
     // we want to custom-build the index, but we have to create an index with a non-empty column.
     // Therefore we build an index and reset the root.
-    dict_col1 = create_dict_column_by_type<std::string>("string", {"test"});
+    dict_col1 = create_dict_column_by_type<std::string>(DataType::String, {"test"});
     index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
@@ -126,7 +126,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   std::mt19937 random_generator(rd());
   std::shuffle(ints.begin(), ints.end(), random_generator);
 
-  auto column = create_dict_column_by_type<int>("int", ints);
+  auto column = create_dict_column_by_type<int>(DataType::Int, ints);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
 
   for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {

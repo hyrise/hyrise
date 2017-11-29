@@ -19,9 +19,9 @@ template <typename DerivedIndex>
 class MultiColumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_col_int = BaseTest::create_dict_column_by_type<int>("int", {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
+    dict_col_int = BaseTest::create_dict_column_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
     dict_col_str = BaseTest::create_dict_column_by_type<std::string>(
-        "string", {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
+        DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dict_col_int, dict_col_str});
@@ -201,9 +201,9 @@ TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
   chunk.create_index<TypeParam>({this->dict_col_int});
   chunk.create_index<TypeParam>({this->dict_col_int, this->dict_col_str});
 
-  auto indices_int = chunk.get_indices_for({this->dict_col_int});
-  auto indices_int_str = chunk.get_indices_for({this->dict_col_int, this->dict_col_str});
-  auto indices_str = chunk.get_indices_for({this->dict_col_str});
+  auto indices_int = chunk.get_indices({this->dict_col_int});
+  auto indices_int_str = chunk.get_indices({this->dict_col_int, this->dict_col_str});
+  auto indices_str = chunk.get_indices({this->dict_col_str});
 
   EXPECT_EQ(2u, indices_int.size());
   EXPECT_EQ(1u, indices_int_str.size());

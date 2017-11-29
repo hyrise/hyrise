@@ -61,16 +61,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
-    auto table_scan1 =
-        std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), ScanType::OpGreaterThanEquals,
-                                    table_scan_node->value(), std::nullopt);
+    auto table_scan1 = std::make_shared<TableScan>(input_operator, table_scan_node->column_id(),
+                                                   ScanType::OpGreaterThanEquals, table_scan_node->value());
 
     return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::OpLessThanEquals,
-                                       *table_scan_node->value2(), std::nullopt);
+                                       *table_scan_node->value2());
   }
 
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), table_scan_node->scan_type(),
-                                     table_scan_node->value(), table_scan_node->value2());
+                                     table_scan_node->value());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(

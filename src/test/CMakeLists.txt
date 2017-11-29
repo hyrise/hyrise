@@ -23,7 +23,7 @@ set(
     operators/get_table_test.cpp
     operators/import_binary_test.cpp
     operators/import_csv_test.cpp
-    operators/index_column_scan_test.cpp
+    operators/index_scan_test.cpp
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
@@ -111,7 +111,7 @@ set (
 )
 
 
-# Both hyriseTest and hyriseSanitizers link against these
+# Both hyriseTest and hyriseSystemTest link against these
 set(
     LIBRARIES
     gtest
@@ -125,22 +125,12 @@ set(
     GTEST_SOURCES
     ../../third_party/googletest/googletest/src/gtest-all.cc
 )
-add_sanitizer_library(gtestSanitizers "${GTEST_SOURCES}" "")
-
-set(
-    LIBRARIES_SANITIZERS
-    gtestSanitizers
-    sqlite3
-)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-
-add_coverage_executable(hyriseCoverage "${HYRISE_UNIT_TEST_SOURCES}" "hyriseCoverageLib;hyriseBenchmarkCoverageLib;${LIBRARIES}")
-add_sanitizers_executable(hyriseSanitizers "${HYRISE_UNIT_TEST_SOURCES}" "hyriseSanitizersLib;hyriseBenchmarkSanitizersLib;${LIBRARIES_SANITIZERS}")
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

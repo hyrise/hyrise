@@ -26,6 +26,9 @@
 #include "pagination.hpp"
 #include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -102,6 +105,7 @@ Console::Console()
   register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
   register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
   register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
+  register_command("setting", std::bind(&Console::change_runtime_setting, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -371,20 +375,25 @@ int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 int Console::help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  out("  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME         - Fully print the given table (including MVCC columns)\n");
-  out("  visualize [options] SQL - Visualize a SQL query\n");
-  out("             noexec          - without executing the query\n");
-  out("             lqp             - print the raw logical query plans\n");
-  out("             lqpopt          - print the optimized abstract syntax tree\n");
-  out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
-  out("  rollback             - Roll back a manually created transaction\n");
-  out("  commit               - Commit a manually created transaction\n");
-  out("  txinfo               - Print information on the current transaction\n");
-  out("  quit                    - Exit the HYRISE Console\n");
-  out("  help                    - Show this message\n\n");
+  out("  generate [TABLENAME]         - Generate available TPC-C tables, or a specific table if TABLENAME is "
+      "specified\n");
+  out("  load FILE TABLENAME          - Load table from disc specified by filepath FILE, store it with name "
+      "TABLENAME\n");
+  out("  script SCRIPTFILE            - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME              - Fully print the given table (including MVCC columns)\n");
+  out("  visualize [options] SQL      - Visualize a SQL query\n");
+  out("             noexec               - without executing the query\n");
+  out("             lqp                  - print the raw logical query plans\n");
+  out("             lqpopt               - print the optimized abstract syntax tree\n");
+  out("  begin                        - Manually create a new transaction (Auto-commit is active unless begin is "
+      "called)\n");
+  out("  rollback                     - Roll back a manually created transaction\n");
+  out("  commit                       - Commit a manually created transaction\n");
+  out("  txinfo                       - Print information on the current transaction\n");
+  out("  quit                         - Exit the HYRISE Console\n");
+  out("  help                         - Show this message\n\n");
+  out("  setting [property] [value]   - Change a runtime setting\n\n");
+  out("           scheduler (on|off)  - Turn the scheduler on (default) or off\n\n");
   out("After TPC-C tables are generated, SQL queries can be executed.\n");
   out("Example:\n");
   out("SELECT * FROM DISTRICT\n");
@@ -588,6 +597,29 @@ int Console::visualize(const std::string& input) {
   return ReturnCode::Ok;
 }
 
+int Console::change_runtime_setting(const std::string& input) {
+  auto property = input.substr(0, input.find_first_of(" \n"));
+  auto value = input.substr(input.find_first_of(" \n") + 1, input.size());
+
+  if (property == "scheduler") {
+    if (value == "on") {
+      opossum::CurrentScheduler::set(
+          std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+      out("Scheduler turned on\n");
+    } else if (value == "off") {
+      opossum::CurrentScheduler::set(nullptr);
+      out("Scheduler turned off\n");
+    } else {
+      out("Usage: scheduler (on|off)\n");
+      return 1;
+    }
+    return 0;
+  }
+
+  out("Unknown property\n");
+  return 1;
+}
+
 int Console::exec_script(const std::string& script_file) {
   auto filepath = script_file;
   boost::algorithm::trim(filepath);
@@ -678,8 +710,9 @@ int Console::print_transaction_info(const std::string& input) {
   }
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-  const auto last_commit_id = std::to_string(_explicitly_created_transaction_context->last_commit_id());
-  out("Active transaction: { transaction id = " + transaction_id + ", last commit id = " + last_commit_id + " }\n");
+  const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
+  out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id +
+      " }\n");
   return ReturnCode::Ok;
 }
 

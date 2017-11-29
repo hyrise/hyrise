@@ -1,5 +1,5 @@
 """
-    Loads the Tables (NEW-ORDER.csv, ...) into SQLite and performs the transactions specified in
+    Loads the Tables (NEW_ORDER.csv, ...) into SQLite and performs the transactions specified in
     tpcc_{distribution}_requests.json in SQLite. The results of the SELECT queries will be saved as a JSON file
     tpcc_{distribution}_results.json like this:
 
@@ -26,7 +26,7 @@
     "w_tax_rate": 0.1716
   }
 
-  After all Transactions have been performed, the tables will be exported as CSVs (RESULT_NEW-ORDER.csv, ...)
+  After all Transactions have been performed, the tables will be exported as CSVs (RESULT_NEW_ORDER.csv, ...)
 """
 
 import argparse
@@ -43,10 +43,10 @@ TPCC_TABLES = {
     ("DISTRICT","DISTRICT"),
     ("CUSTOMER","CUSTOMER"),
     ("ORDER", "ORDERS"),
-    ("NEW-ORDER", "NEW_ORDER"),
+    ("NEW_ORDER", "NEW_ORDER"),
     ("ITEM","ITEM"),
     ("STOCK","STOCK"),
-    ("ORDER-LINE", "ORDER_LINE")
+    ("ORDER_LINE", "ORDER_LINE")
 }
 
 def execute_sql(cur, statement, params=()):

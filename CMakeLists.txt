@@ -15,7 +15,17 @@ else()
     message(WARNING "You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang and GCC.")
 endif()
 
-# Set default build type
+# Enable sanitization if requested
+option(ENABLE_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
+if (${ENABLE_SANITIZATION})
+    # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
+    # duplicating the flags, but this is prbly the simplest solution.
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+endif()
+
+
+# Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
@@ -49,21 +59,9 @@ find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
 
-#
-include(cmake/helpers.cmake)
-
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
-add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
 add_subdirectory(src)
-
-if(${NUMA_FOUND})
-    set(PGASUS_WITH_TASKING OFF CACHE BOOL "" FORCE)
-    set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
-    set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-    add_subdirectory(third_party/pgasus EXCLUDE_FROM_ALL)
-endif()
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

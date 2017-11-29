@@ -25,10 +25,11 @@
  * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
  * IDs and ensures all transactions are committed in the correct order. It also holds a global last commit ID, which is
  * the commit ID of the last transaction that has been committed. When a new transaction context is created, it retains
- * a copy of the current last commit ID, which represents a snapshot of the database. The last commit ID together with
- * the MVCC columns is used to filter out any changes made after the creation transaction context.
+ * a copy of the current last commit ID, stored as snapshot_commit_id, which represents a snapshot of the database. The 
+ * snapshot commit ID together with the MVCC columns is used to filter out any changes made after the creation
+ * transaction context.
  *
- * TransactionContext contains data used by a transaction, mainly its ID, the last commit ID explained above, and,
+ * TransactionContext contains data used by a transaction, mainly its ID, the snapshot commit ID explained above, and,
  * when it enters the commit phase, the TransactionManager gives it a CommitContext, which contains
  * a new commit ID that is used to make its changes visible to others.
  */
@@ -81,7 +82,13 @@ class TransactionManager : private Noncopyable {
 
  private:
   std::atomic<TransactionID> _next_transaction_id;
+  // TransactionID = 0 means "not set" in the MVCC columns
+  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+
   std::atomic<CommitID> _last_commit_id;
+  // We use commit_id=0 for rows that were inserted and then rolled back. Also, this can be used for rows that have
+  // been there "from the beginning of time".
+  static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
   std::shared_ptr<CommitContext> _last_commit_context;
 };

@@ -12,9 +12,6 @@
 #include <vector>
 
 #include "constants.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
@@ -31,8 +28,6 @@ TpccTableGenerator::TpccTableGenerator(const opossum::ChunkOffset chunk_size, co
       _random_gen(TpccRandomGenerator()) {}
 
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
-  opossum::CurrentScheduler::set(
-      std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology(10)));
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
@@ -303,9 +298,9 @@ TpccTableGenerator::order_line_counts_type TpccTableGenerator::generate_order_li
 }
 
 /**
- * Generates a column for the 'ORDER-LINE' table. This is used in the specialization of add_column to insert vectors.
- * In contrast to other tables the ORDER-LINE table is NOT defined by saying, there are 10 order-line per order,
- * but instead there 5 to 15 order-lines per order.
+ * Generates a column for the 'ORDER_LINE' table. This is used in the specialization of add_column to insert vectors.
+ * In contrast to other tables the ORDER_LINE table is NOT defined by saying, there are 10 order_lines per order,
+ * but instead there 5 to 15 order_lines per order.
  * @tparam T
  * @param indices
  * @param order_line_counts
@@ -425,8 +420,8 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
                                                                  {"CUSTOMER", customer_table.get()},
                                                                  {"HISTORY", history_table.get()},
                                                                  {"ORDER", order_table.get()},
-                                                                 {"ORDER-LINE", order_line_table.get()},
-                                                                 {"NEW-ORDER", new_order_table.get()}});
+                                                                 {"ORDER_LINE", order_line_table.get()},
+                                                                 {"NEW_ORDER", new_order_table.get()}});
 }
 
 /*
@@ -443,12 +438,12 @@ TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions()
       {"CUSTOMER", []() { return tpcc::TpccTableGenerator().generate_customer_table(); }},
       {"HISTORY", []() { return tpcc::TpccTableGenerator().generate_history_table(); }},
       {"ORDER", []() { return tpcc::TpccTableGenerator().generate_new_order_table(); }},
-      {"NEW-ORDER",
+      {"NEW_ORDER",
        []() {
          auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
          return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
        }},
-      {"ORDER-LINE", []() {
+      {"ORDER_LINE", []() {
          auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
          return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
        }}};

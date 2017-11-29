@@ -62,7 +62,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
-  _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
+  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
       left_column_type, *this, _column_ids.first, _column_ids.second, _scan_type, _mode);
 
   return _impl->_on_execute();
@@ -96,6 +96,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   // Contains the materialized sorted input tables
   std::unique_ptr<MaterializedColumnList<T>> _sorted_left_table;
   std::unique_ptr<MaterializedColumnList<T>> _sorted_right_table;
+
+  // Contains the null value row ids if a join column is an outer join column
+  std::unique_ptr<PosList> _null_rows_left;
+  std::unique_ptr<PosList> _null_rows_right;
 
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
@@ -625,13 +629,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() {
+    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
+    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer =
         RadixClusterSort<T>(_sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(),
-                            _sort_merge_join._column_ids, _op == ScanType::OpEquals, _cluster_count);
+                            _sort_merge_join._column_ids, _op == ScanType::OpEquals, include_null_left,
+                            include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
-    _sorted_left_table = std::move(sort_output.first);
-    _sorted_right_table = std::move(sort_output.second);
+    _sorted_left_table = std::move(sort_output.clusters_left);
+    _sorted_right_table = std::move(sort_output.clusters_right);
+    _null_rows_left = std::move(sort_output.null_rows_left);
+    _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
@@ -642,6 +651,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // merge the pos lists into single pos lists
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+
+    // Add the outer join rows which had a null value in their join column
+    if (include_null_left) {
+      for (auto row_id_left : *_null_rows_left) {
+        output_left->push_back(row_id_left);
+        output_right->push_back(NULL_ROW_ID);
+      }
+    }
+    if (include_null_right) {
+      for (auto row_id_right : *_null_rows_right) {
+        output_left->push_back(NULL_ROW_ID);
+        output_right->push_back(row_id_right);
+      }
+    }
 
     // Add the columns from both input tables to the output
     _add_output_columns(output_table, _sort_merge_join._input_table_left(), output_left);

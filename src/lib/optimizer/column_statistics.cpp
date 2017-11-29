@@ -534,6 +534,6 @@ std::ostream& ColumnStatistics<ColumnType>::_print_to_stream(std::ostream& os) c
   return os;
 }
 
-EXPLICITLY_INSTANTIATE_COLUMN_TYPES(ColumnStatistics);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics);
 
 }  // namespace opossum

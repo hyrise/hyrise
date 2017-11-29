@@ -23,9 +23,9 @@ class OperatorsExportCsvTest : public BaseTest {
  protected:
   void SetUp() override {
     table = std::make_shared<Table>(2);
-    table->add_column("a", "int");
-    table->add_column("b", "string");
-    table->add_column("c", "float");
+    table->add_column("a", DataType::Int);
+    table->add_column("b", DataType::String);
+    table->add_column("c", DataType::Float);
   }
 
   void TearDown() override {
@@ -150,11 +150,11 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 
 TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
   std::shared_ptr<Table> new_table = std::make_shared<Table>(2);
-  new_table->add_column("a", "int");
-  new_table->add_column("b", "string");
-  new_table->add_column("c", "float");
-  new_table->add_column("d", "long");
-  new_table->add_column("e", "double");
+  new_table->add_column("a", DataType::Int);
+  new_table->add_column("b", DataType::String);
+  new_table->add_column("c", DataType::Float);
+  new_table->add_column("d", DataType::Long);
+  new_table->add_column("e", DataType::Double);
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(new_table));

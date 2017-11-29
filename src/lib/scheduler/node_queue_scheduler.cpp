@@ -82,6 +82,10 @@ void NodeQueueScheduler::finish() {
     processing_unit->join();
   }
 
+  _processing_units = {};
+  _queues = {};
+  _task_counter = 0;
+
   _shut_down = true;
 }
 
