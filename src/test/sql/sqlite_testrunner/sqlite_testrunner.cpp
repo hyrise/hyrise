@@ -17,14 +17,16 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/topology.hpp"
 #include "sql/sql_planner.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-class SQLiteTestRunner : public testing::TestWithParam<std::string> {
+class SQLiteTestRunner : public BaseTestWithParam<std::string> {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
@@ -54,6 +56,9 @@ class SQLiteTestRunner : public testing::TestWithParam<std::string> {
       std::shared_ptr<Table> table = load_table(table_file, Chunk::MAX_SIZE);
       StorageManager::get().add_table(table_name, std::move(table));
     }
+
+    opossum::CurrentScheduler::set(
+        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
   }
 
   std::unique_ptr<SQLiteWrapper> _sqlite;

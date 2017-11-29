@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -117,10 +118,10 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
 
   if (rc != SQLITE_OK) {
+    auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db));
     sqlite3_finalize(result_row);
     sqlite3_close(_db);
-    throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) +
-                             "\n");
+    throw std::runtime_error(error_message);
   }
 
   _create_columns(result_table, result_row, sqlite3_column_count(result_row));
@@ -186,7 +187,9 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
         // Hyrise does not have explicit NULL columns
         col_types[i] = "int";
       }
-      table->add_column(col_names[i], col_types[i], col_nullable[i]);
+
+      const auto data_type = data_type_to_string.right.at(col_types[i]);
+      table->add_column(col_names[i], data_type, col_nullable[i]);
     }
   }
 }

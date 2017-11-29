@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "storage/table.hpp"
@@ -83,31 +84,34 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   }
 
   //  - column names and types
-  std::string left_col_type, right_col_type;
+  DataType left_col_type, right_col_type;
   for (ColumnID col_id{0}; col_id < expected_table->column_count(); ++col_id) {
     left_col_type = opossum_table->column_type(col_id);
     right_col_type = expected_table->column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (type_cmp_mode == TypeCmpMode::Lenient) {
-      if (left_col_type == "double") {
-        left_col_type = "float";
-      } else if (left_col_type == "long") {
-        left_col_type = "int";
+      if (left_col_type == DataType::Double) {
+        left_col_type = DataType::Float;
+      } else if (left_col_type == DataType::Long) {
+        left_col_type = DataType::Int;
       }
 
-      if (right_col_type == "double") {
-        right_col_type = "float";
-      } else if (right_col_type == "long") {
-        right_col_type = "int";
+      if (right_col_type == DataType::Double) {
+        right_col_type = DataType::Float;
+      } else if (right_col_type == DataType::Long) {
+        right_col_type = DataType::Int;
       }
     }
+
     if (left_col_type != right_col_type || opossum_table->column_name(col_id) != expected_table->column_name(col_id)) {
+      const auto opossum_column_data_type = data_type_to_string.left.at(opossum_table->column_type(col_id));
+      const auto expected_column_data_type = data_type_to_string.left.at(expected_table->column_type(col_id));
+
       std::cout << generate_table_comparison() << "Table schema is different."
                 << "Column with ID " << col_id << " is different" << std::endl
-                << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_table->column_type(col_id) << ")"
-                << std::endl
-                << "Expected: " << expected_table->column_name(col_id) << " (" << expected_table->column_type(col_id)
-                << ")" << std::endl;
+                << "Got: " << opossum_table->column_name(col_id) << " (" << opossum_column_data_type << ")" << std::endl
+                << "Expected: " << expected_table->column_name(col_id) << " (" << expected_column_data_type << ")"
+                << std::endl;
       return false;
     }
   }
@@ -117,7 +121,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   if (opossum_table->row_count() != expected_table->row_count()) {
     std::cout << "Number of rows is different." << std::endl
               << "Got: " << opossum_table->row_count() << " rows" << std::endl
-              << "Expected: " << expected_table->row_count() << " rows" << generate_table_comparison() << std::endl;
+              << "Expected: " << expected_table->row_count() << " rows" << std::endl
+              << generate_table_comparison() << std::endl;
     return false;
   }
 
@@ -131,28 +136,30 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     for (ColumnID col{0}; col < opossum_matrix[row].size(); col++) {
       if (variant_is_null(opossum_matrix[row][col]) || variant_is_null(expected_matrix[row][col])) {
         EXPECT_TRUE(variant_is_null(opossum_matrix[row][col]) && variant_is_null(expected_matrix[row][col]));
-      } else if (opossum_table->column_type(col) == "float") {
+      } else if (opossum_table->column_type(col) == DataType::Float) {
         auto left_val = type_cast<float>(opossum_matrix[row][col]);
         auto right_val = type_cast<float>(expected_matrix[row][col]);
 
         if (type_cmp_mode == TypeCmpMode::Strict) {
-          EXPECT_EQ(expected_table->column_type(col), "float");
+          EXPECT_EQ(expected_table->column_type(col), DataType::Float);
         } else {
-          EXPECT_TRUE(expected_table->column_type(col) == "float" || expected_table->column_type(col) == "double");
+          EXPECT_TRUE(expected_table->column_type(col) == DataType::Float ||
+                      expected_table->column_type(col) == DataType::Double);
         }
         if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
           EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
         } else {
           EXPECT_REL_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
         }
-      } else if (opossum_table->column_type(col) == "double") {
+      } else if (opossum_table->column_type(col) == DataType::Double) {
         auto left_val = type_cast<double>(opossum_matrix[row][col]);
         auto right_val = type_cast<double>(expected_matrix[row][col]);
 
         if (type_cmp_mode == TypeCmpMode::Strict) {
-          EXPECT_EQ(expected_table->column_type(col), "double");
+          EXPECT_EQ(expected_table->column_type(col), DataType::Double);
         } else {
-          EXPECT_TRUE(expected_table->column_type(col) == "float" || expected_table->column_type(col) == "double");
+          EXPECT_TRUE(expected_table->column_type(col) == DataType::Float ||
+                      expected_table->column_type(col) == DataType::Double);
         }
         if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
           EXPECT_NEAR(left_val, right_val, 0.0001) << "Row/Col:" << row << "/" << col;
@@ -161,7 +168,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
         }
       } else {
         if (type_cmp_mode == TypeCmpMode::Lenient &&
-            (opossum_table->column_type(col) == "int" || opossum_table->column_type(col) == "long")) {
+            (opossum_table->column_type(col) == DataType::Int || opossum_table->column_type(col) == DataType::Long)) {
           auto left_val = type_cast<int64_t>(opossum_matrix[row][col]);
           auto right_val = type_cast<int64_t>(expected_matrix[row][col]);
           EXPECT_EQ(left_val, right_val) << "Row:" << row + 1 << " Col:" << col + 1;

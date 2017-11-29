@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/base_column.hpp"
 #include "type_cast.hpp"
@@ -44,7 +45,8 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
   for (ColumnID col{0}; col < _input_table_left()->column_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << _input_table_left()->column_type(col) << std::setw(0);
+    const auto data_type = data_type_to_string.left.at(_input_table_left()->column_type(col));
+    _out << "|" << std::setw(widths[col]) << data_type << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";

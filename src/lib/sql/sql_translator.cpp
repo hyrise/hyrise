@@ -43,6 +43,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
       {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
+      {hsql::kOpNotLike, ScanType::OpNotLike},
   };
 
   auto it = operator_to_scan_type.find(operator_type);
@@ -379,9 +380,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   std::sort(right_column_names.begin(), right_column_names.end());
 
   std::vector<std::string> join_column_names;
-  std::set_intersection(left_column_names.begin(), left_column_names.end(),
-                        right_column_names.begin(), right_column_names.end(),
-                        std::back_inserter(join_column_names));
+  std::set_intersection(left_column_names.begin(), left_column_names.end(), right_column_names.begin(),
+                        right_column_names.end(), std::back_inserter(join_column_names));
 
   Assert(!join_column_names.empty(), "No matching columns for natural join found");
 

@@ -16,8 +16,8 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    t.add_column("col_1", "int");
-    t.add_column("col_2", "string");
+    t.add_column("col_1", DataType::Int);
+    t.add_column("col_2", DataType::String);
   }
 
   Table t{2};
@@ -59,8 +59,8 @@ TEST_F(StorageTableTest, GetColumnName) {
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
-  EXPECT_EQ(t.column_type(ColumnID{0}), "int");
-  EXPECT_EQ(t.column_type(ColumnID{1}), "string");
+  EXPECT_EQ(t.column_type(ColumnID{0}), DataType::Int);
+  EXPECT_EQ(t.column_type(ColumnID{1}), DataType::String);
   // TODO(anyone): Do we want checks here?
   // EXPECT_THROW(t.column_type(ColumnID{2}), std::exception);
 }
@@ -84,7 +84,7 @@ TEST_F(StorageTableTest, GetValue) {
 }
 
 TEST_F(StorageTableTest, ColumnNameTooLong) {
-  EXPECT_THROW(t.add_column(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), "int");
+  EXPECT_THROW(t.add_column(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), DataType::Int);
                , std::exception);
 }
 
@@ -128,8 +128,8 @@ TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t.chunk_count(), 1u);
 
   t.append({4, "Hello,"});
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_column_type<BaseColumn, ValueColumn>("string");
+  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   Chunk c;
   c.add_column(vc_int);
   c.add_column(vc_str);
@@ -141,8 +141,8 @@ TEST_F(StorageTableTest, EmplaceChunk) {
 TEST_F(StorageTableTest, EmplaceChunkReplacesFirstChunkIfNoRows) {
   EXPECT_EQ(t.chunk_count(), 1u);
 
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_column_type<BaseColumn, ValueColumn>("string");
+  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   Chunk c;
   c.add_column(vc_int);
   c.add_column(vc_str);
@@ -155,8 +155,8 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   EXPECT_EQ(t.chunk_count(), 1u);
 
   t.append({4, "Hello,"});
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_column_type<BaseColumn, ValueColumn>("string");
+  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   Chunk c;
   c.add_column(vc_int);
   c.add_column(vc_str);
@@ -164,8 +164,8 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   t.emplace_chunk(std::move(c));
   EXPECT_EQ(t.chunk_count(), 2u);
 
-  std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
-  std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_column_type<BaseColumn, ValueColumn>("string");
+  std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   Chunk c2;
   c2.add_column(vc_int);
   c2.add_column(vc_str);

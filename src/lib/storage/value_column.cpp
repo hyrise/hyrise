@@ -199,6 +199,6 @@ std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const Polymorph
   }
 }
 
-EXPLICITLY_INSTANTIATE_COLUMN_TYPES(ValueColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);
 
 }  // namespace opossum

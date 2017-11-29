@@ -12,7 +12,9 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
 #include "storage/storage_manager.hpp"
@@ -46,7 +48,7 @@ class JoinNullTest : public JoinTest {
   std::shared_ptr<TableWrapper> _table_wrapper_a_null_dict;
 };
 
-using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge>;
+using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop>;
 TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
@@ -62,23 +64,36 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullDict) {
                                              "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    // todo(anyone): Remove this as soon as SMJ fixes this
-    return;
-  }
+TYPED_TEST(JoinNullTest, InnerJoinWithNull2) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_m, this->_table_wrapper_n, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
+}
 
+TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_m_dict, this->_table_wrapper_n_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
+}
+
+TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_m, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_n, ColumnID{1}, ScanType::OpGreaterThanEquals, 0);
+  scan_b->execute();
+
+  this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_inner_join_null_ref.tbl", 1);
+}
+
+TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_null, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuterDict) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    // todo(anyone): Remove this as soon as SMJ fixes this
-    return;
-  }
-
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict,
                                              std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                                              ScanType::OpEquals, JoinMode::Left,
@@ -99,22 +114,12 @@ TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInnerDict) {
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuter) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    // todo(anyone): Remove this as soon as SMJ fixes this
-    return;
-  }
-
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_b, this->_table_wrapper_a_null, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuterDict) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
-    // todo(anyone): Remove this as soon as SMJ fixes this
-    return;
-  }
-
   this->template test_join_output<TypeParam>(this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict,
                                              std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                                              ScanType::OpEquals, JoinMode::Right,

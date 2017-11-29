@@ -33,10 +33,6 @@ TYPED_TEST_CASE(JoinFullTest, JoinFullTypes);
 
 TYPED_TEST(JoinFullTest, CrossJoin) {
   if (!IS_DEBUG) return;
-  // this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string,
-  // std::string>("a", "a"),
-  //                                            ScanType::OpEquals, Cross,
-  //                                            "src/test/tables/joinoperators/int_cross_join.tbl", 1);
 
   EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Cross,
                                            std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals),
@@ -188,6 +184,12 @@ TYPED_TEST(JoinFullTest, OuterJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+}
+
+TYPED_TEST(JoinFullTest, OuterJoinWithNull) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_m, this->_table_wrapper_n, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, OuterJoinDict) {

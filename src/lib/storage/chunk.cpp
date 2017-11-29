@@ -15,8 +15,11 @@
 
 namespace opossum {
 
-const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
-const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max();
+// The last commit id is reserved for uncommitted changes
+const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
+
+// The last chunk offset is reserved for NULL as used in ReferenceColumns.
+const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
 Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
 
@@ -114,12 +117,32 @@ void Chunk::shrink_mvcc_columns() {
   _mvcc_columns->end_cids.shrink_to_fit();
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
-               [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
+               [&](const auto& index) { return index->is_index_for(columns); });
   return result;
+}
+
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID> column_ids) const {
+  auto columns = get_columns_for_ids(column_ids);
+  return get_indices(columns);
+}
+
+std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
+                                            const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
+  auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
+    return index->is_index_for(columns) && index->type() == index_type;
+  });
+
+  return (index_it == _indices.cend()) ? nullptr : *index_it;
+}
+
+std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
+                                            const std::vector<ColumnID> column_ids) const {
+  auto columns = get_columns_for_ids(column_ids);
+  return get_index(index_type, columns);
 }
 
 bool Chunk::references_exactly_one_table() const {
@@ -165,6 +188,22 @@ uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
       std::max(static_cast<int64_t>(0), static_cast<int64_t>(_history.size()) - static_cast<int64_t>(lookback));
   const auto prelast = _history.at(prelast_index);
   return last - prelast;
+}
+
+std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
+    const std::vector<ColumnID>& column_ids) const {
+  DebugAssert(([&]() {
+                for (auto column_id : column_ids)
+                  if (column_id >= column_count()) return false;
+                return true;
+              }()),
+              "Column IDs not within range [0, column_count()).");
+
+  auto columns = std::vector<std::shared_ptr<const BaseColumn>>{};
+  columns.reserve(column_ids.size());
+  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(columns),
+                 [&](const auto& column_id) { return get_column(column_id); });
+  return columns;
 }
 
 }  // namespace opossum

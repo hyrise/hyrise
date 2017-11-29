@@ -15,13 +15,15 @@ TransactionManager& TransactionManager::get() {
 
 void TransactionManager::reset() {
   auto& manager = get();
-  manager._next_transaction_id = 1u;
-  manager._last_commit_id = 0u;
-  manager._last_commit_context = std::make_shared<CommitContext>(0u);
+  manager._next_transaction_id = INITIAL_TRANSACTION_ID;
+  manager._last_commit_id = INITIAL_COMMIT_ID;
+  manager._last_commit_context = std::make_shared<CommitContext>(INITIAL_COMMIT_ID);
 }
 
 TransactionManager::TransactionManager()
-    : _next_transaction_id{1u}, _last_commit_id{0u}, _last_commit_context{std::make_shared<CommitContext>(0u)} {}
+    : _next_transaction_id{INITIAL_TRANSACTION_ID},
+      _last_commit_id{INITIAL_COMMIT_ID},
+      _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)} {}
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 

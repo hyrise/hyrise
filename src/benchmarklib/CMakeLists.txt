@@ -32,6 +32,4 @@ set(
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 target_link_libraries(hyriseBenchmarkLib hyrise)
 
-add_sanitizer_library(hyriseBenchmarkSanitizersLib "${SOURCES}" hyriseSanitizersLib)
-add_coverage_library(hyriseBenchmarkCoverageLib "${SOURCES}" hyriseCoverageLib)
 

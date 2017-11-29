@@ -12,6 +12,14 @@ else()
     MESSAGE(STATUS "Building without NUMA support")
 endif()
 
+# Enable coverage if requested   - this is only operating on Hyrise's source (src/) so we don't check coverage of
+# third_party stuff
+option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
+if (${ENABLE_COVERAGE})
+    add_compile_options(-fprofile-arcs -ftest-coverage)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+endif()
+
 # This will be used by the DebugAssert macro to output
 # a file path relative to CMAKE_SOURCE_DIR
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)

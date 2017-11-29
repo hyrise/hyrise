@@ -8,7 +8,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -29,99 +30,93 @@ template <typename T>
 using MaterializedColumnList = std::vector<std::shared_ptr<MaterializedColumn<T>>>;
 
 /**
-* Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
-* the construction of pos lists for the algorithms that are using this class.
-* Note: null values are skipped and do not appear in the output.
-**/
+ * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
+ * the construction of pos lists for the algorithms that are using this class.
+ **/
 template <typename T>
-class ColumnMaterializer : public ColumnVisitable {
+class ColumnMaterializer {
  public:
-  explicit ColumnMaterializer(bool sort) : _sort{sort} {};
-
- protected:
-  bool _sort;
-  /**
-  * Context for the visitor pattern implementation for column materialization and sorting.
-  **/
-  struct MaterializationContext : ColumnVisitableContext {
-    explicit MaterializationContext(ChunkID id) : chunk_id(id) {}
-
-    // The id of the chunk to be materialized
-    ChunkID chunk_id;
-    std::shared_ptr<MaterializedColumn<T>> output;
-  };
-
-  /**
-  * Creates a job to materialize and sort a chunk.
-  **/
-  std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
-                                                             ChunkID chunk_id, std::shared_ptr<const Table> input,
-                                                             ColumnID column_id) {
-    return std::make_shared<JobTask>([this, &output, input, column_id, chunk_id] {
-      auto column = input->get_chunk(chunk_id).get_column(column_id);
-      auto context = std::make_shared<MaterializationContext>(chunk_id);
-      column->visit(*this, context);
-      (*output)[chunk_id] = context->output;
-    });
-  }
+  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
 
  public:
   /**
-  * Materializes and sorts all the chunks of an input table in parallel
-  * by creating multiple jobs that materialize chunks.
-  **/
-  std::unique_ptr<MaterializedColumnList<T>> materialize(std::shared_ptr<const Table> input, ColumnID column_id) {
+   * Materializes and sorts all the chunks of an input table in parallel
+   * by creating multiple jobs that materialize chunks.
+   * Returns the materialized columns and a list of null row ids if materialize_null is enabled.
+   **/
+  std::pair<std::unique_ptr<MaterializedColumnList<T>>,
+            std::unique_ptr<PosList>> materialize(std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
+    auto null_rows = std::make_unique<PosList>();
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
-      jobs.push_back(_create_chunk_materialization_job(output, chunk_id, input, column_id));
+      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id));
       jobs.back()->schedule();
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
 
-    return output;
+    return std::make_pair(std::move(output), std::move(null_rows));
+  }
+
+ private:
+  /**
+   * Creates a job to materialize and sort a chunk.
+   **/
+  std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
+                                                             std::unique_ptr<PosList>& null_rows_output,
+                                                             ChunkID chunk_id, std::shared_ptr<const Table> input,
+                                                             ColumnID column_id) {
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id] {
+      auto column = input->get_chunk(chunk_id).get_column(column_id);
+      resolve_column_type<T>(*column, [&](auto& typed_column) {
+        (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output);
+      });
+    });
   }
 
   /**
-  * ColumnVisitable implementation to materialize and sort a value column.
-  **/
-  void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
-    auto& value_column = static_cast<const ValueColumn<T>&>(column);
-    auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto output = std::make_shared<MaterializedColumn<T>>();
-    output->reserve(value_column.values().size());
+   * Materialization works of all types of columns
+   */
+  template <typename ColumnType>
+  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,
+                                                             std::unique_ptr<PosList>& null_rows_output) {
+    auto output = MaterializedColumn<T>{};
+    output.reserve(column.size());
 
-    // Copy over every entry
-    for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); ++chunk_offset) {
-      RowID row_id{materialization_context->chunk_id, chunk_offset};
-      // Null values are skipped
-      if (!value_column.is_nullable() || !value_column.null_values()[chunk_offset]) {
-        output->emplace_back(row_id, value_column.values()[chunk_offset]);
+    auto iterable = create_iterable_from_column<T>(column);
+
+    iterable.for_each([&](const auto& column_value) {
+      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
+      if (column_value.is_null()) {
+        if (_materialize_null) {
+          null_rows_output->emplace_back(row_id);
+        }
+      } else {
+        output.emplace_back(row_id, column_value.value());
       }
-    }
+    });
 
-    // Sort the entries
     if (_sort) {
-      std::sort(output->begin(), output->end(), [](auto& left, auto& right) { return left.value < right.value; });
+      std::sort(output.begin(), output.end(), [](const auto& left, const auto& right) {
+        return left.value < right.value;
+      });
     }
 
-    materialization_context->output = output;
+    return std::make_shared<MaterializedColumn<T>>(std::move(output));
   }
 
   /**
-  * ColumnVisitable implementation to materialize and sort a dictionary column.
-  **/
-  void handle_dictionary_column(const BaseDictionaryColumn& column,
-                                std::shared_ptr<ColumnVisitableContext> context) override {
-    auto& dictionary_column = dynamic_cast<const DictionaryColumn<T>&>(column);
-    auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto output = std::make_shared<MaterializedColumn<T>>();
-    output->reserve(column.size());
+   * Specialization for dictionary columns
+   */
+  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
+                                                             std::unique_ptr<PosList>& null_rows_output) {
+    auto output = MaterializedColumn<T>{};
+    output.reserve(column.size());
 
-    auto value_ids = dictionary_column.attribute_vector();
-    auto dict = dictionary_column.dictionary();
+    auto value_ids = column.attribute_vector();
+    auto dict = column.dictionary();
 
     if (_sort) {
       // Works like Bucket Sort
@@ -138,9 +133,12 @@ class ColumnMaterializer : public ColumnVisitable {
       for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
         auto value_id = value_ids->get(chunk_offset);
 
-        // Skip null values
         if (value_id != NULL_VALUE_ID) {
-          rows_with_value[value_id].push_back(RowID{materialization_context->chunk_id, chunk_offset});
+          rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
+        } else {
+          if (_materialize_null) {
+            null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
+          }
         }
       }
 
@@ -148,78 +146,30 @@ class ColumnMaterializer : public ColumnVisitable {
       ChunkOffset chunk_offset{0};
       for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
         for (auto& row_id : rows_with_value[value_id]) {
-          output->emplace_back(row_id, (*dict)[value_id]);
+          output.emplace_back(row_id, (*dict)[value_id]);
           ++chunk_offset;
         }
       }
     } else {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < column.size(); ++chunk_offset) {
-        auto row_id = RowID{materialization_context->chunk_id, chunk_offset};
-        auto value_id = value_ids->get(chunk_offset);
-        if (value_id != NULL_VALUE_ID) {
-          output->emplace_back(row_id, (*dict)[value_id]);
+      auto iterable = create_iterable_from_column(column);
+      iterable.for_each([&](const auto& column_value) {
+        const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
+        if (column_value.is_null()) {
+          if (_materialize_null) {
+            null_rows_output->emplace_back(row_id);
+          }
+        } else {
+          output.emplace_back(row_id, column_value.value());
         }
-      }
+      });
     }
 
-    materialization_context->output = output;
+    return std::make_shared<MaterializedColumn<T>>(std::move(output));
   }
 
-  /**
-  * Sorts the contents of a reference column into a sorted chunk
-  **/
-  void handle_reference_column(const ReferenceColumn& ref_column,
-                               std::shared_ptr<ColumnVisitableContext> context) override {
-    auto referenced_table = ref_column.referenced_table();
-    auto referenced_column_id = ref_column.referenced_column_id();
-    auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto pos_list = ref_column.pos_list();
-    auto output = std::make_shared<MaterializedColumn<T>>();
-    output->reserve(ref_column.size());
-
-    // Retrieve the columns from the referenced table so they only have to be cast once
-    auto v_columns = std::vector<std::shared_ptr<const ValueColumn<T>>>(referenced_table->chunk_count());
-    auto d_columns = std::vector<std::shared_ptr<const DictionaryColumn<T>>>(referenced_table->chunk_count());
-    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      v_columns[chunk_id] = std::dynamic_pointer_cast<const ValueColumn<T>>(
-          referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
-      d_columns[chunk_id] = std::dynamic_pointer_cast<const DictionaryColumn<T>>(
-          referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
-    }
-
-    // Retrieve the values from the referenced columns
-    for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list->size(); ++chunk_offset) {
-      const auto& row_id = (*pos_list)[chunk_offset];
-
-      // Skip null values
-      if (row_id == NULL_ROW_ID) {
-        continue;
-      }
-
-      // Dereference the value
-      T value;
-      auto& v_column = v_columns[row_id.chunk_id];
-      auto& d_column = d_columns[row_id.chunk_id];
-      DebugAssert(v_column || d_column, "Referenced column is neither value nor dictionary column!");
-      if (v_column) {
-        value = v_column->values()[row_id.chunk_offset];
-        output->emplace_back(RowID{materialization_context->chunk_id, chunk_offset}, value);
-      } else {
-        ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
-        if (value_id != NULL_VALUE_ID) {
-          value = d_column->dictionary()->at(value_id);
-          output->emplace_back(RowID{materialization_context->chunk_id, chunk_offset}, value);
-        }
-      }
-    }
-
-    // Sort the entries
-    if (_sort) {
-      std::sort(output->begin(), output->end(), [](auto& left, auto& right) { return left.value < right.value; });
-    }
-
-    materialization_context->output = output;
-  }
+ private:
+  bool _sort;
+  bool _materialize_null;
 };
 
 }  // namespace opossum

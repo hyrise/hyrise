@@ -32,7 +32,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * FROM new_order
      * WHERE no_d_id = :d_id AND no_w_id = :w_id ORDER BY no_o_id ASC;
      */
-    auto gt = std::make_shared<GetTable>("NEW-ORDER");
+    auto gt = std::make_shared<GetTable>("NEW_ORDER");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{1} /* "NO_D_ID" */, ScanType::OpEquals, d_id);
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2} /* "NO_W_ID" */, ScanType::OpEquals, w_id);
@@ -42,7 +42,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     Projection::ColumnExpressions columns = {Expression::create_column(ColumnID{0} /* "NO_O_ID" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    auto sort = std::make_shared<Sort>(projection, ColumnID{0} /* "NO_O_ID" */, OrderByMode::Ascending, 0);
+    auto sort = std::make_shared<Sort>(projection, ColumnID{0} /* "NO_O_ID" */, OrderByMode::Ascending);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
     auto t_ts1 = std::make_shared<OperatorTask>(ts1);
@@ -68,11 +68,11 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * FROM new_order
      * WHERE CURRENT OF c_no;
      */
-    auto gt = std::make_shared<GetTable>("NEW-ORDER");
+    auto gt = std::make_shared<GetTable>("NEW_ORDER");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0} /* "NO_O_ID" */, ScanType::OpEquals, no_o_id);
     auto val = std::make_shared<Validate>(ts1);
-    auto delete_op = std::make_shared<Delete>("NEW-ORDER", val);
+    auto delete_op = std::make_shared<Delete>("NEW_ORDER", val);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
     auto t_ts1 = std::make_shared<OperatorTask>(ts1);
@@ -169,7 +169,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * SET ol_delivery_d = :datetime
      * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
      */
-    auto gt = std::make_shared<GetTable>("ORDER-LINE");
+    auto gt = std::make_shared<GetTable>("ORDER_LINE");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0} /* "OL_O_ID" */, ScanType::OpEquals, no_o_id);
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1} /* "OL_D_ID" */, ScanType::OpEquals, d_id);
@@ -182,7 +182,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     Projection::ColumnExpressions values = {Expression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
     auto updated_rows = std::make_shared<Projection>(val, values);
-    auto update = std::make_shared<Update>("ORDER-LINE", projection, updated_rows);
+    auto update = std::make_shared<Update>("ORDER_LINE", projection, updated_rows);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
     auto t_ts1 = std::make_shared<OperatorTask>(ts1);
@@ -212,7 +212,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * FROM order_line
      * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
      */
-    auto gt = std::make_shared<GetTable>("ORDER-LINE");
+    auto gt = std::make_shared<GetTable>("ORDER_LINE");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0} /* "OL_O_ID" */, ScanType::OpEquals, no_o_id);
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1} /* "OL_D_ID" */, ScanType::OpEquals, d_id);
