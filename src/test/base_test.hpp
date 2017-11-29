@@ -49,13 +49,13 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
 
-    // Also make sure that the tasks in the NUMAPlacementManager are not running anymore
+    // Also make sure that the tasks in the NUMAPlacementManager are not running anymore. We don't restart it here.
+    // If you want the NUMAPlacementManager in your test, start it yourself. This is to prevent migrations where we
+    // don't expect them
     NUMAPlacementManager::get().pause();
 
     StorageManager::reset();
     TransactionManager::reset();
-
-    NUMAPlacementManager::get().resume();
   }
 };
 

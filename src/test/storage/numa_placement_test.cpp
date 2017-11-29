@@ -33,6 +33,7 @@ class NUMAPlacementTest : public BaseTest {
     options.counter_history_range = std::chrono::milliseconds(70);
     options.migration_interval = std::chrono::milliseconds(100);
     NUMAPlacementManager::get().set_options(options);
+    NUMAPlacementManager::get().resume();
 
     const auto table = create_table(_chunk_count, 1000);
     StorageManager::get().add_table("table", table);

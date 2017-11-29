@@ -40,7 +40,7 @@ PausableLoopThread::~PausableLoopThread() {
 void PausableLoopThread::pause() {
   _pause_requested = true;
   while (!_is_paused) {
-  };
+  }
 }
 
 void PausableLoopThread::resume() {
