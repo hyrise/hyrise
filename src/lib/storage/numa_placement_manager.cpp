@@ -20,17 +20,14 @@ namespace opossum {
 
 // singleton
 NUMAPlacementManager& NUMAPlacementManager::get() {
+  // Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory
+  // resources. Without those, all destructors of all PMR vectors out there will fail.
+
   static NUMAPlacementManager instance;
   return instance;
 }
 
-void NUMAPlacementManager::reset(const Options options, const std::shared_ptr<Topology> topology) {
-  get() = NUMAPlacementManager(options, topology);
-}
-
-NUMAPlacementManager::NUMAPlacementManager(const NUMAPlacementManager::Options options,
-                                           const std::shared_ptr<Topology> topology)
-    : _options(options), _topology(topology) {
+NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology) : _topology(topology) {
   for (size_t i = 0; i < _topology->nodes().size(); i++) {
     char msource_name[26];
     std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
@@ -41,7 +38,13 @@ NUMAPlacementManager::NUMAPlacementManager(const NUMAPlacementManager::Options o
                                                            [](size_t) { ChunkMetricsCollectionTask().execute(); });
 
   _migration_thread = std::make_unique<PausableLoopThread>(
-      _options.migration_interval, [options](size_t) { MigrationPreparationTask(options).execute(); });
+      _options.migration_interval, [this](size_t) { MigrationPreparationTask(_options).execute(); });
+}
+
+void NUMAPlacementManager::set_options(const NUMAPlacementManager::Options options) {
+  _options = options;
+  _collector_thread->set_loop_sleep_time(_options.counter_history_interval);
+  _migration_thread->set_loop_sleep_time(_options.migration_interval);
 }
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
@@ -60,6 +63,7 @@ void NUMAPlacementManager::resume() {
   _collector_thread->resume();
   _migration_thread->resume();
 }
+
 void NUMAPlacementManager::pause() {
   _collector_thread->pause();
   _migration_thread->pause();

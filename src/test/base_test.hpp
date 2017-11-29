@@ -11,6 +11,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_compression.hpp"
+#include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -44,15 +45,17 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
   }
 
  public:
-  ~BaseTestWithParam() override {
-    StorageManager::reset();
-    TransactionManager::reset();
-  }
-
   void TearDown() override {
+    // Reset scheduler first so that all tasks are done before we kill the StorageManager
+    CurrentScheduler::set(nullptr);
+
+    // Also make sure that the tasks in the NUMAPlacementManager are not running anymore
+    NUMAPlacementManager::get().pause();
+
     StorageManager::reset();
     TransactionManager::reset();
-    CurrentScheduler::set(nullptr);
+
+    NUMAPlacementManager::get().resume();
   }
 };
 

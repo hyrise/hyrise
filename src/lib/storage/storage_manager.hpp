@@ -37,6 +37,9 @@ class StorageManager : private Noncopyable {
   void print(std::ostream& out = std::cout) const;
 
   // deletes the entire StorageManager and creates a new one, used especially in tests
+  // This can lead to a lot of issues if there are still running tasks / threads that
+  // want to access a resource. You should be very sure that this is what you want.
+  // Have a look at base_test.hpp to see the correct order of resetting things.
   static void reset();
 
   // For debugging purposes mostly, dump all tables as csv

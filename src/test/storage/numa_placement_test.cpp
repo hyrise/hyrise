@@ -32,9 +32,7 @@ class NUMAPlacementTest : public BaseTest {
     options.counter_history_interval = std::chrono::milliseconds(1);
     options.counter_history_range = std::chrono::milliseconds(70);
     options.migration_interval = std::chrono::milliseconds(100);
-
-    // Reset NUMAPlacementManager before creating any tables.
-    NUMAPlacementManager::reset(options);
+    NUMAPlacementManager::get().set_options(options);
 
     const auto table = create_table(_chunk_count, 1000);
     StorageManager::get().add_table("table", table);
