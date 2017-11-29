@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "storage/storage_manager.hpp"
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
 #include "utils/assert.hpp"
@@ -28,6 +29,11 @@ NUMAPlacementManager& NUMAPlacementManager::get() {
 }
 
 NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology) : _topology(topology) {
+  // The NUMAPlacementManager must exist before any table is stored in the storage manager. Otherwise, we might migrate
+  // parts of that table. On termination of the program, the NUMAPlacementManager would be destroyed first, taking the
+  // memory sources with it. This means that the destructors of those tables would fail.
+  Assert(StorageManager::get().table_names().size() == 0, "NUMAPlacementManager must be created before any table");
+
   for (size_t i = 0; i < _topology->nodes().size(); i++) {
     char msource_name[26];
     std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
