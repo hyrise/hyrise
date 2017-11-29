@@ -42,13 +42,12 @@ class TableStatisticsTest : public BaseTest {
     std::shared_ptr<TableScan> table_scan;
     if (scan_type == ScanType::OpBetween) {
       auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, column_id, ScanType::OpGreaterThanEquals, value, std::nullopt);
+          std::make_shared<TableScan>(table_wrapper, column_id, ScanType::OpGreaterThanEquals, value);
       first_table_scan->execute();
 
-      table_scan =
-          std::make_shared<TableScan>(first_table_scan, column_id, ScanType::OpLessThanEquals, *value2, std::nullopt);
+      table_scan = std::make_shared<TableScan>(first_table_scan, column_id, ScanType::OpLessThanEquals, *value2);
     } else {
-      table_scan = std::make_shared<TableScan>(table_wrapper, column_id, scan_type, value, value2);
+      table_scan = std::make_shared<TableScan>(table_wrapper, column_id, scan_type, value);
     }
     table_scan->execute();
 
@@ -184,8 +183,8 @@ TEST_F(TableStatisticsTest, BetweenTest) {
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
   auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, ScanType::OpBetween,
                                                    AllParameterVariant(2.), AllTypeVariant(5.));
-  container =
-      check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThanEquals, AllParameterVariant(4));
+  container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThanEquals,
+                                              AllParameterVariant(4), AllTypeVariant(5));
 }
 
 TEST_F(TableStatisticsTest, NotOverlappingTableScans) {

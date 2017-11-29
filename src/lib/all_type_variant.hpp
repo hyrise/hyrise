@@ -1,18 +1,19 @@
 #pragma once
 
+#include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
+#include <boost/hana/map.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
-#include <boost/hana/core/to.hpp>
 
 #include <boost/mpl/push_front.hpp>
 
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
-#include <boost/preprocessor/seq/transform.hpp>
 #include <boost/preprocessor/seq/size.hpp>
+#include <boost/preprocessor/seq/transform.hpp>
 
 #include <boost/variant.hpp>
 
@@ -29,6 +30,7 @@ namespace hana = boost::hana;
 
 namespace detail {
 
+// clang-format off
 #define DATA_TYPE_INFO                  \
   ((int32_t,     Int,        "int"))    \
   ((int64_t,     Long,       "long"))   \
@@ -36,6 +38,7 @@ namespace detail {
   ((double,      Double,     "double")) \
   ((std::string, String,     "string"))
 // Type          Enum Value   String
+// clang-format on
 
 #define NUM_DATA_TYPES BOOST_PP_SEQ_SIZE(DATA_TYPE_INFO)
 
@@ -48,17 +51,14 @@ namespace detail {
 
 enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES) };
 
-static constexpr auto data_types =
-    hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
+static constexpr auto data_types = hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
 static constexpr auto data_type_enum_values =
     hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(APPEND_ENUM_NAMESPACE, _, DATA_TYPE_ENUM_VALUES)));
-static constexpr auto data_type_strings =
-    hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
+static constexpr auto data_type_strings = hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
 
 constexpr auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };
 
-static constexpr auto data_type_enum_pairs =
-    hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
+static constexpr auto data_type_enum_pairs = hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
 static constexpr auto data_type_enum_string_pairs =
     hana::transform(hana::zip(data_type_enum_values, data_type_strings), to_pair);
 

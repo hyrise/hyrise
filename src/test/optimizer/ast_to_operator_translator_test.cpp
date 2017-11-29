@@ -61,7 +61,6 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
-  EXPECT_FALSE(table_scan_op->right_value2());
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
@@ -76,14 +75,12 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op2->scan_type(), ScanType::OpLessThanEquals);
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(1337));
-  EXPECT_EQ(table_scan_op2->right_value2(), std::nullopt);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op->scan_type(), ScanType::OpGreaterThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
-  EXPECT_EQ(table_scan_op->right_value2(), std::nullopt);
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {

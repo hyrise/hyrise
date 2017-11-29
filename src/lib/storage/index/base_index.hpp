@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "column_index_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -43,7 +44,8 @@ class BaseIndex : private Noncopyable {
    * leads to very different indices.
    */
 
-  BaseIndex() = default;
+  BaseIndex() = delete;
+  explicit BaseIndex(const ColumnIndexType type);
   BaseIndex(BaseIndex&&) = default;
   BaseIndex& operator=(BaseIndex&&) = default;
   virtual ~BaseIndex() = default;
@@ -104,6 +106,8 @@ class BaseIndex : private Noncopyable {
    */
   Iterator cend() const;
 
+  ColumnIndexType type() const;
+
  protected:
   /**
    * Seperate the public interface of the index from the interface for programmers implementing own
@@ -114,5 +118,8 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
+
+ private:
+  const ColumnIndexType _type;
 };
 }  // namespace opossum

@@ -29,13 +29,11 @@
 namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
-                     const ScanType scan_type, const AllParameterVariant right_parameter,
-                     const std::optional<AllTypeVariant> right_value2)
+                     const ScanType scan_type, const AllParameterVariant right_parameter)
     : AbstractReadOnlyOperator{in},
       _left_column_id{left_column_id},
       _scan_type{scan_type},
-      _right_parameter{right_parameter},
-      _right_value2{right_value2} {}
+      _right_parameter{right_parameter} {}
 
 TableScan::~TableScan() = default;
 
@@ -44,8 +42,6 @@ ColumnID TableScan::left_column_id() const { return _left_column_id; }
 ScanType TableScan::scan_type() const { return _scan_type; }
 
 const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
-
-const std::optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
@@ -64,12 +60,10 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
     if (index < args.size()) {
-      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, args[index],
-                                         _right_value2);
+      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, args[index]);
     }
   }
-  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, _right_parameter,
-                                     _right_value2);
+  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, _right_parameter);
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
@@ -87,7 +81,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
-      // The actual scan happens in the sub classes of ColumnScanBase
+      // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
 
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
