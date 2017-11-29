@@ -21,7 +21,7 @@ struct PausableLoopThread {
   void set_loop_sleep_time(std::chrono::milliseconds loop_sleep_time);
 
  private:
-  std::atomic_bool _pause_requested{true};
+  std::atomic_bool _pause_requested{false};
   std::atomic_bool _is_paused{false};
   std::atomic_bool _shutdown_flag{false};
   std::mutex _mutex;

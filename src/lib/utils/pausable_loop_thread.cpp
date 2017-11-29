@@ -38,6 +38,7 @@ PausableLoopThread::~PausableLoopThread() {
 }
 
 void PausableLoopThread::pause() {
+  if (!_loop_thread.joinable()) return;
   _pause_requested = true;
   while (!_is_paused) {
   }

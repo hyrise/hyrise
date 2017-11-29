@@ -45,7 +45,16 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
   }
 
  public:
-  void TearDown() override {
+  BaseTestWithParam() {
+    // Set options with very short cycle times
+    auto options = NUMAPlacementManager::Options();
+    options.counter_history_interval = std::chrono::milliseconds(1);
+    options.counter_history_range = std::chrono::milliseconds(70);
+    options.migration_interval = std::chrono::milliseconds(100);
+    NUMAPlacementManager::get().set_options(options);
+  }
+
+  ~BaseTestWithParam() {
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
 

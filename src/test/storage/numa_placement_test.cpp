@@ -27,12 +27,6 @@ namespace opossum {
 class NUMAPlacementTest : public BaseTest {
  protected:
   void SetUp() override {
-    // Set options with very short cycle times
-    auto options = NUMAPlacementManager::Options();
-    options.counter_history_interval = std::chrono::milliseconds(1);
-    options.counter_history_range = std::chrono::milliseconds(70);
-    options.migration_interval = std::chrono::milliseconds(100);
-    NUMAPlacementManager::get().set_options(options);
     NUMAPlacementManager::get().resume();
 
     const auto table = create_table(_chunk_count, 1000);
