@@ -45,6 +45,10 @@ class PrintWrapper : public Print {
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return _column_string_widths(min, max, tab);
   }
+
+  std::string test_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) {
+    return _truncate_cell(cell, max_width);
+  }
 };
 
 TEST_F(OperatorsPrintTest, EmptyTable) {
@@ -125,6 +129,21 @@ TEST_F(OperatorsPrintTest, OperatorName) {
 }
 
 TEST_F(OperatorsPrintTest, TruncateLongValue) {
+  auto print_wrap = std::make_shared<PrintWrapper>(gt);
+
+  auto cell = AllTypeVariant{"abcdefghijklmnopqrstuvwxyz"};
+
+  auto truncated_cell_20 = print_wrap->test_truncate_cell(cell, 20);
+  EXPECT_EQ(truncated_cell_20, "abcdefghijklmnopq...");
+
+  auto truncated_cell_30 = print_wrap->test_truncate_cell(cell, 30);
+  EXPECT_EQ(truncated_cell_30, "abcdefghijklmnopqrstuvwxyz");
+
+  auto truncated_cell_10 = print_wrap->test_truncate_cell(cell, 10);
+  EXPECT_EQ(truncated_cell_10, "abcdefg...");
+}
+
+TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto tab = StorageManager::get().get_table(table_name);
 
   tab->append({0, "abcdefghijklmnopqrstuvwxyz"});
@@ -136,7 +155,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValue) {
   printer->execute();
 
   auto output_str = output.str();
-  EXPECT_TRUE(output_str.find("abcdefghijklmnopq...") != std::string::npos);
+  EXPECT_TRUE(output_str.find("|abcdefghijklmnopq...|") != std::string::npos);
 }
 
 }  // namespace opossum

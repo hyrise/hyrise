@@ -127,6 +127,7 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max, s
 
 std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
   auto cell_str = type_cast<std::string>(cell);
+  DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_str.length() > max_width) {
     return cell_str.substr(0, max_width - 3) + "...";
   }
