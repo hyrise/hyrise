@@ -130,3 +130,4 @@ SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING b > 4
 -- VIEWS disabled because of #367
 -- CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view;
 -- CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view WHERE a > 10;
+-- CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view WHERE a > 10;

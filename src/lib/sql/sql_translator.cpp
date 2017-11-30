@@ -942,16 +942,22 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView: {
       auto view = _translate_select((const hsql::SelectStatement&)*create_statement.select);
+
       if (create_statement.viewColumns) {
-        std::vector<std::shared_ptr<Expression>> projections;
-        ColumnID column_id{0};
+        // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
         Assert(create_statement.viewColumns->size() == view->output_column_count(),
                "Number of Columns in CREATE VIEW does not match SELECT statement");
+
+        // Create a list of renamed column expressions
+        std::vector<std::shared_ptr<Expression>> projections;
+        ColumnID column_id{0};
         for (const auto& alias : *create_statement.viewColumns) {
           // rename columns so they match the view definition
           projections.push_back(Expression::create_column(column_id, alias));
           ++column_id;
         }
+
+        // Create a projection node for this renaming
         auto projection_node = std::make_shared<ProjectionNode>(projections);
         projection_node->set_left_child(view);
         view = projection_node;
