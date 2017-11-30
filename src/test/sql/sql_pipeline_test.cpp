@@ -87,6 +87,19 @@ TEST_F(SQLPipelineTest, GetParsedSQL) {
   EXPECT_EQ(statements.at(0)->type(), hsql::StatementType::kStmtSelect);
 }
 
+TEST_F(SQLPipelineTest, GetParsedSQLTwice) {
+  SQLPipeline sql_pipeline(_select_query_a);
+  sql_pipeline.get_parsed_sql();
+  const auto& parsed_sql = sql_pipeline.get_parsed_sql();
+
+  EXPECT_TRUE(parsed_sql.isValid());
+
+  auto statements = parsed_sql.getStatements();
+
+  EXPECT_EQ(statements.size(), 1ul);
+  EXPECT_EQ(statements.at(0)->type(), hsql::StatementType::kStmtSelect);
+}
+
 TEST_F(SQLPipelineTest, GetParsedSQLInvalid) {
   SQLPipeline sql_pipeline(_invalid_sql);
   EXPECT_THROW(sql_pipeline.get_parsed_sql(), std::exception);
@@ -95,6 +108,16 @@ TEST_F(SQLPipelineTest, GetParsedSQLInvalid) {
 TEST_F(SQLPipelineTest, GetUnoptimizedLQP) {
   SQLPipeline sql_pipeline(_select_query_a);
 
+  const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plan();
+
+  EXPECT_EQ(lqp_roots.size(), 1ul);
+  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+}
+
+TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
+  SQLPipeline sql_pipeline(_select_query_a);
+
+  sql_pipeline.get_unoptimized_logical_plan();
   const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plan();
 
   EXPECT_EQ(lqp_roots.size(), 1ul);
@@ -138,6 +161,16 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPNotValidated) {
 TEST_F(SQLPipelineTest, GetOptimizedLQP) {
   SQLPipeline sql_pipeline(_select_query_a);
 
+  const auto& lqp_roots = sql_pipeline.get_optimized_logical_plan();
+
+  EXPECT_EQ(lqp_roots.size(), 1ul);
+  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+}
+
+TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
+  SQLPipeline sql_pipeline(_select_query_a);
+
+  sql_pipeline.get_optimized_logical_plan();
   const auto& lqp_roots = sql_pipeline.get_optimized_logical_plan();
 
   EXPECT_EQ(lqp_roots.size(), 1ul);
@@ -189,6 +222,17 @@ TEST_F(SQLPipelineTest, GetQueryPlan) {
   EXPECT_EQ(roots.at(0)->name(), "Projection");
 }
 
+TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
+  SQLPipeline sql_pipeline(_select_query_a);
+
+  sql_pipeline.get_query_plan();
+  const auto& plan = sql_pipeline.get_query_plan();
+  const auto& roots = plan.tree_roots();
+
+  EXPECT_EQ(roots.size(), 1ul);
+  EXPECT_EQ(roots.at(0)->name(), "Projection");
+}
+
 TEST_F(SQLPipelineTest, GetQueryPlanJoinWithFilter) {
   SQLPipeline sql_pipeline(_join_query);
 
@@ -231,6 +275,18 @@ TEST_F(SQLPipelineTest, GetQueryPlanWithCustomTransactionContext) {
 TEST_F(SQLPipelineTest, GetTasks) {
   SQLPipeline sql_pipeline(_select_query_a);
 
+  const auto& tasks = sql_pipeline.get_tasks();
+
+  EXPECT_EQ(tasks.size(), 3ul);
+  EXPECT_EQ(tasks.at(0)->get_operator()->name(), "GetTable");
+  EXPECT_EQ(tasks.at(1)->get_operator()->name(), "Validate");
+  EXPECT_EQ(tasks.at(2)->get_operator()->name(), "Projection");
+}
+
+TEST_F(SQLPipelineTest, GetTasksTwice) {
+  SQLPipeline sql_pipeline(_select_query_a);
+
+  sql_pipeline.get_tasks();
   const auto& tasks = sql_pipeline.get_tasks();
 
   EXPECT_EQ(tasks.size(), 3ul);
@@ -313,6 +369,12 @@ TEST_F(SQLPipelineTest, GetResultTableNoMVCC) {
 
 TEST_F(SQLPipelineTest, GetTimes) {
   SQLPipeline sql_pipeline(_select_query_a);
+
+  EXPECT_THROW(sql_pipeline.parse_time_seconds(), std::exception);
+  EXPECT_THROW(sql_pipeline.compile_time_seconds(), std::exception);
+  EXPECT_THROW(sql_pipeline.execution_time_seconds(), std::exception);
+
+  // Run to get times
   sql_pipeline.get_result_table();
 
   EXPECT_GT(sql_pipeline.parse_time_seconds(), 0.0f);
