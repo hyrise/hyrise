@@ -54,7 +54,7 @@ TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
-  const auto projection_node_with_alias = std::make_shared<ProjectionNode>(*_projection_node);
+  const auto projection_node_with_alias = _projection_node->clone();
   projection_node_with_alias->set_alias({"foo"});
 
   EXPECT_TRUE(projection_node_with_alias->knows_table("foo"));

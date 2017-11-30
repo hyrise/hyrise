@@ -37,6 +37,9 @@ class PredicateNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& left_child,
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
+ protected:
+  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+
  private:
   const ColumnID _column_id;
   const ScanType _scan_type;

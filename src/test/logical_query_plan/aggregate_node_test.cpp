@@ -102,7 +102,7 @@ TEST_F(AggregateNodeTest, ColumnIdForExpression) {
 }
 
 TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
-  const auto aggregate_node_with_alias = std::make_shared<AggregateNode>(*_aggregate_node);
+  const auto aggregate_node_with_alias = _aggregate_node->clone();
   aggregate_node_with_alias->set_alias(std::string("foo"));
 
   EXPECT_TRUE(aggregate_node_with_alias->knows_table("foo"));

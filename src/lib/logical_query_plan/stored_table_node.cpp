@@ -23,6 +23,10 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
   _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
 }
 
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_clone_impl() const {
+  return std::make_shared<StoredTableNode>(_table_name);
+}
+
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
 
 const std::vector<ColumnID>& StoredTableNode::output_column_ids_to_input_column_ids() const {

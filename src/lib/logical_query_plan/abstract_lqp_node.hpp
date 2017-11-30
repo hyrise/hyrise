@@ -18,7 +18,9 @@ class TableStatistics;
 
 enum class LQPNodeType {
   Aggregate,
+  CreateView,
   Delete,
+  DropView,
   DummyTable,
   Insert,
   Join,
@@ -66,6 +68,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   explicit AbstractLQPNode(LQPNodeType node_type);
 
+  // We do not want people to copy an LQP node as a copy would still have the same children. Instead, they should use
+  // clone().
+  AbstractLQPNode(const AbstractLQPNode&) = delete;
+  AbstractLQPNode& operator=(const AbstractLQPNode&) = delete;
+
+  // Creates a deep copy
+  virtual std::shared_ptr<AbstractLQPNode> clone() const;
+
   // @{
   /**
    * Set and get the parents/children of this node.
@@ -107,6 +117,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   // @}
 
   LQPNodeType type() const;
+
+  // Returns whether this subtree is read only. Defaults to true - if a node makes modications, it has to override this
+  virtual bool subtree_is_read_only() const;
+
+  // Returns whether all tables in this subtree were validated
+  bool subtree_is_validated() const;
 
   // @{
   /**
@@ -253,6 +269,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   // @}
 
  protected:
+  // creates a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
+  virtual std::shared_ptr<AbstractLQPNode> _clone_impl() const = 0;
+
   /**
    * In derived nodes, clear all data that depends on children and only set it lazily on request (see, e.g.
    * output_column_names())

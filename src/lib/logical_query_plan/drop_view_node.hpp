@@ -2,27 +2,26 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "abstract_lqp_node.hpp"
 
 namespace opossum {
 
 /**
- * Node type to represent insertion of rows into a table.
+ * Node type to represent deleting a view from the StorageManager
  */
-class InsertNode : public AbstractLQPNode {
+class DropViewNode : public AbstractLQPNode {
  public:
-  explicit InsertNode(const std::string table_name);
+  explicit DropViewNode(const std::string& view_name);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;
 
-  const std::string& table_name() const;
+  const std::string& view_name() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
-  const std::string _table_name;
+  const std::string _view_name;
 };
 
 }  // namespace opossum

@@ -17,14 +17,16 @@ class UpdateNode : public AbstractLQPNode {
                       const std::vector<std::shared_ptr<Expression>>& column_expressions);
 
   std::string description() const override;
+  bool subtree_is_read_only() const override;
 
   const std::string& table_name() const;
 
   const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
  protected:
+  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
   const std::string _table_name;
-  const std::vector<std::shared_ptr<Expression>> _column_expressions;
+  std::vector<std::shared_ptr<Expression>> _column_expressions;
 };
 
 }  // namespace opossum

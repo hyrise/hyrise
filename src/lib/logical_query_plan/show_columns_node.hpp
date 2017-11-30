@@ -17,6 +17,9 @@ class ShowColumnsNode : public AbstractLQPNode {
 
   const std::string& table_name() const;
 
+ protected:
+  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+
  private:
   const std::string _table_name;
 };

@@ -11,6 +11,8 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -534,6 +536,46 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->left_child(), "table_b");
   ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->right_child(), "table_c");
   ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->right_child(), "table_a");
+}
+
+TEST_F(SQLTranslatorTest, CreateView) {
+  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM table_a WHERE a = 'b';";
+  auto result_node = compile_query(query);
+  EXPECT_EQ(result_node->type(), LQPNodeType::CreateView);
+  auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(result_node);
+
+  EXPECT_EQ(create_view_node->type(), LQPNodeType::CreateView);
+  EXPECT_EQ(create_view_node->view_name(), "my_first_view");
+
+  auto view_lqp = create_view_node->lqp();
+  EXPECT_EQ(view_lqp->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(view_lqp->right_child());
+
+  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(view_lqp->left_child());
+  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
+  EXPECT_FALSE(ts_node_1->right_child());
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
+}
+
+TEST_F(SQLTranslatorTest, CreateAliasView) {
+  const auto query = "CREATE VIEW my_second_view (c, d) AS SELECT * FROM table_a WHERE a = 'b';";
+  auto result_node = compile_query(query);
+  EXPECT_EQ(result_node->type(), LQPNodeType::CreateView);
+  auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(result_node);
+
+  auto view_lqp = create_view_node->lqp();
+
+  EXPECT_EQ(view_lqp->output_column_names(), std::vector<std::string>({"c", "d"}));
+}
+
+TEST_F(SQLTranslatorTest, DropView) {
+  const auto query = "DROP VIEW my_third_view";
+  auto result_node = compile_query(query);
+  EXPECT_EQ(result_node->type(), LQPNodeType::DropView);
+  auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(result_node);
+  EXPECT_EQ(drop_view_node->view_name(), "my_third_view");
 }
 
 }  // namespace opossum

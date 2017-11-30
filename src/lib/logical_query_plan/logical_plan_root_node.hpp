@@ -19,6 +19,9 @@ class LogicalPlanRootNode : public AbstractLQPNode {
   LogicalPlanRootNode();
 
   std::string description() const override;
+
+ protected:
+  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
 };
 
 }  // namespace opossum

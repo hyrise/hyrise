@@ -44,6 +44,7 @@ class JoinNode : public AbstractLQPNode {
 
  protected:
   void _on_child_changed() override;
+  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
 
  private:
   JoinMode _join_mode;

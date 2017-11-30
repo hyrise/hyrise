@@ -6,6 +6,8 @@ namespace opossum {
 
 ShowTablesNode::ShowTablesNode() : AbstractLQPNode(LQPNodeType::ShowTables) {}
 
+std::shared_ptr<AbstractLQPNode> ShowTablesNode::_clone_impl() const { return std::make_shared<ShowTablesNode>(); }
+
 std::string ShowTablesNode::description() const { return "[ShowTables]"; }
 
 }  // namespace opossum

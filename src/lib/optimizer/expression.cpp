@@ -17,6 +17,29 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
+std::shared_ptr<Expression> Expression::clone() const {
+  // We cannot use the copy constructor here, because it does not work with shared_from_this()
+  auto clone = std::make_shared<Expression>(_type);
+  clone->_value = _value;
+  clone->_aggregate_function = _aggregate_function;
+  clone->_table_name = _table_name;
+  clone->_column_id = _column_id;
+  clone->_alias = _alias;
+  clone->_value_placeholder = _value_placeholder;
+
+  std::vector<std::shared_ptr<Expression>> expression_list;
+  expression_list.reserve(_expression_list.size());
+  for (const auto& expression : _expression_list) {
+    expression_list.emplace_back(expression->clone());
+  }
+  clone->_expression_list = std::move(expression_list);
+
+  if (left_child()) clone->set_left_child(left_child()->clone());
+  if (right_child()) clone->set_right_child(right_child()->clone());
+
+  return clone;
+}
+
 std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,
                                                       const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Column);

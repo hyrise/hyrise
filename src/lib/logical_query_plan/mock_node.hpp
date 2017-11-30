@@ -24,6 +24,9 @@ class MockNode : public AbstractLQPNode {
   std::string description() const override;
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+ protected:
+  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+
  private:
   std::vector<std::string> _output_column_names;
 };

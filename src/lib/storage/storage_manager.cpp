@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
@@ -21,13 +22,14 @@ StorageManager& StorageManager::get() {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
+  Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     Assert(table->get_chunk(chunk_id).has_mvcc_columns(), "Table must have MVCC columns.");
   }
 
   table->set_table_statistics(std::make_shared<TableStatistics>(table));
-  _tables.insert(std::make_pair(name, std::move(table)));
+  _tables.emplace(name, std::move(table));
 }
 
 void StorageManager::drop_table(const std::string& name) {
@@ -55,6 +57,39 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
+void StorageManager::add_view(const std::string& name, std::shared_ptr<const AbstractLQPNode> view) {
+  Assert(_tables.find(name) == _tables.end(),
+         "Cannot add view " + name + " - a table with the same name already exists");
+  Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
+
+  _views.emplace(name, std::move(view));
+}
+
+void StorageManager::drop_view(const std::string& name) {
+  auto num_deleted = _views.erase(name);
+  Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
+}
+
+std::shared_ptr<AbstractLQPNode> StorageManager::get_view(const std::string& name) const {
+  auto iter = _views.find(name);
+  Assert(iter != _views.end(), "No such view named '" + name + "'");
+
+  return iter->second->clone();
+}
+
+bool StorageManager::has_view(const std::string& name) const { return _views.count(name); }
+
+std::vector<std::string> StorageManager::view_names() const {
+  std::vector<std::string> view_names;
+  view_names.reserve(_views.size());
+
+  for (const auto& view_item : _views) {
+    view_names.emplace_back(view_item.first);
+  }
+
+  return view_names;
+}
+
 void StorageManager::print(std::ostream& out) const {
   out << "==================" << std::endl;
   out << "===== Tables =====" << std::endl << std::endl;
@@ -64,6 +99,14 @@ void StorageManager::print(std::ostream& out) const {
     out << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
         << table.second->chunk_count() << " chunks)";
     out << std::endl << std::endl;
+  }
+
+  out << "==================" << std::endl;
+  out << "===== Views ======" << std::endl << std::endl;
+
+  for (auto const& view : _views) {
+    out << "==== view >> " << view.first << " <<";
+    out << std::endl;
   }
 }
 

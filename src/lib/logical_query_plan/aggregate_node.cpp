@@ -23,6 +23,16 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& agg
   }
 }
 
+std::shared_ptr<AbstractLQPNode> AggregateNode::_clone_impl() const {
+  std::vector<std::shared_ptr<Expression>> aggregate_expressions;
+  aggregate_expressions.reserve(_aggregate_expressions.size());
+  for (const auto& expression : _aggregate_expressions) {
+    aggregate_expressions.emplace_back(expression->clone());
+  }
+
+  return std::make_shared<AggregateNode>(std::move(aggregate_expressions), _groupby_column_ids);
+}
+
 const std::vector<std::shared_ptr<Expression>>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
 }

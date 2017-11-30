@@ -44,6 +44,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   explicit Expression(ExpressionType type);
 
+  explicit Expression(const Expression&) = delete;
+  Expression& operator=(const Expression&) = delete;
+  // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
+  std::shared_ptr<Expression> clone() const;
+
   // @{
   /**
    * Factory Methods to create Expressions of specific type

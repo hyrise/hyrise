@@ -67,7 +67,7 @@ TEST_F(JoinNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(JoinNodeTest, AliasedSubqueryTest) {
-  const auto join_node_with_alias = std::make_shared<JoinNode>(*_join_node);
+  const auto join_node_with_alias = _join_node->clone();
   join_node_with_alias->set_alias({"foo"});
 
   EXPECT_TRUE(join_node_with_alias->knows_table("foo"));
