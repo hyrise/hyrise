@@ -82,6 +82,7 @@ TEST_F(SQLPipelineTest, GetParsedSQL) {
   EXPECT_TRUE(parsed_sql.isValid());
 
   auto statements = parsed_sql.getStatements();
+
   EXPECT_EQ(statements.size(), 1ul);
   EXPECT_EQ(statements.at(0)->type(), hsql::StatementType::kStmtSelect);
 }
