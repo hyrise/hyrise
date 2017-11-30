@@ -38,12 +38,6 @@ TEST_F(StorageStorageManagerTest, DropTable) {
   EXPECT_THROW(sm.drop_table("first_table"), std::exception);
 }
 
-TEST_F(StorageStorageManagerTest, ResetTable) {
-  StorageManager::reset();
-  auto& sm = StorageManager::get();
-  EXPECT_THROW(sm.get_table("first_table"), std::exception);
-}
-
 TEST_F(StorageStorageManagerTest, DoesNotHaveTable) {
   auto& sm = StorageManager::get();
   EXPECT_EQ(sm.has_table("third_table"), false);
