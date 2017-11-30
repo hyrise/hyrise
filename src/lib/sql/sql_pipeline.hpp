@@ -70,7 +70,7 @@ class SQLPipeline : public Noncopyable {
   std::unique_ptr<SQLQueryPlan> _query_plan;
   std::vector<std::shared_ptr<OperatorTask>> _op_tasks;
   std::shared_ptr<const Table> _result_table;
-  // Assume there is an output table. Only change if nullptr is returned from execution/
+  // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
 
   // Execution times
