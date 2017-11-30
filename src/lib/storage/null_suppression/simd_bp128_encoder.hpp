@@ -14,13 +14,15 @@ namespace opossum {
 
 class SimdBp128Encoder : public BaseNsEncoder {
  public:
-  void init(size_t size) final;
-  void append(uint32_t value) final;
-  void finish() final;
-  std::unique_ptr<BaseNsVector> get_vector() final;
+  std::unique_ptr<BaseNsVector> encode(const pmr_vector<uint32_t>& vector,
+                                       const PolymorphicAllocator<size_t>& alloc) final;
 
  private:
   using Packing = SimdBp128Packing;
+
+  void init(size_t size);
+  void append(uint32_t value);
+  void finish();
 
   bool meta_block_complete();
   void pack_meta_block();

@@ -10,32 +10,31 @@ namespace opossum {
 template <typename UnsignedIntType>
 class FixedSizeByteAlignedEncoder : public BaseNsEncoder {
  public:
-  void init(size_t size) final;
-  void append(uint32_t value) final;
-  void finish() final;
-  std::unique_ptr<BaseNsVector> get_vector() final;
+  std::unique_ptr<BaseNsVector> encode(const pmr_vector<uint32_t>& vector,
+                                       const PolymorphicAllocator<size_t>& alloc) final;
 
  private:
   pmr_vector<UnsignedIntType> _data;
 };
 
 template <typename UnsignedIntType>
-void FixedSizeByteAlignedEncoder<UnsignedIntType>::init(size_t size) {
-  _data = pmr_vector<UnsignedIntType>{};
-  _data.reserve(size);
-}
+std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::encode(
+    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc) {
+  _data = pmr_vector<UnsignedIntType>{alloc};
+  _data.reserve(vector.size());
 
-template <typename UnsignedIntType>
-void FixedSizeByteAlignedEncoder<UnsignedIntType>::append(uint32_t value) {
-  _data.push_back(static_cast<UnsignedIntType>(value));
-}
+  for (auto value : vector) {
+    _data.push_back(static_cast<UnsignedIntType>(value));
+  }
 
-template <typename UnsignedIntType>
-void FixedSizeByteAlignedEncoder<UnsignedIntType>::finish() {}
-
-template <typename UnsignedIntType>
-std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::get_vector() {
   return std::make_unique<FixedSizeByteAlignedVector<UnsignedIntType>>(std::move(_data));
+}
+
+template <>
+std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<uint32_t>::encode(
+    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc) {
+  _data = pmr_vector<uint32_t>{vector, alloc};
+  return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(std::move(_data));
 }
 
 }  // namespace opossum

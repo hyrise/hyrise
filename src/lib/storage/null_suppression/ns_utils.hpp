@@ -2,24 +2,22 @@
 
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 #include "ns_type.hpp"
 #include "base_ns_vector.hpp"
 
+#include "types.hpp"
 
 namespace opossum {
 
-class BaseNsEncoder;
-
-std::unique_ptr<BaseNsEncoder> create_encoder_for_ns_type(NsType type);
-std::unique_ptr<BaseNsVector> encode_by_ns_type(NsType type, const std::vector<uint32_t>& vector);
+std::unique_ptr<BaseNsVector> encode_by_ns_type(NsType type, const pmr_vector<uint32_t>& vector,
+                                                const PolymorphicAllocator<size_t>& alloc);
 
 template <typename Functor>
 void resolve_ns_vector_type(const BaseNsVector& vector, const Functor& func) {
-  hana::fold(ns_vector_type_pair, false, [&](auto match_found, auto ns_pair) {
-    if (!match_found && (hana::second(ns_pair) == vector.type())) {
-      using NsVectorType = typename decltype(+hana::first(ns_pair))::type;
+  hana::fold(ns_type_vector_pair, false, [&](auto match_found, auto ns_pair) {
+    if (!match_found && (hana::first(ns_pair) == vector.type())) {
+      using NsVectorType = typename decltype(+hana::second(ns_pair))::type;
       func(static_cast<const NsVectorType&>(vector));
 
       return true;

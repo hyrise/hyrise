@@ -11,21 +11,34 @@
 
 namespace opossum {
 
-std::array<std::bitset<32>, 4> print(__m128i* in) {
-  auto data_ptr = reinterpret_cast<uint32_t*>(in);
+namespace {
 
-  auto bitsets = std::array<std::bitset<32>, 4>{{data_ptr[3], data_ptr[2], data_ptr[1], data_ptr[0]}};
+// std::array<std::bitset<32>, 4> print(__m128i* in) {
+//   auto data_ptr = reinterpret_cast<uint32_t*>(in);
 
-  for (const auto& bitset : bitsets) {
-    std::cout << bitset << "|";
-  }
+//   auto bitsets = std::array<std::bitset<32>, 4>{{data_ptr[3], data_ptr[2], data_ptr[1], data_ptr[0]}};
 
-  std::cout << std::endl;
+//   for (const auto& bitset : bitsets) {
+//     std::cout << bitset << "|";
+//   }
 
-  return bitsets;
+//   std::cout << std::endl;
+
+//   return bitsets;
+// }
+
+// std::array<std::bitset<32>, 4> print(__m128i in) { return print(&in); }
+
+}  // namespace
+
+std::unique_ptr<BaseNsVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t>& vector,
+                                                       const PolymorphicAllocator<size_t>& alloc) {
+  init(vector.size());
+  for (auto value : vector) append(value);
+  finish();
+
+  return std::make_unique<SimdBp128Vector>(std::move(_data), _size);
 }
-
-std::array<std::bitset<32>, 4> print(__m128i in) { return print(&in); }
 
 void SimdBp128Encoder::init(size_t size) {
   _data = pmr_vector<__m128i>((size + 3u) / 4u);
@@ -50,10 +63,6 @@ void SimdBp128Encoder::finish() {
   // Resize vector to actual size
   _data.resize(_data_index);
   _data.shrink_to_fit();
-}
-
-std::unique_ptr<BaseNsVector> SimdBp128Encoder::get_vector() {
-  return std::make_unique<SimdBp128Vector>(std::move(_data), _size);
 }
 
 bool SimdBp128Encoder::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 1u; }

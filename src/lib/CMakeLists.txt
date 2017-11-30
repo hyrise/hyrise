@@ -200,6 +200,14 @@ set(
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
+    storage/column_encoders/base_column_encoder.hpp
+    storage/column_encoders/dictionary_encoder.hpp
+    storage/column_encoders/encoder_utils.hpp
+    storage/column_encoders/encoders.hpp
+    storage/columns/base_immutable_column.hpp
+    storage/columns/column_encoding_type.hpp
+    storage/columns/new_dictionary_column.cpp
+    storage/columns/new_dictionary_column.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -232,18 +240,18 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
-    storage/null_suppression/base_ns_vector.hpp
+    storage/null_suppression/base_ns_decoder.hpp
     storage/null_suppression/base_ns_encoder.hpp
+    storage/null_suppression/base_ns_vector.hpp
+    storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
+    storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
+    storage/null_suppression/fixed_size_byte_aligned_vector.hpp
     storage/null_suppression/ns_decoders.hpp
     storage/null_suppression/ns_encoders.hpp
     storage/null_suppression/ns_type.hpp
     storage/null_suppression/ns_utils.cpp
     storage/null_suppression/ns_utils.hpp
     storage/null_suppression/ns_vectors.hpp
-    storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
-    storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
-    storage/null_suppression/fixed_size_byte_aligned_vector.hpp
-    storage/null_suppression/base_ns_decoder.hpp
     storage/null_suppression/simd_bp128_decoder.cpp
     storage/null_suppression/simd_bp128_decoder.hpp
     storage/null_suppression/simd_bp128_encoder.cpp
