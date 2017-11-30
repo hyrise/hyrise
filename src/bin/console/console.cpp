@@ -15,8 +15,8 @@
 #include <regex>
 #include <string>
 #include <vector>
-#include "SQLParser.h"
 
+#include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
@@ -226,7 +226,7 @@ int Console::_eval_sql(const std::string& sql) {
     _sql_pipeline->get_result_table();
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_sql_pipeline->transaction_context()->aborted()) {
+    if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
       out("The transaction has been rolled back.\n");
     }
     _explicitly_created_transaction_context = nullptr;

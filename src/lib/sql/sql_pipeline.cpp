@@ -13,7 +13,7 @@ namespace opossum {
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context)
     : _sql_string(sql), _use_mvcc(true), _auto_commit(false), _transaction_context(std::move(transaction_context)) {
-  DebugAssert(transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
+  DebugAssert(_transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
 }
 
 SQLPipeline::SQLPipeline(const std::string& sql, const bool use_mvcc)
@@ -135,7 +135,7 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipeline::get_tasks() {
 }
 
 const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
-  if (_result_table) {
+  if (_result_table || !_query_has_output) {
     return _result_table;
   }
 
@@ -146,7 +146,7 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   try {
     CurrentScheduler::schedule_and_wait_for_tasks(op_tasks);
   } catch (const std::exception& exception) {
-    _transaction_context->rollback();
+    if (_use_mvcc) _transaction_context->rollback();
     throw std::runtime_error("Error while executing tasks:\n  " + std::string(exception.what()));
   }
 
@@ -158,6 +158,8 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   _execution_time_sec = std::chrono::duration<float>(done - started).count();
 
   _result_table = op_tasks.back()->get_operator()->get_output();
+  if (_result_table == nullptr) _query_has_output = false;
+
   return _result_table;
 }
 
@@ -174,7 +176,7 @@ float SQLPipeline::compile_time_seconds() {
 }
 
 float SQLPipeline::execution_time_seconds() {
-  Assert(_result_table != nullptr, "Cannot return execution duration without having executed.");
+  Assert(_result_table != nullptr || !_query_has_output, "Cannot return execution duration without having executed.");
   return _execution_time_sec;
 }
 
