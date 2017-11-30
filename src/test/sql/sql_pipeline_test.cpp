@@ -11,8 +11,8 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_operator.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -49,7 +49,9 @@ class SQLPipelineTest : public BaseTest {
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
-  const std::string _join_query = "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a JOIN table_b ON table_a.a = table_b.a WHERE table_a.a > 1000";
+  const std::string _join_query =
+      "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a JOIN table_b ON table_a.a = table_b.a WHERE table_a.a "
+      "> 1000";
 };
 
 TEST_F(SQLPipelineTest, SimpleCreation) {
@@ -148,9 +150,9 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPWithJoinFilter) {
 
   EXPECT_EQ(lqp_roots.size(), 1ul);
   // TODO(anyone): Find an example where the optimized version is different than the unoptimized one.
-//  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
-//  EXPECT_EQ(lqp_roots.at(0)->left_child()->type(), LQPNodeType::Predicate);
-//  EXPECT_EQ(lqp_roots.at(0)->left_child()->left_child()->type(), LQPNodeType::Join);
+  //  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+  //  EXPECT_EQ(lqp_roots.at(0)->left_child()->type(), LQPNodeType::Predicate);
+  //  EXPECT_EQ(lqp_roots.at(0)->left_child()->left_child()->type(), LQPNodeType::Join);
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPInvalid) {
@@ -202,7 +204,6 @@ TEST_F(SQLPipelineTest, GetQueryPlanInvalid) {
   SQLPipeline sql_pipeline(_invalid_sql);
   EXPECT_THROW(sql_pipeline.get_query_plan(), std::exception);
 }
-
 
 TEST_F(SQLPipelineTest, GetQueryPlanWithMVCC) {
   SQLPipeline sql_pipeline(_select_query_a);
