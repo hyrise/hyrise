@@ -1,8 +1,0 @@
-load src/test/tables/tpch/customer.tbl customer
-load src/test/tables/tpch/lineitem.tbl lineitem
-load src/test/tables/tpch/nation.tbl nation
-load src/test/tables/tpch/orders.tbl orders
-load src/test/tables/tpch/part.tbl part
-load src/test/tables/tpch/partsupp.tbl partsupp
-load src/test/tables/tpch/region.tbl region
-load src/test/tables/tpch/supplier.tbl supplier

@@ -8,8 +8,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -44,8 +44,8 @@ class ColumnMaterializer {
    * by creating multiple jobs that materialize chunks.
    * Returns the materialized columns and a list of null row ids if materialize_null is enabled.
    **/
-  std::pair<std::unique_ptr<MaterializedColumnList<T>>,
-            std::unique_ptr<PosList>> materialize(std::shared_ptr<const Table> input, ColumnID column_id) {
+  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<PosList>> materialize(
+      std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
     auto null_rows = std::make_unique<PosList>();
 
@@ -99,9 +99,8 @@ class ColumnMaterializer {
     });
 
     if (_sort) {
-      std::sort(output.begin(), output.end(), [](const auto& left, const auto& right) {
-        return left.value < right.value;
-      });
+      std::sort(output.begin(), output.end(),
+                [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
     return std::make_shared<MaterializedColumn<T>>(std::move(output));
