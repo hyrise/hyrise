@@ -1,6 +1,8 @@
 node {
-  script {
-    githubNotify context: 'CI Pipeline', status: 'PENDING'
+  stage ("Start") {
+    script {
+      githubNotify context: 'CI Pipeline', status: 'PENDING'
+    }
   }
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.10');
