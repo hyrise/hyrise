@@ -113,12 +113,16 @@ node {
 
       stage("Cleanup") {
         // Clean up workspace.
-        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+        script {
+          githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+        }
         step([$class: 'WsCleanup'])
       }
     } catch (error) {
       stage "Cleanup after fail"
-      githubNotify context: 'CI Pipeline', status: 'FAILURE'
+      script {
+        githubNotify context: 'CI Pipeline', status: 'FAILURE'
+      }
       throw error
     } finally {
       
