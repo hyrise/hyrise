@@ -123,9 +123,10 @@ node {
         step([$class: 'WsCleanup'])
       }
     } catch (error) {
-      stage "Cleanup after fail"
-      script {
-        githubNotify context: 'CI Pipeline', status: 'FAILURE'
+      stage ("Cleanup after fail") {
+        script {
+          githubNotify context: 'CI Pipeline', status: 'FAILURE'
+        }
       }
       throw error
     } finally {
