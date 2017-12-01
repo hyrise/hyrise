@@ -9,16 +9,7 @@ node {
 
     try {
       stage("Setup") {
-        checkout([
-             $class: 'GitSCM',
-             branches: scm.branches,
-             doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-             extensions: scm.extensions + [$class: 'CloneOption', noTags: true, reference: '', shallow: true, honorRefspec: true],
-             // Set the remote by hand so that we can only check out the branch that we want:
-             userRemoteConfigs: [[refspec: "+refs/heads/" + scm.branches[0] + ":refs/remotes/origin/" + scm.branches[0],
-                                  url : scm.userRemoteConfigs.get(0).getUrl(),
-                                  credentialsId: scm.userRemoteConfigs.get(0).getCredentialsId()]],
-        ])
+        checkout scm
         sh "./install.sh"
         sh "mkdir clang-debug && cd clang-debug && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-5.0 -DCMAKE_CXX_COMPILER=clang++-5.0 .. &\
         mkdir clang-debug-sanitizers && cd clang-debug-sanitizers && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-5.0 -DCMAKE_CXX_COMPILER=clang++-5.0 -DENABLE_SANITIZATION=ON .. &\
