@@ -56,6 +56,8 @@ class Sort::SortImplMaterializeOutput {
     // First we create a new table as the output
     auto output = Table::create_with_layout_from(_table_in, _output_chunk_size);
 
+    // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
+
     // After we created the output table and initialized the column structure, we can start adding values. Because the
     // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are
     // copied column by column for each output row. For each column in a row we visit the input column with a reference
