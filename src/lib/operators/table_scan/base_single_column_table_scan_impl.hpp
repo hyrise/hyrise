@@ -32,7 +32,7 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
   void handle_reference_column(const ReferenceColumn& left_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_immutable_column(const BaseImmutableColumn& base_column,
+  void handle_encoded_column(const BaseEncodedColumn& base_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  protected:

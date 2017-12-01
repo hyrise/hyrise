@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "base_immutable_column.hpp"
+#include "base_encoded_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -11,7 +11,7 @@ namespace opossum {
 class BaseNsVector;
 
 template <typename T>
-class NewDictionaryColumn : public BaseImmutableColumn {
+class NewDictionaryColumn : public BaseEncodedColumn {
  public:
   explicit NewDictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                const std::shared_ptr<const BaseNsVector>& attribute_vector,
@@ -32,9 +32,6 @@ class NewDictionaryColumn : public BaseImmutableColumn {
   // return the number of entries
   size_t size() const final;
 
-  // calls the column-specific handler in an operator (visitor pattern)
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const final;
-
   // writes the length and value at the chunk_offset to the end of row_string
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const final;
 
@@ -44,6 +41,8 @@ class NewDictionaryColumn : public BaseImmutableColumn {
 
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+
+  ColumnEncodingType encoding_type() const final;
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;

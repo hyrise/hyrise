@@ -3,7 +3,7 @@
 #include <limits>
 #include <memory>
 
-#include "base_column.hpp"
+#include "storage/encoded_columns/base_encoded_column.hpp"
 
 namespace opossum {
 
@@ -17,8 +17,10 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 // BaseDictionaryColumn is implemented by DictionaryColumn and offers methods from the DictionaryColumn
 // that are needed for creating indices but that do not depend on the template parameter of the DictionaryColumn,
 // thus allowing the single indexes relying on these methods to be untemplated.
-class BaseDictionaryColumn : public BaseColumn {
+class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
+  ColumnEncodingType encoding_type() const final { return ColumnEncodingType::Dictionary; }
+
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;
   virtual size_t unique_values_count() const = 0;

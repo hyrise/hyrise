@@ -190,9 +190,6 @@ set(
     storage/base_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
-    storage/columns/base_immutable_column.hpp
-    storage/columns/new_dictionary_column.cpp
-    storage/columns/new_dictionary_column.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
     storage/dictionary_column.cpp
@@ -205,10 +202,10 @@ set(
     storage/column_encoders/utils.cpp
     storage/column_encoders/utils.hpp
     storage/column_encoders/encoders.hpp
-    storage/columns/base_immutable_column.hpp
-    storage/columns/column_encoding_type.hpp
-    storage/columns/new_dictionary_column.cpp
-    storage/columns/new_dictionary_column.hpp
+    storage/encoded_columns/base_encoded_column.hpp
+    storage/encoded_columns/column_encoding_type.hpp
+    storage/encoded_columns/new_dictionary_column.cpp
+    storage/encoded_columns/new_dictionary_column.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp

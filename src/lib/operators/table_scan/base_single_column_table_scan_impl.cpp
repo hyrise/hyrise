@@ -53,9 +53,9 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColum
   }
 }
 
-void BaseSingleColumnTableScanImpl::handle_immutable_column(const BaseImmutableColumn& base_column,
+void BaseSingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
                                                             std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Table scan not implemented for immutable columns.");
+  Fail("Table scan not implemented for encoded columns.");
 }
 
 }  // namespace opossum
