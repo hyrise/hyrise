@@ -45,6 +45,11 @@ std::shared_ptr<const BaseNsVector> NewDictionaryColumn<T>::attribute_vector() c
 }
 
 template <typename T>
+ValueID NewDictionaryColumn<T>::null_value_id() const {
+  return _null_value_id;
+}
+
+template <typename T>
 size_t NewDictionaryColumn<T>::size() const {
   return _attribute_vector->size();
 }

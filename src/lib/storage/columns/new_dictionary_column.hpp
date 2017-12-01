@@ -23,6 +23,9 @@ class NewDictionaryColumn : public BaseImmutableColumn {
   // returns an underlying data structure
   std::shared_ptr<const BaseNsVector> attribute_vector() const;
 
+  // returns encoding specific null value ID
+  ValueID null_value_id() const;
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 

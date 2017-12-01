@@ -7,7 +7,9 @@
 namespace opossum {
 
 /**
- * @brief Implements the virtual interface of all decoders
+ * @brief Base class of all null suppression decoders
+ *
+ * Subclasses must be added in ns_decoders.hpp
  */
 class BaseNsDecoder {
  public:

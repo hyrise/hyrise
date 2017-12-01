@@ -8,7 +8,8 @@
 #include "table.hpp"
 #include "base_value_column.hpp"
 
-#include "storage/column_encoders/encoder_utils.hpp"
+#include "storage/columns/column_encoding_type.hpp"
+#include "storage/column_encoders/utils.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -18,7 +19,7 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data
   auto value_column = std::dynamic_pointer_cast<BaseValueColumn>(column);
   DebugAssert(value_column != nullptr, "Column must be uncompressed, i.e. a ValueColumn.");
 
-  return encode_column(EncodingType::Dictionary, data_type, value_column);
+  return encode_column(ColumnEncodingType::NewDictionary, data_type, value_column);
 }
 
 void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk) {

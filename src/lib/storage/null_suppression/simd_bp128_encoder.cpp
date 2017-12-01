@@ -5,31 +5,9 @@
 
 #include "simd_bp128_vector.hpp"
 
-#include <array>
-
 #include "utils/assert.hpp"
 
 namespace opossum {
-
-namespace {
-
-// std::array<std::bitset<32>, 4> print(__m128i* in) {
-//   auto data_ptr = reinterpret_cast<uint32_t*>(in);
-
-//   auto bitsets = std::array<std::bitset<32>, 4>{{data_ptr[3], data_ptr[2], data_ptr[1], data_ptr[0]}};
-
-//   for (const auto& bitset : bitsets) {
-//     std::cout << bitset << "|";
-//   }
-
-//   std::cout << std::endl;
-
-//   return bitsets;
-// }
-
-// std::array<std::bitset<32>, 4> print(__m128i in) { return print(&in); }
-
-}  // namespace
 
 std::unique_ptr<BaseNsVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t>& vector,
                                                        const PolymorphicAllocator<size_t>& alloc) {

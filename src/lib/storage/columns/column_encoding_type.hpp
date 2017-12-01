@@ -7,7 +7,8 @@ namespace opossum {
 
 enum class ColumnEncodingType : uint8_t {
   Invalid,
-  Dictionary
+  Dictionary,
+  NewDictionary
 };
 
 }  // namespace opossum

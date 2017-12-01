@@ -202,7 +202,8 @@ set(
     storage/fitted_attribute_vector.hpp
     storage/column_encoders/base_column_encoder.hpp
     storage/column_encoders/dictionary_encoder.hpp
-    storage/column_encoders/encoder_utils.hpp
+    storage/column_encoders/utils.cpp
+    storage/column_encoders/utils.hpp
     storage/column_encoders/encoders.hpp
     storage/columns/base_immutable_column.hpp
     storage/columns/column_encoding_type.hpp

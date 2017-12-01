@@ -6,14 +6,14 @@
 
 #include "base_column_encoder.hpp"
 
-#include "storage/dictionary_column.hpp"
-#include "storage/fitted_attribute_vector.hpp"
+#include "storage/columns/new_dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/null_suppression/ns_utils.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
+class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
  public:
   static constexpr auto _supported_types = _all_data_types;
 
@@ -45,8 +45,12 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
+
     // We need to increment the dictionary size here because of possible null values.
-    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size());
+    auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
+    attribute_vector.reserve(values.size() + 1u);
+
+    const auto null_value_id = values.size();
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -57,26 +61,28 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
        */
       auto value_it = values.cbegin();
       auto null_value_it = null_values.cbegin();
-      auto index = 0u;
-      for (; value_it != values.cend(); ++value_it, ++null_value_it, ++index) {
+      for (; value_it != values.cend(); ++value_it, ++null_value_it) {
         if (*null_value_it) {
-          attribute_vector->set(index, NULL_VALUE_ID);
+          attribute_vector.push_back(null_value_id);
           continue;
         }
 
-        auto value_id = _get_value_id(dictionary, *value_it);
-        attribute_vector->set(index, value_id);
+        const auto value_id = _get_value_id(dictionary, *value_it);
+        attribute_vector.push_back(value_id);
       }
     } else {
       auto value_it = values.cbegin();
-      auto index = 0u;
-      for (; value_it != values.cend(); ++value_it, ++index) {
-        auto value_id = _get_value_id(dictionary, *value_it);
-        attribute_vector->set(index, value_id);
+      for (; value_it != values.cend(); ++value_it) {
+        const auto value_id = _get_value_id(dictionary, *value_it);
+        attribute_vector.push_back(value_id);
       }
     }
 
-    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
+    auto encoded_attribute_vector = encode_by_ns_type(NsType::FixedSize4ByteAligned, attribute_vector, attribute_vector.get_allocator());
+
+    auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
+    auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));
+    return std::make_shared<NewDictionaryColumn<T>>(dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
   }
 
  private:
@@ -84,16 +90,6 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
-  }
-
-  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
-    if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint8_t>>(size);
-    } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint16_t>>(size);
-    } else {
-      return std::make_shared<FittedAttributeVector<uint32_t>>(size);
-    }
   }
 };
 

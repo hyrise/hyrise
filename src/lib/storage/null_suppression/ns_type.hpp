@@ -13,9 +13,9 @@ namespace hana = boost::hana;
 
 enum class NsType : uint8_t {
   Invalid,
-  FixedSize32ByteAligned,  // “uncompressed”
-  FixedSize16ByteAligned,
-  FixedSize8ByteAligned,
+  FixedSize4ByteAligned,  // “uncompressed”
+  FixedSize2ByteAligned,
+  FixedSize1ByteAligned,
   SimdBp128
 };
 
@@ -23,21 +23,16 @@ template <typename T>
 class FixedSizeByteAlignedVector;
 class SimdBp128Vector;
 
-template <typename T>
-class FixedSizeByteAlignedEncoder;
-class SimdBp128Encoder;
-
+/**
+ * Mapping of null suppression types to null suppression vectors
+ *
+ * Note: Add your vector class here!
+ */
 constexpr auto ns_type_vector_pair = hana::make_tuple(
-  hana::make_pair(NsType::FixedSize32ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-  hana::make_pair(NsType::FixedSize16ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-  hana::make_pair(NsType::FixedSize8ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
+  hana::make_pair(NsType::FixedSize4ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
+  hana::make_pair(NsType::FixedSize2ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
+  hana::make_pair(NsType::FixedSize1ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
   hana::make_pair(NsType::SimdBp128, hana::type_c<SimdBp128Vector>));
-
-constexpr auto ns_type_encoder_pair = hana::make_tuple(
-  hana::make_pair(NsType::FixedSize32ByteAligned, hana::type_c<FixedSizeByteAlignedEncoder<uint32_t>>),
-  hana::make_pair(NsType::FixedSize16ByteAligned, hana::type_c<FixedSizeByteAlignedEncoder<uint16_t>>),
-  hana::make_pair(NsType::FixedSize8ByteAligned, hana::type_c<FixedSizeByteAlignedEncoder<uint8_t>>),
-  hana::make_pair(NsType::SimdBp128, hana::type_c<SimdBp128Encoder>));
 
 template <typename NsVectorType>
 NsType get_ns_type() {

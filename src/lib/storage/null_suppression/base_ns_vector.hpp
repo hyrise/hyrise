@@ -11,6 +11,11 @@
 
 namespace opossum {
 
+/**
+ * @brief Base class of all null suppression vectors
+ *
+ * Use the ns_vector.template.hpp to add new implementations!
+ */
 class BaseNsVector : private Noncopyable {
  public:
   virtual ~BaseNsVector() = default;
