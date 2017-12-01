@@ -1,4 +1,7 @@
 node {
+  script {
+    githubNotify context: 'CI Pipeline', status: 'PENDING'
+  }
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.10');
   oppossumCI.pull()
@@ -6,7 +9,6 @@ node {
   // mkdir /mnt/ccache; mount -t tmpfs -o size=10G none /mnt/ccache
 
   oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\" -e \"CCACHE_SLOPPINESS=file_macro\"") {
-
     try {
       stage("Setup") {
         checkout scm
