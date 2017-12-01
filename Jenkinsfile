@@ -113,12 +113,15 @@ node {
 
       stage("Cleanup") {
         // Clean up workspace.
+        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
         step([$class: 'WsCleanup'])
       }
     } catch (error) {
       stage "Cleanup after fail"
+      githubNotify context: 'CI Pipeline', status: 'FAILURE'
       throw error
     } finally {
+      
       sh "ls -A1 | xargs rm -rf"
       deleteDir()
     }
