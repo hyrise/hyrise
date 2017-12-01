@@ -163,6 +163,8 @@ MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::O
 void MigrationPreparationTask::_on_execute() {
   const auto topology = NUMAPlacementManager::get().topology();
 
+  DebugAssert(topology->nodes().size() > 0, "NUMA management requires at least two nodes");
+
   // Collect chunk and NUMA node temperature metrics
   auto chunk_infos =
       collect_chunk_infos(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
