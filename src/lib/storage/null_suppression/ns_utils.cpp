@@ -16,7 +16,7 @@ std::unique_ptr<BaseNsEncoder> create_encoder_by_ns_type(NsType type) {
 
   auto encoder = std::unique_ptr<BaseNsEncoder>{};
 
-  hana::fold(ns_type_encoder_pair, false, [&](auto match_found, auto ns_pair) {
+  hana::fold(ns_encoder_for_type, false, [&](auto match_found, auto ns_pair) {
     if (!match_found && (hana::first(ns_pair) == type)) {
       using NsEncoderType = typename decltype(+hana::second(ns_pair))::type;
       encoder = std::make_unique<NsEncoderType>();

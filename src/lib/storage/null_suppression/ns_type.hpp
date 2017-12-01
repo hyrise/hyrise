@@ -28,7 +28,7 @@ class SimdBp128Vector;
  *
  * Note: Add your vector class here!
  */
-constexpr auto ns_type_vector_pair = hana::make_tuple(
+constexpr auto ns_vector_for_type = hana::make_tuple(
   hana::make_pair(NsType::FixedSize4ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
   hana::make_pair(NsType::FixedSize2ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
   hana::make_pair(NsType::FixedSize1ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
@@ -36,7 +36,7 @@ constexpr auto ns_type_vector_pair = hana::make_tuple(
 
 template <typename NsVectorType>
 NsType get_ns_type() {
-  return hana::fold(ns_type_vector_pair, NsType::Invalid, [](auto ns_type, auto ns_pair) {
+  return hana::fold(ns_vector_for_type, NsType::Invalid, [](auto ns_type, auto ns_pair) {
     if ((ns_type == NsType::Invalid) && (hana::second(ns_pair) == hana::type_c<NsVectorType>)) {
       return hana::first(ns_pair);
     }

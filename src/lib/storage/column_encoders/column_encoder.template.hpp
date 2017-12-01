@@ -4,7 +4,6 @@
  * - Copy this file for new column encoders
  * - Add new encoder to encoders.hpp
  */
-
 #pragma once
 
 #include <boost/hana/core/to.hpp>
