@@ -81,8 +81,9 @@ double safe_log2(double x) { return x == 0 ? 0 : std::log2(x); }
 
 // The inverted Shannon entropy is used as a metric for imbalance between the NUMA nodes.
 double inverted_entropy(const std::vector<double>& node_temperatures) {
-  double max_entropy =
-      std::pow(-1.0 * node_temperatures.size() * (1.0 / node_temperatures.size() * std::log2(1.0 / node_temperatures.size())), 4);
+  double max_entropy = std::pow(
+      -1.0 * node_temperatures.size() * (1.0 / node_temperatures.size() * std::log2(1.0 / node_temperatures.size())),
+      4);
   double entropy = std::pow(std::accumulate(node_temperatures.cbegin(), node_temperatures.cend(), 0.0,
                                             [](const double& r, const double& a) { return r - a * safe_log2(a); }),
                             4);

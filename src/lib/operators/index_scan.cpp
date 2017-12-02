@@ -25,9 +25,7 @@ IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType
 
 const std::string IndexScan::name() const { return "IndexScan"; }
 
-void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) {
-  _included_chunk_ids = chunk_ids;
-}
+void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = _input_table_left();
