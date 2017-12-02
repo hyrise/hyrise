@@ -13,7 +13,7 @@ DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {
   _output_column_ids_to_input_column_ids.emplace();
 }
 
-std::shared_ptr<AbstractLQPNode> DummyTableNode::_clone_impl() const { return std::make_shared<DummyTableNode>(); }
+std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl() const { return std::make_shared<DummyTableNode>(); }
 
 std::string DummyTableNode::description() const { return "[DummyTable]"; }
 

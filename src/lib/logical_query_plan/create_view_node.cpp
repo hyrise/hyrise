@@ -10,8 +10,8 @@ CreateViewNode::CreateViewNode(const std::string& view_name, std::shared_ptr<con
 std::string CreateViewNode::view_name() const { return _view_name; }
 std::shared_ptr<const AbstractLQPNode> CreateViewNode::lqp() const { return _lqp; }
 
-std::shared_ptr<AbstractLQPNode> CreateViewNode::_clone_impl() const {
-  // no need to clone the _lqp because it is const anyway
+std::shared_ptr<AbstractLQPNode> CreateViewNode::_deep_copy_impl() const {
+  // no need to deep_copy the _lqp because it is const anyway
   return std::make_shared<CreateViewNode>(_view_name, _lqp);
 }
 

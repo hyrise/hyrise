@@ -18,12 +18,12 @@ class TableStatistics;
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::clone() const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   // We cannot use the copy constructor here, because it does not work with shared_from_this()
-  auto clone = _clone_impl();
-  if (_children[0]) clone->set_left_child(_children[0]->clone());
-  if (_children[1]) clone->set_right_child(_children[1]->clone());
-  return clone;
+  auto deep_copy = _deep_copy_impl();
+  if (_children[0]) deep_copy->set_left_child(_children[0]->deep_copy());
+  if (_children[1]) deep_copy->set_right_child(_children[1]->deep_copy());
+  return deep_copy;
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {

@@ -16,6 +16,7 @@ const std::string CreateView::name() const { return "CreateView"; }
 
 std::shared_ptr<AbstractOperator> CreateView::recreate(const std::vector<AllParameterVariant>& args) const {
   Fail("This operator cannot be recreated");
+  // ... because it makes no sense to do so.
   return nullptr;
 }
 

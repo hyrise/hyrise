@@ -15,7 +15,7 @@ OrderByDefinition::OrderByDefinition(const ColumnID column_id, const OrderByMode
 SortNode::SortNode(const std::vector<OrderByDefinition>& order_by_definitions)
     : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
-std::shared_ptr<AbstractLQPNode> SortNode::_clone_impl() const {
+std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl() const {
   return std::make_shared<SortNode>(_order_by_definitions);
 }
 

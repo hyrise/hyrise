@@ -16,7 +16,7 @@ class ShowTablesNode : public AbstractLQPNode {
   std::string description() const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 };
 
 }  // namespace opossum

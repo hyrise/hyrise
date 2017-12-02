@@ -54,7 +54,7 @@ TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
-  const auto projection_node_with_alias = _projection_node->clone();
+  const auto projection_node_with_alias = _projection_node->deep_copy();
   projection_node_with_alias->set_alias({"foo"});
 
   EXPECT_TRUE(projection_node_with_alias->knows_table("foo"));

@@ -18,7 +18,7 @@ class LimitNode : public AbstractLQPNode {
   size_t num_rows() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 
  private:
   const size_t _num_rows;

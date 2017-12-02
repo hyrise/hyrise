@@ -36,11 +36,11 @@ std::string ProjectionNode::description() const {
   return desc.str();
 }
 
-std::shared_ptr<AbstractLQPNode> ProjectionNode::_clone_impl() const {
+std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl() const {
   std::vector<std::shared_ptr<Expression>> column_expressions;
   column_expressions.reserve(_column_expressions.size());
   for (const auto& expression : _column_expressions) {
-    column_expressions.emplace_back(expression->clone());
+    column_expressions.emplace_back(expression->deep_copy());
   }
 
   return std::make_shared<ProjectionNode>(std::move(column_expressions));

@@ -58,7 +58,7 @@ class AggregateNode : public AbstractLQPNode {
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   void _on_child_changed() override;
 
  private:

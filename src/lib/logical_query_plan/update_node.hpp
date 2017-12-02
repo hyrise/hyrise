@@ -24,7 +24,7 @@ class UpdateNode : public AbstractLQPNode {
   const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _clone_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   const std::string _table_name;
   std::vector<std::shared_ptr<Expression>> _column_expressions;
 };

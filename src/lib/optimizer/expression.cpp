@@ -17,27 +17,27 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::clone() const {
+std::shared_ptr<Expression> Expression::deep_copy() const {
   // We cannot use the copy constructor here, because it does not work with shared_from_this()
-  auto clone = std::make_shared<Expression>(_type);
-  clone->_value = _value;
-  clone->_aggregate_function = _aggregate_function;
-  clone->_table_name = _table_name;
-  clone->_column_id = _column_id;
-  clone->_alias = _alias;
-  clone->_value_placeholder = _value_placeholder;
+  auto deep_copy = std::make_shared<Expression>(_type);
+  deep_copy->_value = _value;
+  deep_copy->_aggregate_function = _aggregate_function;
+  deep_copy->_table_name = _table_name;
+  deep_copy->_column_id = _column_id;
+  deep_copy->_alias = _alias;
+  deep_copy->_value_placeholder = _value_placeholder;
 
   std::vector<std::shared_ptr<Expression>> expression_list;
   expression_list.reserve(_expression_list.size());
   for (const auto& expression : _expression_list) {
-    expression_list.emplace_back(expression->clone());
+    expression_list.emplace_back(expression->deep_copy());
   }
-  clone->_expression_list = std::move(expression_list);
+  deep_copy->_expression_list = std::move(expression_list);
 
-  if (left_child()) clone->set_left_child(left_child()->clone());
-  if (right_child()) clone->set_right_child(right_child()->clone());
+  if (left_child()) deep_copy->set_left_child(left_child()->deep_copy());
+  if (right_child()) deep_copy->set_right_child(right_child()->deep_copy());
 
-  return clone;
+  return deep_copy;
 }
 
 std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,

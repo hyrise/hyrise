@@ -33,12 +33,12 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 }
 
 void StorageManager::drop_table(const std::string& name) {
-  auto num_deleted = _tables.erase(name);
+  const auto num_deleted = _tables.erase(name);
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  auto iter = _tables.find(name);
+  const auto iter = _tables.find(name);
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
   return iter->second;
@@ -66,15 +66,15 @@ void StorageManager::add_view(const std::string& name, std::shared_ptr<const Abs
 }
 
 void StorageManager::drop_view(const std::string& name) {
-  auto num_deleted = _views.erase(name);
+  const auto num_deleted = _views.erase(name);
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
 std::shared_ptr<AbstractLQPNode> StorageManager::get_view(const std::string& name) const {
-  auto iter = _views.find(name);
+  const auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
-  return iter->second->clone();
+  return iter->second->deep_copy();
 }
 
 bool StorageManager::has_view(const std::string& name) const { return _views.count(name); }
