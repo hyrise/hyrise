@@ -34,6 +34,11 @@ NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topol
   // memory sources with it. This means that the destructors of those tables would fail.
   Assert(StorageManager::get().table_names().size() == 0, "NUMAPlacementManager must be created before any table");
 
+  if (_topology->nodes().size() == 1) {
+    // We only have one node, no point in running the NUMA placement manager.
+    return;
+  }
+
   for (size_t i = 0; i < _topology->nodes().size(); i++) {
     char msource_name[26];
     std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
