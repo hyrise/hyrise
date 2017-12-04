@@ -19,7 +19,7 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data
   auto value_column = std::dynamic_pointer_cast<BaseValueColumn>(column);
   DebugAssert(value_column != nullptr, "Column must be uncompressed, i.e. a ValueColumn.");
 
-  return encode_column(EncodingType::NewDictionary, data_type, value_column);
+  return encode_column(EncodingType::Dictionary, data_type, value_column);
 }
 
 void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk) {
