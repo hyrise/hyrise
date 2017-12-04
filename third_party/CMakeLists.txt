@@ -60,7 +60,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
 
-# Add google test
+# Add Libraries with their own build setup
+add_subdirectory(tpch-dbgen)
 add_subdirectory(googletest)
 
 # Add PGASUS
