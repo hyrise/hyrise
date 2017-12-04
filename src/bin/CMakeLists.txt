@@ -1,16 +1,3 @@
-# SIMD playground
-add_executable(
-    hyriseSIMDPlayground
-
-    simd_playground.cpp
-)
-
-target_link_libraries(
-    hyriseSIMDPlayground
-
-    hyrise
-)
-
 # Configure server
 add_executable(
     hyriseServer
@@ -31,8 +18,8 @@ add_executable(
 )
 target_link_libraries(
     hyrisePlayground
-    # hyrise
-    # hyriseBenchmarkLib
+    hyrise
+    hyriseBenchmarkLib
 )
 
 # Configure tpccTableGenerator
