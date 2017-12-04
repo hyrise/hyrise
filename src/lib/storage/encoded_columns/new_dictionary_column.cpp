@@ -4,11 +4,11 @@
 #include <string>
 
 #include "storage/column_visitable.hpp"
+#include "storage/null_suppression/base_ns_vector.hpp"
+#include "storage/value_column.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
-#include "storage/value_column.hpp"
-#include "storage/null_suppression/base_ns_vector.hpp"
 
 namespace opossum {
 
@@ -55,7 +55,8 @@ size_t NewDictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-void NewDictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
+void NewDictionaryColumn<T>::write_string_representation(std::string& row_string,
+                                                         const ChunkOffset chunk_offset) const {
   PerformanceWarning("NewDictionaryColumn<T>::write_string_representation is potentially very slow.");
 
   std::stringstream buffer;
@@ -95,14 +96,17 @@ void NewDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> NewDictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseColumn> NewDictionaryColumn<T>::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = std::allocate_shared<pmr_vector<T>>(alloc, *_dictionary, alloc);
   return std::allocate_shared<NewDictionaryColumn<T>>(alloc, new_dictionary, new_attribute_vector, _null_value_id);
 }
 
 template <typename T>
-EncodingType NewDictionaryColumn<T>::encoding_type() const { return EncodingType::NewDictionary; }
+EncodingType NewDictionaryColumn<T>::encoding_type() const {
+  return EncodingType::NewDictionary;
+}
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(NewDictionaryColumn);
 

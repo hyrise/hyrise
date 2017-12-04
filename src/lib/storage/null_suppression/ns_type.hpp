@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/hana/pair.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/fold.hpp>
 #include <boost/hana/equal.hpp>
+#include <boost/hana/fold.hpp>
+#include <boost/hana/map.hpp>
+#include <boost/hana/pair.hpp>
 #include <boost/hana/value.hpp>
 
 #include <cstdint>
@@ -32,10 +32,10 @@ class SimdBp128Vector;
  * Note: Add your vector class here!
  */
 constexpr auto ns_vector_for_type = hana::make_map(
-  hana::make_pair(enum_c<NsType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-  hana::make_pair(enum_c<NsType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-  hana::make_pair(enum_c<NsType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
-  hana::make_pair(enum_c<NsType::SimdBp128>, hana::type_c<SimdBp128Vector>));
+    hana::make_pair(enum_c<NsType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
+    hana::make_pair(enum_c<NsType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
+    hana::make_pair(enum_c<NsType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
+    hana::make_pair(enum_c<NsType::SimdBp128>, hana::type_c<SimdBp128Vector>));
 
 template <typename NsVectorType>
 NsType get_ns_type() {

@@ -31,8 +31,8 @@ std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::enco
 }
 
 template <>
-std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<uint32_t>::encode(
-    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc) {
+std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<uint32_t>::encode(const pmr_vector<uint32_t>& vector,
+                                                                            const PolymorphicAllocator<size_t>& alloc) {
   _data = pmr_vector<uint32_t>{vector, alloc};
   return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(std::move(_data));
 }

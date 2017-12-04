@@ -52,7 +52,6 @@ struct EnumConstant<enum_constant_tag<EnumType>> : std::true_type {};
 
 }  // namespace opossum
 
-
 namespace boost::hana {
 
 /**
@@ -60,8 +59,10 @@ namespace boost::hana {
  */
 template <typename E>
 struct value_impl<E, when<opossum::EnumConstant<E>::value>> {
-    template <typename C>
-    static constexpr auto apply() { return C::value; }
+  template <typename C>
+  static constexpr auto apply() {
+    return C::value;
+  }
 };
 
 /**

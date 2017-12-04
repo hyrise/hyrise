@@ -1,26 +1,22 @@
 #pragma once
 
-#include <boost/hana/contains.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/type.hpp>
 #include <boost/hana/at_key.hpp>
+#include <boost/hana/contains.hpp>
 #include <boost/hana/equal.hpp>
+#include <boost/hana/map.hpp>
+#include <boost/hana/pair.hpp>
+#include <boost/hana/type.hpp>
 
 #include <cstdint>
 
-#include "utils/enum_constant.hpp"
 #include "all_type_variant.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t {
-  Invalid,
-  Dictionary,
-  NewDictionary
-};
+enum class EncodingType : uint8_t { Invalid, Dictionary, NewDictionary };
 
 namespace detail {
 
@@ -35,9 +31,9 @@ constexpr auto all_data_types = data_types;
  * This map ensures that column and encoder templates are only
  * instantiated supported types and not for all data types.
  */
-constexpr auto supported_data_types_for_type = hana::make_map(
-    hana::make_pair(enum_c<EncodingType::Dictionary>, detail::all_data_types),
-    hana::make_pair(enum_c<EncodingType::NewDictionary>, detail::all_data_types));
+constexpr auto supported_data_types_for_type =
+    hana::make_map(hana::make_pair(enum_c<EncodingType::Dictionary>, detail::all_data_types),
+                   hana::make_pair(enum_c<EncodingType::NewDictionary>, detail::all_data_types));
 
 //  Example for an encoding that doesn’t support all data types:
 //  hane::make_pair(EncodingType::NewEncoding, hana::make_tuple(hana::type_t<int32_t, int64_t>))

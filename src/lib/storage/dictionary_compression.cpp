@@ -3,13 +3,13 @@
 #include <memory>
 #include <vector>
 
-#include "chunk.hpp"
-#include "types.hpp"
-#include "table.hpp"
 #include "base_value_column.hpp"
+#include "chunk.hpp"
+#include "table.hpp"
+#include "types.hpp"
 
-#include "storage/encoded_columns/column_encoding_type.hpp"
 #include "storage/column_encoders/utils.hpp"
+#include "storage/encoded_columns/column_encoding_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

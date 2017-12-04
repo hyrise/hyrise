@@ -11,8 +11,8 @@
 #include "base_column_encoder.hpp"
 
 #include "storage/value_column.hpp"
-#include "utils/enum_constant.hpp"
 #include "types.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

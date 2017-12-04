@@ -35,8 +35,6 @@ namespace opossum {
 template <typename Derived, typename Value>
 using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
 
-
-
 /**
  * @brief base class of all referenced iterators used by iterables
  *

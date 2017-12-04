@@ -1,7 +1,7 @@
 #pragma once
 
-#include "new_dictionary_column_iterable.hpp"
 #include "dictionary_column_iterable.hpp"
+#include "new_dictionary_column_iterable.hpp"
 #include "reference_column_iterable.hpp"
 #include "value_column_iterable.hpp"
 

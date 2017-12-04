@@ -1,11 +1,11 @@
 #pragma once
 
-#include <boost/hana/pair.hpp>
 #include <boost/hana/map.hpp>
+#include <boost/hana/pair.hpp>
 
 // Include your encoded column file here!
-#include "storage/dictionary_column.hpp"
 #include "new_dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
 
 #include "column_encoding_type.hpp"
 
@@ -22,8 +22,8 @@ namespace opossum {
  *
  * Note: Add your encoded column class here!
  */
-constexpr auto encoded_column_info_for_type = hana::make_map(
-  hana::make_pair(enum_c<EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>),
-  hana::make_pair(enum_c<EncodingType::NewDictionary>, hana::type_c<NewDictionaryColumnInfo>));
+constexpr auto encoded_column_info_for_type =
+    hana::make_map(hana::make_pair(enum_c<EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>),
+                   hana::make_pair(enum_c<EncodingType::NewDictionary>, hana::type_c<NewDictionaryColumnInfo>));
 
 }  // namespace opossum

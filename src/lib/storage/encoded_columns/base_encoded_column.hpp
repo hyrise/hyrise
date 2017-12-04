@@ -5,7 +5,6 @@
 #include "storage/base_column.hpp"
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 /**

@@ -27,12 +27,14 @@ void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor&
     if (!match_found && (encoding_type == column.encoding_type())) {
       const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
 
+      // clang-format off
       // Compile only for supported data types
-      if constexpr (decltype(data_type_supported)::value) {
+      if constexpr(decltype(data_type_supported)::value) {
         using EncodedColumnInfoType = typename decltype(encoded_column_info_t)::type;
         using EncodedColumnType = typename EncodedColumnInfoType::template ColumnTemplate<ColumnDataType>;
         functor(static_cast<const EncodedColumnType&>(column));
       }
+      // clang-format on
 
       return true;
     }

@@ -7,10 +7,10 @@
 #include "base_column_encoder.hpp"
 
 #include "storage/encoded_columns/new_dictionary_column.hpp"
-#include "storage/value_column.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
-#include "utils/enum_constant.hpp"
+#include "storage/value_column.hpp"
 #include "types.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
@@ -46,7 +46,6 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-
     // We need to increment the dictionary size here because of possible null values.
     auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
     attribute_vector.reserve(values.size() + 1u);
@@ -79,7 +78,8 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
       }
     }
 
-    auto encoded_attribute_vector = encode_by_ns_type(NsType::FixedSize4ByteAligned, attribute_vector, attribute_vector.get_allocator());
+    auto encoded_attribute_vector =
+        encode_by_ns_type(NsType::FixedSize4ByteAligned, attribute_vector, attribute_vector.get_allocator());
 
     auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));

@@ -9,7 +9,6 @@
 
 #include "types.hpp"
 
-
 namespace opossum {
 
 class SimdBp128Encoder : public BaseNsEncoder {

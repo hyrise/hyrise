@@ -4,8 +4,8 @@
 
 #include <memory>
 
-#include "ns_type.hpp"
 #include "base_ns_decoder.hpp"
+#include "ns_type.hpp"
 
 #include "types.hpp"
 

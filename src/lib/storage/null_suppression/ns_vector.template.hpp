@@ -4,7 +4,7 @@
  * - Copy this file for a new null suppression vector
  * - Add new vector ns_vectors.hpp and ns_type.hpp
  */
- #pragma once
+#pragma once
 
 #include <memory>
 
@@ -23,14 +23,10 @@ class NsVectorTemplate : public NsVector<NsVectorTemplate> {
   size_t _on_size() const { return _data.size(); }
   size_t _on_data_size() const { return sizeof(uint32_t) * _data.size(); }
 
-  auto _on_create_base_decoder() const {
-    return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()};
-  }
+  auto _on_create_base_decoder() const { return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()}; }
 
   // TODO: Decoder must inherit from BaseNsDecoder
-  auto _on_create_decoder() const {
-    return std::make_unique<NsDecoderTemplate>(_data);
-  }
+  auto _on_create_decoder() const { return std::make_unique<NsDecoderTemplate>(_data); }
 
   // TODO: Return a constant forward iterator returning uint32_t
   auto _on_cbegin() const { return _data.cbegin(); }

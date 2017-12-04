@@ -9,8 +9,8 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/value_column.hpp"
-#include "utils/enum_constant.hpp"
 #include "types.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

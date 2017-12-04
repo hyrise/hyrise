@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <memory>
 
-#include "ns_type.hpp"
 #include "base_ns_vector.hpp"
+#include "ns_type.hpp"
 
 #include "types.hpp"
 

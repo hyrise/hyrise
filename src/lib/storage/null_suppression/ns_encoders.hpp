@@ -1,7 +1,7 @@
 #pragma once
 
-#include <boost/hana/pair.hpp>
 #include <boost/hana/map.hpp>
+#include <boost/hana/pair.hpp>
 
 // Include your null suppression encoder file here!
 #include "fixed_size_byte_aligned_encoder.hpp"
@@ -19,9 +19,9 @@ namespace opossum {
  * Note: Add your encoder class here!
  */
 constexpr auto ns_encoder_for_type = hana::make_map(
-  hana::make_pair(enum_c<NsType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint32_t>>),
-  hana::make_pair(enum_c<NsType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint16_t>>),
-  hana::make_pair(enum_c<NsType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint8_t>>),
-  hana::make_pair(enum_c<NsType::SimdBp128>, hana::type_c<SimdBp128Encoder>));
+    hana::make_pair(enum_c<NsType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint32_t>>),
+    hana::make_pair(enum_c<NsType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint16_t>>),
+    hana::make_pair(enum_c<NsType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint8_t>>),
+    hana::make_pair(enum_c<NsType::SimdBp128>, hana::type_c<SimdBp128Encoder>));
 
 }  // namespace opossum
