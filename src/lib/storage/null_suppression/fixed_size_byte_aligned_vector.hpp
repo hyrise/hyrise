@@ -14,7 +14,7 @@ namespace opossum {
 template <typename UnsignedIntType>
 class FixedSizeByteAlignedVector : public NsVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
  public:
-  FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
+  explicit FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
   ~FixedSizeByteAlignedVector() = default;
 
   size_t _on_size() const { return _data.size(); }

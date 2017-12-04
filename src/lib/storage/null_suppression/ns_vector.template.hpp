@@ -14,10 +14,10 @@
 
 namespace opossum {
 
-// TODO: Rename class
+// TODO(you): Rename class
 class NsVectorTemplate : public NsVector<NsVectorTemplate> {
  public:
-  NsVectorTemplate(pmr_vector<uint32_t> data) : _data{std::move(data)} {}
+  explicit NsVectorTemplate(pmr_vector<uint32_t> data) : _data{std::move(data)} {}
   ~NsVectorTemplate() = default;
 
   size_t _on_size() const { return _data.size(); }
@@ -25,10 +25,10 @@ class NsVectorTemplate : public NsVector<NsVectorTemplate> {
 
   auto _on_create_base_decoder() const { return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()}; }
 
-  // TODO: Decoder must inherit from BaseNsDecoder
+  // TODO(you): Decoder must inherit from BaseNsDecoder
   auto _on_create_decoder() const { return std::make_unique<NsDecoderTemplate>(_data); }
 
-  // TODO: Return a constant forward iterator returning uint32_t
+  // TODO(you): Return a constant forward iterator returning uint32_t
   auto _on_cbegin() const { return _data.cbegin(); }
   auto _on_cend() const { return _data.cend(); }
 
@@ -38,7 +38,7 @@ class NsVectorTemplate : public NsVector<NsVectorTemplate> {
   }
 
  private:
-  // TODO: Vectors are supposed to be immutable so declare member variables const!
+  // TODO(you): Vectors are supposed to be immutable so declare member variables const!
   const pmr_vector<uint32_t> _data;
 };
 
