@@ -5,6 +5,7 @@
 
 #include "benchmark/benchmark.h"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_generator.hpp"
 #include "types.hpp"
@@ -30,7 +31,7 @@ void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
 void BenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
 
 void BenchmarkBasicFixture::ChunkSizeIn(benchmark::internal::Benchmark* b) {
-  for (ChunkID i : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {
+  for (ChunkID i : {ChunkID(Chunk::MAX_SIZE), ChunkID(10000), ChunkID(100000)}) {
     b->Args({static_cast<int>(i)});  // i = chunk size
   }
 }
