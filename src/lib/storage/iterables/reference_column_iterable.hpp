@@ -78,8 +78,11 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
         return _value_from_dictionary_column(*dict_column, chunk_offset);
       }
 
-      Fail("Referenced column is neither value nor dictionary column.");
-      return NullableColumnValue<T>{T{}, false, 0u};
+      /**
+       * This is just a temporary solution to supporting encoded column type.
+       * It’s very slow and is going to be replaced very soon!
+       */
+      return _value_from_any_column(*column, chunk_offset);
     }
 
    private:
@@ -111,6 +114,19 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
       const auto& value = (*dictionary)[value_id];
 
       return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
+    }
+
+    auto _value_from_any_column(const BaseColumn& column, const ChunkOffset& chunk_offset) const {
+      const auto variant_value = column[chunk_offset];
+
+      const auto chunk_offset_into_ref_column =
+          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+
+      if (variant_is_null(variant_value)) {
+        return NullableColumnValue<T>{T{}, true, chunk_offset_into_ref_column};
+      }
+
+      return NullableColumnValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_column};
     }
 
    private:

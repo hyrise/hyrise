@@ -29,7 +29,7 @@ class NewDictionaryColumnIterable : public IndexableIterable<NewDictionaryColumn
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    with_ns_decoder(*_column.attribute_vector(), [&](const auto& vector) {
+    resolve_ns_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
 
       auto begin = create_indexed_iterator(mapped_chunk_offsets.cbegin(), *decoder);
@@ -103,7 +103,7 @@ class NewDictionaryColumnIterable : public IndexableIterable<NewDictionaryColumn
   template <typename NsDecoderType>
   IndexedIterator<NsDecoderType> create_indexed_iterator(ChunkOffsetsIterator chunk_offsets_it,
                                                          NsDecoderType& decoder) const {
-    const auto lookup = IndexedIteratorLookup{_column.null_value_id(), _column.dictionary(), decoder};
+    const auto lookup = IndexedIteratorLookup<NsDecoderType>{_column.null_value_id(), *_column.dictionary(), decoder};
     return IndexedIterator<NsDecoderType>{chunk_offsets_it, lookup};
   }
 };

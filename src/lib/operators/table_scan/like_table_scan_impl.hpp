@@ -35,6 +35,9 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
+  void handle_encoded_column(const BaseEncodedColumn& base_column,
+                             std::shared_ptr<ColumnVisitableContext> base_context) override;
+
  private:
   /**
    * @defgroup Methods used for handling dictionary columns

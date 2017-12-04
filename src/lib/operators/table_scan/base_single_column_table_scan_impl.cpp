@@ -53,9 +53,4 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColum
   }
 }
 
-void BaseSingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
-                                                            std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Table scan not implemented for encoded columns.");
-}
-
 }  // namespace opossum

@@ -8,6 +8,7 @@
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/encoded_columns/utils.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -107,6 +108,34 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
       this->_with_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
         this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+      });
+    });
+  });
+}
+
+void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+                                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+  auto context = std::static_pointer_cast<Context>(base_context);
+  auto& matches_out = context->_matches_out;
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto chunk_id = context->_chunk_id;
+
+  const auto left_column_type = _in_table->column_type(_left_column_id);
+
+  resolve_data_type(left_column_type, [&](auto type) {
+    using Type = typename decltype(type)::type;
+
+    resolve_encoded_column_type<Type>(base_column, [&](const auto& left_column) {
+      auto left_column_iterable = create_iterable_from_column(left_column);
+
+      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+
+      left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+        right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
+          with_comparator(_scan_type, [&](auto comparator) {
+            _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+          });
+        });
       });
     });
   });
