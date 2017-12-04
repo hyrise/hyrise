@@ -6,15 +6,12 @@
  */
 #pragma once
 
-#include <boost/hana/core/to.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
-
 #include <memory>
 
 #include "base_column_encoder.hpp"
 
 #include "storage/value_column.hpp"
+#include "utils/enum_constant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -22,8 +19,8 @@ namespace opossum {
 // TODO: Rename class
 class ColumnEncoderTemplate : public ColumnEncoder<DictionaryEncoder> {
  public:
-  // TODO: Specify supported data types (use _all_data_types if all are supported)
-  static constexpr auto _supported_types = hana::to_tuple(hana::tuple_t<int32_t, int64_t>);
+  // TODO: Add new encoding to column_encoding_type.hpp and update _encoding_type
+  static constexpr auto _encoding_type = enum_c<EncodingType::NewEncoding>;
 
   template <typename T>
   std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {

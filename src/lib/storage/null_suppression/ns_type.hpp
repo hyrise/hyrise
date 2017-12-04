@@ -1,11 +1,14 @@
 #pragma once
 
 #include <boost/hana/pair.hpp>
-#include <boost/hana/tuple.hpp>
+#include <boost/hana/map.hpp>
 #include <boost/hana/fold.hpp>
 #include <boost/hana/equal.hpp>
+#include <boost/hana/value.hpp>
 
 #include <cstdint>
+
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
@@ -28,21 +31,26 @@ class SimdBp128Vector;
  *
  * Note: Add your vector class here!
  */
-constexpr auto ns_vector_for_type = hana::make_tuple(
-  hana::make_pair(NsType::FixedSize4ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-  hana::make_pair(NsType::FixedSize2ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-  hana::make_pair(NsType::FixedSize1ByteAligned, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
-  hana::make_pair(NsType::SimdBp128, hana::type_c<SimdBp128Vector>));
+constexpr auto ns_vector_for_type = hana::make_map(
+  hana::make_pair(enum_c<NsType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
+  hana::make_pair(enum_c<NsType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
+  hana::make_pair(enum_c<NsType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
+  hana::make_pair(enum_c<NsType::SimdBp128>, hana::type_c<SimdBp128Vector>));
 
 template <typename NsVectorType>
 NsType get_ns_type() {
-  return hana::fold(ns_vector_for_type, NsType::Invalid, [](auto ns_type, auto ns_pair) {
-    if ((ns_type == NsType::Invalid) && (hana::second(ns_pair) == hana::type_c<NsVectorType>)) {
-      return hana::first(ns_pair);
+  auto ns_type = NsType::Invalid;
+
+  hana::fold(ns_vector_for_type, false, [&](auto match_found, auto pair) {
+    if (!match_found && (hana::second(pair) == hana::type_c<NsVectorType>)) {
+      ns_type = hana::value(hana::first(pair));
+      return true;
     }
 
-    return ns_type;
+    return match_found;
   });
+
+  return ns_type;
 }
 
 }  // namespace opossum

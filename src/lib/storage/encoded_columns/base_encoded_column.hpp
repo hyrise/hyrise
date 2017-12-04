@@ -14,14 +14,12 @@ namespace opossum {
 class BaseEncodedColumn : public BaseColumn {
  public:
   // Encoded columns are immutable
-  void append(const AllTypeVariant&) final { Fail("Encoded column is immutable."); }
+  void append(const AllTypeVariant&) final;
 
   // Visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const {
-    visitable.handle_encoded_column(*this, std::move(context));
-  }
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const;
 
-  virtual ColumnEncodingType encoding_type() const = 0;
+  virtual EncodingType encoding_type() const = 0;
 };
 
 }  // namespace opossum

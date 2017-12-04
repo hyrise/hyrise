@@ -56,11 +56,6 @@ const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
 }
 
 template <typename T>
-void DictionaryColumn<T>::append(const AllTypeVariant&) {
-  Fail("DictionaryColumn is immutable");
-}
-
-template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }

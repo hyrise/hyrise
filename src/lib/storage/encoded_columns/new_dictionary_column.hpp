@@ -42,12 +42,19 @@ class NewDictionaryColumn : public BaseEncodedColumn {
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  ColumnEncodingType encoding_type() const final;
+  EncodingType encoding_type() const final;
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseNsVector> _attribute_vector;
   const ValueID _null_value_id;
+};
+
+struct NewDictionaryColumnInfo {
+  static constexpr auto _encoding_type = EncodingType::NewDictionary;
+
+  template <typename T>
+  using ColumnTemplate = NewDictionaryColumn<T>;
 };
 
 }  // namespace opossum

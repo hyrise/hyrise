@@ -10,6 +10,7 @@ namespace opossum {
 class BaseColumn;
 class ReferenceColumn;
 class BaseEncodedColumn;
+class BaseDictionaryColumn;
 
 // In cases where an operator has to operate on different column types, we use the visitor pattern.
 // By inheriting from ColumnVisitable, an AbstractOperator(Impl) can implement handle methods for all column

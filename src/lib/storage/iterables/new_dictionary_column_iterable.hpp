@@ -6,7 +6,7 @@
 
 #include "iterables.hpp"
 
-#include "storage/columns/new_dictionary_column.hpp"
+#include "storage/encoded_columns/new_dictionary_column.hpp"
 #include "storage/null_suppression/ns_decoders.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
 #include "storage/null_suppression/ns_vectors.hpp"
@@ -22,7 +22,7 @@ class NewDictionaryColumnIterable : public IndexableIterable<NewDictionaryColumn
   void _on_with_iterators(const Functor& functor) const {
     resolve_ns_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       auto begin = create_iterator(vector.cbegin(), ChunkOffset{0u});
-      auto end = create_iterator(vector.cend(), static_cast<ChunkOffset>(decoder.size()));
+      auto end = create_iterator(vector.cend(), static_cast<ChunkOffset>(vector.size()));
       functor(begin, end);
     });
   }

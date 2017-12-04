@@ -16,14 +16,17 @@ std::unique_ptr<BaseNsEncoder> create_encoder_by_ns_type(NsType type) {
 
   auto encoder = std::unique_ptr<BaseNsEncoder>{};
 
-  hana::fold(ns_encoder_for_type, false, [&](auto match_found, auto ns_pair) {
-    if (!match_found && (hana::first(ns_pair) == type)) {
-      using NsEncoderType = typename decltype(+hana::second(ns_pair))::type;
+  hana::fold(ns_encoder_for_type, false, [&](auto match_found, auto pair) {
+    const auto vector_type_c = hana::first(pair);
+    const auto encoder_t = hana::second(pair);
+
+    if (!match_found && (hana::value(vector_type_c) == type)) {
+      using NsEncoderType = typename decltype(encoder_t)::type;
       encoder = std::make_unique<NsEncoderType>();
       return true;
     }
 
-    return false;
+    return match_found;
   });
 
   return encoder;

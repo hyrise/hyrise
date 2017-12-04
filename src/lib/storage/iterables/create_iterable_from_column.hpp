@@ -1,5 +1,6 @@
 #pragma once
 
+#include "new_dictionary_column_iterable.hpp"
 #include "dictionary_column_iterable.hpp"
 #include "reference_column_iterable.hpp"
 #include "value_column_iterable.hpp"
@@ -28,6 +29,11 @@ auto create_iterable_from_column(const DictionaryColumn<T>& column) {
 template <typename T>
 auto create_iterable_from_column(const ReferenceColumn& column) {
   return ReferenceColumnIterable<T>{column};
+}
+
+template <typename T>
+auto create_iterable_from_column(const NewDictionaryColumn<T>& column) {
+  return NewDictionaryColumnIterable<T>{column};
 }
 
 /**@}*/

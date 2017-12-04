@@ -19,7 +19,7 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 // thus allowing the single indexes relying on these methods to be untemplated.
 class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
-  ColumnEncodingType encoding_type() const final { return ColumnEncodingType::Dictionary; }
+  EncodingType encoding_type() const final { return EncodingType::Dictionary; }
 
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;

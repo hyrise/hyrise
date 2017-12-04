@@ -38,9 +38,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
-  // dictionary columns are immutable
-  void append(const AllTypeVariant&) override;
-
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
 
@@ -89,6 +86,13 @@ class DictionaryColumn : public BaseDictionaryColumn {
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
+};
+
+struct DictionaryColumnInfo {
+  static constexpr auto _encoding_type = EncodingType::Dictionary;
+
+  template <typename T>
+  using ColumnTemplate = DictionaryColumn<T>;
 };
 
 }  // namespace opossum

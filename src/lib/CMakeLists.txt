@@ -202,6 +202,7 @@ set(
     storage/column_encoders/utils.cpp
     storage/column_encoders/utils.hpp
     storage/column_encoders/encoders.hpp
+    storage/encoded_columns/base_encoded_column.cpp
     storage/encoded_columns/base_encoded_column.hpp
     storage/encoded_columns/column_encoding_type.hpp
     storage/encoded_columns/new_dictionary_column.cpp
@@ -290,6 +291,7 @@ set(
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
+    utils/enum_constant.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp

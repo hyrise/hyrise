@@ -1,18 +1,19 @@
 #pragma once
 
 #include <boost/hana/type.hpp>
-#include <boost/hana/contains.hpp>
-#include <boost/hana/tuple.hpp>
 
 #include <memory>
 
 #include "storage/base_value_column.hpp"
+#include "storage/encoded_columns/column_encoding_type.hpp"
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+namespace hana = boost::hana;
 
 /**
  * @brief Base class of all column encoders
@@ -74,8 +75,8 @@ class ColumnEncoder : public BaseColumnEncoder {
    *       in a constant expression such as constexpr-if.
    */
   template <typename ColumnDataType>
-  auto supports(hana::basic_type<ColumnDataType> type) const {
-    return hana::contains(Derived::_supported_types, type);
+  auto supports(hana::basic_type<ColumnDataType> data_type) const {
+    return encoding_supports_data_type(Derived::_encoding_type, data_type);
   }
 
   /**
@@ -84,19 +85,12 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Compiles only for supported data types.
    */
   template <typename ColumnDataType>
-  std::shared_ptr<BaseColumn> encode(hana::basic_type<ColumnDataType> type, const std::shared_ptr<BaseValueColumn>& value_column) {
-    static_assert(decltype(supports(type))::value);
+  std::shared_ptr<BaseColumn> encode(hana::basic_type<ColumnDataType> data_type, const std::shared_ptr<BaseValueColumn>& value_column) {
+    static_assert(decltype(supports(data_type))::value);
 
     return _self()._encode(std::static_pointer_cast<ValueColumn<ColumnDataType>>(value_column));
   }
   /**@}*/
-
- protected:
-  /**
-   * You may use this as a value of Derived::_supported_types
-   * if the encoder supports all data types.
-   */
-  static constexpr auto _all_data_types = data_types;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }

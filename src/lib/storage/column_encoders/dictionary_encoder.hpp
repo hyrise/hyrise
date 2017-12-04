@@ -9,13 +9,14 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/value_column.hpp"
+#include "utils/enum_constant.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
-  static constexpr auto _supported_types = _all_data_types;
+  static constexpr auto _encoding_type = enum_c<EncodingType::Dictionary>;
 
   template <typename T>
   std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {

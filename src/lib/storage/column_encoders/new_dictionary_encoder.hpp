@@ -6,16 +6,17 @@
 
 #include "base_column_encoder.hpp"
 
-#include "storage/columns/new_dictionary_column.hpp"
+#include "storage/encoded_columns/new_dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
+#include "utils/enum_constant.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
  public:
-  static constexpr auto _supported_types = _all_data_types;
+  static constexpr auto _encoding_type = enum_c<EncodingType::NewDictionary>;
 
   template <typename T>
   std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {

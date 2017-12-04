@@ -102,7 +102,7 @@ std::shared_ptr<BaseColumn> NewDictionaryColumn<T>::copy_using_allocator(const P
 }
 
 template <typename T>
-ColumnEncodingType NewDictionaryColumn<T>::encoding_type() const { return ColumnEncodingType::NewDictionary; }
+EncodingType NewDictionaryColumn<T>::encoding_type() const { return EncodingType::NewDictionary; }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(NewDictionaryColumn);
 

@@ -31,8 +31,8 @@ add_executable(
 )
 target_link_libraries(
     hyrisePlayground
-    hyrise
-    hyriseBenchmarkLib
+    # hyrise
+    # hyriseBenchmarkLib
 )
 
 # Configure tpccTableGenerator
