@@ -10,6 +10,9 @@ namespace opossum {
 
 /**
  * @brief Base class of all encoded columns
+ *
+ * Since encoded columns are immutable, all member variables
+ * of sub-classes should be declared const.
  */
 class BaseEncodedColumn : public BaseColumn {
  public:
