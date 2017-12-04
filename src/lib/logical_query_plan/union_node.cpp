@@ -12,6 +12,8 @@ namespace opossum {
 
 UnionNode::UnionNode(UnionMode union_mode) : AbstractLQPNode(LQPNodeType::Union), _union_mode(union_mode) {}
 
+std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl() const { return std::make_shared<UnionNode>(_union_mode); }
+
 UnionMode UnionNode::union_mode() const { return _union_mode; }
 
 std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode); }

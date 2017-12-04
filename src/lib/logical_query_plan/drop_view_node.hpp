@@ -8,20 +8,20 @@
 namespace opossum {
 
 /**
- * Node type to represent deletion (more specifically, invalidation) in a table.
+ * Node type to represent deleting a view from the StorageManager
  */
-class DeleteNode : public AbstractLQPNode {
+class DropViewNode : public AbstractLQPNode {
  public:
-  explicit DeleteNode(const std::string& table_name);
+  explicit DropViewNode(const std::string& view_name);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;
 
-  const std::string& table_name() const;
+  const std::string& view_name() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
-  const std::string _table_name;
+  const std::string _view_name;
 };
 
 }  // namespace opossum
