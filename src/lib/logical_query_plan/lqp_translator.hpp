@@ -41,6 +41,8 @@ class LQPTranslator final : private Noncopyable {
   // Maintenance operators
   std::shared_ptr<AbstractOperator> _translate_show_tables_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_show_columns_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 };
 
 }  // namespace opossum

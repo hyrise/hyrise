@@ -11,6 +11,7 @@
 namespace opossum {
 
 class Table;
+class AbstractLQPNode;
 
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
@@ -33,6 +34,21 @@ class StorageManager : private Noncopyable {
   // returns a list of all table names
   std::vector<std::string> table_names() const;
 
+  // adds a view to the storage manager
+  void add_view(const std::string& name, std::shared_ptr<const AbstractLQPNode> view);
+
+  // removes the view from the storage manger
+  void drop_view(const std::string& name);
+
+  // returns the view instance with the given name
+  std::shared_ptr<AbstractLQPNode> get_view(const std::string& name) const;
+
+  // returns whether the storage manager holds a table with the given name
+  bool has_view(const std::string& name) const;
+
+  // returns a list of all view names
+  std::vector<std::string> view_names() const;
+
   // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
   void print(std::ostream& out = std::cout) const;
 
@@ -52,5 +68,6 @@ class StorageManager : private Noncopyable {
   StorageManager& operator=(StorageManager&&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
+  std::map<std::string, std::shared_ptr<const AbstractLQPNode>> _views;
 };
 }  // namespace opossum
