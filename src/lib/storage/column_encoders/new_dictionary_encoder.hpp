@@ -50,7 +50,7 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
     auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
     attribute_vector.reserve(values.size() + 1u);
 
-    const auto null_value_id = values.size();
+    const auto null_value_id = static_cast<uint32_t>(values.size());
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
