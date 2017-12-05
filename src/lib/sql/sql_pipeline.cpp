@@ -47,7 +47,7 @@ const hsql::SQLParserResult& SQLPipeline::get_parsed_sql() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _parse_time_sec = std::chrono::duration<float>(done - started);
+  _parse_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
   _parsed_sql = std::move(parse_result);
   return *(_parsed_sql.get());
@@ -115,7 +115,7 @@ const SQLQueryPlan& SQLPipeline::get_query_plan() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _compile_time_sec = std::chrono::duration<float>(done - started);
+  _compile_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
   _query_plan = std::move(plan);
   return *(_query_plan.get());
@@ -157,7 +157,7 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _execution_time_sec = std::chrono::duration<float>(done - started);
+  _execution_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
   _result_table = op_tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
@@ -167,17 +167,17 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
 
 const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() { return _transaction_context; }
 
-std::chrono::duration<float> SQLPipeline::parse_time_seconds() {
+std::chrono::microseconds SQLPipeline::parse_time_microseconds() {
   Assert(_parsed_sql != nullptr, "Cannot return parse duration without having parsed.");
   return _parse_time_sec;
 }
 
-std::chrono::duration<float> SQLPipeline::compile_time_seconds() {
+std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
   Assert(_query_plan != nullptr, "Cannot return compile duration without having created the query plan.");
   return _compile_time_sec;
 }
 
-std::chrono::duration<float> SQLPipeline::execution_time_seconds() {
+std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
   Assert(_result_table != nullptr || !_query_has_output, "Cannot return execution duration without having executed.");
   return _execution_time_sec;
 }

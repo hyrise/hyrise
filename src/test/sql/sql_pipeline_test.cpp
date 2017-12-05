@@ -88,10 +88,10 @@ TEST_F(SQLPipelineTest, GetParsedSQLTwice) {
   SQLPipeline sql_pipeline{_select_query_a};
 
   sql_pipeline.get_parsed_sql();
-  auto duration = sql_pipeline.parse_time_seconds();
+  auto duration = sql_pipeline.parse_time_microseconds();
 
   const auto& parsed_sql = sql_pipeline.get_parsed_sql();
-  auto duration2 = sql_pipeline.parse_time_seconds();
+  auto duration2 = sql_pipeline.parse_time_microseconds();
 
   // Make sure this was not un twice
   EXPECT_EQ(duration, duration2);
@@ -228,10 +228,10 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
   SQLPipeline sql_pipeline{_select_query_a};
 
   sql_pipeline.get_query_plan();
-  auto duration = sql_pipeline.compile_time_seconds();
+  auto duration = sql_pipeline.compile_time_microseconds();
 
   const auto& plan = sql_pipeline.get_query_plan();
-  auto duration2 = sql_pipeline.compile_time_seconds();
+  auto duration2 = sql_pipeline.compile_time_microseconds();
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -325,10 +325,10 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
   SQLPipeline sql_pipeline{_select_query_a};
 
   sql_pipeline.get_result_table();
-  auto duration = sql_pipeline.execution_time_seconds();
+  auto duration = sql_pipeline.execution_time_microseconds();
 
   const auto& table = sql_pipeline.get_result_table();
-  auto duration2 = sql_pipeline.execution_time_seconds();
+  auto duration2 = sql_pipeline.execution_time_microseconds();
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -393,16 +393,16 @@ TEST_F(SQLPipelineTest, GetResultTableNoMVCC) {
 TEST_F(SQLPipelineTest, GetTimes) {
   SQLPipeline sql_pipeline{_select_query_a};
 
-  EXPECT_THROW(sql_pipeline.parse_time_seconds(), std::exception);
-  EXPECT_THROW(sql_pipeline.compile_time_seconds(), std::exception);
-  EXPECT_THROW(sql_pipeline.execution_time_seconds(), std::exception);
+  EXPECT_THROW(sql_pipeline.parse_time_microseconds(), std::exception);
+  EXPECT_THROW(sql_pipeline.compile_time_microseconds(), std::exception);
+  EXPECT_THROW(sql_pipeline.execution_time_microseconds(), std::exception);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
-  EXPECT_GT(sql_pipeline.parse_time_seconds().count(), 0.0f);
-  EXPECT_GT(sql_pipeline.compile_time_seconds().count(), 0.0f);
-  EXPECT_GT(sql_pipeline.execution_time_seconds().count(), 0.0f);
+  EXPECT_GT(sql_pipeline.parse_time_microseconds().count(), 0);
+  EXPECT_GT(sql_pipeline.compile_time_microseconds().count(), 0);
+  EXPECT_GT(sql_pipeline.execution_time_microseconds().count(), 0);
 }
 
 }  // namespace opossum

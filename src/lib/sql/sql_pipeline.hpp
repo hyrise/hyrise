@@ -56,9 +56,9 @@ class SQLPipeline : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context();
 
-  std::chrono::duration<float> parse_time_seconds();
-  std::chrono::duration<float> compile_time_seconds();
-  std::chrono::duration<float> execution_time_seconds();
+  std::chrono::microseconds parse_time_microseconds();
+  std::chrono::microseconds compile_time_microseconds();
+  std::chrono::microseconds execution_time_microseconds();
 
  private:
   const std::string _sql_string;
@@ -74,9 +74,9 @@ class SQLPipeline : public Noncopyable {
   bool _query_has_output = true;
 
   // Execution times
-  std::chrono::duration<float> _parse_time_sec;
-  std::chrono::duration<float> _compile_time_sec;
-  std::chrono::duration<float> _execution_time_sec;
+  std::chrono::microseconds _parse_time_sec;
+  std::chrono::microseconds _compile_time_sec;
+  std::chrono::microseconds _execution_time_sec;
 
   // Transaction related
   const bool _use_mvcc;
