@@ -16,7 +16,7 @@ namespace opossum {
 
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType::Dictionary>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
 
   template <typename T>
   std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {

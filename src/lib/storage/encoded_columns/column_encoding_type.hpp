@@ -32,11 +32,11 @@ constexpr auto all_data_types = data_types;
  * instantiated supported types and not for all data types.
  */
 constexpr auto supported_data_types_for_type =
-    hana::make_map(hana::make_pair(enum_c<EncodingType::Dictionary>, detail::all_data_types),
-                   hana::make_pair(enum_c<EncodingType::NewDictionary>, detail::all_data_types));
+    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, detail::all_data_types),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::NewDictionary>, detail::all_data_types));
 
 //  Example for an encoding that doesn’t support all data types:
-//  hane::make_pair(EncodingType::NewEncoding, hana::make_tuple(hana::type_t<int32_t, int64_t>))
+//  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::make_tuple(hana::type_t<int32_t, int64_t>))
 
 /**
  * @return an integral constant implicitly convertible to bool

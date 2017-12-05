@@ -20,7 +20,7 @@ namespace opossum {
 class ColumnEncoderTemplate : public ColumnEncoder<DictionaryEncoder> {
  public:
   // TODO(you): Add new encoding to column_encoding_type.hpp and update _encoding_type
-  static constexpr auto _encoding_type = enum_c<EncodingType::NewEncoding>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::NewEncoding>;
 
   template <typename T>
   std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {

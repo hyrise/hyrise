@@ -51,8 +51,6 @@ class NewDictionaryColumn : public BaseEncodedColumn {
 };
 
 struct NewDictionaryColumnInfo {
-  static constexpr auto _encoding_type = EncodingType::NewDictionary;
-
   template <typename T>
   using ColumnTemplate = NewDictionaryColumn<T>;
 };

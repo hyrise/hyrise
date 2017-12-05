@@ -89,8 +89,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
 };
 
 struct DictionaryColumnInfo {
-  static constexpr auto _encoding_type = EncodingType::Dictionary;
-
   template <typename T>
   using ColumnTemplate = DictionaryColumn<T>;
 };
