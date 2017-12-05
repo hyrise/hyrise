@@ -241,9 +241,10 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" + "PARSE: " + std::to_string(_sql_pipeline->parse_time_seconds()) +
-      " s, " + "COMPILE: " + std::to_string(_sql_pipeline->compile_time_seconds()) + " s, " + "EXECUTE: " +
-      std::to_string(_sql_pipeline->execution_time_seconds()) + " s (wall time))\n");
+  out(std::to_string(row_count) + " rows total (" + "PARSE: " +
+      std::to_string(_sql_pipeline->parse_time_seconds().count()) + " s, " + "COMPILE: " +
+      std::to_string(_sql_pipeline->compile_time_seconds().count()) + " s, " + "EXECUTE: " +
+      std::to_string(_sql_pipeline->execution_time_seconds().count()) + " s (wall time))\n");
 
   return ReturnCode::Ok;
 }
@@ -455,10 +456,10 @@ int Console::visualize(const std::string& input) {
 
   if (mode == "lqp" || mode == "lqpopt") {
     try {
-      auto lqp_roots = _sql_pipeline->get_unoptimized_logical_plan();
+      auto lqp_roots = _sql_pipeline->get_unoptimized_logical_plans();
 
       if (mode == "lqpopt") {
-        lqp_roots = _sql_pipeline->get_optimized_logical_plan();
+        lqp_roots = _sql_pipeline->get_optimized_logical_plans();
       }
 
       graph_filename = "." + mode + ".dot";
@@ -484,7 +485,10 @@ int Console::visualize(const std::string& input) {
       try {
         _sql_pipeline->get_result_table();
       } catch (const std::exception& exception) {
-        out("An operator failed and the transaction has been rolled back:\n" + std::string(exception.what()) + "\n");
+        out(std::string(exception.what()) + "\n");
+        if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
+          out("The transaction has been rolled back.\n");
+        }
         _explicitly_created_transaction_context = nullptr;
         return ReturnCode::Error;
       }

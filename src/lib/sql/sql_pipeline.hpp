@@ -38,10 +38,10 @@ class SQLPipeline : public Noncopyable {
   const hsql::SQLParserResult& get_parsed_sql();
 
   // Returns all unoptimized LQP roots.
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plan();
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
 
   // Returns all optimized LQP roots.
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plan();
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
   // For now, this always uses the optimized LQP.
   const SQLQueryPlan& get_query_plan();
@@ -56,17 +56,17 @@ class SQLPipeline : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context();
 
-  float parse_time_seconds();
-  float compile_time_seconds();
-  float execution_time_seconds();
+  std::chrono::duration<float> parse_time_seconds();
+  std::chrono::duration<float> compile_time_seconds();
+  std::chrono::duration<float> execution_time_seconds();
 
  private:
   const std::string _sql_string;
 
   // Execution results
   std::unique_ptr<hsql::SQLParserResult> _parsed_sql;
-  std::vector<std::shared_ptr<AbstractLQPNode>> _unopt_logical_plan;
-  std::vector<std::shared_ptr<AbstractLQPNode>> _opt_logical_plan;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plan;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plan;
   std::unique_ptr<SQLQueryPlan> _query_plan;
   std::vector<std::shared_ptr<OperatorTask>> _op_tasks;
   std::shared_ptr<const Table> _result_table;
@@ -74,9 +74,9 @@ class SQLPipeline : public Noncopyable {
   bool _query_has_output = true;
 
   // Execution times
-  float _parse_time_sec;
-  float _compile_time_sec;
-  float _execution_time_sec;
+  std::chrono::duration<float> _parse_time_sec;
+  std::chrono::duration<float> _compile_time_sec;
+  std::chrono::duration<float> _execution_time_sec;
 
   // Transaction related
   const bool _use_mvcc;

@@ -47,46 +47,48 @@ const hsql::SQLParserResult& SQLPipeline::get_parsed_sql() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _parse_time_sec = std::chrono::duration<float>(done - started).count();
+  _parse_time_sec = std::chrono::duration<float>(done - started);
 
   _parsed_sql = std::move(parse_result);
   return *(_parsed_sql.get());
 }
 
-const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plan() {
-  if (!_unopt_logical_plan.empty()) {
-    return _unopt_logical_plan;
+const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
+  if (!_unoptimized_logical_plan.empty()) {
+    return _unoptimized_logical_plan;
   }
 
   const auto& parsed_sql = get_parsed_sql();
   try {
-    _unopt_logical_plan = SQLTranslator{_use_mvcc}.translate_parse_result(parsed_sql);
+    _unoptimized_logical_plan = SQLTranslator{_use_mvcc}.translate_parse_result(parsed_sql);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while compiling query plan:\n  " + std::string(exception.what()));
   }
 
-  return _unopt_logical_plan;
+  return _unoptimized_logical_plan;
 }
 
-const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plan() {
-  if (!_opt_logical_plan.empty()) {
-    return _opt_logical_plan;
+const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
+  if (!_optimized_logical_plan.empty()) {
+    return _optimized_logical_plan;
   }
 
-  const auto& unopt_lqp = get_unoptimized_logical_plan();
-  _opt_logical_plan.reserve(unopt_lqp.size());
+  // We want a copy of the LQP roots because would "merge" the tree in weird ways when optimizing the references to the
+  // unoptimized nodes.
+  const auto unoptimized_lqp = get_unoptimized_logical_plans();
+  _optimized_logical_plan.reserve(unoptimized_lqp.size());
 
   try {
-    for (const auto& node : unopt_lqp) {
-      _opt_logical_plan.push_back(Optimizer::get().optimize(node));
+    for (const auto& node : unoptimized_lqp) {
+      _optimized_logical_plan.push_back(Optimizer::get().optimize(node));
     }
   } catch (const std::exception& exception) {
     // Don't keep bad values
-    _opt_logical_plan.clear();
+    _optimized_logical_plan.clear();
     throw std::runtime_error("Error while optimizing query plan:\n  " + std::string(exception.what()));
   }
 
-  return _opt_logical_plan;
+  return _optimized_logical_plan;
 }
 
 const SQLQueryPlan& SQLPipeline::get_query_plan() {
@@ -94,7 +96,7 @@ const SQLQueryPlan& SQLPipeline::get_query_plan() {
     return *(_query_plan.get());
   }
 
-  const auto& lqp_roots = get_optimized_logical_plan();
+  const auto& lqp_roots = get_optimized_logical_plans();
   auto plan = std::make_unique<SQLQueryPlan>();
 
   const auto started = std::chrono::high_resolution_clock::now();
@@ -113,7 +115,7 @@ const SQLQueryPlan& SQLPipeline::get_query_plan() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _compile_time_sec = std::chrono::duration<float>(done - started).count();
+  _compile_time_sec = std::chrono::duration<float>(done - started);
 
   _query_plan = std::move(plan);
   return *(_query_plan.get());
@@ -155,7 +157,7 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _execution_time_sec = std::chrono::duration<float>(done - started).count();
+  _execution_time_sec = std::chrono::duration<float>(done - started);
 
   _result_table = op_tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
@@ -165,17 +167,17 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
 
 const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() { return _transaction_context; }
 
-float SQLPipeline::parse_time_seconds() {
+std::chrono::duration<float> SQLPipeline::parse_time_seconds() {
   Assert(_parsed_sql != nullptr, "Cannot return parse duration without having parsed.");
   return _parse_time_sec;
 }
 
-float SQLPipeline::compile_time_seconds() {
+std::chrono::duration<float> SQLPipeline::compile_time_seconds() {
   Assert(_query_plan != nullptr, "Cannot return compile duration without having created the query plan.");
   return _compile_time_sec;
 }
 
-float SQLPipeline::execution_time_seconds() {
+std::chrono::duration<float> SQLPipeline::execution_time_seconds() {
   Assert(_result_table != nullptr || !_query_has_output, "Cannot return execution duration without having executed.");
   return _execution_time_sec;
 }
