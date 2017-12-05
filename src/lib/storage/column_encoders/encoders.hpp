@@ -18,8 +18,8 @@ namespace opossum {
  *
  * Note: Add your column encoder class here!
  */
-constexpr auto encoder_for_type =
-    hana::make_tuple(hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryEncoder>),
-                     hana::make_pair(enum_c<EncodingType, EncodingType::NewDictionary>, hana::type_c<NewDictionaryEncoder>));
+constexpr auto encoder_for_type = hana::make_tuple(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryEncoder>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::NewDictionary>, hana::type_c<NewDictionaryEncoder>));
 
 }  // namespace opossum

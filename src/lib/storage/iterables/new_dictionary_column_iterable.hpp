@@ -8,8 +8,8 @@
 
 #include "storage/encoded_columns/new_dictionary_column.hpp"
 #include "storage/null_suppression/ns_decoders.hpp"
-#include "storage/null_suppression/ns_vectors.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
+#include "storage/null_suppression/ns_vectors.hpp"
 
 namespace opossum {
 
