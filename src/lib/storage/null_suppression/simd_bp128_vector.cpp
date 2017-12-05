@@ -4,10 +4,10 @@
 
 namespace opossum {
 
-SimdBp128Vector::SimdBp128Vector(pmr_vector<__m128i> vector, size_t size) : _data{std::move(vector)}, _size{size} {}
+SimdBp128Vector::SimdBp128Vector(pmr_vector<uint128_t> vector, size_t size) : _data{std::move(vector)}, _size{size} {}
 
 size_t SimdBp128Vector::_on_size() const { return _size; }
-size_t SimdBp128Vector::_on_data_size() const { return sizeof(__m128i) * _data.size(); }
+size_t SimdBp128Vector::_on_data_size() const { return sizeof(uint128_t) * _data.size(); }
 
 std::unique_ptr<BaseNsDecoder> SimdBp128Vector::_on_create_base_decoder() const {
   return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()};
@@ -22,7 +22,7 @@ auto SimdBp128Vector::_on_cend() const -> ConstIterator { return ConstIterator{n
 
 std::shared_ptr<BaseNsVector> SimdBp128Vector::_on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto data_copy = pmr_vector<__m128i>{_data, alloc};
+  auto data_copy = pmr_vector<uint128_t>{_data, alloc};
   return std::allocate_shared<SimdBp128Vector>(alloc, std::move(data_copy), _size);
 }
 

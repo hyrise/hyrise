@@ -1,5 +1,7 @@
 #include "simd_bp128_encoder.hpp"
 
+#include <emmintrin.h>
+
 #include <algorithm>
 #include <array>
 
@@ -19,7 +21,7 @@ std::unique_ptr<BaseNsVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t
 }
 
 void SimdBp128Encoder::init(size_t size) {
-  _data = pmr_vector<__m128i>((size + 3u) / 4u);
+  _data = pmr_vector<uint128_t>((size + 3u) / 4u);
   _data_index = 0u;
   _meta_block_index = 0u;
   _size = size;
@@ -86,7 +88,9 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Packing::b
 }
 
 void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
-  Packing::write_meta_info(bits_needed.data(), _data.data() + _data_index++);
+  auto data_ptr = reinterpret_cast<__m128i*>(_data.data());
+  Packing::write_meta_info(bits_needed.data(), data_ptr + _data_index);
+  ++_data_index;
 }
 
 void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,
@@ -95,7 +99,8 @@ void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,
 
   auto in = _pending_meta_block.data();
   for (auto block_index = 0u; block_index < num_blocks; ++block_index) {
-    const auto out = _data.data() + _data_index;
+    const auto data_ptr = reinterpret_cast<__m128i*>(_data.data());
+    const auto out = data_ptr + _data_index;
     Packing::pack_block(in, out, bits_needed[block_index]);
 
     in += Packing::block_size;

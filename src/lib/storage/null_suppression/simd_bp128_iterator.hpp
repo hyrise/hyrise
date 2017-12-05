@@ -8,6 +8,7 @@
 
 #include "base_ns_vector.hpp"
 #include "simd_bp128_packing.hpp"
+#include "oversized_types.hpp"
 
 #include "types.hpp"
 
@@ -18,7 +19,7 @@ class SimdBp128Iterator : public BaseNsIterator<SimdBp128Iterator> {
   using Packing = SimdBp128Packing;
 
  public:
-  SimdBp128Iterator(const pmr_vector<__m128i>* data, size_t size, size_t absolute_index = 0u);
+  SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index = 0u);
   SimdBp128Iterator(const SimdBp128Iterator& other);
 
   SimdBp128Iterator(SimdBp128Iterator&& other) = default;
@@ -52,7 +53,7 @@ class SimdBp128Iterator : public BaseNsIterator<SimdBp128Iterator> {
   void _unpack_block();
 
  private:
-  const pmr_vector<__m128i>* _data;
+  const pmr_vector<uint128_t>* _data;
   const size_t _size;
 
   size_t _data_index;

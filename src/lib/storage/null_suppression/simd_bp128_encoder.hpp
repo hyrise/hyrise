@@ -1,11 +1,10 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include <array>
 
 #include "base_ns_encoder.hpp"
 #include "simd_bp128_packing.hpp"
+#include "oversized_types.hpp"
 
 #include "types.hpp"
 
@@ -32,7 +31,7 @@ class SimdBp128Encoder : public BaseNsEncoder {
   void pack_blocks(const uint8_t num_blocks, const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed);
 
  private:
-  pmr_vector<__m128i> _data;
+  pmr_vector<uint128_t> _data;
   size_t _data_index;
 
   std::array<uint32_t, Packing::meta_block_size> _pending_meta_block;

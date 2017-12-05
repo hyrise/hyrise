@@ -264,6 +264,7 @@ set(
     storage/null_suppression/ns_utils.cpp
     storage/null_suppression/ns_utils.hpp
     storage/null_suppression/ns_vectors.hpp
+    storage/null_suppression/oversized_types.hpp
     storage/null_suppression/simd_bp128_decoder.cpp
     storage/null_suppression/simd_bp128_decoder.hpp
     storage/null_suppression/simd_bp128_encoder.cpp

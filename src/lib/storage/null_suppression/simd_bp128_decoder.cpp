@@ -22,7 +22,8 @@ SimdBp128Decoder::SimdBp128Decoder(const SimdBp128Decoder& other)
       _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
 
 void SimdBp128Decoder::_read_meta_info(size_t meta_info_offset) {
-  Packing::read_meta_info(_data->data() + meta_info_offset, _cached_meta_info.data());
+  const auto data_ptr = reinterpret_cast<const __m128i*>(_data->data());
+  Packing::read_meta_info(data_ptr + meta_info_offset, _cached_meta_info.data());
 }
 
 void SimdBp128Decoder::_unpack_block(uint8_t block_index) {
@@ -30,7 +31,9 @@ void SimdBp128Decoder::_unpack_block(uint8_t block_index) {
   const auto relative_data_offset =
       meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.begin() + block_index, 0u);
   const auto data_offset = _cached_meta_info_offset + relative_data_offset;
-  const auto in = _data->data() + data_offset;
+
+  const auto data_ptr = reinterpret_cast<const __m128i*>(_data->data());
+  const auto in = data_ptr + data_offset;
   auto out = _cached_block->data();
   const auto bit_size = _cached_meta_info[block_index];
 

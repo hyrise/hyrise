@@ -1,7 +1,5 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include <array>
 #include <functional>
 #include <limits>
@@ -11,6 +9,7 @@
 
 #include "base_ns_decoder.hpp"
 #include "simd_bp128_packing.hpp"
+#include "oversized_types.hpp"
 
 #include "types.hpp"
 
@@ -108,7 +107,7 @@ class SimdBp128Decoder : public BaseNsDecoder {
   void _unpack_block(uint8_t block_index);
 
  private:
-  const pmr_vector<__m128i>* _data;
+  const pmr_vector<uint128_t>* _data;
   const size_t _size;
 
   size_t _cached_meta_info_offset;

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include "base_ns_vector.hpp"
 #include "simd_bp128_iterator.hpp"
+#include "oversized_types.hpp"
 
 #include "types.hpp"
 
@@ -16,7 +15,7 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
   using ConstIterator = SimdBp128Iterator;
 
  public:
-  explicit SimdBp128Vector(pmr_vector<__m128i> vector, size_t size);
+  explicit SimdBp128Vector(pmr_vector<uint128_t> vector, size_t size);
   ~SimdBp128Vector() = default;
 
   size_t _on_size() const;
@@ -33,7 +32,7 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
  private:
   friend class SimdBp128Decoder;
 
-  const pmr_vector<__m128i> _data;
+  const pmr_vector<uint128_t> _data;
   const size_t _size;
 };
 }  // namespace opossum
