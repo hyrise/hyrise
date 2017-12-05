@@ -16,20 +16,13 @@ set(
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
 
-    tpch/constants.hpp
-    tpch/text_field_generator.cpp
-    tpch/text_field_generator.hpp
-    tpch/tpch_grammer.cpp
-    tpch/tpch_grammar.hpp
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
-    tpch/tpch_table_generator.cpp
-    tpch/tpch_table_generator.hpp
+    tpch/tpch_db_generator.cpp
+    tpch/tpch_db_generator.hpp
 )
 
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
-target_link_libraries(hyriseBenchmarkLib hyrise)
-
-
+target_link_libraries(hyriseBenchmarkLib hyrise tpch_dbgen)

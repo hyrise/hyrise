@@ -33,7 +33,7 @@ class TPCHTest : public BaseTestWithParam<size_t> {
     _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
 
     for (const auto& tpch_table_name : tpch_table_names) {
-      const auto tpch_table_path = std::string("src/test/tables/tpch/") + tpch_table_name + ".tbl";
+      const auto tpch_table_path = std::string("src/test/tables/tpch/sf-0.001/") + tpch_table_name + ".tbl";
       StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }
@@ -98,7 +98,7 @@ INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
   // 11, /* Enable once we support IN */
   // 12, /* Enable once we support nested expressions in Join Condition */
   // 13, /* Enable once we support Case */
-  // 14, /* We do not support Views yet */
+  // 14, /* Enable once we support Subselects in WHERE condition */
   // 15, /* Enable once we support Subselects in WHERE condition */
   // 16, /* Enable once we support Subselects in WHERE condition */
   // 17, /* Enable once we support Subselects in WHERE condition */

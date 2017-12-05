@@ -11,7 +11,9 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -107,15 +109,19 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parse_res
 std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
-      return _translate_select((const hsql::SelectStatement&)statement);
+      return _translate_select(static_cast<const hsql::SelectStatement&>(statement));
     case hsql::kStmtInsert:
-      return _translate_insert((const hsql::InsertStatement&)statement);
+      return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
     case hsql::kStmtDelete:
-      return _translate_delete((const hsql::DeleteStatement&)statement);
+      return _translate_delete(static_cast<const hsql::DeleteStatement&>(statement));
     case hsql::kStmtUpdate:
-      return _translate_update((const hsql::UpdateStatement&)statement);
+      return _translate_update(static_cast<const hsql::UpdateStatement&>(statement));
     case hsql::kStmtShow:
-      return _translate_show((const hsql::ShowStatement&)statement);
+      return _translate_show(static_cast<const hsql::ShowStatement&>(statement));
+    case hsql::kStmtCreate:
+      return _translate_create(static_cast<const hsql::CreateStatement&>(statement));
+    case hsql::kStmtDrop:
+      return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
     default:
       Fail("SQL statement type not supported");
       return {};
@@ -238,7 +244,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::SelectStatement& select) {
-  // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
+  // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
   // 3. GROUP BY clause
@@ -440,7 +446,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
   std::shared_ptr<AbstractLQPNode> node;
   switch (table.type) {
     case hsql::kTableName:
-      node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+      if (StorageManager::get().has_table(table.name)) {
+        node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+      } else if (StorageManager::get().has_view(table.name)) {
+        node = StorageManager::get().get_view(table.name);
+        Assert(!_validate || node->subtree_is_validated(), "Trying to add non-validated view to validated query");
+      } else {
+        Fail(std::string("Did not find a table or view with name ") + table.name);
+      }
       break;
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
@@ -920,6 +933,52 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
       return std::make_shared<ShowColumnsNode>(std::string(show_statement.name));
     default:
       Fail("hsql::ShowType is not supported.");
+  }
+
+  return {};
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
+  switch (create_statement.type) {
+    case hsql::CreateType::kCreateView: {
+      auto view = _translate_select((const hsql::SelectStatement&)*create_statement.select);
+
+      if (create_statement.viewColumns) {
+        // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
+        Assert(create_statement.viewColumns->size() == view->output_column_count(),
+               "Number of Columns in CREATE VIEW does not match SELECT statement");
+
+        // Create a list of renamed column expressions
+        std::vector<std::shared_ptr<Expression>> projections;
+        ColumnID column_id{0};
+        for (const auto& alias : *create_statement.viewColumns) {
+          // rename columns so they match the view definition
+          projections.push_back(Expression::create_column(column_id, alias));
+          ++column_id;
+        }
+
+        // Create a projection node for this renaming
+        auto projection_node = std::make_shared<ProjectionNode>(projections);
+        projection_node->set_left_child(view);
+        view = projection_node;
+      }
+
+      return std::make_shared<CreateViewNode>(create_statement.tableName, view);
+    }
+    default:
+      Fail("hsql::CreateType is not supported.");
+  }
+
+  return {};
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
+  switch (drop_statement.type) {
+    case hsql::DropType::kDropView: {
+      return std::make_shared<DropViewNode>(drop_statement.name);
+    }
+    default:
+      Fail("hsql::DropType is not supported.");
   }
 
   return {};

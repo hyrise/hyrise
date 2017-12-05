@@ -52,7 +52,7 @@ TEST_F(StoredTableNodeTest, UnknownTableColumns) {
 }
 
 TEST_F(StoredTableNodeTest, AliasTableColumns) {
-  const auto alias_table_node = std::make_shared<StoredTableNode>(*_stored_table_node);
+  const auto alias_table_node = _stored_table_node->deep_copy();
   alias_table_node->set_alias({"foo"});
 
   auto column_ids = alias_table_node->get_output_column_ids_for_table("foo");
@@ -68,7 +68,7 @@ TEST_F(StoredTableNodeTest, VerboseColumnNames) {
 }
 
 TEST_F(StoredTableNodeTest, VerboseColumnNamesWithAlias) {
-  const auto node_with_alias = std::make_shared<StoredTableNode>(*_stored_table_node);
+  const auto node_with_alias = _stored_table_node->deep_copy();
   node_with_alias->set_alias(std::string("foo"));
 
   EXPECT_EQ(node_with_alias->get_verbose_column_name(ColumnID{0}), "(t_a AS foo).a");

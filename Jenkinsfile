@@ -1,4 +1,9 @@
 node {
+  stage ("Start") {
+    script {
+      githubNotify context: 'CI Pipeline', status: 'PENDING'
+    }
+  }
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.10');
   oppossumCI.pull()
@@ -6,19 +11,9 @@ node {
   // mkdir /mnt/ccache; mount -t tmpfs -o size=10G none /mnt/ccache
 
   oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\" -e \"CCACHE_SLOPPINESS=file_macro\"") {
-
     try {
       stage("Setup") {
-        checkout([
-             $class: 'GitSCM',
-             branches: scm.branches,
-             doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
-             extensions: scm.extensions + [$class: 'CloneOption', noTags: true, reference: '', shallow: true, honorRefspec: true],
-             // Set the remote by hand so that we can only check out the branch that we want:
-             userRemoteConfigs: [[refspec: "+refs/heads/" + scm.branches[0] + ":refs/remotes/origin/" + scm.branches[0],
-                                  url : scm.userRemoteConfigs.get(0).getUrl(),
-                                  credentialsId: scm.userRemoteConfigs.get(0).getCredentialsId()]],
-        ])
+        checkout scm
         sh "./install.sh"
         sh "mkdir clang-debug && cd clang-debug && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-5.0 -DCMAKE_CXX_COMPILER=clang++-5.0 .. &\
         mkdir clang-debug-sanitizers && cd clang-debug-sanitizers && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-5.0 -DCMAKE_CXX_COMPILER=clang++-5.0 -DENABLE_SANITIZATION=ON .. &\
@@ -122,12 +117,20 @@ node {
 
       stage("Cleanup") {
         // Clean up workspace.
+        script {
+          githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+        }
         step([$class: 'WsCleanup'])
       }
     } catch (error) {
-      stage "Cleanup after fail"
+      stage ("Cleanup after fail") {
+        script {
+          githubNotify context: 'CI Pipeline', status: 'FAILURE'
+        }
+      }
       throw error
     } finally {
+      
       sh "ls -A1 | xargs rm -rf"
       deleteDir()
     }

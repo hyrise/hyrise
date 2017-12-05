@@ -23,7 +23,7 @@ class AbstractLQPNode;
  * For now we decided to have a single Expression without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.
  */
-class Expression : public std::enable_shared_from_this<Expression> {
+class Expression : public std::enable_shared_from_this<Expression>, private Noncopyable {
  public:
   /*
    * This constructor is meant for internal use only and therefore should be private.
@@ -43,6 +43,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
   explicit Expression(ExpressionType type);
+
+  // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
+  std::shared_ptr<Expression> deep_copy() const;
 
   // @{
   /**

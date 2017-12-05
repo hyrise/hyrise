@@ -17,6 +17,29 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
+std::shared_ptr<Expression> Expression::deep_copy() const {
+  // We cannot use the copy constructor here, because it does not work with shared_from_this()
+  auto deep_copy = std::make_shared<Expression>(_type);
+  deep_copy->_value = _value;
+  deep_copy->_aggregate_function = _aggregate_function;
+  deep_copy->_table_name = _table_name;
+  deep_copy->_column_id = _column_id;
+  deep_copy->_alias = _alias;
+  deep_copy->_value_placeholder = _value_placeholder;
+
+  std::vector<std::shared_ptr<Expression>> expression_list;
+  expression_list.reserve(_expression_list.size());
+  for (const auto& expression : _expression_list) {
+    expression_list.emplace_back(expression->deep_copy());
+  }
+  deep_copy->_expression_list = std::move(expression_list);
+
+  if (left_child()) deep_copy->set_left_child(left_child()->deep_copy());
+  if (right_child()) deep_copy->set_right_child(right_child()->deep_copy());
+
+  return deep_copy;
+}
+
 std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,
                                                       const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Column);

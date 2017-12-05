@@ -1,0 +1,28 @@
+#pragma once
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+
+namespace opossum {
+
+// maintenance operator for the "CREATE VIEW" sql statement
+class CreateView : public AbstractReadOnlyOperator {
+ public:
+  explicit CreateView(const std::string& view_name, std::shared_ptr<const AbstractLQPNode> lqp);
+
+  const std::string name() const override;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+
+ protected:
+  std::shared_ptr<const Table> _on_execute() override;
+
+ private:
+  const std::string _view_name;
+  const std::shared_ptr<const AbstractLQPNode> _lqp;
+};
+}  // namespace opossum

@@ -16,6 +16,7 @@ add_executable(
     operators/union_all_benchmark.cpp
     table_generator.cpp
     table_generator.hpp
+    tpch_db_generator_benchmark.cpp
 )
 
 target_link_libraries(

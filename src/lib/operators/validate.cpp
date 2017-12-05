@@ -67,10 +67,14 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();
+      DebugAssert(referenced_table->get_chunk(ChunkID{0}).has_mvcc_columns(),
+                  "Trying to use Validate on a table that has no MVCC columns");
+
       for (auto row_id : *ref_col_in->pos_list()) {
         const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
         auto mvcc_columns = referenced_chunk.mvcc_columns();
+
         if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_columns)) {
           pos_list_out->emplace_back(row_id);
         }
@@ -87,6 +91,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = _in_table;
+      DebugAssert(chunk_in.has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
       const auto mvcc_columns = chunk_in.mvcc_columns();
 
       // Generate pos_list_out.

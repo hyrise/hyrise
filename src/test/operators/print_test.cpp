@@ -7,6 +7,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -42,7 +43,11 @@ class PrintWrapper : public Print {
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
-    return column_string_widths(min, max, tab);
+    return _column_string_widths(min, max, tab);
+  }
+
+  std::string test_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) {
+    return _truncate_cell(cell, max_width);
   }
 };
 
@@ -121,6 +126,36 @@ TEST_F(OperatorsPrintTest, OperatorName) {
   auto pr = std::make_shared<opossum::Print>(gt, output);
 
   EXPECT_EQ(pr->name(), "Print");
+}
+
+TEST_F(OperatorsPrintTest, TruncateLongValue) {
+  auto print_wrap = std::make_shared<PrintWrapper>(gt);
+
+  auto cell = AllTypeVariant{"abcdefghijklmnopqrstuvwxyz"};
+
+  auto truncated_cell_20 = print_wrap->test_truncate_cell(cell, 20);
+  EXPECT_EQ(truncated_cell_20, "abcdefghijklmnopq...");
+
+  auto truncated_cell_30 = print_wrap->test_truncate_cell(cell, 30);
+  EXPECT_EQ(truncated_cell_30, "abcdefghijklmnopqrstuvwxyz");
+
+  auto truncated_cell_10 = print_wrap->test_truncate_cell(cell, 10);
+  EXPECT_EQ(truncated_cell_10, "abcdefg...");
+}
+
+TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
+  auto tab = StorageManager::get().get_table(table_name);
+
+  tab->append({0, "abcdefghijklmnopqrstuvwxyz"});
+
+  auto wrap = std::make_shared<TableWrapper>(tab);
+  wrap->execute();
+
+  auto printer = std::make_shared<Print>(wrap, output);
+  printer->execute();
+
+  auto output_str = output.str();
+  EXPECT_TRUE(output_str.find("|abcdefghijklmnopq...|") != std::string::npos);
 }
 
 }  // namespace opossum
