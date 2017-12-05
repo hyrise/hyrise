@@ -15,20 +15,22 @@
 namespace opossum {
 
 std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data_type,
-                                                                   const std::shared_ptr<BaseColumn>& column, EncodingType encoding_type) {
+                                                                   const std::shared_ptr<BaseColumn>& column,
+                                                                   EncodingType encoding_type) {
   auto value_column = std::dynamic_pointer_cast<BaseValueColumn>(column);
   DebugAssert(value_column != nullptr, "Column must be uncompressed, i.e. a ValueColumn.");
 
   return encode_column(encoding_type, data_type, value_column);
 }
 
-void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk, EncodingType encoding_type) {
+void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk,
+                                           EncodingType encoding_type) {
   DebugAssert((column_types.size() == chunk.column_count()),
               "Number of column types does not match the chunk’s column count.");
 
   for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
     auto value_column = chunk.get_mutable_column(column_id);
-    auto dict_column = compress_column(column_types[column_id], value_column, encoding_type );
+    auto dict_column = compress_column(column_types[column_id], value_column, encoding_type);
     chunk.replace_column(column_id, dict_column);
   }
 
@@ -37,7 +39,8 @@ void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_t
   }
 }
 
-void DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids, EncodingType encoding_type) {
+void DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
+                                            EncodingType encoding_type) {
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 

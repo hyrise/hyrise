@@ -8,8 +8,8 @@
 #include <utility>
 
 #include "base_ns_decoder.hpp"
-#include "simd_bp128_packing.hpp"
 #include "oversized_types.hpp"
+#include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
 

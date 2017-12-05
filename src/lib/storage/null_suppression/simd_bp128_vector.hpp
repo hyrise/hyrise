@@ -3,8 +3,8 @@
 #include <emmintrin.h>
 
 #include "base_ns_vector.hpp"
-#include "simd_bp128_iterator.hpp"
 #include "oversized_types.hpp"
+#include "simd_bp128_iterator.hpp"
 
 #include "types.hpp"
 

@@ -3,8 +3,8 @@
 #include <array>
 
 #include "base_ns_encoder.hpp"
-#include "simd_bp128_packing.hpp"
 #include "oversized_types.hpp"
+#include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
 

@@ -7,8 +7,8 @@
 #include <numeric>
 
 #include "base_ns_vector.hpp"
-#include "simd_bp128_packing.hpp"
 #include "oversized_types.hpp"
+#include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
 

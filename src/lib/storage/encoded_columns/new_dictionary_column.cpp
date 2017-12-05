@@ -101,7 +101,8 @@ std::shared_ptr<BaseColumn> NewDictionaryColumn<T>::copy_using_allocator(
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<NewDictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr, _null_value_id);
+  return std::allocate_shared<NewDictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr,
+                                                      _null_value_id);
 }
 
 template <typename T>
