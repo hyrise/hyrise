@@ -65,8 +65,8 @@ class SQLPipeline : public Noncopyable {
 
   // Execution results
   std::unique_ptr<hsql::SQLParserResult> _parsed_sql;
-  std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plan;
-  std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plan;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
   std::unique_ptr<SQLQueryPlan> _query_plan;
   std::vector<std::shared_ptr<OperatorTask>> _op_tasks;
   std::shared_ptr<const Table> _result_table;

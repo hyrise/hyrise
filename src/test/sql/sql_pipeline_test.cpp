@@ -1,12 +1,15 @@
 #include <memory>
 #include <string>
 #include <utility>
-
 #include "../base_test.hpp"
+
 #include "SQLParser.h"
 #include "gtest/gtest.h"
+#include "logical_query_plan/join_node.hpp"
 
+#include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -34,12 +37,6 @@ class SQLPipelineTest : public BaseTest {
     _join_result->append({12345, 458.7f, 457.7f});
   }
 
-  bool _contains_validate(const std::shared_ptr<AbstractLQPNode>& node) {
-    if (node == nullptr) return false;
-    if (node->type() == LQPNodeType::Validate) return true;
-    return _contains_validate(node->left_child()) || _contains_validate(node->right_child());
-  }
-
   std::shared_ptr<Table> _table_a;
   std::shared_ptr<Table> _table_b;
   std::shared_ptr<Table> _join_result;
@@ -49,6 +46,54 @@ class SQLPipelineTest : public BaseTest {
   const std::string _join_query =
       "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a, table_b WHERE table_a.a = table_b.a AND table_a.a "
       "> 1000";
+
+  const std::vector<std::string> _column_names{"a", "b"};
+  const std::vector<std::string> _join_column_names{"a", "b", "bb"};
+
+  bool _subtree_is_equal(const std::shared_ptr<AbstractLQPNode>& got,
+                         const std::shared_ptr<AbstractLQPNode>& expected) {
+    if (got == nullptr && expected == nullptr) return true;
+    if (got == nullptr) return false;
+    if (expected == nullptr) return false;
+
+    if (got->type() != expected->type()) return false;
+    return _subtree_is_equal(got->left_child(), expected->left_child()) &&
+           _subtree_is_equal(got->right_child(), expected->right_child());
+  }
+
+  template <typename Functor>
+  bool _find_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor find_fn) {
+    if (node == nullptr) return false;
+    if (find_fn(node)) return true;
+    return _find_in_lqp(node->left_child(), find_fn) || _find_in_lqp(node->right_child(), find_fn);
+  }
+
+  template <typename Functor>
+  bool _find_in_query_plan(const std::shared_ptr<const AbstractOperator>& node, Functor find_fn) {
+    if (node == nullptr) return false;
+    if (find_fn(node)) return true;
+    return _find_in_query_plan(node->input_left(), find_fn) || _find_in_query_plan(node->input_right(), find_fn);
+  }
+
+  bool _contains_validate(const std::vector<std::shared_ptr<OperatorTask>>& tasks) {
+    for (const auto& task : tasks) {
+      if (std::dynamic_pointer_cast<Validate>(task->get_operator())) return true;
+    }
+    return false;
+  }
+
+  // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinDetectionRule and
+  // could break if something is changed within the optimizer.
+  // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
+  // predicate and then optimized to a Join.
+  std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> _contains_cross =
+      [](const std::shared_ptr<AbstractLQPNode>& node) {
+        if (node->type() != LQPNodeType::Join) return false;
+        if (auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
+          return join_node->join_mode() == JoinMode::Cross;
+        }
+        return false;
+      };
 };
 
 TEST_F(SQLPipelineTest, SimpleCreation) {
@@ -114,7 +159,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQP) {
   const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+  EXPECT_EQ(lqp_roots.at(0)->output_column_names(), _column_names);
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
@@ -124,7 +169,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
   const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+  EXPECT_EQ(lqp_roots.at(0)->output_column_names(), _column_names);
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPWithJoinFilter) {
@@ -133,9 +178,8 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPWithJoinFilter) {
   const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
-  EXPECT_EQ(lqp_roots.at(0)->left_child()->type(), LQPNodeType::Predicate);
-  EXPECT_EQ(lqp_roots.at(0)->left_child()->left_child()->type(), LQPNodeType::Predicate);
+  EXPECT_EQ(lqp_roots.at(0)->output_column_names(), _join_column_names);
+  EXPECT_TRUE(_find_in_lqp(lqp_roots.at(0), _contains_cross));
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPInvalid) {
@@ -149,7 +193,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPValidated) {
   const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_TRUE(_contains_validate(lqp_roots.at(0)));
+  EXPECT_TRUE(lqp_roots.at(0)->subtree_is_validated());
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPNotValidated) {
@@ -158,7 +202,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPNotValidated) {
   const auto& lqp_roots = sql_pipeline.get_unoptimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_FALSE(_contains_validate(lqp_roots.at(0)));
+  EXPECT_FALSE(lqp_roots.at(0)->subtree_is_validated());
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQP) {
@@ -167,7 +211,7 @@ TEST_F(SQLPipelineTest, GetOptimizedLQP) {
   const auto& lqp_roots = sql_pipeline.get_optimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+  EXPECT_EQ(lqp_roots.at(0)->output_column_names(), _column_names);
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
@@ -176,8 +220,8 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
   sql_pipeline.get_optimized_logical_plans();
   const auto& lqp_roots = sql_pipeline.get_optimized_logical_plans();
 
-  EXPECT_EQ(lqp_roots.size(), 1ul);
-  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
+  EXPECT_EQ(lqp_roots.size(), 1u);
+  EXPECT_EQ(lqp_roots.at(0)->output_column_names(), _column_names);
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPWithJoinFilter) {
@@ -186,9 +230,8 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPWithJoinFilter) {
   const auto& lqp_roots = sql_pipeline.get_optimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_EQ(lqp_roots.at(0)->type(), LQPNodeType::Projection);
-  EXPECT_EQ(lqp_roots.at(0)->left_child()->type(), LQPNodeType::Predicate);
-  EXPECT_EQ(lqp_roots.at(0)->left_child()->left_child()->type(), LQPNodeType::Join);
+  EXPECT_FALSE(_find_in_lqp(lqp_roots.at(0), _contains_cross));
+  EXPECT_EQ(lqp_roots.at(0)->output_column_names(), _join_column_names);
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPInvalid) {
@@ -202,7 +245,7 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPValidated) {
   const auto& lqp_roots = sql_pipeline.get_optimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_TRUE(_contains_validate(lqp_roots.at(0)));
+  EXPECT_TRUE(lqp_roots.at(0)->subtree_is_validated());
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPNotValidated) {
@@ -211,7 +254,28 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPNotValidated) {
   const auto& lqp_roots = sql_pipeline.get_optimized_logical_plans();
 
   EXPECT_EQ(lqp_roots.size(), 1u);
-  EXPECT_FALSE(_contains_validate(lqp_roots.at(0)));
+  EXPECT_FALSE(lqp_roots.at(0)->subtree_is_validated());
+}
+
+TEST_F(SQLPipelineTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
+  SQLPipeline sql_pipeline{_join_query};
+
+  const auto& unoptimized_lqp_roots = sql_pipeline.get_unoptimized_logical_plans();
+
+  // The optimizer works on the original LQP nodes which could be modified during optimization.
+  // Copy the structure to check that it is equal after optimizing.
+  std::vector<std::shared_ptr<AbstractLQPNode>> unoptimized_copies;
+  for (const auto& root : unoptimized_lqp_roots) {
+    unoptimized_copies.emplace_back(root->deep_copy());
+  }
+
+  // Optimize the LQP node
+  sql_pipeline.get_optimized_logical_plans();
+  const auto& unoptimized_lqp_roots_new = sql_pipeline.get_unoptimized_logical_plans();
+
+  for (auto root_pos = 0u; root_pos < unoptimized_lqp_roots_new.size(); ++root_pos) {
+    EXPECT_TRUE(_subtree_is_equal(unoptimized_lqp_roots_new.at(root_pos), unoptimized_copies.at(root_pos)));
+  }
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlan) {
@@ -221,7 +285,7 @@ TEST_F(SQLPipelineTest, GetQueryPlan) {
   const auto& roots = plan.tree_roots();
 
   EXPECT_EQ(roots.size(), 1u);
-  EXPECT_EQ(roots.at(0)->name(), "Projection");
+  EXPECT_NE(roots.at(0), nullptr);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
@@ -239,7 +303,7 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
   const auto& roots = plan.tree_roots();
 
   EXPECT_EQ(roots.size(), 1u);
-  EXPECT_EQ(roots.at(0)->name(), "Projection");
+  EXPECT_NE(roots.at(0), nullptr);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlanJoinWithFilter) {
@@ -248,10 +312,13 @@ TEST_F(SQLPipelineTest, GetQueryPlanJoinWithFilter) {
   const auto& plan = sql_pipeline.get_query_plan();
   const auto& roots = plan.tree_roots();
 
+  auto is_join_op = [](const std::shared_ptr<const AbstractOperator>& node) {
+    return static_cast<bool>(std::dynamic_pointer_cast<const AbstractJoinOperator>(node));
+  };
+
   EXPECT_EQ(roots.size(), 1u);
-  EXPECT_EQ(roots.at(0)->name(), "Projection");
-  EXPECT_EQ(roots.at(0)->input_left()->name(), "TableScan");
-  EXPECT_TRUE(roots.at(0)->input_left()->input_left()->name().find("Join") != std::string::npos);
+  EXPECT_NE(roots.at(0), nullptr);
+  EXPECT_TRUE(_find_in_query_plan(roots.at(0), is_join_op));
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlanInvalid) {
@@ -287,9 +354,7 @@ TEST_F(SQLPipelineTest, GetTasks) {
   const auto& tasks = sql_pipeline.get_tasks();
 
   EXPECT_EQ(tasks.size(), 3u);
-  EXPECT_EQ(tasks.at(0)->get_operator()->name(), "GetTable");
-  EXPECT_EQ(tasks.at(1)->get_operator()->name(), "Validate");
-  EXPECT_EQ(tasks.at(2)->get_operator()->name(), "Projection");
+  EXPECT_TRUE(_contains_validate(tasks));
 }
 
 TEST_F(SQLPipelineTest, GetTasksTwice) {
@@ -299,9 +364,7 @@ TEST_F(SQLPipelineTest, GetTasksTwice) {
   const auto& tasks = sql_pipeline.get_tasks();
 
   EXPECT_EQ(tasks.size(), 3u);
-  EXPECT_EQ(tasks.at(0)->get_operator()->name(), "GetTable");
-  EXPECT_EQ(tasks.at(1)->get_operator()->name(), "Validate");
-  EXPECT_EQ(tasks.at(2)->get_operator()->name(), "Projection");
+  EXPECT_TRUE(_contains_validate(tasks));
 }
 
 TEST_F(SQLPipelineTest, GetTasksNotValidated) {
@@ -310,8 +373,7 @@ TEST_F(SQLPipelineTest, GetTasksNotValidated) {
   const auto& tasks = sql_pipeline.get_tasks();
 
   EXPECT_EQ(tasks.size(), 2u);
-  EXPECT_EQ(tasks.at(0)->get_operator()->name(), "GetTable");
-  EXPECT_EQ(tasks.at(1)->get_operator()->name(), "Projection");
+  EXPECT_FALSE(_contains_validate(tasks));
 }
 
 TEST_F(SQLPipelineTest, GetResultTable) {

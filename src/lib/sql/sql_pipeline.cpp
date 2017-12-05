@@ -54,41 +54,46 @@ const hsql::SQLParserResult& SQLPipeline::get_parsed_sql() {
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
-  if (!_unoptimized_logical_plan.empty()) {
-    return _unoptimized_logical_plan;
+  if (!_unoptimized_logical_plans.empty()) {
+    return _unoptimized_logical_plans;
   }
 
   const auto& parsed_sql = get_parsed_sql();
   try {
-    _unoptimized_logical_plan = SQLTranslator{_use_mvcc}.translate_parse_result(parsed_sql);
+    _unoptimized_logical_plans = SQLTranslator{_use_mvcc}.translate_parse_result(parsed_sql);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while compiling query plan:\n  " + std::string(exception.what()));
   }
 
-  return _unoptimized_logical_plan;
+  return _unoptimized_logical_plans;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
-  if (!_optimized_logical_plan.empty()) {
-    return _optimized_logical_plan;
+  if (!_optimized_logical_plans.empty()) {
+    return _optimized_logical_plans;
   }
 
   // We want a copy of the LQP roots because would "merge" the tree in weird ways when optimizing the references to the
   // unoptimized nodes.
   const auto unoptimized_lqp = get_unoptimized_logical_plans();
-  _optimized_logical_plan.reserve(unoptimized_lqp.size());
+  _optimized_logical_plans.reserve(unoptimized_lqp.size());
 
   try {
     for (const auto& node : unoptimized_lqp) {
-      _optimized_logical_plan.push_back(Optimizer::get().optimize(node));
+      _optimized_logical_plans.push_back(Optimizer::get().optimize(node));
     }
   } catch (const std::exception& exception) {
     // Don't keep bad values
-    _optimized_logical_plan.clear();
+    _optimized_logical_plans.clear();
     throw std::runtime_error("Error while optimizing query plan:\n  " + std::string(exception.what()));
   }
 
-  return _optimized_logical_plan;
+  // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
+  // optimized, which could lead to subtle bugs. optimized_logical_plans then holds hold the original values now.
+  // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
+  _unoptimized_logical_plans.clear();
+
+  return _optimized_logical_plans;
 }
 
 const SQLQueryPlan& SQLPipeline::get_query_plan() {
