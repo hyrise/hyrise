@@ -23,7 +23,7 @@ namespace hana = boost::hana;
 class BaseColumnEncoder {
  public:
   /**
-   * @brief Returns if the encoder supports the given data type.
+   * @brief Returns true if the encoder supports the given data type.
    */
   virtual bool supports(DataType data_type) const = 0;
 

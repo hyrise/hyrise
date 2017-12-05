@@ -28,10 +28,12 @@ struct enum_constant {
   using hana_tag = enum_constant_tag<EnumType>;
 
   static constexpr auto value = enum_value;
+
+  constexpr EnumType operator()() const { return value; }
 };
 
 /**
- * This templated constant can be used to conventiently
+ * This templated constant can be used to conveniently
  * instantiate enum constants of any enum (class) type.
  *
  * Example: enum_c<DataType::Int> (compare to: hana::type_c<int32_t>)
@@ -68,8 +70,8 @@ struct value_impl<E, when<opossum::EnumConstant<E>::value>> {
 /**
  * Implementation of hana::hash in order to meet requirements for concept “Hashable”
  */
-template <typename Tag>
-struct hash_impl<Tag, when<opossum::EnumConstant<Tag>::value>> {
+template <typename E>
+struct hash_impl<E, when<opossum::EnumConstant<E>::value>> {
   template <typename X>
   static constexpr auto apply(const X& x) {
     return type_c<opossum::enum_constant<decltype(X::value), X::value>>;

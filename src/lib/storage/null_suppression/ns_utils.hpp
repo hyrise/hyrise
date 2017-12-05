@@ -22,7 +22,7 @@ void resolve_ns_vector_type(const BaseNsVector& vector, const Functor& functor) 
     const auto vector_type_c = hana::first(pair);
     const auto vector_t = hana::second(pair);
 
-    if (!match_found && (hana::value(vector_type_c) == vector.type())) {
+    if (!match_found && (vector_type_c() == vector.type())) {
       using NsVectorType = typename decltype(vector_t)::type;
       functor(static_cast<const NsVectorType&>(vector));
 
