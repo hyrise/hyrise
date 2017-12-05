@@ -44,3 +44,13 @@ target_link_libraries(
     hyriseBenchmarkLib
     benchmark
 )
+
+
+# Configure hyriseBenchmarkTPCH
+add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
+target_link_libraries(
+    hyriseBenchmarkTPCH
+    hyrise
+    hyriseBenchmarkLib
+    boost_program_options
+)

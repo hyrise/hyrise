@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "testing_assert.hpp"
+#include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "utils/load_table.hpp"
 
@@ -44,5 +45,28 @@ TEST(TpchDbGeneratorTest, TableContents) {
                           load_table("src/test/tables/tpch/sf-0.001/nation.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Region),
                           load_table("src/test/tables/tpch/sf-0.001/region.tbl", chunk_size));
+}
+
+TEST(TpchDbGeneratorTest, GenerateAndStore) {
+  EXPECT_FALSE(StorageManager::get().has_table("part"));
+  EXPECT_FALSE(StorageManager::get().has_table("supplier"));
+  EXPECT_FALSE(StorageManager::get().has_table("partsupp"));
+  EXPECT_FALSE(StorageManager::get().has_table("customer"));
+  EXPECT_FALSE(StorageManager::get().has_table("orders"));
+  EXPECT_FALSE(StorageManager::get().has_table("nation"));
+  EXPECT_FALSE(StorageManager::get().has_table("region"));
+  
+  // Small scale factor
+  TpchDbGenerator(0.01f, Chunk::MAX_SIZE).generate_and_store();
+
+  EXPECT_TRUE(StorageManager::get().has_table("part"));
+  EXPECT_TRUE(StorageManager::get().has_table("supplier"));
+  EXPECT_TRUE(StorageManager::get().has_table("partsupp"));
+  EXPECT_TRUE(StorageManager::get().has_table("customer"));
+  EXPECT_TRUE(StorageManager::get().has_table("orders"));
+  EXPECT_TRUE(StorageManager::get().has_table("nation"));
+  EXPECT_TRUE(StorageManager::get().has_table("region"));
+
+  StorageManager::reset();
 }
 }  // namespace opossum
