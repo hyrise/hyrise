@@ -19,6 +19,7 @@
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/empty_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
 #include "table_scan/single_column_table_scan_impl.hpp"
@@ -174,16 +175,20 @@ void TableScan::_init_scan() {
     return;
   }
 
+  if (_scan_type == ScanType::OpIsNull || _scan_type == ScanType::OpIsNotNull) {
+    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
+    return;
+  }
+
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
     if (variant_is_null(right_value)) {
-      _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
-
-      return;
+      // early out because of NULL semantics
+      _impl = std::make_unique<EmptyTableScanImpl>(_in_table, _left_column_id, _scan_type);
+    } else {
+      _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
     }
-
-    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
