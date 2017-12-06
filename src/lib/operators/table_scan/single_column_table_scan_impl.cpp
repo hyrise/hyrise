@@ -141,8 +141,8 @@ void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& b
   });
 }
 
-// void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseNewDictionaryColumn& left_column,
-//                                                           std::shared_ptr<ColumnVisitableContext> base_context) const {
+// void SingleColumnTableScanImpl::_handle_dictionary_column(
+//     const BaseNewDictionaryColumn& left_column, std::shared_ptr<ColumnVisitableContext> base_context) const {
 //   auto context = std::static_pointer_cast<Context>(base_context);
 //   auto& matches_out = context->_matches_out;
 //   const auto chunk_id = context->_chunk_id;
