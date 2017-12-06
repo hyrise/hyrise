@@ -73,9 +73,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
     return _optimized_logical_plans;
   }
 
-  // We want a copy of the LQP roots because would "merge" the tree in weird ways when optimizing the references to the
-  // unoptimized nodes.
-  const auto unoptimized_lqp = get_unoptimized_logical_plans();
+  const auto& unoptimized_lqp = get_unoptimized_logical_plans();
   _optimized_logical_plans.reserve(unoptimized_lqp.size());
 
   try {
