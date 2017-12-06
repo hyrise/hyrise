@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <random>
 
 #include "cxxopts.hpp"
 
@@ -7,16 +8,78 @@
 #include <SQLParserResult.h>
 #include <SQLParser.h>
 
+#include "sql/sql_pipeline.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 
-namespace {
+namespace opossum {
 
-void tpch_benchmark(const opossum::ChunkOffset chunk_size,
+enum class BenchmarkMode {
+  IndividualQueries,
+  PermutedQuerySets
+};
+
+using Duration = std::chrono::high_resolution_clock::duration;
+using TimePoint = std::chrono::high_resolution_clock::time_point;
+
+struct QueryBenchmarkResult {
+  explicit QueryBenchmarkResult(size_t id): id(id) {}
+
+  size_t id;
+  size_t num_iterations = 0;
+  Duration duration = Duration{};
+};
+
+using BenchmarkResults = std::unordered_map<size_t, QueryBenchmarkResult>;
+
+class InidividualQueryBenchmark {
+ public:
+  void execute() {
+    while (state.keep_running()) {
+      // Execute the query, we don't care about the results
+      SQLPipeline{sql}.get_result_table();
+    }
+    result.num_iterations = state.num_iterations;
+    result.duration = state.duration;
+  }
+};
+
+class PermutedQuerySetBenchmark {
+ public:
+  void execute() {
+    std::random_device random_device;
+    std::mt19937 random_generator(random_device());
+
+
+    while (state.keep_running()) {
+      std::shuffle(_query_ids.begin(), _query_ids.end(), random_generator);
+
+      for (const auto query_id : _query_ids) {
+        const auto query_benchmark_begin = std::chrono::steady_clock::now();
+        // Execute the query, we don't care about the results
+        SQLPipeline{opossum::tpch_queries[query_id]}.get_result_table();
+        const auto query_benchmark_end = std::chrono::steady_clock::now();
+
+        
+        _results.at(query_id).duration
+      }
+
+      // Execute the query, we don't care about the results
+      SQLPipeline sql_pipeline{sql}.get_result_table();
+    }
+  }
+};
+
+void create_report(const BenchmarkResults& results) {
+
+}
+
+void tpch_benchmark(BenchmarkMode benchmark_mode,
+                    const opossum::ChunkOffset chunk_size,
                     const float scale_factor,
                     const size_t max_num_query_runs,
                     const std::chrono::steady_clock::rep seconds_per_query,
-                    std::vector<size_t> query_ids) {
+                    const std::vector<size_t>& query_ids) {
   /**
    * Populate the StorageManager
    */
@@ -24,38 +87,51 @@ void tpch_benchmark(const opossum::ChunkOffset chunk_size,
   opossum::TpchDbGenerator(scale_factor, chunk_size).generate_and_store();
   std::cout << "Done." << std::endl;
 
+  BenchmarkResults query_results_by_query_id;
+
   // Run each requested query
   for (const auto query_id : query_ids) {
     auto num_runs = size_t{0};
     const auto query_benchmark_begin = std::chrono::steady_clock::now();
+    auto query_benchmark_end = std::chrono::steady_clock::time_point{};
     const auto sql = opossum::tpch_queries[query_id];
 
+    // Exercise a specific query, i.e. translate, optimize and run it
     while (true) {
-      hsql::SQLParserResult parser_result;
-      hsql::SQLParser::parse(sql, &parser_result);
+      SQLPipeline sql_pipeline{sql};
+
+      // Execute the query, we don't care about the results
+      sql_pipeline.get_result_table();
 
       /**
        * Stop executing this query if `num_query_runs` runs of it have been performed or `seconds_per_query` passed
        */
       ++num_runs;
       if (num_runs >= max_num_query_runs) {
+        query_benchmark_end = std::chrono::steady_clock::now();
         break;
       }
 
       /**
-       * Stop exercising this query, if sufficient time passed
+       * Stop exercising this query if sufficient time passed
        */
       {
-        const auto now = std::chrono::steady_clock::now();
-        const auto query_benchmark_seconds = std::chrono::duration_cast<std::chrono::seconds>(now - query_benchmark_begin).count();
+        query_benchmark_end = std::chrono::steady_clock::now();
+        const auto query_benchmark_seconds = std::chrono::duration_cast<std::chrono::seconds>(query_benchmark_end - query_benchmark_begin).count();
         if (query_benchmark_seconds >= seconds_per_query) {
           break;
         }
       }
-
     }
 
+    QueryBenchmarkResult query_results{query_id};
+    query_results.duration = query_benchmark_end - query_benchmark_begin;
+    query_results.num_iterations = num_runs;
+
+    query_results_by_query_id.emplace(query_id, query_results);
   }
+
+  create_report(query_results_by_query_id);
 }
 
 }  // namespace
