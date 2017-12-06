@@ -38,16 +38,24 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
+// void _handle_dictionary_column(const BaseNewDictionaryColumn& left_column,
+//                                std::shared_ptr<ColumnVisitableContext> base_context) const;
+
   /**
    * @defgroup Methods used for handling dictionary columns
    * @{
    */
 
-  ValueID _get_search_value_id(const BaseDictionaryColumn& column);
+  // The following methods are templated for as long as two dictionary column implementations exist.
 
-  bool _right_value_matches_all(const BaseDictionaryColumn& column, const ValueID search_value_id);
+  template <typename BaseDictionaryColumnType>
+  ValueID _get_search_value_id(const BaseDictionaryColumnType& column);
 
-  bool _right_value_matches_none(const BaseDictionaryColumn& column, const ValueID search_value_id);
+  template <typename BaseDictionaryColumnType>
+  bool _right_value_matches_all(const BaseDictionaryColumnType& column, const ValueID search_value_id);
+
+  template <typename BaseDictionaryColumnType>
+  bool _right_value_matches_none(const BaseDictionaryColumnType& column, const ValueID search_value_id);
 
   template <typename Functor>
   void _with_operator_for_dict_column_scan(const ScanType scan_type, const Functor& func) {

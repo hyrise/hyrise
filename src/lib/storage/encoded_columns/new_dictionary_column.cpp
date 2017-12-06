@@ -40,11 +40,6 @@ std::shared_ptr<const pmr_vector<T>> NewDictionaryColumn<T>::dictionary() const 
 }
 
 template <typename T>
-std::shared_ptr<const BaseNsVector> NewDictionaryColumn<T>::attribute_vector() const {
-  return _attribute_vector;
-}
-
-template <typename T>
 ValueID NewDictionaryColumn<T>::null_value_id() const {
   return _null_value_id;
 }
@@ -106,8 +101,35 @@ std::shared_ptr<BaseColumn> NewDictionaryColumn<T>::copy_using_allocator(
 }
 
 template <typename T>
-EncodingType NewDictionaryColumn<T>::encoding_type() const {
-  return EncodingType::NewDictionary;
+ValueID NewDictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
+  DebugAssert(!variant_is_null(value), "Null value passed.");
+
+  const auto typed_value = type_cast<T>(value);
+
+  auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+}
+
+template <typename T>
+ValueID NewDictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
+  DebugAssert(!variant_is_null(value), "Null value passed.");
+
+  const auto typed_value = type_cast<T>(value);
+
+  auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+}
+
+template <typename T>
+size_t NewDictionaryColumn<T>::unique_values_count() const {
+  return _dictionary->size();
+}
+
+template <typename T>
+std::shared_ptr<const BaseNsVector> NewDictionaryColumn<T>::attribute_vector() const {
+  return _attribute_vector;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(NewDictionaryColumn);

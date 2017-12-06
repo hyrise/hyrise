@@ -141,7 +141,73 @@ void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& b
   });
 }
 
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) {
+// void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseNewDictionaryColumn& left_column,
+//                                                           std::shared_ptr<ColumnVisitableContext> base_context) const {
+//   auto context = std::static_pointer_cast<Context>(base_context);
+//   auto& matches_out = context->_matches_out;
+//   const auto chunk_id = context->_chunk_id;
+//   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+
+//   /**
+//    * ValueID value_id; // left value id
+//    * Variant value; // right value
+//    *
+//    * A ValueID value_id from the attribute vector is included in the result iff
+//    *
+//    * Operator           |  Condition
+//    * value_id == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id ==
+//    * dict.lower_bound(value)
+//    * value_id != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id !=
+//    * dict.lower_bound(value)
+//    * value_id <  value  |  value_id < dict.lower_bound(value)
+//    * value_id <= value  |  value_id < dict.upper_bound(value)
+//    * value_id >  value  |  value_id >= dict.upper_bound(value)
+//    * value_id >= value  |  value_id >= dict.lower_bound(value)
+//    */
+
+//   const auto search_value_id = _get_search_value_id(left_column);
+
+//   *
+//    * Early Outs
+//    *
+//    * Operator          | All                                   | None
+//    * value_id == value | !None && unique_values_count == 1     | search_vid == dict.upper_bound(value)
+//    * value_id != value | search_vid == dict.upper_bound(value) | !All && unique_values_count == 1
+//    * value_id <  value | search_vid == INVALID_VALUE_ID        | search_vid == 0
+//    * value_id <= value | search_vid == INVALID_VALUE_ID        | search_vid == 0
+//    * value_id >  value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
+//    * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
+
+
+//   const auto& attribute_vector = *left_column.attribute_vector();
+//   auto left_iterable = AttributeVectorIterable{attribute_vector};
+
+//   if (_right_value_matches_all(left_column, search_value_id)) {
+//     left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+//       static const auto always_true = [](const auto&) { return true; };
+//       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
+//     });
+
+//     return;
+//   }
+
+//   if (_right_value_matches_none(left_column, search_value_id)) {
+//     return;
+//   }
+
+//   auto right_iterable = ConstantValueIterable<ValueID>{search_value_id};
+
+//   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+//     right_iterable.with_iterators([&](auto right_it, auto right_end) {
+//       this->_with_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
+//         this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+//       });
+//     });
+//   });
+// }
+
+template <typename BaseDictionaryColumnType>
+ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumnType& column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
     case ScanType::OpNotEquals:
@@ -159,7 +225,8 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn& column,
+template <typename BaseDictionaryColumnType>
+bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumnType& column,
                                                          const ValueID search_value_id) {
   switch (_scan_type) {
     case ScanType::OpEquals:
@@ -182,7 +249,8 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn& column,
+template <typename BaseDictionaryColumnType>
+bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumnType& column,
                                                           const ValueID search_value_id) {
   switch (_scan_type) {
     case ScanType::OpEquals:
