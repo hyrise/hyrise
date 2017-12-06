@@ -46,11 +46,10 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-    // We need to increment the dictionary size here because of possible null values.
     auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
-    attribute_vector.reserve(values.size() + 1u);
+    attribute_vector.reserve(values.size());
 
-    const auto null_value_id = static_cast<uint32_t>(values.size());
+    const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -78,8 +77,11 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
       }
     }
 
+    // We need to increment the dictionary size here because of possible null values.
+    const auto ns_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
+
     auto encoded_attribute_vector =
-        encode_by_ns_type(NsType::SimdBp128, attribute_vector, attribute_vector.get_allocator());
+        encode_by_ns_type(ns_type, attribute_vector, attribute_vector.get_allocator());
 
     auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));
@@ -91,6 +93,16 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
   static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+  }
+
+  NsType get_fixed_size_byte_aligned_encoding(size_t unique_values_count) {
+    if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
+      return NsType::FixedSize1ByteAligned;
+    } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
+      return NsType::FixedSize2ByteAligned;
+    } else {
+      return NsType::FixedSize4ByteAligned;
+    }
   }
 };
 
