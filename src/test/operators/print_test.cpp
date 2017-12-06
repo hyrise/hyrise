@@ -52,7 +52,7 @@ class PrintWrapper : public Print {
     return _truncate_cell(cell, max_width);
   }
 
-  uint16_t get_max_cell_length() {
+  uint16_t get_max_cell_width() {
     return _max_cell_width;
   }
 };
@@ -64,13 +64,15 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   // check if table is correctly passed
   EXPECT_EQ(pr->get_output(), t);
 
-  auto output_str = output.str();
+  auto output_string = output.str();
 
   // rather hard-coded tests
-  EXPECT_TRUE(output_str.find("col_1") != std::string::npos);
-  EXPECT_TRUE(output_str.find("col_2") != std::string::npos);
-  EXPECT_TRUE(output_str.find("int") != std::string::npos);
-  EXPECT_TRUE(output_str.find("string") != std::string::npos);
+  EXPECT_TRUE(output_string.find("col_1") != std::string::npos);
+  EXPECT_TRUE(output_string.find("col_2") != std::string::npos);
+  EXPECT_TRUE(output_string.find("int") != std::string::npos);
+  EXPECT_TRUE(output_string.find("string") != std::string::npos);
+
+  EXPECT_TRUE(output_string.find("Empty chunk.") != std::string::npos);
 }
 
 TEST_F(OperatorsPrintTest, FilledTable) {
@@ -86,20 +88,18 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   // check if table is correctly passed
   EXPECT_EQ(pr->get_output(), tab);
 
-  auto output_str = output.str();
+  auto output_string = output.str();
 
-  EXPECT_TRUE(output_str.find("Chunk 0") != std::string::npos);
+  EXPECT_TRUE(output_string.find("Chunk 0") != std::string::npos);
   // there should not be a third chunk (at least that's the current impl)
-  EXPECT_TRUE(output_str.find("Chunk 3") == std::string::npos);
+  EXPECT_TRUE(output_string.find("Chunk 3") == std::string::npos);
 
   // remove spaces
-  output_str.erase(remove_if(output_str.begin(), output_str.end(), isspace), output_str.end());
+  output_string.erase(remove_if(output_string.begin(), output_string.end(), isspace), output_string.end());
 
-  EXPECT_TRUE(output_str.find("|2|a|") != std::string::npos);
-  EXPECT_TRUE(output_str.find("|9|b|") != std::string::npos);
-  EXPECT_TRUE(output_str.find("|10|a|") == std::string::npos);
-
-  // EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
+  EXPECT_TRUE(output_string.find("|2|a|") != std::string::npos);
+  EXPECT_TRUE(output_string.find("|9|b|") != std::string::npos);
+  EXPECT_TRUE(output_string.find("|10|a|") == std::string::npos);
 }
 
 TEST_F(OperatorsPrintTest, GetColumnWidths) {
@@ -151,18 +151,18 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto print_wrap = std::make_shared<PrintWrapper>(gt);
   auto tab = StorageManager::get().get_table(table_name);
 
-  std::string input_str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-  auto input = AllTypeVariant{input_str};
+  std::string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+  auto input = AllTypeVariant{cell_string};
 
   tab->append({0, input});
 
-  auto substr_length = std::min(static_cast<int>(input_str.length()), print_wrap->get_max_cell_length() - 3);
+  auto substr_length = std::min(static_cast<int>(cell_string.length()), print_wrap->get_max_cell_width() - 3);
 
-  std::string manual_substr = "|";
+  std::string manual_substring = "|";
   for (uint16_t i = 0; i < substr_length; i++) {
-    manual_substr += input_str.at(i);
+    manual_substring += cell_string.at(i);
   }
-  manual_substr += "...|";
+  manual_substring += "...|";
 
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
@@ -170,8 +170,8 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto printer = std::make_shared<Print>(wrap, output);
   printer->execute();
 
-  auto output_str = output.str();
-  EXPECT_TRUE(output_str.find(manual_substr) != std::string::npos);
+  auto output_string = output.str();
+  EXPECT_TRUE(output_string.find(manual_substring) != std::string::npos);
 }
 
 }  // namespace opossum
