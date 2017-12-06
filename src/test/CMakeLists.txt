@@ -86,7 +86,7 @@ set(
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
-    storage/null_suppression/null_suppression_test.cpp
+    storage/null_suppression_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_column_test.cpp
     storage/single_column_index_test.cpp
