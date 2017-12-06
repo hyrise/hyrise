@@ -1,7 +1,7 @@
 #pragma once
 
-#include <optional>
 #include <memory>
+#include <optional>
 
 #include "storage/encoded_columns/column_encoding_type.hpp"
 #include "types.hpp"
@@ -12,7 +12,8 @@ class Table;
 
 class TableGenerator {
  public:
-  std::shared_ptr<Table> generate_table(const ChunkID chunk_size, std::optional<EncodingType> encoding_type = std::nullopt);
+  std::shared_ptr<Table> generate_table(const ChunkID chunk_size,
+                                        std::optional<EncodingType> encoding_type = std::nullopt);
 
  protected:
   const size_t _num_columns = 10;

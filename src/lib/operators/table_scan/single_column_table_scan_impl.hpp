@@ -38,8 +38,8 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
-// void _handle_dictionary_column(const BaseNewDictionaryColumn& left_column,
-//                                std::shared_ptr<ColumnVisitableContext> base_context) const;
+  // void _handle_dictionary_column(const BaseNewDictionaryColumn& left_column,
+  //                                std::shared_ptr<ColumnVisitableContext> base_context) const;
 
   /**
    * @defgroup Methods used for handling dictionary columns

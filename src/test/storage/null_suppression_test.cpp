@@ -1,22 +1,22 @@
+#include <boost/hana/at_key.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
-#include <boost/hana/at_key.hpp>
 
+#include <bitset>
+#include <iostream>
 #include <memory>
 #include <numeric>
-#include <iostream>
-#include <bitset>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/null_suppression/ns_vectors.hpp"
 #include "storage/null_suppression/ns_decoders.hpp"
 #include "storage/null_suppression/ns_encoders.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
+#include "storage/null_suppression/ns_vectors.hpp"
 
-#include "utils/enum_constant.hpp"
 #include "types.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
@@ -36,16 +36,16 @@ namespace {
 
 namespace hana = boost::hana;
 
-using NsTypes = ::testing::Types<enum_constant<NsType, NsType::SimdBp128>,
-                                 enum_constant<NsType, NsType::FixedSize4ByteAligned>,
-                                 enum_constant<NsType, NsType::FixedSize2ByteAligned>,
-                                 enum_constant<NsType, NsType::FixedSize1ByteAligned>>;
+using NsTypes =
+    ::testing::Types<enum_constant<NsType, NsType::SimdBp128>, enum_constant<NsType, NsType::FixedSize4ByteAligned>,
+                     enum_constant<NsType, NsType::FixedSize2ByteAligned>,
+                     enum_constant<NsType, NsType::FixedSize1ByteAligned>>;
 
-constexpr auto range_for_ns_type = hana::make_map(
-    hana::make_pair(enum_c<NsType, NsType::SimdBp128>, hana::make_pair(1'024, 34'624)),
-    hana::make_pair(enum_c<NsType, NsType::FixedSize4ByteAligned>, hana::make_pair(1'024, 34'624)),
-    hana::make_pair(enum_c<NsType, NsType::FixedSize2ByteAligned>, hana::make_pair(1'024, 34'624)),
-    hana::make_pair(enum_c<NsType, NsType::FixedSize1ByteAligned>, hana::make_pair(0, 255)));
+constexpr auto range_for_ns_type =
+    hana::make_map(hana::make_pair(enum_c<NsType, NsType::SimdBp128>, hana::make_pair(1'024, 34'624)),
+                   hana::make_pair(enum_c<NsType, NsType::FixedSize4ByteAligned>, hana::make_pair(1'024, 34'624)),
+                   hana::make_pair(enum_c<NsType, NsType::FixedSize2ByteAligned>, hana::make_pair(1'024, 34'624)),
+                   hana::make_pair(enum_c<NsType, NsType::FixedSize1ByteAligned>, hana::make_pair(0, 255)));
 
 template <typename NsTypeT>
 class NullSuppressionTest : public BaseTest {
@@ -86,7 +86,6 @@ class NullSuppressionTest : public BaseTest {
 };
 
 TYPED_TEST_CASE(NullSuppressionTest, NsTypes);
-
 
 TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
   // Generates array from [1024, 34.624]

@@ -178,7 +178,6 @@ void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& b
 //    * value_id >  value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
 //    * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
 
-
 //   const auto& attribute_vector = *left_column.attribute_vector();
 //   auto left_iterable = AttributeVectorIterable{attribute_vector};
 

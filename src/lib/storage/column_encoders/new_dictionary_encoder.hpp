@@ -80,8 +80,7 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
     // We need to increment the dictionary size here because of possible null values.
     const auto ns_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
 
-    auto encoded_attribute_vector =
-        encode_by_ns_type(ns_type, attribute_vector, attribute_vector.get_allocator());
+    auto encoded_attribute_vector = encode_by_ns_type(ns_type, attribute_vector, attribute_vector.get_allocator());
 
     auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));
