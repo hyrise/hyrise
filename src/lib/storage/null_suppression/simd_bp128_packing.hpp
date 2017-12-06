@@ -8,7 +8,6 @@ namespace opossum {
 
 class SimdBp128Packing {
  public:
- public:
   static constexpr auto block_size = 128u;
   static constexpr auto blocks_in_meta_block = 16u;
   static constexpr auto meta_block_size = block_size * blocks_in_meta_block;

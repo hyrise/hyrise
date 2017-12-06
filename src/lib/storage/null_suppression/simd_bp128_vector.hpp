@@ -20,6 +20,8 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
   explicit SimdBp128Vector(pmr_vector<uint128_t> vector, size_t size);
   ~SimdBp128Vector() = default;
 
+  const pmr_vector<uint128_t>& data() const;
+
   size_t _on_size() const;
   size_t _on_data_size() const;
 

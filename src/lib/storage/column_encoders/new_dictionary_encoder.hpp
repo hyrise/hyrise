@@ -79,7 +79,7 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
     }
 
     auto encoded_attribute_vector =
-        encode_by_ns_type(NsType::FixedSize4ByteAligned, attribute_vector, attribute_vector.get_allocator());
+        encode_by_ns_type(NsType::SimdBp128, attribute_vector, attribute_vector.get_allocator());
 
     auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));

@@ -6,6 +6,8 @@ namespace opossum {
 
 SimdBp128Vector::SimdBp128Vector(pmr_vector<uint128_t> vector, size_t size) : _data{std::move(vector)}, _size{size} {}
 
+const pmr_vector<uint128_t>& SimdBp128Vector::data() const { return _data; }
+
 size_t SimdBp128Vector::_on_size() const { return _size; }
 size_t SimdBp128Vector::_on_data_size() const { return sizeof(uint128_t) * _data.size(); }
 

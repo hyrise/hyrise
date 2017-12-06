@@ -45,7 +45,7 @@ void SimdBp128Encoder::finish() {
   _data.shrink_to_fit();
 }
 
-bool SimdBp128Encoder::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 1u; }
+bool SimdBp128Encoder::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
 
 void SimdBp128Encoder::pack_meta_block() {
   const auto bits_needed = bits_needed_per_block();

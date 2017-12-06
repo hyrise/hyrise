@@ -1,8 +1,12 @@
 #include "simd_bp128_packing.hpp"
 
+#include <algorithm>
+
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+namespace {
 
 template <uint8_t bit_size, uint8_t carry_over = 0u, uint8_t remaining_recursions = bit_size>
 struct Pack128Bit {
@@ -78,9 +82,12 @@ struct Unpack128Bit<bit_size, carry_over, 0u> {
   void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {}
 };
 
-}  // namespace opossum
+void unpack_128_zeros(uint32_t* out) {
+  static constexpr auto num_zeros = 128u;
+  std::fill(out, out + num_zeros, 0u);
+}
 
-namespace opossum {
+}  // namespace
 
 void SimdBp128Packing::write_meta_info(const uint8_t* in, __m128i* out) {
   const auto meta_block_info_rgtr = _mm_loadu_si128(reinterpret_cast<const __m128i*>(in));
@@ -101,7 +108,7 @@ void SimdBp128Packing::pack_block(const uint32_t* _in, __m128i* out, const uint8
 
   switch (bit_size) {
     case 0u:
-      Fail("Bit size of zero hasn’t been implemented.");
+      // No compression needed, since all values equal to zero.
       return;
 
     case 1u:
@@ -247,7 +254,7 @@ void SimdBp128Packing::unpack_block(const __m128i* in, uint32_t* _out, const uin
 
   switch (bit_size) {
     case 0u:
-      Fail("Bit size of zero hasn’t been implemented.");
+      unpack_128_zeros(_out);
       return;
 
     case 1u:
