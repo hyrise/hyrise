@@ -1,6 +1,8 @@
 #include <chrono>
 #include <iostream>
 
+#include "cxxopts.hpp"
+
 #include <boost/program_options.hpp>
 #include <SQLParserResult.h>
 #include <SQLParser.h>
@@ -18,13 +20,11 @@ void tpch_benchmark(const opossum::ChunkOffset chunk_size,
   /**
    * Populate the StorageManager
    */
-  std::cout << "Generating TPCH Tables with scale_factor=" << scale_factor;
+  std::cout << "Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
   opossum::TpchDbGenerator(scale_factor, chunk_size).generate_and_store();
-  std::cout << std::endl;
+  std::cout << "Done." << std::endl;
 
-  /**
-   * Run each requested query and report performance statistics.
-   */
+  // Run each requested query
   for (const auto query_id : query_ids) {
     auto num_runs = size_t{0};
     const auto query_benchmark_begin = std::chrono::steady_clock::now();
@@ -42,6 +42,9 @@ void tpch_benchmark(const opossum::ChunkOffset chunk_size,
         break;
       }
 
+      /**
+       * Stop exercising this query, if sufficient time passed
+       */
       {
         const auto now = std::chrono::steady_clock::now();
         const auto query_benchmark_seconds = std::chrono::duration_cast<std::chrono::seconds>(now - query_benchmark_begin).count();
@@ -63,24 +66,24 @@ int main(int argc, char * argv[]) {
   auto scale_factor = 1.0f;
   auto chunk_size = opossum::ChunkOffset(opossum::INVALID_CHUNK_OFFSET);
 
-  boost::program_options::options_description options_description("Allowed options");
-  options_description.add_options()
+  cxxopts::Options cli_options_description{"TPCH Benchmark", ""};
+
+  cli_options_description.add_options()
     ("help", "print this help message")
-    ("scale,s", boost::program_options::value<float>(&scale_factor)->default_value(1.0f), "Database scale factor (1.0 ~ 1GB)")
-    ("runs,r", boost::program_options::value<size_t>(&num_runs)->default_value(2), "Minimum number of runs of a single query")
-    ("chunk_size,c", boost::program_options::value<opossum::ChunkOffset>(&chunk_size)->default_value(opossum::INVALID_CHUNK_OFFSET), "Chunk Size")
-    ("time,t", boost::program_options::value<size_t>(&time_seconds)->default_value(60), "Minimum time spend exercising a query");
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>(scale_factor)->default_value("1.0"))
+    ("r,runs", "Minimum number of runs of a single query", cxxopts::value<size_t>(num_runs)->default_value("2"))
+    ("c,chunk_size", "ChunkSize, defaults is 2^32-1", cxxopts::value<opossum::ChunkOffset>(chunk_size)->default_value(std::to_string(opossum::INVALID_CHUNK_OFFSET)))
+    ("t,time", "Minimum time spend exercising a query", cxxopts::value<size_t>(time_seconds)->default_value("60"))
+    ;
 
-  boost::program_options::variables_map program_options;
-  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, options_description), program_options);
-  boost::program_options::notify(program_options);
+  const auto cli_parse_result = cli_options_description.parse(argc, argv);
 
-  if (program_options.count("help")) {
-    std::cout << options_description << "\n";
-    return 1;
+  if (cli_parse_result.count("help")) {
+    std::cout << cli_options_description.help({"", "Group"}) << std::endl;
+    return 0;
   }
 
-  tpch_benchmark(100, 0.01f, 2, 40, {6, 7});
+  tpch_benchmark(chunk_size, scale_factor, num_runs, time_seconds, {6,7});
 
   return 0;
 }
