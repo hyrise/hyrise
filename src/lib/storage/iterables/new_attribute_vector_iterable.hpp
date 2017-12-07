@@ -29,7 +29,7 @@ class NewAttributeVectorIterable : public IndexableIterable<NewAttributeVectorIt
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-  resolve_ns_vector_type(_attribute_vector, [&](const auto& vector) {
+    resolve_ns_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decoder = vector.create_decoder();
 
       auto begin = create_indexed_iterator(mapped_chunk_offsets.cbegin(), *decoder);
@@ -46,8 +46,7 @@ class NewAttributeVectorIterable : public IndexableIterable<NewAttributeVectorIt
   class IteratorLookup {
    public:
     IteratorLookup() = default;
-    explicit IteratorLookup(ValueID null_value_id)
-        : _null_value_id{null_value_id} {}
+    explicit IteratorLookup(ValueID null_value_id) : _null_value_id{null_value_id} {}
 
     NullableColumnValue<ValueID> operator()(const boost::tuple<uint32_t, ChunkOffset>& tuple) const {
       ValueID value_id{};
@@ -82,7 +81,8 @@ class NewAttributeVectorIterable : public IndexableIterable<NewAttributeVectorIt
         : _null_value_id{null_value_id}, _ns_decoder{ns_decoder} {}
 
     NullableColumnValue<ValueID> operator()(const ChunkOffsetMapping& chunk_offsets) const {
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET) return {ValueID{}, true, chunk_offsets.into_referencing};
+      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
+        return {ValueID{}, true, chunk_offsets.into_referencing};
 
       const auto value_id = ValueID{_ns_decoder.get(chunk_offsets.into_referenced)};
       const auto is_null = (value_id == _null_value_id);

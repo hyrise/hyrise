@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "storage/dictionary_compression.hpp"
 #include "storage/encoded_columns/new_dictionary_column.hpp"
 #include "storage/null_suppression/ns_vectors.hpp"
-#include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {

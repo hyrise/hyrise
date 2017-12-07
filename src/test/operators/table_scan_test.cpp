@@ -11,11 +11,11 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "storage/encoded_columns/column_encoding_type.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
+#include "storage/encoded_columns/column_encoding_type.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -24,9 +24,7 @@ namespace opossum {
 
 class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
-  void SetUp() override {
-    _encoding_type = GetParam();
-  }
+  void SetUp() override { _encoding_type = GetParam(); }
 
   std::shared_ptr<TableWrapper> get_table_op() {
     auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
@@ -216,10 +214,8 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 // As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
-INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes,
-                        OperatorsTableScanTest,
-                        ::testing::Values(EncodingType::Dictionary, EncodingType::NewDictionary),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsTableScanTest,
+                        ::testing::Values(EncodingType::Dictionary, EncodingType::NewDictionary), formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
