@@ -27,6 +27,9 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _table_wrapper->execute();
 
+    _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
+    _table_wrapper_null->execute();
+
     std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(5);
     test_even_dict->add_column("a", DataType::Int);
     test_even_dict->add_column("b", DataType::Int);
@@ -197,7 +200,7 @@ class OperatorsTableScanTest : public BaseTest {
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict, _table_wrapper_null;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
@@ -564,7 +567,7 @@ TEST_F(OperatorsTableScanTest, NullSemantics) {
                              ScanType::OpLessThanEquals, ScanType::OpGreaterThan, ScanType::OpGreaterThanEquals});
 
   for (auto scan_type : scan_types) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, scan_type, NULL_VALUE);
+    auto scan = std::make_shared<TableScan>(_table_wrapper_null, ColumnID{0}, scan_type, NULL_VALUE);
     scan->execute();
 
     EXPECT_EQ(scan->get_output()->row_count(), 0u);
