@@ -19,7 +19,6 @@
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
-#include "table_scan/empty_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
 #include "table_scan/single_column_table_scan_impl.hpp"
