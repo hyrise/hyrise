@@ -249,6 +249,7 @@ set(
     storage/iterables/create_iterable_from_column.hpp
     storage/iterables/dictionary_column_iterable.hpp
     storage/iterables/iterables.hpp
+    storage/iterables/new_attribute_vector_iterable.hpp
     storage/iterables/new_dictionary_column_iterable.hpp
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp

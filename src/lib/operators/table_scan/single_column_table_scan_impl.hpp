@@ -14,6 +14,7 @@
 namespace opossum {
 
 class BaseDictionaryColumn;
+class BaseNewDictionaryColumn;
 
 /**
  * @brief Compares one column to a constant value
@@ -36,10 +37,7 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_encoded_column(const BaseEncodedColumn& base_column,
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
-
  private:
-  // void _handle_dictionary_column(const BaseNewDictionaryColumn& left_column,
-  //                                std::shared_ptr<ColumnVisitableContext> base_context) const;
 
   /**
    * @defgroup Methods used for handling dictionary columns
@@ -49,16 +47,20 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   // The following methods are templated for as long as two dictionary column implementations exist.
 
   template <typename BaseDictionaryColumnType>
-  ValueID _get_search_value_id(const BaseDictionaryColumnType& column);
+  void _handle_dictionary_column(const BaseDictionaryColumnType& left_column,
+                                 std::shared_ptr<ColumnVisitableContext> base_context);
 
   template <typename BaseDictionaryColumnType>
-  bool _right_value_matches_all(const BaseDictionaryColumnType& column, const ValueID search_value_id);
+  ValueID _get_search_value_id(const BaseDictionaryColumnType& column) const;
 
   template <typename BaseDictionaryColumnType>
-  bool _right_value_matches_none(const BaseDictionaryColumnType& column, const ValueID search_value_id);
+  bool _right_value_matches_all(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
+
+  template <typename BaseDictionaryColumnType>
+  bool _right_value_matches_none(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
 
   template <typename Functor>
-  void _with_operator_for_dict_column_scan(const ScanType scan_type, const Functor& func) {
+  void _with_operator_for_dict_column_scan(const ScanType scan_type, const Functor& func) const {
     switch (scan_type) {
       case ScanType::OpEquals:
         func(std::equal_to<void>{});

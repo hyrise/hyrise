@@ -38,5 +38,10 @@ class BaseNewDictionaryColumn : public BaseEncodedColumn {
   virtual size_t unique_values_count() const = 0;
 
   virtual std::shared_ptr<const BaseNsVector> attribute_vector() const = 0;
+
+  /**
+   * @brief Returns encoding specific null value ID
+   */
+  virtual const ValueID null_value_id() const = 0;
 };
 }  // namespace opossum

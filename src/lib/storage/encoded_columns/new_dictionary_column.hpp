@@ -28,9 +28,6 @@ class NewDictionaryColumn : public BaseNewDictionaryColumn {
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
 
-  // returns encoding specific null value ID
-  ValueID null_value_id() const;
-
   /**
    * @defgroup BaseColumn interface
    * @{
@@ -59,6 +56,8 @@ class NewDictionaryColumn : public BaseNewDictionaryColumn {
   size_t unique_values_count() const final;
 
   std::shared_ptr<const BaseNsVector> attribute_vector() const final;
+
+  const ValueID null_value_id() const final;
 
   /**@}*/
 

@@ -40,11 +40,6 @@ std::shared_ptr<const pmr_vector<T>> NewDictionaryColumn<T>::dictionary() const 
 }
 
 template <typename T>
-ValueID NewDictionaryColumn<T>::null_value_id() const {
-  return _null_value_id;
-}
-
-template <typename T>
 size_t NewDictionaryColumn<T>::size() const {
   return _attribute_vector->size();
 }
@@ -130,6 +125,11 @@ size_t NewDictionaryColumn<T>::unique_values_count() const {
 template <typename T>
 std::shared_ptr<const BaseNsVector> NewDictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
+}
+
+template <typename T>
+const ValueID NewDictionaryColumn<T>::null_value_id() const {
+  return _null_value_id;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(NewDictionaryColumn);
