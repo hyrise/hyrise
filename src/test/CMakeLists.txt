@@ -43,6 +43,10 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
+    operators/maintenance/create_view_test.cpp
+    operators/maintenance/drop_view_test.cpp
+    operators/maintenance/show_columns_test.cpp
+    operators/maintenance/show_tables_test.cpp
     logical_query_plan/logical_query_plan_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/delete_node_test.cpp
