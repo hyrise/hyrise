@@ -558,4 +558,21 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
   scan_for_null_values(table_wrapper, tests);
 }
 
+TEST_F(OperatorsTableScanTest, NullSemantics) {
+  const auto scan_types =
+      std::vector<ScanType>({ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThan,
+                             ScanType::OpLessThanEquals, ScanType::OpGreaterThan, ScanType::OpGreaterThanEquals});
+
+  for (auto scan_type : scan_types) {
+    auto scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, scan_type, NULL_VALUE);
+    scan->execute();
+
+    EXPECT_EQ(scan->get_output()->row_count(), 0u);
+
+    for (auto i = ChunkID{0}; i < scan->get_output()->chunk_count(); i++) {
+      EXPECT_EQ(scan->get_output()->get_chunk(i).column_count(), 2u);
+    }
+  }
+}
+
 }  // namespace opossum
