@@ -69,7 +69,11 @@ struct Unpack128Bit {
       out_reg = _mm_or_si128(out_reg, _mm_and_si128(_mm_slli_epi32(in_reg, num_first_bits), mask));
       _mm_storeu_si128(out++, out_reg);
     } else {
-      in_reg = _mm_loadu_si128(in++);
+      constexpr auto last_recursion = 1u;
+
+      if (remaining_recursions > last_recursion) {
+        in_reg = _mm_loadu_si128(in++);
+      }
     }
 
     constexpr auto new_carry_over = next_offset < _32_bit ? bit_size - num_first_bits : 0u;
@@ -246,6 +250,11 @@ void SimdBp128Packing::pack_block(const uint32_t* _in, __m128i* out, const uint8
 }
 
 void SimdBp128Packing::unpack_block(const __m128i* in, uint32_t* _out, const uint8_t bit_size) {
+  if (bit_size == 0u) {
+    unpack_128_zeros(_out);
+    return;
+  }
+
   auto out = reinterpret_cast<__m128i*>(_out);
 
   auto in_reg = _mm_loadu_si128(in++);
@@ -253,10 +262,6 @@ void SimdBp128Packing::unpack_block(const __m128i* in, uint32_t* _out, const uin
   const auto mask = _mm_set1_epi32((1u << bit_size) - 1);
 
   switch (bit_size) {
-    case 0u:
-      unpack_128_zeros(_out);
-      return;
-
     case 1u:
       Unpack128Bit<1u>{}(in, out, in_reg, out_reg, mask);
       return;
