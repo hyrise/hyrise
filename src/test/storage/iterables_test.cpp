@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/encoded_columns/new_dictionary_column.hpp"
 #include "../lib/storage/dictionary_compression.hpp"
 #include "../lib/storage/iterables/constant_value_iterable.hpp"
 #include "../lib/storage/iterables/dictionary_column_iterable.hpp"
@@ -132,8 +133,42 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
   DictionaryCompression::compress_table(*table);
+
+  auto& chunk = table->get_chunk(ChunkID{0u});
+
+  auto column = chunk.get_column(ColumnID{0u});
+  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+
+  auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
+
+  auto iterable = DictionaryColumnIterable<int>{*dict_column};
+
+  auto sum = uint32_t{0};
+  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
+
+  EXPECT_EQ(sum, 12'480u);
+}
+
+TEST_F(IterablesTest, NewDictionaryColumnIteratorWithIterators) {
+  DictionaryCompression::compress_table(*table, EncodingType::NewDictionary);
+
+  auto& chunk = table->get_chunk(ChunkID{0u});
+
+  auto column = chunk.get_column(ColumnID{0u});
+  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+
+  auto iterable = DictionaryColumnIterable<int>{*dict_column};
+
+  auto sum = uint32_t{0};
+  iterable.with_iterators(SumUpWithIt{sum});
+
+  EXPECT_EQ(sum, 24'825u);
+}
+
+TEST_F(IterablesTest, NewDictionaryColumnReferencedIteratorWithIterators) {
+  DictionaryCompression::compress_table(*table, EncodingType::NewDictionary);
 
   auto& chunk = table->get_chunk(ChunkID{0u});
 
