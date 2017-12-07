@@ -30,6 +30,8 @@ const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanT
     {ScanType::OpBetween, "BETWEEN"},
     {ScanType::OpLike, "LIKE"},
     {ScanType::OpNotLike, "NOT LIKE"},
+    {ScanType::OpIsNull, "IS NULL"},
+    {ScanType::OpIsNotNull, "IS NOT NULL"},
 });
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
@@ -69,7 +71,8 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
 };
 
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
-    {OrderByMode::Ascending, "Ascending"}, {OrderByMode::Descending, "Descending"},
+    {OrderByMode::Ascending, "Ascending"},
+    {OrderByMode::Descending, "Descending"},
 };
 
 const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_expression_type = {
@@ -96,7 +99,8 @@ const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_ex
 };
 
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending}, {hsql::kOrderDesc, OrderByMode::Descending},
+    {hsql::kOrderAsc, OrderByMode::Ascending},
+    {hsql::kOrderDesc, OrderByMode::Descending},
 };
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
@@ -130,10 +134,9 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
     });
 
 const boost::bimap<DataType, std::string> data_type_to_string =
-    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{},
-               [](auto map, auto pair) {
-                 map.insert({hana::first(pair), std::string{hana::second(pair)}});
-                 return map;
-               });
+    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
+      map.insert({hana::first(pair), std::string{hana::second(pair)}});
+      return map;
+    });
 
 }  // namespace opossum
