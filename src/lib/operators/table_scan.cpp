@@ -183,12 +183,7 @@ void TableScan::_init_scan() {
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    if (variant_is_null(right_value)) {
-      // early out because of NULL semantics
-      _impl = std::make_unique<EmptyTableScanImpl>(_in_table, _left_column_id, _scan_type);
-    } else {
-      _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
-    }
+    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
