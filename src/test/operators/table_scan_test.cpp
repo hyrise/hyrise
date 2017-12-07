@@ -29,7 +29,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<TableWrapper> get_table_op() {
-    return std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    table_wrapper->execute();
+    return table_wrapper;
   }
 
   std::shared_ptr<TableWrapper> get_table_op_even_dict() {

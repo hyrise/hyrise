@@ -6,6 +6,13 @@
 
 namespace opossum {
 
+/**
+ * @brief Implementation of the bit-packing algorithm SIMD-BP128
+ *
+ * Reference Implementation: https://github.com/lemire/FastPFor/blob/master/src/simdunalignedbitpacking.cpp
+ *
+ * Unlike the reference implementation, this implementation uses templates and is thus much shorter.
+ */
 class SimdBp128Packing {
  public:
   static constexpr auto block_size = 128u;

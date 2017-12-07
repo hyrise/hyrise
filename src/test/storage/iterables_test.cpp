@@ -5,18 +5,19 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/dictionary_column.hpp"
-#include "../lib/storage/encoded_columns/new_dictionary_column.hpp"
-#include "../lib/storage/dictionary_compression.hpp"
-#include "../lib/storage/iterables/constant_value_iterable.hpp"
-#include "../lib/storage/iterables/dictionary_column_iterable.hpp"
-#include "../lib/storage/iterables/reference_column_iterable.hpp"
-#include "../lib/storage/iterables/value_column_iterable.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/storage/value_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/encoded_columns/new_dictionary_column.hpp"
+#include "storage/iterables/constant_value_iterable.hpp"
+#include "storage/iterables/dictionary_column_iterable.hpp"
+#include "storage/iterables/new_dictionary_column_iterable.hpp"
+#include "storage/iterables/reference_column_iterable.hpp"
+#include "storage/iterables/value_column_iterable.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 
@@ -157,9 +158,9 @@ TEST_F(IterablesTest, NewDictionaryColumnIteratorWithIterators) {
   auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const NewDictionaryColumn<int>>(column);
 
-  auto iterable = DictionaryColumnIterable<int>{*dict_column};
+  auto iterable = NewDictionaryColumnIterable<int>{*dict_column};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIt{sum});
@@ -173,11 +174,11 @@ TEST_F(IterablesTest, NewDictionaryColumnReferencedIteratorWithIterators) {
   auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const NewDictionaryColumn<int>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<int>{*dict_column};
+  auto iterable = NewDictionaryColumnIterable<int>{*dict_column};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
