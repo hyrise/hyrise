@@ -863,6 +863,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     Assert(hsql_expr.expr != nullptr, "NOT operator without further expressions");
     scan_type = translate_operator_type_to_scan_type(hsql_expr.expr->opType);
 
+    /**
+     * It should be possible for any predicate to be negated with "NOT",
+     * e.g., WHERE NOT a > 5. However, this is currently not supported.
+     * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` scan type.
+     */
     Assert(scan_type == ScanType::OpIsNull, "Only IS NULL can be negated");
 
     if (scan_type == ScanType::OpIsNull) {
