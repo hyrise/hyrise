@@ -8,12 +8,30 @@ namespace opossum {
 
 namespace {
 
+/**
+ * @brief Packs 128 unsigned integers with the specified bit size
+ *
+ * Each recursion fills one 128-bit block. The number of 128-bit blocks needed to
+ * pack 128 integers is equal to the bit size of each integer. The algorithm
+ * packs the data interleaved, i.e., the first four integer are packed into
+ * four different 32-bit words (within the 128-bit block). The fifth integer
+ * directly succeeds the first and so on. If 32 is not a multiple of the bit size,
+ * the last integers of each block are split and their ends stored in the
+ * succeeding block. The following recursion needs to be aware of this and it is
+ * represented by template parameter carry_over.
+ *
+ * @tparam bit_size number of bits each integer by which each integer is represented
+ * @tparam carry_over the number of bits that have been carried over from the previous block
+ */
 template <uint8_t bit_size, uint8_t carry_over = 0u, uint8_t remaining_recursions = bit_size>
 struct Pack128Bit {
   void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {
     constexpr auto _32_bit = 32u;
+
+    // Number of integers that fit completely into the 32-bit sub-blocks
     constexpr auto i_max = (_32_bit - carry_over) / bit_size;
 
+    // Fill the four 32-bit sub-blocks simultaneously by bit shifting
     for (auto i = 0u; i < i_max; ++i) {
       const auto offset = carry_over + i * bit_size;
       in_reg = _mm_and_si128(_mm_loadu_si128(in++), mask);
@@ -22,6 +40,8 @@ struct Pack128Bit {
 
     constexpr auto next_offset = carry_over + i_max * bit_size;
     constexpr auto num_first_bits = _32_bit - next_offset;
+
+    // Check if integers need to be split
     if (next_offset < _32_bit) {
       in_reg = _mm_and_si128(_mm_loadu_si128(in++), mask);
       out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, next_offset));
@@ -37,6 +57,7 @@ struct Pack128Bit {
       out_reg = _mm_setzero_si128();
     }
 
+    // Calculate the new carry over
     constexpr auto new_carry_over = next_offset < _32_bit ? bit_size - num_first_bits : 0u;
     Pack128Bit<bit_size, new_carry_over, remaining_recursions - 1u>{}(in, out, in_reg, out_reg, mask);
   }
@@ -47,10 +68,15 @@ struct Pack128Bit<bit_size, carry_over, 0u> {
   void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {}
 };
 
+/**
+ * @brief Unpacks 128 unsigned integers with the specified bit size
+ */
 template <uint8_t bit_size, uint8_t carry_over = 0u, uint8_t remaining_recursions = bit_size>
 struct Unpack128Bit {
   void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {
     constexpr auto _32_bit = 32u;
+
+    // Number of integers that fit completely into the 32-bit sub-blocks
     constexpr auto i_max = (_32_bit - carry_over) / bit_size;
 
     for (auto i = 0u; i < i_max; ++i) {
@@ -62,6 +88,7 @@ struct Unpack128Bit {
     constexpr auto next_offset = carry_over + i_max * bit_size;
     constexpr auto num_first_bits = _32_bit - next_offset;
 
+    // Check if integers have been split across the 128-bit block boundary
     if (next_offset < _32_bit) {
       out_reg = _mm_srli_epi32(in_reg, next_offset);
       in_reg = _mm_loadu_si128(in++);
@@ -71,11 +98,13 @@ struct Unpack128Bit {
     } else {
       constexpr auto last_recursion = 1u;
 
+      // Only load another 128-bit block if it’s not the last recursion
       if (remaining_recursions > last_recursion) {
         in_reg = _mm_loadu_si128(in++);
       }
     }
 
+    // Calculate the new carry over
     constexpr auto new_carry_over = next_offset < _32_bit ? bit_size - num_first_bits : 0u;
     Unpack128Bit<bit_size, new_carry_over, remaining_recursions - 1u>{}(in, out, in_reg, out_reg, mask);
   }
