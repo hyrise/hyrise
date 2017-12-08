@@ -139,6 +139,7 @@
 #ifndef BITS_PER_LONG
 #define BITS_PER_LONG   32
 #define MAX_LONG        0x7FFFFFFF
+#define MIN_LONG        (int32_t)0x80000000
 #endif /* BITS_PER_LONG */
 #define SPARSE_BITS      2
 #define SPARSE_KEEP      3

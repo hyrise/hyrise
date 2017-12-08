@@ -32,7 +32,7 @@ const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,  
 const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
 
 const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
-const auto lineitem_column_names = boost::hana::make_tuple("o_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
+const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
 const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   int32_t,        std::string>();  // NOLINT
 const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
@@ -189,7 +189,7 @@ namespace opossum {
 
 std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Part, "part"},         {TpchTable::PartSupp, "partsupp"}, {TpchTable::Supplier, "supplier"},
-    {TpchTable::Customer, "customer"}, {TpchTable::Orders, "order"},      {TpchTable::LineItem, "lineitem"},
+    {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},      {TpchTable::LineItem, "lineitem"},
     {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
 TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
