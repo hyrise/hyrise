@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <random>
-#include <string
+#include <string>
 
 #include "cxxopts.hpp"
 #include "json.hpp"
@@ -29,7 +29,7 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 auto verbose_benchmark = false;
 
 /**
- * @return std::cout if `verbose_benchmark` is true, otherwhise returns a discarding stream
+ * @return std::cout if `verbose_benchmark` is true, otherwise returns a discarding stream
  */
 std::ostream& out() {
   if (verbose_benchmark) {
