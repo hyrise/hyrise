@@ -290,7 +290,7 @@ int main(int argc, char * argv[]) {
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>(scale_factor)->default_value("0.001"))
     ("r,runs", "Maximum number of runs of a single query", cxxopts::value<size_t>(num_iterations)->default_value("1000"))
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<opossum::ChunkOffset>(chunk_size)->default_value(std::to_string(opossum::INVALID_CHUNK_OFFSET)))
-    ("t,time", "Maximum seconds after which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5"))
+    ("t,time", "Maximum seconds within which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5"))
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str))
     ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<size_t>>())
