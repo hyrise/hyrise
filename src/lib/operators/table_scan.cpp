@@ -174,14 +174,13 @@ void TableScan::_init_scan() {
     return;
   }
 
+  if (_scan_type == ScanType::OpIsNull || _scan_type == ScanType::OpIsNotNull) {
+    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
+    return;
+  }
+
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
-
-    if (variant_is_null(right_value)) {
-      _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
-
-      return;
-    }
 
     _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
   } else /* is_column_name(_right_parameter) */ {

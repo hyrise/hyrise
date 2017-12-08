@@ -41,10 +41,10 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
   template <typename Functor>
   void _resolve_scan_type(const Functor& func) {
     switch (_scan_type) {
-      case ScanType::OpEquals:
+      case ScanType::OpIsNull:
         return func([](const bool is_null) { return is_null; });
 
-      case ScanType::OpNotEquals:
+      case ScanType::OpIsNotNull:
         return func([](const bool is_null) { return !is_null; });
 
       default:
