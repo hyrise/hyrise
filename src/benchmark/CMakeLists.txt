@@ -52,5 +52,4 @@ target_link_libraries(
     hyriseBenchmarkTPCH
     hyrise
     hyriseBenchmarkLib
-    boost_program_options
 )

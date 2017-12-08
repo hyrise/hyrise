@@ -1,5 +1,3 @@
-#include <boost/program_options.hpp>
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -61,9 +59,6 @@ std::ostream& out() {
 }
 
 struct QueryBenchmarkResult {
-  explicit QueryBenchmarkResult(size_t id) : id(id) {}
-
-  size_t id;
   size_t num_iterations = 0;
   Duration duration = Duration{};
 };
@@ -115,10 +110,11 @@ struct BenchmarkState {
   TimePoint end = TimePoint{};
 
   size_t num_iterations = 0;
-  size_t max_num_iterations = 0;
+  size_t max_num_iterations;
   Duration max_duration;
 };
 
+// Stores config and state of a benchmark mode instantiation
 class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, const std::optional<std::string>& output_file_path,
@@ -135,7 +131,7 @@ class TpchBenchmark final {
 
   void run() {
     /**
-     * Populate the StorageManager
+     * Populate the StorageManager with the TPC-H tables
      */
     out() << "- Generating TPCH Tables with scale_factor=" << _scale_factor << "..." << std::endl;
     opossum::TpchDbGenerator(_scale_factor, _chunk_size).generate_and_store();
@@ -174,10 +170,11 @@ class TpchBenchmark final {
 
   BenchmarkResults _query_results_by_query_id;
 
+  // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets() {
     // Init results
     for (const auto query_id : _query_ids) {
-      _query_results_by_query_id.emplace(query_id, query_id);
+      _query_results_by_query_id.emplace(query_id, QueryBenchmarkResult{});
     }
 
     auto mutable_query_ids = _query_ids;
@@ -203,6 +200,7 @@ class TpchBenchmark final {
     }
   }
 
+  // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries() {
     for (const auto query_id : _query_ids) {
       out() << "- Benchmarking Query " << (query_id + 1) << std::endl;
@@ -215,7 +213,7 @@ class TpchBenchmark final {
         SQLPipeline{sql}.get_result_table();
       }
 
-      QueryBenchmarkResult result{query_id};
+      QueryBenchmarkResult result;
       result.num_iterations = state.num_iterations;
       result.duration = std::chrono::high_resolution_clock::now() - state.begin;
 
@@ -223,6 +221,7 @@ class TpchBenchmark final {
     }
   }
 
+  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const {
     nlohmann::json benchmarks;
 
