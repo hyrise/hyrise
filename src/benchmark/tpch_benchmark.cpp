@@ -14,6 +14,17 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+/**
+ * This benchmark measures Hyrise's performance executing the TPC-H queries, it doesn't (yet) support running the TPC-H
+ * benchmark as it is specified.
+ * The benchmark offers a wide range of options (scale_factor, chunk_size, ...) but most notably it offers two modes:
+ * IndividualQueries and PermutedQuerySets. See docs on BenchmarkMode for details.
+ * The benchmark will stop issuing new queries if either enough iterations have taken place or enough time has passed.
+ *
+ * main() is mostly concerned with parsing the CLI options while TpchBenchmark::run() performs the actual benchmark
+ * logic.
+ */
+
 namespace opossum {
 
 /**
@@ -108,7 +119,7 @@ struct BenchmarkState {
   Duration max_duration;
 };
 
-class TpchBenchmark {
+class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, const std::optional<std::string>& output_file_path,
                 std::vector<size_t> query_ids, const opossum::ChunkOffset chunk_size, const float scale_factor,
