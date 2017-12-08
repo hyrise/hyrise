@@ -17,6 +17,10 @@
 
 namespace opossum {
 
+/**
+ * IndividualQueries runs each query a number of times and then the next one
+ * PermutedQuerySets runs the queries as sets permuting their order after each run (this exercises caches)
+ */
 enum class BenchmarkMode {
   IndividualQueries,
   PermutedQuerySets
@@ -24,6 +28,30 @@ enum class BenchmarkMode {
 
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
+
+// Used to config out()
+auto verbose_benchmark = false;
+
+/**
+ * @return std::cout if `verbose_benchmark` is true, otherwhise returns a discarding stream
+ */
+std::ostream& out() {
+  if (verbose_benchmark) {
+    return std::cout;
+  }
+
+  // Create no-op stream that just swallows everything streamed into it
+  // See https://stackoverflow.com/a/11826666
+  class NullBuffer : public std::streambuf {
+   public:
+    int overflow(int c) { return c; }
+  };
+
+  static NullBuffer null_buffer;
+  static std::ostream null_stream(&null_buffer);
+
+  return null_stream;
+}
 
 struct QueryBenchmarkResult {
   explicit QueryBenchmarkResult(size_t id): id(id) {}
@@ -35,13 +63,17 @@ struct QueryBenchmarkResult {
 
 using BenchmarkResults = std::unordered_map<size_t, QueryBenchmarkResult>;
 
-// Loosely copying benchmark::State
+/**
+ * Loosely copying the functionality of benchmark::State
+ * keep_running() returns false once enough iterations or time has passed.
+ *
+ */
 struct BenchmarkState {
   enum class State {
     NotStarted, Running, Over
   };
 
-  BenchmarkState(size_t max_num_iterations, Duration max_duration):
+  BenchmarkState(const size_t max_num_iterations, const Duration max_duration):
     max_num_iterations(max_num_iterations),
     max_duration(max_duration) {
 
@@ -76,7 +108,6 @@ struct BenchmarkState {
     return true;
   }
 
-
   State state{State::NotStarted};
   TimePoint begin = TimePoint{};
   TimePoint end = TimePoint{};
@@ -88,70 +119,37 @@ struct BenchmarkState {
 
 class TpchBenchmark {
  public:
-  TpchBenchmark(BenchmarkMode benchmark_mode, const std::optional<std::string>& output_file_path, const std::vector<size_t>& query_ids):
-    _benchmark_mode(benchmark_mode), _output_file_path(output_file_path), _query_ids(query_ids) {
+  TpchBenchmark(const BenchmarkMode benchmark_mode,
+                const std::optional<std::string>& output_file_path,
+                std::vector<size_t> query_ids,
+                const opossum::ChunkOffset chunk_size,
+                const float scale_factor,
+                const size_t max_num_query_runs,
+                const Duration max_duration):
+    _benchmark_mode(benchmark_mode), _output_file_path(output_file_path), _query_ids(std::move(query_ids)),
+    _chunk_size(chunk_size),
+    _scale_factor(scale_factor),
+    _max_num_query_runs(max_num_query_runs),
+    _max_duration(max_duration),
+    _query_results_by_query_id() {
 
   }
 
-  void run(const opossum::ChunkOffset chunk_size,
-           const float scale_factor,
-           const size_t max_num_query_runs,
-           const Duration max_duration
-           ) {
+  void run() {
     /**
      * Populate the StorageManager
      */
-    std::cout << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
-    opossum::TpchDbGenerator(scale_factor, chunk_size).generate_and_store();
-    std::cout << "- Done." << std::endl;
+    out() << "- Generating TPCH Tables with scale_factor=" << _scale_factor << "..." << std::endl;
+    opossum::TpchDbGenerator(_scale_factor, _chunk_size).generate_and_store();
+    out() << "- Done." << std::endl;
 
     /**
      * Run the TPCH queries in the selected mode
      */
     if (_benchmark_mode == BenchmarkMode::IndividualQueries) {
-      for (const auto query_id : _query_ids) {
-        std::cout << "- Benchmarking Query " << (query_id + 1) << std::endl;
-
-        const auto sql = opossum::tpch_queries[query_id];
-
-        BenchmarkState state{max_num_query_runs, max_duration};
-        while (state.keep_running()) {
-          // Execute the query, we don't care about the results
-          SQLPipeline{sql}.get_result_table();
-        }
-
-        QueryBenchmarkResult result{query_id};
-        result.num_iterations = state.num_iterations;
-        result.duration = std::chrono::high_resolution_clock::now() - state.begin;
-
-        _query_results_by_query_id.emplace(query_id, result);
-      }
+      _benchmark_individual_queries();
     } else if (_benchmark_mode == BenchmarkMode::PermutedQuerySets) {
-      // Init results
-      for (const auto query_id : _query_ids) {
-        _query_results_by_query_id.emplace(query_id, query_id);
-      }
-
-      auto mutable_query_ids = _query_ids;
-
-      std::random_device random_device;
-      std::mt19937 random_generator(random_device());
-
-      BenchmarkState state{max_num_query_runs, max_duration};
-      while (state.keep_running()) {
-        std::shuffle(mutable_query_ids.begin(), mutable_query_ids.end(), random_generator);
-
-        for (const auto query_id : mutable_query_ids) {
-          const auto query_benchmark_begin = std::chrono::steady_clock::now();
-          // Execute the query, we don't care about the results
-          SQLPipeline{opossum::tpch_queries[query_id]}.get_result_table();
-          const auto query_benchmark_end = std::chrono::steady_clock::now();
-
-          auto& query_benchmark_result = _query_results_by_query_id.at(query_id);
-          query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
-          query_benchmark_result.num_iterations++;
-        }
-      }
+      _benchmark_permuted_query_sets();
     } else {
       Fail("Invalid mode");
     }
@@ -168,10 +166,64 @@ class TpchBenchmark {
   }
 
  private:
-  BenchmarkMode _benchmark_mode;
-  std::optional<std::string> _output_file_path;
-  std::vector<size_t> _query_ids;
+  const BenchmarkMode _benchmark_mode;
+  const std::optional<std::string> _output_file_path;
+  const std::vector<size_t> _query_ids;
+  const ChunkOffset _chunk_size;
+  const float _scale_factor;
+  const size_t _max_num_query_runs;
+  const Duration _max_duration;
+
   BenchmarkResults _query_results_by_query_id;
+
+  void _benchmark_permuted_query_sets() {
+    // Init results
+    for (const auto query_id : _query_ids) {
+      _query_results_by_query_id.emplace(query_id, query_id);
+    }
+
+    auto mutable_query_ids = _query_ids;
+
+    // For shuffling the query order
+    std::random_device random_device;
+    std::mt19937 random_generator(random_device());
+
+    BenchmarkState state{_max_num_query_runs, _max_duration};
+    while (state.keep_running()) {
+      std::shuffle(mutable_query_ids.begin(), mutable_query_ids.end(), random_generator);
+
+      for (const auto query_id : mutable_query_ids) {
+        const auto query_benchmark_begin = std::chrono::steady_clock::now();
+        // Execute the query, we don't care about the results
+        SQLPipeline{opossum::tpch_queries[query_id]}.get_result_table();
+        const auto query_benchmark_end = std::chrono::steady_clock::now();
+
+        auto& query_benchmark_result = _query_results_by_query_id.at(query_id);
+        query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
+        query_benchmark_result.num_iterations++;
+      }
+    }
+  }
+
+  void _benchmark_individual_queries() {
+    for (const auto query_id : _query_ids) {
+      out() << "- Benchmarking Query " << (query_id + 1) << std::endl;
+
+      const auto sql = opossum::tpch_queries[query_id];
+
+      BenchmarkState state{_max_num_query_runs, _max_duration};
+      while (state.keep_running()) {
+        // Execute the query, we don't care about the results
+        SQLPipeline{sql}.get_result_table();
+      }
+
+      QueryBenchmarkResult result{query_id};
+      result.num_iterations = state.num_iterations;
+      result.duration = std::chrono::high_resolution_clock::now() - state.begin;
+
+      _query_results_by_query_id.emplace(query_id, result);
+    }
+  }
 
   void _create_report(std::ostream & stream) const {
     nlohmann::json benchmarks;
@@ -182,30 +234,50 @@ class TpchBenchmark {
       const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
       const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
       const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
+      const auto time_per_query = duration_ns / query_result.num_iterations;
 
       nlohmann::json benchmark{
       {"name", "TPC-H " + std::to_string(query_id + 1)},
       {"iterations", query_result.num_iterations},
-      {"real_time", duration_ns / query_result.num_iterations},
+      {"real_time", time_per_query},
+      {"cpu_time", time_per_query},
       {"items_per_second", items_per_second},
+      {"time_unit", "ns"},
       };
 
       benchmarks.push_back(benchmark);
     }
 
-    nlohmann::json report{
-    {"benchmarks", benchmarks}
+    /**
+     * Generate YY-MM-DD hh:mm::ss
+     */
+    auto current_time = std::time(nullptr);
+    auto local_time = *std::localtime(&current_time);
+    std::stringstream timestamp_stream;
+    timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
+
+    nlohmann::json context{
+      {"date", timestamp_stream.str()},
+      {"scale_factor", _scale_factor},
+      {"chunk_size", _chunk_size},
+      {"build_type", IS_DEBUG ? "debug" : "release"},
+      {"benchmark_mode", _benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"}
     };
 
-    stream << std::setw(4) << report << std::endl;
+    nlohmann::json report{
+      {"context", context},
+      {"benchmarks", benchmarks}
+    };
+
+    stream << std::setw(2) << report << std::endl;
   }
 };
 
-}  // namespace
+}  // namespace opossum
 
 int main(int argc, char * argv[]) {
-  auto num_runs = size_t{0};
-  auto time_seconds = size_t{0};
+  auto num_iterations = size_t{0};
+  auto timeout_duration = size_t{0};
   auto scale_factor = 1.0f;
   auto chunk_size = opossum::ChunkOffset(opossum::INVALID_CHUNK_OFFSET);
   auto benchmark_mode_str = std::string{"IndividualQueries"};
@@ -214,11 +286,12 @@ int main(int argc, char * argv[]) {
 
   cli_options_description.add_options()
     ("help", "print this help message")
+    ("v,verbose", "Print log messages", cxxopts::value<bool>(opossum::verbose_benchmark)->default_value("false"))
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>(scale_factor)->default_value("0.001"))
-    ("r,runs", "Minimum number of runs of a single query", cxxopts::value<size_t>(num_runs)->default_value("150"))
+    ("r,runs", "Maximum number of runs of a single query", cxxopts::value<size_t>(num_iterations)->default_value("1000"))
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<opossum::ChunkOffset>(chunk_size)->default_value(std::to_string(opossum::INVALID_CHUNK_OFFSET)))
-    ("t,time", "Minimum time spend exercising a query", cxxopts::value<size_t>(time_seconds)->default_value("5"))
-    ("o,output", "File to output results to, default is stdout", cxxopts::value<std::string>())
+    ("t,time", "Maximum seconds after which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5"))
+    ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str))
     ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<size_t>>())
     ;
@@ -226,19 +299,28 @@ int main(int argc, char * argv[]) {
   cli_options_description.parse_positional("queries");
   const auto cli_parse_result = cli_options_description.parse(argc, argv);
 
+  // Display usage and quit
   if (cli_parse_result.count("help")) {
     std::cout << cli_options_description.help({}) << std::endl;
     return 0;
   }
 
+  // In non-verbose mode, disable performance warnings
+  std::optional<opossum::PerformanceWarningDisabler> performance_warning_disabler;
+  if (!opossum::verbose_benchmark) {
+    performance_warning_disabler.emplace();
+  }
+
+  // Display info about output destination
   std::optional<std::string> output_file_path;
   if (cli_parse_result.count("output") > 0) {
     output_file_path = cli_parse_result["output"].as<std::string>();
-    std::cout << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
+    opossum::out() << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
   } else {
-    std::cout << "- Writing benchmark results stdout" << std::endl;
+    opossum::out() << "- Writing benchmark results to stdout" << std::endl;
   }
 
+  // Build list of query ids to be benchmarked and display it
   std::vector<size_t> query_ids;
   if (cli_parse_result.count("queries")) {
     const auto cli_query_ids = cli_parse_result["queries"].as<std::vector<size_t>>();
@@ -248,30 +330,31 @@ int main(int argc, char * argv[]) {
   } else {
     std::copy(std::begin(opossum::tpch_supported_queries), std::end(opossum::tpch_supported_queries), std::back_inserter(query_ids));
   }
-  std::cout << "- Benchmarking Queries ";
+  opossum::out() << "- Benchmarking Queries ";
   for (const auto query_id : query_ids) {
-    std::cout << (query_id + 1) << " ";
+    opossum::out() << (query_id + 1) << " ";
   }
-  std::cout << std::endl;
+  opossum::out() << std::endl;
 
-  auto benchmark_mode = opossum::BenchmarkMode::IndividualQueries; // Just init deterministically
+  // Determine benchmark and display it
+  auto benchmark_mode = opossum::BenchmarkMode::IndividualQueries; // Just to init it deterministically
   if (benchmark_mode_str == "IndividualQueries") {
     benchmark_mode = opossum::BenchmarkMode::IndividualQueries;
   } else if (benchmark_mode_str == "PermutedQuerySets") {
     benchmark_mode = opossum::BenchmarkMode::PermutedQuerySets;
   } else {
-    std::cout << "ERROR: Invalid benchmark mode: '" << benchmark_mode_str << "'" << std::endl;
-    std::cout << cli_options_description.help({}) << std::endl;
+    std::cerr << "ERROR: Invalid benchmark mode: '" << benchmark_mode_str << "'" << std::endl;
+    std::cerr << cli_options_description.help({}) << std::endl;
     return 1;
   }
-  std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
+  opossum::out() << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
 
-
-  opossum::TpchBenchmark(benchmark_mode, output_file_path, query_ids).run(
-    chunk_size,
+  // Run the benchmark
+  opossum::TpchBenchmark(benchmark_mode, output_file_path, query_ids,
+  chunk_size,
     scale_factor,
-    num_runs,
-    std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{time_seconds}));
+    num_iterations,
+    std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration})).run();
 
   return 0;
 }
