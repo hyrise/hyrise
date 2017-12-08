@@ -191,8 +191,8 @@ size_t AbstractLQPNode::output_column_count() const { return output_column_names
 ColumnID AbstractLQPNode::get_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   const auto column_id = find_column_id_by_named_column_reference(named_column_reference);
-  DebugAssert(column_id,
-              std::string("NamedColumnReference ") + named_column_reference.column_name + " could not be resolved.");
+  Assert(column_id,
+         std::string("NamedColumnReference ") + named_column_reference.column_name + " could not be resolved.");
   return *column_id;
 }
 
