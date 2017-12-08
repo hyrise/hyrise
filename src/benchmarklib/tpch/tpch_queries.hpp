@@ -14,5 +14,4 @@ extern const char* tpch_query_templates[NUM_TPCH_QUERIES];
  * Indicates whether the query with a specific index is considered to be supported by Hyrise
  */
 extern size_t tpch_supported_queries[NUM_SUPPORTED_TPCH_QUERIES];
-
-}
+}  // namespace opossum

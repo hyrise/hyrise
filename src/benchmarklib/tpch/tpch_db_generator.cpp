@@ -63,7 +63,8 @@ class TableBuilder {
  public:
   template <typename... Strings>
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
-               const boost::hana::tuple<Strings...>& column_names, opossum::ChunkUseMvcc use_mvcc): _use_mvcc(use_mvcc) {
+               const boost::hana::tuple<Strings...>& column_names, opossum::ChunkUseMvcc use_mvcc)
+      : _use_mvcc(use_mvcc) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
     /**
@@ -189,7 +190,7 @@ namespace opossum {
 
 std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Part, "part"},         {TpchTable::PartSupp, "partsupp"}, {TpchTable::Supplier, "supplier"},
-    {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},      {TpchTable::LineItem, "lineitem"},
+    {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},     {TpchTable::LineItem, "lineitem"},
     {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
 TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)

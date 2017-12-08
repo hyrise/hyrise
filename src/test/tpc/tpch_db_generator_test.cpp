@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "testing_assert.hpp"
 #include "storage/storage_manager.hpp"
+#include "testing_assert.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "utils/load_table.hpp"
 
@@ -55,7 +55,7 @@ TEST(TpchDbGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(StorageManager::get().has_table("orders"));
   EXPECT_FALSE(StorageManager::get().has_table("nation"));
   EXPECT_FALSE(StorageManager::get().has_table("region"));
-  
+
   // Small scale factor
   TpchDbGenerator(0.01f, Chunk::MAX_SIZE).generate_and_store();
 

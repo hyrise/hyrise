@@ -1,19 +1,18 @@
+#include <boost/program_options.hpp>
+
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <random>
-#include <string>
+#include <string
 
 #include "cxxopts.hpp"
 #include "json.hpp"
-
-#include <boost/program_options.hpp>
-#include <SQLParserResult.h>
-#include <SQLParser.h>
-
 #include "sql/sql_pipeline.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "SQLParser.h"
+#include "SQLParserResult.h"
 
 namespace opossum {
 
@@ -21,10 +20,7 @@ namespace opossum {
  * IndividualQueries runs each query a number of times and then the next one
  * PermutedQuerySets runs the queries as sets permuting their order after each run (this exercises caches)
  */
-enum class BenchmarkMode {
-  IndividualQueries,
-  PermutedQuerySets
-};
+enum class BenchmarkMode { IndividualQueries, PermutedQuerySets };
 
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
@@ -54,7 +50,7 @@ std::ostream& out() {
 }
 
 struct QueryBenchmarkResult {
-  explicit QueryBenchmarkResult(size_t id): id(id) {}
+  explicit QueryBenchmarkResult(size_t id) : id(id) {}
 
   size_t id;
   size_t num_iterations = 0;
@@ -69,15 +65,10 @@ using BenchmarkResults = std::unordered_map<size_t, QueryBenchmarkResult>;
  *
  */
 struct BenchmarkState {
-  enum class State {
-    NotStarted, Running, Over
-  };
+  enum class State { NotStarted, Running, Over };
 
-  BenchmarkState(const size_t max_num_iterations, const Duration max_duration):
-    max_num_iterations(max_num_iterations),
-    max_duration(max_duration) {
-
-  }
+  BenchmarkState(const size_t max_num_iterations, const Duration max_duration)
+      : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
 
   bool keep_running() {
     switch (state) {
@@ -87,7 +78,7 @@ struct BenchmarkState {
         break;
       case State::Over:
         return false;
-      default:;
+      default: {}
     }
 
     if (num_iterations >= max_num_iterations) {
@@ -119,21 +110,17 @@ struct BenchmarkState {
 
 class TpchBenchmark {
  public:
-  TpchBenchmark(const BenchmarkMode benchmark_mode,
-                const std::optional<std::string>& output_file_path,
-                std::vector<size_t> query_ids,
-                const opossum::ChunkOffset chunk_size,
-                const float scale_factor,
-                const size_t max_num_query_runs,
-                const Duration max_duration):
-    _benchmark_mode(benchmark_mode), _output_file_path(output_file_path), _query_ids(std::move(query_ids)),
-    _chunk_size(chunk_size),
-    _scale_factor(scale_factor),
-    _max_num_query_runs(max_num_query_runs),
-    _max_duration(max_duration),
-    _query_results_by_query_id() {
-
-  }
+  TpchBenchmark(const BenchmarkMode benchmark_mode, const std::optional<std::string>& output_file_path,
+                std::vector<size_t> query_ids, const opossum::ChunkOffset chunk_size, const float scale_factor,
+                const size_t max_num_query_runs, const Duration max_duration)
+      : _benchmark_mode(benchmark_mode),
+        _output_file_path(output_file_path),
+        _query_ids(std::move(query_ids)),
+        _chunk_size(chunk_size),
+        _scale_factor(scale_factor),
+        _max_num_query_runs(max_num_query_runs),
+        _max_duration(max_duration),
+        _query_results_by_query_id() {}
 
   void run() {
     /**
@@ -225,7 +212,7 @@ class TpchBenchmark {
     }
   }
 
-  void _create_report(std::ostream & stream) const {
+  void _create_report(std::ostream& stream) const {
     nlohmann::json benchmarks;
 
     for (const auto query_id : _query_ids) {
@@ -237,12 +224,12 @@ class TpchBenchmark {
       const auto time_per_query = duration_ns / query_result.num_iterations;
 
       nlohmann::json benchmark{
-      {"name", "TPC-H " + std::to_string(query_id + 1)},
-      {"iterations", query_result.num_iterations},
-      {"real_time", time_per_query},
-      {"cpu_time", time_per_query},
-      {"items_per_second", items_per_second},
-      {"time_unit", "ns"},
+          {"name", "TPC-H " + std::to_string(query_id + 1)},
+          {"iterations", query_result.num_iterations},
+          {"real_time", time_per_query},
+          {"cpu_time", time_per_query},
+          {"items_per_second", items_per_second},
+          {"time_unit", "ns"},
       };
 
       benchmarks.push_back(benchmark);
@@ -257,17 +244,14 @@ class TpchBenchmark {
     timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
     nlohmann::json context{
-      {"date", timestamp_stream.str()},
-      {"scale_factor", _scale_factor},
-      {"chunk_size", _chunk_size},
-      {"build_type", IS_DEBUG ? "debug" : "release"},
-      {"benchmark_mode", _benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"}
-    };
+        {"date", timestamp_stream.str()},
+        {"scale_factor", _scale_factor},
+        {"chunk_size", _chunk_size},
+        {"build_type", IS_DEBUG ? "debug" : "release"},
+        {"benchmark_mode",
+         _benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"}};
 
-    nlohmann::json report{
-      {"context", context},
-      {"benchmarks", benchmarks}
-    };
+    nlohmann::json report{{"context", context}, {"benchmarks", benchmarks}};
 
     stream << std::setw(2) << report << std::endl;
   }
@@ -275,7 +259,7 @@ class TpchBenchmark {
 
 }  // namespace opossum
 
-int main(int argc, char * argv[]) {
+int main(int argc, char* argv[]) {
   auto num_iterations = size_t{0};
   auto timeout_duration = size_t{0};
   auto scale_factor = 1.0f;
@@ -284,17 +268,19 @@ int main(int argc, char * argv[]) {
 
   cxxopts::Options cli_options_description{"TPCH Benchmark", ""};
 
-  cli_options_description.add_options()
-    ("help", "print this help message")
-    ("v,verbose", "Print log messages", cxxopts::value<bool>(opossum::verbose_benchmark)->default_value("false"))
-    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>(scale_factor)->default_value("0.001"))
-    ("r,runs", "Maximum number of runs of a single query", cxxopts::value<size_t>(num_iterations)->default_value("1000"))
-    ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<opossum::ChunkOffset>(chunk_size)->default_value(std::to_string(opossum::INVALID_CHUNK_OFFSET)))
-    ("t,time", "Maximum seconds within which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5"))
-    ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
-    ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str))
-    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<size_t>>())
-    ;
+  cli_options_description.add_options()("help", "print this help message")(
+      "v,verbose", "Print log messages", cxxopts::value<bool>(opossum::verbose_benchmark)->default_value("false"))(
+      "s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>(scale_factor)->default_value("0.001"))(
+      "r,runs", "Maximum number of runs of a single query",
+      cxxopts::value<size_t>(num_iterations)->default_value("1000"))(
+      "c,chunk_size", "ChunkSize, default is 2^32-1",
+      cxxopts::value<opossum::ChunkOffset>(chunk_size)->default_value(std::to_string(opossum::INVALID_CHUNK_OFFSET)))(
+      "t,time", "Maximum seconds within which a new query(set) is initiated",
+      cxxopts::value<size_t>(timeout_duration)->default_value("5"))(
+      "o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())(
+      "m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries",
+      cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str))(
+      "queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<size_t>>());
 
   cli_options_description.parse_positional("queries");
   const auto cli_parse_result = cli_options_description.parse(argc, argv);
@@ -325,10 +311,11 @@ int main(int argc, char * argv[]) {
   if (cli_parse_result.count("queries")) {
     const auto cli_query_ids = cli_parse_result["queries"].as<std::vector<size_t>>();
     for (const auto cli_query_id : cli_query_ids) {
-      query_ids.emplace_back(cli_query_id - 1); // Offset because TPC-H query 1 has index 0
+      query_ids.emplace_back(cli_query_id - 1);  // Offset because TPC-H query 1 has index 0
     }
   } else {
-    std::copy(std::begin(opossum::tpch_supported_queries), std::end(opossum::tpch_supported_queries), std::back_inserter(query_ids));
+    std::copy(std::begin(opossum::tpch_supported_queries), std::end(opossum::tpch_supported_queries),
+              std::back_inserter(query_ids));
   }
   opossum::out() << "- Benchmarking Queries ";
   for (const auto query_id : query_ids) {
@@ -337,7 +324,7 @@ int main(int argc, char * argv[]) {
   opossum::out() << std::endl;
 
   // Determine benchmark and display it
-  auto benchmark_mode = opossum::BenchmarkMode::IndividualQueries; // Just to init it deterministically
+  auto benchmark_mode = opossum::BenchmarkMode::IndividualQueries;  // Just to init it deterministically
   if (benchmark_mode_str == "IndividualQueries") {
     benchmark_mode = opossum::BenchmarkMode::IndividualQueries;
   } else if (benchmark_mode_str == "PermutedQuerySets") {
@@ -350,11 +337,9 @@ int main(int argc, char * argv[]) {
   opossum::out() << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
 
   // Run the benchmark
-  opossum::TpchBenchmark(benchmark_mode, output_file_path, query_ids,
-  chunk_size,
-    scale_factor,
-    num_iterations,
-    std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration})).run();
+  opossum::TpchBenchmark(benchmark_mode, output_file_path, query_ids, chunk_size, scale_factor, num_iterations,
+                         std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}))
+      .run();
 
   return 0;
 }
