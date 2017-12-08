@@ -578,4 +578,14 @@ TEST_F(SQLTranslatorTest, DropView) {
   EXPECT_EQ(drop_view_node->view_name(), "my_third_view");
 }
 
+TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
+  const auto query = "SELECT * FROM table_a WHERE invalidname = 0;";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
+TEST_F(SQLTranslatorTest, AccessInvalidTable) {
+  const auto query = "SELECT * FROM invalid_table;";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
 }  // namespace opossum
