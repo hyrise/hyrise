@@ -97,4 +97,14 @@ TEST_F(StorageManagerTest, HasView) {
   EXPECT_EQ(sm.has_view("first_view"), true);
 }
 
+TEST_F(StorageManagerTest, ListViewNames) {
+  auto& sm = StorageManager::get();
+  const auto view_names = sm.view_names();
+
+  EXPECT_EQ(view_names.size(), 2u);
+
+  EXPECT_EQ(view_names[0], "first_view");
+  EXPECT_EQ(view_names[1], "second_view");
+}
+
 }  // namespace opossum
