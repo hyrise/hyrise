@@ -77,6 +77,7 @@ set(
     sql/sql_basic_cache_test.cpp
     sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp
+    sql/sql_pipeline_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
