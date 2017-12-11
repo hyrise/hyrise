@@ -22,8 +22,9 @@ namespace opossum {
  *
  * Note: Add your encoded column class here!
  */
-constexpr auto encoded_column_info_for_type = hana::make_map(
-    hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, hana::type_c<DeprecatedDictionaryColumnInfo>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>));
+constexpr auto encoded_column_info_for_type =
+    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>,
+                                   hana::type_c<DeprecatedDictionaryColumnInfo>),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>));
 
 }  // namespace opossum

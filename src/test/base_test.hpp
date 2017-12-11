@@ -31,7 +31,7 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
   // creates a dictionary column with the given type and values
   template <class T>
   static std::shared_ptr<DeprecatedDictionaryColumn<T>> create_dict_column_by_type(DataType data_type,
-                                                                         const std::vector<T>& values) {
+                                                                                   const std::vector<T>& values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
     auto compressed_column = DictionaryCompression::compress_column(data_type, value_column);

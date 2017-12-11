@@ -16,11 +16,7 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t {
-  Invalid,
-  DeprecatedDictionary,
-  Dictionary
-};
+enum class EncodingType : uint8_t { Invalid, DeprecatedDictionary, Dictionary };
 
 namespace detail {
 

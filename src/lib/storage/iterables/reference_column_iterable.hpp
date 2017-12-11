@@ -100,7 +100,8 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
       return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
-    auto _value_from_dictionary_column(const DeprecatedDictionaryColumn<T>& column, const ChunkOffset& chunk_offset) const {
+    auto _value_from_dictionary_column(const DeprecatedDictionaryColumn<T>& column,
+                                       const ChunkOffset& chunk_offset) const {
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
       auto attribute_vector = column.attribute_vector();

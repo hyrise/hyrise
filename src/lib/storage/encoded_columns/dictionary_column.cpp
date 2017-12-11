@@ -14,8 +14,8 @@ namespace opossum {
 
 template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                                            const std::shared_ptr<const BaseNsVector>& attribute_vector,
-                                            const ValueID null_value_id)
+                                      const std::shared_ptr<const BaseNsVector>& attribute_vector,
+                                      const ValueID null_value_id)
     : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
 template <typename T>
@@ -45,8 +45,7 @@ size_t DictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-void DictionaryColumn<T>::write_string_representation(std::string& row_string,
-                                                         const ChunkOffset chunk_offset) const {
+void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   PerformanceWarning("DictionaryColumn<T>::write_string_representation is potentially very slow.");
 
   std::stringstream buffer;
@@ -86,13 +85,11 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr,
-                                                      _null_value_id);
+  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr, _null_value_id);
 }
 
 template <typename T>

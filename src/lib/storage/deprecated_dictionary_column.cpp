@@ -16,12 +16,12 @@ namespace opossum {
 
 template <typename T>
 DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
-                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+                                                          const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
 DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
-                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+                                                          const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
 
 template <typename T>
@@ -125,12 +125,14 @@ size_t DeprecatedDictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-void DeprecatedDictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
+void DeprecatedDictionaryColumn<T>::visit(ColumnVisitable& visitable,
+                                          std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
 template <typename T>
-void DeprecatedDictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
+void DeprecatedDictionaryColumn<T>::write_string_representation(std::string& row_string,
+                                                                const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
   // buffering value at chunk_offset
   auto value_id = _attribute_vector->get(chunk_offset);
@@ -147,7 +149,8 @@ void DeprecatedDictionaryColumn<T>::write_string_representation(std::string& row
 }
 
 template <typename T>
-void DeprecatedDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
+void DeprecatedDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column,
+                                                               ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
   auto& values_out = output_column.values();
 
@@ -164,7 +167,8 @@ void DeprecatedDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> DeprecatedDictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseColumn> DeprecatedDictionaryColumn<T>::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   const pmr_vector<T> new_dictionary(*_dictionary, alloc);
   return std::allocate_shared<DeprecatedDictionaryColumn<T>>(

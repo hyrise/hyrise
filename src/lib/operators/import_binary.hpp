@@ -133,7 +133,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DeprecatedDictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<DeprecatedDictionaryColumn<T>> _import_dictionary_column(std::ifstream& file,
+                                                                                  ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseAttributeVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,

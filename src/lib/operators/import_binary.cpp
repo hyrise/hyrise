@@ -188,7 +188,7 @@ std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream
 
 template <typename T>
 std::shared_ptr<DeprecatedDictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
-                                                                             ChunkOffset row_count) {
+                                                                                       ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _read_values<T>(file, dictionary_size);

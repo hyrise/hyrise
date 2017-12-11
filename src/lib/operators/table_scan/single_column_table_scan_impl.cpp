@@ -7,10 +7,10 @@
 #include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/encoded_columns/base_dictionary_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
-#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"

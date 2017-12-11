@@ -856,7 +856,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
   auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
 
-  const auto *column_ref_hsql_expr = hsql_expr.expr;
+  const auto* column_ref_hsql_expr = hsql_expr.expr;
   ScanType scan_type;
 
   if (predicate_negated) {
