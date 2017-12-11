@@ -172,7 +172,9 @@ enum class ScanType {
   OpGreaterThanEquals,
   OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
   OpLike,
-  OpNotLike
+  OpNotLike,
+  OpIsNull,
+  OpIsNotNull
 };
 
 enum class ExpressionType {

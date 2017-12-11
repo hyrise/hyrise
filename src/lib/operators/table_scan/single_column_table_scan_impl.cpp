@@ -36,6 +36,21 @@ SingleColumnTableScanImpl::SingleColumnTableScanImpl(std::shared_ptr<const Table
                                                      const AllTypeVariant& right_value)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type}, _right_value{right_value} {}
 
+PosList SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
+  // early outs for specific NULL semantics
+  if (variant_is_null(_right_value)) {
+    /**
+     * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
+     * Therefore, these scans will always return an empty position list.
+     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl, 
+     * we can assume that comparing with NULLs here will always return nothing.
+     */
+    return PosList{};
+  }
+
+  return BaseSingleColumnTableScanImpl::scan_chunk(chunk_id);
+}
+
 void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
                                                     std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);

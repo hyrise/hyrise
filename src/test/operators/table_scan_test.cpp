@@ -45,6 +45,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return table_wrapper_even_dict;
   }
 
+  std::shared_ptr<TableWrapper> get_table_op_null() {
+    auto table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
+    table_wrapper_null->execute();
+    return table_wrapper_null;
+  }
+
   std::shared_ptr<TableWrapper> get_table_op_part_dict() {
     auto table = std::make_shared<Table>(5);
     table->add_column("a", DataType::Int);
@@ -257,6 +263,8 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[ScanType::OpGreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpBetween] = {};  // Will throw
+  tests[ScanType::OpIsNull] = {};
+  tests[ScanType::OpIsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 4);
@@ -283,6 +291,8 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   tests[ScanType::OpGreaterThan] = {106};
   tests[ScanType::OpGreaterThanEquals] = {104, 106};
   tests[ScanType::OpBetween] = {};  // Will throw
+  tests[ScanType::OpIsNull] = {};
+  tests[ScanType::OpIsNotNull] = {100, 102, 104, 106};
 
   for (const auto& test : tests) {
     auto scan1 = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{1}, ScanType::OpLessThan, 108);
@@ -429,6 +439,8 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   tests[ScanType::OpGreaterThan] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpGreaterThanEquals] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpNotEquals] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[ScanType::OpIsNull] = {};
+  tests[ScanType::OpIsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 0);
@@ -478,7 +490,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
   table_wrapper->execute();
 
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+      {ScanType::OpIsNull, {12, 123}}, {ScanType::OpIsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -491,7 +503,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   table_wrapper->execute();
 
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+      {ScanType::OpIsNull, {12, 123}}, {ScanType::OpIsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -502,8 +514,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {}},
-                                                                     {ScanType::OpNotEquals, {12345, 123, 1234}}};
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpIsNull, {}},
+                                                                     {ScanType::OpIsNotNull, {12345, 123, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -514,8 +526,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNu
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {}},
-                                                                     {ScanType::OpNotEquals, {12345, 123, 1234}}};
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpIsNull, {}},
+                                                                     {ScanType::OpIsNotNull, {12345, 123, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -527,7 +539,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   table_wrapper->execute();
 
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+      {ScanType::OpIsNull, {12, 123}}, {ScanType::OpIsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -540,7 +552,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
   table_wrapper->execute();
 
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+      {ScanType::OpIsNull, {12, 123}}, {ScanType::OpIsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -551,8 +563,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {123, 1234}},
-                                                                     {ScanType::OpNotEquals, {12345, NULL_VALUE}}};
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpIsNull, {123, 1234}},
+                                                                     {ScanType::OpIsNotNull, {12345, NULL_VALUE}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -563,10 +575,27 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {123, 1234}},
-                                                                     {ScanType::OpNotEquals, {12345, NULL_VALUE}}};
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpIsNull, {123, 1234}},
+                                                                     {ScanType::OpIsNotNull, {12345, NULL_VALUE}}};
 
   scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_F(OperatorsTableScanTest, NullSemantics) {
+  const auto scan_types =
+      std::vector<ScanType>({ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThan,
+                             ScanType::OpLessThanEquals, ScanType::OpGreaterThan, ScanType::OpGreaterThanEquals});
+
+  for (auto scan_type : scan_types) {
+    auto scan = std::make_shared<TableScan>(get_table_op_null(), ColumnID{0}, scan_type, NULL_VALUE);
+    scan->execute();
+
+    EXPECT_EQ(scan->get_output()->row_count(), 0u);
+
+    for (auto i = ChunkID{0}; i < scan->get_output()->chunk_count(); i++) {
+      EXPECT_EQ(scan->get_output()->get_chunk(i).column_count(), 2u);
+    }
+  }
 }
 
 }  // namespace opossum

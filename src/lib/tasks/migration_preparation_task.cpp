@@ -81,6 +81,7 @@ double safe_log2(double x) { return x == 0 ? 0 : std::log2(x); }
 
 // The inverted Shannon entropy is used as a metric for imbalance between the NUMA nodes.
 double inverted_entropy(const std::vector<double>& node_temperatures) {
+  if (node_temperatures.size() == 1) { return 0; }
   double max_entropy = std::pow(
       -1.0 * node_temperatures.size() * (1.0 / node_temperatures.size() * std::log2(1.0 / node_temperatures.size())),
       4);
@@ -163,8 +164,6 @@ MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::O
 // identifies chunks that are candidates for migration and schedules migration tasks.
 void MigrationPreparationTask::_on_execute() {
   const auto topology = NUMAPlacementManager::get().topology();
-
-  DebugAssert(topology->nodes().size() > 1, "NUMA management requires at least two nodes");
 
   // Collect chunk and NUMA node temperature metrics
   auto chunk_infos =

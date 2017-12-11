@@ -75,10 +75,10 @@ void IsNullTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_co
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
   switch (_scan_type) {
-    case ScanType::OpEquals:
+    case ScanType::OpIsNull:
       return false;
 
-    case ScanType::OpNotEquals:
+    case ScanType::OpIsNotNull:
       return !column.is_nullable();
 
     default:
@@ -89,10 +89,10 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
 
 bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
   switch (_scan_type) {
-    case ScanType::OpEquals:
+    case ScanType::OpIsNull:
       return !column.is_nullable();
 
-    case ScanType::OpNotEquals:
+    case ScanType::OpIsNotNull:
       return false;
 
     default:

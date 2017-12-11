@@ -36,7 +36,7 @@ SELECT "left".a, "left".b, "right".a, "right".b FROM int_float AS "left",  int_f
 
 -- JOIN
 SELECT "left".a, "left".b, "right".a, "right".b FROM int_float AS "left" JOIN int_float2 AS "right" ON "left".a = "right".a;
--- SELECT * FROM int_float AS "left" LEFT JOIN int_float2 AS "right" ON "left".a = "right".a;
+SELECT * FROM int_float AS "left" LEFT JOIN int_float2 AS "right" ON "left".a = "right".a;
 SELECT * FROM int_float AS "left" INNER JOIN int_float2 AS "right" ON "left".a = "right".a;
 SELECT * FROM int_float4 NATURAL JOIN int_float6;
 SELECT * FROM int_float NATURAL JOIN (SELECT d, a FROM int_float5) AS T2;
@@ -131,3 +131,21 @@ SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING b > 4
 -- CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view;
 -- CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view WHERE a > 10;
 -- CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view WHERE a > 10;
+
+-- NULL Semantics
+SELECT * FROM int_float WHERE a IS NOT NULL;
+SELECT * FROM int_float_null WHERE a IS NULL;
+
+-- cannot test these because we cannot handle empty query results here
+-- SELECT * FROM int_float WHERE a IS NULL;
+-- SELECT * FROM int_float WHERE a = NULL;
+-- SELECT * FROM int_float WHERE a > NULL;
+-- SELECT * FROM int_float WHERE a < NULL;
+-- SELECT * FROM int_float WHERE a <> NULL;
+-- SELECT * FROM int_float WHERE a BETWEEN NULL AND NULL;
+-- SELECT * FROM int_float_null WHERE a IS NOT NULL;
+-- SELECT * FROM int_float_null WHERE a = NULL;
+-- SELECT * FROM int_float_null WHERE a > NULL;
+-- SELECT * FROM int_float_null WHERE a < NULL;
+-- SELECT * FROM int_float_null WHERE a <> NULL;
+-- SELECT * FROM int_float_null WHERE a BETWEEN NULL AND NULL;
