@@ -10,9 +10,9 @@
 namespace opossum {
 
 template <typename T>
-class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterable<T>> {
+class DeprecatedDictionaryColumnIterable : public IndexableIterable<DeprecatedDictionaryColumnIterable<T>> {
  public:
-  explicit DictionaryColumnIterable(const DeprecatedDictionaryColumn<T>& column) : _column{column} {}
+  explicit DeprecatedDictionaryColumnIterable(const DeprecatedDictionaryColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {

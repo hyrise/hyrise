@@ -581,7 +581,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, NullSemantics) {
+TEST_P(OperatorsTableScanTest, NullSemantics) {
   const auto scan_types =
       std::vector<ScanType>({ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThan,
                              ScanType::OpLessThanEquals, ScanType::OpGreaterThan, ScanType::OpGreaterThanEquals});

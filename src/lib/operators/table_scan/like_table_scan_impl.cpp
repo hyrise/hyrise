@@ -14,7 +14,7 @@
 
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
@@ -84,7 +84,7 @@ void LikeTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryC
   const auto& dictionary_matches = result.second;
 
   const auto& attribute_vector = *left_column.attribute_vector();
-  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
+  auto attribute_vector_iterable = DeprecatedAttributeVectorIterable{attribute_vector};
 
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {

@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-class AttributeVectorIterable : public IndexableIterable<AttributeVectorIterable> {
+class DeprecatedAttributeVectorIterable : public IndexableIterable<DeprecatedAttributeVectorIterable> {
  public:
-  explicit AttributeVectorIterable(const BaseAttributeVector& attribute_vector) : _attribute_vector{attribute_vector} {}
+  explicit DeprecatedAttributeVectorIterable(const BaseAttributeVector& attribute_vector) : _attribute_vector{attribute_vector} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& f) const {

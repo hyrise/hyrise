@@ -7,7 +7,7 @@
 #include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/encoded_columns/base_new_dictionary_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/iterables/new_attribute_vector_iterable.hpp"
@@ -26,7 +26,7 @@ namespace {
 }
 
 [[maybe_unused]] auto create_attribute_vector_iterable(const BaseDeprecatedDictionaryColumn& column) {
-  return AttributeVectorIterable{*column.attribute_vector()};
+  return DeprecatedAttributeVectorIterable{*column.attribute_vector()};
 }
 
 }  // namespace

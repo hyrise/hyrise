@@ -8,7 +8,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "types.hpp"
 
