@@ -38,7 +38,6 @@ struct ChunkInfo {
   std::string table_name;
   ChunkID id;
   int node;
-  size_t byte_size;
   double temperature;
   friend bool operator<(const ChunkInfo& l, const ChunkInfo& r) { return l.temperature < r.temperature; }
 };
@@ -151,7 +150,6 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,
                                            /* .id = */ i,
                                            /* .node = */ MigrationPreparationTask::get_node_id(chunk.get_allocator()),
-                                           /* .byte_size = */ chunk.byte_size(),
                                            /* .temperature = */ temperature});
       }
     }
