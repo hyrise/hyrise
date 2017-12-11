@@ -1,0 +1,6 @@
+column_name|column_type|is_nullable
+string|string|int
+i|int|0
+f|float|0
+d|double|0
+s|string|0

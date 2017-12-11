@@ -45,8 +45,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
       {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
-      {hsql::kOpNotLike, ScanType::OpNotLike},
-  };
+      {hsql::kOpNotLike, ScanType::OpNotLike},     {hsql::kOpIsNull, ScanType::OpIsNull}};
 
   auto it = operator_to_scan_type.find(operator_type);
   DebugAssert(it != operator_to_scan_type.end(), "Filter expression clause operator is not yet supported.");
@@ -854,7 +853,32 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   };
 
   // TODO(anybody): handle IN with join
-  auto scan_type = translate_operator_type_to_scan_type(hsql_expr.opType);
+
+  auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
+
+  const auto *column_ref_hsql_expr = hsql_expr.expr;
+  ScanType scan_type;
+
+  if (predicate_negated) {
+    Assert(hsql_expr.expr != nullptr, "NOT operator without further expressions");
+    scan_type = translate_operator_type_to_scan_type(hsql_expr.expr->opType);
+
+    /**
+     * It should be possible for any predicate to be negated with "NOT",
+     * e.g., WHERE NOT a > 5. However, this is currently not supported.
+     * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` scan type.
+     */
+    Assert(scan_type == ScanType::OpIsNull, "Only IS NULL can be negated");
+
+    if (scan_type == ScanType::OpIsNull) {
+      scan_type = ScanType::OpIsNotNull;
+    }
+
+    // change column reference to the correct expression
+    column_ref_hsql_expr = hsql_expr.expr->expr;
+  } else {
+    scan_type = translate_operator_type_to_scan_type(hsql_expr.opType);
+  }
 
   // Indicates whether to use expr.expr or expr.expr2 as the main column to reference
   auto operands_switched = false;
@@ -887,8 +911,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     // or to do a BETWEEN scan for three columns (a BETWEEN b and c).
     value2 = boost::get<AllTypeVariant>(translate_hsql_operand(*expr1));
 
-    Assert(refers_to_column(*hsql_expr.expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
-  } else {
+    Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
+  } else if (scan_type != ScanType::OpIsNull && scan_type != ScanType::OpIsNotNull) {
     /**
      * For logical operators (>, >=, <, ...), thanks to the strict interface of PredicateNode/TableScan, we have to
      * determine whether the left (expr.expr) or the right (expr.expr2) expr refers to the Column/AggregateFunction
@@ -903,10 +927,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     }
 
     value_ref_hsql_expr = operands_switched ? hsql_expr.expr : hsql_expr.expr2;
+    column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
   }
 
   AllParameterVariant value;
-  if (refers_to_column(*value_ref_hsql_expr)) {
+  if (scan_type == ScanType::OpIsNull || scan_type == ScanType::OpIsNotNull) {
+    value = NULL_VALUE;
+  } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
   } else {
     value = translate_hsql_operand(*value_ref_hsql_expr);
@@ -917,7 +944,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
    * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
    * or "p_a" in `WHERE p_a > p_b`
    */
-  const auto column_id = resolve_column(operands_switched ? *hsql_expr.expr2 : *hsql_expr.expr);
+  const auto column_id = resolve_column(*column_ref_hsql_expr);
 
   auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
   predicate_node->set_left_child(input_node);
