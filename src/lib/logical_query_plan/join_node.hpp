@@ -9,8 +9,11 @@
 #include "types.hpp"
 
 #include "abstract_lqp_node.hpp"
+#include "column_origin.hpp"
 
 namespace opossum {
+
+using JoinColumnOrigins = std::pair<ColumnOrigin, ColumnOrigin>;
 
 /**
  * This node type is used to represent any type of Join, including cross products.
@@ -18,11 +21,13 @@ namespace opossum {
  */
 class JoinNode : public AbstractLQPNode {
  public:
+  // Constructor for Natural and Cross Joins
   explicit JoinNode(const JoinMode join_mode);
 
-  JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID>& join_column_ids, const ScanType scan_type);
+  // Constructor for predicated Joins
+  JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_origins, const ScanType scan_type);
 
-  const std::optional<std::pair<ColumnID, ColumnID>>& join_column_ids() const;
+  const std::optional<JoinColumnOrigins>& join_column_origins() const;
   const std::optional<ScanType>& scan_type() const;
   JoinMode join_mode() const;
 
@@ -47,7 +52,7 @@ class JoinNode : public AbstractLQPNode {
 
  private:
   JoinMode _join_mode;
-  std::optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
+  std::optional<JoinColumnOrigins> _join_column_origins;
   std::optional<ScanType> _scan_type;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;

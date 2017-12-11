@@ -21,11 +21,11 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID>& join_column_ids,
+JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_origins,
                    const ScanType scan_type)
     : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
-      _join_column_ids(join_column_ids),
+      _join_column_origins(join_column_origins),
       _scan_type(scan_type) {
   DebugAssert(join_mode != JoinMode::Cross && join_mode != JoinMode::Natural,
               "Specified JoinMode must specify neither column ids nor scan type.");
@@ -36,13 +36,13 @@ std::string JoinNode::description() const {
 
   std::ostringstream desc;
 
-  desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
+  desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";g
 
-  if (_join_column_ids && _scan_type) {
-    desc << " " << get_verbose_column_name(_join_column_ids->first);
+  if (_join_column_origins && _scan_type) {
+    desc << " " << get_verbose_column_name(_join_column_origins->first);
     desc << " " << scan_type_to_string.left.at(*_scan_type);
     desc << " " << get_verbose_column_name(ColumnID{static_cast<ColumnID::base_type>(
-                       left_child()->output_column_count() + _join_column_ids->second)});
+                       left_child()->output_column_count() + _join_column_origins->second)});
   }
 
   return desc.str();
@@ -136,11 +136,11 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   if (_join_mode == JoinMode::Cross) {
     return left_child->get_statistics()->generate_cross_join_statistics(right_child->get_statistics());
   } else {
-    Assert(_join_column_ids,
+    Assert(_join_column_origins,
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
-                                                                             *_join_column_ids, *_scan_type);
+                                                                             *_join_column_origins, *_scan_type);
   }
 }
 
@@ -194,7 +194,7 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-const std::optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() const { return _join_column_ids; }
+const std::optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_origins() const { return _join_column_origins; }
 
 const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 
