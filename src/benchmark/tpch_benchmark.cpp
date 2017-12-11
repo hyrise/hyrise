@@ -65,8 +65,8 @@ struct QueryBenchmarkResult {
   Duration duration = Duration{};
 };
 
-using QueryId = size_t;
-using BenchmarkResults = std::unordered_map<QueryId, QueryBenchmarkResult>;
+using QueryIDcm    = size_t;
+using BenchmarkResults = std::unordered_map<QueryID, QueryBenchmarkResult>;
 
 /**
  * Loosely copying the functionality of benchmark::State
@@ -121,7 +121,7 @@ struct BenchmarkState {
 class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode,
-                std::vector<QueryId> query_ids, const opossum::ChunkOffset chunk_size, const float scale_factor,
+                std::vector<QueryID> query_ids, const opossum::ChunkOffset chunk_size, const float scale_factor,
                 const size_t max_num_query_runs, const Duration max_duration, const std::optional<std::string>& output_file_path)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
@@ -165,7 +165,7 @@ class TpchBenchmark final {
 
  private:
   const BenchmarkMode _benchmark_mode;
-  const std::vector<QueryId> _query_ids;
+  const std::vector<QueryID> _query_ids;
   const ChunkOffset _chunk_size;
   const float _scale_factor;
   const size_t _max_num_query_runs;
@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
     ("t,time", "Maximum seconds within which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str)) // NOLINT
-    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryId>>());
+    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>());
 // clang-format on
 
   cli_options_description.parse_positional("queries");
@@ -320,9 +320,9 @@ int main(int argc, char* argv[]) {
   }
 
   // Build list of query ids to be benchmarked and display it
-  std::vector<opossum::QueryId> query_ids;
+  std::vector<opossum::QueryID> query_ids;
   if (cli_parse_result.count("queries")) {
-    const auto cli_query_ids = cli_parse_result["queries"].as<std::vector<opossum::QueryId>>();
+    const auto cli_query_ids = cli_parse_result["queries"].as<std::vector<opossum::QueryID>>();
     for (const auto cli_query_id : cli_query_ids) {
       query_ids.emplace_back(cli_query_id - 1);  // Offset because TPC-H query 1 has index 0
     }
