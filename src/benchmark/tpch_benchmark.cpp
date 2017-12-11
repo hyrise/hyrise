@@ -65,7 +65,7 @@ struct QueryBenchmarkResult {
   Duration duration = Duration{};
 };
 
-using QueryIDcm = size_t;
+using QueryID = size_t;
 using BenchmarkResults = std::unordered_map<QueryID, QueryBenchmarkResult>;
 
 /**
