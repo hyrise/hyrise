@@ -12,10 +12,10 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
+PredicateNode::PredicateNode(const ColumnOrigin& column_origin, const ScanType scan_type, const AllParameterVariant& value,
                              const std::optional<AllTypeVariant>& value2)
     : AbstractLQPNode(LQPNodeType::Predicate),
-      _column_id(column_id),
+      _column_origin(column_origin),
       _scan_type(scan_type),
       _value(value),
       _value2(value2) {}
@@ -31,7 +31,7 @@ std::string PredicateNode::description() const {
    * (2) right operand (only for BETWEEN)
    */
 
-  std::string left_operand_desc = get_verbose_column_name(_column_id);
+  std::string left_operand_desc = get_verbose_column_name(_column_origin);
   std::string middle_operand_desc;
 
   if (_value.type() == typeid(ColumnID)) {
@@ -56,7 +56,7 @@ std::string PredicateNode::description() const {
   return desc.str();
 }
 
-const ColumnID PredicateNode::column_id() const { return _column_id; }
+const ColumnOrigin& PredicateNode::column_origin() const { return _column_origin; }
 
 ScanType PredicateNode::scan_type() const { return _scan_type; }
 
@@ -67,7 +67,7 @@ const std::optional<AllTypeVariant>& PredicateNode::value2() const { return _val
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   DebugAssert(left_child && !right_child, "PredicateNode need left_child and no right_child");
-  return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
+  return left_child->get_statistics()->predicate_statistics(_column_origin, _scan_type, _value, _value2);
 }
 
 }  // namespace opossum

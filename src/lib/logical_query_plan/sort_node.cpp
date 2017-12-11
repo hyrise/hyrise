@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-OrderByDefinition::OrderByDefinition(const ColumnID column_id, const OrderByMode order_by_mode)
-    : column_id(column_id), order_by_mode(order_by_mode) {}
+OrderByDefinition::OrderByDefinition(const ColumnOrigin& column_origin, const OrderByMode order_by_mode)
+    : column_origin(column_origin), order_by_mode(order_by_mode) {}
 
 SortNode::SortNode(const std::vector<OrderByDefinition>& order_by_definitions)
     : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
@@ -21,7 +21,7 @@ std::string SortNode::description() const {
   s << "[Sort] ";
 
   auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << get_verbose_column_name(definition.column_id);
+   syntax error// s << get_verbose_column_name(definition.column_origin->);
     s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
   };
 

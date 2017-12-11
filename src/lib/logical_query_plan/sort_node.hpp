@@ -4,18 +4,19 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "column_origin.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 /**
  * Struct to specify Order By items.
- * Order By items are defined by the column_name they operate on and their sort order.
+ * Order By items are defined by the column they operate on and their sort order.
  */
 struct OrderByDefinition {
   OrderByDefinition(const ColumnID column_id, const OrderByMode order_by_mode);
 
-  ColumnID column_id;
+  ColumnOrigin column_origin;
   OrderByMode order_by_mode;
 };
 

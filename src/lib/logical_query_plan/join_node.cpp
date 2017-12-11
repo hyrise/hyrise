@@ -194,7 +194,7 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-const std::optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_origins() const { return _join_column_origins; }
+const std::optional<JoinColumnOrigins>& JoinNode::join_column_origins() const { return _join_column_origins; }
 
 const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 

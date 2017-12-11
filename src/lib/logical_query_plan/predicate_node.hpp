@@ -8,10 +8,10 @@
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
+#include "column_origin.hpp"
 
 namespace opossum {
 
-struct ColumnID;
 class TableStatistics;
 
 /**
@@ -23,12 +23,12 @@ class TableStatistics;
  */
 class PredicateNode : public AbstractLQPNode {
  public:
-  PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
+  PredicateNode(const ColumnOrigin& column_origin, const ScanType scan_type, const AllParameterVariant& value,
                 const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 
-  const ColumnID column_id() const;
+  const ColumnOrigin& column_origin() const;
   ScanType scan_type() const;
   const AllParameterVariant& value() const;
   const std::optional<AllTypeVariant>& value2() const;
@@ -38,7 +38,7 @@ class PredicateNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
  private:
-  const ColumnID _column_id;
+  const ColumnOrigin _column_origin;
   const ScanType _scan_type;
   const AllParameterVariant _value;
   const std::optional<AllTypeVariant> _value2;
