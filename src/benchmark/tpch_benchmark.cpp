@@ -4,13 +4,13 @@
 #include <random>
 #include <string>
 
+#include "SQLParser.h"
+#include "SQLParserResult.h"
 #include "cxxopts.hpp"
 #include "json.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
-#include "SQLParser.h"
-#include "SQLParserResult.h"
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H queries, it doesn't (yet) support running the TPC-H
@@ -65,7 +65,7 @@ struct QueryBenchmarkResult {
   Duration duration = Duration{};
 };
 
-using QueryIDcm    = size_t;
+using QueryIDcm = size_t;
 using BenchmarkResults = std::unordered_map<QueryID, QueryBenchmarkResult>;
 
 /**
@@ -120,9 +120,9 @@ struct BenchmarkState {
 // Stores config and state of a benchmark mode instantiation
 class TpchBenchmark final {
  public:
-  TpchBenchmark(const BenchmarkMode benchmark_mode,
-                std::vector<QueryID> query_ids, const opossum::ChunkOffset chunk_size, const float scale_factor,
-                const size_t max_num_query_runs, const Duration max_duration, const std::optional<std::string>& output_file_path)
+  TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
+                const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
+                const Duration max_duration, const std::optional<std::string>& output_file_path)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
@@ -282,7 +282,7 @@ int main(int argc, char* argv[]) {
 
   cxxopts::Options cli_options_description{"TPCH Benchmark", ""};
 
-// clang-format off
+  // clang-format off
   cli_options_description.add_options()
     ("help", "print this help message")
     ("v,verbose", "Print log messages", cxxopts::value<bool>(opossum::verbose_benchmark)->default_value("false"))
@@ -292,8 +292,8 @@ int main(int argc, char* argv[]) {
     ("t,time", "Maximum seconds within which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str)) // NOLINT
-    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>());
-// clang-format on
+    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
+  // clang-format on
 
   cli_options_description.parse_positional("queries");
   const auto cli_parse_result = cli_options_description.parse(argc, argv);
@@ -351,7 +351,8 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   opossum::TpchBenchmark(benchmark_mode, query_ids, chunk_size, scale_factor, num_iterations,
-                         std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}), output_file_path)
+                         std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}),
+                         output_file_path)
       .run();
 
   return 0;
