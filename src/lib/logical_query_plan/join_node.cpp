@@ -36,7 +36,7 @@ std::string JoinNode::description() const {
 
   std::ostringstream desc;
 
-  desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";g
+  desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
 
   if (_join_column_origins && _scan_type) {
     desc << " " << get_verbose_column_name(_join_column_origins->first);
