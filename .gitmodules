@@ -12,4 +12,4 @@
 	url = https://github.com/hyrise/pgasus.git
 [submodule "third_party/cxxopts"]
 	path = third_party/cxxopts
-	url = git@github.com:jarro2783/cxxopts.git
+	url = https://github.com/jarro2783/cxxopts.git
