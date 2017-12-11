@@ -6,17 +6,17 @@
 
 #include "base_column_encoder.hpp"
 
-#include "storage/encoded_columns/new_dictionary_column.hpp"
-#include "storage/null_suppression/ns_utils.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+#include "storage/fitted_attribute_vector.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
 namespace opossum {
 
-class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
+class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEncoder> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::DeprecatedDictionary>;
 
   template <typename T>
   std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
@@ -46,10 +46,8 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-    auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
-    attribute_vector.reserve(values.size());
-
-    const auto null_value_id = static_cast<uint32_t>(dictionary.size());
+    // We need to increment the dictionary size here because of possible null values.
+    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size());
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -60,31 +58,26 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
        */
       auto value_it = values.cbegin();
       auto null_value_it = null_values.cbegin();
-      for (; value_it != values.cend(); ++value_it, ++null_value_it) {
+      auto index = 0u;
+      for (; value_it != values.cend(); ++value_it, ++null_value_it, ++index) {
         if (*null_value_it) {
-          attribute_vector.push_back(null_value_id);
+          attribute_vector->set(index, NULL_VALUE_ID);
           continue;
         }
 
-        const auto value_id = _get_value_id(dictionary, *value_it);
-        attribute_vector.push_back(value_id);
+        auto value_id = _get_value_id(dictionary, *value_it);
+        attribute_vector->set(index, value_id);
       }
     } else {
       auto value_it = values.cbegin();
-      for (; value_it != values.cend(); ++value_it) {
-        const auto value_id = _get_value_id(dictionary, *value_it);
-        attribute_vector.push_back(value_id);
+      auto index = 0u;
+      for (; value_it != values.cend(); ++value_it, ++index) {
+        auto value_id = _get_value_id(dictionary, *value_it);
+        attribute_vector->set(index, value_id);
       }
     }
 
-    // We need to increment the dictionary size here because of possible null values.
-    const auto ns_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
-
-    auto encoded_attribute_vector = encode_by_ns_type(ns_type, attribute_vector, attribute_vector.get_allocator());
-
-    auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
-    auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));
-    return std::make_shared<NewDictionaryColumn<T>>(dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
+    return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), attribute_vector);
   }
 
  private:
@@ -94,13 +87,13 @@ class NewDictionaryEncoder : public ColumnEncoder<NewDictionaryEncoder> {
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
 
-  NsType get_fixed_size_byte_aligned_encoding(size_t unique_values_count) {
+  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return NsType::FixedSize1ByteAligned;
+      return std::make_shared<FittedAttributeVector<uint8_t>>(size);
     } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return NsType::FixedSize2ByteAligned;
+      return std::make_shared<FittedAttributeVector<uint16_t>>(size);
     } else {
-      return NsType::FixedSize4ByteAligned;
+      return std::make_shared<FittedAttributeVector<uint32_t>>(size);
     }
   }
 };

@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "base_new_dictionary_column.hpp"
+#include "base_dictionary_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -19,9 +19,9 @@ class BaseNsVector;
  * replaced with new one.
  */
 template <typename T>
-class NewDictionaryColumn : public BaseNewDictionaryColumn {
+class DictionaryColumn : public BaseDictionaryColumn {
  public:
-  explicit NewDictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+  explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                const std::shared_ptr<const BaseNsVector>& attribute_vector,
                                const ValueID null_value_id);
 
@@ -46,7 +46,7 @@ class NewDictionaryColumn : public BaseNewDictionaryColumn {
   /**@}*/
 
   /**
-   * @defgroup BaseNewDictionaryColumn interface
+   * @defgroup BaseDictionaryColumn interface
    * @{
    */
 
@@ -67,9 +67,9 @@ class NewDictionaryColumn : public BaseNewDictionaryColumn {
   const ValueID _null_value_id;
 };
 
-struct NewDictionaryColumnInfo {
+struct DictionaryColumnInfo {
   template <typename T>
-  using ColumnTemplate = NewDictionaryColumn<T>;
+  using ColumnTemplate = DictionaryColumn<T>;
 };
 
 }  // namespace opossum

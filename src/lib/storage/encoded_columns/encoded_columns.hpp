@@ -4,7 +4,7 @@
 #include <boost/hana/pair.hpp>
 
 // Include your encoded column file here!
-#include "new_dictionary_column.hpp"
+#include "dictionary_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 
 #include "column_encoding_type.hpp"
@@ -23,7 +23,7 @@ namespace opossum {
  * Note: Add your encoded column class here!
  */
 constexpr auto encoded_column_info_for_type = hana::make_map(
-    hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, hana::type_c<DictionaryColumnInfo>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<NewDictionaryColumnInfo>));
+    hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, hana::type_c<DeprecatedDictionaryColumnInfo>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>));
 
 }  // namespace opossum

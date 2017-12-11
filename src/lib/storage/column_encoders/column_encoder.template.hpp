@@ -17,7 +17,7 @@
 namespace opossum {
 
 // TODO(you): Rename class
-class ColumnEncoderTemplate : public ColumnEncoder<DictionaryEncoder> {
+class ColumnEncoderTemplate : public ColumnEncoder<DeprecatedDictionaryEncoder> {
  public:
   // TODO(you): Add new encoding to column_encoding_type.hpp and update _encoding_type
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::NewEncoding>;

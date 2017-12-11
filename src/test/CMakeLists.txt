@@ -86,11 +86,11 @@ set(
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
+    storage/deprecated_dictionary_column_test.cpp
     storage/dictionary_column_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
-    storage/new_dictionary_column_test.cpp
     storage/null_suppression_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_column_test.cpp

@@ -5,12 +5,12 @@
 #include <vector>
 
 #include "storage/base_deprecated_dictionary_column.hpp"
-#include "storage/encoded_columns/base_new_dictionary_column.hpp"
+#include "storage/encoded_columns/base_dictionary_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
 #include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/iterables/new_attribute_vector_iterable.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -21,8 +21,8 @@ namespace {
 
 // These methods will be removed as used as the new dictionary column implementation is supported everywhere!
 
-[[maybe_unused]] auto create_attribute_vector_iterable(const BaseNewDictionaryColumn& column) {
-  return NewAttributeVectorIterable{*column.attribute_vector(), column.null_value_id()};
+[[maybe_unused]] auto create_attribute_vector_iterable(const BaseDictionaryColumn& column) {
+  return AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()};
 }
 
 [[maybe_unused]] auto create_attribute_vector_iterable(const BaseDeprecatedDictionaryColumn& column) {
@@ -113,7 +113,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDeprecatedDic
 void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
                                                       std::shared_ptr<ColumnVisitableContext> base_context) {
   if (base_column.encoding_type() == EncodingType::Dictionary) {
-    const auto& left_column = static_cast<const BaseNewDictionaryColumn&>(base_column);
+    const auto& left_column = static_cast<const BaseDictionaryColumn&>(base_column);
     _handle_dictionary_column(left_column, base_context);
     return;
   }

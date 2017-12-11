@@ -14,7 +14,7 @@
 namespace opossum {
 
 class BaseDeprecatedDictionaryColumn;
-class BaseNewDictionaryColumn;
+class BaseDictionaryColumn;
 
 /**
  * @brief Compares one column to a constant value

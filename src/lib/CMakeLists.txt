@@ -208,18 +208,18 @@ set(
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
     storage/column_encoders/base_column_encoder.hpp
-    storage/column_encoders/dictionary_encoder.hpp
+    storage/column_encoders/deprecated_dictionary_encoder.hpp
     storage/column_encoders/encoders.hpp
-    storage/column_encoders/new_dictionary_encoder.hpp
+    storage/column_encoders/dictionary_encoder.hpp
     storage/column_encoders/utils.cpp
     storage/column_encoders/utils.hpp
     storage/encoded_columns/base_encoded_column.cpp
     storage/encoded_columns/base_encoded_column.hpp
-    storage/encoded_columns/base_new_dictionary_column.hpp
+    storage/encoded_columns/base_dictionary_column.hpp
     storage/encoded_columns/column_encoding_type.hpp
     storage/encoded_columns/encoded_columns.hpp
-    storage/encoded_columns/new_dictionary_column.cpp
-    storage/encoded_columns/new_dictionary_column.hpp
+    storage/encoded_columns/dictionary_column.cpp
+    storage/encoded_columns/dictionary_column.hpp
     storage/encoded_columns/utils.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
@@ -249,8 +249,8 @@ set(
     storage/iterables/create_iterable_from_column.hpp
     storage/iterables/deprecated_dictionary_column_iterable.hpp
     storage/iterables/iterables.hpp
-    storage/iterables/new_attribute_vector_iterable.hpp
-    storage/iterables/new_dictionary_column_iterable.hpp
+    storage/iterables/attribute_vector_iterable.hpp
+    storage/iterables/dictionary_column_iterable.hpp
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp

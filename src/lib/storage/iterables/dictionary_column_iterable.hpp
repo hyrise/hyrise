@@ -6,7 +6,7 @@
 
 #include "iterables.hpp"
 
-#include "storage/encoded_columns/new_dictionary_column.hpp"
+#include "storage/encoded_columns/dictionary_column.hpp"
 #include "storage/null_suppression/ns_decoders.hpp"
 #include "storage/null_suppression/ns_utils.hpp"
 #include "storage/null_suppression/ns_vectors.hpp"
@@ -14,9 +14,9 @@
 namespace opossum {
 
 template <typename T>
-class NewDictionaryColumnIterable : public IndexableIterable<NewDictionaryColumnIterable<T>> {
+class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterable<T>> {
  public:
-  explicit NewDictionaryColumnIterable(const NewDictionaryColumn<T>& column) : _column{column} {}
+  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -39,7 +39,7 @@ class NewDictionaryColumnIterable : public IndexableIterable<NewDictionaryColumn
   }
 
  private:
-  const NewDictionaryColumn<T>& _column;
+  const DictionaryColumn<T>& _column;
 
  private:
   class IteratorLookup {

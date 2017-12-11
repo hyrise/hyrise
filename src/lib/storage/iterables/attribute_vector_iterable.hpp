@@ -13,9 +13,9 @@
 
 namespace opossum {
 
-class NewAttributeVectorIterable : public IndexableIterable<NewAttributeVectorIterable> {
+class AttributeVectorIterable : public IndexableIterable<AttributeVectorIterable> {
  public:
-  explicit NewAttributeVectorIterable(const BaseNsVector& attribute_vector, const ValueID null_value_id)
+  explicit AttributeVectorIterable(const BaseNsVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
   template <typename Functor>

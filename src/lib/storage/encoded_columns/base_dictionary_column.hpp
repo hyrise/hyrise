@@ -10,9 +10,9 @@ namespace opossum {
 class BaseNsVector;
 
 /**
- * @brief Base class of NewDictionaryColumn<T> exposing type independent interface
+ * @brief Base class of DictionaryColumn<T> exposing type independent interface
  */
-class BaseNewDictionaryColumn : public BaseEncodedColumn {
+class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
   EncodingType encoding_type() const final { return EncodingType::Dictionary; }
 

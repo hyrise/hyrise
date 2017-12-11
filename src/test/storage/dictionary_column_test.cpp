@@ -2,14 +2,13 @@
 #include <string>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/base_column.hpp"
-#include "../lib/storage/deprecated_dictionary_column.hpp"
-#include "../lib/storage/dictionary_compression.hpp"
-#include "../lib/storage/fitted_attribute_vector.hpp"
-#include "../lib/storage/value_column.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/null_suppression/ns_vectors.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 
@@ -28,8 +27,8 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnInt) {
   vc_int->append(5);
   vc_int->append(3);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<int>>(col);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -52,8 +51,8 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
-  auto col = DictionaryCompression::compress_column(DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<std::string>>(col);
+  auto col = DictionaryCompression::compress_column(DataType::String, vc_str, EncodingType::Dictionary);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -77,8 +76,8 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
   vc_double->append(0.9);
   vc_double->append(1.1);
 
-  auto col = DictionaryCompression::compress_column(DataType::Double, vc_double);
-  auto dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<double>>(col);
+  auto col = DictionaryCompression::compress_column(DataType::Double, vc_double, EncodingType::Dictionary);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<double>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -103,8 +102,8 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
   vc_int->append(NULL_VALUE);
   vc_int->append(3);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<int>>(col);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -124,18 +123,8 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
 TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<int>>(col);
-
-  // Test for template-type as parameter
-  EXPECT_EQ(dict_col->lower_bound(4), (ValueID)2);
-  EXPECT_EQ(dict_col->upper_bound(4), (ValueID)3);
-
-  EXPECT_EQ(dict_col->lower_bound(5), (ValueID)3);
-  EXPECT_EQ(dict_col->upper_bound(5), (ValueID)3);
-
-  EXPECT_EQ(dict_col->lower_bound(15), INVALID_VALUE_ID);
-  EXPECT_EQ(dict_col->upper_bound(15), INVALID_VALUE_ID);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test for AllTypeVariant as parameter
   EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(4)), (ValueID)2);
@@ -148,17 +137,17 @@ TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
 }
 
-TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
+TEST_F(StorageDictionaryColumnTest, FixedSizeByteAlignedVectorSize) {
   vc_int->append(0);
   vc_int->append(1);
   vc_int->append(2);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<int>>(col);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   auto attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
   auto attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FittedAttributeVector<uint16_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_col->attribute_vector());
 
   EXPECT_NE(attribute_vector_uint8_t, nullptr);
   EXPECT_EQ(attribute_vector_uint16_t, nullptr);
@@ -167,12 +156,12 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
     vc_int->append(i);
   }
 
-  col = DictionaryCompression::compress_column(DataType::Int, vc_int);
-  dict_col = std::dynamic_pointer_cast<DeprecatedDictionaryColumn<int>>(col);
+  col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
   attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FittedAttributeVector<uint16_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_col->attribute_vector());
 
   EXPECT_EQ(attribute_vector_uint8_t, nullptr);
   EXPECT_NE(attribute_vector_uint16_t, nullptr);

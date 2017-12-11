@@ -1,4 +1,4 @@
-#include "new_dictionary_column.hpp"
+#include "dictionary_column.hpp"
 
 #include <memory>
 #include <string>
@@ -13,13 +13,13 @@
 namespace opossum {
 
 template <typename T>
-NewDictionaryColumn<T>::NewDictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                             const std::shared_ptr<const BaseNsVector>& attribute_vector,
                                             const ValueID null_value_id)
     : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
 template <typename T>
-const AllTypeVariant NewDictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
+const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
@@ -35,19 +35,19 @@ const AllTypeVariant NewDictionaryColumn<T>::operator[](const ChunkOffset chunk_
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> NewDictionaryColumn<T>::dictionary() const {
+std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
 
 template <typename T>
-size_t NewDictionaryColumn<T>::size() const {
+size_t DictionaryColumn<T>::size() const {
   return _attribute_vector->size();
 }
 
 template <typename T>
-void NewDictionaryColumn<T>::write_string_representation(std::string& row_string,
+void DictionaryColumn<T>::write_string_representation(std::string& row_string,
                                                          const ChunkOffset chunk_offset) const {
-  PerformanceWarning("NewDictionaryColumn<T>::write_string_representation is potentially very slow.");
+  PerformanceWarning("DictionaryColumn<T>::write_string_representation is potentially very slow.");
 
   std::stringstream buffer;
   // buffering value at chunk_offset
@@ -66,8 +66,8 @@ void NewDictionaryColumn<T>::write_string_representation(std::string& row_string
 }
 
 template <typename T>
-void NewDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
-  PerformanceWarning("NewDictionaryColumn<T>::copy_value_to_value_column is potentially very slow.");
+void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
+  PerformanceWarning("DictionaryColumn<T>::copy_value_to_value_column is potentially very slow.");
 
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
   auto& values_out = output_column.values();
@@ -86,17 +86,17 @@ void NewDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> NewDictionaryColumn<T>::copy_using_allocator(
+std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<NewDictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr,
+  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr,
                                                       _null_value_id);
 }
 
 template <typename T>
-ValueID NewDictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
+ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
   const auto typed_value = type_cast<T>(value);
@@ -107,7 +107,7 @@ ValueID NewDictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
 }
 
 template <typename T>
-ValueID NewDictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
+ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
   const auto typed_value = type_cast<T>(value);
@@ -118,20 +118,20 @@ ValueID NewDictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
 }
 
 template <typename T>
-size_t NewDictionaryColumn<T>::unique_values_count() const {
+size_t DictionaryColumn<T>::unique_values_count() const {
   return _dictionary->size();
 }
 
 template <typename T>
-std::shared_ptr<const BaseNsVector> NewDictionaryColumn<T>::attribute_vector() const {
+std::shared_ptr<const BaseNsVector> DictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
 template <typename T>
-const ValueID NewDictionaryColumn<T>::null_value_id() const {
+const ValueID DictionaryColumn<T>::null_value_id() const {
   return _null_value_id;
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(NewDictionaryColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 
 }  // namespace opossum
