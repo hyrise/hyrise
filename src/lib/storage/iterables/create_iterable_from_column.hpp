@@ -22,7 +22,7 @@ auto create_iterable_from_column(const ValueColumn<T>& column) {
 }
 
 template <typename T>
-auto create_iterable_from_column(const DictionaryColumn<T>& column) {
+auto create_iterable_from_column(const DeprecatedDictionaryColumn<T>& column) {
   return DictionaryColumnIterable<T>{column};
 }
 

@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
-#include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/deprecated_dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {

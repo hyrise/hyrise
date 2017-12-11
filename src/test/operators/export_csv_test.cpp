@@ -108,7 +108,7 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
+TEST_F(OperatorsExportCsvTest, DeprecatedDictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});

@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/encoded_columns/base_new_dictionary_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
@@ -25,7 +25,7 @@ namespace {
   return NewAttributeVectorIterable{*column.attribute_vector(), column.null_value_id()};
 }
 
-[[maybe_unused]] auto create_attribute_vector_iterable(const BaseDictionaryColumn& column) {
+[[maybe_unused]] auto create_attribute_vector_iterable(const BaseDeprecatedDictionaryColumn& column) {
   return AttributeVectorIterable{*column.attribute_vector()};
 }
 
@@ -42,7 +42,7 @@ PosList SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
     /**
      * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
      * Therefore, these scans will always return an empty position list.
-     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl, 
+     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl,
      * we can assume that comparing with NULLs here will always return nothing.
      */
     return PosList{};
@@ -78,7 +78,7 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
   });
 }
 
-void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
+void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   _handle_dictionary_column(base_column, base_context);
 
@@ -94,7 +94,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
   // resolve_data_type(left_column_type, [&](auto type) {
   //   using Type = typename decltype(type)::type;
 
-  //   auto& left_column = static_cast<const DictionaryColumn<Type>&>(base_column);
+  //   auto& left_column = static_cast<const DeprecatedDictionaryColumn<Type>&>(base_column);
 
   //   auto left_column_iterable = create_iterable_from_column(left_column);
 

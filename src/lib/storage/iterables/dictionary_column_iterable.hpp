@@ -5,14 +5,14 @@
 
 #include "iterables.hpp"
 #include "storage/base_attribute_vector.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 
 namespace opossum {
 
 template <typename T>
 class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterable<T>> {
  public:
-  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
+  explicit DictionaryColumnIterable(const DeprecatedDictionaryColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -29,7 +29,7 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
   }
 
  private:
-  const DictionaryColumn<T>& _column;
+  const DeprecatedDictionaryColumn<T>& _column;
 
  private:
   class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {

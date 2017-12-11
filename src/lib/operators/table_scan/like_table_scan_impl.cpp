@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
@@ -70,14 +70,14 @@ void LikeTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_colu
   });
 }
 
-void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
+void LikeTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
+  const auto& left_column = static_cast<const DeprecatedDictionaryColumn<std::string>&>(base_column);
 
   const auto result = _find_matches_in_dictionary(*left_column.dictionary());
   const auto& match_count = result.first;

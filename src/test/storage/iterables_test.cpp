@@ -8,7 +8,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/encoded_columns/new_dictionary_column.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
@@ -124,7 +124,7 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<int>>(column);
 
   auto iterable = DictionaryColumnIterable<int>{*dict_column};
 
@@ -140,7 +140,7 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
   auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<int>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 

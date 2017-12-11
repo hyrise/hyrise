@@ -11,7 +11,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"

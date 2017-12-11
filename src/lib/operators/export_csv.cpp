@@ -9,7 +9,7 @@
 #include "import_export/csv_writer.hpp"
 #include "json.hpp"
 #include "storage/base_attribute_vector.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
@@ -114,10 +114,10 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     context->csv_writer.write(ref_column[context->current_row]);
   }
 
-  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
+  void handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
-    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+    const auto& column = static_cast<const DeprecatedDictionaryColumn<T>&>(base_column);
 
     context->csv_writer.write((*column.dictionary())[(column.attribute_vector()->get(context->current_row))]);
   }

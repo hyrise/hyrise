@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "storage/chunk.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"

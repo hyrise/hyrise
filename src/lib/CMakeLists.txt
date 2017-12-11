@@ -196,14 +196,14 @@ set(
     sql/sql_translator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
-    storage/base_dictionary_column.hpp
+    storage/base_deprecated_dictionary_column.hpp
     storage/base_value_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
-    storage/dictionary_column.cpp
-    storage/dictionary_column.hpp
+    storage/deprecated_dictionary_column.cpp
+    storage/deprecated_dictionary_column.hpp
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp

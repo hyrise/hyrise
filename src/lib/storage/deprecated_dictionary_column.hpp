@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "base_dictionary_column.hpp"
+#include "base_deprecated_dictionary_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -17,15 +17,15 @@ class BaseColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>
-class DictionaryColumn : public BaseDictionaryColumn {
+class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
  public:
   /**
    * Creates a Dictionary column from a given dictionary and attribute vector.
    * See dictionary_compression.cpp for more.
    */
-  explicit DictionaryColumn(pmr_vector<T>&& dictionary, const std::shared_ptr<BaseAttributeVector>& attribute_vector);
+  explicit DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary, const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
-  explicit DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+  explicit DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
@@ -80,7 +80,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
-  // Copies a DictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
+  // Copies a DeprecatedDictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:
@@ -90,7 +90,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
 struct DictionaryColumnInfo {
   template <typename T>
-  using ColumnTemplate = DictionaryColumn<T>;
+  using ColumnTemplate = DeprecatedDictionaryColumn<T>;
 };
 
 }  // namespace opossum

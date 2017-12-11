@@ -1,4 +1,4 @@
-#include "dictionary_column.hpp"
+#include "deprecated_dictionary_column.hpp"
 
 #include <memory>
 #include <string>
@@ -15,17 +15,17 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(pmr_vector<T>&& dictionary,
+DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
+const AllTypeVariant DeprecatedDictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
@@ -40,12 +40,12 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
-bool DictionaryColumn<T>::is_null(const ChunkOffset chunk_offset) const {
+bool DeprecatedDictionaryColumn<T>::is_null(const ChunkOffset chunk_offset) const {
   return _attribute_vector->get(chunk_offset) == NULL_VALUE_ID;
 }
 
 template <typename T>
-const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
+const T DeprecatedDictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto value_id = _attribute_vector->get(chunk_offset);
@@ -56,17 +56,17 @@ const T DictionaryColumn<T>::get(const ChunkOffset chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
+std::shared_ptr<const pmr_vector<T>> DeprecatedDictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
 
 template <typename T>
-std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector() const {
+std::shared_ptr<const BaseAttributeVector> DeprecatedDictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
 template <typename T>
-const pmr_concurrent_vector<std::optional<T>> DictionaryColumn<T>::materialize_values() const {
+const pmr_concurrent_vector<std::optional<T>> DeprecatedDictionaryColumn<T>::materialize_values() const {
   pmr_concurrent_vector<std::optional<T>> values(_attribute_vector->size(), std::nullopt, _dictionary->get_allocator());
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
@@ -78,21 +78,21 @@ const pmr_concurrent_vector<std::optional<T>> DictionaryColumn<T>::materialize_v
 }
 
 template <typename T>
-const T& DictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
+const T& DeprecatedDictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
   DebugAssert(value_id != NULL_VALUE_ID, "Null value id passed.");
 
   return _dictionary->at(value_id);
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::lower_bound(T value) const {
+ValueID DeprecatedDictionaryColumn<T>::lower_bound(T value) const {
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
   return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
+ValueID DeprecatedDictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
@@ -100,14 +100,14 @@ ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::upper_bound(T value) const {
+ValueID DeprecatedDictionaryColumn<T>::upper_bound(T value) const {
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
   return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
+ValueID DeprecatedDictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
@@ -115,22 +115,22 @@ ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
 }
 
 template <typename T>
-size_t DictionaryColumn<T>::unique_values_count() const {
+size_t DeprecatedDictionaryColumn<T>::unique_values_count() const {
   return _dictionary->size();
 }
 
 template <typename T>
-size_t DictionaryColumn<T>::size() const {
+size_t DeprecatedDictionaryColumn<T>::size() const {
   return _attribute_vector->size();
 }
 
 template <typename T>
-void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
+void DeprecatedDictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
 template <typename T>
-void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
+void DeprecatedDictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
   // buffering value at chunk_offset
   auto value_id = _attribute_vector->get(chunk_offset);
@@ -147,7 +147,7 @@ void DictionaryColumn<T>::write_string_representation(std::string& row_string, c
 }
 
 template <typename T>
-void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
+void DeprecatedDictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
   auto& values_out = output_column.values();
 
@@ -164,13 +164,13 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseColumn> DeprecatedDictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   const pmr_vector<T> new_dictionary(*_dictionary, alloc);
-  return std::allocate_shared<DictionaryColumn<T>>(
+  return std::allocate_shared<DeprecatedDictionaryColumn<T>>(
       alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(DeprecatedDictionaryColumn);
 
 }  // namespace opossum

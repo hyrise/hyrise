@@ -43,7 +43,7 @@ namespace opossum {
 
 /** We use vectors with custom allocators, e.g, to bind the data object to
  * specific NUMA nodes. This is mainly used in the data objects, i.e.,
- * Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+ * Chunk, ValueColumn, DeprecatedDictionaryColumn, ReferenceColumn and attribute vectors.
  * The PolymorphicAllocator provides an abstraction over several allocation
  * methods by adapting to subclasses of boost::container::pmr::memory_resource.
  */

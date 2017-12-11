@@ -6,7 +6,7 @@
 
 #include "base_column_encoder.hpp"
 
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -77,7 +77,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
       }
     }
 
-    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
+    return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), attribute_vector);
   }
 
  private:

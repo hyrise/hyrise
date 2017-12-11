@@ -9,10 +9,10 @@ namespace opossum {
 
 class BaseAttributeVector;
 
-// BaseDictionaryColumn is implemented by DictionaryColumn and offers methods from the DictionaryColumn
-// that are needed for creating indices but that do not depend on the template parameter of the DictionaryColumn,
+// BaseDeprecatedDictionaryColumn is implemented by DeprecatedDictionaryColumn and offers methods from the DeprecatedDictionaryColumn
+// that are needed for creating indices but that do not depend on the template parameter of the DeprecatedDictionaryColumn,
 // thus allowing the single indexes relying on these methods to be untemplated.
-class BaseDictionaryColumn : public BaseEncodedColumn {
+class BaseDeprecatedDictionaryColumn : public BaseEncodedColumn {
  public:
   EncodingType encoding_type() const final { return EncodingType::DeprecatedDictionary; }
 
