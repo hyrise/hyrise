@@ -5,12 +5,12 @@
 #include <vector>
 
 #include "storage/base_dictionary_column.hpp"
-#include "storage/encoded_columns/utils.hpp"
 #include "storage/encoded_columns/base_new_dictionary_column.hpp"
+#include "storage/encoded_columns/utils.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
-#include "storage/iterables/new_attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/iterables/new_attribute_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -97,7 +97,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
 
 void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
                                                       std::shared_ptr<ColumnVisitableContext> base_context) {
-  if (base_column.encoding_type() == EncodingType::NewDictionary) {
+  if (base_column.encoding_type() == EncodingType::Dictionary) {
     const auto& left_column = static_cast<const BaseNewDictionaryColumn&>(base_column);
     _handle_dictionary_column(left_column, base_context);
     return;
@@ -130,8 +130,8 @@ void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& b
 }
 
 template <typename BaseDictionaryColumnType>
-void SingleColumnTableScanImpl::_handle_dictionary_column(
-    const BaseDictionaryColumnType& left_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryColumnType& left_column,
+                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;

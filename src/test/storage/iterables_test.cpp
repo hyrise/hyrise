@@ -153,7 +153,7 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, NewDictionaryColumnIteratorWithIterators) {
-  DictionaryCompression::compress_table(*table, EncodingType::NewDictionary);
+  DictionaryCompression::compress_table(*table, EncodingType::Dictionary);
 
   auto& chunk = table->get_chunk(ChunkID{0u});
 
@@ -169,7 +169,7 @@ TEST_F(IterablesTest, NewDictionaryColumnIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, NewDictionaryColumnReferencedIteratorWithIterators) {
-  DictionaryCompression::compress_table(*table, EncodingType::NewDictionary);
+  DictionaryCompression::compress_table(*table, EncodingType::Dictionary);
 
   auto& chunk = table->get_chunk(ChunkID{0u});
 

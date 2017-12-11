@@ -14,7 +14,7 @@ class BaseAttributeVector;
 // thus allowing the single indexes relying on these methods to be untemplated.
 class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
-  EncodingType encoding_type() const final { return EncodingType::Dictionary; }
+  EncodingType encoding_type() const final { return EncodingType::DeprecatedDictionary; }
 
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;

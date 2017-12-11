@@ -14,7 +14,7 @@ class BaseNsVector;
  */
 class BaseNewDictionaryColumn : public BaseEncodedColumn {
  public:
-  EncodingType encoding_type() const final { return EncodingType::NewDictionary; }
+  EncodingType encoding_type() const final { return EncodingType::Dictionary; }
 
   /**
    * @brief Returns index (i.e. ValueID) of first dictionary entry >= search value

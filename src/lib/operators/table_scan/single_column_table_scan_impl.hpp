@@ -37,8 +37,8 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_encoded_column(const BaseEncodedColumn& base_column,
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
- private:
 
+ private:
   /**
    * @defgroup Methods used for handling dictionary columns
    * @{

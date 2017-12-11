@@ -27,7 +27,7 @@ class DictionaryCompression {
    * @return a compressed column of type DictionaryColumn<T>
    */
   static std::shared_ptr<BaseColumn> compress_column(DataType data_type, const std::shared_ptr<BaseColumn>& column,
-                                                     EncodingType encoding_type = EncodingType::Dictionary);
+                                                     EncodingType encoding_type = EncodingType::DeprecatedDictionary);
 
   /**
    * @brief Compresses a chunk
@@ -43,7 +43,7 @@ class DictionaryCompression {
    * @param chunk to be compressed
    */
   static void compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk,
-                             EncodingType encoding_type = EncodingType::Dictionary);
+                             EncodingType encoding_type = EncodingType::DeprecatedDictionary);
 
   /**
    * @brief Compresses specified chunks of a table
@@ -52,7 +52,7 @@ class DictionaryCompression {
    * only be called by the ChunkCompressionTask.
    */
   static void compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
-                              EncodingType encoding_type = EncodingType::Dictionary);
+                              EncodingType encoding_type = EncodingType::DeprecatedDictionary);
 
   /**
    * @brief Compresses a table by calling compress_chunk for each chunk
@@ -60,7 +60,7 @@ class DictionaryCompression {
    * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
    * only be called by the ChunkCompressionTask.
    */
-  static void compress_table(Table& table, EncodingType encoding_type = EncodingType::Dictionary);
+  static void compress_table(Table& table, EncodingType encoding_type = EncodingType::DeprecatedDictionary);
 };
 
 }  // namespace opossum

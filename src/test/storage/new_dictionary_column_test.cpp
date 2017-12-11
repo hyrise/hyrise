@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "storage/dictionary_compression.hpp"
 #include "storage/encoded_columns/new_dictionary_column.hpp"
 #include "storage/null_suppression/ns_vectors.hpp"
-#include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {
@@ -27,7 +27,7 @@ TEST_F(StorageNewDictionaryColumnTest, CompressColumnInt) {
   vc_int->append(5);
   vc_int->append(3);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::NewDictionary);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
   auto dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<int>>(col);
 
   // Test attribute_vector size
@@ -51,7 +51,7 @@ TEST_F(StorageNewDictionaryColumnTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
-  auto col = DictionaryCompression::compress_column(DataType::String, vc_str, EncodingType::NewDictionary);
+  auto col = DictionaryCompression::compress_column(DataType::String, vc_str, EncodingType::Dictionary);
   auto dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<std::string>>(col);
 
   // Test attribute_vector size
@@ -76,7 +76,7 @@ TEST_F(StorageNewDictionaryColumnTest, CompressColumnDouble) {
   vc_double->append(0.9);
   vc_double->append(1.1);
 
-  auto col = DictionaryCompression::compress_column(DataType::Double, vc_double, EncodingType::NewDictionary);
+  auto col = DictionaryCompression::compress_column(DataType::Double, vc_double, EncodingType::Dictionary);
   auto dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<double>>(col);
 
   // Test attribute_vector size
@@ -102,7 +102,7 @@ TEST_F(StorageNewDictionaryColumnTest, CompressNullableColumnInt) {
   vc_int->append(NULL_VALUE);
   vc_int->append(3);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::NewDictionary);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
   auto dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<int>>(col);
 
   // Test attribute_vector size
@@ -123,7 +123,7 @@ TEST_F(StorageNewDictionaryColumnTest, CompressNullableColumnInt) {
 TEST_F(StorageNewDictionaryColumnTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::NewDictionary);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
   auto dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<int>>(col);
 
   // Test for AllTypeVariant as parameter
@@ -142,7 +142,7 @@ TEST_F(StorageNewDictionaryColumnTest, FixedSizeByteAlignedVectorSize) {
   vc_int->append(1);
   vc_int->append(2);
 
-  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::NewDictionary);
+  auto col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
   auto dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<int>>(col);
   auto attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
@@ -156,7 +156,7 @@ TEST_F(StorageNewDictionaryColumnTest, FixedSizeByteAlignedVectorSize) {
     vc_int->append(i);
   }
 
-  col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::NewDictionary);
+  col = DictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
   dict_col = std::dynamic_pointer_cast<NewDictionaryColumn<int>>(col);
   attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
