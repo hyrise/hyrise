@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "column_origin.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -131,6 +132,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @returns the names of the columns this node outputs without any alias added by this node
    */
   virtual const std::vector<std::string>& output_column_names() const;
+
+  virtual std::optional<ColumnOrigin> find_column_origin(const NamedColumnReference& named_column_reference) const;
+  virtual std::shared_ptr<AbstractLQPNode> find_prefix_origin(const std::string& table_or_alias) const;
+  virtual std::optional<ColumnID> resolve_column_origin(const ColumnOrigin& column_origin) const;
+
 
   /**
    * This function is public for testing purposes only, otherwise should only be used internally
