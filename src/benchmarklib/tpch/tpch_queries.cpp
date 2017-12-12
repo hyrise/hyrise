@@ -852,4 +852,26 @@ const char* tpch_queries[21] = {
     tpch_query_15, tpch_query_16, tpch_query_17, tpch_query_18, tpch_query_19, tpch_query_20, tpch_query_21,
 };
 
+size_t tpch_supported_queries[NUM_SUPPORTED_TPCH_QUERIES] = {
+    0,
+    // 1, /* // Enable once we support Subselects in WHERE condition */
+    2,
+    // 3, /* Enable once we support Exists and Subselects in WHERE condition */
+    4, 5, 6,
+    // 7, /* Enable once CASE and arithmetic operations of Aggregations are supported */
+    8, 9
+    // 10, /* Enable once we support Subselects in Having clause */
+    // 11, /* Enable once we support IN */
+    // 12, /* Enable once we support nested expressions in Join Condition */
+    // 13, /* Enable once we support Case */
+    // 14, /* Enable once we support Subselects in WHERE condition */
+    // 15, /* Enable once we support Subselects in WHERE condition */
+    // 16, /* Enable once we support Subselects in WHERE condition */
+    // 17, /* Enable once we support Subselects in WHERE condition */
+    // 18, /* Enable once we support OR in WHERE condition */
+    // 19, /* Enable once we support Subselects in WHERE condition */
+    // 20, /* Enable once we support Exists and Subselect in WHERE condition */
+    // 21 /* Enable once we support SUBSTRING, IN and EXISTS */
+};
+
 }  // namespace opossum
