@@ -124,15 +124,21 @@ const SQLQueryPlan& SQLPipeline::get_query_plan() {
   return *(_query_plan.get());
 }
 
-const std::vector<std::shared_ptr<OperatorTask>>& SQLPipeline::get_tasks() {
+const std::vector<TaskSet>& SQLPipeline::get_tasks() {
   if (!_op_tasks.empty()) {
     return _op_tasks;
   }
 
   const auto& query_plan = get_query_plan();
+  _op_tasks.reserve(query_plan.tree_roots().size());
+
   try {
-    _op_tasks = query_plan.create_tasks();
+    for (const auto& root : query_plan.tree_roots()) {
+      _op_tasks.emplace_back(OperatorTask::make_tasks_from_operator(root));
+    }
   } catch (const std::exception& exception) {
+    // Don't keep bad values
+    _op_tasks.clear();
     throw std::runtime_error("Error while creating tasks:\n  " + std::string(exception.what()));
   }
 
@@ -149,7 +155,9 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   const auto started = std::chrono::high_resolution_clock::now();
 
   try {
-    CurrentScheduler::schedule_and_wait_for_tasks(op_tasks);
+    for (const auto& task_set : op_tasks) {
+      CurrentScheduler::schedule_and_wait_for_tasks(task_set);
+    }
   } catch (const std::exception& exception) {
     if (_use_mvcc) _transaction_context->rollback();
     throw std::runtime_error("Error while executing tasks:\n  " + std::string(exception.what()));
@@ -162,7 +170,8 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   const auto done = std::chrono::high_resolution_clock::now();
   _execution_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
-  _result_table = op_tasks.back()->get_operator()->get_output();
+  // Get output from last task in last task set
+  _result_table = op_tasks.back().back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
   return _result_table;

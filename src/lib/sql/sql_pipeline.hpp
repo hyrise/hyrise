@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+using TaskSet = std::vector<std::shared_ptr<OperatorTask>>;
+
 /**
  * This is the unified interface to handle SQL queries and related operations.
  *
@@ -47,7 +49,7 @@ class SQLPipeline : public Noncopyable {
   const SQLQueryPlan& get_query_plan();
 
   // Returns all tasks tht need to be executed for this query.
-  const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
+  const std::vector<TaskSet>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns the resulting table.
   const std::shared_ptr<const Table>& get_result_table();
@@ -68,7 +70,7 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
   std::unique_ptr<SQLQueryPlan> _query_plan;
-  std::vector<std::shared_ptr<OperatorTask>> _op_tasks;
+  std::vector<TaskSet> _op_tasks;
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
