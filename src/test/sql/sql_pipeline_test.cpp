@@ -309,28 +309,28 @@ TEST_F(SQLPipelineTest, GetQueryPlanWithCustomTransactionContext) {
 TEST_F(SQLPipelineTest, GetTasks) {
   SQLPipeline sql_pipeline{_select_query_a};
 
-  const auto& tasks_sets = sql_pipeline.get_tasks();
+  const auto& task_sets = sql_pipeline.get_task_sets();
 
-  EXPECT_EQ(tasks_sets.size(), 1u);
-  EXPECT_EQ(tasks_sets.at(0).size(), 3u);
-  EXPECT_TRUE(_contains_validate(tasks_sets.at(0)));
+  EXPECT_EQ(task_sets.size(), 1u);
+  EXPECT_EQ(task_sets.at(0).size(), 3u);
+  EXPECT_TRUE(_contains_validate(task_sets.at(0)));
 }
 
 TEST_F(SQLPipelineTest, GetTasksTwice) {
   SQLPipeline sql_pipeline{_select_query_a};
 
-  sql_pipeline.get_tasks();
-  const auto& tasks_sets = sql_pipeline.get_tasks();
+  sql_pipeline.get_task_sets();
+  const auto& task_sets = sql_pipeline.get_task_sets();
 
-  EXPECT_EQ(tasks_sets.size(), 1u);
-  EXPECT_EQ(tasks_sets.at(0).size(), 3u);
-  EXPECT_TRUE(_contains_validate(tasks_sets.at(0)));
+  EXPECT_EQ(task_sets.size(), 1u);
+  EXPECT_EQ(task_sets.at(0).size(), 3u);
+  EXPECT_TRUE(_contains_validate(task_sets.at(0)));
 }
 
 TEST_F(SQLPipelineTest, GetTasksNotValidated) {
   SQLPipeline sql_pipeline{_select_query_a, false};
 
-  const auto& task_sets = sql_pipeline.get_tasks();
+  const auto& task_sets = sql_pipeline.get_task_sets();
 
   EXPECT_EQ(task_sets.size(), 1u);
   EXPECT_EQ(task_sets.at(0).size(), 2u);

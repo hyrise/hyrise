@@ -124,25 +124,25 @@ const SQLQueryPlan& SQLPipeline::get_query_plan() {
   return *(_query_plan.get());
 }
 
-const std::vector<TaskSet>& SQLPipeline::get_tasks() {
-  if (!_op_tasks.empty()) {
-    return _op_tasks;
+const std::vector<TaskSet>& SQLPipeline::get_task_sets() {
+  if (!_op_task_sets.empty()) {
+    return _op_task_sets;
   }
 
   const auto& query_plan = get_query_plan();
-  _op_tasks.reserve(query_plan.tree_roots().size());
+  _op_task_sets.reserve(query_plan.tree_roots().size());
 
   try {
     for (const auto& root : query_plan.tree_roots()) {
-      _op_tasks.emplace_back(OperatorTask::make_tasks_from_operator(root));
+      _op_task_sets.emplace_back(OperatorTask::make_tasks_from_operator(root));
     }
   } catch (const std::exception& exception) {
     // Don't keep bad values
-    _op_tasks.clear();
+    _op_task_sets.clear();
     throw std::runtime_error("Error while creating tasks:\n  " + std::string(exception.what()));
   }
 
-  return _op_tasks;
+  return _op_task_sets;
 }
 
 const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
@@ -150,7 +150,7 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
     return _result_table;
   }
 
-  const auto& op_tasks = get_tasks();
+  const auto& op_tasks = get_task_sets();
 
   const auto started = std::chrono::high_resolution_clock::now();
 
