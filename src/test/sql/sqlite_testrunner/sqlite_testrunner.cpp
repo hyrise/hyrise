@@ -1,4 +1,3 @@
-
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
@@ -20,6 +19,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_planner.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -81,27 +81,11 @@ std::vector<std::string> read_queries_from_file() {
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
-  std::string query = GetParam();
+  const std::string query = GetParam();
 
-  hsql::SQLParserResult parse_result;
-  hsql::SQLParser::parseSQLString(query, &parse_result);
+  SQLPipeline sql_pipeline{query};
+  const auto& result_table = sql_pipeline.get_result_table();
 
-  ASSERT_TRUE(parse_result.isValid()) << "Query not valid: " << query;
-
-  auto plan = SQLPlanner::plan(parse_result);
-
-  auto tx_context = TransactionManager::get().new_transaction_context();
-
-  plan.set_transaction_context(tx_context);
-
-  for (const auto& root : plan.tree_roots()) {
-    auto tasks = OperatorTask::make_tasks_from_operator(root);
-
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-  }
-  tx_context->commit();
-
-  auto result_table = plan.tree_roots().back()->get_output();
   auto sqlite_result_table = _sqlite->execute_query(query);
 
   // The problem is that we can only infer columns from sqlite if they have at least one row.
@@ -110,6 +94,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto order_sensitivity = OrderSensitivity::No;
 
+  const auto& parse_result = sql_pipeline.get_parsed_sql();
   if (parse_result.getStatements().back()->is(hsql::kStmtSelect)) {
     auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatements().back());
     if (select_statement->order != nullptr) {
