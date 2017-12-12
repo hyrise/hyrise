@@ -107,6 +107,9 @@ SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) > 10 AND MAX(
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING b > 33 AND AVG(c) > 50;
 -- (#579) SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING b > 33 OR b = 1 OR b = 17;
 
+-- HAVING w/o mentioning in the SELECT list
+SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;
+
 -- DELETE
 DELETE FROM int_int_int; INSERT INTO int_int_int VALUES (1, 2, 3, 4); SELECT * FROM int_int_int;
 DELETE FROM int_int_int WHERE id > 75; SELECT * FROM int_int_int;
