@@ -133,9 +133,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual const std::vector<std::string>& output_column_names() const;
 
-  virtual std::optional<ColumnOrigin> find_column_origin(const NamedColumnReference& named_column_reference) const;
-  virtual std::shared_ptr<AbstractLQPNode> find_prefix_origin(const std::string& table_or_alias) const;
+  std::optional<ColumnOrigin> find_column_origin(const NamedColumnReference& named_column_reference) const;
+  virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
   virtual std::optional<ColumnID> resolve_column_origin(const ColumnOrigin& column_origin) const;
+  virtual std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const;
 
 
   /**
@@ -289,7 +290,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * only operate on the column name. If an alias for this subtree is set, but this reference does not match
    * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+  virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;

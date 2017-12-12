@@ -31,7 +31,7 @@ std::string PredicateNode::description() const {
    * (2) right operand (only for BETWEEN)
    */
 
-  std::string left_operand_desc = get_verbose_column_name(_column_origin);
+  std::string left_operand_desc = _column_origin.get_verbose_name();
   std::string middle_operand_desc;
 
   if (_value.type() == typeid(ColumnID)) {

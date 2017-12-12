@@ -26,9 +26,12 @@ class AggregateNode : public AbstractLQPNode {
                          const std::vector<ColumnOrigin>& groupy_column_origins);
 
   const std::vector<std::shared_ptr<Expression>>& aggregate_expressions() const;
-  const std::vector<ColumnOrigin>& groupy_column_origins() const;
+  const std::vector<ColumnOrigin>& groupby_column_origins() const;
 
   std::string description() const override;
+
+  std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const override;
+
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
 
@@ -63,7 +66,7 @@ class AggregateNode : public AbstractLQPNode {
 
  private:
   std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
-  std::vector<ColumnOrigin> _groupy_column_origins;
+  std::vector<ColumnOrigin> _groupby_column_origins;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

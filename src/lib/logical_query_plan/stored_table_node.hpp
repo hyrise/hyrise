@@ -23,6 +23,8 @@ class StoredTableNode : public AbstractLQPNode {
   const std::string& table_name() const;
 
   std::string description() const override;
+  std::shared_ptr<AbstractLQPNode> find_table_name_origin(const std::string& table_name) const override;
+  std::optional<ColumnOrigin> find_column_origin(const NamedColumnReference& named_column_reference) const override;
   const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
@@ -41,6 +43,7 @@ class StoredTableNode : public AbstractLQPNode {
 
  protected:
   void _on_child_changed() override;
+  std::optional<NamedColumnReference> _resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const;
 
  private:
   const std::string _table_name;

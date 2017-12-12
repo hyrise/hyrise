@@ -25,6 +25,14 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
 
+std::shared_ptr<AbstractLQPNode> StoredTableNode::find_table_name_origin(const std::string& table_name) const {
+  if (_table_alias) {
+    return *_table_alias == table_name ? shared_from_this() : nullptr;
+  }
+
+  return table_name == _table_name ? shared_from_this() : nullptr;
+}
+
 const std::vector<ColumnID>& StoredTableNode::output_column_ids_to_input_column_ids() const {
   DebugAssert(_output_column_ids_to_input_column_ids, "Not initialized");
   return *_output_column_ids_to_input_column_ids;
@@ -94,5 +102,25 @@ std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
 }
 
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }
+
+std::optional<NamedColumnReference> StoredTableNode::_resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const {
+  if (!reference.table_name) {
+    return reference;
+  }
+
+  if (_table_alias) {
+    if (*reference.table_name != *_table_alias) {
+      return std::nullopt;
+    }
+  } else {
+    if (_table_name != *reference.table_name) {
+      return std::nullopt;
+    }
+  }
+
+  auto reference_without_local_alias = reference;
+  reference_without_local_alias.table_name = std::nullopt;
+  return reference_without_local_alias;
+}
 
 }  // namespace opossum

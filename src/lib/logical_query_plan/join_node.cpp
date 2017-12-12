@@ -68,8 +68,8 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
-  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
-  if (!named_column_reference_without_local_alias) {
+  auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
+  if (!named_column_reference_without_local_column_prefix) {
     return {};
   }
 
@@ -77,16 +77,16 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
   std::optional<ColumnID> right_column_id;
 
   // If there is no qualifying table name or this table's alias is used, search both children.
-  if (!named_column_reference_without_local_alias->table_name ||
-      (_table_alias && *_table_alias == named_column_reference_without_local_alias->table_name)) {
+  if (!named_column_reference_without_local_column_prefix->table_name ||
+      (_table_alias && *_table_alias == named_column_reference_without_local_column_prefix->table_name)) {
     left_column_id =
-        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
     right_column_id =
-        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
   } else {
     // Otherwise only search a child if it knows that qualifier.
-    auto left_knows_table = left_child()->knows_table(*named_column_reference_without_local_alias->table_name);
-    auto right_knows_table = right_child()->knows_table(*named_column_reference_without_local_alias->table_name);
+    auto left_knows_table = left_child()->knows_table(*named_column_reference_without_local_column_prefix->table_name);
+    auto right_knows_table = right_child()->knows_table(*named_column_reference_without_local_column_prefix->table_name);
 
     // If neither input table knows the table name, return.
     if (!left_knows_table && !right_knows_table) {
@@ -95,14 +95,14 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 
     // There must not be two tables with the same qualifying name.
     Assert(left_knows_table ^ right_knows_table,
-           "Table name " + *named_column_reference_without_local_alias->table_name + " is ambiguous.");
+           "Table name " + *named_column_reference_without_local_column_prefix->table_name + " is ambiguous.");
 
     if (left_knows_table) {
       left_column_id =
-          left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+          left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
     } else {
       right_column_id =
-          right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+          right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
     }
   }
 
@@ -112,7 +112,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
   }
 
   Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
-         "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
+         "Column name " + named_column_reference_without_local_column_prefix->column_name + " is ambiguous.");
 
   ColumnID input_column_id;
   ColumnID output_column_id;

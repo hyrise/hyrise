@@ -51,6 +51,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   static std::shared_ptr<Expression> create_column(const ColumnOrigin& column_origin,
                                                    const std::optional<std::string>& alias = std::nullopt);
+  static std::shared_ptr<Expression> create_column(const ColumnID column_id,
+                                                   const std::optional<std::string>& alias = std::nullopt);
 
   static std::vector<std::shared_ptr<Expression>> create_columns(
       const std::vector<ColumnOrigin>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
@@ -132,6 +134,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Getters. Only call them if you are sure the type() has such a member
    */
   const ColumnOrigin& column_origin() const;
+  ColumnID column_id() const;
   AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
@@ -153,7 +156,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
    * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
-  std::string to_string() const;
+  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt) const;
 
   bool operator==(const Expression& other) const;
 
@@ -177,11 +180,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   std::optional<std::string> _table_name;
 
-  // a column that might be referenced
-  std::optional<ColumnOrigin> _column_origin;
-
-  // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
-  std::optional<std::string> _alias;
+  // a column that might be referenced. When used in the LQP, _column_origin must be used to refer to columns. In the
+  // Operators, use ColumnIDs
+  std::optional<boost::variant<ColumnOrigin, ColumnID>> _column_reference;
 
   std::optional<ValuePlaceholder> _value_placeholder;
 
