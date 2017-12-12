@@ -79,6 +79,7 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     optimizer/table_statistics_join_test.cpp
