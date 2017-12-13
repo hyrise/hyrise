@@ -18,7 +18,7 @@ class FixedSizeByteAlignedVector : public ZeroSuppressionVector<FixedSizeByteAli
   ~FixedSizeByteAlignedVector() = default;
 
   size_t _on_size() const { return _data.size(); }
-  size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.capacity(); }
+  size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
   auto _on_create_base_decoder() const { return std::unique_ptr<BaseZeroSuppressionDecoder>{_on_create_decoder()}; }
 

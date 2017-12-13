@@ -179,7 +179,7 @@ template <typename T>
 size_t DeprecatedDictionaryColumn<T>::data_size() const {
   auto data_size = size_t{0u};
   data_size += _attribute_vector->size() * _attribute_vector->width();
-  data_size += _dictionary->capacity() * sizeof(T);
+  data_size += _dictionary->size() * sizeof(T);
   data_size += sizeof(DeprecatedDictionaryColumn<T>);
   return data_size;
 }

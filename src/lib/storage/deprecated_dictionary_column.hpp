@@ -71,6 +71,9 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
   // return the number of entries
   size_t size() const override;
 
+  // Returns the physical size of the column
+  size_t data_size() const final;
+
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
@@ -83,8 +86,6 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
 
   // Copies a DeprecatedDictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
-
-  size_t data_size() const final;
 
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;

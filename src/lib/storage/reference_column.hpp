@@ -69,7 +69,10 @@ class ReferenceColumn : public BaseColumn {
     return values;
   }
 
-  size_t size() const override;
+  size_t size() const final;
+
+  // Returns the physical size of the column
+  size_t data_size() const final;
 
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;

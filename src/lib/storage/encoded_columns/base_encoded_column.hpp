@@ -22,12 +22,6 @@ class BaseEncodedColumn : public BaseColumn {
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   virtual EncodingType encoding_type() const = 0;
-
-  /**
-   * @brief Returns the physical size of the vector
-   */
-  virtual size_t data_size() const = 0;
-
 };
 
 }  // namespace opossum

@@ -140,6 +140,15 @@ size_t ValueColumn<T>::size() const {
 }
 
 template <typename T>
+size_t ValueColumn<T>::data_size() const {
+  auto data_size = _values.size() + sizeof(T);
+
+  if (is_nullable()) data_size += _null_values.size() * sizeof(bool);
+
+  return data_size;
+}
+
+template <typename T>
 void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_value_column(*this, std::move(context));
 }

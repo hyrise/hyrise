@@ -32,6 +32,9 @@ class BaseColumn : private Noncopyable {
   // returns the number of values
   virtual size_t size() const = 0;
 
+  // Returns the physical size of the column
+  virtual size_t data_size() const = 0;
+
   // calls the column-specific handler in an operator (visitor pattern)
   virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const = 0;
 
