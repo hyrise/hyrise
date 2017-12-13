@@ -145,8 +145,6 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-
-
 std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin(const NamedColumnReference& named_column_reference) const {
   const auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
   if (!named_column_reference_without_local_column_prefix) {
