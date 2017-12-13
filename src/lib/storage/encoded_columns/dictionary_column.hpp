@@ -22,7 +22,8 @@ template <typename T>
 class DictionaryColumn : public BaseDictionaryColumn {
  public:
   explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<const BaseZeroSuppressionVector>& attribute_vector, const ValueID null_value_id);
+                            const std::shared_ptr<const BaseZeroSuppressionVector>& attribute_vector,
+                            const ValueID null_value_id);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;

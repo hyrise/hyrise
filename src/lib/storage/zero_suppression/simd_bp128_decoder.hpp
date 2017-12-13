@@ -2,11 +2,11 @@
 
 #include <array>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <utility>
-#include <iostream>
 
 #include "base_zero_suppression_decoder.hpp"
 #include "oversized_types.hpp"

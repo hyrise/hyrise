@@ -4,8 +4,8 @@
 #include <string>
 
 #include "storage/column_visitable.hpp"
-#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
 #include "storage/value_column.hpp"
+#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

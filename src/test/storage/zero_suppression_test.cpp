@@ -12,8 +12,8 @@
 
 #include "storage/zero_suppression/decoders.hpp"
 #include "storage/zero_suppression/encoders.hpp"
-#include "storage/zero_suppression/zs_utils.hpp"
 #include "storage/zero_suppression/vectors.hpp"
+#include "storage/zero_suppression/zs_utils.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"

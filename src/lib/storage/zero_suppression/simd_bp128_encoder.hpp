@@ -13,7 +13,7 @@ namespace opossum {
 class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
  public:
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
-                                       const PolymorphicAllocator<size_t>& alloc) final;
+                                                    const PolymorphicAllocator<size_t>& alloc) final;
 
  private:
   using Packing = SimdBp128Packing;

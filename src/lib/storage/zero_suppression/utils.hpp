@@ -14,7 +14,7 @@
 namespace opossum {
 
 std::unique_ptr<BaseZeroSuppressionVector> encode_by_zs_type(ZsType type, const pmr_vector<uint32_t>& vector,
-                                                const PolymorphicAllocator<size_t>& alloc);
+                                                             const PolymorphicAllocator<size_t>& alloc);
 
 template <typename Functor>
 void resolve_zs_vector_type(const BaseZeroSuppressionVector& vector, const Functor& functor) {

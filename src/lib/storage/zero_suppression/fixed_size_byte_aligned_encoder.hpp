@@ -11,7 +11,7 @@ template <typename UnsignedIntType>
 class FixedSizeByteAlignedEncoder : public BaseZeroSuppressionEncoder {
  public:
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
-                                       const PolymorphicAllocator<size_t>& alloc) final;
+                                                    const PolymorphicAllocator<size_t>& alloc) final;
 
  private:
   pmr_vector<UnsignedIntType> _data;

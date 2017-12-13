@@ -7,8 +7,8 @@
 #include "base_column_encoder.hpp"
 
 #include "storage/encoded_columns/dictionary_column.hpp"
-#include "storage/zero_suppression/zs_utils.hpp"
 #include "storage/value_column.hpp"
+#include "storage/zero_suppression/zs_utils.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 

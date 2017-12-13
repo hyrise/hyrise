@@ -29,7 +29,8 @@ class BaseZeroSuppressionVector : private Noncopyable {
 
   virtual std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const = 0;
 
-  virtual std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+  virtual std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(
+      const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 
 /**
@@ -68,7 +69,9 @@ class ZeroSuppressionVector : public BaseZeroSuppressionVector {
     return decoded_vector;
   }
 
-  std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
+  std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const final {
+    return _self()._on_create_base_decoder();
+  }
 
   std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     return _self()._on_copy_using_allocator(alloc);
