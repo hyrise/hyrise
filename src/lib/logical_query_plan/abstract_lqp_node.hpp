@@ -138,79 +138,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::optional<ColumnID> resolve_column_origin(const ColumnOrigin& column_origin) const;
   virtual std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const;
 
-
-  /**
-   * This function is public for testing purposes only, otherwise should only be used internally
-   *
-   * Every node will output a list of column and all nodes except StoredTableNode take a list of columns as input from
-   * their predecessor.
-   */
-  virtual const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const;
-
   size_t output_column_count() const;
-
-  // @{
-  /**
-   * These functions are part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general
-   * discussion
-   * on this.
-   *
-   * AbstractLQPNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
-   * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise std::nullopt
-   * is returned.
-   *
-   * AbstractLQPNode::get_column_id_by_named_column_reference() is more strict and will fail if the
-   * @param named_column_reference cannot be found.
-   *
-   * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
-   * ColumnIdentifier{"y", std::nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
-   * ColumnIdentifier{"y", "table_name"}
-   *
-   * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
-   *
-   * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
-   */
-  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
-  virtual std::optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference& named_column_reference) const;
-  // @}
-
-  /**
-   * Checks whether this node or any of its ancestors retrieve the table @param table_name from the StorageManager
-   * or as an alias of a subquery.
-   *
-   * Used especially to figure out which of the children of a Join is referenced.
-   *
-   * The standard requires subqueries (known as derived tables) to have an alias. The original name(s) of the table(s)
-   * that became part of that subselect are not accessible anymore once an alias is given.
-   *
-   *        <table reference> ::=
-   *            <table name> [ [ AS ] <correlation name>
-   *                [ <left paren> <derived column list> <right paren> ] ]
-   *          | <derived table> [ AS ] <correlation name>
-   *                [ <left paren> <derived column list> <right paren> ]
-   *          | <joined table>
-   */
-  virtual bool knows_table(const std::string& table_name) const;
-
-  /**
-   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
-   * on this.
-   *
-   * Returns all ColumnIDs of this node, i.e., a vector with [0, output_column_count)
-   */
-  virtual std::vector<ColumnID> get_output_column_ids() const;
-
-  /**
-   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
-   * on this.
-   *
-   * Returns all ColumnIDs of this node that belong to a table. Used for resolving wildcards in queries like
-   * `SELECT T1.*, T2.a FROM T1, T2`
-   *
-   * @param table_name can be an alias.
-   */
-  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const;
 
   /**
    * Makes this nodes parents point to this node's left child
