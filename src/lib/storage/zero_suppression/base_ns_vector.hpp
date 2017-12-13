@@ -12,7 +12,7 @@
 namespace opossum {
 
 /**
- * @brief Base class of all null suppression vectors
+ * @brief Base class of all zero suppression vectors
  *
  * Use the ns_vector.template.hpp to add new implementations!
  */

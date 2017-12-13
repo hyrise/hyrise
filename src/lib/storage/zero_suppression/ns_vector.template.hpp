@@ -1,7 +1,7 @@
 /**
- * Null Suppression Vector Template
+ * Zero Suppression Vector Template
  *
- * - Copy this file for a new null suppression vector
+ * - Copy this file for a new zero suppression vector
  * - Add new vector ns_vectors.hpp and ns_type.hpp
  */
 #pragma once

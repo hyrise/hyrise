@@ -4,7 +4,7 @@
 #include <string>
 
 #include "storage/column_visitable.hpp"
-#include "storage/null_suppression/base_ns_vector.hpp"
+#include "storage/zero_suppression/base_ns_vector.hpp"
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"

@@ -3,7 +3,7 @@
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
 
-// Include your null suppression encoder file here!
+// Include your zero suppression encoder file here!
 #include "fixed_size_byte_aligned_encoder.hpp"
 #include "simd_bp128_encoder.hpp"
 
@@ -14,7 +14,7 @@
 namespace opossum {
 
 /**
- * Mapping of null suppression types to null suppression encoders
+ * Mapping of zero suppression types to zero suppression encoders
  *
  * Note: Add your encoder class here!
  */

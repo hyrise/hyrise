@@ -20,6 +20,7 @@ std::unique_ptr<SimdBp128Decoder> SimdBp128Vector::_on_create_decoder() const {
 }
 
 auto SimdBp128Vector::_on_cbegin() const -> ConstIterator { return ConstIterator{&_data, _size, 0u}; }
+
 auto SimdBp128Vector::_on_cend() const -> ConstIterator { return ConstIterator{nullptr, _size, _size}; }
 
 std::shared_ptr<BaseNsVector> SimdBp128Vector::_on_copy_using_allocator(

@@ -6,6 +6,7 @@
 #include <memory>
 #include <numeric>
 #include <utility>
+#include <iostream>
 
 #include "base_ns_decoder.hpp"
 #include "oversized_types.hpp"
@@ -29,6 +30,8 @@ class SimdBp128Decoder : public BaseNsDecoder {
   ~SimdBp128Decoder() = default;
 
   uint32_t get(size_t i) final {
+    // std::cout << "SimdBp128Decoder::get()" << std::endl;
+
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);
     }

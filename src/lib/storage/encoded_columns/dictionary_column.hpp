@@ -14,7 +14,7 @@ class BaseNsVector;
  * @brief Column implementing dictionary encoding
  *
  * This is the updated dictionary column, which uses the
- * new null suppression encodings for its attribute vector.
+ * new zero suppression encodings for its attribute vector.
  * Eventually the old implementation is going to be completely
  * replaced with new one.
  */

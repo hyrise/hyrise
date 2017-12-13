@@ -10,10 +10,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/null_suppression/ns_decoders.hpp"
-#include "storage/null_suppression/ns_encoders.hpp"
-#include "storage/null_suppression/ns_utils.hpp"
-#include "storage/null_suppression/ns_vectors.hpp"
+#include "storage/zero_suppression/ns_decoders.hpp"
+#include "storage/zero_suppression/ns_encoders.hpp"
+#include "storage/zero_suppression/ns_utils.hpp"
+#include "storage/zero_suppression/ns_vectors.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"

@@ -7,7 +7,7 @@
 namespace opossum {
 
 /**
- * @brief Base class of all null suppression decoders
+ * @brief Base class of all zero suppression decoders
  *
  * Subclasses must be added in ns_decoders.hpp
  */

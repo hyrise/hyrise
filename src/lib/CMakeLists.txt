@@ -254,29 +254,29 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
-    storage/null_suppression/base_ns_decoder.hpp
-    storage/null_suppression/base_ns_encoder.hpp
-    storage/null_suppression/base_ns_vector.hpp
-    storage/null_suppression/fixed_size_byte_aligned_decoder.hpp
-    storage/null_suppression/fixed_size_byte_aligned_encoder.hpp
-    storage/null_suppression/fixed_size_byte_aligned_vector.hpp
-    storage/null_suppression/ns_decoders.hpp
-    storage/null_suppression/ns_encoders.hpp
-    storage/null_suppression/ns_type.hpp
-    storage/null_suppression/ns_utils.cpp
-    storage/null_suppression/ns_utils.hpp
-    storage/null_suppression/ns_vectors.hpp
-    storage/null_suppression/oversized_types.hpp
-    storage/null_suppression/simd_bp128_decoder.cpp
-    storage/null_suppression/simd_bp128_decoder.hpp
-    storage/null_suppression/simd_bp128_encoder.cpp
-    storage/null_suppression/simd_bp128_encoder.hpp
-    storage/null_suppression/simd_bp128_iterator.cpp
-    storage/null_suppression/simd_bp128_iterator.hpp
-    storage/null_suppression/simd_bp128_packing.cpp
-    storage/null_suppression/simd_bp128_packing.hpp
-    storage/null_suppression/simd_bp128_vector.cpp
-    storage/null_suppression/simd_bp128_vector.hpp
+    storage/zero_suppression/base_ns_decoder.hpp
+    storage/zero_suppression/base_ns_encoder.hpp
+    storage/zero_suppression/base_ns_vector.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_decoder.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_encoder.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_vector.hpp
+    storage/zero_suppression/ns_decoders.hpp
+    storage/zero_suppression/ns_encoders.hpp
+    storage/zero_suppression/ns_type.hpp
+    storage/zero_suppression/ns_utils.cpp
+    storage/zero_suppression/ns_utils.hpp
+    storage/zero_suppression/ns_vectors.hpp
+    storage/zero_suppression/oversized_types.hpp
+    storage/zero_suppression/simd_bp128_decoder.cpp
+    storage/zero_suppression/simd_bp128_decoder.hpp
+    storage/zero_suppression/simd_bp128_encoder.cpp
+    storage/zero_suppression/simd_bp128_encoder.hpp
+    storage/zero_suppression/simd_bp128_iterator.cpp
+    storage/zero_suppression/simd_bp128_iterator.hpp
+    storage/zero_suppression/simd_bp128_packing.cpp
+    storage/zero_suppression/simd_bp128_packing.hpp
+    storage/zero_suppression/simd_bp128_vector.cpp
+    storage/zero_suppression/simd_bp128_vector.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp

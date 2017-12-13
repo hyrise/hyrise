@@ -7,9 +7,9 @@
 #include <utility>
 
 #include "iterables.hpp"
-#include "storage/null_suppression/ns_decoders.hpp"
-#include "storage/null_suppression/ns_utils.hpp"
-#include "storage/null_suppression/ns_vectors.hpp"
+#include "storage/zero_suppression/ns_decoders.hpp"
+#include "storage/zero_suppression/ns_utils.hpp"
+#include "storage/zero_suppression/ns_vectors.hpp"
 
 namespace opossum {
 

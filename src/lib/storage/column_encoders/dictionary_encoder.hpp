@@ -7,7 +7,7 @@
 #include "base_column_encoder.hpp"
 
 #include "storage/encoded_columns/dictionary_column.hpp"
-#include "storage/null_suppression/ns_utils.hpp"
+#include "storage/zero_suppression/ns_utils.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"

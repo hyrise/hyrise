@@ -7,7 +7,7 @@
 
 #include "storage/dictionary_compression.hpp"
 #include "storage/encoded_columns/dictionary_column.hpp"
-#include "storage/null_suppression/ns_vectors.hpp"
+#include "storage/zero_suppression/ns_vectors.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {

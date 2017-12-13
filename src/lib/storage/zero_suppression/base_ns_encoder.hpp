@@ -10,7 +10,7 @@ namespace opossum {
 class BaseNsVector;
 
 /**
- * @brief Base class of all null suppression encoders
+ * @brief Base class of all zero suppression encoders
  *
  * Subclasses must be added in ns_encoders.hpp
  */

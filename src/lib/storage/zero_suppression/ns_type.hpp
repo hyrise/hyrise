@@ -27,7 +27,7 @@ class FixedSizeByteAlignedVector;
 class SimdBp128Vector;
 
 /**
- * Mapping of null suppression types to null suppression vectors
+ * Mapping of zero suppression types to zero suppression vectors
  *
  * Note: Add your vector class here!
  */
