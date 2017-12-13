@@ -7,7 +7,7 @@
 #include "base_column_encoder.hpp"
 
 #include "storage/encoded_columns/dictionary_column.hpp"
-#include "storage/zero_suppression/ns_utils.hpp"
+#include "storage/zero_suppression/zs_utils.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -78,9 +78,9 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     }
 
     // We need to increment the dictionary size here because of possible null values.
-    const auto ns_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
+    const auto zs_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
 
-    auto encoded_attribute_vector = encode_by_ns_type(ns_type, attribute_vector, attribute_vector.get_allocator());
+    auto encoded_attribute_vector = encode_by_zs_type(zs_type, attribute_vector, attribute_vector.get_allocator());
 
     auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
@@ -94,13 +94,13 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
 
-  NsType get_fixed_size_byte_aligned_encoding(size_t unique_values_count) {
+  ZsType get_fixed_size_byte_aligned_encoding(size_t unique_values_count) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return NsType::FixedSize1ByteAligned;
+      return ZsType::FixedSize1ByteAligned;
     } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return NsType::FixedSize2ByteAligned;
+      return ZsType::FixedSize2ByteAligned;
     } else {
-      return NsType::FixedSize4ByteAligned;
+      return ZsType::FixedSize4ByteAligned;
     }
   }
 };

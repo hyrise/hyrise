@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-class SimdBp128Iterator : public BaseNsIterator<SimdBp128Iterator> {
+class SimdBp128Iterator : public BaseZeroSuppressionIterator<SimdBp128Iterator> {
  public:
   using Packing = SimdBp128Packing;
 

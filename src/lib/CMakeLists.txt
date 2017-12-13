@@ -260,12 +260,12 @@ set(
     storage/zero_suppression/fixed_size_byte_aligned_decoder.hpp
     storage/zero_suppression/fixed_size_byte_aligned_encoder.hpp
     storage/zero_suppression/fixed_size_byte_aligned_vector.hpp
-    storage/zero_suppression/ns_decoders.hpp
-    storage/zero_suppression/ns_encoders.hpp
-    storage/zero_suppression/ns_type.hpp
-    storage/zero_suppression/ns_utils.cpp
-    storage/zero_suppression/ns_utils.hpp
-    storage/zero_suppression/ns_vectors.hpp
+    storage/zero_suppression/decoders.hpp
+    storage/zero_suppression/encoders.hpp
+    storage/zero_suppression/zs_type.hpp
+    storage/zero_suppression/zs_utils.cpp
+    storage/zero_suppression/zs_utils.hpp
+    storage/zero_suppression/vectors.hpp
     storage/zero_suppression/oversized_types.hpp
     storage/zero_suppression/simd_bp128_decoder.cpp
     storage/zero_suppression/simd_bp128_decoder.hpp

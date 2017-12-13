@@ -10,10 +10,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/zero_suppression/ns_decoders.hpp"
-#include "storage/zero_suppression/ns_encoders.hpp"
-#include "storage/zero_suppression/ns_utils.hpp"
-#include "storage/zero_suppression/ns_vectors.hpp"
+#include "storage/zero_suppression/decoders.hpp"
+#include "storage/zero_suppression/encoders.hpp"
+#include "storage/zero_suppression/zs_utils.hpp"
+#include "storage/zero_suppression/vectors.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -36,22 +36,22 @@ namespace {
 
 namespace hana = boost::hana;
 
-using NsTypes =
-    ::testing::Types<enum_constant<NsType, NsType::SimdBp128>, enum_constant<NsType, NsType::FixedSize4ByteAligned>,
-                     enum_constant<NsType, NsType::FixedSize2ByteAligned>,
-                     enum_constant<NsType, NsType::FixedSize1ByteAligned>>;
+using ZsTypes =
+    ::testing::Types<enum_constant<ZsType, ZsType::SimdBp128>, enum_constant<ZsType, ZsType::FixedSize4ByteAligned>,
+                     enum_constant<ZsType, ZsType::FixedSize2ByteAligned>,
+                     enum_constant<ZsType, ZsType::FixedSize1ByteAligned>>;
 
-constexpr auto range_for_ns_type =
-    hana::make_map(hana::make_pair(enum_c<NsType, NsType::SimdBp128>, hana::make_pair(1'024, 34'624)),
-                   hana::make_pair(enum_c<NsType, NsType::FixedSize4ByteAligned>, hana::make_pair(1'024, 34'624)),
-                   hana::make_pair(enum_c<NsType, NsType::FixedSize2ByteAligned>, hana::make_pair(1'024, 34'624)),
-                   hana::make_pair(enum_c<NsType, NsType::FixedSize1ByteAligned>, hana::make_pair(0, 255)));
+constexpr auto range_for_zs_type =
+    hana::make_map(hana::make_pair(enum_c<ZsType, ZsType::SimdBp128>, hana::make_pair(1'024, 34'624)),
+                   hana::make_pair(enum_c<ZsType, ZsType::FixedSize4ByteAligned>, hana::make_pair(1'024, 34'624)),
+                   hana::make_pair(enum_c<ZsType, ZsType::FixedSize2ByteAligned>, hana::make_pair(1'024, 34'624)),
+                   hana::make_pair(enum_c<ZsType, ZsType::FixedSize1ByteAligned>, hana::make_pair(0, 255)));
 
-template <typename NsTypeT>
-class NullSuppressionTest : public BaseTest {
+template <typename ZsTypeT>
+class ZeroSuppressionTest : public BaseTest {
  protected:
-  static constexpr auto vector_t = hana::at_key(ns_vector_for_type, NsTypeT{});
-  static constexpr auto encoder_t = hana::at_key(ns_encoder_for_type, NsTypeT{});
+  static constexpr auto vector_t = hana::at_key(zs_vector_for_type, ZsTypeT{});
+  static constexpr auto encoder_t = hana::at_key(zs_encoder_for_type, ZsTypeT{});
 
   using VectorType = typename decltype(vector_t)::type;
   using EncoderType = typename decltype(encoder_t)::type;
@@ -59,9 +59,9 @@ class NullSuppressionTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  auto min() { return hana::first(hana::at_key(range_for_ns_type, NsTypeT{})); }
+  auto min() { return hana::first(hana::at_key(range_for_zs_type, ZsTypeT{})); }
 
-  auto max() { return hana::second(hana::at_key(range_for_ns_type, NsTypeT{})); }
+  auto max() { return hana::second(hana::at_key(range_for_zs_type, ZsTypeT{})); }
 
   pmr_vector<uint32_t> generate_sequence(size_t count, uint32_t increment) {
     auto sequence = pmr_vector<uint32_t>(count);
@@ -85,9 +85,9 @@ class NullSuppressionTest : public BaseTest {
   }
 };
 
-TYPED_TEST_CASE(NullSuppressionTest, NsTypes);
+TYPED_TEST_CASE(ZeroSuppressionTest, ZsTypes);
 
-TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
+TYPED_TEST(ZeroSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
@@ -102,7 +102,7 @@ TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
   }
 }
 
-TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
+TYPED_TEST(ZeroSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence = this->encode(sequence);
 
@@ -116,7 +116,7 @@ TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
   }
 }
 
-TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingIterators) {
+TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingIterators) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence_base = this->encode(sequence);
 
@@ -131,7 +131,7 @@ TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingIterators) {
   }
 }
 
-TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {
+TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence = this->encode(sequence);
 
@@ -145,7 +145,7 @@ TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {
   }
 }
 
-TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingDecodeMethod) {
+TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingDecodeMethod) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence = this->encode(sequence);
 

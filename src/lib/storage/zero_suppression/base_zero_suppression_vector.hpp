@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "base_zero_suppression_decoder.hpp"
-#include "ns_type.hpp"
+#include "zs_type.hpp"
 
 #include "types.hpp"
 
@@ -23,7 +23,7 @@ class BaseZeroSuppressionVector : private Noncopyable {
   virtual size_t size() const = 0;
   virtual size_t data_size() const = 0;
 
-  virtual NsType type() const = 0;
+  virtual ZsType type() const = 0;
 
   virtual pmr_vector<uint32_t> decode() const = 0;
 
@@ -37,7 +37,7 @@ class BaseZeroSuppressionVector : private Noncopyable {
  * by ZeroSuppressionVector::cbegin() and ZeroSuppressionVector::cend()
  */
 template <typename Derived>
-using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_traversal_tag, uint32_t>;
+using BaseZeroSuppressionIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_traversal_tag, uint32_t>;
 
 /**
  * @brief Implements the non-virtual interface of all vectors
@@ -53,7 +53,7 @@ class ZeroSuppressionVector : public BaseZeroSuppressionVector {
   size_t size() const final { return _self()._on_size(); }
   size_t data_size() const final { return _self()._on_data_size(); }
 
-  NsType type() const final { return get_ns_type<Derived>(); }
+  ZsType type() const final { return get_zs_type<Derived>(); }
 
   pmr_vector<uint32_t> decode() const final {
     auto decoded_vector = pmr_vector<uint32_t>{};
