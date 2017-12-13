@@ -55,7 +55,10 @@ class ValueColumn : public BaseValueColumn {
   pmr_concurrent_vector<bool>& null_values() final;
 
   // Return the number of entries in the column.
-  size_t size() const override;
+  size_t size() const final;
+
+  // Returns the physical size of the column
+  size_t data_size() const final;
 
   // Visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
