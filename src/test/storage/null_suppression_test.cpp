@@ -146,4 +146,18 @@ TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {
   }
 }
 
+TYPED_TEST(NullSuppressionTest, DecodeSequenceOfZerosUsingDecodeMethod) {
+  const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
+  const auto encoded_sequence = this->encode(sequence);
+
+  auto decoded_sequence = encoded_sequence->decode();
+
+  auto seq_it = sequence.cbegin();
+  const auto seq_end = sequence.cend();
+  auto decoded_seq_it = decoded_sequence.cbegin();
+  for (; seq_it != seq_end; seq_it++, decoded_seq_it++) {
+    EXPECT_EQ(*seq_it, *decoded_seq_it);
+  }
+}
+
 }  // namespace opossum
