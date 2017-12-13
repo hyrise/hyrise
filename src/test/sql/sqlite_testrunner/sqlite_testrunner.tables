@@ -3,6 +3,3 @@ src/test/tables/sqlite/mixed_types_null_100.tbl mixed_null
 src/test/tables/sqlite/int_int_int_100.tbl int_int_int
 
 src/test/tables/tpch/sf-0.001/customer.tbl tpch_customer
-src/test/tables/tpch/sf-0.001/orders.tbl tpch_orders
-src/test/tables/tpch/sf-0.001/nation.tbl tpch_nation
-src/test/tables/tpch/sf-0.001/lineitem_1000.tbl tpch_lineitem

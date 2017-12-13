@@ -51,7 +51,6 @@ SELECT * FROM mixed NATURAL JOIN (SELECT int_c, id FROM int_int_int) AS T2;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables
-SELECT * FROM tpch_customer AS t1 INNER JOIN tpch_orders AS t2 ON t1.c_custkey = t2.o_custkey INNER JOIN tpch_nation AS t3 ON t1.c_nationkey = t3.n_nationkey;
 SELECT * FROM mixed_null AS t1 INNER JOIN int_int_int AS t2 ON t1.b = t2.int_a INNER JOIN mixed AS t3 ON t1.b = t3.b;
 
 -- Make sure that name-to-id-resolving works fine.
@@ -77,8 +76,8 @@ SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 -- (#578) SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
 
 -- Join, GROUP BY, Having, ...
-SELECT c_custkey, c_name, COUNT(o_orderkey) FROM tpch_customer JOIN tpch_orders ON c_custkey = o_custkey GROUP BY c_custkey, c_name HAVING COUNT(tpch_orders.o_orderkey) >= 1;
-SELECT c_custkey, c_name, COUNT(o_orderkey) FROM tpch_customer JOIN ( SELECT * FROM tpch_orders JOIN tpch_lineitem ON o_orderkey = l_orderkey ) AS orderitems ON tpch_customer.c_custkey = orderitems.o_custkey GROUP BY c_custkey, c_name HAVING COUNT(orderitems.o_orderkey) >= 1;
+SELECT c_custkey, c_name, COUNT(int_a) FROM tpch_customer JOIN int_int_int ON c_custkey = int_a GROUP BY c_custkey, c_name HAVING COUNT(int_a) >= 2;
+SELECT c_custkey, c_name, COUNT(int_a) FROM tpch_customer JOIN ( SELECT * FROM int_int_int JOIN mixed ON int_a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.int_a GROUP BY c_custkey, c_name HAVING COUNT(sub.int_a) >= 2;
 
 -- COUNT(*)
 SELECT COUNT(*) FROM mixed GROUP BY a;
