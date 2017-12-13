@@ -88,7 +88,6 @@ class NullSuppressionTest : public BaseTest {
 TYPED_TEST_CASE(NullSuppressionTest, NsTypes);
 
 TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
-  // Generates array from [1024, 34.624]
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
@@ -96,9 +95,9 @@ TYPED_TEST(NullSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
   EXPECT_NE(encoded_sequence, nullptr);
 
   auto seq_it = sequence.cbegin();
-  const auto seq_end = sequence.cend();
   auto encoded_seq_it = encoded_sequence->cbegin();
-  for (; seq_it != seq_end; seq_it++, encoded_seq_it++) {
+  const auto encoded_seq_end = encoded_sequence->cend();
+  for (; encoded_seq_it != encoded_seq_end; seq_it++, encoded_seq_it++) {
     EXPECT_EQ(*seq_it, *encoded_seq_it);
   }
 }
