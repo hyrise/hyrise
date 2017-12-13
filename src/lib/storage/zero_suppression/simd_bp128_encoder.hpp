@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "base_ns_encoder.hpp"
+#include "base_zero_suppression_encoder.hpp"
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
 
@@ -10,9 +10,9 @@
 
 namespace opossum {
 
-class SimdBp128Encoder : public BaseNsEncoder {
+class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
  public:
-  std::unique_ptr<BaseNsVector> encode(const pmr_vector<uint32_t>& vector,
+  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
                                        const PolymorphicAllocator<size_t>& alloc) final;
 
  private:

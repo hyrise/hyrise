@@ -6,18 +6,18 @@
 #include <cstdint>
 #include <memory>
 
-#include "base_ns_vector.hpp"
+#include "base_zero_suppression_vector.hpp"
 #include "ns_type.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
-std::unique_ptr<BaseNsVector> encode_by_ns_type(NsType type, const pmr_vector<uint32_t>& vector,
+std::unique_ptr<BaseZeroSuppressionVector> encode_by_ns_type(NsType type, const pmr_vector<uint32_t>& vector,
                                                 const PolymorphicAllocator<size_t>& alloc);
 
 template <typename Functor>
-void resolve_ns_vector_type(const BaseNsVector& vector, const Functor& functor) {
+void resolve_ns_vector_type(const BaseZeroSuppressionVector& vector, const Functor& functor) {
   hana::fold(ns_vector_for_type, false, [&](auto match_found, auto pair) {
     const auto vector_type_c = hana::first(pair);
     const auto vector_t = hana::second(pair);

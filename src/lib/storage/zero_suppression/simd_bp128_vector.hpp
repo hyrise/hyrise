@@ -2,7 +2,7 @@
 
 #include <emmintrin.h>
 
-#include "base_ns_vector.hpp"
+#include "base_zero_suppression_vector.hpp"
 #include "oversized_types.hpp"
 #include "simd_bp128_iterator.hpp"
 
@@ -12,7 +12,7 @@ namespace opossum {
 
 class SimdBp128Decoder;
 
-class SimdBp128Vector : public NsVector<SimdBp128Vector> {
+class SimdBp128Vector : public ZeroSuppressionVector<SimdBp128Vector> {
  public:
   using ConstIterator = SimdBp128Iterator;
 
@@ -31,7 +31,7 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
   ConstIterator _on_cbegin() const;
   ConstIterator _on_cend() const;
 
-  std::shared_ptr<BaseNsVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+  std::shared_ptr<BaseZeroSuppressionVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
   friend class SimdBp128Decoder;

@@ -11,10 +11,10 @@ namespace opossum {
 
 namespace {
 
-std::unique_ptr<BaseNsEncoder> create_encoder_by_ns_type(NsType type) {
+std::unique_ptr<BaseZeroSuppressionEncoder> create_encoder_by_ns_type(NsType type) {
   Assert(type != NsType::Invalid, "NsType must be valid.");
 
-  auto encoder = std::unique_ptr<BaseNsEncoder>{};
+  auto encoder = std::unique_ptr<BaseZeroSuppressionEncoder>{};
 
   hana::fold(ns_encoder_for_type, false, [&](auto match_found, auto pair) {
     const auto vector_type_c = hana::first(pair);
@@ -34,7 +34,7 @@ std::unique_ptr<BaseNsEncoder> create_encoder_by_ns_type(NsType type) {
 
 }  // namespace
 
-std::unique_ptr<BaseNsVector> encode_by_ns_type(NsType type, const pmr_vector<uint32_t>& vector,
+std::unique_ptr<BaseZeroSuppressionVector> encode_by_ns_type(NsType type, const pmr_vector<uint32_t>& vector,
                                                 const PolymorphicAllocator<size_t>& alloc) {
   auto encoder = create_encoder_by_ns_type(type);
   return encoder->encode(vector, alloc);

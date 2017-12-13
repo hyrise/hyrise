@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-std::unique_ptr<BaseNsVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t>& vector,
+std::unique_ptr<BaseZeroSuppressionVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t>& vector,
                                                        const PolymorphicAllocator<size_t>& alloc) {
   init(vector.size());
   for (auto value : vector) append(value);

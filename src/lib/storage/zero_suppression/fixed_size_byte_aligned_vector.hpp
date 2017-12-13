@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "base_ns_vector.hpp"
+#include "base_zero_suppression_vector.hpp"
 #include "fixed_size_byte_aligned_decoder.hpp"
 
 #include "types.hpp"
@@ -12,7 +12,7 @@
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedVector : public NsVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
+class FixedSizeByteAlignedVector : public ZeroSuppressionVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
  public:
   explicit FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
   ~FixedSizeByteAlignedVector() = default;
@@ -28,7 +28,7 @@ class FixedSizeByteAlignedVector : public NsVector<FixedSizeByteAlignedVector<Un
 
   auto _on_cend() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
 
-  std::shared_ptr<BaseNsVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::shared_ptr<BaseZeroSuppressionVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::allocate_shared<FixedSizeByteAlignedVector<UnsignedIntType>>(alloc, std::move(data_copy));
   }

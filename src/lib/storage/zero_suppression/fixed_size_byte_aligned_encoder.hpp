@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_ns_encoder.hpp"
+#include "base_zero_suppression_encoder.hpp"
 #include "fixed_size_byte_aligned_vector.hpp"
 
 #include "types.hpp"
@@ -8,9 +8,9 @@
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedEncoder : public BaseNsEncoder {
+class FixedSizeByteAlignedEncoder : public BaseZeroSuppressionEncoder {
  public:
-  std::unique_ptr<BaseNsVector> encode(const pmr_vector<uint32_t>& vector,
+  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
                                        const PolymorphicAllocator<size_t>& alloc) final;
 
  private:
@@ -18,7 +18,7 @@ class FixedSizeByteAlignedEncoder : public BaseNsEncoder {
 };
 
 template <typename UnsignedIntType>
-std::unique_ptr<BaseNsVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::encode(
+std::unique_ptr<BaseZeroSuppressionVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::encode(
     const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc) {
   _data = pmr_vector<UnsignedIntType>{alloc};
   _data.reserve(vector.size());

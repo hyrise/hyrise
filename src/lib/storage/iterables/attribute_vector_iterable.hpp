@@ -15,7 +15,7 @@ namespace opossum {
 
 class AttributeVectorIterable : public IndexableIterable<AttributeVectorIterable> {
  public:
-  explicit AttributeVectorIterable(const BaseNsVector& attribute_vector, const ValueID null_value_id)
+  explicit AttributeVectorIterable(const BaseZeroSuppressionVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
   template <typename Functor>
@@ -39,7 +39,7 @@ class AttributeVectorIterable : public IndexableIterable<AttributeVectorIterable
   }
 
  private:
-  const BaseNsVector& _attribute_vector;
+  const BaseZeroSuppressionVector& _attribute_vector;
   const ValueID _null_value_id;
 
  private:

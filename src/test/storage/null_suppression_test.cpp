@@ -76,7 +76,7 @@ class NullSuppressionTest : public BaseTest {
     return sequence;
   }
 
-  std::unique_ptr<BaseNsVector> encode(const pmr_vector<uint32_t>& vector) {
+  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
     auto encoder = EncoderType{};
     auto encoded_vector = encoder.encode(vector, vector.get_allocator());
     EXPECT_EQ(encoded_vector->size(), vector.size());

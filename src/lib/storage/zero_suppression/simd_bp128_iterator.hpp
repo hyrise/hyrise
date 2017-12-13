@@ -6,7 +6,7 @@
 #include <memory>
 #include <numeric>
 
-#include "base_ns_vector.hpp"
+#include "base_zero_suppression_vector.hpp"
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
 

@@ -7,18 +7,18 @@
 
 namespace opossum {
 
-class BaseNsVector;
+class BaseZeroSuppressionVector;
 
 /**
  * @brief Base class of all zero suppression encoders
  *
  * Subclasses must be added in ns_encoders.hpp
  */
-class BaseNsEncoder {
+class BaseZeroSuppressionEncoder {
  public:
-  virtual ~BaseNsEncoder() = default;
+  virtual ~BaseZeroSuppressionEncoder() = default;
 
-  virtual std::unique_ptr<BaseNsVector> encode(const pmr_vector<uint32_t>& vector,
+  virtual std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
                                                const PolymorphicAllocator<size_t>& alloc) = 0;
 };
 

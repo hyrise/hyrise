@@ -83,7 +83,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     auto encoded_attribute_vector = encode_by_ns_type(ns_type, attribute_vector, attribute_vector.get_allocator());
 
     auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
-    auto attribute_vector_sptr = std::shared_ptr<BaseNsVector>(std::move(encoded_attribute_vector));
+    auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
     return std::make_shared<DictionaryColumn<T>>(dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
   }
 

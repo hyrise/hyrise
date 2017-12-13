@@ -8,14 +8,14 @@
 
 #include <memory>
 
-#include "base_ns_vector.hpp"
+#include "base_zero_suppression_vector.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
 // TODO(you): Rename class
-class NsVectorTemplate : public NsVector<NsVectorTemplate> {
+class NsVectorTemplate : public ZeroSuppressionVector<NsVectorTemplate> {
  public:
   explicit NsVectorTemplate(pmr_vector<uint32_t> data) : _data{std::move(data)} {}
   ~NsVectorTemplate() = default;
@@ -32,7 +32,7 @@ class NsVectorTemplate : public NsVector<NsVectorTemplate> {
   auto _on_cbegin() const { return _data.cbegin(); }
   auto _on_cend() const { return _data.cend(); }
 
-  std::shared_ptr<BaseNsVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::shared_ptr<BaseZeroSuppressionVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::allocate_shared<NsVectorTemplate>(alloc, std::move(data_copy));
   }

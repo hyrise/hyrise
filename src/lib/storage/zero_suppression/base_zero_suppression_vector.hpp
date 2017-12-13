@@ -16,9 +16,9 @@ namespace opossum {
  *
  * Use the ns_vector.template.hpp to add new implementations!
  */
-class BaseNsVector : private Noncopyable {
+class BaseZeroSuppressionVector : private Noncopyable {
  public:
-  virtual ~BaseNsVector() = default;
+  virtual ~BaseZeroSuppressionVector() = default;
 
   virtual size_t size() const = 0;
   virtual size_t data_size() const = 0;
@@ -29,11 +29,12 @@ class BaseNsVector : private Noncopyable {
 
   virtual std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const = 0;
 
-  virtual std::shared_ptr<BaseNsVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+  virtual std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 
 /**
- * You may use this iterator facade to implement iterators returned by NsVector::cbegin() and NsVector::cend()
+ * You may use this iterator facade to implement iterators returned
+ * by ZeroSuppressionVector::cbegin() and ZeroSuppressionVector::cend()
  */
 template <typename Derived>
 using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_traversal_tag, uint32_t>;
@@ -42,7 +43,7 @@ using BaseNsIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_
  * @brief Implements the non-virtual interface of all vectors
  */
 template <typename Derived>
-class NsVector : public BaseNsVector {
+class ZeroSuppressionVector : public BaseZeroSuppressionVector {
  public:
   /**
    * @defgroup Virtual interface implementation
@@ -69,7 +70,7 @@ class NsVector : public BaseNsVector {
 
   std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
 
-  std::shared_ptr<BaseNsVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     return _self()._on_copy_using_allocator(alloc);
   }
 
