@@ -133,10 +133,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual const std::vector<std::string>& output_column_names() const;
 
-  std::optional<ColumnOrigin> find_column_origin(const NamedColumnReference& named_column_reference) const;
+  std::optional<ColumnOrigin> find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
+
+  // has to be overriden if there is > 1 child
+  virtual ColumnOrigin find_column_origin_by_output_column_id(const ColumnID column_id) const;
+
+  // has to be override by StoredTableNode
   virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
-  virtual std::optional<ColumnID> resolve_column_origin(const ColumnOrigin& column_origin) const;
-  virtual std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const;
+  std::optional<ColumnID> resolve_column_origin(const ColumnOrigin& column_origin) const;
+  std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const;
+  std::optional<ColumnID> map_output_column_id_to_input_column_id(const ColumnID output_column_id) const;
+  virtual const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const;
 
   size_t output_column_count() const;
 
@@ -207,11 +214,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * For each column in the input node holds
    *    - the ColumnID of this column in the output of this node
-   *    - INVALID_COLUMN_ID, if the column was created by this node.
+   *    - std::nullopt, if the column was created by this node.
    *
    * mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides
    */
-  mutable std::optional<std::vector<ColumnID>> _output_column_ids_to_input_column_ids;
+  mutable std::optional<std::vector<std::optional<ColumnID>>> _output_column_ids_to_input_column_ids;
 
   /**
    * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we

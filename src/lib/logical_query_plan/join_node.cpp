@@ -48,12 +48,24 @@ std::string JoinNode::description() const {
   return desc.str();
 }
 
-const std::vector<ColumnID>& JoinNode::output_column_ids_to_input_column_ids() const {
+const std::vector<std::optional<ColumnID>>& JoinNode::output_column_ids_to_input_column_ids() const {
   if (!_output_column_ids_to_input_column_ids) {
     _update_output();
   }
 
   return *_output_column_ids_to_input_column_ids;
+}
+
+ColumnOrigin JoinNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
+  Assert(left_child() && right_child(), "Need both children for this operation");
+
+  if (column_id < left_child()->output_column_count()) {
+    return left_child()->find_column_origin_by_output_column_id(column_id);
+  } else {
+    const auto right_child_column_id = column_id - left_child()->output_column_count();
+    Assert(right_child_column_id < right_child()->output_column_count(), "ColumnID out of range");
+    return right_child()->find_column_origin_by_output_column_id(right_child_column_id);
+  }
 }
 
 const std::vector<std::string>& JoinNode::output_column_names() const {
@@ -62,73 +74,6 @@ const std::vector<std::string>& JoinNode::output_column_names() const {
   }
 
   return *_output_column_names;
-}
-
-std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const {
-  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
-
-  auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
-  if (!named_column_reference_without_local_column_prefix) {
-    return {};
-  }
-
-  std::optional<ColumnID> left_column_id;
-  std::optional<ColumnID> right_column_id;
-
-  // If there is no qualifying table name or this table's alias is used, search both children.
-  if (!named_column_reference_without_local_column_prefix->table_name ||
-      (_table_alias && *_table_alias == named_column_reference_without_local_column_prefix->table_name)) {
-    left_column_id =
-        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-    right_column_id =
-        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-  } else {
-    // Otherwise only search a child if it knows that qualifier.
-    auto left_knows_table = left_child()->knows_table(*named_column_reference_without_local_column_prefix->table_name);
-    auto right_knows_table = right_child()->knows_table(*named_column_reference_without_local_column_prefix->table_name);
-
-    // If neither input table knows the table name, return.
-    if (!left_knows_table && !right_knows_table) {
-      return std::nullopt;
-    }
-
-    // There must not be two tables with the same qualifying name.
-    Assert(left_knows_table ^ right_knows_table,
-           "Table name " + *named_column_reference_without_local_column_prefix->table_name + " is ambiguous.");
-
-    if (left_knows_table) {
-      left_column_id =
-          left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-    } else {
-      right_column_id =
-          right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-    }
-  }
-
-  // If neither input table has that column, return.
-  if (!left_column_id && !right_column_id) {
-    return std::nullopt;
-  }
-
-  Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
-         "Column name " + named_column_reference_without_local_column_prefix->column_name + " is ambiguous.");
-
-  ColumnID input_column_id;
-  ColumnID output_column_id;
-
-  if (left_column_id) {
-    input_column_id = *left_column_id;
-    output_column_id = *left_column_id;
-  } else {
-    input_column_id = *right_column_id;
-    output_column_id = left_child()->output_column_count() + *right_column_id;
-  }
-
-  DebugAssert(output_column_ids_to_input_column_ids()[output_column_id] == input_column_id,
-              "ColumnID should be in output.");
-
-  return output_column_id;
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
@@ -142,56 +87,6 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
                                                                              *_join_column_origins, *_scan_type);
   }
-}
-
-bool JoinNode::knows_table(const std::string& table_name) const {
-  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
-  if (_table_alias) {
-    return *_table_alias == table_name;
-  } else {
-    return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
-  }
-}
-
-std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
-
-  if (_table_alias) {
-    if (*_table_alias == table_name) {
-      return get_output_column_ids();
-    } else {
-      // if the join is an aliased subquery, we cannot access the individual tables anymore.
-      return {};
-    }
-  }
-
-  auto left_knows_table = left_child()->knows_table(table_name);
-  auto right_knows_table = right_child()->knows_table(table_name);
-
-  // If neither input table knows the table name, return.
-  if (!left_knows_table && !right_knows_table) {
-    return {};
-  }
-
-  // There must not be two tables with the same qualifying name.
-  Assert(left_knows_table ^ right_knows_table, "Table name " + table_name + " is ambiguous.");
-
-  if (left_knows_table) {
-    // The ColumnIDs of the left table appear first in `_output_column_ids_to_input_column_ids`.
-    // That means they are at the same position in our output, so we can return them directly.
-    return left_child()->get_output_column_ids_for_table(table_name);
-  }
-
-  // The ColumnIDs of the right table appear after the ColumnIDs of the left table.
-  // Add that offset to each of them and return that list.
-  const auto input_column_ids_for_table = right_child()->get_output_column_ids_for_table(table_name);
-  std::vector<ColumnID> output_column_ids_for_table;
-  for (const auto input_column_id : input_column_ids_for_table) {
-    const auto idx = left_child()->output_column_count() + input_column_id;
-    output_column_ids_for_table.emplace_back(static_cast<ColumnID::base_type>(idx));
-  }
-
-  return output_column_ids_for_table;
 }
 
 const std::optional<JoinColumnOrigins>& JoinNode::join_column_origins() const { return _join_column_origins; }

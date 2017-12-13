@@ -39,7 +39,7 @@ const std::vector<std::string>& UnionNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<ColumnID>& UnionNode::output_column_ids_to_input_column_ids() const {
+const std::vector<std::optional<ColumnID>>& UnionNode::output_column_ids_to_input_column_ids() const {
   if (!_output_column_ids_to_input_column_ids) {
     _output_column_ids_to_input_column_ids.emplace(output_column_count());
     std::iota(_output_column_ids_to_input_column_ids->begin(), _output_column_ids_to_input_column_ids->end(),
@@ -54,34 +54,17 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
   return nullptr;  // Return something
 }
 
-std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const {
-  auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
+ColumnOrigin UnionNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
+  Assert(left_child() && right_child(), "Need children to determine ColumnOrigin");
 
-  if (!named_column_reference_without_local_column_prefix) {
-    return std::nullopt;
-  }
+  const auto column_origin_in_left_child = left_child()->find_column_origin_by_output_column_id(column_id);
 
-  const auto column_id_in_left =
-      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
+#if IS_DEBUG
+  const auto column_origin_in_right_child = right_child()->find_column_origin_by_output_column_id(column_id);
+  Assert(column_origin_in_left_child == column_origin_in_right_child, "Column origins in subtrees do not match, invalid LQP");
+#endif
 
-  const auto column_id_in_right =
-      right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-
-  if (column_id_in_left != column_id_in_right) {
-    return std::nullopt;
-  }
-
-  return column_id_in_left;
-}
-
-bool UnionNode::knows_table(const std::string& table_name) const {
-  return false;  // knows_table() is not a concept that applies to Unions
-}
-
-std::vector<ColumnID> UnionNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  Fail("get_output_column_ids_for_table() is not a concept that applies to Unions");
-  return {};
+  return column_origin_in_left_child;
 }
 
 }  // namespace opossum

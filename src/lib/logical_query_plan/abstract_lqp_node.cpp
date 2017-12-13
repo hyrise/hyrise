@@ -145,7 +145,7 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin(const NamedColumnReference& named_column_reference) const {
+std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
   const auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
   if (!named_column_reference_without_local_column_prefix) {
     return std::nullopt;
@@ -154,7 +154,7 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin(const NamedColum
   if (!named_column_reference_without_local_column_prefix->table_name) {
     for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
       if (output_column_names()[column_id] == named_column_reference_without_local_column_prefix->column_name) {
-        return std::optional<ColumnOrigin>(std::in_place, shared_from_this(), column_id);
+        return find_column_origin_by_output_column_id(column_id);
       }
     }
   }
@@ -163,10 +163,10 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin(const NamedColum
     return std::nullopt;
   }
 
-  const auto column_origin_in_left_child = left_child()->find_column_origin(*named_column_reference_without_local_column_prefix);
+  const auto column_origin_in_left_child = left_child()->find_column_origin_by_named_column_reference(*named_column_reference_without_local_column_prefix);
 
   if (right_child()) {
-    const auto column_origin_in_right_child = right_child()->find_column_origin(*named_column_reference_without_local_column_prefix);
+    const auto column_origin_in_right_child = right_child()->find_column_origin_by_named_column_reference(*named_column_reference_without_local_column_prefix);
 
     if (column_origin_in_left_child && column_origin_in_right_child) {
       Assert(column_origin_in_left_child == column_origin_in_right_child, "If both children can resolve the NamedColumnReference, they have to resolve a it to the same ColumnOrigin.");
@@ -177,6 +177,17 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin(const NamedColum
   }
 
   return column_origin_in_left_child;
+}
+
+ColumnOrigin AbstractLQPNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
+  const auto input_column_id = map_output_column_id_to_input_column_id(column_id);
+  if (input_column_id == INVALID_COLUMN_ID) {
+    return {std::in_place, shared_from_this(), column_id};
+  }
+
+  Assert(left_child() && !right_child(), "Node type has to override find_column_origin_by_output_column_id()");
+
+  return left_child()->find_column_origin_by_output_column_id(input_column_id);
 }
 
 std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(const std::string& table_name) const {
@@ -235,10 +246,22 @@ std::optional<ColumnID> AbstractLQPNode::resolve_column_origin(const ColumnOrigi
 }
 
 std::optional<ColumnID> AbstractLQPNode::map_input_column_id_to_output_column_id(const ColumnID input_column_id) const {
-  return input_column_id; // Nodes changing column order will need to override
+  const auto output_column_ids_to_input_column_ids = _output_column_ids_to_input_column_ids();
+  for (auto output_column_id = ColumnID{0}; output_column_id < output_column_count(); output_column_id++) {
+    if (output_column_ids_to_input_column_ids[output_column_id] == input_column_id) {
+      return output_column_id;
+    }
+  }
+
+  return std::nullopt;
 }
 
-const std::vector<ColumnID>& AbstractLQPNode::output_column_ids_to_input_column_ids() const {
+std::optional<ColumnID> AbstractLQPNode::map_output_column_id_to_input_column_id(const ColumnID output_column_id) const {
+  Assert(output_column_id < output_column_count(), "ColumnID out of range");
+  return _output_column_ids_to_input_column_ids()[output_column_id];
+}
+
+const std::vector<std::optional<ColumnID>>& AbstractLQPNode::output_column_ids_to_input_column_ids() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
@@ -255,68 +278,6 @@ const std::vector<ColumnID>& AbstractLQPNode::output_column_ids_to_input_column_
 }
 
 size_t AbstractLQPNode::output_column_count() const { return output_column_names().size(); }
-
-ColumnID AbstractLQPNode::get_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const {
-  const auto column_id = find_column_id_by_named_column_reference(named_column_reference);
-  DebugAssert(column_id,
-              std::string("NamedColumnReference ") + named_column_reference.column_name + " could not be resolved.");
-  return *column_id;
-}
-
-std::optional<ColumnID> AbstractLQPNode::find_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const {
-  /**
-   * This function has to be overwritten if columns or their order are in any way redefined by this Node.
-   * Examples include Projections, Aggregates, and Joins.
-   */
-  DebugAssert(left_child() && !right_child(),
-              "Node has no or two inputs and therefore needs to override this function");
-
-  auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
-  if (!named_column_reference_without_local_column_prefix) {
-    return {};
-  } else {
-    return left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-  }
-}
-
-bool AbstractLQPNode::knows_table(const std::string& table_name) const {
-  /**
-   * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
-   */
-  DebugAssert(left_child() && !right_child(),
-              "Node has no or two inputs and therefore needs to override this function");
-  if (_table_alias) {
-    return *_table_alias == table_name;
-  } else {
-    return left_child()->knows_table(table_name);
-  }
-}
-
-std::vector<ColumnID> AbstractLQPNode::get_output_column_ids() const {
-  std::vector<ColumnID> column_ids(output_column_count());
-  std::iota(column_ids.begin(), column_ids.end(), 0);
-  return column_ids;
-}
-
-std::vector<ColumnID> AbstractLQPNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  /**
-   * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
-   */
-  DebugAssert(left_child() && !right_child(),
-              "Node has no or two inputs and therefore needs to override this function.");
-
-  if (!knows_table(table_name)) {
-    return {};
-  }
-
-  if (_table_alias && *_table_alias == table_name) {
-    return get_output_column_ids();
-  }
-
-  return left_child()->get_output_column_ids_for_table(table_name);
-}
 
 void AbstractLQPNode::remove_from_tree() {
   Assert(!right_child(), "Can only remove nodes that only have a left child or no children");

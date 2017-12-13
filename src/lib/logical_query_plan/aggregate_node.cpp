@@ -72,19 +72,6 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-std::optional<ColumnID> AggregateNode::map_input_column_id_to_output_column_id(const ColumnID input_column_id) const {
-  Assert(left_child(), "Need a left child to perform this operation");
-
-  const auto iter = std::find_if(_groupby_column_origins.begin(), _groupby_column_origins.end(), [&](const auto & column_origin) {
-    const auto column_id = left_child()->resolve_column_origin(column_origin) == input_column_id;
-  });
-  if (iter == _groupby_column_origins.end()) {
-    return std::nullopt;
-  }
-
-  return static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter));
-}
-
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
@@ -122,67 +109,11 @@ const std::vector<std::string>& AggregateNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<ColumnID>& AggregateNode::output_column_ids_to_input_column_ids() const {
+const std::vector<std::optional<ColumnID>>& AggregateNode::output_column_ids_to_input_column_ids() const {
   if (!_output_column_ids_to_input_column_ids) {
     _update_output();
   }
   return *_output_column_ids_to_input_column_ids;
-}
-
-std::optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const {
-  DebugAssert(left_child(), "AggregateNode needs a child.");
-
-  auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
-  if (!named_column_reference_without_local_column_prefix) {
-    return {};
-  }
-
-  /*
-   * Search for NamedColumnReference in Aggregate columns ALIASes, if the named_column_reference has no table.
-   * These columns are created by the Aggregate Operator, so we have to look through them here.
-   */
-  std::optional<ColumnID> column_id_aggregate;
-  if (!named_column_reference_without_local_column_prefix->table_name) {
-    for (auto aggregate_idx = 0u; aggregate_idx < _aggregate_expressions.size(); aggregate_idx++) {
-      const auto& aggregate_expression = _aggregate_expressions[aggregate_idx];
-
-      // If AggregateDefinition has no alias, column_name will not match.
-      if (named_column_reference_without_local_column_prefix->column_name == aggregate_expression->alias()) {
-        // Check that we haven't found a match yet.
-        Assert(!column_id_aggregate,
-               "Column name " + named_column_reference_without_local_column_prefix->column_name + " is ambiguous.");
-        // Aggregate columns come after Group By columns in the Aggregate's output
-        column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(aggregate_idx + _groupby_column_origins.size())};
-      }
-    }
-  }
-
-  /*
-   * Search for NamedColumnReference in Group By columns.
-   * These columns have been created by another node. Since Aggregates can only have a single child node,
-   * we just have to check the left_child for the NamedColumnReference.
-   */
-  std::optional<ColumnID> column_id_groupby;
-  const auto column_id_child =
-      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-  if (column_id_child) {
-    const auto iter = std::find(_groupby_column_origins.begin(), _groupby_column_origins.end(), *column_id_child);
-    if (iter != _groupby_column_ids.end()) {
-      column_id_groupby = ColumnID{static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter))};
-    }
-  }
-
-  // Max one can be set, both not being set is fine, as we are in a find_* method
-  Assert(!column_id_aggregate || !column_id_groupby,
-         "Column name " + named_column_reference_without_local_column_prefix->column_name + " is ambiguous.");
-
-  if (column_id_aggregate) {
-    return column_id_aggregate;
-  }
-
-  // Optional might not be set.
-  return column_id_groupby;
 }
 
 ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
@@ -202,12 +133,11 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
    */
   if (expression->type() == ExpressionType::Column) {
     const auto iter =
-        std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
-                     [&](const auto& groupby_column_id) { return expression->column_id() == groupby_column_id; });
+        std::find_if(_groupby_column_origins.begin(), _groupby_column_origins.end(),
+                     [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
 
-    if (iter != _groupby_column_ids.end()) {
-      const auto idx = std::distance(_groupby_column_ids.begin(), iter);
-      return ColumnID{static_cast<ColumnID::base_type>(idx)};
+    if (iter != _groupby_column_origins.end()) {
+      return static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter));
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =
@@ -218,7 +148,7 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
+      return static_cast<ColumnID>(idx + _groupby_column_origins.size());
     }
   } else {
     Fail("Expression type is not supported.");
@@ -226,33 +156,6 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
 
   // Return unset optional if expression was not found.
   return std::nullopt;
-}
-
-std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  DebugAssert(left_child(), "AggregateNode needs a child.");
-
-  if (!knows_table(table_name)) {
-    return {};
-  }
-
-  if (_table_alias && *_table_alias == table_name) {
-    return get_output_column_ids();
-  }
-
-  const auto input_column_ids_for_table = left_child()->get_output_column_ids_for_table(table_name);
-
-  std::vector<ColumnID> output_column_ids_for_table;
-
-  for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), input_column_id);
-
-    if (iter != _groupby_column_ids.end()) {
-      const auto index = std::distance(_groupby_column_ids.begin(), iter);
-      output_column_ids_for_table.emplace_back(static_cast<ColumnID::base_type>(index));
-    }
-  }
-
-  return output_column_ids_for_table;
 }
 
 void AggregateNode::_update_output() const {
@@ -267,10 +170,10 @@ void AggregateNode::_update_output() const {
   DebugAssert(left_child(), "Can't set output without input");
 
   _output_column_names.emplace();
-  _output_column_names->reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+  _output_column_names->reserve(_groupby_column_origins.size() + _aggregate_expressions.size());
 
   _output_column_ids_to_input_column_ids.emplace();
-  _output_column_ids_to_input_column_ids->reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+  _output_column_ids_to_input_column_ids->reserve(_groupby_column_origins.size() + _aggregate_expressions.size());
 
   /**
    * Set output column ids and names.
@@ -278,9 +181,10 @@ void AggregateNode::_update_output() const {
    * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
-  for (const auto groupby_column_id : _groupby_column_ids) {
-    _output_column_ids_to_input_column_ids->emplace_back(groupby_column_id);
-    _output_column_names->emplace_back(left_child()->output_column_names()[groupby_column_id]);
+  for (const auto& groupby_column_origin : _groupby_column_origins) {
+    const auto input_column_id = left_child()->resolve_column_origin(groupby_column_origin);
+    _output_column_ids_to_input_column_ids->emplace_back(input_column_id);
+    _output_column_names->emplace_back(left_child()->output_column_names()[input_column_id]);
   }
 
   for (const auto& aggregate_expression : _aggregate_expressions) {
@@ -301,7 +205,7 @@ void AggregateNode::_update_output() const {
     }
 
     _output_column_names->emplace_back(column_name);
-    _output_column_ids_to_input_column_ids->emplace_back(INVALID_COLUMN_ID);
+    _output_column_ids_to_input_column_ids->emplace_back(std::nullopt);
   }
 }
 
