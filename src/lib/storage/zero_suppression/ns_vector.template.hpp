@@ -23,9 +23,9 @@ class NsVectorTemplate : public NsVector<NsVectorTemplate> {
   size_t _on_size() const { return _data.size(); }
   size_t _on_data_size() const { return sizeof(uint32_t) * _data.size(); }
 
-  auto _on_create_base_decoder() const { return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()}; }
+  auto _on_create_base_decoder() const { return std::unique_ptr<BaseZeroSuppressionDecoder>{_on_create_decoder()}; }
 
-  // TODO(you): Decoder must inherit from BaseNsDecoder
+  // TODO(you): Decoder must inherit from BaseZeroSuppressionDecoder
   auto _on_create_decoder() const { return std::make_unique<NsDecoderTemplate>(_data); }
 
   // TODO(you): Return a constant forward iterator returning uint32_t

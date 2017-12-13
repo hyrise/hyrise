@@ -25,7 +25,7 @@ class SimdBp128Vector : public NsVector<SimdBp128Vector> {
   size_t _on_size() const;
   size_t _on_data_size() const;
 
-  std::unique_ptr<BaseNsDecoder> _on_create_base_decoder() const;
+  std::unique_ptr<BaseZeroSuppressionDecoder> _on_create_base_decoder() const;
   std::unique_ptr<SimdBp128Decoder> _on_create_decoder() const;
 
   ConstIterator _on_cbegin() const;

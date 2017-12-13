@@ -11,9 +11,9 @@ namespace opossum {
  *
  * Subclasses must be added in ns_decoders.hpp
  */
-class BaseNsDecoder {
+class BaseZeroSuppressionDecoder {
  public:
-  virtual ~BaseNsDecoder() = default;
+  virtual ~BaseZeroSuppressionDecoder() = default;
 
   virtual uint32_t get(size_t i) = 0;
   virtual size_t size() const = 0;

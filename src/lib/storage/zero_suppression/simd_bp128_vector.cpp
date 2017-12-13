@@ -11,8 +11,8 @@ const pmr_vector<uint128_t>& SimdBp128Vector::data() const { return _data; }
 size_t SimdBp128Vector::_on_size() const { return _size; }
 size_t SimdBp128Vector::_on_data_size() const { return sizeof(uint128_t) * _data.size(); }
 
-std::unique_ptr<BaseNsDecoder> SimdBp128Vector::_on_create_base_decoder() const {
-  return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()};
+std::unique_ptr<BaseZeroSuppressionDecoder> SimdBp128Vector::_on_create_base_decoder() const {
+  return std::unique_ptr<BaseZeroSuppressionDecoder>{_on_create_decoder()};
 }
 
 std::unique_ptr<SimdBp128Decoder> SimdBp128Vector::_on_create_decoder() const {

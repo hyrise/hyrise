@@ -1,13 +1,13 @@
 #pragma once
 
-#include "base_ns_decoder.hpp"
+#include "base_zero_suppression_decoder.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedDecoder : public BaseNsDecoder {
+class FixedSizeByteAlignedDecoder : public BaseZeroSuppressionDecoder {
  public:
   explicit FixedSizeByteAlignedDecoder(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
   ~FixedSizeByteAlignedDecoder() final = default;

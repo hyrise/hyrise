@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "base_ns_decoder.hpp"
+#include "base_zero_suppression_decoder.hpp"
 #include "ns_type.hpp"
 
 #include "types.hpp"
@@ -12,7 +12,7 @@
 namespace opossum {
 
 /**
- * @brief Base class of all zero suppression vectors
+ * @brief Base class of all null suppression vectors
  *
  * Use the ns_vector.template.hpp to add new implementations!
  */
@@ -27,7 +27,7 @@ class BaseNsVector : private Noncopyable {
 
   virtual pmr_vector<uint32_t> decode() const = 0;
 
-  virtual std::unique_ptr<BaseNsDecoder> create_base_decoder() const = 0;
+  virtual std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const = 0;
 
   virtual std::shared_ptr<BaseNsVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
@@ -67,7 +67,7 @@ class NsVector : public BaseNsVector {
     return decoded_vector;
   }
 
-  std::unique_ptr<BaseNsDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
+  std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const final { return _self()._on_create_base_decoder(); }
 
   std::shared_ptr<BaseNsVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     return _self()._on_copy_using_allocator(alloc);
@@ -83,7 +83,7 @@ class NsVector : public BaseNsVector {
 
   /**
    * @brief Returns a vector specific decoder
-   * @return a unique_ptr of subclass of BaseNsDecoder
+   * @return a unique_ptr of subclass of BaseZeroSuppressionDecoder
    */
   auto create_decoder() const { return _self()._on_create_decoder(); }
 

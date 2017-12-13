@@ -254,7 +254,7 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
-    storage/zero_suppression/base_ns_decoder.hpp
+    storage/zero_suppression/base_zero_suppression_decoder.hpp
     storage/zero_suppression/base_ns_encoder.hpp
     storage/zero_suppression/base_ns_vector.hpp
     storage/zero_suppression/fixed_size_byte_aligned_decoder.hpp

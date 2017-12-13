@@ -8,7 +8,7 @@
 #include <utility>
 #include <iostream>
 
-#include "base_ns_decoder.hpp"
+#include "base_zero_suppression_decoder.hpp"
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
 
@@ -18,7 +18,7 @@ namespace opossum {
 
 class SimdBp128Vector;
 
-class SimdBp128Decoder : public BaseNsDecoder {
+class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
  public:
   using Packing = SimdBp128Packing;
 

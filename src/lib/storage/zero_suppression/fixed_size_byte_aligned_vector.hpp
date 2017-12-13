@@ -20,7 +20,7 @@ class FixedSizeByteAlignedVector : public NsVector<FixedSizeByteAlignedVector<Un
   size_t _on_size() const { return _data.size(); }
   size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
-  auto _on_create_base_decoder() const { return std::unique_ptr<BaseNsDecoder>{_on_create_decoder()}; }
+  auto _on_create_base_decoder() const { return std::unique_ptr<BaseZeroSuppressionDecoder>{_on_create_decoder()}; }
 
   auto _on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecoder<UnsignedIntType>>(_data); }
 
