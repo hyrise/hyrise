@@ -259,9 +259,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::Se
     current_result_node = _translate_where(*select.whereClause, current_result_node);
   }
 
-  // TODO(torpedro): Handle DISTINCT.
   DebugAssert(select.selectList != nullptr, "SELECT list needs to exist");
   DebugAssert(!select.selectList->empty(), "SELECT list needs to have entries");
+
+  Assert(!select.selectDistinct, "DISTINCT is not yet supported");
 
   // If the query has a GROUP BY clause or if it has aggregates, we do not need a top-level projection
   // because all elements must either be aggregate functions or columns of the GROUP BY clause,
