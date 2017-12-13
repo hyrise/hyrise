@@ -46,6 +46,15 @@ class DictionaryColumn : public BaseDictionaryColumn {
   /**@}*/
 
   /**
+   * @defgroup BaseEncodedColumn interface
+   * @{
+   */
+
+  size_t data_size() const final;
+
+  /**@}*/
+
+  /**
    * @defgroup BaseDictionaryColumn interface
    * @{
    */

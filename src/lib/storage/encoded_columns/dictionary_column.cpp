@@ -93,6 +93,15 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const Poly
 }
 
 template <typename T>
+size_t DictionaryColumn<T>::data_size() const {
+  auto data_size = size_t{0u};
+  data_size += _attribute_vector->data_size();
+  data_size += _dictionary->capacity() * sizeof(T);
+  data_size += sizeof(DictionaryColumn<T>);
+  return data_size;
+}
+
+template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 

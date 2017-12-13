@@ -20,7 +20,14 @@ class BaseZeroSuppressionVector : private Noncopyable {
  public:
   virtual ~BaseZeroSuppressionVector() = default;
 
+  /**
+   * @brief Returns the number of elements in the vector
+   */
   virtual size_t size() const = 0;
+
+  /**
+   * @brief Returns the physical size of the vector
+   */
   virtual size_t data_size() const = 0;
 
   virtual ZsType type() const = 0;
