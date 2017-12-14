@@ -2,11 +2,13 @@
 add_executable(
     hyriseServer
 
-    server.cpp
+    server/server.cpp
+    server/postgres_wire_handler.cpp
+    server/postgres_wire_handler.hpp
 )
 target_link_libraries(
     hyriseServer
-    hyrise
+#    hyrise
     ${Boost_SYSTEM_LIBRARY}
     boost_program_options
 )
