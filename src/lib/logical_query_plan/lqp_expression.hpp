@@ -9,7 +9,13 @@ namespace opossum {
 
 class LQPExpression : public Expression {
  public:
+  static std::shared_ptr<LQPExpression> create_column(const ColumnOrigin& column_origin,
+                                                              const std::optional<std::string>& alias);
+  using Expression::Expression;
+
   const ColumnOrigin& column_origin() const;
+
+  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt) const override;
 
  private:
   std::optional<ColumnOrigin> _column_origin;

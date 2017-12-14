@@ -17,24 +17,6 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::create_column(const ColumnOrigin& column_origin,
-                                                      const std::optional<std::string>& alias) {
-  auto expression = std::make_shared<Expression>(ExpressionType::Column);
-  expression->_column_origin = column_origin;
-  expression->_alias = alias;
-
-  return expression;
-}
-
-std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,
-                                                      const std::optional<std::string>& alias) {
-  auto expression = std::make_shared<Expression>(ExpressionType::Column);
-  expression->_column_id = column_id;
-  expression->_alias = alias;
-
-  return expression;
-}
-
 std::vector<std::shared_ptr<Expression>> Expression::create_columns(
     const std::vector<ColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
   std::vector<std::shared_ptr<Expression>> column_references;
@@ -250,20 +232,6 @@ const std::string Expression::description() const {
   return desc.str();
 }
 
-const ColumnOrigin& Expression::column_origin() const {
-  DebugAssert(_column_reference != std::nullopt,
-              "Expression " + expression_type_to_string.at(_type) + " does not have a column");
-  DebugAssert(_column_reference.type() == typeid(ColumnOrigin), "Column expression not a ColumnOrigin. Are you using Operator expressions in a LQP?");
-  return boost::get<ColumnOrigin>(_column_reference);
-}
-
-ColumnID Expression::column_id() const {
-  DebugAssert(_column_reference != std::nullopt,
-              "Expression " + expression_type_to_string.at(_type) + " does not have a column");
-  DebugAssert(_column_reference.type() == typeid(ColumnID), "Column expression not a ColumnID. Are you using LQP expressions in an Operator?");
-  return boost::get<ColumnID>(_column_reference);
-}
-
 const std::optional<std::string>& Expression::table_name() const { return _table_name; }
 
 AggregateFunction Expression::aggregate_function() const {
@@ -296,17 +264,7 @@ std::string Expression::to_string(const std::optional<std::vector<std::string>>&
       }
       return type_cast<std::string>(value());
     case ExpressionType::Column:
-      if (_column_reference.type() == typeid(ColumnID)) {
-        if (!input_column_names) {
-          DebugAssert(column_id() < input_column_names.size(),
-                      std::string("_column_id ") + std::to_string(column_id()) + " out of range");
-          return input_column_names[column_id()];
-        }
-        return std::string("ColumnID #" + std::to_string(column_id()));
-      } else {
-        Assert(_column_reference.type() == typeid(ColumnOrigin), "Unhandled column type");
-        return column_origin().get_verbose_column_name();
-      }
+      Fail("This should be handled in derived Expression type");
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
              _expression_list[0]->to_string() + ")";

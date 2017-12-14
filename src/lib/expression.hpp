@@ -133,8 +133,6 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /**
    * Getters. Only call them if you are sure the type() has such a member
    */
-  const ColumnOrigin& column_origin() const;
-  ColumnID column_id() const;
   AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
@@ -156,7 +154,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
    * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
-  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt) const;
+  virtual std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt) const;
 
   bool operator==(const Expression& other) const;
 
