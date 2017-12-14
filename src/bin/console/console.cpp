@@ -187,7 +187,7 @@ int Console::_eval(const std::string& input) {
 
   // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
   _multiline_input += input;
-  _multiline_input += ' ';
+  _multiline_input += '\n';
   return ReturnCode::Multiline;
 }
 
@@ -215,36 +215,55 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   return static_cast<int>(func(args));
 }
 
-int Console::_eval_sql(const std::string& sql) {
-  if (_explicitly_created_transaction_context != nullptr) {
-    _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
-  } else {
-    _sql_pipeline = std::make_unique<SQLPipeline>(sql);
-  }
-
+bool Console::_initialize_pipelines(const std::string& sql) {
   try {
-    _sql_pipeline->get_result_table();
-  } catch (const std::exception& exception) {
-    out(std::string(exception.what()) + "\n");
-    if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
-      out("The transaction has been rolled back.\n");
+    if (_explicitly_created_transaction_context != nullptr) {
+      _sql_pipelines = SQLPipeline::from_sql_string(sql, _explicitly_created_transaction_context);
+    } else {
+      _sql_pipelines = SQLPipeline::from_sql_string(sql);
     }
-    _explicitly_created_transaction_context = nullptr;
-    return ReturnCode::Error;
+  } catch (const std::exception& exception) {
+    out(std::string(exception.what()) + '\n');
+    return false;
   }
 
-  const auto& table = _sql_pipeline->get_result_table();
+  return true;
+}
+
+int Console::_eval_sql(const std::string& sql) {
+  if (!_initialize_pipelines(sql)) return ReturnCode::Error;
+
+  for (auto& pipeline : _sql_pipelines) {
+    try {
+      pipeline.get_result_table();
+    } catch (const std::exception& exception) {
+      out(std::string(exception.what()) + "\n");
+      if (pipeline.transaction_context() && pipeline.transaction_context()->aborted()) {
+        out("The transaction has been rolled back.\nAll previous statements have been commited.\n");
+        _explicitly_created_transaction_context = nullptr;
+      }
+      return ReturnCode::Error;
+    }
+  }
+
+  const auto& table = _sql_pipelines.back().get_result_table();
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
   if (table) {
     out(table);
   }
+
+  std::chrono::microseconds compile_time_micros{};
+  std::chrono::microseconds execution_time_micros{};
+  for (const auto& pipeline : _sql_pipelines) {
+    compile_time_micros += pipeline.compile_time_microseconds();
+    execution_time_micros += pipeline.execution_time_microseconds();
+  }
+
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" + "PARSE: " +
-      std::to_string(_sql_pipeline->parse_time_microseconds().count()) + " µs, " + "COMPILE: " +
-      std::to_string(_sql_pipeline->compile_time_microseconds().count()) + " µs, " + "EXECUTE: " +
-      std::to_string(_sql_pipeline->execution_time_microseconds().count()) + " µs (wall time))\n");
+  out(std::to_string(row_count) + " rows total (" + "COMPILE: " + std::to_string(compile_time_micros.count()) +
+      " µs, " + "EXECUTE: " + std::to_string(execution_time_micros.count()) + " µs (wall time))\n");
 
   return ReturnCode::Ok;
 }
@@ -313,25 +332,26 @@ int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 int Console::help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate [TABLENAME]         - Generate available TPC-C tables, or a specific table if TABLENAME is "
+  out("  generate [TABLENAME]             - Generate available TPC-C tables, or a specific table if TABLENAME is "
       "specified\n");
-  out("  load FILE TABLENAME          - Load table from disc specified by filepath FILE, store it with name "
+  out("  load FILE TABLENAME              - Load table from disc specified by filepath FILE, store it with name "
       "TABLENAME\n");
-  out("  script SCRIPTFILE            - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME              - Fully print the given table (including MVCC columns)\n");
-  out("  visualize [options] SQL      - Visualize a SQL query\n");
-  out("             noexec               - without executing the query\n");
-  out("             lqp                  - print the raw logical query plans\n");
-  out("             lqpopt               - print the optimized abstract syntax tree\n");
-  out("  begin                        - Manually create a new transaction (Auto-commit is active unless begin is "
+  out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                  - Fully print the given table (including MVCC columns)\n");
+  out("  visualize [options] (noexec) SQL - Visualize a SQL query\n");
+  out("                      <if set>        - does not execute the query (only supported with single statements)\n");
+  out("             lqp                      - print the raw logical query plans\n");
+  out("             lqpopt                   - print the optimized logical query plans\n");
+  out("            <not set>                 - print the physical query plan\n");
+  out("  begin                            - Manually create a new transaction (Auto-commit is active unless begin is "
       "called)\n");
-  out("  rollback                     - Roll back a manually created transaction\n");
-  out("  commit                       - Commit a manually created transaction\n");
-  out("  txinfo                       - Print information on the current transaction\n");
-  out("  quit                         - Exit the HYRISE Console\n");
-  out("  help                         - Show this message\n\n");
-  out("  setting [property] [value]   - Change a runtime setting\n\n");
-  out("           scheduler (on|off)  - Turn the scheduler on (default) or off\n\n");
+  out("  rollback                         - Roll back a manually created transaction\n");
+  out("  commit                           - Commit a manually created transaction\n");
+  out("  txinfo                           - Print information on the current transaction\n");
+  out("  quit                             - Exit the HYRISE Console\n");
+  out("  help                             - Show this message\n\n");
+  out("  setting [property] [value]       - Change a runtime setting\n\n");
+  out("           scheduler (on|off)      - Turn the scheduler on (default) or off\n\n");
   out("After TPC-C tables are generated, SQL queries can be executed.\n");
   out("Example:\n");
   out("SELECT * FROM DISTRICT\n");
@@ -436,60 +456,96 @@ int Console::print_table(const std::string& args) {
 }
 
 int Console::visualize(const std::string& input) {
-  auto first_word = input.substr(0, input.find_first_of(" \n"));
-  std::string mode, sql, graph_filename, img_filename;
-  if (first_word == "noexec" || first_word == "lqp" || first_word == "lqpopt") {
+  std::vector<std::string> input_words;
+  boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
+
+  std::string first_word, second_word;
+  if (!input_words.empty()) {
+    first_word = input_words[0];
+  }
+
+  if (input_words.size() > 1) {
+    second_word = input_words[1];
+  }
+
+  const bool no_execute = (first_word == "noexec" || second_word == "noexec");
+
+  std::string mode;
+  if (first_word == "lqp" || first_word == "lqpopt")
     mode = first_word;
-  }
+  else if (second_word == "lqp" || second_word == "lqpopt")
+    mode = second_word;
 
-  // Removes mode from sql string. If no mode is set, does nothing.
-  sql = input.substr(mode.size(), input.size());
+  // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
+  const auto noexec_size = no_execute ? 6ul : 0ul;
+  auto sql_begin_pos = mode.size() + noexec_size;
 
-  // If no SQL is provided, use the last execution. Else, create a new pipeline.
+  // If we have both words present, we need to remove additional whitespace
+  if (no_execute && !mode.empty()) sql_begin_pos++;
+
+  const auto sql = input.substr(sql_begin_pos, input.size());
+
+  // If no SQL is provided, use the last execution. Else, create new pipelines.
   if (!sql.empty()) {
-    if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
-    } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
-    }
+    if (!_initialize_pipelines(sql)) return ReturnCode::Error;
   }
 
+  if (no_execute && !sql.empty() && _sql_pipelines.size() > 1) {
+    out("We do not support the visualization of multiple statements in noexec mode.\n");
+    return ReturnCode::Error;
+  }
+
+  std::string graph_filename, img_filename;
+
+  // Visualize the Logical Query Plan
   if (mode == "lqp" || mode == "lqpopt") {
-    try {
-      auto lqp_roots = _sql_pipeline->get_unoptimized_logical_plans();
+    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+    lqp_roots.reserve(_sql_pipelines.size());
 
-      if (mode == "lqpopt") {
-        lqp_roots = _sql_pipeline->get_optimized_logical_plans();
-      }
-
-      graph_filename = "." + mode + ".dot";
-      img_filename = mode + ".png";
-
-      LQPVisualizer visualizer;
-      visualizer.visualize(lqp_roots, graph_filename, img_filename);
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-  } else {
-    // Compile the parse result
-    SQLQueryPlan plan;
-    try {
-      plan = _sql_pipeline->get_query_plan();
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-
-    if (mode != "noexec") {
+    // We want to execute all statements
+    for (auto& pipeline : _sql_pipelines) {
       try {
-        _sql_pipeline->get_result_table();
+        auto& lqp = (mode == "lqp") ? pipeline.get_unoptimized_logical_plan() : pipeline.get_optimized_logical_plan();
+        lqp_roots.push_back(lqp);
+
+        if (!no_execute) {
+          // Execute so we can create next LQP
+          pipeline.get_result_table();
+        }
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
-        if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
+        if (pipeline.transaction_context() && pipeline.transaction_context()->aborted()) {
           out("The transaction has been rolled back.\n");
+          _explicitly_created_transaction_context = nullptr;
         }
-        _explicitly_created_transaction_context = nullptr;
+        return ReturnCode::Error;
+      }
+    }
+
+    graph_filename = "." + mode + ".dot";
+    img_filename = mode + ".png";
+    LQPVisualizer visualizer;
+    visualizer.visualize(lqp_roots, graph_filename, img_filename);
+
+  } else {
+    // Visualize the Physical Query Plan
+    SQLQueryPlan plan;
+
+    for (auto& pipeline : _sql_pipelines) {
+      try {
+        // Create plan with all roots
+        plan.append_plan(pipeline.get_query_plan());
+
+        if (!no_execute) {
+          // Execute so we can create next QueryPlan
+          pipeline.get_result_table();
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        if (pipeline.transaction_context() && pipeline.transaction_context()->aborted()) {
+          out("The transaction has been rolled back.\n");
+          _explicitly_created_transaction_context = nullptr;
+        }
         return ReturnCode::Error;
       }
     }
