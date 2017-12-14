@@ -4,6 +4,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
+#include "logical_query_plan/column_origin.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -19,6 +20,7 @@ namespace hana = boost::hana;
 static constexpr auto parameter_types =
     hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
                      hana::make_pair("ColumnID", hana::type_c<ColumnID>),              // NOLINT
+                     hana::make_pair("ColumnOrigin", hana::type_c<ColumnOrigin>),      // NOLINT
                      hana::make_pair("Placeholder", hana::type_c<ValuePlaceholder>));  // NOLINT
 
 // This holds only the possible data types.
@@ -36,6 +38,9 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 
 // Function to check if AllParameterVariant is a column id
 inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
+
+// Function to check if AllParameterVariant is a column origin
+inline bool is_column_origin(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnOrigin)); }
 
 // Function to check if AllParameterVariant is a placeholder
 inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.type() == typeid(ValuePlaceholder)); }

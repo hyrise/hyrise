@@ -181,8 +181,8 @@ set(
     sql/lru_cache.hpp
     sql/sql_planner.cpp
     sql/sql_planner.hpp
-    sql/sql_expression_translator.cpp
-    sql/sql_expression_translator.hpp
+    sql/hsql_expr_translator.cpp
+    sql/hsql_expr_translator.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp

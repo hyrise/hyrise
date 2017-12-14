@@ -7,13 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "expression.hpp"
+#include "lqp_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregate_expressions,
+AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
                              const std::vector<ColumnOrigin>& groupby_column_origins)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
@@ -23,7 +23,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& agg
   }
 }
 
-const std::vector<std::shared_ptr<Expression>>& AggregateNode::aggregate_expressions() const {
+const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
 }
 
@@ -39,7 +39,7 @@ std::string AggregateNode::description() const {
     verbose_column_names = left_child()->get_verbose_column_names();
   }
 
-  auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
+  auto stream_aggregate = [&](const std::shared_ptr<LQPExpression>& aggregate_expr) {
     s << aggregate_expr->to_string(verbose_column_names);
 
     if (aggregate_expr->alias()) {
@@ -116,14 +116,14 @@ const std::vector<std::optional<ColumnID>>& AggregateNode::output_column_ids_to_
   return *_output_column_ids_to_input_column_ids;
 }
 
-ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
-  const auto column_id = find_column_id_for_expression(expression);
+ColumnOrigin AggregateNode::get_column_origin_for_expression(const std::shared_ptr<LQPExpression>& expression) const {
+  const auto column_id = find_column_origin_for_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
-std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
-    const std::shared_ptr<Expression>& expression) const {
+std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
+    const std::shared_ptr<LQPExpression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
@@ -137,7 +137,7 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
                      [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
 
     if (iter != _groupby_column_origins.end()) {
-      return static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter));
+      return find_column_origin_by_output_column_id(static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter)));
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =
@@ -148,7 +148,7 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return static_cast<ColumnID>(idx + _groupby_column_origins.size());
+      return {shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
     }
   } else {
     Fail("Expression type is not supported.");

@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class Expression;
+class LQPExpression;
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
@@ -22,10 +22,10 @@ class Expression;
  */
 class AggregateNode : public AbstractLQPNode {
  public:
-  explicit AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregates,
+  explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
                          const std::vector<ColumnOrigin>& groupy_column_origins);
 
-  const std::vector<std::shared_ptr<Expression>>& aggregate_expressions() const;
+  const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
   const std::vector<ColumnOrigin>& groupby_column_origins() const;
 
   std::string description() const override;
@@ -35,10 +35,10 @@ class AggregateNode : public AbstractLQPNode {
 
   // @{
   /**
-   * AggregateNode::find_column_id_for_expression() looks for the @param expression in the columns this
+   * AggregateNode::find_column_origin_for_expression() looks for the @param expression in the columns this
    * node outputs, checking by semantic and NOT by Expression object's address. If it can find it, it will be returned,
    * otherwise std::nullopt is returned.
-   * AggregateNode::get_column_id_for_expression() is more strict and will fail, if the
+   * AggregateNode::get_column_origin_for_expression() is more strict and will fail, if the
    * @param expression cannot be found
    *
    * Since we're using a TableScan added AFTER the actual aggregate to implement HAVING, in a query like
@@ -48,11 +48,9 @@ class AggregateNode : public AbstractLQPNode {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
-  ColumnID get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
+  std::optional<ColumnOrigin> find_column_origin_for_expression(const std::shared_ptr<Expression>& expression) const;
+  ColumnOrigin get_column_origin_for_expression(const std::shared_ptr<Expression>& expression) const;
   // @}
-
-  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 

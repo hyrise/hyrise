@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class Expression;
+class LQPExpression;
 struct ColumnID;
 
 /**
@@ -18,9 +18,9 @@ struct ColumnID;
  */
 class ProjectionNode : public AbstractLQPNode {
  public:
-  explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
+  explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
 
-  const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
+  const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
 
   std::string description() const override;
 
@@ -33,7 +33,7 @@ class ProjectionNode : public AbstractLQPNode {
   void _on_child_changed() override;
 
  private:
-  const std::vector<std::shared_ptr<Expression>> _column_expressions;
+  const std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

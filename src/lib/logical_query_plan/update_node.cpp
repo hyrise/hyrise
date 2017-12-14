@@ -6,13 +6,14 @@
 #include <vector>
 
 #include "utils/assert.hpp"
+#include "lqp_expression.hpp"
 
 namespace opossum {
 
 class Expression;
 
 UpdateNode::UpdateNode(const std::string& table_name,
-                       const std::vector<std::shared_ptr<Expression>>& column_expressions)
+                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Update), _table_name(table_name), _column_expressions(column_expressions) {}
 
 std::string UpdateNode::description() const {
@@ -23,7 +24,7 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
-const std::vector<std::shared_ptr<Expression>>& UpdateNode::column_expressions() const { return _column_expressions; }
+const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const { return _column_expressions; }
 
 const std::string& UpdateNode::table_name() const { return _table_name; }
 

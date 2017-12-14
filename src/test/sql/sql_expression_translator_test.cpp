@@ -10,7 +10,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "expression.hpp"
 #include "sql/SQLStatement.h"
-#include "sql/sql_expression_translator.hpp"
+#include "sql/hsql_expr_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -47,7 +47,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto* select = static_cast<const hsql::SelectStatement*>(statement);
-        return _translator.translate_expression(*(select->whereClause), _stored_table_node);
+        return _translator.to_lqp_expression(*(select->whereClause), _stored_table_node);
       }
       default:
         throw std::runtime_error("Translating statement failed.");
@@ -69,7 +69,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
       case hsql::kStmtSelect: {
         const auto* select = static_cast<const hsql::SelectStatement*>(statement);
         for (auto expr : *(select->selectList)) {
-          expressions.emplace_back(_translator.translate_expression(*expr, _stored_table_node));
+          expressions.emplace_back(_translator.to_lqp_expression(*expr, _stored_table_node));
         }
         return expressions;
       }
@@ -78,7 +78,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
     }
   }
 
-  SQLExpressionTranslator _translator;
+  HSQLExprTranslator _translator;
   std::shared_ptr<AbstractLQPNode> _stored_table_node;
 };
 

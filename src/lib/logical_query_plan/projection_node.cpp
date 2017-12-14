@@ -7,13 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "expression.hpp"
+#include "lqp_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions)
+ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
@@ -36,18 +36,7 @@ std::string ProjectionNode::description() const {
   return desc.str();
 }
 
-std::optional<ColumnID> ProjectionNode::map_input_column_id_to_output_column_id(const ColumnID input_column_id) const {
-  const auto iter = std::find_if(_column_expressions.begin(), _column_expressions.end(), [&](const auto & column_expression) {
-    return column_expression->type() == ExpressionType::Column && column_expression->column_id() == input_column_id;
-  });
-  if (iter == _column_expressions.end()) {
-    return std::nullopt;
-  }
-
-  return std::distance(_column_expressions.begin(), iter);
-}
-
-const std::vector<std::shared_ptr<Expression>>& ProjectionNode::column_expressions() const {
+const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expressions() const {
   return _column_expressions;
 }
 
@@ -116,11 +105,12 @@ void ProjectionNode::_update_output() const {
     if (expression->type() == ExpressionType::Column) {
       DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-      _output_column_ids_to_input_column_ids->emplace_back(expression->column_id());
+      const auto input_column_id = left_child()->resolve_column_origin(expression->column_origin());
+      _output_column_ids_to_input_column_ids->emplace_back(input_column_id);
 
       if (!expression->alias()) {
-        Assert(expression->column_id() < left_child()->output_column_names().size(), "ColumnID out of range");
-        const auto& column_name = left_child()->output_column_names()[expression->column_id()];
+        Assert(input_column_id < left_child()->output_column_names().size(), "ColumnID out of range");
+        const auto& column_name = left_child()->output_column_names()[input_column_id];
         _output_column_names->emplace_back(column_name);
       }
 

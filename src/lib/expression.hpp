@@ -8,6 +8,7 @@
 #include "all_type_variant.hpp"
 #include "logical_query_plan/column_origin.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -49,34 +50,33 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /**
    * Factory Methods to create Expressions of specific type
    */
-  static std::shared_ptr<Expression> create_column(const ColumnOrigin& column_origin,
-                                                   const std::optional<std::string>& alias = std::nullopt);
-  static std::shared_ptr<Expression> create_column(const ColumnID column_id,
-                                                   const std::optional<std::string>& alias = std::nullopt);
-
-  static std::vector<std::shared_ptr<Expression>> create_columns(
-      const std::vector<ColumnOrigin>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
-
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
-  static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
+  template<typename ExpressionType>
+  static std::shared_ptr<ExpressionType> create_literal(const AllTypeVariant& value,
                                                     const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<Expression> create_value_placeholder(ValuePlaceholder value_placeholder);
+  template<typename ExpressionType>
+  static std::shared_ptr<ExpressionType> create_value_placeholder(ValuePlaceholder value_placeholder);
 
-  static std::shared_ptr<Expression> create_aggregate_function(
-      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
+  template<typename ExpressionType>
+  static std::shared_ptr<ExpressionType> create_aggregate_function(
+      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<ExpressionType>>& function_arguments,
       const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
-                                                            const std::shared_ptr<Expression>& left,
-                                                            const std::shared_ptr<Expression>& right,
+  template<typename ExpressionType>
+  static std::shared_ptr<ExpressionType> create_binary_operator(ExpressionType type,
+                                                            const std::shared_ptr<ExpressionType>& left,
+                                                            const std::shared_ptr<ExpressionType>& right,
                                                             const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<Expression> create_unary_operator(ExpressionType type,
-                                                           const std::shared_ptr<Expression>& input,
+  template<typename ExpressionType>
+  static std::shared_ptr<ExpressionType> create_unary_operator(ExpressionType type,
+                                                           const std::shared_ptr<ExpressionType>& input,
                                                            const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<Expression> create_select_star(const std::optional<std::string>& table_name = {});
+  template<typename ExpressionType>
+  static std::shared_ptr<ExpressionType> create_select_star(const std::optional<std::string>& table_name = {});
+
   // @}
 
   // @{
@@ -191,5 +191,69 @@ class Expression : public std::enable_shared_from_this<Expression> {
   std::shared_ptr<Expression> _right_child;
   // @}
 };
+
+template<typename ExpressionType>
+std::shared_ptr<ExpressionType> Expression::create_literal(const AllTypeVariant& value,
+                                                       const std::optional<std::string>& alias) {
+  auto expression = std::make_shared<ExpressionType>(ExpressionType::Literal);
+  expression->_alias = alias;
+  expression->_value = value;
+
+  return expression;
+}
+
+template<typename ExpressionType>
+std::shared_ptr<ExpressionType> Expression::create_value_placeholder(ValuePlaceholder value_placeholder) {
+  auto expression = std::make_shared<ExpressionType>(ExpressionType::Placeholder);
+  expression->_value_placeholder = value_placeholder;
+  return expression;
+}
+
+template<typename ExpressionType>
+std::shared_ptr<ExpressionType> Expression::create_aggregate_function(
+AggregateFunction aggregate_function, const std::vector<std::shared_ptr<ExpressionType>>& function_arguments,
+const std::optional<std::string>& alias) {
+  auto expression = std::make_shared<ExpressionType>(ExpressionType::Function);
+  expression->_aggregate_function = aggregate_function;
+  expression->_expression_list = function_arguments;
+  expression->_alias = alias;
+  return expression;
+}
+
+template<typename ExpressionType>
+std::shared_ptr<ExpressionType> Expression::create_binary_operator(ExpressionType type,
+                                                               const std::shared_ptr<ExpressionType>& left,
+                                                               const std::shared_ptr<ExpressionType>& right,
+                                                               const std::optional<std::string>& alias) {
+  auto expression = std::make_shared<ExpressionType>(type);
+  Assert(expression->is_binary_operator(),
+         "Type is not a binary operator type, such as Equals, LessThan, Like, And, etc.");
+  expression->_alias = alias;
+
+  expression->set_left_child(left);
+  expression->set_right_child(right);
+
+  return expression;
+}
+
+template<typename ExpressionType>
+std::shared_ptr<ExpressionType> Expression::create_unary_operator(ExpressionType type,
+                                                              const std::shared_ptr<ExpressionType>& input,
+                                                              const std::optional<std::string>& alias) {
+  auto expression = std::make_shared<ExpressionType>(type);
+  Assert(expression->is_unary_operator(), "Type is not a unary operator such as Not, Exists");
+  expression->_alias = alias;
+
+  expression->set_left_child(input);
+
+  return expression;
+}
+
+template<typename ExpressionType>
+std::shared_ptr<ExpressionType> Expression::create_select_star(const std::optional<std::string>& table_name) {
+  auto expression = std::make_shared<ExpressionType>(ExpressionType::Star);
+  expression->_table_name = table_name;
+  return expression;
+}
 
 }  // namespace opossum

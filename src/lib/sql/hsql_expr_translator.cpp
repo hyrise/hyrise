@@ -1,4 +1,4 @@
-#include "sql_expression_translator.hpp"
+#include "hsql_expr_translator.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -8,34 +8,34 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "expression.hpp"
+#include "logical_query_plan/lqp_expression.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
 namespace opossum {
 
-std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
+std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
+const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
   auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
-  std::shared_ptr<Expression> node;
-  std::shared_ptr<Expression> left;
-  std::shared_ptr<Expression> right;
+  std::shared_ptr<LQPExpression> node;
+  std::shared_ptr<LQPExpression> left;
+  std::shared_ptr<LQPExpression> right;
 
   if (expr.expr != nullptr) {
-    left = translate_expression(*expr.expr, input_node);
+    left = to_lqp_expression(*expr.expr, input_node);
   }
 
   if (expr.expr2 != nullptr) {
-    right = translate_expression(*expr.expr2, input_node);
+    right = to_lqp_expression(*expr.expr2, input_node);
   }
 
   switch (expr.type) {
     case hsql::kExprOperator: {
       auto operator_type = operator_type_to_expression_type.at(expr.opType);
-      node = Expression::create_binary_operator(operator_type, left, right, alias);
+      node = Expression::create_binary_operator<LQPExpression>(operator_type, left, right, alias);
       break;
     }
     case hsql::kExprColumnRef: {
@@ -44,14 +44,14 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
 
       auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
       NamedColumnReference named_column_reference{name, table_name};
-      auto column_id = input_node->get_column_id_by_named_column_reference(named_column_reference);
-      node = Expression::create_column(column_id, alias);
+      auto column_origin = input_node->find_column_origin_by_named_column_reference(named_column_reference);
+      node = LQPExpression::create_column(column_origin, alias);
       break;
     }
     case hsql::kExprFunctionRef: {
       std::vector<std::shared_ptr<Expression>> expression_list;
       for (auto elem : *(expr.exprList)) {
-        expression_list.emplace_back(translate_expression(*elem, input_node));
+        expression_list.emplace_back(to_lqp_expression(*elem, input_node));
       }
 
       // This is currently for aggregate functions only, hence checking for arguments
@@ -70,11 +70,11 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
         aggregate_function = AggregateFunction::CountDistinct;
       }
 
-      node = Expression::create_aggregate_function(aggregate_function, expression_list, alias);
+      node = Expression::create_aggregate_function<LQPExpression>(aggregate_function, expression_list, alias);
       break;
     }
     case hsql::kExprLiteralFloat:
-      node = Expression::create_literal(expr.fval, alias);
+      node = Expression::create_literal<LQPExpression>(expr.fval, alias);
       break;
     case hsql::kExprLiteralInt: {
       AllTypeVariant value;
@@ -83,21 +83,21 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       } else {
         value = expr.ival;
       }
-      node = Expression::create_literal(value, alias);
+      node = Expression::create_literal<LQPExpression>(value, alias);
       break;
     }
     case hsql::kExprLiteralString:
-      node = Expression::create_literal(name, alias);
+      node = Expression::create_literal<LQPExpression>(name, alias);
       break;
     case hsql::kExprLiteralNull:
-      node = Expression::create_literal(NULL_VALUE);
+      node = Expression::create_literal<LQPExpression>(NULL_VALUE);
       break;
     case hsql::kExprParameter:
-      node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
+      node = Expression::create_value_placeholder<LQPExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
       break;
     case hsql::kExprStar: {
       const auto table_name = expr.table != nullptr ? std::optional<std::string>(expr.table) : std::nullopt;
-      node = Expression::create_select_star(table_name);
+      node = Expression::create_select_star<LQPExpression>(table_name);
       break;
     }
     case hsql::kExprSelect:
@@ -113,29 +113,54 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
        * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
        */
       // TODO(mp): translate as soon as SQLTranslator is merged
-      throw std::runtime_error("Subselects are not supported yet.");
+      Fail("Subselects are not supported yet.");
     default:
-      throw std::runtime_error("Unsupported expression type");
+      Fail("Unsupported expression type");
   }
 
   return node;
 }
 
-NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_column_reference(
-    const hsql::Expr& hsql_expr) {
+AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
+const hsql::Expr &expr, const std::optional<std::shared_ptr<AbstractLQPNode>> &input_node) {
+  switch (expr.type) {
+    case hsql::kExprLiteralInt:
+      return AllTypeVariant(expr.ival);
+    case hsql::kExprLiteralFloat:
+      return AllTypeVariant(expr.fval);
+    case hsql::kExprLiteralString:
+      return AllTypeVariant(expr.name);
+    case hsql::kExprLiteralNull:
+      return NULL_VALUE;
+    case hsql::kExprParameter:
+      return ValuePlaceholder(expr.ival);
+    case hsql::kExprColumnRef:
+      Assert(input_node, "Cannot generate ColumnID without input_node");
+      return HSQLExprTranslator::to_column_origin(expr, *input_node);
+    default:
+      Fail("Could not translate expression: type not supported.");
+      return {};
+  }
+}
+
+ColumnOrigin HSQLExprTranslator::to_column_origin(const hsql::Expr &hsql_expr,
+                                                  const std::shared_ptr<AbstractLQPNode> &input_node) {
+  Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
+
+  const auto column_origin = input_node->find_column_origin_by_named_column_reference(
+  to_named_column_reference(hsql_expr));
+
+  Assert(column_origin, "Couldn't resolve named column reference");
+
+  return *column_origin;
+}
+
+NamedColumnReference HSQLExprTranslator::to_named_column_reference(
+const hsql::Expr &hsql_expr) {
   DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
   return NamedColumnReference{hsql_expr.name,
                               hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
 }
-
-ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr& hsql_expr,
-                                                               const std::shared_ptr<AbstractLQPNode>& input_node) {
-  Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
-
-  return input_node->get_column_id_by_named_column_reference(
-      get_named_column_reference_for_column_reference(hsql_expr));
-}
-
 }  // namespace opossum

@@ -15,6 +15,27 @@ std::shared_ptr<LQPExpression> LQPExpression::create_column(const ColumnOrigin& 
   return expression;
 }
 
+std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
+const std::vector<ColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
+  std::vector<std::shared_ptr<LQPExpression>> column_expressions;
+  column_expressions.reserve(column_origins.size());
+
+  if (!aliases) {
+    for (const auto& column_origin : column_origins) {
+      column_expressions.emplace_back(create_column(column_origin));
+    }
+  } else {
+    DebugAssert(column_origins.size() == (*aliases).size(), "There must be the same number of aliases as ColumnIDs");
+
+    for (auto column_index = 0u; column_index < column_origins.size(); ++column_index) {
+      column_expressions.emplace_back(create_column(column_origins[column_index], (*aliases)[column_index]));
+    }
+  }
+
+  return column_expressions;
+}
+
+
 const ColumnOrigin& LQPExpression::column_origin() const {
   DebugAssert(_column_origin, "Expression " + expression_type_to_string.at(_type) + " does not have a ColumnOrigin");
   return *_column_origin;

@@ -55,7 +55,7 @@ class SQLTranslator final : public Noncopyable {
   /**
    * @param validate If set to false, does not add validate nodes to the resulting tree.
    */
-  constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
+  explicit constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_parse_result(const hsql::SQLParserResult& result);
