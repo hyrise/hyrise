@@ -261,6 +261,10 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tuning/index_selection_heuristic.cpp
+    tuning/index_selection_heuristic.hpp
+    tuning/index_tuner.cpp
+    tuning/index_tuner.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
