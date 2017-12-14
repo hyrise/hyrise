@@ -29,6 +29,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -215,66 +216,24 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  SQLQueryPlan plan;
-  hsql::SQLParserResult parse_result;
-
-  // Measure the query parse time
-  auto started = std::chrono::high_resolution_clock::now();
+  if (_explicitly_created_transaction_context != nullptr) {
+    _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
+  } else {
+    _sql_pipeline = std::make_unique<SQLPipeline>(sql);
+  }
 
   try {
-    hsql::SQLParser::parse(sql, &parse_result);
+    _sql_pipeline->get_result_table();
   } catch (const std::exception& exception) {
-    out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
-
-  // Measure the query parse time
-  auto done = std::chrono::high_resolution_clock::now();
-  auto parse_elapsed_ms = std::chrono::duration<double>(done - started).count();
-
-  // Check if SQL query is valid
-  if (!parse_result.isValid()) {
-    out("Error: SQL query not valid.\n");
-    return ReturnCode::Error;
-  }
-
-  // Measure the plan compile time
-  started = std::chrono::high_resolution_clock::now();
-
-  // Compile the parse result
-  try {
-    plan = SQLPlanner::plan(parse_result);
-  } catch (const std::exception& exception) {
-    out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
-
-  // Measure the plan compile time
-  done = std::chrono::high_resolution_clock::now();
-  auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
-
-  const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
-  auto transaction_context =
-      auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
-
-  plan.set_transaction_context(transaction_context);
-
-  // Measure the query plan execution time
-  started = std::chrono::high_resolution_clock::now();
-
-  if (_execute_plan(plan) == ReturnCode::Error) {
-    transaction_context->rollback();
-    out("Execution failed and the transaction has been rolled back.\n");
+    out(std::string(exception.what()) + "\n");
+    if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
+      out("The transaction has been rolled back.\n");
+    }
     _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }
 
-  // Measure the query plan execution time
-  done = std::chrono::high_resolution_clock::now();
-  auto execution_elapsed_ms = std::chrono::duration<double>(done - started).count();
-
-  auto table = plan.tree_roots().back()->get_output();
-
+  const auto& table = _sql_pipeline->get_result_table();
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
@@ -282,32 +241,11 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
   out("===\n");
-  out(std::to_string(row_count) + " rows total (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
-      std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
+  out(std::to_string(row_count) + " rows total (" + "PARSE: " +
+      std::to_string(_sql_pipeline->parse_time_microseconds().count()) + " µs, " + "COMPILE: " +
+      std::to_string(_sql_pipeline->compile_time_microseconds().count()) + " µs, " + "EXECUTE: " +
+      std::to_string(_sql_pipeline->execution_time_microseconds().count()) + " µs (wall time))\n");
 
-  if (transaction_context->aborted()) {
-    out("An operator failed and the transaction has been rolled back.\n");
-    _explicitly_created_transaction_context = nullptr;
-    return ReturnCode::Error;
-  }
-
-  // Commit
-  if (auto_commit) {
-    transaction_context->commit();
-  }
-
-  return ReturnCode::Ok;
-}
-
-int Console::_execute_plan(const SQLQueryPlan& plan) {
-  try {
-    for (const auto& task : plan.create_tasks()) {
-      task->schedule();
-    }
-  } catch (const std::exception& exception) {
-    out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
   return ReturnCode::Ok;
 }
 
@@ -504,33 +442,24 @@ int Console::visualize(const std::string& input) {
     mode = first_word;
   }
 
-  sql = input.substr(mode.size(), input.size());
   // Removes mode from sql string. If no mode is set, does nothing.
+  sql = input.substr(mode.size(), input.size());
 
-  SQLQueryPlan plan;
-  hsql::SQLParserResult parse_result;
-
-  try {
-    hsql::SQLParser::parse(sql, &parse_result);
-  } catch (const std::exception& exception) {
-    out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
-
-  // Check if SQL query is valid
-  if (!parse_result.isValid()) {
-    out("Error: SQL query not valid.\n");
-    return ReturnCode::Error;
+  // If no SQL is provided, use the last execution. Else, create a new pipeline.
+  if (!sql.empty()) {
+    if (_explicitly_created_transaction_context != nullptr) {
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
+    } else {
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
+    }
   }
 
   if (mode == "lqp" || mode == "lqpopt") {
     try {
-      auto lqp_roots = SQLTranslator{}.translate_parse_result(parse_result);
+      auto lqp_roots = _sql_pipeline->get_unoptimized_logical_plans();
 
       if (mode == "lqpopt") {
-        for (auto& root : lqp_roots) {
-          root = Optimizer::get().optimize(root);
-        }
+        lqp_roots = _sql_pipeline->get_optimized_logical_plans();
       }
 
       graph_filename = "." + mode + ".dot";
@@ -539,39 +468,29 @@ int Console::visualize(const std::string& input) {
       LQPVisualizer visualizer;
       visualizer.visualize(lqp_roots, graph_filename, img_filename);
     } catch (const std::exception& exception) {
-      out("Exception while creating query plan:\n  " + std::string(exception.what()) + "\n");
+      out(std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
     // Compile the parse result
+    SQLQueryPlan plan;
     try {
-      plan = SQLPlanner::plan(parse_result);
+      plan = _sql_pipeline->get_query_plan();
     } catch (const std::exception& exception) {
-      out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+      out(std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
 
     if (mode != "noexec") {
-      const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
-      auto transaction_context =
-          auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
-
-      plan.set_transaction_context(transaction_context);
-
-      if (_execute_plan(plan) == ReturnCode::Error) {
-        transaction_context->rollback();
+      try {
+        _sql_pipeline->get_result_table();
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
+          out("The transaction has been rolled back.\n");
+        }
         _explicitly_created_transaction_context = nullptr;
         return ReturnCode::Error;
-      }
-
-      if (transaction_context->aborted()) {
-        out("An operator failed and the transaction has been rolled back.");
-        _explicitly_created_transaction_context = nullptr;
-        return ReturnCode::Error;
-      }
-
-      if (auto_commit) {
-        transaction_context->commit();
       }
     }
 

@@ -11,6 +11,7 @@
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -38,35 +39,6 @@ class TPCHTest : public BaseTestWithParam<size_t> {
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }
   }
-
-  std::shared_ptr<AbstractOperator> translate_query_to_operator(const std::string query, bool optimize) {
-    hsql::SQLParserResult parse_result;
-    hsql::SQLParser::parseSQLString(query, &parse_result);
-
-    if (!parse_result.isValid()) {
-      std::cout << parse_result.errorMsg() << std::endl;
-      std::cout << "ErrorLine: " << parse_result.errorLine() << std::endl;
-      std::cout << "ErrorColumn: " << parse_result.errorColumn() << std::endl;
-      throw std::runtime_error("Query is not valid.");
-    }
-
-    auto result_node = SQLTranslator{false}.translate_parse_result(parse_result)[0];
-
-    if (optimize) {
-      result_node = Optimizer::get().optimize(result_node);
-    }
-
-    return LQPTranslator{}.translate_node(result_node);
-  }
-
-  std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query, bool optimize) {
-    auto result_operator = translate_query_to_operator(query, optimize);
-    auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
-    for (auto& task : tasks) {
-      task->schedule();
-    }
-    return tasks.back();
-  }
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
@@ -77,7 +49,10 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto query = tpch_queries[query_idx];
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
-  auto result_table = schedule_query_and_return_task(query, true)->get_operator()->get_output();
+  // Disable MVCC
+  SQLPipeline sql_pipeline{query, false};
+  const auto& result_table = sql_pipeline.get_result_table();
+
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
 }

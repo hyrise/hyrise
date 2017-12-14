@@ -212,8 +212,6 @@ class Chunk : private Noncopyable {
 
   bool references_exactly_one_table() const;
 
-  size_t byte_size() const { return 0; }
-
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
  private:

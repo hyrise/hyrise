@@ -63,7 +63,7 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
     query << "INSERT INTO " << table_name << " VALUES (";
     std::vector<std::string> values = _split<std::string>(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
-      if (col_types[i] == "TEXT") {
+      if (col_types[i] == "TEXT" && values[i] != "null") {
         query << "'" << values[i] << "'";
       } else {
         query << values[i];

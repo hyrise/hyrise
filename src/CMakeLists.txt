@@ -36,6 +36,7 @@ add_compile_options(-std=c++1z -pthread -Wall -Wextra -pedantic -Werror -Wno-unu
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
+    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 

@@ -215,8 +215,12 @@ UnifInt(DSS_HUGE nLow, DSS_HUGE nHigh, long nStream)
 	
 	if ((nHigh == MAX_LONG) && (nLow == 0))
 	{
-		dRange = DOUBLE_CAST (nHigh32 - nLow32 + 1);
-		nRange = nHigh32 - nLow32 + 1;
+    // Hyrise: was undefined behaviour, let's make it defined
+//		dRange = DOUBLE_CAST (nHigh32 - nLow32 + 1);
+//		nRange = nHigh32 - nLow32 + 1;
+		dRange = DOUBLE_CAST(MIN_LONG);
+		nRange = MIN_LONG;
+
 	}
 	else
 	{

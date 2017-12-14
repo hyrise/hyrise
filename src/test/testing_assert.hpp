@@ -7,6 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "operators/abstract_operator.hpp"
+#include "scheduler/operator_task.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -52,6 +54,25 @@ void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
                    const std::shared_ptr<const AbstractLQPNode>& child);
+
+bool subtree_types_are_equal(const std::shared_ptr<AbstractLQPNode>& got,
+                             const std::shared_ptr<AbstractLQPNode>& expected);
+
+template <typename Functor>
+bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
+  if (node == nullptr) return false;
+  if (contains_fn(node)) return true;
+  return contained_in_lqp(node->left_child(), contains_fn) || contained_in_lqp(node->right_child(), contains_fn);
+}
+
+template <typename Functor>
+bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node, Functor contains_fn) {
+  if (node == nullptr) return false;
+  if (contains_fn(node)) return true;
+  return contained_in_query_plan(node->input_left(), contains_fn) ||
+         contained_in_query_plan(node->input_right(), contains_fn);
+}
+
 }  // namespace opossum
 
 /**
