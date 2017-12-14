@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "optimizer/expression.hpp"
+#include "expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"

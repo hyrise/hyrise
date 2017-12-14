@@ -100,6 +100,8 @@ set(
     logical_query_plan/column_origin.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
+    logical_query_plan/lqp_expression.cpp
+    logical_query_plan/lqp_expression.hpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/delete_node.cpp
@@ -136,8 +138,10 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/expression.cpp
-    optimizer/expression.hpp
+    expression.cpp
+    expression.hpp
+    operators/operator_expression.cpp
+    operators/operator_expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp

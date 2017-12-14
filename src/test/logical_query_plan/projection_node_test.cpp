@@ -8,7 +8,7 @@
 
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/expression.hpp"
+#include "expression.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

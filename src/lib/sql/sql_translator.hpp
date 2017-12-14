@@ -10,7 +10,7 @@
 #include "all_parameter_variant.hpp"
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "optimizer/expression.hpp"
+#include "expression.hpp"
 
 namespace opossum {
 

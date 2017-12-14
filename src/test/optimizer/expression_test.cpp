@@ -6,7 +6,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "optimizer/expression.hpp"
+#include "expression.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

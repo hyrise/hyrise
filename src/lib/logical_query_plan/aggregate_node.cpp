@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression.hpp"
+#include "expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
