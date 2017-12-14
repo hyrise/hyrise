@@ -219,7 +219,7 @@ class TpchBenchmark final {
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
         // Execute the query, we don't care about the results
-        auto sql_pipelines = SQLPipeline::from_sql_string(opossum::tpch_queries[query_id]);
+        auto sql_pipelines = SQLPipeline::from_sql_string(sql);
         for (auto& pipeline : sql_pipelines) {
           pipeline.get_result_table();
         }
