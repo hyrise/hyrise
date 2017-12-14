@@ -6,10 +6,9 @@
 
 namespace opossum {
 
-IndexTuner::IndexTuner() : _heuristic{std::make_unique<IndexSelectionHeuristic>()} {}
+IndexTuner::IndexTuner()
+    : _statistics{std::make_unique<SystemStatistics>()}, _heuristic{std::make_unique<IndexSelectionHeuristic>()} {}
 
-void IndexTuner::execute() {
-  // const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache();
-}
+void IndexTuner::execute() { _heuristic->recommend_changes(*_statistics); }
 
 }  // namespace opossum

@@ -265,6 +265,8 @@ set(
     tuning/index_selection_heuristic.hpp
     tuning/index_tuner.cpp
     tuning/index_tuner.hpp
+    tuning/system_statistics.cpp
+    tuning/system_statistics.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

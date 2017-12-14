@@ -5,6 +5,8 @@
 int main() {
   opossum::IndexTuner tuner;
 
+  tuner.execute();
+
   std::cout << "Hello world!" << std::endl;
   return 0;
 }
