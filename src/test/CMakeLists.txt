@@ -95,6 +95,7 @@ set(
     storage/zero_suppression_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_column_test.cpp
+    storage/simd_bp128_test.cpp
     storage/single_column_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp

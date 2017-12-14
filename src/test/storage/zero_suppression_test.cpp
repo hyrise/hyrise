@@ -5,7 +5,6 @@
 #include <bitset>
 #include <iostream>
 #include <memory>
-#include <numeric>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -68,8 +67,8 @@ class ZeroSuppressionTest : public BaseTest {
     auto value = min();
     for (auto& elem : sequence) {
       elem = value;
-      value += increment;
 
+      value += increment;
       if (value > max()) value = min();
     }
 
