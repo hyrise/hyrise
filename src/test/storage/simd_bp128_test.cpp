@@ -37,19 +37,18 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
  protected:
   void SetUp() override {
     _bit_size = GetParam();
+    _min = 1u << (_bit_size - 1u);
     _max = (1u << _bit_size) - 1u;
   }
 
   pmr_vector<uint32_t> generate_sequence(size_t count) {
-    constexpr auto min = 0u;
-
     auto sequence = pmr_vector<uint32_t>(count);
-    auto value = min;
+    auto value = _min;
     for (auto& elem : sequence) {
       elem = value;
 
       value += 1u;
-      if (value > _max) value = min;
+      if (value > _max) value = _min;
     }
 
     return sequence;
@@ -65,6 +64,7 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
 
  private:
   uint8_t _bit_size;
+  uint32_t _min;
   uint32_t _max;
 };
 
