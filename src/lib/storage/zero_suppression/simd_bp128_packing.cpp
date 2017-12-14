@@ -137,7 +137,7 @@ void SimdBp128Packing::pack_block(const uint32_t* _in, __m128i* out, const uint8
 
   auto in_reg = _mm_setzero_si128();
   auto out_reg = _mm_setzero_si128();
-  const auto mask = _mm_set1_epi32((1u << bit_size) - 1);
+  const auto mask = _mm_set1_epi32((1ul << bit_size) - 1);
 
   switch (bit_size) {
     case 0u:
@@ -288,7 +288,7 @@ void SimdBp128Packing::unpack_block(const __m128i* in, uint32_t* _out, const uin
 
   auto in_reg = _mm_loadu_si128(in++);
   auto out_reg = _mm_setzero_si128();
-  const auto mask = _mm_set1_epi32((1u << bit_size) - 1);
+  const auto mask = _mm_set1_epi32((1ul << bit_size) - 1);
 
   switch (bit_size) {
     case 1u:

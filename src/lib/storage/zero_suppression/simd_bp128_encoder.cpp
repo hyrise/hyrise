@@ -21,7 +21,11 @@ std::unique_ptr<BaseZeroSuppressionVector> SimdBp128Encoder::encode(const pmr_ve
 }
 
 void SimdBp128Encoder::init(size_t size) {
-  _data = pmr_vector<uint128_t>((size + 3u) / 4u);
+  // Ceiling of integer devision
+  const auto div_ceil = [] (auto x, auto y) { return (x + y - 1u) / y; };
+  const auto data_size = div_ceil(size, 4u) + div_ceil(size, Packing::meta_block_size) + 1;
+  _data = pmr_vector<uint128_t>(data_size);
+
   _data_index = 0u;
   _meta_block_index = 0u;
   _size = size;

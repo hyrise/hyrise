@@ -2,7 +2,6 @@
 
 #include <array>
 #include <functional>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -30,8 +29,6 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
   ~SimdBp128Decoder() = default;
 
   uint32_t get(size_t i) final {
-    // std::cout << "SimdBp128Decoder::get()" << std::endl;
-
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);
     }
