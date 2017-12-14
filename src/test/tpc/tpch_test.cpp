@@ -49,9 +49,14 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto query = tpch_queries[query_idx];
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
-  // Disable MVCC
-  SQLPipeline sql_pipeline{query, false};
-  const auto& result_table = sql_pipeline.get_result_table();
+  // Don't use MVCC
+  auto sql_pipelines = SQLPipeline::from_sql_string(query, false);
+
+  for (auto& pipeline : sql_pipelines) {
+    pipeline.get_result_table();
+  }
+
+  const auto& result_table = sql_pipelines.back().get_result_table();
 
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
