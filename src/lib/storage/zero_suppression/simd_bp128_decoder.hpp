@@ -1,8 +1,6 @@
 #pragma once
 
 #include <array>
-#include <functional>
-#include <limits>
 #include <memory>
 #include <numeric>
 #include <utility>

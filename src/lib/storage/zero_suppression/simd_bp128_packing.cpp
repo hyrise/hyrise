@@ -1,5 +1,7 @@
 #include "simd_bp128_packing.hpp"
 
+#include <emmintrin.h>
+
 #include <algorithm>
 
 #include "utils/assert.hpp"
@@ -122,18 +124,25 @@ void unpack_128_zeros(uint32_t* out) {
 
 }  // namespace
 
-void SimdBp128Packing::write_meta_info(const uint8_t* in, __m128i* out) {
-  const auto meta_block_info_rgtr = _mm_loadu_si128(reinterpret_cast<const __m128i*>(in));
+void SimdBp128Packing::write_meta_info(const uint8_t* _in, uint128_t* _out) {
+  const auto in = reinterpret_cast<const __m128i*>(_in);
+  auto out = reinterpret_cast<__m128i*>(_out);
+
+  const auto meta_block_info_rgtr = _mm_loadu_si128(in);
   _mm_storeu_si128(out, meta_block_info_rgtr);
 }
 
-void SimdBp128Packing::read_meta_info(const __m128i* in, uint8_t* out) {
+void SimdBp128Packing::read_meta_info(const uint128_t* _in, uint8_t* _out) {
+  const auto in = reinterpret_cast<const __m128i*>(_in);
+  auto out = reinterpret_cast<__m128i*>(_out);
+
   auto meta_info_block_rgtr = _mm_loadu_si128(in);
-  _mm_storeu_si128(reinterpret_cast<__m128i*>(out), meta_info_block_rgtr);
+  _mm_storeu_si128(out, meta_info_block_rgtr);
 }
 
-void SimdBp128Packing::pack_block(const uint32_t* _in, __m128i* out, const uint8_t bit_size) {
+void SimdBp128Packing::pack_block(const uint32_t* _in, uint128_t* _out, const uint8_t bit_size) {
   auto in = reinterpret_cast<const __m128i*>(_in);
+  auto out = reinterpret_cast<__m128i*>(_out);
 
   auto in_reg = _mm_setzero_si128();
   auto out_reg = _mm_setzero_si128();
@@ -278,12 +287,13 @@ void SimdBp128Packing::pack_block(const uint32_t* _in, __m128i* out, const uint8
   }
 }
 
-void SimdBp128Packing::unpack_block(const __m128i* in, uint32_t* _out, const uint8_t bit_size) {
+void SimdBp128Packing::unpack_block(const uint128_t* _in, uint32_t* _out, const uint8_t bit_size) {
   if (bit_size == 0u) {
     unpack_128_zeros(_out);
     return;
   }
 
+  auto in = reinterpret_cast<const __m128i*>(_in);
   auto out = reinterpret_cast<__m128i*>(_out);
 
   auto in_reg = _mm_loadu_si128(in++);

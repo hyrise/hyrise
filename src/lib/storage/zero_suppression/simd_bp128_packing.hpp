@@ -1,8 +1,8 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include <cstdint>
+
+#include "oversized_types.hpp"
 
 namespace opossum {
 
@@ -21,11 +21,11 @@ class SimdBp128Packing {
   static constexpr auto meta_block_size = block_size * blocks_in_meta_block;
 
  public:
-  static void write_meta_info(const uint8_t* in, __m128i* out);
-  static void read_meta_info(const __m128i* in, uint8_t* out);
+  static void write_meta_info(const uint8_t* in, uint128_t* out);
+  static void read_meta_info(const uint128_t* in, uint8_t* out);
 
-  static void pack_block(const uint32_t* _in, __m128i* out, const uint8_t bit_size);
-  static void unpack_block(const __m128i* in, uint32_t* _out, const uint8_t bit_size);
+  static void pack_block(const uint32_t* _in, uint128_t* out, const uint8_t bit_size);
+  static void unpack_block(const uint128_t* in, uint32_t* _out, const uint8_t bit_size);
 };
 
 }  // namespace opossum

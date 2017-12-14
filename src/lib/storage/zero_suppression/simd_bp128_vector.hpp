@@ -1,7 +1,5 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include "base_zero_suppression_vector.hpp"
 #include "oversized_types.hpp"
 #include "simd_bp128_iterator.hpp"

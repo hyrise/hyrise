@@ -29,14 +29,12 @@ SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
       _current_block_index{other._current_block_index} {}
 
 void SimdBp128Iterator::_read_meta_info() {
-  const auto data_ptr = reinterpret_cast<const __m128i*>(_data->data());
-  Packing::read_meta_info(data_ptr + _data_index++, _current_meta_info.data());
+  Packing::read_meta_info(_data->data() + _data_index++, _current_meta_info.data());
   _current_meta_info_index = 0u;
 }
 
 void SimdBp128Iterator::_unpack_block() {
-  const auto data_ptr = reinterpret_cast<const __m128i*>(_data->data());
-  const auto in = data_ptr + _data_index;
+  const auto in = _data->data() + _data_index;
   auto out = _current_block->data();
   const auto bit_size = _current_meta_info[_current_meta_info_index];
 

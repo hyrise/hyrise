@@ -1,10 +1,7 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include <array>
 #include <memory>
-#include <numeric>
 
 #include "base_zero_suppression_vector.hpp"
 #include "oversized_types.hpp"

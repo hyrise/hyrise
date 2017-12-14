@@ -1,7 +1,5 @@
 #pragma once
 
-#include <emmintrin.h>
-
 #include <cstdint>
 
 namespace opossum {
