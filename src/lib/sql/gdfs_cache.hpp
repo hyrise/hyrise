@@ -7,6 +7,8 @@
 #include "abstract_cache.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 
+class SystemStatistics;
+
 namespace opossum {
 
 // Generic cache implementation using the GDFS policy.

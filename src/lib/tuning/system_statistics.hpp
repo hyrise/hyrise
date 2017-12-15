@@ -20,7 +20,7 @@ class SystemStatistics {
   const std::vector<SQLQueryPlan>& recent_queries() const;
 
  protected:
-  std::vector<SQLQueryPlan> _recent_queries;
+  mutable std::vector<SQLQueryPlan> _recent_queries;
 };
 
 }  // namespace opossum
