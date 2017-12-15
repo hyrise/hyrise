@@ -116,7 +116,6 @@ class Session : public std::enable_shared_from_this<Session> {
   }
 
   tcp::socket _socket;
-  static const uint16_t _max_length = 1024;
   PostgresWireHandler _pg_handler;
   InputPacket _input_packet;
   OutputPacket _output_packet;
