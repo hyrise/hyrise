@@ -1,29 +1,38 @@
 #pragma once
 
+#include <arpa/inet.h>
 #include <algorithm>
 #include <string>
 #include <vector>
 
-
 namespace opossum {
 
+// For convenience
 using ByteBuffer = std::vector<char>;
 
+static const uint32_t MAX_BUFFER_SIZE = 1024u;
+
+// This is the struct that we store our incoming network bytes in and that we then read from
 struct InputPacket {
-  ByteBuffer data = ByteBuffer(1024);
+  // The vector needs to have a fixed size for boost::asio to work with it
+  ByteBuffer data = ByteBuffer(MAX_BUFFER_SIZE);
+
+  // Stores the current position in the data buffer
   ByteBuffer::iterator offset = data.begin();
-  ByteBuffer::iterator end;
 };
 
+// This is the struct in which we write our network bytes and then send
 struct OutputPacket {
   ByteBuffer data;
 };
-
 
 class PostgresWireHandler {
  public:
   static uint32_t handle_startup_package(InputPacket& packet);
   static void handle_startup_package_content(InputPacket& packet, size_t length);
+
+  static uint32_t handle_header(InputPacket& packet);
+
   static std::string handle_query_packet(InputPacket& packet, size_t length);
 
   template <typename T>
@@ -31,10 +40,6 @@ class PostgresWireHandler {
 
   template <typename T>
   static std::vector<T> read_values(InputPacket& packet, size_t num_values);
-
-  static std::string read_string(InputPacket& packet);
-
-  static uint32_t get_uint32_big_endian(uint32_t num);
 
   template <typename T>
   static void write_value(OutputPacket& packet, T value);
@@ -75,6 +80,5 @@ void PostgresWireHandler::write_value(OutputPacket& packet, T value) {
     data.push_back(value_chars[byte_offset]);
   }
 }
-
 
 }  // namespace opossum

@@ -9,35 +9,32 @@
 #include <boost/asio.hpp>
 #include "postgres_wire_handler.hpp"
 
-namespace {
-uint32_t uint32_endian_swap(uint32_t num) {
-  return ((num & 0xFF000000) >> 24) | ((num & 0x00FF0000) >> 8 ) | ((num & 0x0000FF00) << 8 ) | (num << 24);
-}
-}
-
-
 namespace opossum {
 
 using boost::asio::ip::tcp;
+
+static const uint32_t HEADER_LENGTH = 5u;
+static const uint32_t STARTUP_HEADER_LENGTH = 8u;
 
 class Session : public std::enable_shared_from_this<Session> {
  public:
   explicit Session(tcp::socket socket) : _socket(std::move(socket)) {}
 
-  void start() {
-    read_startup_packet();
-  }
+  void start() { read_startup_packet(); }
 
  private:
   void read_startup_packet() {
     _input_packet.offset = _input_packet.data.begin();
 
-    const auto startup_header_length = 8u;
-    boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, startup_header_length));
+    // boost::asio::read will read until either the buffer is full or STARTUP_HEADER_LENGTH bytes are read from socket
+    boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, STARTUP_HEADER_LENGTH));
 
+    // Content length tells us how much more data there is in this packet
     auto content_length = _pg_handler.handle_startup_package(_input_packet);
+
+    // If we have no further content, this is a special 8 byte SSL packet,
+    // which we decline with 'N' because we don't support SSL
     if (content_length == 0) {
-      // Special SSL packet
       _output_packet.data.clear();
       _pg_handler.write_value(_output_packet, 'N');
       _pg_handler.write_value(_output_packet, 0u);
@@ -49,27 +46,34 @@ class Session : public std::enable_shared_from_this<Session> {
     }
 
     auto bytes_read = boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, content_length));
+    // TODO: not sure if this can happen, and not sure how to deal with it yet
     if (bytes_read != content_length) {
-      std::cout << "Bad read. Got: " << bytes_read << " but expected: " << content_length << std::endl;
+      std::cout << "Bad read. Got: " << bytes_read << " bytes, but expected: " << content_length << std::endl;
     }
     _pg_handler.handle_startup_package_content(_input_packet, bytes_read);
+
+    // We still need to reset the ByteBuffer manually, so the next reader can start of at the correct position.
+    // This should be hidden later on
     _input_packet.offset = _input_packet.data.begin();
     send_auth();
   }
 
   void send_auth() {
+    // This packet is our AuthenticationOK, which means we do not require any auth. However, psql does not accept this.
+    // TODO: figure out how to send correct AuthenticationOK (wireshark says this is valid)
     _output_packet.data.clear();
     _pg_handler.write_value(_output_packet, 'R');
-    _pg_handler.write_value<uint32_t>(_output_packet, uint32_endian_swap(8u));
-    _pg_handler.write_value<uint32_t>(_output_packet, uint32_endian_swap(0u));
+    _pg_handler.write_value(_output_packet, htonl(8u));
+    _pg_handler.write_value(_output_packet, htonl(0u));
     auto auth = boost::asio::buffer(_output_packet.data);
     boost::asio::write(_socket, auth);
 
+    // This is a Status Parameter which is useless but it seems like clients expect at least one. Contains dummy value.
     _output_packet.data.clear();
     _pg_handler.write_value(_output_packet, 'S');
-    _pg_handler.write_value<uint32_t>(_output_packet, uint32_endian_swap(22u));
-    _pg_handler.write_string(_output_packet, "server_version");
-    _pg_handler.write_string(_output_packet, "0.1");
+    _pg_handler.write_value<uint32_t>(_output_packet, htonl(28u));
+    _pg_handler.write_string(_output_packet, "client_encoding");
+    _pg_handler.write_string(_output_packet, "UNICODE");
     auto params = boost::asio::buffer(_output_packet.data);
     boost::asio::write(_socket, params);
 
@@ -77,16 +81,10 @@ class Session : public std::enable_shared_from_this<Session> {
   }
 
   void send_ready_for_query() {
-//    auto self(shared_from_this());
-//
-//    auto query_read = [this, self](boost::system::error_code ec, size_t length) {
-//      if (!ec) {
-//        read_query();
-//      }
-//    };
-
+    // ReadyForQuery packet 'Z' with status Idle 'I'
     _output_packet.data.clear();
     _pg_handler.write_value(_output_packet, 'Z');
+    _pg_handler.write_value(_output_packet, htonl(5u));
     _pg_handler.write_value(_output_packet, 'I');
     auto ready = boost::asio::buffer(_output_packet.data);
     boost::asio::write(_socket, ready);
@@ -95,37 +93,26 @@ class Session : public std::enable_shared_from_this<Session> {
   }
 
   void read_query() {
-//    auto self(shared_from_this());
-//
-//    auto handle_query_read = [this, self](boost::system::error_code ec, size_t length) {
-//      if (!ec) {
-//        send_row_description(_pg_handler.handle_query_packet(_input_packet, length));
-//      }
-//    };
-
     boost::system::error_code ec;
-    auto bytes_read = _socket.receive(boost::asio::buffer(_input_packet.data), 0, ec);
 
-    if (bytes_read == 0) {
-      std::cout << "No bytes read!" << std::endl;
-    }
-    send_row_description();
+    boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, HEADER_LENGTH));
+    auto content_length = _pg_handler.handle_header(_input_packet);
+
+    boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, content_length));
+    auto sql = _pg_handler.handle_query_packet(_input_packet, content_length);
+
+    send_row_description(sql);
   }
 
-  void send_row_description() {
-    auto self(shared_from_this());
-
-    auto ready_for_next_query = [this, self](boost::system::error_code ec, size_t length) {
-      if (!ec) {
-        read_startup_packet();
-      }
-    };
-
+  void send_row_description(const std::string& sql) {
     _output_packet.data.clear();
-//    _pg_handler.write_string(_output_packet, sql + '\n');
+    // TODO: find out correct format once we get here
+    _pg_handler.write_string(_output_packet, sql);
     auto query = boost::asio::buffer(_output_packet.data);
     boost::asio::write(_socket, query);
-    read_query();
+
+    // For now, we just go back to reading the next query
+    send_ready_for_query();
   }
 
   tcp::socket _socket;
@@ -138,8 +125,7 @@ class Session : public std::enable_shared_from_this<Session> {
 class server {
  public:
   server(boost::asio::io_service& io_service, unsigned short port)
-    : acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
-      socket_(io_service) {
+      : acceptor_(io_service, tcp::endpoint(tcp::v4(), port)), socket_(io_service) {
     do_accept();
   }
 
@@ -161,7 +147,7 @@ class server {
 
 }  // namespace opossum
 
-int main(int argc, char*argv[]) {
+int main(int argc, char* argv[]) {
   try {
     if (argc != 2) {
       std::cerr << "Usage: async_tcp_echo_server <port>\n";
@@ -173,8 +159,7 @@ int main(int argc, char*argv[]) {
     opossum::server s(io_service, std::atoi(argv[1]));
 
     io_service.run();
-  }
-  catch (std::exception& e) {
+  } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";
   }
 
