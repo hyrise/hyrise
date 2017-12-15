@@ -44,7 +44,7 @@ class PostgresWireHandler {
   template <typename T>
   static void write_value(OutputPacket& packet, T value);
 
-  static void write_string(OutputPacket& packet, const std::string& value);
+  static void write_string(OutputPacket& packet, const std::string& value, bool terminate = true);
 };
 
 template <typename T>
@@ -59,10 +59,11 @@ T PostgresWireHandler::read_value(InputPacket& packet) {
 
 template <typename T>
 std::vector<T> PostgresWireHandler::read_values(InputPacket& packet, const size_t num_values) {
-  std::vector<T> result;
-  result.reserve(num_values);
-  auto num_bytes = num_values * sizeof(T);
+  std::vector<T> result(num_values);
+  auto num_bytes = result.size() * sizeof(T);
+
   // TODO: bounds check
+
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(result.data()));
   packet.offset += num_bytes;
   return result;

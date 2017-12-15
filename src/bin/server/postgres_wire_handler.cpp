@@ -44,6 +44,8 @@ uint32_t PostgresWireHandler::handle_header(InputPacket& packet) {
   auto n_length = read_value<uint32_t>(packet);
   auto length = ntohl(n_length);
 
+  packet.offset = packet.data.begin();
+
   // Return length minus the already read bytes
   return length - (sizeof(char) + sizeof(uint32_t));
 }
@@ -54,14 +56,20 @@ std::string PostgresWireHandler::handle_query_packet(InputPacket& packet, size_t
   return std::string(buffer.data(), buffer.size());
 }
 
-void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& value) {
+void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& value, bool terminate) {
   auto num_bytes = value.length();
   auto& data = packet.data;
-  data.reserve(data.size() + num_bytes + 1);
+
+  // Add one byte more for terminated string
+  auto total_size = data.size() + num_bytes + (terminate ? 1 : 0);
+  data.reserve(total_size);
 
   data.insert(data.end(), value.begin(), value.end());
-  // \0-terminate the string
-  data.push_back(0);
+
+  if (terminate) {
+    // 0-terminate the string
+    data.push_back(0);
+  }
 }
 
 }  // namespace opossum
