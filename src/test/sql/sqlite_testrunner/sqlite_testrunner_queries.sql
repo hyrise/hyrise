@@ -37,6 +37,7 @@ SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS su
 
 -- LIMIT
 SELECT * FROM mixed LIMIT 77;
+SELECT b FROM mixed LIMIT 10;
 
 -- PRODUCT
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".a;
