@@ -13,6 +13,7 @@
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
+#include "lqp_expression.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
@@ -22,6 +23,7 @@
 #include "operators/limit.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
+#include "operators/operator_expression.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -127,15 +129,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   DebugAssert(static_cast<bool>(join_node->join_column_origins()), "Cannot translate Join without columns.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
 
-  J join_column_origins
+  JoinColumnIDs join_column_ids;
+  join_column_ids.first = join_node->left_child()->get_output_column_id_by_column_origin(join_node->join_column_origins().first);
+  join_column_ids.second = join_node->right_child()->get_output_column_id_by_column_origin(join_node->join_column_origins().second);
 
   if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
-                                      *(join_node->join_column_ids()), *(join_node->scan_type()));
+                                      join_column_ids, *(join_node->scan_type()));
   }
 
   return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode(),
-                                         *(join_node->join_column_ids()), *(join_node->scan_type()));
+                                         join_column_ids, *(join_node->scan_type()));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
@@ -149,29 +153,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   auto aggregate_input_operator = input_operator;
 
   /**
-   * 1. Handle arithmetic expressions in aggregate functions via Projection.
+   * 1. Handle arithmetic expressions in the arguments of aggregate functions via a Projection.
    *
-   * In Hyrise, only Projections are supposed to be able to handle arithmetic expressions.
-   * Therefore, if we encounter an expression within an aggregate function, we have to execute a Projection first.
-   * The Aggregate will work with the output columns of that Projection.
-   *
-   * We only need a Projection before the aggregate if the function argument is an arithmetic expression.
+   * If there are arithmetic expressions in aggregates, e.g. `a+b` in `SUM(a+b)`, we create a Projection to compute it.
+   * If there are no arithmetics expressions we don't need the Projection (i.e. need_projection is false)
    */
-  auto need_projection = false;
-
-  // Check if there are any arithmetic expressions.
-  for (const auto& aggregate_expression : aggregate_expressions) {
+  auto need_projection = std::any_of(aggregate_expressions.begin(), aggregate_expressions.end(), [&] (const auto &aggregate_expression) {
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
-
-    // Check whether the expression that is the argument of the aggregate function, e.g. `a+b` in `SUM(a+b)` is, as in
-    // this case, an arithmetic expression and therefore needs a Projection before the aggregate is performed. If all
-    // Aggregates are in the style of `COUNT(b)` or there are just groupby columns, there is no need for a Projection.
-    const auto& function_arg_expr = (aggregate_expression->expression_list())[0];
-    if (function_arg_expr->is_arithmetic_operator()) {
-      need_projection = true;
-      break;
-    }
-  }
+    return aggregate_expression->aggregate_function_arguments()[0]->is_arithmetic_operator();
+  });
 
   /**
    * If there are arithmetic expressions create a Projection with:
@@ -183,7 +173,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
    *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
-    Projection::ColumnExpressions column_expressions = Expression::create_columns(groupby_columns);
+    auto column_expressions = _translate_expressions(groupby_columns, node);
     column_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
@@ -197,24 +187,29 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
     for (auto& aggregate_expression : aggregate_expressions) {
-      Assert(aggregate_expression->expression_list().size(), "Aggregate: empty expression list");
+      Assert(aggregate_expression->aggregate_function_arguments().size(), "Aggregate: empty expression list");
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
       // Do not project for COUNT(*)
       if (aggregate_expression->aggregate_function() == AggregateFunction::Count &&
-          (aggregate_expression->expression_list())[0]->type() == ExpressionType::Star) {
+          (aggregate_expression->aggregate_function_arguments())[0]->type() == ExpressionType::Star) {
         continue;
       }
 
       // Add original expression of the function to the Projection.
-      column_expressions.emplace_back(aggregate_expression->expression_list()[0]);
+      Assert(aggregate_expression->aggregate_function_arguments().size() == 1,
+             "Aggregate functions with more than one argument not supported right now");
+      const auto lqp_expression = std::dynamic_pointer_cast<LQPExpression>(aggregate_expression->aggregate_function_arguments()[0]);
+      DebugAssert(lqp_expression, "Expression in AggregateNode was not an LQPExpression");
+
+      column_expressions.emplace_back(std::make_shared<OperatorExpression>(node));
 
       // Create a ColumnReference expression for the column id of the Projection.
-      const auto column_ref_expr = Expression::create_column(ColumnID{current_column_id});
+      const auto column_ref_expr = OperatorExpression::create_column(ColumnID{current_column_id});
       current_column_id++;
 
       // Change the expression list of the expression representing the aggregate.
-      aggregate_expression->set_expression_list({column_ref_expr});
+      aggregate_expression->set_aggregate_function_arguments({column_ref_expr});
     }
 
     aggregate_input_operator = std::make_shared<Projection>(aggregate_input_operator, column_expressions);
@@ -230,7 +225,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();
-    const auto root_expr = (aggregate_expression->expression_list())[0];
+    const auto root_expr = (aggregate_expression->aggregate_function_arguments())[0];
 
     if (aggregate_function_type == AggregateFunction::Count && root_expr->type() == ExpressionType::Star) {
       // COUNT(*) does not specify a ColumnID

@@ -49,13 +49,13 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
       break;
     }
     case hsql::kExprFunctionRef: {
-      std::vector<std::shared_ptr<Expression>> expression_list;
+      std::vector<std::shared_ptr<Expression>> aggregate_function_arguments;
       for (auto elem : *(expr.exprList)) {
-        expression_list.emplace_back(to_lqp_expression(*elem, input_node));
+        aggregate_function_arguments.emplace_back(to_lqp_expression(*elem, input_node));
       }
 
       // This is currently for aggregate functions only, hence checking for arguments
-      DebugAssert(expression_list.size(), "Aggregate functions must have arguments");
+      DebugAssert(aggregate_function_arguments.size(), "Aggregate functions must have arguments");
 
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
@@ -70,7 +70,7 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
         aggregate_function = AggregateFunction::CountDistinct;
       }
 
-      node = Expression::create_aggregate_function<LQPExpression>(aggregate_function, expression_list, alias);
+      node = Expression::create_aggregate_function<LQPExpression>(aggregate_function, aggregate_function_arguments, alias);
       break;
     }
     case hsql::kExprLiteralFloat:

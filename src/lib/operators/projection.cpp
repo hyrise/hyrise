@@ -11,6 +11,7 @@
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
+#include "operators/operator_expression.hpp"
 
 namespace opossum {
 

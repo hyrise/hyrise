@@ -135,7 +135,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
-  const std::vector<std::shared_ptr<Expression>>& expression_list() const;
+  const std::vector<std::shared_ptr<Expression>>& aggregate_function_arguments() const;
   ValuePlaceholder value_placeholder() const;
   // @}
 
@@ -145,7 +145,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   const std::optional<std::string>& table_name() const;
   const std::optional<std::string>& alias() const;
 
-  void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
+  void set_aggregate_function_arguments(const std::vector<std::shared_ptr<Expression>>& aggregate_function_arguments);
 
   void set_alias(const std::string& alias);
 

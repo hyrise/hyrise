@@ -101,9 +101,9 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChil
 #define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_id) \
   ASSERT_EQ(expression->type(), ExpressionType::Function);                                            \
   ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                             \
-  ASSERT_EQ(expression->expression_list().size(), 1u);                                                \
-  ASSERT_EQ(expression->expression_list()[0]->type(), ExpressionType::Column);                        \
-  ASSERT_EQ(expression->expression_list()[0]->column_id(), actual_column_id);
+  ASSERT_EQ(expression->aggregate_function_arguments().size(), 1u);                                                \
+  ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);                        \
+  ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_id(), actual_column_id);
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();

@@ -11,13 +11,14 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class OperatorExpression;
 
 /**
  * Operator to select a subset of the set of all columns found in the table
@@ -26,7 +27,7 @@ namespace opossum {
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<Expression>>;
+  using ColumnExpressions = std::vector<std::shared_ptr<OperatorExpression>>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 

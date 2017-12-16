@@ -174,8 +174,8 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
   EXPECT_EQ(first->right_child(), nullptr);
 
   EXPECT_EQ(second->type(), ExpressionType::Function);
-  ASSERT_EQ(second->expression_list().size(), 1u);
-  EXPECT_EQ(second->expression_list().at(0)->type(), ExpressionType::Column);
+  ASSERT_EQ(second->aggregate_function_arguments().size(), 1u);
+  EXPECT_EQ(second->aggregate_function_arguments().at(0)->type(), ExpressionType::Column);
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
@@ -186,9 +186,9 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
   auto& first = expressions.at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::Function);
-  ASSERT_EQ(first->expression_list().size(), 1u);
+  ASSERT_EQ(first->aggregate_function_arguments().size(), 1u);
 
-  auto function_expression = first->expression_list().at(0);
+  auto function_expression = first->aggregate_function_arguments().at(0);
   EXPECT_EQ(function_expression->type(), ExpressionType::Multiplication);
   EXPECT_EQ(function_expression->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(function_expression->right_child()->type(), ExpressionType::Column);

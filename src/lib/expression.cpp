@@ -140,7 +140,7 @@ const std::string Expression::description() const {
       break;
     case ExpressionType::Function:
       desc << "[" << aggregate_function_to_string.left.at(aggregate_function()) << ": " << std::endl;
-      for (const auto& expr : expression_list()) {
+      for (const auto& expr : aggregate_function_arguments()) {
         desc << expr->description() << ", " << std::endl;
       }
       desc << "]";
@@ -226,10 +226,10 @@ std::string Expression::to_string(const std::optional<std::vector<std::string>>&
   return result;
 }
 
-const std::vector<std::shared_ptr<Expression>>& Expression::expression_list() const { return _expression_list; }
+const std::vector<std::shared_ptr<Expression>>& Expression::aggregate_function_arguments() const { return _expression_list; }
 
-void Expression::set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list) {
-  _expression_list = expression_list;
+void Expression::set_aggregate_function_arguments(const std::vector<std::shared_ptr<Expression>>& aggregate_function_arguments) {
+  _expression_list = aggregate_function_arguments;
 }
 
 bool Expression::operator==(const Expression& other) const {
