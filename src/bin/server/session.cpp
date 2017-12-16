@@ -1,3 +1,4 @@
+#include "types.hpp"
 
 #include "session.hpp"
 
@@ -20,7 +21,7 @@ void Session::read_startup_packet() {
   // which we decline with 'N' because we don't support SSL
   if (content_length == 0) {
     _output_packet.data.clear();
-    _pg_handler.write_value(_output_packet, 'N');
+    _pg_handler.write_value(_output_packet, NetworkMessageType::SslNo);
     auto ssl_yes = boost::asio::buffer(_output_packet.data);
     boost::asio::write(_socket, ssl_yes);
 
@@ -44,7 +45,7 @@ void Session::read_startup_packet() {
 void Session::send_auth() {
   // This packet is our AuthenticationOK, which means we do not require any auth.
   _output_packet.data.clear();
-  _pg_handler.write_value(_output_packet, 'R');
+  _pg_handler.write_value(_output_packet, NetworkMessageType::AuthenticationRequest);
   _pg_handler.write_value(_output_packet, htonl(8u));
   _pg_handler.write_value(_output_packet, htonl(0u));
   auto auth = boost::asio::buffer(_output_packet.data);
@@ -65,9 +66,9 @@ void Session::send_auth() {
 void Session::send_ready_for_query() {
   // ReadyForQuery packet 'Z' with transaction status Idle 'I'
   _output_packet.data.clear();
-  _pg_handler.write_value(_output_packet, 'Z');
+  _pg_handler.write_value(_output_packet, NetworkMessageType::ReadyForQuery);
   _pg_handler.write_value(_output_packet, htonl(5u));
-  _pg_handler.write_value(_output_packet, 'I');
+  _pg_handler.write_value(_output_packet, TransactionStatusIndicator::Idle);
   auto ready = boost::asio::buffer(_output_packet.data);
   boost::asio::write(_socket, ready);
 
@@ -86,7 +87,7 @@ void Session::read_query() {
 
 void Session::send_row_description(const std::string& sql) {
   _output_packet.data.clear();
-  _pg_handler.write_value(_output_packet, 'T');
+  _pg_handler.write_value(_output_packet, NetworkMessageType::RowDescription);
 
   auto total_bytes = sizeof(uint32_t) + 6 + 3 * sizeof(uint32_t) + 4 * sizeof(uint16_t);
   _pg_handler.write_value(_output_packet, htonl(total_bytes));
@@ -151,7 +152,7 @@ void Session::send_row_data() {
     */
 
   _output_packet.data.clear();
-  _pg_handler.write_value(_output_packet, 'D');
+  _pg_handler.write_value(_output_packet, NetworkMessageType::DataRow);
 
   auto total_bytes = sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + 3;
   _pg_handler.write_value(_output_packet, htonl(total_bytes));
@@ -170,7 +171,7 @@ void Session::send_row_data() {
 
   // CommandComplete
   _output_packet.data.clear();
-  _pg_handler.write_value(_output_packet, 'C');
+  _pg_handler.write_value(_output_packet, NetworkMessageType::CommandComplete);
 
   total_bytes = sizeof(uint32_t) + 9;
   _pg_handler.write_value(_output_packet, htonl(total_bytes));

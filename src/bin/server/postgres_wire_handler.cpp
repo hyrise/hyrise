@@ -64,11 +64,11 @@ void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& 
   auto total_size = data.size() + num_bytes + (terminate ? 1 : 0);
   data.reserve(total_size);
 
-  data.insert(data.end(), value.begin(), value.end());
+  data.insert(data.end(), value.cbegin(), value.cend());
 
   if (terminate) {
     // 0-terminate the string
-    data.push_back(0);
+    data.emplace_back('\0');
   }
 }
 
