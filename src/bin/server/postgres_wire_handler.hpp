@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "types.hpp"
+
 namespace opossum {
 
 // For convenience
@@ -26,12 +28,17 @@ struct OutputPacket {
   ByteBuffer data;
 };
 
+struct RequestHeader {
+  NetworkMessageType message_type;
+  uint32_t payload_length;
+};
+
 class PostgresWireHandler {
  public:
   static uint32_t handle_startup_package(InputPacket& packet);
   static void handle_startup_package_content(InputPacket& packet, size_t length);
 
-  static uint32_t handle_header(InputPacket& packet);
+  static RequestHeader handle_header(InputPacket& packet);
 
   static std::string handle_query_packet(InputPacket& packet, size_t length);
 

@@ -1,6 +1,8 @@
-#include "postgres_wire_handler.hpp"
-
 #include <iostream>
+
+#include "types.hpp"
+
+#include "postgres_wire_handler.hpp"
 
 //namespace {
 //uint32_t uint32_endian_swap(uint32_t num) {
@@ -37,21 +39,22 @@ void PostgresWireHandler::handle_startup_package_content(InputPacket& packet, si
   read_values<char>(packet, length);
 }
 
-uint32_t PostgresWireHandler::handle_header(InputPacket& packet) {
-  auto tag = read_value<char>(packet);
-  std::cout << "Received message tag: " << tag << std::endl;
+RequestHeader PostgresWireHandler::handle_header(InputPacket& packet) {
+  auto tag = read_value<NetworkMessageType>(packet);
+  std::cout << "Received message tag: " << static_cast<unsigned char>(tag) << std::endl;
 
   auto n_length = read_value<uint32_t>(packet);
   auto length = ntohl(n_length);
 
   packet.offset = packet.data.begin();
 
-  // Return length minus the already read bytes
-  return length - (sizeof(char) + sizeof(uint32_t));
+  // Return length minus the already read bytes (the message type doesn't count into the length)
+  return { /* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
 }
 
 std::string PostgresWireHandler::handle_query_packet(InputPacket& packet, size_t length) {
   auto buffer = read_values<char>(packet, length);
+
   // Convert the content to a string for now
   return std::string(buffer.data(), buffer.size());
 }

@@ -22,8 +22,8 @@ void Session::read_startup_packet() {
   if (content_length == 0) {
     _output_packet.data.clear();
     _pg_handler.write_value(_output_packet, NetworkMessageType::SslNo);
-    auto ssl_yes = boost::asio::buffer(_output_packet.data);
-    boost::asio::write(_socket, ssl_yes);
+    auto ssl_no = boost::asio::buffer(_output_packet.data);
+    boost::asio::write(_socket, ssl_no);
 
     // Wait for actual startup packet
     return read_startup_packet();
@@ -36,7 +36,7 @@ void Session::read_startup_packet() {
   }
   _pg_handler.handle_startup_package_content(_input_packet, bytes_read);
 
-  // We still need to reset the ByteBuffer manually, so the next reader can start of at the correct position.
+  // We still need to reset the ByteBuffer manually, so the next reader can start off at the correct position.
   // This should be hidden later on
   _input_packet.offset = _input_packet.data.begin();
   send_auth();
@@ -76,11 +76,18 @@ void Session::send_ready_for_query() {
 }
 
 void Session::read_query() {
+  _input_packet.offset = _input_packet.data.begin();
   boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, HEADER_LENGTH));
-  auto content_length = _pg_handler.handle_header(_input_packet);
 
-  boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, content_length));
-  auto sql = _pg_handler.handle_query_packet(_input_packet, content_length);
+  auto header = _pg_handler.handle_header(_input_packet);
+
+  if (header.message_type == NetworkMessageType::TerminateCommand) {
+    _socket.close();
+    return;
+  }
+
+  boost::asio::read(_socket, boost::asio::buffer(_input_packet.data, header.payload_length));
+  auto sql = _pg_handler.handle_query_packet(_input_packet, header.payload_length);
 
   send_row_description(sql);
 }
@@ -183,7 +190,7 @@ void Session::send_row_data() {
   boost::asio::write(_socket, command_complete);
 
   // For now, we just go back to reading the next query,
-  // This not not work yet, as we are reading wrong bytes or the client terminates which we don't handle
+  // This does not work yet, as we are reading wrong bytes or the client terminates which we don't handle
   send_ready_for_query();
 }
 
