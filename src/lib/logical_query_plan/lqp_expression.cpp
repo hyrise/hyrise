@@ -3,6 +3,7 @@
 #include "column_origin.hpp"
 #include "utils/assert.hpp"
 #include "constant_mappings.hpp"
+#include "operators/operator_expression.hpp"
 
 namespace opossum {
 

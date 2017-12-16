@@ -105,7 +105,7 @@ void ProjectionNode::_update_output() const {
     if (expression->type() == ExpressionType::Column) {
       DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-      const auto input_column_id = left_child()->resolve_column_origin(expression->column_origin());
+      const auto input_column_id = left_child()->find_output_column_id_by_column_origin(expression->column_origin());
       _output_column_ids_to_input_column_ids->emplace_back(input_column_id);
 
       if (!expression->alias()) {

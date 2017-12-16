@@ -140,7 +140,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   // has to be override by StoredTableNode
   virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
-  std::optional<ColumnID> resolve_column_origin(const ColumnOrigin& column_origin) const;
+
+  std::optional<ColumnID> find_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const;
+  ColumnID get_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const;
+
   std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const;
   std::optional<ColumnID> map_output_column_id_to_input_column_id(const ColumnID output_column_id) const;
   virtual const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const;

@@ -1,5 +1,7 @@
 #include "operator_expression.hpp"
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_expression.hpp"
 #include "utils/assert.hpp"
 #include "constant_mappings.hpp"
 
@@ -12,6 +14,15 @@ std::shared_ptr<OperatorExpression> OperatorExpression::create_column(const Colu
   expression->_alias = alias;
 
   return expression;
+}
+
+OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
+                                       const std::shared_ptr<AbstractLQPNode>& node):
+  Expression(*lqp_expression)
+{
+  if (lqp_expression->type() == ExpressionType::Column) {
+    _column_id = node->get_output_column_id_by_column_origin(lqp_expression->column_origin());
+  }
 }
 
 ColumnID OperatorExpression::column_id() const {

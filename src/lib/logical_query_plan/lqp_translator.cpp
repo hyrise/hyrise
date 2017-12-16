@@ -57,19 +57,26 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
+  const auto column_id = table_scan_node->get_output_column_id_by_column_origin(table_scan_node->column_origin());
+
   if (table_scan_node->scan_type() == ScanType::OpBetween) {
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
-    auto table_scan1 =
-        std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), ScanType::OpGreaterThanEquals,
-                                    table_scan_node->value(), std::nullopt);
+    const auto value = table_scan_node->value();
 
-    return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::OpLessThanEquals,
+    if (value.type() == typeid(ColumnOrigin)) {
+      value = table_scan_node->get_output_column_id_by_column_origin(boost::get<ColumnOrigin>(value));
+    }
+
+    auto table_scan_gt =
+        std::make_shared<TableScan>(input_operator, column_id, ScanType::OpGreaterThanEquals, value, std::nullopt);
+
+    return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::OpLessThanEquals,
                                        *table_scan_node->value2(), std::nullopt);
   }
 
-  return std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), table_scan_node->scan_type(),
+  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(),
                                      table_scan_node->value(), table_scan_node->value2());
 }
 
@@ -78,7 +85,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
   const auto left_child = node->left_child();
   const auto input_operator = translate_node(node->left_child());
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
-  return std::make_shared<Projection>(input_operator, projection_node->column_expressions());
+  return std::make_shared<Projection>(input_operator, _translate_expressions(projection_node->column_expressions(), projection_node));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
@@ -99,7 +106,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   }
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
     const auto& definition = *it;
-    result_operator = std::make_shared<Sort>(input_operator, definition.column_id, definition.order_by_mode);
+    result_operator = std::make_shared<Sort>(input_operator, node->get_output_column_id_by_column_origin(definition.column_origin), definition.order_by_mode);
     input_operator = result_operator;
   }
 
@@ -118,8 +125,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  DebugAssert(static_cast<bool>(join_node->join_column_ids()), "Cannot translate Join without join column ids.");
+  DebugAssert(static_cast<bool>(join_node->join_column_origins()), "Cannot translate Join without columns.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
+
+  const auto join_column_origins
 
   if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
@@ -350,6 +359,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
       Fail("Unknown node type encountered.");
       return nullptr;
   }
+}
+
+std::vector<std::shared_ptr<OperatorExpression>> LQPTranslator::_translate_expressions(const std::vector<std::shared_ptr<LQPExpression>> & lqp_expressions, const std::shared_ptr<AbstractLQPNode>& node) const {
+  std::vector<std::shared_ptr<OperatorExpression>> operator_expressions;
+  operator_expressions.reserve(lqp_expressions.size());
+
+  for (const auto& lqp_expression : lqp_expressions) {
+    operator_expressions.emplace_back(std::make_shared<OperatorExpression>(lqp_expression, node));
+  }
+
+  return operator_expressions;
 }
 
 }  // namespace opossum

@@ -14,7 +14,7 @@ namespace opossum {
  * Order By items are defined by the column they operate on and their sort order.
  */
 struct OrderByDefinition {
-  OrderByDefinition(const ColumnID column_id, const OrderByMode order_by_mode);
+  OrderByDefinition(const ColumnOrigin& column_origin, const OrderByMode order_by_mode);
 
   ColumnOrigin column_origin;
   OrderByMode order_by_mode;

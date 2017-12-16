@@ -215,7 +215,7 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
   return table_name_origin_in_left_child;
 }
 
-std::optional<ColumnID> AbstractLQPNode::resolve_column_origin(const ColumnOrigin& column_origin) const {
+std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const {
   if (column_origin.node.get() == this) {
     DebugAssert(column_origin.column_id < output_column_count(), "ColumnOrigin::column_id out of range");
     return column_origin.column_id;
@@ -224,11 +224,11 @@ std::optional<ColumnID> AbstractLQPNode::resolve_column_origin(const ColumnOrigi
   if (!left_child()) {
     return std::nullopt;
   }
-  const auto column_id_in_left_child = left_child()->resolve_column_origin(column_origin);
+  const auto column_id_in_left_child = left_child()->find_output_column_id_by_column_origin(column_origin);
   auto input_column_id = column_id_in_left_child;
 
   if (right_child()) {
-    const auto column_id_in_right_child = right_child()->resolve_column_origin(column_origin);
+    const auto column_id_in_right_child = right_child()->find_output_column_id_by_column_origin(column_origin);
 
     if (column_id_in_left_child && column_id_in_right_child) {
       Assert(column_id_in_left_child == column_id_in_right_child,
@@ -243,6 +243,12 @@ std::optional<ColumnID> AbstractLQPNode::resolve_column_origin(const ColumnOrigi
   }
 
   return map_input_column_id_to_output_column_id(*input_column_id);
+}
+
+ColumnID AbstractLQPNode::get_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const {
+  const auto column_id = find_output_column_id_by_column_origin(column_origin);
+  Assert(column_id, "Couldn't resolve ColumnOrigin");
+  return *column_id;
 }
 
 std::optional<ColumnID> AbstractLQPNode::map_input_column_id_to_output_column_id(const ColumnID input_column_id) const {

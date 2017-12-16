@@ -228,7 +228,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     const auto column_origin = current_values_node->find_column_origin_by_named_column_reference(named_column_ref);
     Assert(column_origin, "Update: Could not find column reference");
 
-    const auto column_id = current_values_node->resolve_column_origin(column_origin);
+    const auto column_id = current_values_node->find_output_column_id_by_column_origin(column_origin);
     Assert(column_id, "Couldn't resolve ColumnOrigin");
 
     auto expr = HSQLExprTranslator::to_lqp_expression(*sql_expr->value, current_values_node);
@@ -592,7 +592,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
     const auto named_column_reference = HSQLExprTranslator::to_named_column_reference(*select_column_hsql_expr);
     const auto column_origin = input_node->find_column_origin_by_named_column_reference(named_column_reference);
     DebugAssert(column_origin, "Couldn't resolve column");
-    const auto column_id = input_node->resolve_column_origin(column_origin);
+    const auto column_id = input_node->find_output_column_id_by_column_origin(column_origin);
     DebugAssert(column_id, "Couldn't resolve column");
 
     groupby_aliasing_expressions[column_id]->set_alias(select_column_hsql_expr->alias);
@@ -658,7 +658,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       Assert(iter != groupby_column_origins.end(), std::string("Column '") + select_column_hsql_expr->getName() +
                                     "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      const auto column_id = groupby_aliasing_node->resolve_column_origin(*column_origin);
+      const auto column_id = groupby_aliasing_node->find_output_column_id_by_column_origin(*column_origin);
       DebugAssert(column_id, "Couldn't resolve groupby column.");
 
       output_columns.emplace_back(*column_id, alias);
@@ -720,37 +720,56 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractLQPNode>& input_node) {
-  std::vector<std::shared_ptr<Expression>> column_expressions;
+  std::vector<std::shared_ptr<Expression>> select_column_expressions;
 
-  for (const auto* hsql_expr : select_list) {
-    const auto expr = HSQLExprTranslator::to_lqp_expression(*hsql_expr, input_node);
+  for (const auto* select_column_hsql_expr : select_list) {
+    const auto expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
 
     DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
                     expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal,
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
     if (expr->type() == ExpressionType::Star) {
-      // Resolve `SELECT *` to columns.
-      std::vector<ColumnID> column_ids;
+      // Resolve `SELECT *` or `SELECT prefix.*` to columns.
+      std::vector<ColumnOrigin> column_origins;
 
       if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
         for (ColumnID column_idx{0}; column_idx < input_node->output_column_count(); ++column_idx) {
-          column_ids.emplace_back(column_idx);
+          column_origins.emplace_back(input_node->find_column_origin_by_output_column_id(column_idx));
         }
       } else {
-        // Otherwise only take columns that belong to that qualifier.
-        column_ids = input_node->get_output_column_ids_for_table(*expr->table_name());
+        /**
+         * Otherwise only take columns that belong to that qualifier.
+         *
+         * Consider `SELECT t1.* FROM (SELECT a,b FROM t) AS t1`
+         *
+         * First, we retrieve the node (`origin_node`) that "creates" "t1". Then, in the for loop, for every Column that
+         * `origin_node` outputs, we check whether it "reaches" the input_node
+         * (it may get discarded by a Projection/Aggregate along the way). If it is still contained in the input_node
+         * it gets added to the list of Columns that the Projection outputs.
+         */
+        auto origin_node = input_node->find_table_name_origin(*expr->table_name());
+        Assert(origin_node, "Couldn't resolve '" + *expr->table_name() + "'.*");
+
+        for (auto origin_node_column_id = ColumnID{0}; origin_node_column_id < origin_node->output_column_count(); ++origin_node_column_id) {
+          const auto column_origin = ColumnOrigin{origin_node, origin_node_column_id};
+          const auto input_node_column_id = input_node->find_output_column_id_by_column_origin(
+          {origin_node, origin_node_column_id});
+          if (input_node_column_id) {
+            column_origins.emplace_back(column_origin);
+          }
+        }
       }
 
-      const auto& column_references = Expression::create_columns(column_ids);
-      column_expressions.insert(column_expressions.end(), column_references.cbegin(), column_references.cend());
+      const auto column_references = LQPExpression::create_columns(column_origins);
+      select_column_expressions.insert(select_column_expressions.end(), column_references.cbegin(), column_references.cend());
     } else {
-      column_expressions.emplace_back(expr);
+      select_column_expressions.emplace_back(expr);
     }
   }
 
-  auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
+  auto projection_node = std::make_shared<ProjectionNode>(select_column_expressions);
   projection_node->set_left_child(input_node);
 
   return projection_node;
@@ -771,10 +790,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
     // TODO(anybody): handle non-column refs
     DebugAssert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
-    const auto column_id = HSQLExprTranslator::get_column_id_for_expression(order_expr, input_node);
+    const auto column_origin = HSQLExprTranslator::to_column_origin(order_expr, input_node);
     const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
 
-    order_by_definitions.emplace_back(column_id, order_by_mode);
+    order_by_definitions.emplace_back(column_origin, order_by_mode);
   }
 
   auto sort_node = std::make_shared<SortNode>(order_by_definitions);
@@ -828,6 +847,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
    * TODO(anybody): extend support for those HAVING clauses.
    * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
    */
+
   const auto refers_to_column = [allow_function_columns](const hsql::Expr& hsql_expr) {
     return hsql_expr.isType(hsql::kExprColumnRef) ||
            (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
@@ -865,7 +885,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     // TODO(anybody): TableScan does not support AllParameterVariant as second value.
     // This would be required to use BETWEEN in a prepared statement,
     // or to do a BETWEEN scan for three columns (a BETWEEN b and c).
-    value2 = boost::get<AllTypeVariant>(translate_hsql_operand(*expr1));
+    const auto value2_all_parameter_variant = HSQLExprTranslator::to_all_parameter_variant(*expr1);
+    Assert(is_variant(value2_all_parameter_variant), "Value2 of a Predicate has to be AllTypeVariant");
+    value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
 
     Assert(refers_to_column(*hsql_expr.expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
   } else {
@@ -889,7 +911,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
   } else {
-    value = translate_hsql_operand(*value_ref_hsql_expr);
+    value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }
 
   /**

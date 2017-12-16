@@ -21,7 +21,7 @@ std::string SortNode::description() const {
   s << "[Sort] ";
 
   auto stream_aggregate = [&](const OrderByDefinition& definition) {
-   syntax error// s << get_verbose_column_name(definition.column_origin->);
+    s << definition.column_origin.get_verbose_name();
     s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
   };
 
