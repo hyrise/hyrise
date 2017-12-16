@@ -3,6 +3,7 @@ add_executable(
     hyriseServer
 
     server/server.cpp
+    server/session.cpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
 )
