@@ -84,7 +84,7 @@ class JoinTest : public BaseTest {
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator> left,
                         const std::shared_ptr<const AbstractOperator> right,
-                        const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const JoinMode mode,
+                        const JoinColumnIDs& column_ids, const ScanType scan_type, const JoinMode mode,
                         const std::string& file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);

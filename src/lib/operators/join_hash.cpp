@@ -24,7 +24,7 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
+                   const JoinColumnIDs& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
   DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
 }
@@ -87,7 +87,7 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
+               const JoinMode mode, const JoinColumnIDs& column_ids, const ScanType scan_type,
                const bool inputs_swapped)
       : _left(left),
         _right(right),
@@ -102,7 +102,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const JoinMode _mode;
-  const std::pair<ColumnID, ColumnID> _column_ids;
+  const JoinColumnIDs _column_ids;
   const ScanType _scan_type;
 
   const bool _inputs_swapped;

@@ -89,7 +89,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    */
   virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
       const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
-      const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type);
+      const JoinColumnIDs column_ids, const ScanType scan_type);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);

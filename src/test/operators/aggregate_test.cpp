@@ -516,7 +516,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 
 TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
   auto join = std::make_shared<JoinHash>(_table_wrapper_3_1, _table_wrapper_3_2, JoinMode::Inner,
-                                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+                                         JoinColumnIDs(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->test_output(join, {}, {ColumnID{0}, ColumnID{3}}, "src/test/tables/aggregateoperator/join_2gb_0agg/result.tbl",
@@ -526,7 +526,7 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
 TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
   auto join =
       std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
-                                       std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpLessThan);
+                                       JoinColumnIDs(ColumnID{0}, ColumnID{0}), ScanType::OpLessThan);
   join->execute();
 
   this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

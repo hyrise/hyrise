@@ -130,7 +130,7 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
 
 TEST_F(LogicalQueryPlanTest, TwoInputsTest) {
   const auto join_node = std::make_shared<JoinNode>(
-      JoinMode::Inner, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
+      JoinMode::Inner, JoinColumnIDs(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
 
   ASSERT_EQ(join_node->left_child(), nullptr);
   ASSERT_EQ(join_node->right_child(), nullptr);

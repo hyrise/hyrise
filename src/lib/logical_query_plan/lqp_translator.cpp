@@ -64,7 +64,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
     const auto value = table_scan_node->value();
-
     if (value.type() == typeid(ColumnOrigin)) {
       value = table_scan_node->get_output_column_id_by_column_origin(boost::get<ColumnOrigin>(value));
     }
@@ -128,7 +127,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   DebugAssert(static_cast<bool>(join_node->join_column_origins()), "Cannot translate Join without columns.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
 
-  const auto join_column_origins
+  J join_column_origins
 
   if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
