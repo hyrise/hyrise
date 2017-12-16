@@ -39,14 +39,15 @@ class server {
 
 int main(int argc, char* argv[]) {
   try {
-    if (argc != 2) {
-      std::cerr << "Usage: " << argv[0] << " <port>\n";
-      return 1;
+    auto port = 5432;
+
+    if (argc >= 2) {
+      port = std::atoi(argv[1]);
     }
 
     boost::asio::io_service io_service;
 
-    opossum::server s(io_service, std::atoi(argv[1]));
+    opossum::server s(io_service, port);
 
     io_service.run();
   } catch (std::exception& e) {
