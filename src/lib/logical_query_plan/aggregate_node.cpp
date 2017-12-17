@@ -148,7 +148,7 @@ std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return {shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
+      return ColumnOrigin{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
     }
   } else {
     Fail("Expression type is not supported.");
@@ -182,7 +182,7 @@ void AggregateNode::_update_output() const {
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
   for (const auto& groupby_column_origin : _groupby_column_origins) {
-    const auto input_column_id = left_child()->find_output_column_id_by_column_origin(groupby_column_origin);
+    const auto input_column_id = left_child()->get_output_column_id_by_column_origin(groupby_column_origin);
     _output_column_ids_to_input_column_ids->emplace_back(input_column_id);
     _output_column_names->emplace_back(left_child()->output_column_names()[input_column_id]);
   }

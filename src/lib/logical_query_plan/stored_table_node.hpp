@@ -23,21 +23,13 @@ class StoredTableNode : public AbstractLQPNode {
   const std::string& table_name() const;
 
   std::string description() const override;
-  std::shared_ptr<AbstractLQPNode> find_table_name_origin(const std::string& table_name) const override;
-  std::optional<ColumnOrigin> find_column_origin(const NamedColumnReference& named_column_reference) const override;
-  const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
+  std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const override;
+  const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
-
-  bool knows_table(const std::string& table_name) const override;
-
-  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
-
-  std::optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference& named_column_reference) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 

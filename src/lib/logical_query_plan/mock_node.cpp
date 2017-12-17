@@ -24,7 +24,7 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : Abstrac
 
 const std::vector<std::optional<ColumnID>>& MockNode::output_column_ids_to_input_column_ids() const {
   if (!_output_column_ids_to_input_column_ids) {
-    _output_column_ids_to_input_column_ids->emplace(output_column_count());
+    _output_column_ids_to_input_column_ids = std::vector<std::optional<ColumnID>>(output_column_count());
   }
 
   return *_output_column_ids_to_input_column_ids;

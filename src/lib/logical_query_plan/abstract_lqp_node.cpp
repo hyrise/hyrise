@@ -181,13 +181,13 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
 
 ColumnOrigin AbstractLQPNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
   const auto input_column_id = map_output_column_id_to_input_column_id(column_id);
-  if (input_column_id == INVALID_COLUMN_ID) {
-    return {std::in_place, shared_from_this(), column_id};
+  if (!input_column_id) {
+    return {shared_from_this(), column_id};
   }
 
   Assert(left_child() && !right_child(), "Node type has to override find_column_origin_by_output_column_id()");
 
-  return left_child()->find_column_origin_by_output_column_id(input_column_id);
+  return left_child()->find_column_origin_by_output_column_id(*input_column_id);
 }
 
 std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(const std::string& table_name) const {
@@ -252,7 +252,7 @@ ColumnID AbstractLQPNode::get_output_column_id_by_column_origin(const ColumnOrig
 }
 
 std::optional<ColumnID> AbstractLQPNode::map_input_column_id_to_output_column_id(const ColumnID input_column_id) const {
-  const auto output_column_ids_to_input_column_ids = _output_column_ids_to_input_column_ids();
+  const auto& output_column_ids_to_input_column_ids = this->output_column_ids_to_input_column_ids();
   for (auto output_column_id = ColumnID{0}; output_column_id < output_column_count(); output_column_id++) {
     if (output_column_ids_to_input_column_ids[output_column_id] == input_column_id) {
       return output_column_id;
@@ -264,7 +264,7 @@ std::optional<ColumnID> AbstractLQPNode::map_input_column_id_to_output_column_id
 
 std::optional<ColumnID> AbstractLQPNode::map_output_column_id_to_input_column_id(const ColumnID output_column_id) const {
   Assert(output_column_id < output_column_count(), "ColumnID out of range");
-  return _output_column_ids_to_input_column_ids()[output_column_id];
+  return output_column_ids_to_input_column_ids()[output_column_id];
 }
 
 const std::vector<std::optional<ColumnID>>& AbstractLQPNode::output_column_ids_to_input_column_ids() const {

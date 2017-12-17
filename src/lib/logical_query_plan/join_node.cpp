@@ -39,10 +39,9 @@ std::string JoinNode::description() const {
   desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
 
   if (_join_column_origins && _scan_type) {
-    desc << " " << get_verbose_column_name(_join_column_origins->first);
+    desc << " " << _join_column_origins->first.get_verbose_name();
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << get_verbose_column_name(ColumnID{static_cast<ColumnID::base_type>(
-                       left_child()->output_column_count() + _join_column_origins->second)});
+    desc << " " << _join_column_origins->second.get_verbose_name();;
   }
 
   return desc.str();
@@ -62,7 +61,7 @@ ColumnOrigin JoinNode::find_column_origin_by_output_column_id(const ColumnID col
   if (column_id < left_child()->output_column_count()) {
     return left_child()->find_column_origin_by_output_column_id(column_id);
   } else {
-    const auto right_child_column_id = column_id - left_child()->output_column_count();
+    const auto right_child_column_id = static_cast<ColumnID>(column_id - left_child()->output_column_count());
     Assert(right_child_column_id < right_child()->output_column_count(), "ColumnID out of range");
     return right_child()->find_column_origin_by_output_column_id(right_child_column_id);
   }
@@ -84,8 +83,14 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     Assert(_join_column_origins,
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
+
+    JoinColumnIDs join_colum_ids{
+      get_output_column_id_by_column_origin(_join_column_origins->first),
+      get_output_column_id_by_column_origin(_join_column_origins->second)
+    };
+
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
-                                                                             *_join_column_origins, *_scan_type);
+                                                                             join_colum_ids, *_scan_type);
   }
 }
 

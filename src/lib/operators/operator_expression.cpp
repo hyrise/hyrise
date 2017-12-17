@@ -18,14 +18,26 @@ std::shared_ptr<OperatorExpression> OperatorExpression::create_column(const Colu
 
 OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                                        const std::shared_ptr<AbstractLQPNode>& node):
-  Expression(*lqp_expression)
+  Expression<OperatorExpression>(lqp_expression->_type)
 {
+  _value = lqp_expression->_value;
+  _aggregate_function = lqp_expression->_aggregate_function;
+  _table_name = lqp_expression->_table_name;
+  _value_placeholder = lqp_expression->_value_placeholder;
+
   if (lqp_expression->type() == ExpressionType::Column) {
     _column_id = node->get_output_column_id_by_column_origin(lqp_expression->column_origin());
   }
 
-  for (auto &aggregate_function_argument : _aggregate_function_arguments) {
-    aggregate_function_argument = std::make_shared<OperatorExpression>(aggregate_function_argument, node);
+  for (auto &aggregate_function_argument : lqp_expression->_aggregate_function_arguments) {
+    _aggregate_function_arguments.emplace_back(std::make_shared<OperatorExpression>(aggregate_function_argument, node));
+  }
+
+  if (lqp_expression->left_child()) {
+    _left_child = std::make_shared<OperatorExpression>(lqp_expression->left_child(), node);
+  }
+  if (lqp_expression->right_child()) {
+    _right_child = std::make_shared<OperatorExpression>(lqp_expression->right_child(), node);
   }
 }
 
@@ -37,9 +49,9 @@ ColumnID OperatorExpression::column_id() const {
 std::string OperatorExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names) const {
   if (type() == ExpressionType::Column) {
     if (!input_column_names) {
-      DebugAssert(column_id() < input_column_names.size(),
+      DebugAssert(column_id() < input_column_names->size(),
                   std::string("_column_id ") + std::to_string(column_id()) + " out of range");
-      return input_column_names[column_id()];
+      return (*input_column_names)[column_id()];
     }
     return std::string("ColumnID #" + std::to_string(column_id()));
   }
