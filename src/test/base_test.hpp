@@ -36,7 +36,9 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
                                                                          const std::vector<T>& values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
-    auto compressed_column = DictionaryCompression::compress_column(data_type, value_column);
+    auto [compressed_column, _ignore] =
+            DictionaryCompression::compress_column(data_type, value_column);
+    (void)_ignore; // ugly way of not having to use the returned stats because we have -Wunused-variable enabled
     return std::static_pointer_cast<DictionaryColumn<T>>(compressed_column);
   }
 
