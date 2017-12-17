@@ -15,6 +15,7 @@
 namespace opossum {
 
 class AggregateNode;
+class LQPExpression;
 
 /**
 * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
@@ -105,14 +106,14 @@ class SQLTranslator final : public Noncopyable {
    */
   std::shared_ptr<AbstractLQPNode> _translate_predicate(
       const hsql::Expr& hsql_expr, bool allow_function_columns,
-      const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
+      const std::function<ColumnOrigin(const hsql::Expr&)>& resolve_column,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::vector<std::shared_ptr<Expression>> _retrieve_having_aggregates(
+  std::vector<std::shared_ptr<LQPExpression>> _retrieve_having_aggregates(
       const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node);
 
  private:

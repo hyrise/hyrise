@@ -35,7 +35,7 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
   switch (expr.type) {
     case hsql::kExprOperator: {
       auto operator_type = operator_type_to_expression_type.at(expr.opType);
-      node = Expression::create_binary_operator<LQPExpression>(operator_type, left, right, alias);
+      node = LQPExpression::create_binary_operator(operator_type, left, right, alias);
       break;
     }
     case hsql::kExprColumnRef: {
@@ -44,12 +44,12 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
 
       auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
       NamedColumnReference named_column_reference{name, table_name};
-      auto column_origin = input_node->find_column_origin_by_named_column_reference(named_column_reference);
+      auto column_origin = input_node->get_column_origin_by_named_column_reference(named_column_reference);
       node = LQPExpression::create_column(column_origin, alias);
       break;
     }
     case hsql::kExprFunctionRef: {
-      std::vector<std::shared_ptr<Expression>> aggregate_function_arguments;
+      std::vector<std::shared_ptr<LQPExpression>> aggregate_function_arguments;
       for (auto elem : *(expr.exprList)) {
         aggregate_function_arguments.emplace_back(to_lqp_expression(*elem, input_node));
       }
@@ -70,11 +70,11 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
         aggregate_function = AggregateFunction::CountDistinct;
       }
 
-      node = Expression::create_aggregate_function<LQPExpression>(aggregate_function, aggregate_function_arguments, alias);
+      node = LQPExpression::create_aggregate_function(aggregate_function, aggregate_function_arguments, alias);
       break;
     }
     case hsql::kExprLiteralFloat:
-      node = Expression::create_literal<LQPExpression>(expr.fval, alias);
+      node = LQPExpression::create_literal(expr.fval, alias);
       break;
     case hsql::kExprLiteralInt: {
       AllTypeVariant value;
@@ -83,21 +83,21 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
       } else {
         value = expr.ival;
       }
-      node = Expression::create_literal<LQPExpression>(value, alias);
+      node = LQPExpression::create_literal(value, alias);
       break;
     }
     case hsql::kExprLiteralString:
-      node = Expression::create_literal<LQPExpression>(name, alias);
+      node = LQPExpression::create_literal(name, alias);
       break;
     case hsql::kExprLiteralNull:
-      node = Expression::create_literal<LQPExpression>(NULL_VALUE);
+      node = LQPExpression::create_literal(NULL_VALUE);
       break;
     case hsql::kExprParameter:
-      node = Expression::create_value_placeholder<LQPExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
+      node = LQPExpression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
       break;
     case hsql::kExprStar: {
       const auto table_name = expr.table != nullptr ? std::optional<std::string>(expr.table) : std::nullopt;
-      node = Expression::create_select_star<LQPExpression>(table_name);
+      node = LQPExpression::create_select_star(table_name);
       break;
     }
     case hsql::kExprSelect:
@@ -114,8 +114,10 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
        */
       // TODO(mp): translate as soon as SQLTranslator is merged
       Fail("Subselects are not supported yet.");
+      return nullptr; // Make compiler happy
     default:
       Fail("Unsupported expression type");
+      return nullptr; // Make compiler happy
   }
 
   return node;

@@ -37,6 +37,8 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID 
       _right_parameter{right_parameter},
       _right_value2{right_value2} {}
 
+TableScan::~TableScan() = default;
+
 ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }

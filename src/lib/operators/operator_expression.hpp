@@ -19,7 +19,7 @@ class OperatorExpression : public Expression<OperatorExpression> {
 
   ColumnID column_id() const;
 
-  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names) const override;
+  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root = true) const override;
 
  private:
   std::optional<ColumnID> _column_id;

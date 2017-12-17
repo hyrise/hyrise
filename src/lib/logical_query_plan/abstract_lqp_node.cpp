@@ -179,6 +179,12 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
   return column_origin_in_left_child;
 }
 
+ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
+  const auto colum_origin = find_column_origin_by_named_column_reference(named_column_reference);
+  DebugAssert(colum_origin, "Couldn't resolve column origin");
+  return *colum_origin;
+}
+
 ColumnOrigin AbstractLQPNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
   const auto input_column_id = map_output_column_id_to_input_column_id(column_id);
   if (!input_column_id) {

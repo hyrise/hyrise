@@ -69,9 +69,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
-    const auto value = table_scan_node->value();
+    auto value = table_scan_node->value();
     if (value.type() == typeid(ColumnOrigin)) {
-      value = table_scan_node->get_output_column_id_by_column_origin(boost::get<ColumnOrigin>(value));
+      value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const ColumnOrigin>(value));
     }
 
     auto table_scan_gt =
@@ -134,8 +134,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
 
   JoinColumnIDs join_column_ids;
-  join_column_ids.first = join_node->left_child()->get_output_column_id_by_column_origin(join_node->join_column_origins().first);
-  join_column_ids.second = join_node->right_child()->get_output_column_id_by_column_origin(join_node->join_column_origins().second);
+  join_column_ids.first = join_node->left_child()->get_output_column_id_by_column_origin(join_node->join_column_origins()->first);
+  join_column_ids.second = join_node->right_child()->get_output_column_id_by_column_origin(join_node->join_column_origins()->second);
 
   if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
@@ -152,7 +152,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
   auto aggregate_expressions = _translate_expressions(aggregate_node->aggregate_expressions(), node);
-  auto groupby_columns = aggregate_node->groupby_column_origins();
+
+  std::vector<ColumnID> groupby_columns;
+  for (const auto& groupby_column_origin : aggregate_node->groupby_column_origins()) {
+    groupby_columns.emplace_back(node->get_output_column_id_by_column_origin(groupby_column_origin));
+  }
 
   auto aggregate_input_operator = input_operator;
 
@@ -176,7 +180,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
    *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
-    auto projection_expressions = _translate_expressions(groupby_columns, node);
+    auto projection_expressions = _translate_expressions(LQPExpression::create_columns(aggregate_node->groupby_column_origins()), node);
     projection_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
@@ -266,7 +270,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
   const auto input_operator = translate_node(node->left_child());
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
-  auto new_value_exprs = update_node->column_expressions();
+  auto new_value_exprs = _translate_expressions(update_node->column_expressions(), node);
 
   auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
   return std::make_shared<Update>(update_node->table_name(), input_operator, projection);

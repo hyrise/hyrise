@@ -46,7 +46,7 @@ ColumnID OperatorExpression::column_id() const {
   return *_column_id;
 }
 
-std::string OperatorExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names) const {
+std::string OperatorExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
   if (type() == ExpressionType::Column) {
     if (!input_column_names) {
       DebugAssert(column_id() < input_column_names->size(),
@@ -55,7 +55,7 @@ std::string OperatorExpression::to_string(const std::optional<std::vector<std::s
     }
     return std::string("ColumnID #" + std::to_string(column_id()));
   }
-  return Expression::to_string(input_column_names);
+  return Expression<OperatorExpression>::to_string(input_column_names, is_root);
 }
 
 }

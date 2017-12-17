@@ -147,7 +147,7 @@ const std::string Expression<DerivedExpressionType>::description() const {
       desc << "[" << value() << "]";
       break;
     case ExpressionType::Column:
-      desc << "[Column: " << column_origin().node->name() << ": " column_origin().column_id << "]";
+      desc << "[" << to_string() << "]";
       break;
     case ExpressionType::Function:
       desc << "[" << aggregate_function_to_string.left.at(aggregate_function()) << ": " << std::endl;
@@ -204,6 +204,7 @@ std::string Expression<DerivedExpressionType>::to_string(const std::optional<std
       return type_cast<std::string>(value());
     case ExpressionType::Column:
       Fail("This should be handled in derived Expression type");
+      return "";
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
              _aggregate_function_arguments[0]->to_string(input_column_names, false) + ")";
@@ -247,7 +248,7 @@ template<typename DerivedExpressionType>
 const std::vector<std::shared_ptr<DerivedExpressionType>>& Expression<DerivedExpressionType>::aggregate_function_arguments() const { return _aggregate_function_arguments; }
 
 template<typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_aggregate_function_arguments(const std::vector<std::shared_ptr<Expression>>& aggregate_function_arguments) {
+void Expression<DerivedExpressionType>::set_aggregate_function_arguments(const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments) {
   _aggregate_function_arguments = aggregate_function_arguments;
 }
 
@@ -273,7 +274,7 @@ bool Expression<DerivedExpressionType>::operator==(const Expression& other) cons
   }
 
   return _type == other._type && _value == other._value && _aggregate_function == other._aggregate_function &&
-         _table_name == other._table_name && _column_id == other._column_id && _alias == other._alias;
+         _table_name == other._table_name && _alias == other._alias;
 }
 
 template<typename DerivedExpressionType>
@@ -337,7 +338,7 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
 }
 
 template<typename DerivedExpressionType>
-std::shared_ptr<ExpressionType> Expression<DerivedExpressionType>::create_select_star(const std::optional<std::string>& table_name) {
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_select_star(const std::optional<std::string>& table_name) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Star);
   expression->_table_name = table_name;
   return expression;

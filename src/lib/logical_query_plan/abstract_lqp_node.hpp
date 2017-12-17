@@ -133,6 +133,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual const std::vector<std::string>& output_column_names() const;
 
   std::optional<ColumnOrigin> find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
+  ColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
   // has to be overriden if there is > 1 child
   virtual ColumnOrigin find_column_origin_by_output_column_id(const ColumnID column_id) const;

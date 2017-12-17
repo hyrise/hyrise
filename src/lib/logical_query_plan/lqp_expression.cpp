@@ -42,11 +42,11 @@ const ColumnOrigin& LQPExpression::column_origin() const {
   return *_column_origin;
 }
 
-std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names) const {
+std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
   if (type() == ExpressionType::Column) {
     return column_origin().get_verbose_name();
   }
-  return Expression::to_string(input_column_names);
+  return Expression<LQPExpression>::to_string(input_column_names, is_root);
 }
 
 }
