@@ -110,7 +110,7 @@ using ColumnNameLength = uint8_t;  // The length of column names must fit in thi
 using AttributeVectorWidth = uint8_t;
 
 using PosList = pmr_vector<RowID>;
-using JoinColumnIDs = JoinColumnIDs;
+using JoinColumnIDs = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};

@@ -61,10 +61,10 @@ class Projection : public AbstractReadOnlyOperator {
 
   template <typename T>
   static void _create_column(boost::hana::basic_type<T> type, Chunk& chunk, const ChunkID chunk_id,
-                             const std::shared_ptr<Expression>& expression,
+                             const std::shared_ptr<OperatorExpression>& expression,
                              std::shared_ptr<const Table> input_table_left);
 
-  static DataType _get_type_of_expression(const std::shared_ptr<Expression>& expression,
+  static DataType _get_type_of_expression(const std::shared_ptr<OperatorExpression>& expression,
                                           const std::shared_ptr<const Table>& table);
 
   /**
@@ -73,7 +73,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
-      const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id);
+      const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id);
 
   /**
    * Operators that all numerical types support.

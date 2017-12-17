@@ -189,7 +189,7 @@ std::string Expression::to_string(const std::optional<std::vector<std::string>>&
       Fail("This should be handled in derived Expression type");
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
-             _expression_list[0]->to_string() + ")";
+             _aggregate_function_arguments[0]->to_string() + ")";
     case ExpressionType::Star:
       return std::string("*");
     default:
@@ -226,10 +226,10 @@ std::string Expression::to_string(const std::optional<std::vector<std::string>>&
   return result;
 }
 
-const std::vector<std::shared_ptr<Expression>>& Expression::aggregate_function_arguments() const { return _expression_list; }
+const std::vector<std::shared_ptr<Expression>>& Expression::aggregate_function_arguments() const { return _aggregate_function_arguments; }
 
 void Expression::set_aggregate_function_arguments(const std::vector<std::shared_ptr<Expression>>& aggregate_function_arguments) {
-  _expression_list = aggregate_function_arguments;
+  _aggregate_function_arguments = aggregate_function_arguments;
 }
 
 bool Expression::operator==(const Expression& other) const {
@@ -244,10 +244,10 @@ bool Expression::operator==(const Expression& other) const {
   if (!compare_expression_ptrs(_left_child, other._left_child)) return false;
   if (!compare_expression_ptrs(_right_child, other._right_child)) return false;
 
-  if (_expression_list.size() != other._expression_list.size()) return false;
+  if (_aggregate_function_arguments.size() != other._aggregate_function_arguments.size()) return false;
 
-  for (size_t expression_list_idx = 0; expression_list_idx < _expression_list.size(); ++expression_list_idx) {
-    if (!compare_expression_ptrs(_expression_list[expression_list_idx], other._expression_list[expression_list_idx])) {
+  for (size_t expression_list_idx = 0; expression_list_idx < _aggregate_function_arguments.size(); ++expression_list_idx) {
+    if (!compare_expression_ptrs(_aggregate_function_arguments[expression_list_idx], other._aggregate_function_arguments[expression_list_idx])) {
       return false;
     }
   }

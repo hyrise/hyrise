@@ -14,7 +14,6 @@
 namespace opossum {
 
 struct ColumnID;
-class Expression;
 class TableStatistics;
 
 enum class LQPNodeType {

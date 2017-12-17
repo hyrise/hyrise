@@ -23,6 +23,10 @@ OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp
   if (lqp_expression->type() == ExpressionType::Column) {
     _column_id = node->get_output_column_id_by_column_origin(lqp_expression->column_origin());
   }
+
+  for (auto &aggregate_function_argument : _aggregate_function_arguments) {
+    aggregate_function_argument = std::make_shared<OperatorExpression>(aggregate_function_argument, node);
+  }
 }
 
 ColumnID OperatorExpression::column_id() const {

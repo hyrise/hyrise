@@ -19,4 +19,6 @@ struct ColumnOrigin {
   std::string get_verbose_name() const;
 };
 
+std::ostream& operator<<(std::ostream& os, const ColumnOrigin& column_origin);
+
 }

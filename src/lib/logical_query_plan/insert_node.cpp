@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

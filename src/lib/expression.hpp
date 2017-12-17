@@ -158,7 +158,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   bool operator==(const Expression& other) const;
 
- private:
+ protected:
   // the type of the expression
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal
@@ -174,7 +174,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Expression hierarchy.
    * E.g. for CASE one could argue that the THEN case becomes the left child, whereas ELSE becomes the right child.
    */
-  std::vector<std::shared_ptr<Expression>> _expression_list;
+  std::vector<std::shared_ptr<Expression>> _aggregate_function_arguments;
 
   std::optional<std::string> _table_name;
 
@@ -215,7 +215,7 @@ AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expressi
 const std::optional<std::string>& alias) {
   auto expression = std::make_shared<ExpressionType>(ExpressionType::Function);
   expression->_aggregate_function = aggregate_function;
-  expression->_expression_list = function_arguments;
+  expression->_aggregate_function_arguments = function_arguments;
   expression->_alias = alias;
   return expression;
 }

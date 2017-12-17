@@ -61,6 +61,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 
   const auto column_id = table_scan_node->get_output_column_id_by_column_origin(table_scan_node->column_origin());
 
+  /**
+   * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
+   * `X >= a` and one for `X <= b`
+   */
   if (table_scan_node->scan_type() == ScanType::OpBetween) {
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
@@ -147,8 +151,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   const auto input_operator = translate_node(node->left_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
-  auto aggregate_expressions = aggregate_node->aggregate_expressions();
-  auto groupby_columns = aggregate_node->groupby_column_ids();
+  auto aggregate_expressions = _translate_expressions(aggregate_node->aggregate_expressions(), node);
+  auto groupby_columns = aggregate_node->groupby_column_origins();
 
   auto aggregate_input_operator = input_operator;
 
@@ -164,17 +168,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   });
 
   /**
-   * If there are arithmetic expressions create a Projection with:
-   *
-   *  - arithmetic expressions,
-   *  - columns used in aggregate functions, and
-   *  - GROUP BY columns
+   * If there are arithmetic expressions create a Projection with:   *
+   *  - GROUPBY columns
+   *  - arithmetic expressions used as arguments for aggregate functions,
+   *  - columns used as arguments for aggregate functions
    *
    *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
-    auto column_expressions = _translate_expressions(groupby_columns, node);
-    column_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
+    auto projection_expressions = _translate_expressions(groupby_columns, node);
+    projection_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
     // Unused columns are skipped – therefore, the ColumnIDs might change.
@@ -199,20 +202,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
       // Add original expression of the function to the Projection.
       Assert(aggregate_expression->aggregate_function_arguments().size() == 1,
              "Aggregate functions with more than one argument not supported right now");
-      const auto lqp_expression = std::dynamic_pointer_cast<LQPExpression>(aggregate_expression->aggregate_function_arguments()[0]);
-      DebugAssert(lqp_expression, "Expression in AggregateNode was not an LQPExpression");
+      const auto argument_lqp_expression = std::dynamic_pointer_cast<OperatorExpression>(aggregate_expression->aggregate_function_arguments()[0]);
+      DebugAssert(argument_lqp_expression, "Expression in AggregateNode was not an LQPExpression");
 
-      column_expressions.emplace_back(std::make_shared<OperatorExpression>(node));
-
-      // Create a ColumnReference expression for the column id of the Projection.
-      const auto column_ref_expr = OperatorExpression::create_column(ColumnID{current_column_id});
-      current_column_id++;
+      projection_expressions.emplace_back(argument_lqp_expression);
 
       // Change the expression list of the expression representing the aggregate.
-      aggregate_expression->set_aggregate_function_arguments({column_ref_expr});
+      aggregate_expression->set_aggregate_function_arguments({OperatorExpression::create_column(ColumnID{current_column_id})});
+      current_column_id++;
     }
 
-    aggregate_input_operator = std::make_shared<Projection>(aggregate_input_operator, column_expressions);
+    aggregate_input_operator = std::make_shared<Projection>(aggregate_input_operator, projection_expressions);
   }
 
   /**
@@ -225,13 +225,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();
-    const auto root_expr = (aggregate_expression->aggregate_function_arguments())[0];
+    const auto argument_expression = std::dynamic_pointer_cast<OperatorExpression>(aggregate_expression->aggregate_function_arguments()[0]);
+    DebugAssert(argument_expression, "Couldn't cast Expression to OperatorExpression.");
 
-    if (aggregate_function_type == AggregateFunction::Count && root_expr->type() == ExpressionType::Star) {
+    if (aggregate_function_type == AggregateFunction::Count && argument_expression->type() == ExpressionType::Star) {
       // COUNT(*) does not specify a ColumnID
       aggregate_definitions.emplace_back(CountStarID, AggregateFunction::Count, aggregate_expression->alias());
     } else {
-      const auto column_id = root_expr->column_id();
+      const auto column_id = argument_expression->column_id();
       aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());
     }
   }
@@ -281,9 +282,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode()) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
-      break;
-    default:
-      Fail("UnionMode not supported");
   }
   return nullptr;  // Shouldn't be reached, but makes compilers happy
 }
