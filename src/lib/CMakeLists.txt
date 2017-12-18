@@ -180,6 +180,21 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    server/hyrise_server.cpp
+    server/hyrise_server.hpp
+    server/hyrise_session.cpp
+    server/hyrise_session.hpp
+    server/postgres_wire_handler.cpp
+    server/postgres_wire_handler.hpp
+    server/types.hpp
+    server/commands/abstract_command.cpp
+    server/commands/abstract_command.hpp
+    server/commands/simple_query_command.cpp
+    server/commands/simple_query_command.hpp
+    server/commands/startup_command.cpp
+    server/commands/startup_command.hpp
+    server/commands/terminate_command.cpp
+    server/commands/terminate_command.hpp
     sql/lru_cache.hpp
     sql/sql_planner.cpp
     sql/sql_planner.hpp

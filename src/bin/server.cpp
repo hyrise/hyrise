@@ -6,7 +6,7 @@
 
 #include <boost/asio.hpp>
 
-#include "server/hyrise_server.hpp"
+#include <server/hyrise_server.hpp>
 
 int main(int argc, char* argv[]) {
   try {
