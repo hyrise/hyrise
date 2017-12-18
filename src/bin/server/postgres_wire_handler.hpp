@@ -20,7 +20,7 @@ struct InputPacket {
   ByteBuffer data = ByteBuffer(MAX_BUFFER_SIZE);
 
   // Stores the current position in the data buffer
-  ByteBuffer::iterator offset = data.begin();
+  mutable ByteBuffer::const_iterator offset = data.begin();
 };
 
 // This is the struct in which we write our network bytes and then send
@@ -35,18 +35,18 @@ struct RequestHeader {
 
 class PostgresWireHandler {
  public:
-  static uint32_t handle_startup_package(InputPacket& packet);
-  static void handle_startup_package_content(InputPacket& packet, size_t length);
+  static uint32_t handle_startup_package(const InputPacket& packet);
+  static void handle_startup_package_content(const InputPacket& packet, size_t length);
 
-  static RequestHeader handle_header(InputPacket& packet);
+  static RequestHeader handle_header(const InputPacket& packet);
 
-  static std::string handle_query_packet(InputPacket& packet, size_t length);
-
-  template <typename T>
-  static T read_value(InputPacket& packet);
+  static std::string handle_query_packet(const InputPacket& packet, size_t length);
 
   template <typename T>
-  static std::vector<T> read_values(InputPacket& packet, size_t num_values);
+  static T read_value(const InputPacket& packet);
+
+  template <typename T>
+  static std::vector<T> read_values(const InputPacket& packet, size_t num_values);
 
   template <typename T>
   static void write_value(OutputPacket& packet, T value);
@@ -55,7 +55,7 @@ class PostgresWireHandler {
 };
 
 template <typename T>
-T PostgresWireHandler::read_value(InputPacket& packet) {
+T PostgresWireHandler::read_value(const InputPacket& packet) {
   T result;
   auto num_bytes = sizeof(T);
   // TODO: bounds check
@@ -65,7 +65,7 @@ T PostgresWireHandler::read_value(InputPacket& packet) {
 }
 
 template <typename T>
-std::vector<T> PostgresWireHandler::read_values(InputPacket& packet, const size_t num_values) {
+std::vector<T> PostgresWireHandler::read_values(const InputPacket& packet, const size_t num_values) {
   std::vector<T> result(num_values);
   auto num_bytes = result.size() * sizeof(T);
 

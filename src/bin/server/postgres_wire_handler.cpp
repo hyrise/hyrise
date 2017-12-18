@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-uint32_t PostgresWireHandler::handle_startup_package(InputPacket& packet) {
+uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) {
   auto n_length = read_value<uint32_t>(packet);
   // We ALWAYS need to convert from network endianess to host endianess with these fancy macros
   // ntohl = network to host long and htonl = host to network long (where long = uint32)
@@ -23,7 +23,7 @@ uint32_t PostgresWireHandler::handle_startup_package(InputPacket& packet) {
   auto version = ntohl(n_version);
 
   // Reset data buffer
-  packet.offset = packet.data.begin();
+  packet.offset = packet.data.cbegin();
 
   // Special SLL version number
   if (version == 80877103) {
@@ -34,12 +34,12 @@ uint32_t PostgresWireHandler::handle_startup_package(InputPacket& packet) {
   }
 }
 
-void PostgresWireHandler::handle_startup_package_content(InputPacket& packet, size_t length) {
+void PostgresWireHandler::handle_startup_package_content(const InputPacket& packet, size_t length) {
   // Ignore the content for now
   read_values<char>(packet, length);
 }
 
-RequestHeader PostgresWireHandler::handle_header(InputPacket& packet) {
+RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
   auto tag = read_value<NetworkMessageType>(packet);
   std::cout << "Received message tag: " << static_cast<unsigned char>(tag) << std::endl;
 
@@ -52,7 +52,7 @@ RequestHeader PostgresWireHandler::handle_header(InputPacket& packet) {
   return { /* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
 }
 
-std::string PostgresWireHandler::handle_query_packet(InputPacket& packet, size_t length) {
+std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet, size_t length) {
   auto buffer = read_values<char>(packet, length);
 
   // Convert the content to a string for now
