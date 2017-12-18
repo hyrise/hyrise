@@ -1,18 +1,16 @@
-#include <utils/assert.hpp>
-
-#include "../hyrise_session.hpp"
-
 #include "simple_query_command.hpp"
 
-namespace opossum {
+#include <server/hyrise_session.hpp>
+#include <utils/assert.hpp>
 
+namespace opossum {
 
 void SimpleQueryCommand::start(std::size_t size) {
   // Read the SQL query rom the connection
   _session.async_receive_packet(size);
 }
 
-void SimpleQueryCommand::handle_packet_received(const InputPacket &input_packet, std::size_t size) {
+void SimpleQueryCommand::handle_packet_received(const InputPacket& input_packet, std::size_t size) {
   switch (_state) {
     case SimpleQueryCommandState::Started: {
       auto sql = PostgresWireHandler::handle_query_packet(input_packet, size);
@@ -25,7 +23,7 @@ void SimpleQueryCommand::handle_packet_received(const InputPacket &input_packet,
   }
 }
 
-void SimpleQueryCommand::send_row_description(const std::string &sql) {
+void SimpleQueryCommand::send_row_description(const std::string& sql) {
   OutputPacket output_packet;
   PostgresWireHandler::write_value(output_packet, NetworkMessageType::RowDescription);
 
@@ -139,4 +137,4 @@ void SimpleQueryCommand::handle_packet_sent() {
   }
 }
 
-} // namespace opossum
+}  // namespace opossum

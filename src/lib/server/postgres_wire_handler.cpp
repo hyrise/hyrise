@@ -1,14 +1,8 @@
+#include "postgres_wire_handler.hpp"
+
 #include <iostream>
 
 #include "types.hpp"
-
-#include "postgres_wire_handler.hpp"
-
-//namespace {
-//uint32_t uint32_endian_swap(uint32_t num) {
-//  return ((num & 0xFF000000) >> 24) | ((num & 0x00FF0000) >> 8 ) | ((num & 0x0000FF00) << 8 ) | (num << 24);
-//}
-//}
 
 namespace opossum {
 
@@ -16,7 +10,7 @@ uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) 
   auto n_length = read_value<uint32_t>(packet);
   // We ALWAYS need to convert from network endianess to host endianess with these fancy macros
   // ntohl = network to host long and htonl = host to network long (where long = uint32)
-  // TODO: This should be integrated into the read_value template for numeric data types at some point
+  // TODO(lawben): This should be integrated into the read_value template for numeric data types at some point
   auto length = ntohl(n_length);
 
   auto n_version = read_value<uint32_t>(packet);
@@ -49,7 +43,7 @@ RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
   packet.offset = packet.data.begin();
 
   // Return length minus the already read bytes (the message type doesn't count into the length)
-  return { /* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
+  return {/* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
 }
 
 std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet, size_t length) {

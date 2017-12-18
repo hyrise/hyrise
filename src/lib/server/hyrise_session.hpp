@@ -3,7 +3,7 @@
 #include <memory>
 #include <optional>
 
-#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include "postgres_wire_handler.hpp"
 #include "types.hpp"
@@ -17,12 +17,12 @@ class AbstractCommand;
 class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
  public:
   explicit HyriseSession(tcp::socket socket)
-    : _socket(std::move(socket))
-    , _input_packet()
-    , _is_started(false)
-    , _expected_input_packet_length(0)
-    , _current_command()
-    , _self() {}
+      : _socket(std::move(socket)),
+        _input_packet(),
+        _is_started(false),
+        _expected_input_packet_length(0),
+        _current_command(),
+        _self() {}
 
   void start();
 
@@ -36,8 +36,8 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void terminate_session();
 
  private:
-  void handle_packet_received(const boost::system::error_code &error, size_t bytes_transferred);
-  void handle_packet_sent(const boost::system::error_code &error);
+  void handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
+  void handle_packet_sent(const boost::system::error_code& error);
 
   void async_send_ready_for_query();
 

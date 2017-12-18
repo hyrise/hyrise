@@ -1,15 +1,18 @@
+#include "hyrise_session.hpp"
+
 #include <iostream>
 
+#include <boost/asio/placeholders.hpp>
+#include <boost/asio/write.hpp>
 #include <boost/bind.hpp>
 
 #include <utils/assert.hpp>
-#include "types.hpp"
+
 #include "commands/abstract_command.hpp"
 #include "commands/simple_query_command.hpp"
 #include "commands/startup_command.hpp"
 #include "commands/terminate_command.hpp"
-
-#include "hyrise_session.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -21,16 +24,11 @@ void HyriseSession::start() {
 }
 
 void HyriseSession::async_send_packet(const OutputPacket& output_packet) {
-  boost::asio::async_write(_socket,
-                           boost::asio::buffer(output_packet.data),
-                           boost::bind(
-                                   &HyriseSession::handle_packet_sent,
-                                   this,
-                                   boost::asio::placeholders::error));
+  boost::asio::async_write(_socket, boost::asio::buffer(output_packet.data),
+                           boost::bind(&HyriseSession::handle_packet_sent, this, boost::asio::placeholders::error));
 }
 
-void HyriseSession::handle_packet_received(const boost::system::error_code &error, size_t bytes_transferred) {
-
+void HyriseSession::handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred) {
   if (error) {
     std::cout << error.category().name() << ':' << error.value() << std::endl;
     DebugAssert(false, "An error occurred when reading from the connection");
@@ -65,8 +63,7 @@ void HyriseSession::handle_packet_received(const boost::system::error_code &erro
     }
 
     default: {
-      std::cout << "Unknown command received: " << static_cast<unsigned char>(command_header.message_type)
-                << std::endl;
+      std::cout << "Unknown command received: " << static_cast<unsigned char>(command_header.message_type) << std::endl;
     }
   }
 
@@ -89,7 +86,7 @@ void HyriseSession::terminate_session() {
   _self.reset();
 }
 
-void HyriseSession::handle_packet_sent(const boost::system::error_code &error) {
+void HyriseSession::handle_packet_sent(const boost::system::error_code& error) {
   if (error) {
     std::cout << error.category().name() << ':' << error.value() << std::endl;
     DebugAssert(false, "An error occurred when writing to the connection");
@@ -109,11 +106,8 @@ void HyriseSession::async_receive_packet(std::size_t size) {
   _input_packet.offset = _input_packet.data.begin();
 
   _socket.async_read_some(boost::asio::buffer(_input_packet.data, size),
-                          boost::bind(
-                                  &HyriseSession::handle_packet_received,
-                                  this,
-                                  boost::asio::placeholders::error,
-                                  boost::asio::placeholders::bytes_transferred));
+                          boost::bind(&HyriseSession::handle_packet_received, this, boost::asio::placeholders::error,
+                                      boost::asio::placeholders::bytes_transferred));
 }
 
 void HyriseSession::async_send_ready_for_query() {

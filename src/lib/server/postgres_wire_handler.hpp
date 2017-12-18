@@ -58,7 +58,7 @@ template <typename T>
 T PostgresWireHandler::read_value(const InputPacket& packet) {
   T result;
   auto num_bytes = sizeof(T);
-  // TODO: bounds check
+  // TODO(lawben): bounds check
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(&result));
   packet.offset += num_bytes;
   return result;
@@ -69,7 +69,7 @@ std::vector<T> PostgresWireHandler::read_values(const InputPacket& packet, const
   std::vector<T> result(num_values);
   auto num_bytes = result.size() * sizeof(T);
 
-  // TODO: bounds check
+  // TODO(lawben): bounds check
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(result.data()));
   packet.offset += num_bytes;

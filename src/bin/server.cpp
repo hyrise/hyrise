@@ -1,10 +1,7 @@
-// Files in the /bin folder are not tested. Everything that can be tested should be in the /lib folder and this file
-// should be as short as possible.
-
 #include <cstdlib>
 #include <iostream>
 
-#include <boost/asio.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include <server/hyrise_server.hpp>
 

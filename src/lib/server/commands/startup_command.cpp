@@ -1,9 +1,9 @@
+#include "startup_command.hpp"
+
 #include <boost/asio/buffer.hpp>
 
+#include <server/hyrise_session.hpp>
 #include <utils/assert.hpp>
-#include "../hyrise_session.hpp"
-
-#include "startup_command.hpp"
 
 namespace opossum {
 
@@ -22,7 +22,7 @@ void StartupCommand::start(std::size_t size) {
   }
 }
 
-void StartupCommand::handle_packet_received(const InputPacket &input_packet, std::size_t size) {
+void StartupCommand::handle_packet_received(const InputPacket& input_packet, std::size_t size) {
   switch (_state) {
     case StartupCommandState::ExpectingStartupContent:
       // We've received the startup package contents
@@ -71,4 +71,4 @@ void StartupCommand::handle_packet_sent() {
   }
 }
 
-} // namespace opossum
+}  // namespace opossum

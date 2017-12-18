@@ -1,13 +1,13 @@
+#include "hyrise_server.hpp"
+
 #include <boost/asio.hpp>
 
 #include "hyrise_session.hpp"
 
-#include "hyrise_server.hpp"
-
 namespace opossum {
 
-HyriseServer::HyriseServer(boost::asio::io_service &io_service, unsigned short port)
-        : _acceptor(io_service, tcp::endpoint(tcp::v4(), port)), _socket(io_service) {
+HyriseServer::HyriseServer(boost::asio::io_service& io_service, unsigned short port)
+    : _acceptor(io_service, tcp::endpoint(tcp::v4(), port)), _socket(io_service) {
   accept_next_connection();
 }
 

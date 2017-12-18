@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/asio/ip/tcp.hpp>
+
 namespace opossum {
 
 using boost::asio::ip::tcp;
