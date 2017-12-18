@@ -193,8 +193,6 @@ set(
     server/commands/simple_query_command.hpp
     server/commands/startup_command.cpp
     server/commands/startup_command.hpp
-    server/commands/terminate_command.cpp
-    server/commands/terminate_command.hpp
     sql/lru_cache.hpp
     sql/sql_planner.cpp
     sql/sql_planner.hpp

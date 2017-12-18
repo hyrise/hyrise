@@ -11,7 +11,6 @@
 #include "commands/abstract_command.hpp"
 #include "commands/simple_query_command.hpp"
 #include "commands/startup_command.hpp"
-#include "commands/terminate_command.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -58,8 +57,9 @@ void HyriseSession::handle_packet_received(const boost::system::error_code& erro
     }
 
     case NetworkMessageType::TerminateCommand: {
-      _current_command = std::make_shared<TerminateCommand>(*this);
-      break;
+      // This immediately releases the session object
+      terminate_session();
+      return;
     }
 
     default: {

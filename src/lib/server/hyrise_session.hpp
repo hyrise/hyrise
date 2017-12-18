@@ -33,13 +33,14 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void async_send_packet(const OutputPacket& output_packet);
 
   void terminate_command();
-  void terminate_session();
 
  private:
   void handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
   void handle_packet_sent(const boost::system::error_code& error);
 
   void async_send_ready_for_query();
+
+  void terminate_session();
 
   tcp::socket _socket;
   InputPacket _input_packet;
