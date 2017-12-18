@@ -20,7 +20,8 @@ namespace opossum {
 
 class ColumnCompressorBase {
  public:
-  virtual std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<BaseChunkColumnStatistics>> compress_column(const std::shared_ptr<BaseColumn>& column) = 0;
+  virtual std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<BaseChunkColumnStatistics>> compress_column(
+      const std::shared_ptr<BaseColumn>& column) = 0;
 
  protected:
   static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
@@ -37,8 +38,8 @@ class ColumnCompressorBase {
 template <typename T>
 class ColumnCompressor : public ColumnCompressorBase {
  public:
-  std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<BaseChunkColumnStatistics>>
-  compress_column(const std::shared_ptr<BaseColumn>& column) override {
+  std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<BaseChunkColumnStatistics>> compress_column(
+      const std::shared_ptr<BaseColumn>& column) override {
     auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column);
 
     Assert(value_column != nullptr, "Column is either already compressed or type mismatches.");
@@ -101,10 +102,10 @@ class ColumnCompressor : public ColumnCompressorBase {
     }
 
     // only create statistics when the compressed dictionary is not empty
-    auto stats = dictionary.empty() ? std::shared_ptr<BaseChunkColumnStatistics>()
-            : std::dynamic_pointer_cast<BaseChunkColumnStatistics>(
-                  std::make_shared<ChunkColumnStatistics<T>>(
-                      *dictionary.begin(), *(dictionary.end() - 1)));
+    auto stats = dictionary.empty()
+                     ? std::shared_ptr<BaseChunkColumnStatistics>()
+                     : std::dynamic_pointer_cast<BaseChunkColumnStatistics>(
+                           std::make_shared<ChunkColumnStatistics<T>>(*dictionary.begin(), *(dictionary.end() - 1)));
     auto out_column = std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
 
     return std::make_tuple(out_column, stats);
@@ -117,8 +118,7 @@ class ColumnCompressor : public ColumnCompressorBase {
 };
 
 std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<BaseChunkColumnStatistics>>
-DictionaryCompression::compress_column(DataType data_type,
-                                       const std::shared_ptr<BaseColumn>& column) {
+DictionaryCompression::compress_column(DataType data_type, const std::shared_ptr<BaseColumn>& column) {
   auto compressor = make_shared_by_data_type<ColumnCompressorBase, ColumnCompressor>(data_type);
   return compressor->compress_column(column);
 }
@@ -144,8 +144,8 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
   return std::make_shared<ChunkStatistics>(column_stats);
 }
 
-std::vector<std::shared_ptr<ChunkStatistics>>
-DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids) {
+std::vector<std::shared_ptr<ChunkStatistics>> DictionaryCompression::compress_chunks(
+    Table& table, const std::vector<ChunkID>& chunk_ids) {
   std::vector<std::shared_ptr<ChunkStatistics>> chunk_stats;
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
@@ -156,8 +156,7 @@ DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>&
   return chunk_stats;
 }
 
-std::vector<std::shared_ptr<ChunkStatistics>>
-DictionaryCompression::compress_table(Table& table) {
+std::vector<std::shared_ptr<ChunkStatistics>> DictionaryCompression::compress_table(Table& table) {
   std::vector<std::shared_ptr<ChunkStatistics>> chunk_stats;
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);

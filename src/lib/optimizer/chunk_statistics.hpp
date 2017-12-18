@@ -18,7 +18,7 @@ class BaseChunkColumnStatistics : public std::enable_shared_from_this<BaseChunkC
 template <typename T>
 class ChunkColumnStatistics : public BaseChunkColumnStatistics {
  public:
-  ChunkColumnStatistics(const T & min, const T & max) : _min(min), _max(max) {}
+  ChunkColumnStatistics(const T& min, const T& max) : _min(min), _max(max) {}
   virtual ~ChunkColumnStatistics() = default;
 
   AllTypeVariant min() const override { return _min; }
@@ -33,10 +33,9 @@ class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
  public:
   ChunkStatistics(std::vector<std::shared_ptr<BaseChunkColumnStatistics>> stats) : _statistics(stats) {}
 
-  const std::vector<std::shared_ptr<BaseChunkColumnStatistics>> & statistics() { return _statistics; }
+  const std::vector<std::shared_ptr<BaseChunkColumnStatistics>>& statistics() { return _statistics; }
 
  protected:
   std::vector<std::shared_ptr<BaseChunkColumnStatistics>> _statistics;
 };
-
 }

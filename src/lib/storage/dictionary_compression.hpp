@@ -26,8 +26,8 @@ class DictionaryCompression {
    * @param column needs to be of type ValueColumn<T>
    * @return a compressed column of type DictionaryColumn<T>
    */
-  static std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<opossum::BaseChunkColumnStatistics>>
-  compress_column(DataType data_type, const std::shared_ptr<BaseColumn>& column);
+  static std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<opossum::BaseChunkColumnStatistics>> compress_column(
+      DataType data_type, const std::shared_ptr<BaseColumn>& column);
 
   /**
    * @brief Compresses a chunk
@@ -50,7 +50,8 @@ class DictionaryCompression {
    * This is potentially unsafe if another operation modifies the table at the same time. In most cases, this should
    * only be called by the ChunkCompressionTask.
    */
-  static std::vector<std::shared_ptr<ChunkStatistics>> compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids);
+  static std::vector<std::shared_ptr<ChunkStatistics>> compress_chunks(Table& table,
+                                                                       const std::vector<ChunkID>& chunk_ids);
 
   /**
    * @brief Compresses a table by calling compress_chunk for each chunk

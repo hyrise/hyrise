@@ -29,7 +29,7 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnInt) {
   vc_int->append(5);
   vc_int->append(3);
 
-  auto [col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  auto[col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test stats
@@ -57,7 +57,7 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
-  auto [col, stats] = DictionaryCompression::compress_column(DataType::String, vc_str);
+  auto[col, stats] = DictionaryCompression::compress_column(DataType::String, vc_str);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
 
   // Test stats
@@ -86,7 +86,7 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
   vc_double->append(0.9);
   vc_double->append(1.1);
 
-  auto [col, stats] = DictionaryCompression::compress_column(DataType::Double, vc_double);
+  auto[col, stats] = DictionaryCompression::compress_column(DataType::Double, vc_double);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<double>>(col);
 
   // Test stats
@@ -116,7 +116,7 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
   vc_int->append(NULL_VALUE);
   vc_int->append(3);
 
-  auto [col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  auto[col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test stats
@@ -141,7 +141,7 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
 TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
 
-  auto [col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  auto[col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test stats
@@ -174,7 +174,7 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
   vc_int->append(1);
   vc_int->append(2);
 
-  auto [col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  auto[col, stats] = DictionaryCompression::compress_column(DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   auto attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
@@ -191,7 +191,7 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
     vc_int->append(i);
   }
 
-  auto [col2, stats2] = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  auto[col2, stats2] = DictionaryCompression::compress_column(DataType::Int, vc_int);
   // Test stats
   EXPECT_EQ(stats2->min(), AllTypeVariant{0});
   EXPECT_EQ(stats2->max(), AllTypeVariant{256});
