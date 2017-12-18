@@ -55,15 +55,15 @@ const std::vector<std::optional<ColumnID>>& JoinNode::output_column_ids_to_input
   return *_output_column_ids_to_input_column_ids;
 }
 
-ColumnOrigin JoinNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
+ColumnOrigin JoinNode::get_column_origin_by_output_column_id(const ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need both children for this operation");
 
   if (column_id < left_child()->output_column_count()) {
-    return left_child()->find_column_origin_by_output_column_id(column_id);
+    return left_child()->get_column_origin_by_output_column_id(column_id);
   } else {
     const auto right_child_column_id = static_cast<ColumnID>(column_id - left_child()->output_column_count());
     Assert(right_child_column_id < right_child()->output_column_count(), "ColumnID out of range");
-    return right_child()->find_column_origin_by_output_column_id(right_child_column_id);
+    return right_child()->get_column_origin_by_output_column_id(right_child_column_id);
   }
 }
 

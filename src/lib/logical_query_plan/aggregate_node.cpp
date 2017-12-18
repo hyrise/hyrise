@@ -137,7 +137,7 @@ std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
                      [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
 
     if (iter != _groupby_column_origins.end()) {
-      return find_column_origin_by_output_column_id(static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter)));
+      return get_column_origin_by_output_column_id(static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter)));
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =
@@ -150,11 +150,8 @@ std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
       return ColumnOrigin{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
     }
-  } else {
-    Fail("Expression type is not supported.");
   }
 
-  // Return unset optional if expression was not found.
   return std::nullopt;
 }
 

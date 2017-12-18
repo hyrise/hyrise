@@ -148,9 +148,10 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
    */
   virtual std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt, bool is_root = true) const;
 
+ protected:
+  // Not to be used directly, derived classes should implement it in the public scope and use this internally
   bool operator==(const Expression& other) const;
 
- protected:
   // the type of the expression
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal

@@ -21,6 +21,8 @@ class OperatorExpression : public Expression<OperatorExpression> {
 
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root = true) const override;
 
+  bool operator==(const OperatorExpression& other) const;
+
  private:
   std::optional<ColumnID> _column_id;
 };

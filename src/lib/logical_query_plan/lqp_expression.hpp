@@ -21,6 +21,8 @@ class LQPExpression : public Expression<LQPExpression> {
 
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt, bool is_root = true) const override;
 
+  bool operator==(const LQPExpression& other) const;
+
  private:
   std::optional<ColumnOrigin> _column_origin;
 };

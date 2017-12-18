@@ -8,7 +8,8 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-struct ColumnOrigin {
+struct ColumnOrigin final {
+  ColumnOrigin() = default;
   ColumnOrigin(const std::shared_ptr<const AbstractLQPNode>& node, ColumnID column_id = INVALID_COLUMN_ID);
 
   bool operator==(const ColumnOrigin& rhs) const;

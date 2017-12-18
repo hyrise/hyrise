@@ -9,9 +9,21 @@
 
 namespace opossum {
 
-MockNode::MockNode() : AbstractLQPNode(LQPNodeType::Mock) {}
+MockNode::MockNode(const std::optional<std::string>& alias) : AbstractLQPNode(LQPNodeType::Mock) {
+  set_alias(alias);
+}
 
-MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractLQPNode(LQPNodeType::Mock) {
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& alias) : AbstractLQPNode(LQPNodeType::Mock) {
+  for (const auto& column_definition : column_definitions) {
+    _output_column_names.emplace_back(column_definition.second);
+  }
+  _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
+
+
+  set_alias(alias);
+}
+
+MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std::optional<std::string>& alias) : AbstractLQPNode(LQPNodeType::Mock) {
   set_statistics(statistics);
 
   for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();
@@ -20,6 +32,8 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : Abstrac
   }
 
   _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
+
+  set_alias(alias);
 }
 
 const std::vector<std::optional<ColumnID>>& MockNode::output_column_ids_to_input_column_ids() const {

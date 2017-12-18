@@ -26,7 +26,7 @@ class UnionNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& left_child,
       const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
-  ColumnOrigin find_column_origin_by_output_column_id(const ColumnID column_id) const override;
+  ColumnOrigin get_column_origin_by_output_column_id(const ColumnID column_id) const override;
 
 
  private:

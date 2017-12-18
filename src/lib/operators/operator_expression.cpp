@@ -58,5 +58,12 @@ std::string OperatorExpression::to_string(const std::optional<std::vector<std::s
   return Expression<OperatorExpression>::to_string(input_column_names, is_root);
 }
 
+bool OperatorExpression::operator==(const OperatorExpression& other) const {
+  if (!Expression<OperatorExpression>::operator==(other)) {
+    return false;
+  }
+  return _column_id == other._column_id;
+}
+
 }
 

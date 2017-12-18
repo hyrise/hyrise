@@ -33,7 +33,7 @@ class JoinNode : public AbstractLQPNode {
 
   std::string description() const override;
   const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const override;
-  ColumnOrigin find_column_origin_by_output_column_id(const ColumnID column_id) const override;
+  ColumnOrigin get_column_origin_by_output_column_id(const ColumnID column_id) const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(

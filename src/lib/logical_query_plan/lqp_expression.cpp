@@ -49,4 +49,11 @@ std::string LQPExpression::to_string(const std::optional<std::vector<std::string
   return Expression<LQPExpression>::to_string(input_column_names, is_root);
 }
 
+bool LQPExpression::operator==(const LQPExpression& other) const {
+  if (!Expression<LQPExpression>::operator==(other)) {
+    return false;
+  }
+  return _column_origin == other._column_origin;
+}
+
 }

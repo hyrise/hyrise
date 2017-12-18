@@ -54,13 +54,13 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
   return nullptr;  // Return something
 }
 
-ColumnOrigin UnionNode::find_column_origin_by_output_column_id(const ColumnID column_id) const {
+ColumnOrigin UnionNode::get_column_origin_by_output_column_id(const ColumnID column_id) const {
   Assert(left_child() && right_child(), "Need children to determine ColumnOrigin");
 
-  const auto column_origin_in_left_child = left_child()->find_column_origin_by_output_column_id(column_id);
+  const auto column_origin_in_left_child = left_child()->get_column_origin_by_output_column_id(column_id);
 
 #if IS_DEBUG
-  const auto column_origin_in_right_child = right_child()->find_column_origin_by_output_column_id(column_id);
+  const auto column_origin_in_right_child = right_child()->get_column_origin_by_output_column_id(column_id);
   Assert(column_origin_in_left_child == column_origin_in_right_child, "Column origins in subtrees do not match, invalid LQP");
 #endif
 
