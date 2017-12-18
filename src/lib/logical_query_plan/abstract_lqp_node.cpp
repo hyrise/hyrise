@@ -145,7 +145,7 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
+std::optional<ColumnOrigin> AbstractLQPNode::resolve_named_column_reference(const NamedColumnReference& named_column_reference) const {
   const auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
   if (!named_column_reference_without_local_column_prefix) {
     return std::nullopt;
@@ -163,10 +163,11 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
     return std::nullopt;
   }
 
-  const auto column_origin_in_left_child = left_child()->find_column_origin_by_named_column_reference(*named_column_reference_without_local_column_prefix);
+  const auto column_origin_in_left_child = left_child()->resolve_named_column_reference(*named_column_reference_without_local_column_prefix);
+  std::optional<ColumnOrigin> column_origin_in_right_child;
 
   if (right_child()) {
-    const auto column_origin_in_right_child = right_child()->find_column_origin_by_named_column_reference(*named_column_reference_without_local_column_prefix);
+    column_origin_in_right_child = right_child()->resolve_named_column_reference(*named_column_reference_without_local_column_prefix);
 
     if (column_origin_in_left_child && column_origin_in_right_child) {
       Assert(column_origin_in_left_child == column_origin_in_right_child, "If both children can resolve the NamedColumnReference, they have to resolve a it to the same ColumnOrigin.");
@@ -180,7 +181,7 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
 }
 
 ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
-  const auto colum_origin = find_column_origin_by_named_column_reference(named_column_reference);
+  const auto colum_origin = resolve_named_column_reference(named_column_reference);
   DebugAssert(colum_origin, "Couldn't resolve column origin");
   return *colum_origin;
 }

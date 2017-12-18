@@ -149,7 +149,7 @@ ColumnOrigin HSQLExprTranslator::to_column_origin(const hsql::Expr &hsql_expr,
                                                   const std::shared_ptr<AbstractLQPNode> &input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
-  const auto column_origin = input_node->find_column_origin_by_named_column_reference(
+  const auto column_origin = input_node->resolve_named_column_reference(
   to_named_column_reference(hsql_expr));
 
   Assert(column_origin, "Couldn't resolve named column reference");

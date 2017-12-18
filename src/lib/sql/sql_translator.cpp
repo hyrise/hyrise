@@ -336,10 +336,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
    * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
    * ambiguity or the column is simply not existing.
    */
-  const auto left_in_left_node = left_node->find_column_origin_by_named_column_reference(left_named_column_reference);
-  const auto left_in_right_node = right_node->find_column_origin_by_named_column_reference(left_named_column_reference);
-  const auto right_in_left_node = left_node->find_column_origin_by_named_column_reference(right_named_column_reference);
-  const auto right_in_right_node = right_node->find_column_origin_by_named_column_reference(right_named_column_reference);
+  const auto left_in_left_node = left_node->resolve_named_column_reference(left_named_column_reference);
+  const auto left_in_right_node = right_node->resolve_named_column_reference(left_named_column_reference);
+  const auto right_in_left_node = left_node->resolve_named_column_reference(right_named_column_reference);
+  const auto right_in_right_node = right_node->resolve_named_column_reference(right_named_column_reference);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
          std::string("Left operand ") + left_named_column_reference.as_string() +
@@ -599,7 +599,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       Assert(groupby_hsql_expr->isType(hsql::kExprColumnRef), "Grouping on complex expressions is not yet supported.");
 
       const auto named_column_reference = HSQLExprTranslator::to_named_column_reference(*groupby_hsql_expr);
-      const auto column_origin = groupby_aliasing_node->find_column_origin_by_named_column_reference(named_column_reference);
+      const auto column_origin = groupby_aliasing_node->resolve_named_column_reference(named_column_reference);
       DebugAssert(column_origin, "Couldn't resolve groupby column.");
 
       groupby_column_origins.emplace_back(*column_origin);
@@ -639,7 +639,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       const auto named_column_reference = HSQLExprTranslator::to_named_column_reference(*select_column_hsql_expr);
-      const auto column_origin = groupby_aliasing_node->find_column_origin_by_named_column_reference(named_column_reference);
+      const auto column_origin = groupby_aliasing_node->resolve_named_column_reference(named_column_reference);
       DebugAssert(column_origin, "Couldn't resolve groupby column.");
 
       const auto iter = std::find(groupby_column_origins.begin(), groupby_column_origins.end(), *column_origin);
