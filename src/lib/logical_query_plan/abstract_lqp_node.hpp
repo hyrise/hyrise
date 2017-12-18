@@ -131,8 +131,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @returns the names of the columns this node outputs without any alias added by this node
    */
   virtual const std::vector<std::string>& output_column_names() const;
+  virtual const std::vector<ColumnOrigin>& output_column_origins() const;
+  size_t output_column_count() const;
 
-  std::optional<ColumnOrigin> resolve_named_column_reference(const NamedColumnReference& named_column_reference) const;
+  std::optional<ColumnOrigin> find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
   ColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
   // has to be overriden if there is != 1 child
@@ -144,11 +146,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::optional<ColumnID> find_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const;
   ColumnID get_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const;
 
-  std::optional<ColumnID> map_input_column_id_to_output_column_id(const ColumnID input_column_id) const;
-  std::optional<ColumnID> map_output_column_id_to_input_column_id(const ColumnID output_column_id) const;
-  virtual const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const;
 
-  size_t output_column_count() const;
 
   /**
    * Makes this nodes parents point to this node's left child
@@ -214,14 +212,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::optional<std::string> _table_alias;
 
-  /**
-   * For each column in the input node holds
-   *    - the ColumnID of this column in the output of this node
-   *    - std::nullopt, if the column was created by this node.
-   *
-   * mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides
-   */
-  mutable std::optional<std::vector<std::optional<ColumnID>>> _output_column_ids_to_input_column_ids;
+  // mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides
+  mutable std::optional<std::vector<ColumnOrigin>> _output_column_origins;
 
   /**
    * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we

@@ -31,7 +31,7 @@ class AggregateNode : public AbstractLQPNode {
   std::string description() const override;
 
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const override;
+  const std::vector<ColumnOrigin>& output_column_origins() const override;
 
   // @{
   /**

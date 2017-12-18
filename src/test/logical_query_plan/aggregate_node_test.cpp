@@ -65,8 +65,8 @@ TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
    */
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a", std::nullopt}), _a);
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a", {"t_a"}}), _a);
-  EXPECT_EQ(_aggregate_node->resolve_named_column_reference({"b", std::nullopt}), _b);
-  EXPECT_EQ(_aggregate_node->resolve_named_column_reference({"b", {"t_a"}}), _b);
+  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"b", std::nullopt}), _b);
+  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"b", {"t_a"}}), _b);
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"c", std::nullopt}), _c);
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"c", {"t_a"}}), _c);
 
@@ -74,7 +74,7 @@ TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
    * Find Aggregates
    */
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"some_sum", std::nullopt}), ColumnOrigin(_aggregate_node, ColumnID{3}));
-  EXPECT_EQ(_aggregate_node->resolve_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
 }
 
 TEST_F(AggregateNodeTest, ColumnOriginByOutputColumnID) {
