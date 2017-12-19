@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <storage/partitioning/round_robin_partition_schema.hpp>
 
 #include "resolve_type.hpp"
 #include "types.hpp"
@@ -48,7 +49,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 }
 
 Table::Table(const uint32_t max_chunk_size)
-    : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+    : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()), _partition_schema(std::make_shared<NullPartitionSchema>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
@@ -207,5 +208,19 @@ TableType Table::get_type() const {
     return TableType::Data;
   }
 }
+
+void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> borders) {
+
+}
+
+void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, int number_of_partitions) {
+
+}
+
+void Table::create_round_robin_partitioning(int number_of_partitions) {
+  _partition_schema = std::make_shared<RoundRobinPartitionSchema>(number_of_partitions);
+}
+
+
 
 }  // namespace opossum

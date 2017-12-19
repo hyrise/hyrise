@@ -5,6 +5,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <hash_function.hpp>
+#include <storage/partitioning/partition_schema.hpp>
+#include <storage/partitioning/null_partition_schema.hpp>
 
 #include "base_column.hpp"
 #include "chunk.hpp"
@@ -140,6 +143,15 @@ class Table : private Noncopyable {
    */
   TableType get_type() const;
 
+  // partitioning
+  void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> borders);
+  void create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, int number_of_partitions);
+  void create_round_robin_partitioning(int number_of_partitions);
+
+  void remove_partitioning();
+  std::vector<ChunkID> get_partition(PartitionID partition_id);
+  std::vector<PartitionID> get_partition_ids();
+
  protected:
   const uint32_t _max_chunk_size;
   std::vector<Chunk> _chunks;
@@ -158,5 +170,7 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
 
   std::unique_ptr<std::mutex> _append_mutex;
+
+  std::shared_ptr<PartitionSchema> _partition_schema;
 };
 }  // namespace opossum
