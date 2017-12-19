@@ -34,7 +34,7 @@ class StoredTableNode : public AbstractLQPNode {
 
  protected:
   void _on_child_changed() override;
-  std::optional<NamedColumnReference> _resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const;
+  std::optional<NamedColumnReference> _resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const override;
 
  private:
   const std::string _table_name;

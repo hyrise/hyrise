@@ -185,18 +185,27 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
   /**
    * Look for the Column in child nodes
    */
-  auto column_origin = left_child() ? left_child()->find_column_origin_by_named_column_reference(
-  *named_column_reference_without_local_column_prefix) : std::optional<ColumnOrigin>();
-
-  if (right_child()) {
-    const auto column_origin_right = right_child()->find_column_origin_by_named_column_reference(*named_column_reference_without_local_column_prefix);
-    Assert(!column_origin || !column_origin_right || column_origin == column_origin_right, "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
-    if (!column_origin) {
-      column_origin = column_origin_right;
+  const auto resolve_named_column_reference = [&] (const auto& node, const auto& named_column_reference) -> std::optional<ColumnOrigin> {
+    if (node) {
+      const auto column_origin = node->find_column_origin_by_named_column_reference(named_column_reference);
+      if (column_origin) {
+        if (find_output_column_id_by_column_origin(*column_origin)) {
+          return column_origin;
+        }
+      }
     }
-  }
+    return std::nullopt;
+  };
 
-  return column_origin;
+  const auto column_origin_from_left = resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
+  const auto column_origin_from_right = resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
+
+  Assert(!column_origin_from_left || !column_origin_from_right || column_origin_from_left == column_origin_from_right, "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
+
+  if (column_origin_from_left) {
+    return column_origin_from_left;
+  }
+  return column_origin_from_right;
 }
 
 ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
