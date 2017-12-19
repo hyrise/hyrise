@@ -144,7 +144,7 @@ class Table : private Noncopyable {
   TableType get_type() const;
 
   // partitioning
-  void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> borders);
+  void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, int number_of_partitions);
   void create_round_robin_partitioning(int number_of_partitions);
 

@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 #include <storage/partitioning/round_robin_partition_schema.hpp>
+#include <storage/partitioning/range_partition_schema.hpp>
 
 #include "resolve_type.hpp"
 #include "types.hpp"
@@ -209,8 +210,8 @@ TableType Table::get_type() const {
   }
 }
 
-void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> borders) {
-
+void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
+  _partition_schema = std::make_shared<RangePartitionSchema>(column_id, bounds);
 }
 
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, int number_of_partitions) {

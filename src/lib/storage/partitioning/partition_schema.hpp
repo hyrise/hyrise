@@ -9,7 +9,7 @@ namespace opossum {
 class PartitionSchema {
 
 protected:
-  std::vector<std::shared_ptr<Partition>> partitions;
+  std::vector<std::shared_ptr<Partition>> _partitions;
 
 };
 

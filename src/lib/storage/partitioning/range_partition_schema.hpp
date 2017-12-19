@@ -8,8 +8,12 @@ namespace opossum {
 
 class RangePartitionSchema : public PartitionSchema {
 
-    ColumnID column_id;
-    std::vector<AllTypeVariant> bounds;
+public:
+  RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
+
+protected:
+  ColumnID _column_id;
+  std::vector<AllTypeVariant> _bounds;
 
 };
 
