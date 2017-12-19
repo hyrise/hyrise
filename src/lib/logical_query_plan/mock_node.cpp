@@ -17,8 +17,6 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
   for (const auto& column_definition : column_definitions) {
     _output_column_names.emplace_back(column_definition.second);
   }
-  _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
-
 
   set_alias(alias);
 }
@@ -31,17 +29,7 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std
     _output_column_names.emplace_back("MockCol" + std::to_string(column_statistics_idx));
   }
 
-  _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
-
   set_alias(alias);
-}
-
-const std::vector<std::optional<ColumnID>>& MockNode::output_column_ids_to_input_column_ids() const {
-  if (!_output_column_ids_to_input_column_ids) {
-    _output_column_ids_to_input_column_ids = std::vector<std::optional<ColumnID>>(output_column_count());
-  }
-
-  return *_output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& MockNode::output_column_names() const { return _output_column_names; }

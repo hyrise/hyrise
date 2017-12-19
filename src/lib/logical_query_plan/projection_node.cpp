@@ -46,7 +46,7 @@ void ProjectionNode::_on_child_changed() {
   _output_column_names.reset();
 }
 
-const std::vector<ColumnOrigin>& ProjectionNode::output_column_origins() const override {
+const std::vector<ColumnOrigin>& ProjectionNode::output_column_origins() const {
   if (!_output_column_origins) {
     _update_output();
   }
@@ -115,7 +115,7 @@ void ProjectionNode::_update_output() const {
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_origins->emplace_back({shared_from_this(), column_id});
+      _output_column_origins->emplace_back(shared_from_this(), column_id);
 
       if (!expression->alias()) {
         _output_column_names->emplace_back(expression->to_string(left_child()->output_column_names()));

@@ -204,7 +204,7 @@ void AggregateNode::_update_output() const {
     }
 
     _output_column_names->emplace_back(column_name);
-    _output_column_origins->emplace_back({shared_from_this(), column_id});
+    _output_column_origins->emplace_back(shared_from_this(), column_id);
     column_id++;
   }
 }

@@ -24,7 +24,6 @@ class StoredTableNode : public AbstractLQPNode {
 
   std::string description() const override;
   std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const override;
-  const std::vector<std::optional<ColumnID>>& output_column_ids_to_input_column_ids() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(

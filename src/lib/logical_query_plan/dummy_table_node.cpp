@@ -10,7 +10,7 @@
 namespace opossum {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {
-  _output_column_ids_to_input_column_ids.emplace();
+  _output_column_origins.emplace();
 }
 
 std::string DummyTableNode::description() const { return "[DummyTable]"; }

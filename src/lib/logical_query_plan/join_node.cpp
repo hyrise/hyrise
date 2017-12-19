@@ -47,32 +47,20 @@ std::string JoinNode::description() const {
   return desc.str();
 }
 
-const std::vector<std::optional<ColumnID>>& JoinNode::output_column_ids_to_input_column_ids() const {
-  if (!_output_column_ids_to_input_column_ids) {
-    _update_output();
-  }
-
-  return *_output_column_ids_to_input_column_ids;
-}
-
-ColumnOrigin JoinNode::get_column_origin_by_output_column_id(const ColumnID column_id) const {
-  Assert(left_child() && right_child(), "Need both children for this operation");
-
-  if (column_id < left_child()->output_column_count()) {
-    return left_child()->get_column_origin_by_output_column_id(column_id);
-  } else {
-    const auto right_child_column_id = static_cast<ColumnID>(column_id - left_child()->output_column_count());
-    Assert(right_child_column_id < right_child()->output_column_count(), "ColumnID out of range");
-    return right_child()->get_column_origin_by_output_column_id(right_child_column_id);
-  }
-}
-
 const std::vector<std::string>& JoinNode::output_column_names() const {
   if (!_output_column_names) {
     _update_output();
   }
 
   return *_output_column_names;
+}
+
+const std::vector<ColumnOrigin>& JoinNode::output_column_origins() const {
+  if (!_output_column_origins) {
+    _update_output();
+  }
+
+  return *_output_column_origins;
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
@@ -136,14 +124,12 @@ void JoinNode::_update_output() const {
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
    */
-  const auto num_left_columns = left_child()->output_column_count();
-  const auto num_right_columns = right_child()->output_column_count();
+  _output_column_origins.emplace();
 
-  _output_column_ids_to_input_column_ids.emplace(num_left_columns + num_right_columns);
-
-  auto begin = _output_column_ids_to_input_column_ids->begin();
-  std::iota(begin, begin + num_left_columns, 0);
-  std::iota(begin + num_left_columns, _output_column_ids_to_input_column_ids->end(), 0);
+  _output_column_origins->insert(_output_column_origins->end(), left_child()->output_column_origins().begin(),
+                                 left_child()->output_column_origins().end());
+  _output_column_origins->insert(_output_column_origins->end(), right_child()->output_column_origins().begin(),
+                                 right_child()->output_column_origins().end());
 }
 
 }  // namespace opossum

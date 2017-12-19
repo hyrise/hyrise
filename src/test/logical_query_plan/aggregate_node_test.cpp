@@ -49,24 +49,14 @@ class AggregateNodeTest : public BaseTest {
   ColumnOrigin _c;
 };
 
-TEST_F(AggregateNodeTest, OutputColumnIDsToInputColumnID) {
-  const auto& output_column_ids_to_input_column_ids = _aggregate_node->output_column_ids_to_input_column_ids();
-
-  ASSERT_EQ(output_column_ids_to_input_column_ids.size(), 4u);
-  EXPECT_EQ(output_column_ids_to_input_column_ids[0], ColumnID{0});
-  EXPECT_EQ(output_column_ids_to_input_column_ids[1], ColumnID{2});
-  EXPECT_EQ(output_column_ids_to_input_column_ids[2], std::nullopt);
-  EXPECT_EQ(output_column_ids_to_input_column_ids[3], std::nullopt);
-}
-
 TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
   /**
    * Find GROUPBY columns
    */
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a", std::nullopt}), _a);
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a", {"t_a"}}), _a);
-  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"b", std::nullopt}), _b);
-  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"b", {"t_a"}}), _b);
+  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"b", std::nullopt}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"b", {"t_a"}}), std::nullopt);
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"c", std::nullopt}), _c);
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"c", {"t_a"}}), _c);
 
@@ -127,22 +117,22 @@ TEST_F(AggregateNodeTest, ExpressionToColumnID) {
             std::nullopt);
 }
 
-TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
-  _aggregate_node->set_alias("foo");
-
-  EXPECT_EQ(_aggregate_node->find_table_name_origin("foo"), _aggregate_node);
-  EXPECT_EQ(_aggregate_node->find_table_name_origin("t_a"), _mock_node);
-
-  EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a"}), _a);
-  EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a"}), _);
-  EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a"}), _a);
-  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
-  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), std::nullopt);
-  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", std::nullopt}),
-            ColumnID{3});
-  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", {"foo"}}), ColumnID{3});
-  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
-}
+//TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
+//  _aggregate_node->set_alias("foo");
+//
+//  EXPECT_EQ(_aggregate_node->find_table_name_origin("foo"), _aggregate_node);
+//  EXPECT_EQ(_aggregate_node->find_table_name_origin("t_a"), _mock_node);
+//
+//  EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a"}), _a);
+//  EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a"}), _);
+//  EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"a"}), _a);
+//  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
+//  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), std::nullopt);
+//  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", std::nullopt}),
+//            ColumnID{3});
+//  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", {"foo"}}), ColumnID{3});
+//  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
+//}
 //
 //TEST_F(AggregateNodeTest, Description) {
 //  auto description = _aggregate_node->description();

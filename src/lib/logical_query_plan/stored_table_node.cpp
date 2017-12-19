@@ -19,8 +19,6 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
    */
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
-
-  _output_column_ids_to_input_column_ids.emplace(output_column_count(), INVALID_COLUMN_ID);
 }
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
@@ -31,11 +29,6 @@ std::shared_ptr<const AbstractLQPNode> StoredTableNode::find_table_name_origin(c
   }
 
   return table_name == _table_name ? shared_from_this() : nullptr;
-}
-
-const std::vector<std::optional<ColumnID>>& StoredTableNode::output_column_ids_to_input_column_ids() const {
-  DebugAssert(_output_column_ids_to_input_column_ids, "Not initialized");
-  return *_output_column_ids_to_input_column_ids;
 }
 
 const std::vector<std::string>& StoredTableNode::output_column_names() const { return _output_column_names; }

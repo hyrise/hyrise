@@ -138,7 +138,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
   // has to be overriden if there is != 1 child
-  virtual ColumnOrigin get_column_origin_by_output_column_id(const ColumnID column_id) const;
+  ColumnOrigin get_column_origin_by_output_column_id(const ColumnID column_id) const;
 
   // has to be overriden by StoredTableNode
   virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
@@ -212,7 +212,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::optional<std::string> _table_alias;
 
-  // mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides
+  // mutable, so it can be lazily initialized in output_column_origins() overrides
   mutable std::optional<std::vector<ColumnOrigin>> _output_column_origins;
 
   /**

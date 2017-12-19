@@ -39,13 +39,12 @@ const std::vector<std::string>& UnionNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<std::optional<ColumnID>>& UnionNode::output_column_ids_to_input_column_ids() const {
-  if (!_output_column_ids_to_input_column_ids) {
-    _output_column_ids_to_input_column_ids.emplace(output_column_count());
-    std::iota(_output_column_ids_to_input_column_ids->begin(), _output_column_ids_to_input_column_ids->end(),
-              ColumnID{0});
+const std::vector<ColumnOrigin>& UnionNode::output_column_origins() const {
+  if (!_output_column_origins) {
+    DebugAssert(left_child()->output_column_origins() == right_child()->output_column_origins(), "Input layouts differ.");
+    _output_column_origins = left_child()->output_column_origins();
   }
-  return *_output_column_ids_to_input_column_ids;
+  return *_output_column_origins;
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
@@ -53,18 +52,4 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
   Fail("Statistics for UNION not yet implemented");
   return nullptr;  // Return something
 }
-
-ColumnOrigin UnionNode::get_column_origin_by_output_column_id(const ColumnID column_id) const {
-  Assert(left_child() && right_child(), "Need children to determine ColumnOrigin");
-
-  const auto column_origin_in_left_child = left_child()->get_column_origin_by_output_column_id(column_id);
-
-#if IS_DEBUG
-  const auto column_origin_in_right_child = right_child()->get_column_origin_by_output_column_id(column_id);
-  Assert(column_origin_in_left_child == column_origin_in_right_child, "Column origins in subtrees do not match, invalid LQP");
-#endif
-
-  return column_origin_in_left_child;
-}
-
 }  // namespace opossum
