@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "logical_query_plan/column_origin.hpp"
 #include "abstract_rule.hpp"
+#include "logical_query_plan/column_origin.hpp"
 #include "types.hpp"
 
 namespace opossum {

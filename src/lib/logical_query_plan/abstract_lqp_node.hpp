@@ -134,7 +134,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual const std::vector<ColumnOrigin>& output_column_origins() const;
   size_t output_column_count() const;
 
-  std::optional<ColumnOrigin> find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
+  std::optional<ColumnOrigin> find_column_origin_by_named_column_reference(
+      const NamedColumnReference& named_column_reference) const;
   ColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
   // has to be overriden if there is != 1 child
@@ -143,10 +144,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   // has to be overriden by StoredTableNode
   virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
 
-  std::optional<ColumnID> find_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const;
-  ColumnID get_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const;
-
-
+  std::optional<ColumnID> find_output_column_id_by_column_origin(const ColumnOrigin& column_origin) const;
+  ColumnID get_output_column_id_by_column_origin(const ColumnOrigin& column_origin) const;
 
   /**
    * Makes this nodes parents point to this node's left child
@@ -220,7 +219,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * only operate on the column name. If an alias for this subtree is set, but this reference does not match
    * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const;
+  virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(
+      const NamedColumnReference& named_column_reference) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;

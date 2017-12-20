@@ -17,29 +17,35 @@
 
 namespace opossum {
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 Expression<DerivedExpressionType>::Expression(ExpressionType type) : _type(type) {}
 
-template<typename DerivedExpressionType>
-const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::left_child() const { return _left_child; }
+template <typename DerivedExpressionType>
+const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::left_child() const {
+  return _left_child;
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 void Expression<DerivedExpressionType>::set_left_child(const std::shared_ptr<DerivedExpressionType>& left) {
   _left_child = left;
 }
 
-template<typename DerivedExpressionType>
-const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::right_child() const { return _right_child; }
+template <typename DerivedExpressionType>
+const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::right_child() const {
+  return _right_child;
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 void Expression<DerivedExpressionType>::set_right_child(const std::shared_ptr<DerivedExpressionType>& right) {
   _right_child = right;
 }
 
-template<typename DerivedExpressionType>
-ExpressionType Expression<DerivedExpressionType>::type() const { return _type; }
+template <typename DerivedExpressionType>
+ExpressionType Expression<DerivedExpressionType>::type() const {
+  return _type;
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 void Expression<DerivedExpressionType>::print(const uint32_t level, std::ostream& out) const {
   out << std::setw(level) << " ";
   out << description() << std::endl;
@@ -53,10 +59,12 @@ void Expression<DerivedExpressionType>::print(const uint32_t level, std::ostream
   }
 }
 
-template<typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_operator() const { return is_arithmetic_operator() || is_logical_operator(); }
+template <typename DerivedExpressionType>
+bool Expression<DerivedExpressionType>::is_operator() const {
+  return is_arithmetic_operator() || is_logical_operator();
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 bool Expression<DerivedExpressionType>::is_arithmetic_operator() const {
   switch (_type) {
     case ExpressionType::Subtraction:
@@ -71,7 +79,7 @@ bool Expression<DerivedExpressionType>::is_arithmetic_operator() const {
   }
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 bool Expression<DerivedExpressionType>::is_logical_operator() const {
   switch (_type) {
     case ExpressionType::Equals:
@@ -93,7 +101,7 @@ bool Expression<DerivedExpressionType>::is_logical_operator() const {
   }
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 bool Expression<DerivedExpressionType>::is_binary_operator() const {
   if (is_arithmetic_operator()) return true;
 
@@ -115,7 +123,7 @@ bool Expression<DerivedExpressionType>::is_binary_operator() const {
   }
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 bool Expression<DerivedExpressionType>::is_unary_operator() const {
   switch (_type) {
     case ExpressionType::Not:
@@ -126,15 +134,17 @@ bool Expression<DerivedExpressionType>::is_unary_operator() const {
   }
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 bool Expression<DerivedExpressionType>::is_null_literal() const {
   return _type == ExpressionType::Literal && _value && variant_is_null(*_value);
 }
 
-template<typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
+template <typename DerivedExpressionType>
+bool Expression<DerivedExpressionType>::is_operand() const {
+  return _type == ExpressionType::Literal || _type == ExpressionType::Column;
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 const std::string Expression<DerivedExpressionType>::description() const {
   std::ostringstream desc;
 
@@ -165,34 +175,39 @@ const std::string Expression<DerivedExpressionType>::description() const {
   return desc.str();
 }
 
-template<typename DerivedExpressionType>
-const std::optional<std::string>& Expression<DerivedExpressionType>::table_name() const { return _table_name; }
+template <typename DerivedExpressionType>
+const std::optional<std::string>& Expression<DerivedExpressionType>::table_name() const {
+  return _table_name;
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 AggregateFunction Expression<DerivedExpressionType>::aggregate_function() const {
   DebugAssert(_aggregate_function != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have an aggregate function");
   return *_aggregate_function;
 }
 
-template<typename DerivedExpressionType>
-const std::optional<std::string>& Expression<DerivedExpressionType>::alias() const { return _alias; }
+template <typename DerivedExpressionType>
+const std::optional<std::string>& Expression<DerivedExpressionType>::alias() const {
+  return _alias;
+}
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 const AllTypeVariant Expression<DerivedExpressionType>::value() const {
   DebugAssert(_value != std::nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value");
   return *_value;
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 ValuePlaceholder Expression<DerivedExpressionType>::value_placeholder() const {
   DebugAssert(_value_placeholder != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
   return *_value_placeholder;
 }
 
-template<typename DerivedExpressionType>
-std::string Expression<DerivedExpressionType>::to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
+template <typename DerivedExpressionType>
+std::string Expression<DerivedExpressionType>::to_string(
+    const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
   switch (_type) {
     case ExpressionType::Literal:
       if (is_null_literal()) {
@@ -207,7 +222,7 @@ std::string Expression<DerivedExpressionType>::to_string(const std::optional<std
       return "";
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
-             _aggregate_function_arguments[0]->to_string(input_column_names, false) + ")";
+             _aggregate_function_arguments[0]->to_string(input_column_names, true) + ")";
     case ExpressionType::Star:
       return std::string("*");
     default:
@@ -244,15 +259,19 @@ std::string Expression<DerivedExpressionType>::to_string(const std::optional<std
   return result;
 }
 
-template<typename DerivedExpressionType>
-const std::vector<std::shared_ptr<DerivedExpressionType>>& Expression<DerivedExpressionType>::aggregate_function_arguments() const { return _aggregate_function_arguments; }
+template <typename DerivedExpressionType>
+const std::vector<std::shared_ptr<DerivedExpressionType>>&
+Expression<DerivedExpressionType>::aggregate_function_arguments() const {
+  return _aggregate_function_arguments;
+}
 
-template<typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_aggregate_function_arguments(const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments) {
+template <typename DerivedExpressionType>
+void Expression<DerivedExpressionType>::set_aggregate_function_arguments(
+    const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments) {
   _aggregate_function_arguments = aggregate_function_arguments;
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 bool Expression<DerivedExpressionType>::operator==(const Expression& other) const {
   auto compare_expression_ptrs = [](const auto& left_pointer, const auto& right_pointer) {
     if (left_pointer && right_pointer) {
@@ -267,8 +286,10 @@ bool Expression<DerivedExpressionType>::operator==(const Expression& other) cons
 
   if (_aggregate_function_arguments.size() != other._aggregate_function_arguments.size()) return false;
 
-  for (size_t expression_list_idx = 0; expression_list_idx < _aggregate_function_arguments.size(); ++expression_list_idx) {
-    if (!compare_expression_ptrs(_aggregate_function_arguments[expression_list_idx], other._aggregate_function_arguments[expression_list_idx])) {
+  for (size_t expression_list_idx = 0; expression_list_idx < _aggregate_function_arguments.size();
+       ++expression_list_idx) {
+    if (!compare_expression_ptrs(_aggregate_function_arguments[expression_list_idx],
+                                 other._aggregate_function_arguments[expression_list_idx])) {
       return false;
     }
   }
@@ -277,12 +298,14 @@ bool Expression<DerivedExpressionType>::operator==(const Expression& other) cons
          _table_name == other._table_name && _alias == other._alias;
 }
 
-template<typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_alias(const std::string& alias) { _alias = alias; }
+template <typename DerivedExpressionType>
+void Expression<DerivedExpressionType>::set_alias(const std::string& alias) {
+  _alias = alias;
+}
 
-template<typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_literal(const AllTypeVariant& value,
-                                                           const std::optional<std::string>& alias) {
+template <typename DerivedExpressionType>
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_literal(
+    const AllTypeVariant& value, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Literal);
   expression->_alias = alias;
   expression->_value = value;
@@ -290,17 +313,18 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
   return expression;
 }
 
-template<typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_value_placeholder(ValuePlaceholder value_placeholder) {
+template <typename DerivedExpressionType>
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_value_placeholder(
+    ValuePlaceholder value_placeholder) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Placeholder);
   expression->_value_placeholder = value_placeholder;
   return expression;
 }
 
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_aggregate_function(
-AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpressionType>>& function_arguments,
-const std::optional<std::string>& alias) {
+    AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpressionType>>& function_arguments,
+    const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Function);
   expression->_aggregate_function = aggregate_function;
   expression->_aggregate_function_arguments = function_arguments;
@@ -308,11 +332,10 @@ const std::optional<std::string>& alias) {
   return expression;
 }
 
-template<typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_binary_operator(ExpressionType type,
-                                                                   const std::shared_ptr<DerivedExpressionType>& left,
-                                                                   const std::shared_ptr<DerivedExpressionType>& right,
-                                                                   const std::optional<std::string>& alias) {
+template <typename DerivedExpressionType>
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_binary_operator(
+    ExpressionType type, const std::shared_ptr<DerivedExpressionType>& left,
+    const std::shared_ptr<DerivedExpressionType>& right, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(type);
   Assert(expression->is_binary_operator(),
          "Type is not a binary operator type, such as Equals, LessThan, Like, And, etc.");
@@ -324,10 +347,9 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
   return expression;
 }
 
-template<typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_unary_operator(ExpressionType type,
-                                                                  const std::shared_ptr<DerivedExpressionType>& input,
-                                                                  const std::optional<std::string>& alias) {
+template <typename DerivedExpressionType>
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_unary_operator(
+    ExpressionType type, const std::shared_ptr<DerivedExpressionType>& input, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(type);
   Assert(expression->is_unary_operator(), "Type is not a unary operator such as Not, Exists");
   expression->_alias = alias;
@@ -337,8 +359,9 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
   return expression;
 }
 
-template<typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_select_star(const std::optional<std::string>& table_name) {
+template <typename DerivedExpressionType>
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_select_star(
+    const std::optional<std::string>& table_name) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Star);
   expression->_table_name = table_name;
   return expression;

@@ -18,17 +18,15 @@ class LQPExpression;
  */
 class HSQLExprTranslator {
  public:
-  static std::shared_ptr<LQPExpression> to_lqp_expression(const hsql::Expr &expr,
-                                                          const std::shared_ptr<AbstractLQPNode> &input_node);
+  static std::shared_ptr<LQPExpression> to_lqp_expression(const hsql::Expr& expr,
+                                                          const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  static AllParameterVariant to_all_parameter_variant(const hsql::Expr &expr,
-                                                      const std::optional<std::shared_ptr<AbstractLQPNode>> &input_node = std::nullopt);
+  static AllParameterVariant to_all_parameter_variant(
+      const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node = std::nullopt);
 
-  static ColumnOrigin to_column_origin(const hsql::Expr &hsql_expr,
-                                       const std::shared_ptr<AbstractLQPNode> &input_node);
+  static ColumnOrigin to_column_origin(const hsql::Expr& hsql_expr, const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  static NamedColumnReference to_named_column_reference(const hsql::Expr &hsql_expr);
-
+  static NamedColumnReference to_named_column_reference(const hsql::Expr& hsql_expr);
 };
 
 }  // namespace opossum

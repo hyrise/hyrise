@@ -6,10 +6,10 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
-#include "expression.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

@@ -7,12 +7,12 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "expression.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -129,8 +129,8 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
 }
 
 TEST_F(LogicalQueryPlanTest, TwoInputsTest) {
-  const auto join_node = std::make_shared<JoinNode>(
-      JoinMode::Inner, JoinColumnIDs(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
+  const auto join_node =
+      std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnIDs(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
 
   ASSERT_EQ(join_node->left_child(), nullptr);
   ASSERT_EQ(join_node->right_child(), nullptr);

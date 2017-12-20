@@ -21,8 +21,7 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_origins,
-                   const ScanType scan_type)
+JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_origins, const ScanType scan_type)
     : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
       _join_column_origins(join_column_origins),
@@ -41,7 +40,8 @@ std::string JoinNode::description() const {
   if (_join_column_origins && _scan_type) {
     desc << " " << _join_column_origins->first.get_verbose_name();
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << _join_column_origins->second.get_verbose_name();;
+    desc << " " << _join_column_origins->second.get_verbose_name();
+    ;
   }
 
   return desc.str();
@@ -72,10 +72,8 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
 
-    JoinColumnIDs join_colum_ids{
-      get_output_column_id_by_column_origin(_join_column_origins->first),
-      get_output_column_id_by_column_origin(_join_column_origins->second)
-    };
+    JoinColumnIDs join_colum_ids{get_output_column_id_by_column_origin(_join_column_origins->first),
+                                 get_output_column_id_by_column_origin(_join_column_origins->second)};
 
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
                                                                              join_colum_ids, *_scan_type);
@@ -94,8 +92,7 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
   if (column_id < left_child()->output_column_count()) {
     return left_child()->get_verbose_column_name(column_id);
   }
-  return right_child()->get_verbose_column_name(
-      ColumnID{static_cast<ColumnID::base_type>(column_id - left_child()->output_column_count())});
+  return right_child()->get_verbose_column_name(static_cast<ColumnID>(column_id - left_child()->output_column_count()));
 }
 
 void JoinNode::_on_child_changed() { _output_column_names.reset(); }

@@ -132,12 +132,13 @@ std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
    *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
    */
   if (expression->type() == ExpressionType::Column) {
-    const auto iter =
-        std::find_if(_groupby_column_origins.begin(), _groupby_column_origins.end(),
-                     [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
+    const auto iter = std::find_if(
+        _groupby_column_origins.begin(), _groupby_column_origins.end(),
+        [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
 
     if (iter != _groupby_column_origins.end()) {
-      return get_column_origin_by_output_column_id(static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter)));
+      return get_column_origin_by_output_column_id(
+          static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter)));
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =

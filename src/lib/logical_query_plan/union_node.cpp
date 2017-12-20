@@ -41,7 +41,8 @@ const std::vector<std::string>& UnionNode::output_column_names() const {
 
 const std::vector<ColumnOrigin>& UnionNode::output_column_origins() const {
   if (!_output_column_origins) {
-    DebugAssert(left_child()->output_column_origins() == right_child()->output_column_origins(), "Input layouts differ.");
+    DebugAssert(left_child()->output_column_origins() == right_child()->output_column_origins(),
+                "Input layouts differ.");
     _output_column_origins = left_child()->output_column_origins();
   }
   return *_output_column_origins;

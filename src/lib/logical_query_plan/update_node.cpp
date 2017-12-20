@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "utils/assert.hpp"
 #include "lqp_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,7 +22,9 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const { return _column_expressions; }
+const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const {
+  return _column_expressions;
+}
 
 const std::string& UpdateNode::table_name() const { return _table_name; }
 

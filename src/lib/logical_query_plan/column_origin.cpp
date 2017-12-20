@@ -5,23 +5,31 @@
 
 namespace opossum {
 
-ColumnOrigin::ColumnOrigin(const std::shared_ptr<const AbstractLQPNode> &node, ColumnID column_id) :
-node(node), column_id(column_id) {}
+ColumnOrigin::ColumnOrigin(const std::shared_ptr<const AbstractLQPNode>& node, ColumnID column_id)
+    : _node(node), _column_id(column_id) {}
 
-bool ColumnOrigin::operator==(const ColumnOrigin &rhs) const {
-  return node == rhs.node && column_id == rhs.column_id;
-}
+std::shared_ptr<const AbstractLQPNode> ColumnOrigin::node() const { return _node.lock(); }
+
+ColumnID ColumnOrigin::column_id() const { return _column_id; }
 
 std::string ColumnOrigin::get_verbose_name() const {
-  DebugAssert(node && column_id != INVALID_COLUMN_ID, "ColumnOrigin state not sufficient to retrieve column name");
-  return node->get_verbose_column_name(column_id);
+  const auto node = this->node();
+
+  DebugAssert(node, "ColumnOrigin state not sufficient to retrieve column name");
+  return node->get_verbose_column_name(_column_id);
 }
 
-std::ostream &operator<<(std::ostream &os, const ColumnOrigin &column_origin) {
-  if (column_origin.node && column_origin.column_id != INVALID_COLUMN_ID) {
-    os << "[Invalid ColumnOrigin, ColumnID:" << column_origin.column_id << "]";
-  } else {
+bool ColumnOrigin::operator==(const ColumnOrigin& rhs) const {
+  return node() == rhs.node() && _column_id == rhs._column_id;
+}
+
+std::ostream& operator<<(std::ostream& os, const ColumnOrigin& column_origin) {
+  const auto node = column_origin.node();
+
+  if (column_origin.node()) {
     os << column_origin.get_verbose_name();
+  } else {
+    os << "[Invalid ColumnOrigin, ColumnID:" << column_origin.column_id() << "]";
   }
   return os;
 }

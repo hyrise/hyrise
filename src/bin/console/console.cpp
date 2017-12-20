@@ -230,8 +230,7 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
-    parse_result.
-    out("Error: SQL query not valid.\n");
+    parse_result.out("Error: SQL query not valid.\n");
     return ReturnCode::Error;
   }
 

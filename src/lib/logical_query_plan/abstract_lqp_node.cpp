@@ -160,7 +160,8 @@ const std::vector<ColumnOrigin>& AbstractLQPNode::output_column_origins() const 
   return *_output_column_origins;
 }
 
-std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
+std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(
+    const NamedColumnReference& named_column_reference) const {
   /**
    * If this node carries an alias, that is different from that of the Column reference, we can't resolve the column
    * in this node
@@ -185,7 +186,8 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
   /**
    * Look for the Column in child nodes
    */
-  const auto resolve_named_column_reference = [&] (const auto& node, const auto& named_column_reference) -> std::optional<ColumnOrigin> {
+  const auto resolve_named_column_reference = [&](const auto& node,
+                                                  const auto& named_column_reference) -> std::optional<ColumnOrigin> {
     if (node) {
       const auto column_origin = node->find_column_origin_by_named_column_reference(named_column_reference);
       if (column_origin) {
@@ -197,10 +199,13 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
     return std::nullopt;
   };
 
-  const auto column_origin_from_left = resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
-  const auto column_origin_from_right = resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
+  const auto column_origin_from_left =
+      resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
+  const auto column_origin_from_right =
+      resolve_named_column_reference(right_child(), *named_column_reference_without_local_column_prefix);
 
-  Assert(!column_origin_from_left || !column_origin_from_right || column_origin_from_left == column_origin_from_right, "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
+  Assert(!column_origin_from_left || !column_origin_from_right || column_origin_from_left == column_origin_from_right,
+         "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
 
   if (column_origin_from_left) {
     return column_origin_from_left;
@@ -208,9 +213,10 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
   return column_origin_from_right;
 }
 
-ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const {
+ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(
+    const NamedColumnReference& named_column_reference) const {
   const auto colum_origin = find_column_origin_by_named_column_reference(named_column_reference);
-  DebugAssert(colum_origin, "Couldn't resolve column origin");
+  DebugAssert(colum_origin, "Couldn't resolve column origin of " + named_column_reference.as_string());
   return *colum_origin;
 }
 
@@ -224,7 +230,7 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     return shared_from_this();
   }
 
-  if (!left_child()) {
+  if (!left_child() || _table_alias) {
     return nullptr;
   }
 
@@ -234,7 +240,8 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     const auto table_name_origin_in_right_child = right_child()->find_table_name_origin(table_name);
 
     if (table_name_origin_in_left_child && table_name_origin_in_right_child) {
-      Assert(table_name_origin_in_left_child == table_name_origin_in_right_child, "If a node has two children, both have to resolve a table name to the same node");
+      Assert(table_name_origin_in_left_child == table_name_origin_in_right_child,
+             "If a node has two children, both have to resolve a table name to the same node");
       return table_name_origin_in_left_child;
     } else if (table_name_origin_in_right_child) {
       return table_name_origin_in_right_child;
@@ -244,7 +251,8 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
   return table_name_origin_in_left_child;
 }
 
-std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const {
+std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(
+    const ColumnOrigin& column_origin) const {
   const auto& output_column_origins = this->output_column_origins();
 
   const auto iter = std::find(output_column_origins.begin(), output_column_origins.end(), column_origin);
@@ -256,7 +264,7 @@ std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(
   return static_cast<ColumnID>(std::distance(output_column_origins.begin(), iter));
 }
 
-ColumnID AbstractLQPNode::get_output_column_id_by_column_origin(const ColumnOrigin &column_origin) const {
+ColumnID AbstractLQPNode::get_output_column_id_by_column_origin(const ColumnOrigin& column_origin) const {
   const auto column_id = find_output_column_id_by_column_origin(column_origin);
   Assert(column_id, "Couldn't resolve ColumnOrigin");
   return *column_id;
@@ -358,7 +366,8 @@ std::vector<std::string> AbstractLQPNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_column_prefix(const NamedColumnReference& reference) const {
+std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_column_prefix(
+    const NamedColumnReference& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
@@ -442,11 +451,7 @@ void AbstractLQPNode::_remove_parent_pointer(const std::shared_ptr<AbstractLQPNo
 }
 
 void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent) {
-#if IS_DEBUG
-  const auto iter =
-      std::find_if(_parents.begin(), _parents.end(), [&](const auto& other) { return parent == other.lock(); });
-  DebugAssert(iter == _parents.end(), "Specified new parent node is already a parent node.");
-#endif
+  // Having the same parent multiple times is allowed, e.g. for self joins
   _parents.emplace_back(parent);
 }
 

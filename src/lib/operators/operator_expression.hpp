@@ -12,19 +12,20 @@ class LQPExpression;
 class OperatorExpression : public Expression<OperatorExpression> {
  public:
   static std::shared_ptr<OperatorExpression> create_column(const ColumnID column_id,
-                                                                        const std::optional<std::string>& alias = std::nullopt);
+                                                           const std::optional<std::string>& alias = std::nullopt);
 
   using Expression<OperatorExpression>::Expression;
-  OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression, const std::shared_ptr<AbstractLQPNode>& node);
+  OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
+                     const std::shared_ptr<AbstractLQPNode>& node);
 
   ColumnID column_id() const;
 
-  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root = true) const override;
+  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names,
+                        bool is_root = true) const override;
 
   bool operator==(const OperatorExpression& other) const;
 
  private:
   std::optional<ColumnID> _column_id;
 };
-
 }

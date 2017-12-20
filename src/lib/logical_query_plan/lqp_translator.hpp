@@ -45,8 +45,9 @@ class LQPTranslator final : private Noncopyable {
   std::shared_ptr<AbstractOperator> _translate_show_columns_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Translate LQP- to OperatorExpressions
-  std::vector<std::shared_ptr<OperatorExpression>> _translate_expressions(const std::vector<std::shared_ptr<LQPExpression>> & lqp_expressions, const std::shared_ptr<AbstractLQPNode>& node) const;
-
+  std::vector<std::shared_ptr<OperatorExpression>> _translate_expressions(
+      const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
+      const std::shared_ptr<AbstractLQPNode>& node) const;
 };
 
 }  // namespace opossum

@@ -73,7 +73,8 @@ class Projection : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
-      const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id);
+      const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table,
+      const ChunkID chunk_id);
 
   /**
    * Operators that all numerical types support.

@@ -50,7 +50,8 @@ std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
 
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }
 
-std::optional<NamedColumnReference> StoredTableNode::_resolve_local_column_prefix(const NamedColumnReference& named_column_reference) const {
+std::optional<NamedColumnReference> StoredTableNode::_resolve_local_column_prefix(
+    const NamedColumnReference& named_column_reference) const {
   if (!named_column_reference.table_name) {
     return named_column_reference;
   }

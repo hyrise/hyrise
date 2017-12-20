@@ -12,6 +12,9 @@ set(
     ${SHARED_SOURCES}
     gtest_main.cpp
     logical_query_plan/aggregate_node_test.cpp
+    logical_query_plan/join_node_test.cpp
+    logical_query_plan/projection_node_test.cpp
+    logical_query_plan/union_node_test.cpp
 )
 
 set (

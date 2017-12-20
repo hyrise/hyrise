@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "operators/operator_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
-#include "operators/operator_expression.hpp"
 
 namespace opossum {
 
@@ -144,7 +144,8 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<OperatorExpre
 
 template <typename T>
 const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
-    const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id) {
+    const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table,
+    const ChunkID chunk_id) {
   /**
    * Handle Literal
    * This is only used if the Literal represents a constant column, e.g. in 'SELECT 5 FROM table_a'.

@@ -6,12 +6,12 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "expression.hpp"
 #include "optimizer/strategy/join_detection_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_translator.hpp"

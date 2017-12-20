@@ -16,7 +16,7 @@
 namespace opossum {
 
 std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
-const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
+    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
   auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
@@ -114,17 +114,17 @@ const hsql::Expr &expr, const std::shared_ptr<AbstractLQPNode> &input_node) {
        */
       // TODO(mp): translate as soon as SQLTranslator is merged
       Fail("Subselects are not supported yet.");
-      return nullptr; // Make compiler happy
+      return nullptr;  // Make compiler happy
     default:
       Fail("Unsupported expression type");
-      return nullptr; // Make compiler happy
+      return nullptr;  // Make compiler happy
   }
 
   return node;
 }
 
 AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
-const hsql::Expr &expr, const std::optional<std::shared_ptr<AbstractLQPNode>> &input_node) {
+    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -145,20 +145,19 @@ const hsql::Expr &expr, const std::optional<std::shared_ptr<AbstractLQPNode>> &i
   }
 }
 
-ColumnOrigin HSQLExprTranslator::to_column_origin(const hsql::Expr &hsql_expr,
-                                                  const std::shared_ptr<AbstractLQPNode> &input_node) {
+ColumnOrigin HSQLExprTranslator::to_column_origin(const hsql::Expr& hsql_expr,
+                                                  const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
-  const auto column_origin = input_node->find_column_origin_by_named_column_reference(
-  to_named_column_reference(hsql_expr));
+  const auto column_origin =
+      input_node->find_column_origin_by_named_column_reference(to_named_column_reference(hsql_expr));
 
   Assert(column_origin, "Couldn't resolve named column reference");
 
   return *column_origin;
 }
 
-NamedColumnReference HSQLExprTranslator::to_named_column_reference(
-const hsql::Expr &hsql_expr) {
+NamedColumnReference HSQLExprTranslator::to_named_column_reference(const hsql::Expr& hsql_expr) {
   DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 

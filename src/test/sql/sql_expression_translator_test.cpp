@@ -5,10 +5,10 @@
 
 #include "../base_test.hpp"
 
+#include "expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "expression.hpp"
 #include "sql/SQLStatement.h"
 #include "sql/hsql_expr_translator.hpp"
 #include "storage/storage_manager.hpp"

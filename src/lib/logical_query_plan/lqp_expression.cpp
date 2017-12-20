@@ -1,14 +1,14 @@
 #include "lqp_expression.hpp"
 
 #include "column_origin.hpp"
-#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
 #include "operators/operator_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 std::shared_ptr<LQPExpression> LQPExpression::create_column(const ColumnOrigin& column_origin,
-                                                      const std::optional<std::string>& alias) {
+                                                            const std::optional<std::string>& alias) {
   auto expression = std::make_shared<LQPExpression>(ExpressionType::Column);
   expression->_column_origin = column_origin;
   expression->_alias = alias;
@@ -17,7 +17,7 @@ std::shared_ptr<LQPExpression> LQPExpression::create_column(const ColumnOrigin& 
 }
 
 std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
-const std::vector<ColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
+    const std::vector<ColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions;
   column_expressions.reserve(column_origins.size());
 
@@ -36,13 +36,13 @@ const std::vector<ColumnOrigin>& column_origins, const std::optional<std::vector
   return column_expressions;
 }
 
-
 const ColumnOrigin& LQPExpression::column_origin() const {
   DebugAssert(_column_origin, "Expression " + expression_type_to_string.at(_type) + " does not have a ColumnOrigin");
   return *_column_origin;
 }
 
-std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
+std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
+                                     bool is_root) const {
   if (type() == ExpressionType::Column) {
     return column_origin().get_verbose_name();
   }
@@ -55,5 +55,4 @@ bool LQPExpression::operator==(const LQPExpression& other) const {
   }
   return _column_origin == other._column_origin;
 }
-
 }

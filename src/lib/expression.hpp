@@ -25,7 +25,7 @@ class AbstractLQPNode;
  * For now we decided to have a single Expression without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.
  */
-template<typename DerivedExpressionType>
+template <typename DerivedExpressionType>
 class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
  public:
   /*
@@ -53,22 +53,22 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
    */
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
   static std::shared_ptr<DerivedExpressionType> create_literal(const AllTypeVariant& value,
-                                                    const std::optional<std::string>& alias = std::nullopt);
+                                                               const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<DerivedExpressionType> create_value_placeholder(ValuePlaceholder value_placeholder);
 
   static std::shared_ptr<DerivedExpressionType> create_aggregate_function(
-      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpressionType>>& function_arguments,
+      AggregateFunction aggregate_function,
+      const std::vector<std::shared_ptr<DerivedExpressionType>>& function_arguments,
       const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<DerivedExpressionType> create_binary_operator(ExpressionType type,
-                                                            const std::shared_ptr<DerivedExpressionType>& left,
-                                                            const std::shared_ptr<DerivedExpressionType>& right,
-                                                            const std::optional<std::string>& alias = std::nullopt);
+  static std::shared_ptr<DerivedExpressionType> create_binary_operator(
+      ExpressionType type, const std::shared_ptr<DerivedExpressionType>& left,
+      const std::shared_ptr<DerivedExpressionType>& right, const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<DerivedExpressionType> create_unary_operator(ExpressionType type,
-                                                           const std::shared_ptr<DerivedExpressionType>& input,
-                                                           const std::optional<std::string>& alias = std::nullopt);
+  static std::shared_ptr<DerivedExpressionType> create_unary_operator(
+      ExpressionType type, const std::shared_ptr<DerivedExpressionType>& input,
+      const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<DerivedExpressionType> create_select_star(const std::optional<std::string>& table_name = {});
 
@@ -137,7 +137,8 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
   const std::optional<std::string>& table_name() const;
   const std::optional<std::string>& alias() const;
 
-  void set_aggregate_function_arguments(const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments);
+  void set_aggregate_function_arguments(
+      const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments);
 
   void set_alias(const std::string& alias);
 
@@ -146,7 +147,8 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
    * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
    * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
-  virtual std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt, bool is_root = true) const;
+  virtual std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
+                                bool is_root = true) const;
 
  protected:
   // Not to be used directly, derived classes should implement it in the public scope and use this internally
@@ -181,7 +183,7 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
   // @}
 
   friend class LQPExpression;
-  friend class OperatorExpression; // For creating OperatorExpressions from LQPExpressions
+  friend class OperatorExpression;  // For creating OperatorExpressions from LQPExpressions
 };
 
 }  // namespace opossum

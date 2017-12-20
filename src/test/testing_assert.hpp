@@ -45,8 +45,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
 // @}
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type, const ColumnOrigin& left_column_origin,
-                            const ColumnOrigin& right_column_origin);
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type,
+                            const ColumnOrigin& left_column_origin, const ColumnOrigin& right_column_origin);
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 
@@ -101,8 +101,8 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChil
 #define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_id) \
   ASSERT_EQ(expression->type(), ExpressionType::Function);                                            \
   ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                             \
-  ASSERT_EQ(expression->aggregate_function_arguments().size(), 1u);                                                \
-  ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);                        \
+  ASSERT_EQ(expression->aggregate_function_arguments().size(), 1u);                                   \
+  ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);           \
   ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_id(), actual_column_id);
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \

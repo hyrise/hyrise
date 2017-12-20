@@ -32,7 +32,8 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
         JoinColumnOrigins join_column_ids(join_condition->left_column_origin, join_condition->right_column_origin);
 
         auto predicate_node = join_condition->predicate_node;
-        const auto new_join_node = std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, predicate_node->scan_type());
+        const auto new_join_node =
+            std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, predicate_node->scan_type());
 
         /**
          * Place the conditional join where the cross join was and remove the predicate node
@@ -102,15 +103,19 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
       auto predicate_left_column_origin = predicate_node->column_origin();
       auto predicate_right_column_origin = boost::get<ColumnOrigin>(predicate_node->value());
 
-      const auto left_in_left = cross_join->left_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);
-      const auto right_in_right = cross_join->right_child()->find_output_column_id_by_column_origin(predicate_right_column_origin);
+      const auto left_in_left =
+          cross_join->left_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);
+      const auto right_in_right =
+          cross_join->right_child()->find_output_column_id_by_column_origin(predicate_right_column_origin);
 
       if (left_in_left && right_in_right) {
         return JoinCondition{predicate_node, predicate_left_column_origin, predicate_right_column_origin};
       }
 
-      const auto left_in_right = cross_join->right_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);
-      const auto right_in_left = cross_join->left_child()->find_output_column_id_by_column_origin(predicate_right_column_origin);
+      const auto left_in_right =
+          cross_join->right_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);
+      const auto right_in_left =
+          cross_join->left_child()->find_output_column_id_by_column_origin(predicate_right_column_origin);
 
       if (right_in_left && left_in_right) {
         return JoinCondition{predicate_node, predicate_right_column_origin, predicate_left_column_origin};
