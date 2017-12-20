@@ -112,10 +112,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   auto opossum_matrix = _table_to_matrix(opossum_table);
   auto expected_matrix = _table_to_matrix(expected_table);
 
-  std::string error_type = "";
-  std::string error_msg = "";
-
-  const auto generate_table_comparison = [&](const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
+  const auto generate_table_comparison = [&](const std::string& error_type, const std::string& error_msg, const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
     std::stringstream stream;
     stream << "========= Tables are not equal =========" << std::endl;
     stream << "------- Actual Result -------" << std::endl;
@@ -133,11 +130,11 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   // compare schema of tables
   //  - column count
   if (opossum_table->column_count() != expected_table->column_count()) {
-    error_type = "Column count mismatch";
-    error_msg = "Actual number of columns: " + std::to_string(opossum_table->column_count()) + "\n"
+    const std::string error_type = "Column count mismatch";
+    const std::string error_msg = "Actual number of columns: " + std::to_string(opossum_table->column_count()) + "\n"
               + "Expected number of columns: " + std::to_string(expected_table->column_count());
 
-    std::cout << generate_table_comparison() << std::endl;
+    std::cout << generate_table_comparison(error_type, error_msg) << std::endl;
     return false;
   }
 
@@ -162,20 +159,20 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     }
 
     if (opossum_table->column_name(col_id) != expected_table->column_name(col_id)) {
-      error_type = "Column name mismatch (column " + std::to_string(col_id) + ")";
-      error_msg = "Actual column name: " + opossum_table->column_name(col_id) + "\n"
+      const std::string error_type = "Column name mismatch (column " + std::to_string(col_id) + ")";
+      const std::string error_msg = "Actual column name: " + opossum_table->column_name(col_id) + "\n"
               + "Expected column name: " + expected_table->column_name(col_id);
 
-      std::cout << generate_table_comparison({{0, col_id}}) << std::endl;
+      std::cout << generate_table_comparison(error_type, error_msg, {{0, col_id}}) << std::endl;
       return false;
     }
 
     if (left_col_type != right_col_type) {
-      error_type = "Column type mismatch (column " + std::to_string(col_id) + ")";
-      error_msg = "Actual column type: " + data_type_to_string.left.at(opossum_table->column_type(col_id)) + "\n"
+      const std::string error_type = "Column type mismatch (column " + std::to_string(col_id) + ")";
+      const std::string error_msg = "Actual column type: " + data_type_to_string.left.at(opossum_table->column_type(col_id)) + "\n"
               + "Expected column type: " + data_type_to_string.left.at(expected_table->column_type(col_id));
 
-      std::cout << generate_table_comparison({{1, col_id}}) << std::endl;
+      std::cout << generate_table_comparison(error_type, error_msg, {{1, col_id}}) << std::endl;
       return false;
     }
   }
@@ -183,11 +180,11 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   // compare content of tables
   //  - row count for fast failure
   if (opossum_table->row_count() != expected_table->row_count()) {
-    error_type = "Row count mismatch";
-    error_msg = "Actual number of rows: " + std::to_string(opossum_table->row_count()) + "\n"
+    const std::string error_type = "Row count mismatch";
+    const std::string error_msg = "Actual number of rows: " + std::to_string(opossum_table->row_count()) + "\n"
               + "Expected number of rows: " + std::to_string(expected_table->row_count());
 
-    std::cout << generate_table_comparison() << std::endl;
+    std::cout << generate_table_comparison(error_type, error_msg) << std::endl;
     return false;
   }
 
@@ -208,6 +205,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     }
   };
 
+  // Compare each cell, skipping header
   for (unsigned row = 2; row < opossum_matrix.size(); row++)
     for (ColumnID col{0}; col < opossum_matrix[row].size(); col++) {
       if (variant_is_null(opossum_matrix[row][col]) || variant_is_null(expected_matrix[row][col])) {
@@ -235,13 +233,13 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     }
 
   if (has_error) {
-    error_type = "Cell data mismatch";
-    error_msg = "Mismatched cells (row,column): ";
+    const std::string error_type = "Cell data mismatch";
+    std::string error_msg = "Mismatched cells (row,column): ";
     for (auto cell : mismatched_cells) {
       error_msg += "(" + std::to_string(cell.first - 2) + "," + std::to_string(cell.second) + ") ";
     }
 
-    std::cout << generate_table_comparison(mismatched_cells) << std::endl;
+    std::cout << generate_table_comparison(error_type, error_msg, mismatched_cells) << std::endl;
     return false;
   }
 
