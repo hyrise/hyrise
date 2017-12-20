@@ -249,7 +249,7 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition.tbl", 2);
 
   // creates ref_columns
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper_int_dict, ColumnID{0}, ScanType::OpGreaterThan, "0");
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper_int_dict, ColumnID{0}, ScanType::GreaterThan, "0");
   table_scan->execute();
 
   auto projection = std::make_shared<Projection>(table_scan, _sum_a_b_c_expr);
@@ -277,7 +277,7 @@ TEST_F(OperatorsProjectionTest, ValueColumnCount) {
 
 // TODO(anyone): refactor test
 TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
-  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpEquals, 1234);
+  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::Equals, 1234);
   scan->execute();
 
   auto projection_1 = std::make_shared<opossum::Projection>(scan, _a_b_expr);

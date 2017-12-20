@@ -26,7 +26,7 @@ class JoinNodeTest : public BaseTest {
     _join_node->set_right_child(_stored_table_node_b);
 
     _inner_join_node =
-        std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
+        std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{1}), ScanType::Equals);
     _inner_join_node->set_left_child(_stored_table_node_a);
     _inner_join_node->set_right_child(_stored_table_node_b);
   }

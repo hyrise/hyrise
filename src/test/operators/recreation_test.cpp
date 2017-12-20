@@ -58,7 +58,7 @@ TYPED_TEST(RecreationTestJoin, RecreationJoin) {
 
   // build and execute join
   auto join = std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals);
   EXPECT_NE(join, nullptr) << "Could not build Join";
   join->execute();
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
@@ -147,7 +147,7 @@ TEST_F(RecreationTest, RecreationTableScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
   // build and execute table scan
-  auto scan = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
+  auto scan = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::GreaterThanEquals, 1234);
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 

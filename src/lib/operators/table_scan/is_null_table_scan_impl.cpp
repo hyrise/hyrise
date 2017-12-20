@@ -53,10 +53,10 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& b
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
   switch (_scan_type) {
-    case ScanType::OpIsNull:
+    case ScanType::IsNull:
       return false;
 
-    case ScanType::OpIsNotNull:
+    case ScanType::IsNotNull:
       return !column.is_nullable();
 
     default:
@@ -67,10 +67,10 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
 
 bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
   switch (_scan_type) {
-    case ScanType::OpIsNull:
+    case ScanType::IsNull:
       return !column.is_nullable();
 
-    case ScanType::OpIsNotNull:
+    case ScanType::IsNotNull:
       return false;
 
     default:
