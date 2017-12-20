@@ -13,6 +13,7 @@ set(
     gtest_main.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/join_node_test.cpp
+    logical_query_plan/logical_query_plan_test.cpp
     logical_query_plan/projection_node_test.cpp
     logical_query_plan/union_node_test.cpp
 )

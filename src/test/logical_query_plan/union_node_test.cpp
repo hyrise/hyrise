@@ -58,7 +58,7 @@ TEST_F(UnionNodeTest, MismatchingColumnNames) {
   invalid_union->set_left_child(_mock_node);
   invalid_union->set_right_child(mock_node_b);
 
-  EXPECT_THROW(invalid_union->get_verbose_column_name(ColumnID{0}), std::exception);
+  EXPECT_THROW(invalid_union->get_verbose_column_name(ColumnID{1}), std::exception);
 }
 
 TEST_F(UnionNodeTest, VerboseColumnNames) {
