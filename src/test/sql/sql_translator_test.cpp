@@ -84,7 +84,7 @@ TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
   // TODO(anybody): once this is implemented, the value side has to be checked.
 }
 
@@ -98,7 +98,7 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{ColumnID{1}});
 }
@@ -114,7 +114,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }
 
@@ -261,7 +261,7 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
 
   EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
   EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0});
   EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0});
@@ -283,7 +283,7 @@ TEST_F(SQLTranslatorTest, SelectLeftRightOuterJoins) {
 
     EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
     auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-    EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+    EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
     EXPECT_EQ(join_node->join_mode(), mode);
     EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0} /* "a" */);
     EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
@@ -317,7 +317,7 @@ TEST_F(SQLTranslatorTest, SelectOuterJoin) {
 
   EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Outer);
   EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0} /* "a" */);
   EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
@@ -339,7 +339,7 @@ TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
   auto predicate = std::dynamic_pointer_cast<PredicateNode>(projection_node->left_child());
   EXPECT_FALSE(predicate->right_child());
   EXPECT_EQ(predicate->column_id(), ColumnID{0});
-  EXPECT_EQ(predicate->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(predicate->scan_type(), ScanType::Equals);
   EXPECT_EQ(predicate->value(), AllParameterVariant{ColumnID{2}});
 
   EXPECT_EQ(predicate->left_child()->type(), LQPNodeType::Join);
@@ -555,7 +555,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
   EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
   EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }
 

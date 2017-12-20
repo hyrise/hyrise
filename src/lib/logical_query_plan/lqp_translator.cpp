@@ -61,14 +61,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-  if (table_scan_node->scan_type() == ScanType::OpBetween) {
+  if (table_scan_node->scan_type() == ScanType::Between) {
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
     auto table_scan1 = std::make_shared<TableScan>(input_operator, table_scan_node->column_id(),
-                                                   ScanType::OpGreaterThanEquals, table_scan_node->value());
+                                                   ScanType::GreaterThanEquals, table_scan_node->value());
 
-    return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::OpLessThanEquals,
+    return std::make_shared<TableScan>(table_scan1, table_scan_node->column_id(), ScanType::LessThanEquals,
                                        *table_scan_node->value2());
   }
 
@@ -124,7 +124,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   DebugAssert(static_cast<bool>(join_node->join_column_ids()), "Cannot translate Join without join column ids.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
 
-  if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
+  if (*join_node->scan_type() == ScanType::Equals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
                                       *(join_node->join_column_ids()), *(join_node->scan_type()));
   }
