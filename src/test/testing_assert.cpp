@@ -65,7 +65,7 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
   if (highlight_color == ANSI_COLOR_GREEN) {
     highlight_color_bg = ANSI_COLOR_BG_GREEN;
   }
-  
+
   for (unsigned row = 0; row < matrix.size(); row++) {
     highlight = false;
     auto it = std::find_if( highlight_cells.begin(), highlight_cells.end(), [&](const std::pair<uint64_t, uint16_t>& element){ return element.first == row;} );
@@ -78,6 +78,8 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
     } else {
       previous_row_highlighted = false;
     }
+
+    // Highlight row number with background color
     std::string coloring = "";
     if (highlight) {
       coloring = highlight_color_bg;
@@ -87,13 +89,15 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
     } else {
       stream << coloring << std::setw(4) << "    " << ANSI_COLOR_RESET;
     }
+
+    // Highlicht each (applicable) cell with highlight color
     for (opossum::ColumnID col{0}; col < matrix[row].size(); col++) {
-      std::string field = boost::lexical_cast<std::string>(matrix[row][col]);
+      std::string cell = boost::lexical_cast<std::string>(matrix[row][col]);
       coloring = "";
       if (highlight && it->second == col) {
         coloring = highlight_color;
       }
-      stream << coloring << std::setw(8) << field << ANSI_COLOR_RESET << " ";
+      stream << coloring << std::setw(8) << cell << ANSI_COLOR_RESET << " ";
     }
     stream << std::endl;
   }
