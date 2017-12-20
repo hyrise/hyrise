@@ -15,7 +15,8 @@
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
-#define ANSI_COLOR_YELLOW "\x1B[33m"
+#define ANSI_COLOR_BG_RED "\x1B[41m"
+#define ANSI_COLOR_BG_GREEN "\x1B[42m"
 #define ANSI_COLOR_RESET "\x1B[0m"
 
 #define EPSILON 0.0001
@@ -59,6 +60,12 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
   std::stringstream stream;
   bool highlight;
   bool previous_row_highlighted = false;
+
+  std::string highlight_color_bg = ANSI_COLOR_BG_RED;
+  if (highlight_color == ANSI_COLOR_GREEN) {
+    highlight_color_bg = ANSI_COLOR_BG_GREEN;
+  }
+  
   for (unsigned row = 0; row < matrix.size(); row++) {
     highlight = false;
     auto it = std::find_if( highlight_cells.begin(), highlight_cells.end(), [&](const std::pair<uint64_t, uint16_t>& element){ return element.first == row;} );
@@ -71,19 +78,20 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
     } else {
       previous_row_highlighted = false;
     }
+    std::string coloring = "";
+    if (highlight) {
+      coloring = highlight_color_bg;
+    }
     if (row >= 2) {
-      stream << std::setw(4) << std::to_string(row - 2);
+      stream << coloring << std::setw(4) << std::to_string(row - 2) << ANSI_COLOR_RESET;
     } else {
-      stream << std::setw(4) << " ";
+      stream << coloring << std::setw(4) << "    " << ANSI_COLOR_RESET;
     }
     for (opossum::ColumnID col{0}; col < matrix[row].size(); col++) {
       std::string field = boost::lexical_cast<std::string>(matrix[row][col]);
-      std::string coloring = "";
-      if (highlight) {
-        coloring = ANSI_COLOR_YELLOW;
-        if (it->second == col) {
-          coloring = highlight_color;
-        }
+      coloring = "";
+      if (highlight && it->second == col) {
+        coloring = highlight_color;
       }
       stream << coloring << std::setw(8) << field << ANSI_COLOR_RESET << " ";
     }
