@@ -1,3 +1,4 @@
+#pragma once
 
 #include "strong_typedef.hpp"
 #include "all_type_variant.hpp"

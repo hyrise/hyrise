@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 #include <hash_function.hpp>
-#include <storage/partitioning/partition_schema.hpp>
 #include <storage/partitioning/null_partition_schema.hpp>
+#include <storage/partitioning/partition_schema.hpp>
 
 #include "base_column.hpp"
 #include "chunk.hpp"
@@ -144,9 +144,9 @@ class Table : private Noncopyable {
   TableType get_type() const;
 
   // partitioning
+  void create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, const size_t number_of_partitions);
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
-  void create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, int number_of_partitions);
-  void create_round_robin_partitioning(int number_of_partitions);
+  void create_round_robin_partitioning(const size_t number_of_partitions);
 
   void remove_partitioning();
   std::vector<ChunkID> get_partition(PartitionID partition_id);
