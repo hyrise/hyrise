@@ -92,6 +92,15 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
   return stream.str();
 }
 
+template<typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
+bool near(T left_val, T right_val, opossum::FloatComparisonMode float_comparison_mode) {
+  if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
+    return std::fabs(left_val - right_val) < EPSILON;
+  } else {
+    return std::fabs(left_val - right_val) < std::fabs(right_val * EPSILON);
+  }
+}
+
 }  // namespace
 
 
@@ -207,20 +216,12 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
         auto left_val = type_cast<float>(opossum_matrix[row][col]);
         auto right_val = type_cast<float>(expected_matrix[row][col]);
 
-        if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
-          expect_true(std::fabs(left_val - right_val) < EPSILON, row, col);
-        } else {
-          expect_true(std::fabs(left_val - right_val) < std::fabs(right_val * EPSILON), row, col);
-        }
+        expect_true(near(left_val, right_val, float_comparison_mode), row, col);
       } else if (opossum_table->column_type(col) == DataType::Double) {
         auto left_val = type_cast<double>(opossum_matrix[row][col]);
         auto right_val = type_cast<double>(expected_matrix[row][col]);
 
-        if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
-          expect_true(std::fabs(left_val - right_val) < EPSILON, row, col);
-        } else {
-          expect_true(std::fabs(left_val - right_val) < std::fabs(right_val * EPSILON), row, col);
-        }
+        expect_true(near(left_val, right_val, float_comparison_mode), row, col);
       } else {
         if (type_cmp_mode == TypeCmpMode::Lenient &&
             (opossum_table->column_type(col) == DataType::Int || opossum_table->column_type(col) == DataType::Long)) {
