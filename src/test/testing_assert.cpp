@@ -56,7 +56,8 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& t) {
   return matrix;
 }
 
-std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells, const std::string& highlight_color) {
+std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
+                              const std::string& highlight_color) {
   std::stringstream stream;
   bool highlight;
   bool previous_row_highlighted = false;
@@ -68,7 +69,8 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
 
   for (unsigned row = 0; row < matrix.size(); row++) {
     highlight = false;
-    auto it = std::find_if( highlight_cells.begin(), highlight_cells.end(), [&](const std::pair<uint64_t, uint16_t>& element){ return element.first == row;} );
+    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
+                           [&](const std::pair<uint64_t, uint16_t>& element) { return element.first == row; });
     if (it != highlight_cells.end()) {
       highlight = true;
       if (!previous_row_highlighted) {
@@ -104,7 +106,7 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
   return stream.str();
 }
 
-template<typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
+template <typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
 bool near(T left_val, T right_val, opossum::FloatComparisonMode float_comparison_mode) {
   if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
@@ -115,7 +117,6 @@ bool near(T left_val, T right_val, opossum::FloatComparisonMode float_comparison
 
 }  // namespace
 
-
 namespace opossum {
 
 bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
@@ -124,7 +125,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   auto opossum_matrix = _table_to_matrix(opossum_table);
   auto expected_matrix = _table_to_matrix(expected_table);
 
-  const auto generate_table_comparison = [&](const std::string& error_type, const std::string& error_msg, const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
+  const auto generate_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
+                                             const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
     std::stringstream stream;
     stream << "========= Tables are not equal =========" << std::endl;
     stream << "------- Actual Result -------" << std::endl;
@@ -143,8 +145,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   //  - column count
   if (opossum_table->column_count() != expected_table->column_count()) {
     const std::string error_type = "Column count mismatch";
-    const std::string error_msg = "Actual number of columns: " + std::to_string(opossum_table->column_count()) + "\n"
-              + "Expected number of columns: " + std::to_string(expected_table->column_count());
+    const std::string error_msg = "Actual number of columns: " + std::to_string(opossum_table->column_count()) + "\n" +
+                                  "Expected number of columns: " + std::to_string(expected_table->column_count());
 
     std::cout << generate_table_comparison(error_type, error_msg) << std::endl;
     return false;
@@ -172,8 +174,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
     if (opossum_table->column_name(col_id) != expected_table->column_name(col_id)) {
       const std::string error_type = "Column name mismatch (column " + std::to_string(col_id) + ")";
-      const std::string error_msg = "Actual column name: " + opossum_table->column_name(col_id) + "\n"
-              + "Expected column name: " + expected_table->column_name(col_id);
+      const std::string error_msg = "Actual column name: " + opossum_table->column_name(col_id) + "\n" +
+                                    "Expected column name: " + expected_table->column_name(col_id);
 
       std::cout << generate_table_comparison(error_type, error_msg, {{0, col_id}}) << std::endl;
       return false;
@@ -181,8 +183,9 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
     if (left_col_type != right_col_type) {
       const std::string error_type = "Column type mismatch (column " + std::to_string(col_id) + ")";
-      const std::string error_msg = "Actual column type: " + data_type_to_string.left.at(opossum_table->column_type(col_id)) + "\n"
-              + "Expected column type: " + data_type_to_string.left.at(expected_table->column_type(col_id));
+      const std::string error_msg =
+          "Actual column type: " + data_type_to_string.left.at(opossum_table->column_type(col_id)) + "\n" +
+          "Expected column type: " + data_type_to_string.left.at(expected_table->column_type(col_id));
 
       std::cout << generate_table_comparison(error_type, error_msg, {{1, col_id}}) << std::endl;
       return false;
@@ -193,8 +196,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   //  - row count for fast failure
   if (opossum_table->row_count() != expected_table->row_count()) {
     const std::string error_type = "Row count mismatch";
-    const std::string error_msg = "Actual number of rows: " + std::to_string(opossum_table->row_count()) + "\n"
-              + "Expected number of rows: " + std::to_string(expected_table->row_count());
+    const std::string error_msg = "Actual number of rows: " + std::to_string(opossum_table->row_count()) + "\n" +
+                                  "Expected number of rows: " + std::to_string(expected_table->row_count());
 
     std::cout << generate_table_comparison(error_type, error_msg) << std::endl;
     return false;
