@@ -48,12 +48,13 @@ class ColumnEncoder : public BaseColumnEncoder {
     return result;
   }
 
+  // Resolves the data type and calls the appropriate instantiation of encode().
   std::shared_ptr<BaseColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) final {
     auto encoded_column = std::shared_ptr<BaseColumn>{};
     resolve_data_type(data_type, [&](auto type_obj) {
       const auto data_type_supported = this->supports(type_obj);
       // clang-format off
-      if constexpr(decltype(data_type_supported)::value) {
+      if constexpr (decltype(data_type_supported)::value) {
         /**
          * The templated method encode() where the actual encoding happens
          * is only instantiated for data types supported by the encoding type.
@@ -74,6 +75,10 @@ class ColumnEncoder : public BaseColumnEncoder {
 
   /**
    * @return an integral constant implicitly convertible to bool
+   *
+   * Note: This method is virtually always used in compile-time
+   *       expression and can therefore not simply return bool
+   *       because then we would lose the compile-time information.
    *
    * Hint: Use decltype(result)::value if you want to use the result
    *       in a constant expression such as constexpr-if.
