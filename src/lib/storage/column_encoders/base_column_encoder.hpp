@@ -62,7 +62,7 @@ class ColumnEncoder : public BaseColumnEncoder {
          */
         encoded_column = this->encode(type_obj, column);
       } else {
-        Fail("Passed data type not supported by encoding.")
+        Fail("Passed data type not supported by encoding.");
       }
       // clang-format on
     });
