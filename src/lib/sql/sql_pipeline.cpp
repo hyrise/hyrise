@@ -45,7 +45,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
       }
     }
 
-    auto parsed_statement = std::make_unique<hsql::SQLParserResult>(statement);
+    auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement);
     // We know this is always true because the check above would fail otherwise
     parsed_statement->setIsValid(true);
 
