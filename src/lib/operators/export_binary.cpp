@@ -238,9 +238,9 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_encoded_column(const BaseEncodedColumn& base_column,
+void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Binary export not implemented for encoded columns.");
+  Fail("Binary export not implemented yet for new version of dictionary column.");
 }
 
 template <typename T>

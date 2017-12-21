@@ -217,6 +217,7 @@ set(
     storage/column_encoders/utils.hpp
     storage/encoded_columns/base_encoded_column.cpp
     storage/encoded_columns/base_encoded_column.hpp
+    storage/encoded_columns/base_dictionary_column.cpp
     storage/encoded_columns/base_dictionary_column.hpp
     storage/encoded_columns/column_encoding_type.hpp
     storage/encoded_columns/encoded_columns.hpp

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <limits>
 #include <memory>
 
-#include "storage/encoded_columns/base_encoded_column.hpp"
+#include "base_encoded_column.hpp"
 
 namespace opossum {
 
@@ -14,7 +13,9 @@ class BaseZeroSuppressionVector;
  */
 class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
-  EncodingType encoding_type() const final { return EncodingType::Dictionary; }
+  EncodingType encoding_type() const final;
+
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   /**
    * @brief Returns index (i.e. ValueID) of first dictionary entry >= search value

@@ -7,6 +7,7 @@
 #include "storage/encoded_columns/utils.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
@@ -42,35 +43,26 @@ void IsNullTableScanImpl::handle_value_column(const BaseValueColumn& base_column
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
+void IsNullTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& left_column,
                                                    std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
-  auto& left_column = static_cast<const BaseDeprecatedDictionaryColumn&>(base_column);
 
-  auto left_column_iterable = DeprecatedAttributeVectorIterable{*left_column.attribute_vector()};
+  auto left_column_iterable = create_attribute_vector_iterable(left_column);
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& left_column,
                                                 std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  const auto left_column_type = _in_table->column_type(_left_column_id);
+  auto left_column_iterable = create_attribute_vector_iterable(left_column);
 
-  resolve_data_type(left_column_type, [&](auto type) {
-    using Type = typename decltype(type)::type;
-
-    resolve_encoded_column_type<Type>(base_column, [&](auto& left_column) {
-      auto left_column_iterable = create_iterable_from_column<Type>(left_column);
-
-      left_column_iterable.with_iterators(
-          mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
-    });
-  });
+  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {

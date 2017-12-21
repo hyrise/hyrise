@@ -154,7 +154,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
   void handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_encoded_column(const BaseEncodedColumn& base_column,
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:

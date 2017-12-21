@@ -122,9 +122,9 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     context->csv_writer.write((*column.dictionary())[(column.attribute_vector()->get(context->current_row))]);
   }
 
-  void handle_encoded_column(const BaseEncodedColumn& base_column,
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                              std::shared_ptr<ColumnVisitableContext> base_context) final {
-    Fail("CSV export not implemented for encoded columns.");
+    Fail("CSV export not implemented yet for new version of dictionary column.");
   }
 };
 

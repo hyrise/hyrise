@@ -9,7 +9,7 @@ namespace opossum {
 
 class BaseColumn;
 class ReferenceColumn;
-class BaseEncodedColumn;
+class BaseDictionaryColumn;
 class BaseDeprecatedDictionaryColumn;
 
 // In cases where an operator has to operate on different column types, we use the visitor pattern.
@@ -22,10 +22,10 @@ class ColumnVisitable {
   virtual void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
   virtual void handle_dictionary_column(const BaseDeprecatedDictionaryColumn& column,
                                         std::shared_ptr<ColumnVisitableContext> context) = 0;
+  virtual void handle_dictionary_column(const BaseDictionaryColumn& column,
+                                        std::shared_ptr<ColumnVisitableContext> context) = 0;
   virtual void handle_reference_column(const ReferenceColumn& column,
                                        std::shared_ptr<ColumnVisitableContext> context) = 0;
-  virtual void handle_encoded_column(const BaseEncodedColumn& column,
-                                     std::shared_ptr<ColumnVisitableContext> context) = 0;
 };
 
 }  // namespace opossum
