@@ -35,11 +35,11 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanConstantOnDict)(benchmark:
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanConstantOnNewDict)(benchmark::State& state) {
   clear_cache();
   auto warm_up =
-      std::make_shared<TableScan>(_table_new_dict_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThanEquals, 7);
+      std::make_shared<TableScan>(_table_new_dict_wrapper, ColumnID{0} /* "a" */, ScanType::GreaterThanEquals, 7);
   warm_up->execute();
   while (state.KeepRunning()) {
     auto table_scan =
-        std::make_shared<TableScan>(_table_new_dict_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThanEquals, 7);
+        std::make_shared<TableScan>(_table_new_dict_wrapper, ColumnID{0} /* "a" */, ScanType::GreaterThanEquals, 7);
     table_scan->execute();
   }
 }
