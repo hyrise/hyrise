@@ -11,7 +11,7 @@
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -50,13 +50,8 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
   // Don't use MVCC
-  auto sql_pipelines = SQLPipelineStatement::from_sql_string(query, false);
-
-  for (auto& pipeline : sql_pipelines) {
-    pipeline.get_result_table();
-  }
-
-  const auto& result_table = sql_pipelines.back().get_result_table();
+  SQLPipeline sql_pipeline{query, false};
+  const auto& result_table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
