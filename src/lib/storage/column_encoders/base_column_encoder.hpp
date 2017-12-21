@@ -76,9 +76,8 @@ class ColumnEncoder : public BaseColumnEncoder {
   /**
    * @return an integral constant implicitly convertible to bool
    *
-   * Note: This method is virtually always used in compile-time
-   *       expression and can therefore not simply return bool
-   *       because then we would lose the compile-time information.
+   * Since this method is used in compile-time expression,
+   * it cannot simply return bool.
    *
    * Hint: Use decltype(result)::value if you want to use the result
    *       in a constant expression such as constexpr-if.
