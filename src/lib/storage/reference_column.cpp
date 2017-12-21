@@ -41,8 +41,6 @@ ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_colu
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
-size_t ReferenceColumn::data_size() const { return _pos_list->size() * sizeof(PosList::value_type); }
-
 void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_reference_column(*this, std::move(context));
 }
