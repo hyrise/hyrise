@@ -14,6 +14,12 @@
 
 namespace opossum {
 
+/**
+ * @brief Encodes a column using dictionary encoding and compresses its attribute vector using zero suppression.
+ *
+ * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
+ * using fixed-size byte-aligned encoding.
+ */
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
