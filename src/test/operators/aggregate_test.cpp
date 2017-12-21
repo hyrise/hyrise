@@ -435,12 +435,12 @@ TEST_F(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
 }
 
 TEST_F(OperatorsAggregateTest, OneGroupbyCountStar) {
-  this->test_output(_table_wrapper_1_1_null, {{CountStarID, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{std::nullopt, AggregateFunction::Count}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
-  this->test_output(_table_wrapper_2_0_null, {{CountStarID, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{2}},
+  this->test_output(_table_wrapper_2_0_null, {{std::nullopt, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{2}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1, false);
 }
 

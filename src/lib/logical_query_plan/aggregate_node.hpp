@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class LQPExpression;
+using LQPAggregateColumnDefinition = AggregateColumnDefinition<ColumnOrigin>;
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:

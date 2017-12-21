@@ -24,10 +24,12 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& 
 }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+
+
   std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
-    aggregate_expressions.emplace_back(expression->deep_copy()->move_lqps(left_child(), ));
+    aggregate_expressions.emplace_back(expression->deep_copy());
   }
 
   return std::make_shared<AggregateNode>(std::move(aggregate_expressions), _groupby_column_origins);

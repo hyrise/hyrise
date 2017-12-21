@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "column_origin.hpp"
+#include "lqp_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -239,6 +240,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(
       const NamedColumnReference& named_column_reference) const;
 
+  ColumnOrigin _clone_column_origin(const ColumnOrigin& origin,
+                                    const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
+  std::shared_ptr<LQPExpression> _adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
+                                                           const std::shared_ptr<AbstractLQPNode>& current_lqp, const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
+
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _children;
@@ -266,11 +272,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   void _remove_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
   void _add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
   // @}
-
-  ColumnOrigin _clone_column_origin(const ColumnOrigin& origin,
-                                    const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
-  std::optional<ColumnOrigin> _clone_column_origin(const std::shared_ptr<AbstractLQPNode>& origin_node, const ColumnID origin_column_id,
-                                    const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 };
 
 }  // namespace opossum

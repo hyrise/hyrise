@@ -233,7 +233,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   /**
    * 2. Build Aggregate
    */
-  std::vector<AggregateDefinition> aggregate_definitions;
+  std::vector<OperatorAggregateColumnDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregate_expressions.size());
 
   for (const auto& aggregate_expression : aggregate_expressions) {
@@ -246,7 +246,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
     if (aggregate_function_type == AggregateFunction::Count && argument_expression->type() == ExpressionType::Star) {
       // COUNT(*) does not specify a ColumnID
-      aggregate_definitions.emplace_back(CountStarID, AggregateFunction::Count, aggregate_expression->alias());
+      aggregate_definitions.emplace_back(std::nullopt, AggregateFunction::Count, aggregate_expression->alias());
     } else {
       const auto column_id = argument_expression->column_id();
       aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());

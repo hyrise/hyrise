@@ -487,23 +487,27 @@ void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>
 }
 
 ColumnOrigin AbstractLQPNode::_clone_column_origin(const ColumnOrigin& column_origin, const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
-  return _clone_column_origin(column_origin.node(), column_origin.column_id(), lqp_copy);
+  Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
+  return lqp_copy->output_column_origins()[get_output_column_id_by_column_origin(column_origin)];
 }
 
-std::optional<ColumnOrigin> AbstractLQPNode::_clone_column_origin(const std::shared_ptr<AbstractLQPNode>& origin_node, const ColumnID origin_column_id,
-                                  const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
-  if (origin_node.get() == this) return ColumnOrigin{lqp_copy, origin_column_id};
-  if (left_child()) {
-    DebugAssert(lqp_copy->left_child(), "LQP structure doesn't match the structure of the LQP clone");
-    const auto column_origin = _clone_column_origin(origin_node, origin_column_id, lqp_copy->left_child());
-    if (column_origin) return column_origin;
+std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
+const std::shared_ptr<AbstractLQPNode>& current_lqp,
+const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
+  if (!expression) return nullptr;
+
+  if (expression->type() == ExpressionType::Column) {
+    expression->set_column_origin(current_lqp->_clone_column_origin(expression->column_origin(), lqp_copy));
   }
-  if (right_child()) {
-    DebugAssert(lqp_copy->right_child(), "LQP structure doesn't match the structure of the LQP clone");
-    const auto column_origin = _clone_column_origin(origin_node, origin_column_id, lqp_copy->right_child());
-    if (column_origin) return column_origin;
+
+  for (auto& argument_expression : expression->aggregate_function_arguments()) {
+    _adjust_expression_to_lqp(argument_expression, current_lqp, lqp_copy);
   }
-  return std::nullopt;
+
+  _adjust_expression_to_lqp(expression->left_child(), current_lqp, lqp_copy);
+  _adjust_expression_to_lqp(expression->right_child(), current_lqp, lqp_copy);
+
+  return expression;
 }
 
 std::string NamedColumnReference::as_string() const {

@@ -20,6 +20,8 @@ class LQPExpression : public Expression<LQPExpression> {
 
   const ColumnOrigin& column_origin() const;
 
+  void set_column_origin(const ColumnOrigin& column_origin);
+
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
                         bool is_root = true) const override;
 

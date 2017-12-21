@@ -22,6 +22,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "sql/sql_translator.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -39,193 +40,189 @@ class SQLTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_c", std::move(table_c));
   }
 
-  std::shared_ptr<AbstractLQPNode> compile_query(const std::string& query) {
-    hsql::SQLParserResult parse_result;
-    hsql::SQLParser::parseSQLString(query, &parse_result);
-
-    if (!parse_result.isValid()) {
-      throw std::runtime_error("Query is not valid.");
-    }
-
-    return SQLTranslator{false}.translate_parse_result(parse_result)[0];
+  std::shared_ptr<AbstractLQPNode> compile_query(const std::string &query) const {
+    return compile_query(query);
   }
 };
 
-//TEST_F(SQLTranslatorTest, SelectStarAllTest) {
-//  const auto query = "SELECT * FROM table_a;";
-//  auto result_node = compile_query(query);
-//
-//  std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
-//  EXPECT_EQ(expected_columns, result_node->output_column_ids_to_input_column_ids());
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//
-//  EXPECT_TRUE(result_node->left_child());
-//  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::StoredTable);
-//
-//  EXPECT_FALSE(result_node->right_child());
-//  EXPECT_FALSE(result_node->left_child()->left_child());
-//}
-//
-///*
-// * Disabled because: Opossums's Expressions are able to handle this kind of expression. However, a PredicateNode needs
-// * the parsed expression as input. And it does not support nested Expressions, such as '1234 + 1'.
-// * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
-// * in the translator.
-// */
-//TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
-//  const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
-//  auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  auto ts_node_1 = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
-//  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
-//  EXPECT_FALSE(ts_node_1->right_child());
-//  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
-//  // TODO(anybody): once this is implemented, the value side has to be checked.
-//}
-//
-//TEST_F(SQLTranslatorTest, TwoColumnFilter) {
-//  const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
-//  auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
-//  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
-//  EXPECT_FALSE(ts_node_1->right_child());
-//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
-//  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-//  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{ColumnID{1}});
-//}
-//
-//TEST_F(SQLTranslatorTest, ExpressionStringTest) {
-//  const auto query = "SELECT * FROM table_a WHERE a = 'b'";
-//  auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
-//  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
-//  EXPECT_FALSE(ts_node_1->right_child());
-//  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
-//  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
-//}
-//
-//TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
-//  const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
-//  auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  auto ts_node_1 = result_node->left_child();
-//  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
-//  EXPECT_FALSE(ts_node_1->right_child());
-//
-//  auto ts_node_2 = ts_node_1->left_child();
-//  EXPECT_EQ(ts_node_2->type(), LQPNodeType::Predicate);
-//  EXPECT_FALSE(ts_node_2->right_child());
-//
-//  auto t_node = ts_node_2->left_child();
-//  EXPECT_EQ(t_node->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(t_node->left_child());
-//  EXPECT_FALSE(t_node->right_child());
-//}
-//
-//TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
-//  const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//  EXPECT_NE(projection_node, nullptr);
-//  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
-//  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
-//
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
-//  EXPECT_NE(aggregate_node, nullptr);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-//  const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
-//  EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-//
-//  auto t_node_1 = aggregate_node->left_child();
-//  EXPECT_EQ(t_node_1->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(t_node_1->left_child());
-//  EXPECT_FALSE(t_node_1->right_child());
-//}
-//
-//TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
-//  // Cannot select b without it being in the GROUP BY clause.
-//  const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
-//  EXPECT_THROW(compile_query(query), std::logic_error);
-//}
-//
-//TEST_F(SQLTranslatorTest, AggregateWithExpression) {
-//  const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//  EXPECT_NE(projection_node, nullptr);
-//  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names()[0], std::string("s"));
-//  EXPECT_EQ(projection_node->output_column_names()[1], std::string("f"));
-//
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
-//  EXPECT_EQ(aggregate_node->groupby_column_ids().size(), 0u);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
-//
-//  auto t_node_1 = aggregate_node->left_child();
-//  EXPECT_EQ(t_node_1->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(t_node_1->left_child());
-//  EXPECT_FALSE(t_node_1->right_child());
-//}
-//
-//TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
-//  const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_child());
-//
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//  EXPECT_NE(projection_node, nullptr);
-//  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
-//  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
-//
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
-//  EXPECT_NE(aggregate_node, nullptr);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-//  const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
-//  EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
-//
-//  auto t_node_1 = aggregate_node->left_child();
-//  EXPECT_EQ(t_node_1->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(t_node_1->left_child());
-//  EXPECT_FALSE(t_node_1->right_child());
-//}
-//
+TEST_F(SQLTranslatorTest, SelectStarAllTest) {
+  const auto query = "SELECT * FROM table_a;";
+  const auto result_node = compile_query(query);
+
+  ASSERT_EQ(result_node->type(), LQPNodeType::Projection);
+  ASSERT_TRUE(result_node->left_child());
+  ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::StoredTable);
+  EXPECT_FALSE(result_node->right_child());
+  EXPECT_FALSE(result_node->left_child()->left_child());
+  ASSERT_EQ(result_node->output_column_origins().size(), 2u);
+
+  EXPECT_EQ(result_node->output_column_origins()[0], ColumnOrigin(result_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(result_node->output_column_origins()[1], ColumnOrigin(result_node->left_child(), ColumnID{1}));
+}
+
+/*
+ * Disabled because: Opossums's Expressions are able to handle this kind of expression. However, a PredicateNode needs
+ * the parsed expression as input. And it does not support nested Expressions, such as '1234 + 1'.
+ * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
+ * in the translator.
+ */
+TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
+  EXPECT_FALSE(predicate_node->right_child());
+  EXPECT_EQ(predicate_node->column_origin(), ColumnOrigin(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  // TODO(anybody): once this is implemented, the value side has to be checked.
+}
+
+TEST_F(SQLTranslatorTest, TwoColumnFilter) {
+  const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
+  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
+  EXPECT_FALSE(predicate_node->right_child());
+  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_node->column_origin(), ColumnOrigin(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(predicate_node->value(), AllParameterVariant(ColumnOrigin(predicate_node->left_child(), ColumnID{1})));
+
+  EXPECT_EQ(result_node->output_column_origins()[0], ColumnOrigin(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(result_node->output_column_origins()[1], ColumnOrigin(predicate_node->left_child(), ColumnID{1}));
+}
+
+TEST_F(SQLTranslatorTest, ExpressionStringTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 'b'";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
+  EXPECT_EQ(predicate_node->type(), LQPNodeType::Predicate);
+  EXPECT_FALSE(predicate_node->right_child());
+  EXPECT_EQ(predicate_node->column_origin(), ColumnOrigin(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_node->value(), AllParameterVariant{std::string{"b"}});
+}
+
+TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
+  const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto predicate_node_a = result_node->left_child();
+  EXPECT_EQ(predicate_node_a->type(), LQPNodeType::Predicate);
+  EXPECT_FALSE(predicate_node_a->right_child());
+
+  const auto predicate_node_b = predicate_node_a->left_child();
+  EXPECT_EQ(predicate_node_b->type(), LQPNodeType::Predicate);
+  EXPECT_FALSE(predicate_node_b->right_child());
+
+  const auto stored_table_node = predicate_node_b->left_child();
+  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
+  EXPECT_FALSE(stored_table_node->left_child());
+  EXPECT_FALSE(stored_table_node->right_child());
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
+  const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_NE(projection_node, nullptr);
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
+  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  EXPECT_NE(aggregate_node, nullptr);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
+  const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
+  EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
+
+  const auto stored_table_node = aggregate_node->left_child();
+  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
+  EXPECT_FALSE(stored_table_node->left_child());
+  EXPECT_FALSE(stored_table_node->right_child());
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
+  // Cannot select b without it being in the GROUP BY clause.
+  const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithExpression) {
+  const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_NE(projection_node, nullptr);
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names()[0], std::string("s"));
+  EXPECT_EQ(projection_node->output_column_names()[1], std::string("f"));
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
+  EXPECT_EQ(aggregate_node->groupby_column_ids().size(), 0u);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
+
+  const auto stored_table_node = aggregate_node->left_child();
+  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
+  EXPECT_FALSE(stored_table_node->left_child());
+  EXPECT_FALSE(stored_table_node->right_child());
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
+  const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_NE(projection_node, nullptr);
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
+  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  EXPECT_NE(aggregate_node, nullptr);
+  EXPECT_NE(aggregate_node->left_child(), nullptr);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
+  const std::vector<ColumnOrigin> groupby_columns = {ColumnOrigin(aggregate_node->left_child(), ColumnID{0}};
+  EXPECT_EQ(aggregate_node->groupby_column_origins(), groupby_columns);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
+
+  const auto stored_table_node = aggregate_node->left_child();
+  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
+  EXPECT_FALSE(stored_table_node->left_child());
+  EXPECT_FALSE(stored_table_node->right_child());
+}
+
 //TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
 //  const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
 //  auto result_node = compile_query(query);

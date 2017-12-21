@@ -37,11 +37,12 @@ std::string ProjectionNode::description() const {
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
-  std::vector<std::shared_ptr<LQPExpression>> column_expressions;
-  column_expressions.reserve(_column_expressions.size());
-  for (const auto& expression : _column_expressions) {
-    column_expressions.emplace_back(expression->deep_copy());
-  }
+  Assert(this->left_child() && left_child, "Can't deep copy without child to adjust ColumnOrigins");
+
+  std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
+  std::transform(_column_expressions.begin(), _column_expressions.end(), column_expressions.begin(), [&](const auto & expression) {
+    return _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child);
+  });
 
   return std::make_shared<ProjectionNode>(std::move(column_expressions));
 }

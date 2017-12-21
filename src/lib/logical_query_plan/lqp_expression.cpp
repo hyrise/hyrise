@@ -41,6 +41,11 @@ const ColumnOrigin& LQPExpression::column_origin() const {
   return *_column_origin;
 }
 
+void LQPExpression::set_column_origin(const ColumnOrigin& column_origin) {
+  Assert(_type == ExpressionType::Column, "Can't set a ColumnOrigin on a non-column");
+  _column_origin = column_origin;
+}
+
 std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                      bool is_root) const {
   if (type() == ExpressionType::Column) {
