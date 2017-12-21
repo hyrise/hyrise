@@ -54,6 +54,10 @@ class ColumnEncoder : public BaseColumnEncoder {
       const auto data_type_supported = this->supports(type_obj);
       // clang-format off
       if constexpr(decltype(data_type_supported)::value) {
+        /**
+         * The templated method encode() where the actual encoding happens
+         * is only instantiated for data types supported by the encoding type.
+         */
         encoded_column = this->encode(type_obj, column);
       }
       // clang-format on
