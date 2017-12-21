@@ -38,8 +38,10 @@ std::shared_ptr<const Table> Limit::_on_execute() {
       const auto input_base_column = input_chunk.get_column(column_id);
       auto output_pos_list = std::make_shared<PosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
+      ColumnID output_column_id = column_id;
 
       if (auto input_ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(input_base_column)) {
+        output_column_id = input_ref_column->referenced_column_id();
         referenced_table = input_ref_column->referenced_table();
         // TODO(all): optimize using whole chunk whenever possible
         auto begin = input_ref_column->pos_list()->begin();
@@ -51,7 +53,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         }
       }
 
-      output_chunk.add_column(std::make_shared<ReferenceColumn>(referenced_table, column_id, output_pos_list));
+      output_chunk.add_column(std::make_shared<ReferenceColumn>(referenced_table, output_column_id, output_pos_list));
     }
 
     i += output_chunk_row_count;

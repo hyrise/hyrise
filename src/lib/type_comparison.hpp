@@ -99,22 +99,22 @@ value_greater(L l, R r) {
 template <typename Functor>
 void with_comparator(const ScanType scan_type, const Functor& func) {
   switch (scan_type) {
-    case ScanType::OpEquals:
+    case ScanType::Equals:
       return func(std::equal_to<void>{});
 
-    case ScanType::OpNotEquals:
+    case ScanType::NotEquals:
       return func(std::not_equal_to<void>{});
 
-    case ScanType::OpLessThan:
+    case ScanType::LessThan:
       return func(std::less<void>{});
 
-    case ScanType::OpLessThanEquals:
+    case ScanType::LessThanEquals:
       return func(std::less_equal<void>{});
 
-    case ScanType::OpGreaterThan:
+    case ScanType::GreaterThan:
       return func(std::greater<void>{});
 
-    case ScanType::OpGreaterThanEquals:
+    case ScanType::GreaterThanEquals:
       return func(std::greater_equal<void>{});
 
     default:

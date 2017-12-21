@@ -210,14 +210,14 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
 template <typename BaseDictionaryColumnType>
 ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumnType& column) const {
   switch (_scan_type) {
-    case ScanType::OpEquals:
-    case ScanType::OpNotEquals:
-    case ScanType::OpLessThan:
-    case ScanType::OpGreaterThanEquals:
+    case ScanType::Equals:
+    case ScanType::NotEquals:
+    case ScanType::LessThan:
+    case ScanType::GreaterThanEquals:
       return column.lower_bound(_right_value);
 
-    case ScanType::OpLessThanEquals:
-    case ScanType::OpGreaterThan:
+    case ScanType::LessThanEquals:
+    case ScanType::GreaterThan:
       return column.upper_bound(_right_value);
 
     default:
@@ -230,18 +230,18 @@ template <typename BaseDictionaryColumnType>
 bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumnType& column,
                                                          const ValueID search_value_id) const {
   switch (_scan_type) {
-    case ScanType::OpEquals:
+    case ScanType::Equals:
       return search_value_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
-    case ScanType::OpNotEquals:
+    case ScanType::NotEquals:
       return search_value_id == column.upper_bound(_right_value);
 
-    case ScanType::OpLessThan:
-    case ScanType::OpLessThanEquals:
+    case ScanType::LessThan:
+    case ScanType::LessThanEquals:
       return search_value_id == INVALID_VALUE_ID;
 
-    case ScanType::OpGreaterThanEquals:
-    case ScanType::OpGreaterThan:
+    case ScanType::GreaterThanEquals:
+    case ScanType::GreaterThan:
       return search_value_id == ValueID{0u};
 
     default:
@@ -254,18 +254,18 @@ template <typename BaseDictionaryColumnType>
 bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumnType& column,
                                                           const ValueID search_value_id) const {
   switch (_scan_type) {
-    case ScanType::OpEquals:
+    case ScanType::Equals:
       return search_value_id == column.upper_bound(_right_value);
 
-    case ScanType::OpNotEquals:
+    case ScanType::NotEquals:
       return search_value_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
-    case ScanType::OpLessThan:
-    case ScanType::OpLessThanEquals:
+    case ScanType::LessThan:
+    case ScanType::LessThanEquals:
       return search_value_id == ValueID{0u};
 
-    case ScanType::OpGreaterThan:
-    case ScanType::OpGreaterThanEquals:
+    case ScanType::GreaterThan:
+    case ScanType::GreaterThanEquals:
       return search_value_id == INVALID_VALUE_ID;
 
     default:
