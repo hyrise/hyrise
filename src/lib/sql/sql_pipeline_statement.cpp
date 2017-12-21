@@ -29,7 +29,7 @@ SQLPipelineStatement::SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult
     : _parsed_sql_statement(std::move(parsed_sql)),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc && transaction_context == nullptr) {
-  DebugAssert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
+  Assert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
   // We don't want to create a new context yet, as it should contain all changes of previously created (possibly even in
   // same query) pipelines up to the point of this pipeline's execution.
   if (transaction_context != nullptr) {
