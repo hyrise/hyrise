@@ -32,10 +32,10 @@ class LogicalQueryPlanTest : public BaseTest {
     _t_b_a = ColumnOrigin{_mock_node_b, ColumnID{0}};
     _t_b_b = ColumnOrigin{_mock_node_b, ColumnID{1}};
 
-    _predicate_node_a = std::make_shared<PredicateNode>(_t_a_a, ScanType::OpEquals, 42);
-    _predicate_node_b = std::make_shared<PredicateNode>(_t_a_b, ScanType::OpEquals, 1337);
+    _predicate_node_a = std::make_shared<PredicateNode>(_t_a_a, ScanType::Equals, 42);
+    _predicate_node_b = std::make_shared<PredicateNode>(_t_a_b, ScanType::Equals, 1337);
     _projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({_t_a_a, _t_a_b}));
-    _join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins{_t_a_a, _t_b_a}, ScanType::OpEquals);
+    _join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins{_t_a_a, _t_b_a}, ScanType::Equals);
 
     /**
      * Init complex graph.

@@ -19,6 +19,14 @@ class TableStatistics;
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
+  // We cannot use the copy constructor here, because it does not work with shared_from_this()
+  auto deep_copy = _deep_copy_impl();
+  if (_children[0]) deep_copy->set_left_child(_children[0]->deep_copy());
+  if (_children[1]) deep_copy->set_right_child(_children[1]->deep_copy());
+  return deep_copy;
+}
+
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> parents;
   parents.reserve(_parents.size());
@@ -115,6 +123,24 @@ void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<Abstrac
 
 LQPNodeType AbstractLQPNode::type() const { return _type; }
 
+bool AbstractLQPNode::subtree_is_read_only() const {
+  auto read_only = true;
+  if (left_child()) read_only &= left_child()->subtree_is_read_only();
+  if (right_child()) read_only &= right_child()->subtree_is_read_only();
+  return read_only;
+}
+
+bool AbstractLQPNode::subtree_is_validated() const {
+  if (type() == LQPNodeType::Validate) return true;
+
+  if (!left_child() && !right_child()) return false;
+
+  auto children_validated = true;
+  if (left_child()) children_validated &= left_child()->subtree_is_validated();
+  if (right_child()) children_validated &= right_child()->subtree_is_validated();
+  return children_validated;
+}
+
 void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
 
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
@@ -157,6 +183,7 @@ const std::vector<ColumnOrigin>& AbstractLQPNode::output_column_origins() const 
       }
     }
   }
+
   return *_output_column_origins;
 }
 

@@ -30,7 +30,7 @@ class JoinNodeTest : public BaseTest {
     _join_node->set_left_child(_mock_node_a);
     _join_node->set_right_child(_mock_node_b);
 
-    _inner_join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), ScanType::OpEquals);
+    _inner_join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), ScanType::Equals);
     _inner_join_node->set_left_child(_mock_node_a);
     _inner_join_node->set_right_child(_mock_node_b);
   }

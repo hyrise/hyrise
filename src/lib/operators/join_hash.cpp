@@ -26,7 +26,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                    const JoinColumnIDs& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
-  DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
+  DebugAssert(scan_type == ScanType::Equals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -186,21 +186,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-        auto materialized_chunk = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
+        auto materialized_chunk = std::vector<std::pair<RowID, T>>();
 
         // Materialize the chunk
         resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
           auto iterable = create_iterable_from_column<T>(typed_column);
-          auto& materialized = *materialized_chunk;
 
           iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
             if (!value.is_null() || keep_nulls) {
-              materialized.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+              materialized_chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+            } else {
+              // We need to add this to avoid gaps in the list of offsets when we iterate later on
+              materialized_chunk.emplace_back(RowID{chunk_id, INVALID_CHUNK_OFFSET}, T{});
             }
           });
         });
 
-        const auto& materialized = *materialized_chunk;
         size_t row_id = output_offset;
 
         /*
@@ -212,18 +213,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
           // hash and add to the other elements
           ChunkOffset offset = 0;
-          for (auto&& elem : materialized) {
-            output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
+          for (auto&& elem : materialized_chunk) {
+            if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
+              output[row_id] =
+                  PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
 
-            const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
-            histogram[radix]++;
+              const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
+              histogram[radix]++;
 
-            row_id++;
+              row_id++;
+            }
+
             offset++;
           }
         } else {
           // hash and add to the other elements
-          for (auto&& elem : materialized) {
+          for (auto&& elem : materialized_chunk) {
+            if (elem.first.chunk_offset == INVALID_CHUNK_OFFSET) continue;
+
             output[row_id] = PartitionedElement<T>{elem.first, murmur2<T>(elem.second, seed), elem.second};
 
             const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
@@ -349,7 +356,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
         auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
         const auto& partition_left_begin = radix_container.partition_offsets[current_partition_id];
         const auto& partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
@@ -397,7 +404,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
         // Get information from work queue
         auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
         const auto& partition_begin = radix_container.partition_offsets[current_partition_id];
@@ -475,7 +482,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
         // Get information from work queue
         auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
         const auto& partition_begin = radix_container.partition_offsets[current_partition_id];

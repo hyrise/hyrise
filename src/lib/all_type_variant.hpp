@@ -2,6 +2,7 @@
 
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
+#include <boost/hana/map.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
@@ -29,10 +30,15 @@ namespace hana = boost::hana;
 
 namespace detail {
 
-#define DATA_TYPE_INFO                                                                                   \
-  ((int32_t, Int, "int"))((int64_t, Long, "long"))((float, Float, "float"))((double, Double, "double"))( \
-      (std::string, String, "string"))
+// clang-format off
+#define DATA_TYPE_INFO                  \
+  ((int32_t,     Int,        "int"))    \
+  ((int64_t,     Long,       "long"))   \
+  ((float,       Float,      "float"))  \
+  ((double,      Double,     "double")) \
+  ((std::string, String,     "string"))
 // Type          Enum Value   String
+// clang-format on
 
 #define NUM_DATA_TYPES BOOST_PP_SEQ_SIZE(DATA_TYPE_INFO)
 

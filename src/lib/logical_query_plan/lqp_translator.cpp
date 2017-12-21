@@ -1,4 +1,4 @@
-#include "lqp_translator.hpp"
+ #include "lqp_translator.hpp"
 
 #include <iostream>
 #include <memory>
@@ -8,7 +8,9 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "constant_mappings.hpp"
+#include "create_view_node.hpp"
 #include "delete_node.hpp"
+#include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
@@ -21,6 +23,8 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_view.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/operator_expression.hpp"
@@ -65,7 +69,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
    * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
    * `X >= a` and one for `X <= b`
    */
-  if (table_scan_node->scan_type() == ScanType::OpBetween) {
+  if (table_scan_node->scan_type() == ScanType::Between) {
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
@@ -75,14 +79,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     }
 
     auto table_scan_gt =
-        std::make_shared<TableScan>(input_operator, column_id, ScanType::OpGreaterThanEquals, value, std::nullopt);
+        std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
 
-    return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::OpLessThanEquals, *table_scan_node->value2(),
-                                       std::nullopt);
+    return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals, *table_scan_node->value2());
   }
 
-  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(), table_scan_node->value(),
-                                     table_scan_node->value2());
+  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(), table_scan_node->value());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
@@ -142,7 +144,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   join_column_ids.second =
       join_node->right_child()->get_output_column_id_by_column_origin(join_node->join_column_origins()->second);
 
-  if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
+  if (*join_node->scan_type() == ScanType::Equals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
                                       join_column_ids, *(join_node->scan_type()));
   }
@@ -319,6 +321,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
   return std::make_shared<ShowColumns>(show_columns_node->table_name());
 }
 
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
+  return std::make_shared<CreateView>(create_view_node->view_name(), create_view_node->lqp());
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
+  return std::make_shared<DropView>(drop_view_node->view_name());
+}
+
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());
@@ -360,6 +374,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
       return _translate_show_tables_node(node);
     case LQPNodeType::ShowColumns:
       return _translate_show_columns_node(node);
+    case LQPNodeType::CreateView:
+      return _translate_create_view_node(node);
+    case LQPNodeType::DropView:
+      return _translate_drop_view_node(node);
 
     default:
       Fail("Unknown node type encountered.");

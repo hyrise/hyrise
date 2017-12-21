@@ -11,6 +11,8 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -27,9 +29,14 @@ namespace opossum {
 class SQLTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 2));
-    StorageManager::get().add_table("table_b", load_table("src/test/tables/int_float2.tbl", 2));
-    StorageManager::get().add_table("table_c", load_table("src/test/tables/int_float5.tbl", 2));
+    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("table_a", std::move(table_a));
+
+    std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    StorageManager::get().add_table("table_b", std::move(table_b));
+
+    std::shared_ptr<Table> table_c = load_table("src/test/tables/int_float5.tbl", 2);
+    StorageManager::get().add_table("table_c", std::move(table_c));
   }
 
   std::shared_ptr<AbstractLQPNode> compile_query(const std::string& query) {
@@ -44,21 +51,21 @@ class SQLTranslatorTest : public BaseTest {
   }
 };
 
-TEST_F(SQLTranslatorTest, SelectStarAllTest) {
-  const auto query = "SELECT * FROM table_a;";
-  auto result_node = SQL(query);
-
-  std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
-  EXPECT_EQ(expected_columns, result_node->output_column_ids_to_input_column_ids());
-
-  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-
-  EXPECT_TRUE(result_node->left_child());
-  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::StoredTable);
-
-  EXPECT_FALSE(result_node->right_child());
-  EXPECT_FALSE(result_node->left_child()->left_child());
-}
+//TEST_F(SQLTranslatorTest, SelectStarAllTest) {
+//  const auto query = "SELECT * FROM table_a;";
+//  auto result_node = compile_query(query);
+//
+//  std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
+//  EXPECT_EQ(expected_columns, result_node->output_column_ids_to_input_column_ids());
+//
+//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+//
+//  EXPECT_TRUE(result_node->left_child());
+//  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::StoredTable);
+//
+//  EXPECT_FALSE(result_node->right_child());
+//  EXPECT_FALSE(result_node->left_child()->left_child());
+//}
 //
 ///*
 // * Disabled because: Opossums's Expressions are able to handle this kind of expression. However, a PredicateNode needs
@@ -77,7 +84,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
 //  EXPECT_FALSE(ts_node_1->right_child());
 //  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
 //  // TODO(anybody): once this is implemented, the value side has to be checked.
 //}
 //
@@ -91,7 +98,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
 //  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
 //  EXPECT_FALSE(ts_node_1->right_child());
-//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
 //  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
 //  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{ColumnID{1}});
 //}
@@ -107,7 +114,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
 //  EXPECT_FALSE(ts_node_1->right_child());
 //  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
-//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
 //  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 //}
 //
@@ -254,7 +261,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //
 //  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
 //  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-//  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+//  EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
 //  EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
 //  EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0});
 //  EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0});
@@ -276,7 +283,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //
 //    EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
 //    auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-//    EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+//    EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
 //    EXPECT_EQ(join_node->join_mode(), mode);
 //    EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0} /* "a" */);
 //    EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
@@ -310,7 +317,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //
 //  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Join);
 //  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-//  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+//  EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
 //  EXPECT_EQ(join_node->join_mode(), JoinMode::Outer);
 //  EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0} /* "a" */);
 //  EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0} /* "a" */);
@@ -332,7 +339,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //  auto predicate = std::dynamic_pointer_cast<PredicateNode>(projection_node->left_child());
 //  EXPECT_FALSE(predicate->right_child());
 //  EXPECT_EQ(predicate->column_id(), ColumnID{0});
-//  EXPECT_EQ(predicate->scan_type(), ScanType::OpEquals);
+//  EXPECT_EQ(predicate->scan_type(), ScanType::Equals);
 //  EXPECT_EQ(predicate->value(), AllParameterVariant{ColumnID{2}});
 //
 //  EXPECT_EQ(predicate->left_child()->type(), LQPNodeType::Join);
@@ -529,6 +536,56 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->left_child(), "table_b");
 //  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->left_child()->right_child(), "table_c");
 //  ASSERT_STORED_TABLE_NODE(aggregate_node->left_child()->right_child(), "table_a");
+//}
+//
+//TEST_F(SQLTranslatorTest, CreateView) {
+//  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM table_a WHERE a = 'b';";
+//  auto result_node = compile_query(query);
+//  EXPECT_EQ(result_node->type(), LQPNodeType::CreateView);
+//  auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(result_node);
+//
+//  EXPECT_EQ(create_view_node->type(), LQPNodeType::CreateView);
+//  EXPECT_EQ(create_view_node->view_name(), "my_first_view");
+//
+//  auto view_lqp = create_view_node->lqp();
+//  EXPECT_EQ(view_lqp->type(), LQPNodeType::Projection);
+//  EXPECT_FALSE(view_lqp->right_child());
+//
+//  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(view_lqp->left_child());
+//  EXPECT_EQ(ts_node_1->type(), LQPNodeType::Predicate);
+//  EXPECT_FALSE(ts_node_1->right_child());
+//  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+//  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
+//  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
+//}
+//
+//TEST_F(SQLTranslatorTest, CreateAliasView) {
+//  const auto query = "CREATE VIEW my_second_view (c, d) AS SELECT * FROM table_a WHERE a = 'b';";
+//  auto result_node = compile_query(query);
+//  EXPECT_EQ(result_node->type(), LQPNodeType::CreateView);
+//  auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(result_node);
+//
+//  auto view_lqp = create_view_node->lqp();
+//
+//  EXPECT_EQ(view_lqp->output_column_names(), std::vector<std::string>({"c", "d"}));
+//}
+//
+//TEST_F(SQLTranslatorTest, DropView) {
+//  const auto query = "DROP VIEW my_third_view";
+//  auto result_node = compile_query(query);
+//  EXPECT_EQ(result_node->type(), LQPNodeType::DropView);
+//  auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(result_node);
+//  EXPECT_EQ(drop_view_node->view_name(), "my_third_view");
+//}
+//
+//TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
+//  const auto query = "SELECT * FROM table_a WHERE invalidname = 0;";
+//  EXPECT_THROW(compile_query(query), std::logic_error);
+//}
+//
+//TEST_F(SQLTranslatorTest, AccessInvalidTable) {
+//  const auto query = "SELECT * FROM invalid_table;";
+//  EXPECT_THROW(compile_query(query), std::logic_error);
 //}
 
 }  // namespace opossum

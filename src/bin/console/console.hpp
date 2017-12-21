@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
@@ -104,11 +105,6 @@ class Console {
    */
   int _eval_sql(const std::string& sql);
 
-  /*
-   * Executes the given SQL plan
-   */
-  int _execute_plan(const SQLQueryPlan& plan);
-
   // Command functions, registered to be called from the Console
   int exit(const std::string& args);
   int help(const std::string& args);
@@ -117,6 +113,7 @@ class Console {
   int exec_script(const std::string& args);
   int print_table(const std::string& args);
   int visualize(const std::string& input);
+  int change_runtime_setting(const std::string& args);
 
   int begin_transaction(const std::string& input);
   int rollback_transaction(const std::string& input);
@@ -137,6 +134,7 @@ class Console {
   std::ofstream _log;
   bool _verbose;
 
+  std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
 };
 

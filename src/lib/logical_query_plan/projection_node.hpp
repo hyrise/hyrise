@@ -30,10 +30,11 @@ class ProjectionNode : public AbstractLQPNode {
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   void _on_child_changed() override;
 
  private:
-  const std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
+  std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

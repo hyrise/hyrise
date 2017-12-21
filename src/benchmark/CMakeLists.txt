@@ -16,6 +16,7 @@ add_executable(
     operators/union_all_benchmark.cpp
     table_generator.cpp
     table_generator.hpp
+    tpch_db_generator_benchmark.cpp
 )
 
 target_link_libraries(
@@ -42,4 +43,13 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
     benchmark
+)
+
+
+# Configure hyriseBenchmarkTPCH
+add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
+target_link_libraries(
+    hyriseBenchmarkTPCH
+    hyrise
+    hyriseBenchmarkLib
 )

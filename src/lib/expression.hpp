@@ -26,7 +26,7 @@ class AbstractLQPNode;
  * approach used in hsql::Expr.
  */
 template <typename DerivedExpressionType>
-class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
+class Expression : public std::enable_shared_from_this<DerivedExpressionType>, private Noncopyable {
  public:
   /*
    * This constructor is meant for internal use only and therefore should be private.
@@ -46,6 +46,9 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
    * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
   explicit Expression(ExpressionType type);
+
+  // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
+  std::shared_ptr<DerivedExpressionType> deep_copy() const;
 
   // @{
   /**
@@ -153,6 +156,8 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType> {
  protected:
   // Not to be used directly, derived classes should implement it in the public scope and use this internally
   bool operator==(const Expression& other) const;
+
+  virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpressionType> &copy) const = 0;
 
   // the type of the expression
   const ExpressionType _type;

@@ -63,7 +63,7 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
  public:
   pmr_concurrent_vector(PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, alloc) {}  // NOLINT
   pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})                             // NOLINT
-      : pmr_concurrent_vector(0, T{}, alloc) {}
+      : pmr_concurrent_vector(n, T{}, alloc) {}
   pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(n, val),
         _alloc(alloc) {}
@@ -94,6 +94,11 @@ struct RowID {
   // Useful when comparing a row ID to NULL_ROW_ID
   bool operator==(const RowID& other) const {
     return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
+  }
+
+  friend std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
+    o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
+    return o;
   }
 };
 
@@ -158,15 +163,17 @@ class ValuePlaceholder {
 
 // TODO(anyone): integrate and replace with ExpressionType
 enum class ScanType {
-  OpEquals,
-  OpNotEquals,
-  OpLessThan,
-  OpLessThanEquals,
-  OpGreaterThan,
-  OpGreaterThanEquals,
-  OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
-  OpLike,
-  OpNotLike
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  Like,
+  NotLike,
+  IsNull,
+  IsNotNull
 };
 
 enum class ExpressionType {

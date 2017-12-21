@@ -21,6 +21,10 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
   _output_column_names = table->column_names();
 }
 
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_deep_copy_impl() const {
+  return std::make_shared<StoredTableNode>(_table_name);
+}
+
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
 
 std::shared_ptr<const AbstractLQPNode> StoredTableNode::find_table_name_origin(const std::string& table_name) const {

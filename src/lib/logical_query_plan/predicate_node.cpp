@@ -20,6 +20,10 @@ PredicateNode::PredicateNode(const ColumnOrigin& column_origin, const ScanType s
       _value(value),
       _value2(value2) {}
 
+std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl() const {
+  return std::make_shared<PredicateNode>(_column_origin, _scan_type, _value, _value2);
+}
+
 std::string PredicateNode::description() const {
   /**
    * " a BETWEEN 5 AND c"

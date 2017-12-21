@@ -164,6 +164,7 @@ void Table::emplace_chunk(Chunk chunk) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
+  DebugAssert(chunk.column_count() > 0, "Trying to add chunk without columns.");
   DebugAssert(chunk.column_count() == column_count(),
               std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");

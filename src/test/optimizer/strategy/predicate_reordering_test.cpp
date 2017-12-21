@@ -67,10 +67,10 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -88,13 +88,13 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 90);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::GreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
   predicate_node_2->get_statistics();
@@ -113,13 +113,13 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 90);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::GreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
@@ -127,10 +127,10 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
   predicate_node_3->set_left_child(projection_node);
 
-  auto predicate_node_4 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_node_4 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
   predicate_node_4->set_left_child(predicate_node_3);
 
   predicate_node_4->get_statistics();
@@ -153,19 +153,19 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
   sort_node->set_left_child(predicate_node_1);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 90);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::GreaterThan, 90);
   predicate_node_2->set_left_child(sort_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
   predicate_node_3->set_left_child(predicate_node_2);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
@@ -195,10 +195,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpLessThan, 20);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::LessThan, 20);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 458.5);
   predicate_node_1->set_left_child(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -207,10 +207,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 458.5);
   predicate_node_2->set_left_child(stored_table_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpLessThan, 20);
+  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::LessThan, 20);
   predicate_node_3->set_left_child(predicate_node_2);
 
   predicate_node_3->get_statistics();
@@ -257,11 +257,11 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 80);
-  auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 60);
-  auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);
-  auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
-  auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 30);
+  auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 80);
+  auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 60);
+  auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 90);
+  auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 50);
+  auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 30);
   auto table_0 = std::make_shared<MockNode>(table_statistics);
   auto table_1 = std::make_shared<MockNode>(table_statistics);
 
@@ -308,8 +308,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
-  auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);
-  auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
+  auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 90);
+  auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
   auto table_node = std::make_shared<MockNode>(table_statistics);
 
   union_node->set_left_child(predicate_a_node);

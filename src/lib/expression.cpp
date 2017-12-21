@@ -21,6 +21,31 @@ template <typename DerivedExpressionType>
 Expression<DerivedExpressionType>::Expression(ExpressionType type) : _type(type) {}
 
 template <typename DerivedExpressionType>
+std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::deep_copy() const {
+  // We cannot use the copy constructor here, because it does not work with shared_from_this()
+  auto deep_copy = std::make_shared<DerivedExpressionType>(_type);
+  deep_copy->_value = _value;
+  deep_copy->_aggregate_function = _aggregate_function;
+  deep_copy->_table_name = _table_name;
+  deep_copy->_alias = _alias;
+  deep_copy->_value_placeholder = _value_placeholder;
+
+  std::vector<std::shared_ptr<DerivedExpressionType>> aggregate_function_arguments;
+  aggregate_function_arguments.reserve(_aggregate_function_arguments.size());
+  for (const auto& expression : _aggregate_function_arguments) {
+    aggregate_function_arguments.emplace_back(expression->deep_copy());
+  }
+  deep_copy->_aggregate_function_arguments = std::move(aggregate_function_arguments);
+
+  if (left_child()) deep_copy->set_left_child(left_child()->deep_copy());
+  if (right_child()) deep_copy->set_right_child(right_child()->deep_copy());
+
+  _deep_copy_impl(deep_copy);
+
+  return deep_copy;
+}
+
+template <typename DerivedExpressionType>
 const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::left_child() const {
   return _left_child;
 }

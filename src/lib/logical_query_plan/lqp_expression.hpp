@@ -25,6 +25,9 @@ class LQPExpression : public Expression<LQPExpression> {
 
   bool operator==(const LQPExpression& other) const;
 
+ protected:
+  void _deep_copy_impl(const std::shared_ptr<LQPExpression> &copy) const override;
+
  private:
   std::optional<ColumnOrigin> _column_origin;
 };

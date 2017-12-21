@@ -12,7 +12,9 @@
 #include "expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -40,12 +42,11 @@ namespace opossum {
 
 ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_type) {
   static const std::unordered_map<const hsql::OperatorType, const ScanType> operator_to_scan_type = {
-      {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
-      {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
-      {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
-      {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
-      {hsql::kOpNotLike, ScanType::OpNotLike},
-  };
+      {hsql::kOpEquals, ScanType::Equals},       {hsql::kOpNotEquals, ScanType::NotEquals},
+      {hsql::kOpGreater, ScanType::GreaterThan}, {hsql::kOpGreaterEq, ScanType::GreaterThanEquals},
+      {hsql::kOpLess, ScanType::LessThan},       {hsql::kOpLessEq, ScanType::LessThanEquals},
+      {hsql::kOpBetween, ScanType::Between},     {hsql::kOpLike, ScanType::Like},
+      {hsql::kOpNotLike, ScanType::NotLike},     {hsql::kOpIsNull, ScanType::IsNull}};
 
   auto it = operator_to_scan_type.find(operator_type);
   DebugAssert(it != operator_to_scan_type.end(), "Filter expression clause operator is not yet supported.");
@@ -66,10 +67,10 @@ ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
    *  -> SELECT * FROM t WHERE a = 1
    */
   static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
-      {ScanType::OpGreaterThan, ScanType::OpLessThan},
-      {ScanType::OpLessThan, ScanType::OpGreaterThan},
-      {ScanType::OpGreaterThanEquals, ScanType::OpLessThanEquals},
-      {ScanType::OpLessThanEquals, ScanType::OpGreaterThanEquals}};
+      {ScanType::GreaterThan, ScanType::LessThan},
+      {ScanType::LessThan, ScanType::GreaterThan},
+      {ScanType::GreaterThanEquals, ScanType::LessThanEquals},
+      {ScanType::LessThanEquals, ScanType::GreaterThanEquals}};
 
   auto it = scan_type_for_reverse_order.find(scan_type);
   if (it != scan_type_for_reverse_order.end()) {
@@ -108,15 +109,19 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parse_res
 std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
-      return _translate_select((const hsql::SelectStatement&)statement);
+      return _translate_select(static_cast<const hsql::SelectStatement&>(statement));
     case hsql::kStmtInsert:
-      return _translate_insert((const hsql::InsertStatement&)statement);
+      return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
     case hsql::kStmtDelete:
-      return _translate_delete((const hsql::DeleteStatement&)statement);
+      return _translate_delete(static_cast<const hsql::DeleteStatement&>(statement));
     case hsql::kStmtUpdate:
-      return _translate_update((const hsql::UpdateStatement&)statement);
+      return _translate_update(static_cast<const hsql::UpdateStatement&>(statement));
     case hsql::kStmtShow:
-      return _translate_show((const hsql::ShowStatement&)statement);
+      return _translate_show(static_cast<const hsql::ShowStatement&>(statement));
+    case hsql::kStmtCreate:
+      return _translate_create(static_cast<const hsql::CreateStatement&>(statement));
+    case hsql::kStmtDrop:
+      return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
     default:
       Fail("SQL statement type not supported");
       return {};
@@ -242,7 +247,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::SelectStatement& select) {
-  // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
+  // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
   // 3. GROUP BY clause
@@ -258,9 +263,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::Se
     current_result_node = _translate_where(*select.whereClause, current_result_node);
   }
 
-  // TODO(torpedro): Handle DISTINCT.
   DebugAssert(select.selectList != nullptr, "SELECT list needs to exist");
   DebugAssert(!select.selectList->empty(), "SELECT list needs to have entries");
+
+  Assert(!select.selectDistinct, "DISTINCT is not yet supported");
 
   // If the query has a GROUP BY clause or if it has aggregates, we do not need a top-level projection
   // because all elements must either be aggregate functions or columns of the GROUP BY clause,
@@ -390,7 +396,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   for (const auto& join_column_name : join_column_names) {
     auto left_column_origin = left_node->get_column_origin_by_named_column_reference({join_column_name});
     auto right_column_origin = right_node->get_column_origin_by_named_column_reference({join_column_name});
-    auto predicate = std::make_shared<PredicateNode>(left_column_origin, ScanType::OpEquals, right_column_origin);
+    auto predicate = std::make_shared<PredicateNode>(left_column_origin, ScanType::Equals, right_column_origin);
     predicate->set_left_child(return_node);
     return_node = predicate;
   }
@@ -437,7 +443,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
   std::shared_ptr<AbstractLQPNode> node;
   switch (table.type) {
     case hsql::kTableName:
-      node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+      if (StorageManager::get().has_table(table.name)) {
+        node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+      } else if (StorageManager::get().has_view(table.name)) {
+        node = StorageManager::get().get_view(table.name);
+        Assert(!_validate || node->subtree_is_validated(), "Trying to add non-validated view to validated query");
+      } else {
+        Fail(std::string("Did not find a table or view with name ") + table.name);
+      }
       break;
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
@@ -850,7 +863,32 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   };
 
   // TODO(anybody): handle IN with join
-  auto scan_type = translate_operator_type_to_scan_type(hsql_expr.opType);
+
+  auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
+
+  const auto* column_ref_hsql_expr = hsql_expr.expr;
+  ScanType scan_type;
+
+  if (predicate_negated) {
+    Assert(hsql_expr.expr != nullptr, "NOT operator without further expressions");
+    scan_type = translate_operator_type_to_scan_type(hsql_expr.expr->opType);
+
+    /**
+     * It should be possible for any predicate to be negated with "NOT",
+     * e.g., WHERE NOT a > 5. However, this is currently not supported.
+     * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` scan type.
+     */
+    Assert(scan_type == ScanType::IsNull, "Only IS NULL can be negated");
+
+    if (scan_type == ScanType::IsNull) {
+      scan_type = ScanType::IsNotNull;
+    }
+
+    // change column reference to the correct expression
+    column_ref_hsql_expr = hsql_expr.expr->expr;
+  } else {
+    scan_type = translate_operator_type_to_scan_type(hsql_expr.opType);
+  }
 
   // Indicates whether to use expr.expr or expr.expr2 as the main column to reference
   auto operands_switched = false;
@@ -863,7 +901,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
   std::optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
-  if (scan_type == ScanType::OpBetween) {
+  if (scan_type == ScanType::Between) {
     /**
      * Translate expressions of the form `column_or_aggregate BETWEEN value AND value2`.
      * Both value and value2 can be any kind of literal, while value might also be a column or a placeholder.
@@ -885,8 +923,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     Assert(is_variant(value2_all_parameter_variant), "Value2 of a Predicate has to be AllTypeVariant");
     value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
 
-    Assert(refers_to_column(*hsql_expr.expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
-  } else {
+    Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
+  } else if (scan_type != ScanType::IsNull && scan_type != ScanType::IsNotNull) {
     /**
      * For logical operators (>, >=, <, ...), thanks to the strict interface of PredicateNode/TableScan, we have to
      * determine whether the left (expr.expr) or the right (expr.expr2) expr refers to the Column/AggregateFunction
@@ -901,10 +939,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     }
 
     value_ref_hsql_expr = operands_switched ? hsql_expr.expr : hsql_expr.expr2;
+    column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
   }
 
   AllParameterVariant value;
-  if (refers_to_column(*value_ref_hsql_expr)) {
+  if (scan_type == ScanType::IsNull || scan_type == ScanType::IsNotNull) {
+    value = NULL_VALUE;
+  } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
   } else {
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
@@ -915,7 +956,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
    * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
    * or "p_a" in `WHERE p_a > p_b`
    */
-  const auto column_id = resolve_column(operands_switched ? *hsql_expr.expr2 : *hsql_expr.expr);
+  const auto column_id = resolve_column(*column_ref_hsql_expr);
 
   auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
   predicate_node->set_left_child(input_node);
@@ -931,6 +972,53 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
       return std::make_shared<ShowColumnsNode>(std::string(show_statement.name));
     default:
       Fail("hsql::ShowType is not supported.");
+  }
+
+  return {};
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
+  switch (create_statement.type) {
+    case hsql::CreateType::kCreateView: {
+      auto view = _translate_select((const hsql::SelectStatement&)*create_statement.select);
+
+      if (create_statement.viewColumns) {
+        // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
+        Assert(create_statement.viewColumns->size() == view->output_column_count(),
+               "Number of Columns in CREATE VIEW does not match SELECT statement");
+
+        // Create a list of renamed column expressions
+        std::vector<std::shared_ptr<LQPExpression>> projections;
+        ColumnID column_id{0};
+        for (const auto& alias : *create_statement.viewColumns) {
+          const auto column_origin = view->output_column_origins()[column_id];
+          // rename columns so they match the view definition
+          projections.push_back(LQPExpression::create_column(column_origin, alias));
+          ++column_id;
+        }
+
+        // Create a projection node for this renaming
+        auto projection_node = std::make_shared<ProjectionNode>(projections);
+        projection_node->set_left_child(view);
+        view = projection_node;
+      }
+
+      return std::make_shared<CreateViewNode>(create_statement.tableName, view);
+    }
+    default:
+      Fail("hsql::CreateType is not supported.");
+  }
+
+  return {};
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
+  switch (drop_statement.type) {
+    case hsql::DropType::kDropView: {
+      return std::make_shared<DropViewNode>(drop_statement.name);
+    }
+    default:
+      Fail("hsql::DropType is not supported.");
   }
 
   return {};

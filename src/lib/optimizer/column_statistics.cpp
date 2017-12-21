@@ -181,13 +181,13 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
   auto casted_value = type_cast<ColumnType>(value);
 
   switch (scan_type) {
-    case ScanType::OpEquals: {
+    case ScanType::Equals: {
       return _create_column_stats_for_equals_predicate(casted_value);
     }
-    case ScanType::OpNotEquals: {
+    case ScanType::NotEquals: {
       return _create_column_stats_for_not_equals_predicate(casted_value);
     }
-    case ScanType::OpLessThan: {
+    case ScanType::LessThan: {
       // distinction between integers and decimals
       // for integers "< value" means that the new max is value <= value - 1
       // for decimals "< value" means that the new max is value <= value - ε
@@ -199,10 +199,10 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
-    case ScanType::OpLessThanEquals: {
+    case ScanType::LessThanEquals: {
       return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value);
     }
-    case ScanType::OpGreaterThan: {
+    case ScanType::GreaterThan: {
       // distinction between integers and decimals
       // for integers "> value" means that the new min value is >= value + 1
       // for decimals "> value" means that the new min value is >= value + ε
@@ -214,10 +214,10 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
-    case ScanType::OpGreaterThanEquals: {
+    case ScanType::GreaterThanEquals: {
       return _create_column_stats_for_range_predicate(casted_value, _get_or_calculate_max());
     }
-    case ScanType::OpBetween: {
+    case ScanType::Between: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
       return _create_column_stats_for_range_predicate(casted_value, casted_value2);
@@ -239,10 +239,10 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
 
   auto casted_value = type_cast<std::string>(value);
   switch (scan_type) {
-    case ScanType::OpEquals: {
+    case ScanType::Equals: {
       return _create_column_stats_for_equals_predicate(casted_value);
     }
-    case ScanType::OpNotEquals: {
+    case ScanType::NotEquals: {
       return _create_column_stats_for_not_equals_predicate(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
@@ -259,26 +259,26 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
   }
 
   switch (scan_type) {
-    case ScanType::OpEquals: {
+    case ScanType::Equals: {
       auto column_statistics =
           std::make_shared<ColumnStatistics>(_column_id, 1, _get_or_calculate_min(), _get_or_calculate_max());
       return {1.f / distinct_count(), column_statistics};
     }
-    case ScanType::OpNotEquals: {
+    case ScanType::NotEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1,
                                                                   _get_or_calculate_min(), _get_or_calculate_max());
       return {(distinct_count() - 1.f) / distinct_count(), column_statistics};
     }
-    case ScanType::OpLessThan:
-    case ScanType::OpLessThanEquals:
-    case ScanType::OpGreaterThan:
-    case ScanType::OpGreaterThanEquals: {
+    case ScanType::LessThan:
+    case ScanType::LessThanEquals:
+    case ScanType::GreaterThan:
+    case ScanType::GreaterThanEquals: {
       auto column_statistics =
           std::make_shared<ColumnStatistics>(_column_id, distinct_count() * DEFAULT_OPEN_ENDED_SELECTIVITY,
                                              _get_or_calculate_min(), _get_or_calculate_max());
       return {_non_null_value_ratio * DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
-    case ScanType::OpBetween: {
+    case ScanType::Between: {
       // since the value2 is known,
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
@@ -460,7 +460,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
   // TODO(Anyone): Fix issue mentioned above.
 
   switch (scan_type) {
-    case ScanType::OpEquals: {
+    case ScanType::Equals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);
 
       auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count,
@@ -469,7 +469,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
           right_stats->_column_id, overlapping_distinct_count, overlapping_range_min, overlapping_range_max);
       return {combined_non_null_ratio * equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
-    case ScanType::OpNotEquals: {
+    case ScanType::NotEquals: {
       auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, distinct_count(),
                                                                       _get_or_calculate_min(), _get_or_calculate_max());
       auto new_right_column_stats = std::make_shared<ColumnStatistics>(
@@ -477,27 +477,27 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
           right_stats->_get_or_calculate_max());
       return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_column_stats, new_right_column_stats};
     }
-    case ScanType::OpLessThan: {
+    case ScanType::LessThan: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
                                                            _get_or_calculate_min(),
                                                            right_stats->_get_or_calculate_max(), false);
     }
-    case ScanType::OpLessThanEquals: {
+    case ScanType::LessThanEquals: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
                                                            _get_or_calculate_min(),
                                                            right_stats->_get_or_calculate_max(), true);
     }
-    case ScanType::OpGreaterThan: {
+    case ScanType::GreaterThan: {
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_stats->_get_or_calculate_min(),
                                                            _get_or_calculate_max(), false);
     }
-    case ScanType::OpGreaterThanEquals: {
+    case ScanType::GreaterThanEquals: {
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_stats->_get_or_calculate_min(),
                                                            _get_or_calculate_max(), true);
     }
-    // case ScanType::OpBetween is not supported for ColumnID as TableScan does not support this
+    // case ScanType::Between is not supported for ColumnID as TableScan does not support this
     default: {
       return {combined_non_null_ratio, _this_without_null_values(), right_stats->_this_without_null_values()};
     }

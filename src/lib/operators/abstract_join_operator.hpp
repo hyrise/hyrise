@@ -20,6 +20,8 @@ namespace opossum {
 // find more information about joins in our Wiki:
 // https://github.com/hyrise/hyrise/wiki/Operator-Join
 
+// We have decided against forwarding MVCC columns in https://github.com/hyrise/hyrise/issues/409
+
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,

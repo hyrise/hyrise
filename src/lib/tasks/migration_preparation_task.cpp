@@ -38,7 +38,6 @@ struct ChunkInfo {
   std::string table_name;
   ChunkID id;
   int node;
-  size_t byte_size;
   double temperature;
   friend bool operator<(const ChunkInfo& l, const ChunkInfo& r) { return l.temperature < r.temperature; }
 };
@@ -80,10 +79,14 @@ bool node_has_capacity(size_t node_id, double threshold = 0.8) {
 double safe_log2(double x) { return x == 0 ? 0 : std::log2(x); }
 
 // The inverted Shannon entropy is used as a metric for imbalance between the NUMA nodes.
-double inverted_entropy(const std::vector<double>& node_chunk) {
-  double max_entropy =
-      std::pow(-1.0 * node_chunk.size() * (1.0 / node_chunk.size() * std::log2(1.0 / node_chunk.size())), 4);
-  double entropy = std::pow(std::accumulate(node_chunk.cbegin(), node_chunk.cend(), 0.0,
+double inverted_entropy(const std::vector<double>& node_temperatures) {
+  if (node_temperatures.size() == 1) {
+    return 0;
+  }
+  double max_entropy = std::pow(
+      -1.0 * node_temperatures.size() * (1.0 / node_temperatures.size() * std::log2(1.0 / node_temperatures.size())),
+      4);
+  double entropy = std::pow(std::accumulate(node_temperatures.cbegin(), node_temperatures.cend(), 0.0,
                                             [](const double& r, const double& a) { return r - a * safe_log2(a); }),
                             4);
   return (max_entropy - entropy) / max_entropy;
@@ -147,7 +150,6 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,
                                            /* .id = */ i,
                                            /* .node = */ MigrationPreparationTask::get_node_id(chunk.get_allocator()),
-                                           /* .byte_size = */ chunk.byte_size(),
                                            /* .temperature = */ temperature});
       }
     }

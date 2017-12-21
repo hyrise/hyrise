@@ -10,6 +10,6 @@
 [submodule "third_party/pgasus"]
 	path = third_party/pgasus
 	url = https://github.com/hyrise/pgasus.git
-[submodule "third_party/json"]
-	path = third_party/json
-	url = https://github.com/nlohmann/json.git
+[submodule "third_party/cxxopts"]
+	path = third_party/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git

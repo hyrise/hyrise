@@ -30,6 +30,14 @@ JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_colum
               "Specified JoinMode must specify neither column ids nor scan type.");
 }
 
+std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl() const {
+  if (_join_mode == JoinMode::Cross || _join_mode == JoinMode::Natural) {
+    return std::make_shared<JoinNode>(_join_mode);
+  } else {
+    return std::make_shared<JoinNode>(_join_mode, *_join_column_origins, *_scan_type);
+  }
+}
+
 std::string JoinNode::description() const {
   Assert(left_child() && right_child(), "Can't generate description if children aren't set");
 

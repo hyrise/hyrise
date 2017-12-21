@@ -38,11 +38,11 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     return shared_from_this();
   }
 
-  if (scan_type == ScanType::OpLike || scan_type == ScanType::OpNotLike) {
+  if (scan_type == ScanType::Like || scan_type == ScanType::NotLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
     auto selectivity = DEFAULT_LIKE_SELECTIVITY;
-    if (scan_type == ScanType::OpNotLike) selectivity = 1.0 - selectivity;
+    if (scan_type == ScanType::NotLike) selectivity = 1.0 - selectivity;
     clone->_row_count = _row_count * selectivity;
     return clone;
   }

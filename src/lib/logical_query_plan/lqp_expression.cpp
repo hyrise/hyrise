@@ -55,4 +55,9 @@ bool LQPExpression::operator==(const LQPExpression& other) const {
   }
   return _column_origin == other._column_origin;
 }
+
+void LQPExpression::_deep_copy_impl(const std::shared_ptr<LQPExpression> &copy) const {
+  copy->_column_origin = _column_origin;
+}
+
 }

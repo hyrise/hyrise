@@ -25,6 +25,9 @@ class OperatorExpression : public Expression<OperatorExpression> {
 
   bool operator==(const OperatorExpression& other) const;
 
+ protected:
+  void _deep_copy_impl(const std::shared_ptr<OperatorExpression> &copy) const override;
+
  private:
   std::optional<ColumnID> _column_id;
 };
