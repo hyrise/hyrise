@@ -10,6 +10,7 @@
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -30,7 +31,7 @@ class BaseColumnEncoder {
   /**
    * @brief Encodes a value column with the given data type.
    *
-   * @return encoded column if data type is supported else nullptr
+   * @return encoded column if data type is supported else throws exception
    */
   virtual std::shared_ptr<BaseColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) = 0;
 };
@@ -60,9 +61,12 @@ class ColumnEncoder : public BaseColumnEncoder {
          * is only instantiated for data types supported by the encoding type.
          */
         encoded_column = this->encode(type_obj, column);
+      } else {
+        Fail("Passed data type not supported by encoding.")
       }
       // clang-format on
     });
+
     return encoded_column;
   }
   /**@}*/
