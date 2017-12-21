@@ -2,8 +2,12 @@
 
 #include <memory>
 
+#include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "types.hpp"
 
 namespace opossum {
