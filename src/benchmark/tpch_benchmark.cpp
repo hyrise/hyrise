@@ -195,10 +195,7 @@ class TpchBenchmark final {
         const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
         // Execute the query, we don't care about the results
-        auto sql_pipelines = SQLPipeline::from_sql_string(opossum::tpch_queries[query_id]);
-        for (auto& pipeline : sql_pipelines) {
-          pipeline.get_result_table();
-        }
+        SQLPipeline{opossum::tpch_queries[query_id]}.get_result_table();
 
         const auto query_benchmark_end = std::chrono::steady_clock::now();
 
@@ -219,10 +216,7 @@ class TpchBenchmark final {
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
         // Execute the query, we don't care about the results
-        auto sql_pipelines = SQLPipeline::from_sql_string(sql);
-        for (auto& pipeline : sql_pipelines) {
-          pipeline.get_result_table();
-        }
+        SQLPipeline{sql}.get_result_table();
       }
 
       QueryBenchmarkResult result;

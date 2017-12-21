@@ -4,6 +4,7 @@
 #include "../base_test.hpp"
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
 #include "gtest/gtest.h"
 #include "logical_query_plan/join_node.hpp"
 
@@ -41,6 +42,10 @@ class SQLPipelineTest : public BaseTest {
     _table_a = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
+    _table_a_multi = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a_multi->append({11, 11.11});
+    StorageManager::get().add_table("table_a_multi", _table_a_multi);
+
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
@@ -53,290 +58,261 @@ class SQLPipelineTest : public BaseTest {
   }
 
   std::shared_ptr<Table> _table_a;
+  std::shared_ptr<Table> _table_a_multi;
   std::shared_ptr<Table> _table_b;
   std::shared_ptr<Table> _join_result;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
+  const std::string _fail_query = "SELECT * FROM table_does_not_exist";
   const std::string _join_query =
       "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a, table_b WHERE table_a.a = table_b.a AND table_a.a "
       "> 1000";
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
-
-  const std::vector<std::string> _join_column_names{"a", "b", "bb"};
-
-  static bool _contains_validate(const std::vector<std::shared_ptr<OperatorTask>>& tasks) {
-    for (const auto& task : tasks) {
-      if (std::dynamic_pointer_cast<Validate>(task->get_operator())) return true;
-    }
-    return false;
-  }
+  // VIEW --> VIE
+  const std::string _multi_statement_invalid = "CREATE VIE foo AS SELECT * FROM table_a; SELECT * FROM foo;";
 };
 
 TEST_F(SQLPipelineTest, SimpleCreation) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
-  EXPECT_EQ(sql_pipelines.size(), 1u);
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query, false);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a, false};
 
-  EXPECT_EQ(sql_pipelines.size(), 1u);
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, context);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a, context};
 
-  EXPECT_EQ(sql_pipelines.size(), 1u);
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
+  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
 }
 
-TEST_F(SQLPipelineTest, CreationSQLInvalid) {
-  EXPECT_THROW(SQLPipeline::from_sql_string(_invalid_sql), std::exception);
+TEST_F(SQLPipelineTest, SimpleCreationMulti) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+
+  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
 }
 
-TEST_F(SQLPipelineTest, GetParsedSQL) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
-  const auto& parsed_sql = sql_pipeline.get_parsed_sql();
+TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
+  SQLPipeline sql_pipeline{_multi_statement_query, false};
 
-  EXPECT_TRUE(parsed_sql.isValid());
-
-  auto statements = parsed_sql.getStatements();
-
-  EXPECT_EQ(statements.size(), 1u);
-  EXPECT_EQ(statements.at(0)->type(), hsql::StatementType::kStmtSelect);
+  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
 }
 
-TEST_F(SQLPipelineTest, GetUnoptimizedLQP) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
+  auto context = TransactionManager::get().new_transaction_context();
+  SQLPipeline sql_pipeline{_multi_statement_query, context};
 
-  const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
+  EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
+  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+}
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
-  EXPECT_TRUE(contained_in_lqp(lqp, contains_cross));
+TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
+  EXPECT_THROW(SQLPipeline sql_pipeline{_multi_statement_invalid}, std::exception);
+}
+
+TEST_F(SQLPipelineTest, GetParsedSQLStatements) {
+  SQLPipeline sql_pipeline{_select_query_a};
+  const auto& parsed_sql_statements = sql_pipeline.get_parsed_sql_statements();
+
+  EXPECT_EQ(parsed_sql_statements.size(), 1u);
+  EXPECT_TRUE(parsed_sql_statements.front()->isValid());
+}
+
+TEST_F(SQLPipelineTest, GetParsedSQLStatementsExecutionRequired) {
+  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  EXPECT_NO_THROW(sql_pipeline.get_parsed_sql_statements());
+}
+
+TEST_F(SQLPipelineTest, GetParsedSQLStatementsMultiple) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+  const auto& parsed_sql_statements = sql_pipeline.get_parsed_sql_statements();
+
+  EXPECT_EQ(parsed_sql_statements.size(), 2u);
+  EXPECT_TRUE(parsed_sql_statements.front()->isValid());
+  EXPECT_TRUE(parsed_sql_statements.back()->isValid());
+}
+
+TEST_F(SQLPipelineTest, GetUnoptimizedLQPs) {
+  SQLPipeline sql_pipeline{_select_query_a};
+  const auto& lqps = sql_pipeline.get_unoptimized_logical_plans();
+
+  EXPECT_EQ(lqps.size(), 1u);
+}
+
+TEST_F(SQLPipelineTest, GetUnoptimizedLQPsMultiple) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+  const auto& lqps = sql_pipeline.get_unoptimized_logical_plans();
+
+  EXPECT_EQ(lqps.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
-  sql_pipeline.get_unoptimized_logical_plan();
-  const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
+  sql_pipeline.get_unoptimized_logical_plans();
+  const auto& lqps = sql_pipeline.get_unoptimized_logical_plans();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
-  EXPECT_TRUE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_EQ(lqps.size(), 1u);
 }
 
-TEST_F(SQLPipelineTest, GetUnoptimizedLQPValidated) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, GetUnoptimizedLQPExecutionRequired) {
+  SQLPipeline sql_pipeline{_multi_statement_dependant};
 
-  const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
-
-  // We did not need the context yet
-  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_TRUE(lqp->subtree_is_validated());
-}
-
-TEST_F(SQLPipelineTest, GetUnoptimizedLQPNotValidated) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, false);
-  auto& sql_pipeline = sql_pipelines.front();
-
-  const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
-
-  // We did not need the context yet
-  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_FALSE(lqp->subtree_is_validated());
+  try {
+    sql_pipeline.get_unoptimized_logical_plans();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception& e) {
+    const auto error_msg = std::string(e.what());
+    // Check that the correct error was thrown
+    EXPECT_TRUE(error_msg.find("Cannot translate") != std::string::npos);
+  }
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQP) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
-  const auto& lqp = sql_pipeline.get_optimized_logical_plan();
+  const auto& lqps = sql_pipeline.get_optimized_logical_plans();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
-  EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_EQ(lqps.size(), 1u);
+}
+
+TEST_F(SQLPipelineTest, GetOptimizedLQPsMultiple) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+  const auto& lqps = sql_pipeline.get_optimized_logical_plans();
+
+  EXPECT_EQ(lqps.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
-  sql_pipeline.get_optimized_logical_plan();
-  const auto& lqp = sql_pipeline.get_optimized_logical_plan();
+  sql_pipeline.get_unoptimized_logical_plans();
+  const auto& lqps = sql_pipeline.get_optimized_logical_plans();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
-  EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
+  EXPECT_EQ(lqps.size(), 1u);
 }
 
-TEST_F(SQLPipelineTest, GetOptimizedLQPValidated) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, GetOptimizedLQPExecutionRequired) {
+  SQLPipeline sql_pipeline{_multi_statement_dependant};
 
-  const auto& lqp = sql_pipeline.get_optimized_logical_plan();
-
-  // We did not need the context yet
-  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_TRUE(lqp->subtree_is_validated());
+  try {
+    sql_pipeline.get_optimized_logical_plans();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception& e) {
+    const auto error_msg = std::string(e.what());
+    // Check that the correct error was thrown
+    EXPECT_TRUE(error_msg.find("Cannot translate") != std::string::npos);
+  }
 }
 
-TEST_F(SQLPipelineTest, GetOptimizedLQPNotValidated) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, false);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, GetQueryPlans) {
+  SQLPipeline sql_pipeline{_select_query_a};
+  const auto& plans = sql_pipeline.get_query_plans();
 
-  const auto& lqp = sql_pipeline.get_optimized_logical_plan();
-
-  // We did not need the context yet
-  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_FALSE(lqp->subtree_is_validated());
+  EXPECT_EQ(plans.size(), 1u);
 }
 
-TEST_F(SQLPipelineTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, GetQueryPlansMultiple) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+  const auto& plans = sql_pipeline.get_query_plans();
 
-  const auto& unoptimized_lqp = sql_pipeline.get_unoptimized_logical_plan();
-
-  // The optimizer works on the original LQP nodes which could be modified during optimization.
-  // Copy the structure to check that it is equal after optimizing.
-  std::shared_ptr<AbstractLQPNode> unoptimized_copy = unoptimized_lqp->deep_copy();
-
-  // Optimize the LQP node
-  sql_pipeline.get_optimized_logical_plan();
-  const auto& unoptimized_lqp_new = sql_pipeline.get_unoptimized_logical_plan();
-
-  EXPECT_TRUE(subtree_types_are_equal(unoptimized_lqp_new, unoptimized_copy));
-}
-
-TEST_F(SQLPipelineTest, GetQueryPlan) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
-
-  // We don't have a transaction context yet, as it was not needed
-  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-
-  const auto& plan = sql_pipeline.get_query_plan();
-  const auto& roots = plan.tree_roots();
-
-  // We need the transaction context for the query plan if we use MVCC
-  EXPECT_NE(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(roots.size(), 1u);
-  EXPECT_NE(roots.at(0), nullptr);
+  EXPECT_EQ(plans.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
-  sql_pipeline.get_query_plan();
+  sql_pipeline.get_query_plans();
   auto duration = sql_pipeline.compile_time_microseconds();
 
-  const auto& plan = sql_pipeline.get_query_plan();
+  const auto& plans = sql_pipeline.get_query_plans();
   auto duration2 = sql_pipeline.compile_time_microseconds();
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
-
-  const auto& roots = plan.tree_roots();
-
-  EXPECT_EQ(roots.size(), 1u);
-  EXPECT_NE(roots.at(0), nullptr);
+  EXPECT_EQ(plans.size(), 1u);
 }
 
-TEST_F(SQLPipelineTest, GetQueryPlanJoinWithFilter) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
-
-  const auto& plan = sql_pipeline.get_query_plan();
-  const auto& roots = plan.tree_roots();
-
-  auto is_join_op = [](const std::shared_ptr<const AbstractOperator>& node) {
-    return static_cast<bool>(std::dynamic_pointer_cast<const AbstractJoinOperator>(node));
-  };
-
-  EXPECT_EQ(roots.size(), 1u);
-  EXPECT_NE(roots.at(0), nullptr);
-  EXPECT_TRUE(contained_in_query_plan(roots.at(0), is_join_op));
-}
-
-TEST_F(SQLPipelineTest, GetQueryPlanWithMVCC) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
-  const auto& plan = sql_pipeline.get_query_plan();
-
-  EXPECT_NE(plan.tree_roots().at(0)->transaction_context(), nullptr);
-}
-
-TEST_F(SQLPipelineTest, GetQueryPlanWithoutMVCC) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, false);
-  auto& sql_pipeline = sql_pipelines.front();
-  const auto& plan = sql_pipeline.get_query_plan();
-
-  EXPECT_EQ(plan.tree_roots().at(0)->transaction_context(), nullptr);
-}
-
-TEST_F(SQLPipelineTest, GetQueryPlanWithCustomTransactionContext) {
-  auto context = TransactionManager::get().new_transaction_context();
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, context);
-  auto& sql_pipeline = sql_pipelines.front();
-  const auto& plan = sql_pipeline.get_query_plan();
-
-  EXPECT_EQ(plan.tree_roots().at(0)->transaction_context().get(), context.get());
+TEST_F(SQLPipelineTest, GetQueryPlansExecutionRequired) {
+  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  try {
+    sql_pipeline.get_query_plans();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception& e) {
+    const auto error_msg = std::string(e.what());
+    // Check that the correct error was thrown
+    EXPECT_TRUE(error_msg.find("Cannot compile") != std::string::npos);
+  }
 }
 
 TEST_F(SQLPipelineTest, GetTasks) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
-
+  SQLPipeline sql_pipeline{_select_query_a};
   const auto& tasks = sql_pipeline.get_tasks();
 
-  EXPECT_EQ(tasks.size(), 3u);
-  EXPECT_TRUE(_contains_validate(tasks));
+  EXPECT_EQ(tasks.size(), 1u);
+}
+
+TEST_F(SQLPipelineTest, GetTasksMultiple) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+  const auto& tasks = sql_pipeline.get_tasks();
+
+  EXPECT_EQ(tasks.size(), 2u);
 }
 
 TEST_F(SQLPipelineTest, GetTasksTwice) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
   sql_pipeline.get_tasks();
   const auto& tasks = sql_pipeline.get_tasks();
 
-  EXPECT_EQ(tasks.size(), 3u);
-  EXPECT_TRUE(_contains_validate(tasks));
+  EXPECT_EQ(tasks.size(), 1u);
 }
 
-TEST_F(SQLPipelineTest, GetTasksNotValidated) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, false);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
+  SQLPipeline sql_pipeline{_multi_statement_dependant};
 
-  const auto& tasks = sql_pipeline.get_tasks();
-
-  EXPECT_EQ(tasks.size(), 2u);
-  EXPECT_FALSE(_contains_validate(tasks));
+  try {
+    sql_pipeline.get_tasks();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception& e) {
+    const auto error_msg = std::string(e.what());
+    // Check that the correct error was thrown
+    EXPECT_TRUE(error_msg.find("Cannot generate tasks") != std::string::npos);
+  }
 }
 
 TEST_F(SQLPipelineTest, GetResultTable) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
 }
 
+TEST_F(SQLPipelineTest, GetResultTableMultiple) {
+  SQLPipeline sql_pipeline{_multi_statement_query};
+  const auto& table = sql_pipeline.get_result_table();
+
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi)
+}
+
 TEST_F(SQLPipelineTest, GetResultTableTwice) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
   sql_pipeline.get_result_table();
   auto duration = sql_pipeline.execution_time_microseconds();
@@ -349,17 +325,15 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
 }
 
-TEST_F(SQLPipelineTest, GetResultTableJoin) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
+  SQLPipeline sql_pipeline{_multi_statement_dependant};
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
 }
 
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_join_query);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_join_query};
 
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
   const auto& table = sql_pipeline.get_result_table();
@@ -367,52 +341,27 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
 
-TEST_F(SQLPipelineTest, GetResultTableBadQueryNoMVCC) {
-  auto sql = "SELECT a + b FROM table_a";
-  auto sql_pipelines = SQLPipeline::from_sql_string(sql, false);
-  auto& sql_pipeline = sql_pipelines.front();
-
-  // Make sure this is actually the failed execution and not a logic_error from the transaction management.
-  EXPECT_THROW(sql_pipeline.get_result_table(), std::runtime_error);
-}
-
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
   auto sql = "SELECT a + b FROM table_a";
-  auto sql_pipelines = SQLPipeline::from_sql_string(sql);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{sql};
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);
-  EXPECT_TRUE(sql_pipeline.transaction_context()->aborted());
 }
 
 TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 5";
-  auto sql_pipelines = SQLPipeline::from_sql_string(sql);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{sql};
 
   const auto& table = sql_pipeline.get_result_table();
   EXPECT_EQ(table, nullptr);
 
-  // Check that this doesn't crash. This should return the previous table, otherwise the auto-commit will fail.
+  // Check that this doesn't crash. This should return the previous table.
   const auto& table2 = sql_pipeline.get_result_table();
   EXPECT_EQ(table2, nullptr);
 }
 
-TEST_F(SQLPipelineTest, GetResultTableNoMVCC) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a, false);
-  auto& sql_pipeline = sql_pipelines.front();
-
-  const auto& table = sql_pipeline.get_result_table();
-
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
-
-  // Check that there really is no transaction management
-  EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-}
-
 TEST_F(SQLPipelineTest, GetTimes) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_select_query_a);
-  auto& sql_pipeline = sql_pipelines.front();
+  SQLPipeline sql_pipeline{_select_query_a};
 
   EXPECT_THROW(sql_pipeline.compile_time_microseconds(), std::exception);
   EXPECT_THROW(sql_pipeline.execution_time_microseconds(), std::exception);
@@ -424,89 +373,84 @@ TEST_F(SQLPipelineTest, GetTimes) {
   EXPECT_GT(sql_pipeline.execution_time_microseconds().count(), 0);
 }
 
-TEST_F(SQLPipelineTest, MultiStatementCreation) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_multi_statement_query);
-
-  EXPECT_EQ(sql_pipelines.size(), 2u);
-  EXPECT_TRUE(sql_pipelines.at(0).get_parsed_sql().isValid());
-  EXPECT_TRUE(sql_pipelines.at(1).get_parsed_sql().isValid());
-  EXPECT_EQ(sql_pipelines.at(0).transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipelines.at(1).transaction_context(), nullptr);
-}
-
-TEST_F(SQLPipelineTest, MultiStatementCreationNoMVCC) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_multi_statement_query, false);
-
-  EXPECT_EQ(sql_pipelines.size(), 2u);
-  EXPECT_EQ(sql_pipelines.at(0).transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipelines.at(1).transaction_context(), nullptr);
-}
-
-TEST_F(SQLPipelineTest, MultiStatementCreationExplicitTransactionContext) {
-  auto transaction_context = TransactionManager::get().new_transaction_context();
-  auto sql_pipelines = SQLPipeline::from_sql_string(_multi_statement_query, transaction_context);
-
-  EXPECT_EQ(sql_pipelines.size(), 2u);
-  EXPECT_EQ(sql_pipelines.at(0).transaction_context().get(), transaction_context.get());
-  EXPECT_EQ(sql_pipelines.at(1).transaction_context().get(), transaction_context.get());
-}
-
-TEST_F(SQLPipelineTest, MultiStatementGetUnoptimizedLQP) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_multi_statement_query);
-
-  auto first_lqp = sql_pipelines.at(0).get_unoptimized_logical_plan();
-  EXPECT_NE(first_lqp, nullptr);
-
-  auto second_lqp = sql_pipelines.at(1).get_unoptimized_logical_plan();
-  EXPECT_NE(second_lqp, nullptr);
-}
-
-TEST_F(SQLPipelineTest, MultiStatementDependant) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_multi_statement_dependant);
-
-  EXPECT_EQ(sql_pipelines.size(), 2u);
-
-  auto first_query_plan = sql_pipelines.at(0).get_query_plan();
-  EXPECT_EQ(first_query_plan.tree_roots().size(), 1u);
-
-  // Cannot create QueryPlan because view does not exist yet
-  EXPECT_THROW(sql_pipelines.at(1).get_query_plan(), std::exception);
-}
-
-TEST_F(SQLPipelineTest, MultiStatementGetQueryPlanDependant) {
-  auto sql_pipelines = SQLPipeline::from_sql_string(_multi_statement_dependant);
-
-  EXPECT_EQ(sql_pipelines.size(), 2u);
-  auto& create_pipeline = sql_pipelines.at(0);
-  auto& select_pipeline = sql_pipelines.at(1);
-
-  EXPECT_EQ(create_pipeline.transaction_context(), nullptr);
-  create_pipeline.get_result_table();
-  EXPECT_NE(create_pipeline.transaction_context(), nullptr);
-
-  EXPECT_EQ(select_pipeline.transaction_context(), nullptr);
-
-  // The view was created and it should be visible here now
-  auto query_plan = select_pipeline.get_query_plan();
-
-  EXPECT_EQ(query_plan.tree_roots().size(), 1u);
-  EXPECT_NE(select_pipeline.transaction_context(), nullptr);
-}
-
-TEST_F(SQLPipelineTest, ParseErrorDebugMessage) {
-#if !IS_DEBUG
-  return;
-#endif
+TEST_F(SQLPipelineTest, GetFailedPipelineUnoptimizedLQPs) {
+  SQLPipeline sql_pipeline{_fail_query};
 
   try {
-    SQLPipeline::from_sql_string(_invalid_sql);
-    // Fail if the previous command did not throw an exception
+    sql_pipeline.get_unoptimized_logical_plans();
+    // Fail if this did not throw an exception
     FAIL();
-  } catch (const std::runtime_error& e) {
-    const auto error_msg = std::string(e.what());
-    // Check that the ^ was actually inserted in the error message
-    EXPECT_TRUE(error_msg.find('^') != std::string::npos);
+  } catch (const std::exception&) {
+    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
   }
+}
+
+TEST_F(SQLPipelineTest, GetFailedPipelineOptimizedLQPs) {
+  SQLPipeline sql_pipeline{_fail_query};
+
+  try {
+    sql_pipeline.get_optimized_logical_plans();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception&) {
+    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
+  }
+}
+
+TEST_F(SQLPipelineTest, GetFailedPipelineGueryPlans) {
+  SQLPipeline sql_pipeline{_fail_query};
+
+  try {
+    sql_pipeline.get_query_plans();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception&) {
+    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
+  }
+}
+
+TEST_F(SQLPipelineTest, GetFailedPipelineResultTable) {
+  SQLPipeline sql_pipeline{_fail_query};
+
+  try {
+    sql_pipeline.get_result_table();
+    // Fail if this did not throw an exception
+    FAIL();
+  } catch (const std::exception&) {
+    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
+  }
+}
+
+TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
+  EXPECT_FALSE(SQLPipeline{_select_query_a}.requires_execution());
+  EXPECT_FALSE(SQLPipeline{_join_query}.requires_execution());
+  EXPECT_FALSE(SQLPipeline{_multi_statement_query}.requires_execution());
+  EXPECT_TRUE(SQLPipeline{_multi_statement_dependant}.requires_execution());
+
+  const std::string create_view_single = "CREATE VIEW blub AS SELECT * FROM foo;";
+  EXPECT_FALSE(SQLPipeline{create_view_single}.requires_execution());
+
+  const std::string create_view_multi_reverse = "SELECT * FROM blub; " + create_view_single;
+  EXPECT_TRUE(SQLPipeline{create_view_multi_reverse}.requires_execution());
+
+  const std::string create_view_multi_middle = create_view_multi_reverse + " SELECT * FROM foo;";
+  EXPECT_TRUE(SQLPipeline{create_view_multi_reverse}.requires_execution());
+
+  const std::string create_table_single = "CREATE TABLE foo2 (c int);";
+  EXPECT_FALSE(SQLPipeline{create_table_single}.requires_execution());
+
+  const std::string create_table_multi = create_table_single + "SELECT * FROM foo2;";
+  EXPECT_TRUE(SQLPipeline{create_table_multi}.requires_execution());
+
+  const std::string drop_table_single = "DROP TABLE foo;";
+  EXPECT_FALSE(SQLPipeline{drop_table_single}.requires_execution());
+
+  const std::string drop_table_multi = "SELECT * FROM foo; " + drop_table_single;
+  EXPECT_TRUE(SQLPipeline{drop_table_multi}.requires_execution());
+
+  const std::string multi_no_exec =
+      "SELECT * FROM foo; INSERT INTO foo VALUES (2); SELECT * FROM blub; DELETE FROM foo WHERE a = 2;";
+  EXPECT_FALSE(SQLPipeline{multi_no_exec}.requires_execution());
 }
 
 }  // namespace opossum

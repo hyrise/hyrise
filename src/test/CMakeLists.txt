@@ -77,7 +77,7 @@ set(
     sql/sql_basic_cache_test.cpp
     sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp
-    sql/sql_pipeline_test.cpp
+        sql/sql_pipeline_statement_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
@@ -105,7 +105,7 @@ set(
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
-)
+        sql/sql_pipeline_test.cpp)
 
 set (
     SYSTEM_TEST_SOURCES

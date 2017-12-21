@@ -29,7 +29,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -215,12 +215,12 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   return static_cast<int>(func(args));
 }
 
-bool Console::_initialize_pipelines(const std::string& sql) {
+bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipelines = SQLPipeline::from_sql_string(sql, _explicitly_created_transaction_context);
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
     } else {
-      _sql_pipelines = SQLPipeline::from_sql_string(sql);
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
@@ -231,22 +231,24 @@ bool Console::_initialize_pipelines(const std::string& sql) {
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  if (!_initialize_pipelines(sql)) return ReturnCode::Error;
+  if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
-  for (auto& pipeline : _sql_pipelines) {
-    try {
-      pipeline.get_result_table();
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      if (pipeline.transaction_context() && pipeline.transaction_context()->aborted()) {
-        out("The transaction has been rolled back.\nAll previous statements have been commited.\n");
-        _explicitly_created_transaction_context = nullptr;
+  try {
+    _sql_pipeline->get_result_table();
+  } catch (const std::exception& exception) {
+    out(std::string(exception.what()) + "\n");
+    const auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+    if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+      out("The transaction has been rolled back.\n");
+      if (_explicitly_created_transaction_context != nullptr) {
+        out("All previous statements have been committed.\n");
       }
-      return ReturnCode::Error;
+      _explicitly_created_transaction_context = nullptr;
     }
+    return ReturnCode::Error;
   }
 
-  const auto& table = _sql_pipelines.back().get_result_table();
+  const auto& table = _sql_pipeline->get_result_table();
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
@@ -254,16 +256,10 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
 
-  std::chrono::microseconds compile_time_micros{};
-  std::chrono::microseconds execution_time_micros{};
-  for (const auto& pipeline : _sql_pipelines) {
-    compile_time_micros += pipeline.compile_time_microseconds();
-    execution_time_micros += pipeline.execution_time_microseconds();
-  }
-
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" + "COMPILE: " + std::to_string(compile_time_micros.count()) +
-      " µs, " + "EXECUTE: " + std::to_string(execution_time_micros.count()) + " µs (wall time))\n");
+  out(std::to_string(row_count) + " rows total (" + "COMPILE: " +
+      std::to_string(_sql_pipeline->compile_time_microseconds().count()) + " µs, " + "EXECUTE: " +
+      std::to_string(_sql_pipeline->execution_time_microseconds().count()) + " µs (wall time))\n");
 
   return ReturnCode::Ok;
 }
@@ -485,13 +481,13 @@ int Console::visualize(const std::string& input) {
 
   const auto sql = input.substr(sql_begin_pos, input.size());
 
-  // If no SQL is provided, use the last execution. Else, create new pipelines.
+  // If no SQL is provided, use the last execution. Else, create a new pipeline.
   if (!sql.empty()) {
-    if (!_initialize_pipelines(sql)) return ReturnCode::Error;
+    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
   }
 
-  if (no_execute && !sql.empty() && _sql_pipelines.size() > 1) {
-    out("We do not support the visualization of multiple statements in noexec mode.\n");
+  if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
+    out("We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
     return ReturnCode::Error;
   }
 
@@ -500,26 +496,26 @@ int Console::visualize(const std::string& input) {
   // Visualize the Logical Query Plan
   if (mode == "lqp" || mode == "lqpopt") {
     std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-    lqp_roots.reserve(_sql_pipelines.size());
 
-    // We want to execute all statements
-    for (auto& pipeline : _sql_pipelines) {
-      try {
-        auto& lqp = (mode == "lqp") ? pipeline.get_unoptimized_logical_plan() : pipeline.get_optimized_logical_plan();
-        lqp_roots.push_back(lqp);
-
-        if (!no_execute) {
-          // Execute so we can create next LQP
-          pipeline.get_result_table();
-        }
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-        if (pipeline.transaction_context() && pipeline.transaction_context()->aborted()) {
-          out("The transaction has been rolled back.\n");
-          _explicitly_created_transaction_context = nullptr;
-        }
-        return ReturnCode::Error;
+    try {
+      if (!no_execute) {
+        // Run the query and then collect the LQPs
+        _sql_pipeline->get_result_table();
       }
+
+      const auto& lqps = (mode == "lqp") ? _sql_pipeline->get_unoptimized_logical_plans()
+                                         : _sql_pipeline->get_optimized_logical_plans();
+      for (const auto& lqp : lqps) {
+        lqp_roots.push_back(lqp);
+      }
+    } catch (const std::exception& exception) {
+      out(std::string(exception.what()) + "\n");
+      auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+      if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+        out("The transaction has been rolled back.\n");
+        _explicitly_created_transaction_context = nullptr;
+      }
+      return ReturnCode::Error;
     }
 
     graph_filename = "." + mode + ".dot";
@@ -529,31 +525,33 @@ int Console::visualize(const std::string& input) {
 
   } else {
     // Visualize the Physical Query Plan
-    SQLQueryPlan plan;
+    SQLQueryPlan query_plan;
 
-    for (auto& pipeline : _sql_pipelines) {
-      try {
-        // Create plan with all roots
-        plan.append_plan(pipeline.get_query_plan());
-
-        if (!no_execute) {
-          // Execute so we can create next QueryPlan
-          pipeline.get_result_table();
-        }
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-        if (pipeline.transaction_context() && pipeline.transaction_context()->aborted()) {
-          out("The transaction has been rolled back.\n");
-          _explicitly_created_transaction_context = nullptr;
-        }
-        return ReturnCode::Error;
+    try {
+      if (!no_execute) {
+        // Run the query and then collect the QueryPlans
+        _sql_pipeline->get_result_table();
       }
+
+      // Create plan with all roots
+      const auto& plans = _sql_pipeline->get_query_plans();
+      for (const auto& plan : plans) {
+        query_plan.append_plan(*plan);
+      }
+    } catch (const std::exception& exception) {
+      out(std::string(exception.what()) + "\n");
+      auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+      if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+        out("The transaction has been rolled back.\n");
+        _explicitly_created_transaction_context = nullptr;
+      }
+      return ReturnCode::Error;
     }
 
     graph_filename = ".queryplan.dot";
     img_filename = "queryplan.png";
     SQLQueryPlanVisualizer visualizer;
-    visualizer.visualize(plan, graph_filename, img_filename);
+    visualizer.visualize(query_plan, graph_filename, img_filename);
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");

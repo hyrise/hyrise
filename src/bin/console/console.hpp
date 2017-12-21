@@ -121,7 +121,7 @@ class Console {
   int print_transaction_info(const std::string& input);
 
   // Creates the pipelines and returns whether is was successful (true) or not (false)
-  bool _initialize_pipelines(const std::string& sql);
+  bool _initialize_pipeline(const std::string& sql);
 
   // GNU readline interface to our commands
   static char** command_completion(const char* text, int start, int end);
@@ -137,7 +137,7 @@ class Console {
   std::ofstream _log;
   bool _verbose;
 
-  std::vector<SQLPipeline> _sql_pipelines;
+  std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
 };
 

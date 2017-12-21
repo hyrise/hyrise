@@ -20,6 +20,7 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_planner.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -83,14 +84,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   const std::string query = GetParam();
 
-  auto sql_pipelines = SQLPipeline::from_sql_string(query);
-  for (auto& sql_pipeline : sql_pipelines) {
-    sql_pipeline.get_result_table();
-  }
-
-  // Get result table from last statement
-  auto& last_pipeline = sql_pipelines.back();
-  const auto& result_table = last_pipeline.get_result_table();
+  SQLPipeline sql_pipeline{query};
+  const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 
@@ -100,9 +95,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto order_sensitivity = OrderSensitivity::No;
 
-  const auto& parse_result = last_pipeline.get_parsed_sql();
-  if (parse_result.getStatements().front()->is(hsql::kStmtSelect)) {
-    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatements().back());
+  const auto& parse_result = sql_pipeline.get_parsed_sql_statements().back();
+  if (parse_result->getStatements().front()->is(hsql::kStmtSelect)) {
+    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result->getStatements().back());
     if (select_statement->order != nullptr) {
       order_sensitivity = OrderSensitivity::Yes;
     }
