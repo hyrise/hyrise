@@ -89,7 +89,7 @@ class ColumnEncoder : public BaseColumnEncoder {
                                      const std::shared_ptr<BaseValueColumn>& value_column) {
     static_assert(decltype(supports(data_type))::value);
 
-    return _self()._encode(std::static_pointer_cast<ValueColumn<ColumnDataType>>(value_column));
+    return _self()._on_encode(std::static_pointer_cast<ValueColumn<ColumnDataType>>(value_column));
   }
   /**@}*/
 

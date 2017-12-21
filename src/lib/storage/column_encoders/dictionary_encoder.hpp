@@ -19,7 +19,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
 
   template <typename T>
-  std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
