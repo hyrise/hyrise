@@ -27,7 +27,7 @@ class UnionNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
  private:
   UnionMode _union_mode;

@@ -20,10 +20,14 @@ class TableStatistics;
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
+  auto left_child = this->left_child() ? this->left_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
+  auto right_child = this->right_child() ? this->right_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
+
   // We cannot use the copy constructor here, because it does not work with shared_from_this()
-  auto deep_copy = _deep_copy_impl();
-  if (_children[0]) deep_copy->set_left_child(_children[0]->deep_copy());
-  if (_children[1]) deep_copy->set_right_child(_children[1]->deep_copy());
+  auto deep_copy = _deep_copy_impl(left_child, right_child);
+  deep_copy->set_left_child(left_child);
+  deep_copy->set_right_child(right_child);
+
   return deep_copy;
 }
 
@@ -480,6 +484,26 @@ void AbstractLQPNode::_remove_parent_pointer(const std::shared_ptr<AbstractLQPNo
 void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent) {
   // Having the same parent multiple times is allowed, e.g. for self joins
   _parents.emplace_back(parent);
+}
+
+ColumnOrigin AbstractLQPNode::_clone_column_origin(const ColumnOrigin& column_origin, const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
+  return _clone_column_origin(column_origin.node(), column_origin.column_id(), lqp_copy);
+}
+
+std::optional<ColumnOrigin> AbstractLQPNode::_clone_column_origin(const std::shared_ptr<AbstractLQPNode>& origin_node, const ColumnID origin_column_id,
+                                  const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
+  if (origin_node.get() == this) return ColumnOrigin{lqp_copy, origin_column_id};
+  if (left_child()) {
+    DebugAssert(lqp_copy->left_child(), "LQP structure doesn't match the structure of the LQP clone");
+    const auto column_origin = _clone_column_origin(origin_node, origin_column_id, lqp_copy->left_child());
+    if (column_origin) return column_origin;
+  }
+  if (right_child()) {
+    DebugAssert(lqp_copy->right_child(), "LQP structure doesn't match the structure of the LQP clone");
+    const auto column_origin = _clone_column_origin(origin_node, origin_column_id, lqp_copy->right_child());
+    if (column_origin) return column_origin;
+  }
+  return std::nullopt;
 }
 
 std::string NamedColumnReference::as_string() const {

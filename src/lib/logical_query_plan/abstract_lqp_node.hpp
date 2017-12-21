@@ -210,7 +210,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
  protected:
   // creates a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
-  virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const = 0;
+  virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const = 0;
 
   /**
    * In derived nodes, clear all data that depends on children and only set it lazily on request (see, e.g.
@@ -266,6 +266,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   void _remove_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
   void _add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
   // @}
+
+  ColumnOrigin _clone_column_origin(const ColumnOrigin& origin,
+                                    const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
+  std::optional<ColumnOrigin> _clone_column_origin(const std::shared_ptr<AbstractLQPNode>& origin_node, const ColumnID origin_column_id,
+                                    const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 };
 
 }  // namespace opossum

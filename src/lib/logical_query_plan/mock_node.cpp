@@ -32,7 +32,7 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std
   set_alias(alias);
 }
 
-std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl() const {
+std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Cannot deep_copy MockNodes because we cannot get a deep copy of the statistics");
   return nullptr;
 }
