@@ -70,7 +70,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDeprecatedDic
 }
 
 void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
   _handle_dictionary_column(base_column, base_context);
 }
 

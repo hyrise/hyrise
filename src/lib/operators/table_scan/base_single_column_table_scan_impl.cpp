@@ -6,14 +6,14 @@
 
 #include "storage/chunk.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/iterables/chunk_offset_mapping.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/chunk_offset_mapping.hpp"
+#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
+#include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
-#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 
 namespace opossum {
 
@@ -57,11 +57,13 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColum
   }
 }
 
-AttributeVectorIterable BaseSingleColumnTableScanImpl::create_attribute_vector_iterable(const BaseDictionaryColumn& column) {
+AttributeVectorIterable BaseSingleColumnTableScanImpl::create_attribute_vector_iterable(
+    const BaseDictionaryColumn& column) {
   return AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()};
 }
 
-DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::create_attribute_vector_iterable(const BaseDeprecatedDictionaryColumn& column) {
+DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::create_attribute_vector_iterable(
+    const BaseDeprecatedDictionaryColumn& column) {
   return DeprecatedAttributeVectorIterable{*column.attribute_vector()};
 }
 

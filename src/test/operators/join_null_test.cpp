@@ -59,9 +59,9 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNullDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_a_null_dict,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl",
+                                             1);
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull2) {
@@ -88,16 +88,15 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_null, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::Equals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a_null, this->_table_wrapper_b,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuterDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::Equals, JoinMode::Left,
-                                             "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInner) {
@@ -108,8 +107,8 @@ TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInner) {
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInnerDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::Equals, JoinMode::Left,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Left,
                                              "src/test/tables/joinoperators/int_left_join_null_inner.tbl", 1);
 }
 
@@ -121,9 +120,9 @@ TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuter) {
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuterDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::Equals, JoinMode::Right,
-                                             "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl",
+                                             1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsInner) {
@@ -134,15 +133,15 @@ TYPED_TEST(JoinNullTest, RightJoinWithNullAsInner) {
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsInnerDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::Equals, JoinMode::Right,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Right,
                                              "src/test/tables/joinoperators/int_right_join_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, SelfJoinWithNullDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_null_dict, this->_table_wrapper_a_null_dict,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::Equals, JoinMode::Self,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::Equals,
+                                             JoinMode::Self,
                                              "src/test/tables/joinoperators/int_float_with_null_self_join.tbl", 1);
 }
 

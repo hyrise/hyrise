@@ -316,8 +316,8 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
 
 TEST_F(ColumnStatisticsTest, TwoColumnsRealDataTest) {
   // test selectivity calculations for all scan types and all column combinations of int_equal_distribution.tbl
-  std::vector<ScanType> scan_types{ScanType::Equals, ScanType::NotEquals, ScanType::LessThan,
-                                   ScanType::LessThanEquals, ScanType::GreaterThan};
+  std::vector<ScanType> scan_types{ScanType::Equals, ScanType::NotEquals, ScanType::LessThan, ScanType::LessThanEquals,
+                                   ScanType::GreaterThan};
   for (auto scan_type : scan_types) {
     predict_selectivities_and_compare(_table_uniform_distribution, _column_statistics_uniform_columns, scan_type);
   }

@@ -24,7 +24,7 @@ void SimdBp128Encoder::init(size_t size) {
   constexpr auto max_bit_size = 32u;
 
   // Ceiling of integer devision
-  const auto div_ceil = [] (auto x, auto y) { return (x + y - 1u) / y; };
+  const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
 
   const auto num_blocks = div_ceil(size, Packing::block_size) * max_bit_size;
   const auto num_meta_blocks = div_ceil(size, Packing::meta_block_size);

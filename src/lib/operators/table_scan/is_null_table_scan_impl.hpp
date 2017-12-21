@@ -24,7 +24,7 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                             std::shared_ptr<ColumnVisitableContext> base_context) override;
+                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   /**

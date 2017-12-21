@@ -472,8 +472,7 @@ TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
 
   // 2**16 + 1 values require a data type of 32bit.
   const auto table_wrapper_dict_32 = get_table_op_with_n_dict_entries((1 << 16) + 1);
-  auto scan_2 =
-      std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::GreaterThan, 65500);
+  auto scan_2 = std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::GreaterThan, 65500);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
@@ -583,8 +582,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
 
 TEST_P(OperatorsTableScanTest, NullSemantics) {
   const auto scan_types =
-      std::vector<ScanType>({ScanType::Equals, ScanType::NotEquals, ScanType::LessThan,
-                             ScanType::LessThanEquals, ScanType::GreaterThan, ScanType::GreaterThanEquals});
+      std::vector<ScanType>({ScanType::Equals, ScanType::NotEquals, ScanType::LessThan, ScanType::LessThanEquals,
+                             ScanType::GreaterThan, ScanType::GreaterThanEquals});
 
   for (auto scan_type : scan_types) {
     auto scan = std::make_shared<TableScan>(get_table_op_null(), ColumnID{0}, scan_type, NULL_VALUE);

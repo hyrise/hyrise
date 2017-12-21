@@ -155,7 +155,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                             std::shared_ptr<ColumnVisitableContext> base_context) override;
+                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   // Chooses the right FittedAttributeVector depending on the attribute_vector_width and exports it.

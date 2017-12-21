@@ -60,7 +60,8 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
 
   static AttributeVectorIterable create_attribute_vector_iterable(const BaseDictionaryColumn& column);
 
-  static DeprecatedAttributeVectorIterable create_attribute_vector_iterable(const BaseDeprecatedDictionaryColumn& column);
+  static DeprecatedAttributeVectorIterable create_attribute_vector_iterable(
+      const BaseDeprecatedDictionaryColumn& column);
 
   /**@}*/
 

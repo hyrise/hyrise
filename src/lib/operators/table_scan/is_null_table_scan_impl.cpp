@@ -5,9 +5,9 @@
 #include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/encoded_columns/utils.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
@@ -55,7 +55,7 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionar
 }
 
 void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& left_column,
-                                                std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                   std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 

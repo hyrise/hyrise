@@ -123,7 +123,7 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
   }
 
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                             std::shared_ptr<ColumnVisitableContext> base_context) final {
+                                std::shared_ptr<ColumnVisitableContext> base_context) final {
     Fail("CSV export not implemented yet for new version of dictionary column.");
   }
 };
