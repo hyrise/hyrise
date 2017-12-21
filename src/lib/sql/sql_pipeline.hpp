@@ -18,20 +18,20 @@ class SQLPipeline : public Noncopyable {
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
 
   // Returns the parsed SQL string for each statement.
-  const std::vector<const std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
+  const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
 
   // Returns the unoptimized LQP root for each statement.
-  const std::vector<const std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
 
   // Returns the optimized LQP root for each statement.
-  const std::vector<const std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
   // Returns the SQLQueryPlan for each statement.
   // For now, this always uses the optimized LQP.
-  const std::vector<const std::shared_ptr<SQLQueryPlan>>& get_query_plans();
+  const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
 
   // Returns all tasks for each statement that need to be executed for this query.
-  const std::vector<const std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
+  const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns the resulting table of the last statement.
   const std::shared_ptr<const Table>& get_result_table();
@@ -63,11 +63,11 @@ class SQLPipeline : public Noncopyable {
   size_t _num_statements;
 
   // Execution results
-  std::vector<const std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
-  std::vector<const std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
-  std::vector<const std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
-  std::vector<const std::shared_ptr<SQLQueryPlan>> _query_plans;
-  std::vector<const std::vector<std::shared_ptr<OperatorTask>>> _tasks;
+  std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
+  std::vector<std::shared_ptr<SQLQueryPlan>> _query_plans;
+  std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::shared_ptr<const Table> _result_table;
   // Indicates whether get_result_table has been run successfully
   bool _pipeline_was_executed = false;

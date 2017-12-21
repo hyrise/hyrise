@@ -104,12 +104,12 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   }
 
   const auto& lqp = get_optimized_logical_plan();
-  auto plan = std::make_shared<SQLQueryPlan>();
+  _query_plan = std::make_shared<SQLQueryPlan>();
 
   const auto started = std::chrono::high_resolution_clock::now();
 
   try {
-    plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
+    _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while translating query plan:\n  " + std::string(exception.what()));
   }
@@ -117,13 +117,12 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   if (_use_mvcc) {
     // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
     if (!_transaction_context) _transaction_context = TransactionManager::get().new_transaction_context();
-    plan->set_transaction_context(_transaction_context);
+    _query_plan->set_transaction_context(_transaction_context);
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
   _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
-  _query_plan = std::move(plan);
   return _query_plan;
 }
 

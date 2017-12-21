@@ -61,7 +61,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   _requires_execution = seen_altering_statement && _num_statements > 1;
 }
 
-const std::vector<const std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_parsed_sql_statements() {
+const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_parsed_sql_statements() {
   if (!_parsed_sql_statements.empty()) {
     return _parsed_sql_statements;
   }
@@ -81,7 +81,7 @@ const std::vector<const std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::ge
 
   return _parsed_sql_statements;
 }
-const std::vector<const std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
+const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
   if (!_unoptimized_logical_plans.empty()) {
     return _unoptimized_logical_plans;
   }
@@ -105,7 +105,7 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unop
   return _unoptimized_logical_plans;
 }
 
-const std::vector<const std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
+const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
   if (!_optimized_logical_plans.empty()) {
     return _optimized_logical_plans;
   }
@@ -134,7 +134,7 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_opti
   return _optimized_logical_plans;
 }
 
-const std::vector<const std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans() {
+const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans() {
   if (!_query_plans.empty()) {
     return _query_plans;
   }
@@ -158,7 +158,7 @@ const std::vector<const std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_p
   return _query_plans;
 }
 
-const std::vector<const std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
+const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
   if (!_tasks.empty()) {
     return _tasks;
   }
