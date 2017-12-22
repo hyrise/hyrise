@@ -30,23 +30,23 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& t) {
   Matrix matrix(t->row_count() + 2, std::vector<opossum::AllTypeVariant>(t->column_count()));
 
   // set column names/types
-  for (opossum::ColumnID col_id{0}; col_id < t->column_count(); ++col_id) {
+  for (auto col_id = opossum::ColumnID{0}; col_id < t->column_count(); ++col_id) {
     matrix[0][col_id] = t->column_name(col_id);
     matrix[1][col_id] = opossum::data_type_to_string.left.at(t->column_type(col_id));
   }
 
   // set values
   unsigned row_offset = 0;
-  for (opossum::ChunkID chunk_id{0}; chunk_id < t->chunk_count(); chunk_id++) {
+  for (auto chunk_id = opossum::ChunkID{0}; chunk_id < t->chunk_count(); chunk_id++) {
     const opossum::Chunk& chunk = t->get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (opossum::ColumnID col_id{0}; col_id < t->column_count(); ++col_id) {
+    for (auto col_id = opossum::ColumnID{0}; col_id < t->column_count(); ++col_id) {
       const auto column = chunk.get_column(col_id);
 
-      for (opossum::ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset + 2][col_id] = (*column)[chunk_offset];
       }
     }
@@ -56,21 +56,13 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& t) {
   return matrix;
 }
 
-std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
-                              const std::string& highlight_color) {
+std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells, const std::string& highlight_color, const std::string& highlight_color_bg) {
   std::stringstream stream;
-  bool highlight;
   bool previous_row_highlighted = false;
 
-  std::string highlight_color_bg = ANSI_COLOR_BG_RED;
-  if (highlight_color == ANSI_COLOR_GREEN) {
-    highlight_color_bg = ANSI_COLOR_BG_GREEN;
-  }
-
-  for (unsigned row = 0; row < matrix.size(); row++) {
-    highlight = false;
-    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
-                           [&](const std::pair<uint64_t, uint16_t>& element) { return element.first == row; });
+  for (auto row_id = size_t{0}; row_id < matrix.size(); row_id++) {
+    auto highlight = false;
+    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(), [&](const auto& element) { return element.first == row_id; });
     if (it != highlight_cells.end()) {
       highlight = true;
       if (!previous_row_highlighted) {
@@ -82,21 +74,21 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
     }
 
     // Highlight row number with background color
-    std::string coloring = "";
+    auto coloring = std::string{};
     if (highlight) {
       coloring = highlight_color_bg;
     }
-    if (row >= 2) {
-      stream << coloring << std::setw(4) << std::to_string(row - 2) << ANSI_COLOR_RESET;
+    if (row_id >= 2) {
+      stream << coloring << std::setw(4) << std::to_string(row_id - 2) << ANSI_COLOR_RESET;
     } else {
       stream << coloring << std::setw(4) << "    " << ANSI_COLOR_RESET;
     }
 
     // Highlicht each (applicable) cell with highlight color
-    for (opossum::ColumnID col{0}; col < matrix[row].size(); col++) {
-      std::string cell = boost::lexical_cast<std::string>(matrix[row][col]);
+    for (auto col_id = opossum::ColumnID{0}; col_id < matrix[row_id].size(); col_id++) {
+      auto cell = boost::lexical_cast<std::string>(matrix[row_id][col_id]);
       coloring = "";
-      if (highlight && it->second == col) {
+      if (highlight && it->second == col_id) {
         coloring = highlight_color;
       }
       stream << coloring << std::setw(8) << cell << ANSI_COLOR_RESET << " ";
@@ -107,7 +99,7 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
 }
 
 template <typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
-bool near(T left_val, T right_val, opossum::FloatComparisonMode float_comparison_mode) {
+bool almost_equals(T left_val, T right_val, opossum::FloatComparisonMode float_comparison_mode) {
   if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
   } else {
@@ -125,20 +117,18 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   auto opossum_matrix = _table_to_matrix(opossum_table);
   auto expected_matrix = _table_to_matrix(expected_table);
 
-  const auto generate_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
+  const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                              const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    std::stringstream stream;
-    stream << "========= Tables are not equal =========" << std::endl;
-    stream << "------- Actual Result -------" << std::endl;
-    stream << _matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED);
-    stream << "-----------------------------" << std::endl << std::endl;
-    stream << "------- Expected Result -------" << std::endl;
-    stream << _matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN);
-    stream << "-------------------------------" << std::endl;
-    stream << "========================================" << std::endl << std::endl;
-    stream << "Type of error: " << error_type << std::endl;
-    stream << error_msg << std::endl;
-    return stream.str();
+    std::cout << "========= Tables are not equal =========" << std::endl;
+    std::cout << "------- Actual Result -------" << std::endl;
+    std::cout << _matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
+    std::cout << "-----------------------------" << std::endl << std::endl;
+    std::cout << "------- Expected Result -------" << std::endl;
+    std::cout << _matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
+    std::cout << "-------------------------------" << std::endl;
+    std::cout << "========================================" << std::endl << std::endl;
+    std::cout << "Type of error: " << error_type << std::endl;
+    std::cout << error_msg << std::endl << std::endl;
   };
 
   // compare schema of tables
@@ -148,13 +138,13 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     const std::string error_msg = "Actual number of columns: " + std::to_string(opossum_table->column_count()) + "\n" +
                                   "Expected number of columns: " + std::to_string(expected_table->column_count());
 
-    std::cout << generate_table_comparison(error_type, error_msg) << std::endl;
+    print_table_comparison(error_type, error_msg);
     return false;
   }
 
   //  - column names and types
   DataType left_col_type, right_col_type;
-  for (ColumnID col_id{0}; col_id < expected_table->column_count(); ++col_id) {
+  for (auto col_id = ColumnID{0}; col_id < expected_table->column_count(); ++col_id) {
     left_col_type = opossum_table->column_type(col_id);
     right_col_type = expected_table->column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
@@ -177,7 +167,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
       const std::string error_msg = "Actual column name: " + opossum_table->column_name(col_id) + "\n" +
                                     "Expected column name: " + expected_table->column_name(col_id);
 
-      std::cout << generate_table_comparison(error_type, error_msg, {{0, col_id}}) << std::endl;
+      print_table_comparison(error_type, error_msg, {{0, col_id}});
       return false;
     }
 
@@ -187,7 +177,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
           "Actual column type: " + data_type_to_string.left.at(opossum_table->column_type(col_id)) + "\n" +
           "Expected column type: " + data_type_to_string.left.at(expected_table->column_type(col_id));
 
-      std::cout << generate_table_comparison(error_type, error_msg, {{1, col_id}}) << std::endl;
+      print_table_comparison(error_type, error_msg, {{1, col_id}});
       return false;
     }
   }
@@ -199,7 +189,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     const std::string error_msg = "Actual number of rows: " + std::to_string(opossum_table->row_count()) + "\n" +
                                   "Expected number of rows: " + std::to_string(expected_table->row_count());
 
-    std::cout << generate_table_comparison(error_type, error_msg) << std::endl;
+    print_table_comparison(error_type, error_msg);
     return false;
   }
 
@@ -213,36 +203,36 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   bool has_error = false;
   std::vector<std::pair<uint64_t, uint16_t>> mismatched_cells{};
 
-  const auto expect_true = [&has_error, &mismatched_cells](bool statement, uint64_t row, uint16_t col) {
-    if (!statement) {
+  const auto highlight_if = [&has_error, &mismatched_cells](bool statement, uint64_t row_id, uint16_t col_id) {
+    if (statement) {
       has_error = true;
-      mismatched_cells.push_back({row, col});
+      mismatched_cells.push_back({row_id, col_id});
     }
   };
 
   // Compare each cell, skipping header
-  for (unsigned row = 2; row < opossum_matrix.size(); row++)
-    for (ColumnID col{0}; col < opossum_matrix[row].size(); col++) {
-      if (variant_is_null(opossum_matrix[row][col]) || variant_is_null(expected_matrix[row][col])) {
-        expect_true(variant_is_null(opossum_matrix[row][col]) && variant_is_null(expected_matrix[row][col]), row, col);
-      } else if (opossum_table->column_type(col) == DataType::Float) {
-        auto left_val = type_cast<float>(opossum_matrix[row][col]);
-        auto right_val = type_cast<float>(expected_matrix[row][col]);
+  for (auto row_id = size_t{2}; row_id < opossum_matrix.size(); row_id++)
+    for (auto col_id = ColumnID{0}; col_id < opossum_matrix[row_id].size(); col_id++) {
+      if (variant_is_null(opossum_matrix[row_id][col_id]) || variant_is_null(expected_matrix[row_id][col_id])) {
+        highlight_if(!(variant_is_null(opossum_matrix[row_id][col_id]) && variant_is_null(expected_matrix[row_id][col_id])), row_id, col_id);
+      } else if (opossum_table->column_type(col_id) == DataType::Float) {
+        auto left_val = type_cast<float>(opossum_matrix[row_id][col_id]);
+        auto right_val = type_cast<float>(expected_matrix[row_id][col_id]);
 
-        expect_true(near(left_val, right_val, float_comparison_mode), row, col);
-      } else if (opossum_table->column_type(col) == DataType::Double) {
-        auto left_val = type_cast<double>(opossum_matrix[row][col]);
-        auto right_val = type_cast<double>(expected_matrix[row][col]);
+        highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, col_id);
+      } else if (opossum_table->column_type(col_id) == DataType::Double) {
+        auto left_val = type_cast<double>(opossum_matrix[row_id][col_id]);
+        auto right_val = type_cast<double>(expected_matrix[row_id][col_id]);
 
-        expect_true(near(left_val, right_val, float_comparison_mode), row, col);
+        highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, col_id);
       } else {
         if (type_cmp_mode == TypeCmpMode::Lenient &&
-            (opossum_table->column_type(col) == DataType::Int || opossum_table->column_type(col) == DataType::Long)) {
-          auto left_val = type_cast<int64_t>(opossum_matrix[row][col]);
-          auto right_val = type_cast<int64_t>(expected_matrix[row][col]);
-          expect_true(left_val == right_val, row, col);
+            (opossum_table->column_type(col_id) == DataType::Int || opossum_table->column_type(col_id) == DataType::Long)) {
+          auto left_val = type_cast<int64_t>(opossum_matrix[row_id][col_id]);
+          auto right_val = type_cast<int64_t>(expected_matrix[row_id][col_id]);
+          highlight_if(left_val != right_val, row_id, col_id);
         } else {
-          expect_true(opossum_matrix[row][col] == expected_matrix[row][col], row, col);
+          highlight_if(opossum_matrix[row_id][col_id] != expected_matrix[row_id][col_id], row_id, col_id);
         }
       }
     }
@@ -254,7 +244,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
       error_msg += "(" + std::to_string(cell.first - 2) + "," + std::to_string(cell.second) + ") ";
     }
 
-    std::cout << generate_table_comparison(error_type, error_msg, mismatched_cells) << std::endl;
+    print_table_comparison(error_type, error_msg, mismatched_cells);
     return false;
   }
 
