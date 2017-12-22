@@ -157,7 +157,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
 
-  if (_scan_type == ScanType::OpLike || _scan_type == ScanType::OpNotLike) {
+  if (_scan_type == ScanType::Like || _scan_type == ScanType::NotLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
@@ -174,7 +174,7 @@ void TableScan::_init_scan() {
     return;
   }
 
-  if (_scan_type == ScanType::OpIsNull || _scan_type == ScanType::OpIsNotNull) {
+  if (_scan_type == ScanType::IsNull || _scan_type == ScanType::IsNotNull) {
     _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
     return;
   }

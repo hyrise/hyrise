@@ -106,7 +106,7 @@ class ColumnStatisticsTest : public BaseTest {
 };
 
 TEST_F(ColumnStatisticsTest, NotEqualTest) {
-  ScanType scan_type = ScanType::OpNotEquals;
+  ScanType scan_type = ScanType::NotEquals;
 
   std::vector<float> selectivities{1.f, 5.f / 6.f, 5.f / 6.f, 5.f / 6.f, 1.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, _int_values, selectivities);
@@ -116,7 +116,7 @@ TEST_F(ColumnStatisticsTest, NotEqualTest) {
 }
 
 TEST_F(ColumnStatisticsTest, EqualsTest) {
-  ScanType scan_type = ScanType::OpEquals;
+  ScanType scan_type = ScanType::Equals;
 
   std::vector<float> selectivities{0.f, 1.f / 6.f, 1.f / 6.f, 1.f / 6.f, 0.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, _int_values, selectivities);
@@ -126,7 +126,7 @@ TEST_F(ColumnStatisticsTest, EqualsTest) {
 }
 
 TEST_F(ColumnStatisticsTest, LessThanTest) {
-  ScanType scan_type = ScanType::OpLessThan;
+  ScanType scan_type = ScanType::LessThan;
 
   std::vector<float> selectivities_int{0.f, 0.f, 1.f / 3.f, 5.f / 6.f, 1.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, _int_values, selectivities_int);
@@ -137,7 +137,7 @@ TEST_F(ColumnStatisticsTest, LessThanTest) {
 }
 
 TEST_F(ColumnStatisticsTest, LessEqualThanTest) {
-  ScanType scan_type = ScanType::OpLessThanEquals;
+  ScanType scan_type = ScanType::LessThanEquals;
 
   std::vector<float> selectivities_int{0.f, 1.f / 6.f, 1.f / 2.f, 1.f, 1.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, _int_values, selectivities_int);
@@ -148,7 +148,7 @@ TEST_F(ColumnStatisticsTest, LessEqualThanTest) {
 }
 
 TEST_F(ColumnStatisticsTest, GreaterThanTest) {
-  ScanType scan_type = ScanType::OpGreaterThan;
+  ScanType scan_type = ScanType::GreaterThan;
 
   std::vector<float> selectivities_int{1.f, 5.f / 6.f, 1.f / 2.f, 0.f, 0.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, _int_values, selectivities_int);
@@ -159,7 +159,7 @@ TEST_F(ColumnStatisticsTest, GreaterThanTest) {
 }
 
 TEST_F(ColumnStatisticsTest, GreaterEqualThanTest) {
-  ScanType scan_type = ScanType::OpGreaterThanEquals;
+  ScanType scan_type = ScanType::GreaterThanEquals;
 
   std::vector<float> selectivities_int{1.f, 1.f, 2.f / 3.f, 1.f / 6.f, 0.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, _int_values, selectivities_int);
@@ -170,7 +170,7 @@ TEST_F(ColumnStatisticsTest, GreaterEqualThanTest) {
 }
 
 TEST_F(ColumnStatisticsTest, BetweenTest) {
-  ScanType scan_type = ScanType::OpBetween;
+  ScanType scan_type = ScanType::Between;
 
   std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   std::vector<float> selectivities_int{0.f, 1.f / 3.f, 1.f / 3.f, 1.f, 1.f / 3.f, 1.f / 3.f, 0.f};
@@ -187,7 +187,7 @@ TEST_F(ColumnStatisticsTest, BetweenTest) {
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureNotEqualsTest) {
-  ScanType scan_type = ScanType::OpNotEquals;
+  ScanType scan_type = ScanType::NotEquals;
 
   auto result_container_int =
       _column_statistics_int->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
@@ -207,7 +207,7 @@ TEST_F(ColumnStatisticsTest, StoredProcedureNotEqualsTest) {
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureEqualsTest) {
-  ScanType scan_type = ScanType::OpEquals;
+  ScanType scan_type = ScanType::Equals;
 
   auto result_container_int =
       _column_statistics_int->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
@@ -228,7 +228,7 @@ TEST_F(ColumnStatisticsTest, StoredProcedureEqualsTest) {
 
 TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
   // OpLessThan, OpGreaterThan, OpLessThanEquals, OpGreaterThanEquals are same for stored procedures
-  ScanType scan_type = ScanType::OpLessThan;
+  ScanType scan_type = ScanType::LessThan;
 
   auto result_container_int =
       _column_statistics_int->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
@@ -248,7 +248,7 @@ TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
-  ScanType scan_type = ScanType::OpBetween;
+  ScanType scan_type = ScanType::Between;
 
   // selectivities = selectivities from LessEqualThan / 0.3f
 
@@ -264,7 +264,7 @@ TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
 }
 
 TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
-  ScanType scan_type = ScanType::OpEquals;
+  ScanType scan_type = ScanType::Equals;
 
   auto col_stat1 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 10.f, 0, 10);
   auto col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(1), 10.f, -10, 20);
@@ -288,7 +288,7 @@ TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
 }
 
 TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
-  ScanType scan_type = ScanType::OpLessThan;
+  ScanType scan_type = ScanType::LessThan;
 
   auto col_stat1 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 10.f, 1, 20);
   auto col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(1), 30.f, 11, 40);
@@ -316,8 +316,8 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
 
 TEST_F(ColumnStatisticsTest, TwoColumnsRealDataTest) {
   // test selectivity calculations for all scan types and all column combinations of int_equal_distribution.tbl
-  std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThan,
-                                   ScanType::OpLessThanEquals, ScanType::OpGreaterThan};
+  std::vector<ScanType> scan_types{ScanType::Equals, ScanType::NotEquals, ScanType::LessThan,
+                                   ScanType::LessThanEquals, ScanType::GreaterThan};
   for (auto scan_type : scan_types) {
     predict_selectivities_and_compare(_table_uniform_distribution, _column_statistics_uniform_columns, scan_type);
   }
@@ -329,7 +329,7 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   _column_statistics_float->set_null_value_ratio(0.5f);  // non-null value ratio: 0.5
   _column_statistics_string->set_null_value_ratio(1.f);  // non-null value ratio: 0
 
-  auto scan_type = ScanType::OpEquals;
+  auto scan_type = ScanType::Equals;
   auto result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(1));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2.f));
@@ -337,7 +337,7 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("a"));
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
-  scan_type = ScanType::OpNotEquals;
+  scan_type = ScanType::NotEquals;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(1));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 5.f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2.f));
@@ -345,7 +345,7 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("a"));
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
-  scan_type = ScanType::OpLessThan;
+  scan_type = ScanType::LessThan;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 2.f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3.f));
@@ -353,7 +353,7 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"));
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
-  scan_type = ScanType::OpGreaterThanEquals;
+  scan_type = ScanType::GreaterThanEquals;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 4.f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3.f));
@@ -361,7 +361,7 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"));
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
-  scan_type = ScanType::OpBetween;
+  scan_type = ScanType::Between;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2), AllTypeVariant(4));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
   result =
@@ -381,11 +381,11 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
   stats_1->set_null_value_ratio(0.2);   // non-null value ratio: 0.8
   stats_2->set_null_value_ratio(0.15);  // non-null value ratio: 0.85
 
-  auto scan_type = ScanType::OpEquals;
+  auto scan_type = ScanType::Equals;
   auto result = stats_0->estimate_selectivity_for_two_column_predicate(scan_type, stats_1);
   EXPECT_FLOAT_EQ(result.selectivity, 0.9f * 0.8f * 0.5f / 3.f);
 
-  scan_type = ScanType::OpLessThan;
+  scan_type = ScanType::LessThan;
   result = stats_1->estimate_selectivity_for_two_column_predicate(scan_type, stats_2);
   EXPECT_FLOAT_EQ(result.selectivity, 0.8f * 0.85f * (1.f / 3.f + 1.f / 3.f * 1.f / 2.f));
 }

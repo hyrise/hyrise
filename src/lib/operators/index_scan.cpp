@@ -78,12 +78,12 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
 }
 
 void IndexScan::_validate_input() {
-  Assert(_scan_type != ScanType::OpLike, "Scan type not supported by index scan.");
-  Assert(_scan_type != ScanType::OpNotLike, "Scan type not supported by index scan.");
+  Assert(_scan_type != ScanType::Like, "Scan type not supported by index scan.");
+  Assert(_scan_type != ScanType::NotLike, "Scan type not supported by index scan.");
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
-  if (_scan_type == ScanType::OpBetween) {
+  if (_scan_type == ScanType::Between) {
     Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
@@ -104,12 +104,12 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   Assert(index != nullptr, "Index of specified type not found for column (vector).");
 
   switch (_scan_type) {
-    case ScanType::OpEquals: {
+    case ScanType::Equals: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values);
       break;
     }
-    case ScanType::OpNotEquals: {
+    case ScanType::NotEquals: {
       // first, get all values less than the search value
       range_begin = index->cbegin();
       range_end = index->lower_bound(_right_values);
@@ -122,27 +122,27 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->cend();
       break;
     }
-    case ScanType::OpLessThan: {
+    case ScanType::LessThan: {
       range_begin = index->cbegin();
       range_end = index->lower_bound(_right_values);
       break;
     }
-    case ScanType::OpLessThanEquals: {
+    case ScanType::LessThanEquals: {
       range_begin = index->cbegin();
       range_end = index->upper_bound(_right_values);
       break;
     }
-    case ScanType::OpGreaterThan: {
+    case ScanType::GreaterThan: {
       range_begin = index->upper_bound(_right_values);
       range_end = index->cend();
       break;
     }
-    case ScanType::OpGreaterThanEquals: {
+    case ScanType::GreaterThanEquals: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->cend();
       break;
     }
-    case ScanType::OpBetween: {
+    case ScanType::Between: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values2);
       break;
