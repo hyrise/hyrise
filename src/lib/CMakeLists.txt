@@ -285,6 +285,7 @@ set(
     storage/partitioning/hash_partition_schema.hpp
     storage/partitioning/range_partition_schema.cpp
     storage/partitioning/range_partition_schema.hpp
+    storage/partitioning/null_partition_schema.cpp
     storage/partitioning/null_partition_schema.hpp
     storage/partitioning/round_robin_partition_schema.cpp
     storage/partitioning/round_robin_partition_schema.hpp)

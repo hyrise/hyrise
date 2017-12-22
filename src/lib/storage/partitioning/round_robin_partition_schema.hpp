@@ -6,15 +6,12 @@
 namespace opossum {
 
 class RoundRobinPartitionSchema : public PartitionSchema {
+ public:
+  explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 
-public:
-	RoundRobinPartitionSchema(size_t number_of_partitions);
-
-protected:
+ protected:
   int _number_of_partitions;
   PartitionID _next_partition;
-
 };
 
-}
-
+}  // namespace opossum

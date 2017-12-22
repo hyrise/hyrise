@@ -4,7 +4,9 @@
 
 namespace opossum {
 
-class NullPartitionSchema : public PartitionSchema {};
+class NullPartitionSchema : public PartitionSchema {
+ public:
+  NullPartitionSchema();
+};
 
-} // namespace opossum
-
+}  // namespace opossum

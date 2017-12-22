@@ -1,20 +1,18 @@
 #pragma once
 
+#include <all_type_variant.hpp>
 #include <storage/partitioning/partition_schema.hpp>
 #include <types.hpp>
-#include <all_type_variant.hpp>
 
 namespace opossum {
 
 class RangePartitionSchema : public PartitionSchema {
-
-public:
+ public:
   RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
 
-protected:
+ protected:
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;
-
 };
 
-}
+}  // namespace opossum

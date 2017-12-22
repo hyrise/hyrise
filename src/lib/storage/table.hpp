@@ -1,17 +1,17 @@
 #pragma once
 
+#include <hash_function.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
-#include <hash_function.hpp>
-#include <storage/partitioning/null_partition_schema.hpp>
-#include <storage/partitioning/partition_schema.hpp>
 
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
+#include "storage/partitioning/null_partition_schema.hpp"
+#include "storage/partitioning/partition_schema.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -144,7 +144,8 @@ class Table : private Noncopyable {
   TableType get_type() const;
 
   // partitioning
-  void create_hash_partitioning(const ColumnID column_id, const HashFunction hashFunction, const size_t number_of_partitions);
+  void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
+                                const size_t number_of_partitions);
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
   void create_round_robin_partitioning(const size_t number_of_partitions);
 
