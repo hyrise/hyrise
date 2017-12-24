@@ -11,4 +11,29 @@ RoundRobinPartitionSchema::RoundRobinPartitionSchema(size_t number_of_partitions
   }
 }
 
+void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values) {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
+ChunkID RoundRobinPartitionSchema::chunk_count() const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
+TableType RoundRobinPartitionSchema::get_type() const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
+uint32_t RoundRobinPartitionSchema::max_chunk_size() const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
+uint64_t RoundRobinPartitionSchema::row_count() const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 }  // namespace opossum

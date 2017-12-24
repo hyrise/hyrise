@@ -54,6 +54,7 @@ Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size),
       _append_mutex(std::make_unique<std::mutex>()),
       _partition_schema(std::make_shared<NullPartitionSchema>()) {
+  // TODO(partitioning group): Pass chunk information to partition schema and ignore them here
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
@@ -76,6 +77,7 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
+  // TODO(partitioning group): Pass to partition schema
   if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
@@ -84,6 +86,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk() {
+  // TODO(partitioning group): Pass to NullPartitioningSchema (or DebugAssert fail)
   // Create chunk with mvcc columns
   Chunk new_chunk{ChunkUseMvcc::Yes};
 
@@ -99,6 +102,7 @@ void Table::create_new_chunk() {
 uint16_t Table::column_count() const { return _column_types.size(); }
 
 uint64_t Table::row_count() const {
+  // TODO(partitioning group): Pass to partitioning schema
   uint64_t ret = 0;
   for (const auto& chunk : _chunks) {
     ret += chunk.size();
@@ -108,7 +112,10 @@ uint64_t Table::row_count() const {
 
 uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
-ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
+ChunkID Table::chunk_count() const {
+  // TODO(partitioning group): Pass to partitioning schema
+  return static_cast<ChunkID>(_chunks.size());
+}
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
@@ -121,7 +128,10 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return {};
 }
 
-uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
+uint32_t Table::max_chunk_size() const {
+  // TODO(partitioning group): This should be kept in PartitonSchema
+  return _max_chunk_size;
+}
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 
@@ -145,26 +155,43 @@ const std::vector<DataType>& Table::column_types() const { return _column_types;
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
 Chunk& Table::get_chunk(ChunkID chunk_id) {
+  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
+  
+  // TODO(partitioning group): Implement and use get_chunk on NullPartitionSchema
+  
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
+  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
+  
+  // TODO(partitioning group): Implement and use get_chunk on NullPartitionSchema
+
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
 
 ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
+  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
+  
+  // TODO(partitioning group): Implement and use get_chunk_with_access_counting on NullPartitionSchema
+
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return ProxyChunk(_chunks[chunk_id]);
 }
 
 const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
+  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
+  
+  // TODO(partitioning group): Implement and use get_chunk_with_access_counting on NullPartitionSchema
+
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return ProxyChunk(_chunks[chunk_id]);
 }
 
 void Table::emplace_chunk(Chunk chunk) {
+  // TODO(partitioning group): Forward this to NullPartitionSchema (or DebugAssert fail)
   if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
@@ -179,6 +206,7 @@ void Table::emplace_chunk(Chunk chunk) {
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
 TableType Table::get_type() const {
+  // TODO(partitioning group): In release mode, only consider ref_column. In debug mode, pass to partition schema.
   // Cannot answer this if the table has no content
   Assert(!_chunks.empty() && column_count() > 0, "Table has no content, can't specify type");
 
@@ -224,6 +252,10 @@ void Table::create_range_partitioning(const ColumnID column_id, const std::vecto
 
 void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
   _partition_schema = std::make_shared<RoundRobinPartitionSchema>(number_of_partitions);
+}
+
+bool Table::is_partitioned() const {
+  return !_partition_schema->is_continous();
 }
 
 }  // namespace opossum

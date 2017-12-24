@@ -149,6 +149,8 @@ class Table : private Noncopyable {
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
   void create_round_robin_partitioning(const size_t number_of_partitions);
 
+  bool is_partitioned() const;
+
   void remove_partitioning();
   std::vector<ChunkID> get_partition(PartitionID partition_id);
   std::vector<PartitionID> get_partition_ids();
