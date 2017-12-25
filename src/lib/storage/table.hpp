@@ -114,16 +114,18 @@ class Table : private Noncopyable {
 
     Assert(column_id < column_count(), "column_id invalid");
 
-    size_t row_counter = 0u;
-    for (auto& chunk : _chunks) {
-      size_t current_size = chunk.size();
-      row_counter += current_size;
-      if (row_counter > row_number) {
-        return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
-      }
-    }
-    Fail("Row does not exist.");
-    return {};
+    // size_t row_counter = 0u;
+    // for (auto& chunk : _chunks) {
+    //   size_t current_size = chunk.size();
+    //   row_counter += current_size;
+    //   if (row_counter > row_number) {
+    //     return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
+    //   }
+    // }
+    // Fail("Row does not exist.");
+    // return {};
+
+    return _partition_schema->get_value<T>(column_id, row_number);
   }
 
   // creates a new chunk and appends it

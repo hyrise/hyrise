@@ -25,6 +25,11 @@ class NullPartitionSchema : public PartitionSchema {
   TableType get_type() const;
   uint64_t row_count() const;
 
+  template <typename T>
+  T get_value(const ColumnID column_id, const size_t row_number) const {
+    return _partitions.front()->get_value<T>(column_id, row_number);
+  }
+
   // specific for NullPartitionSchema
   void create_new_chunk();
   void emplace_chunk(Chunk& chunk);

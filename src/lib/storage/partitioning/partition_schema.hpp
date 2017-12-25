@@ -21,6 +21,11 @@ class PartitionSchema {
   virtual TableType get_type() const = 0;
   virtual uint64_t row_count() const = 0;
 
+  template <typename T>
+  T get_value(const ColumnID column_id, const size_t row_number) const {
+    throw "Cannot be called";
+  }
+
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;
   Table& _table;
