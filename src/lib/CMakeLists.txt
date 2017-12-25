@@ -278,8 +278,9 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-    storage/partitioning/partition.hpp
     hash_function.hpp
+    storage/partitioning/partition.cpp
+    storage/partitioning/partition.hpp
     storage/partitioning/partition_schema.hpp
     storage/partitioning/hash_partition_schema.cpp
     storage/partitioning/hash_partition_schema.hpp
@@ -288,7 +289,8 @@ set(
     storage/partitioning/null_partition_schema.cpp
     storage/partitioning/null_partition_schema.hpp
     storage/partitioning/round_robin_partition_schema.cpp
-    storage/partitioning/round_robin_partition_schema.hpp)
+    storage/partitioning/round_robin_partition_schema.hpp
+)
 
 set(
     LIBRARIES

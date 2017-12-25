@@ -10,7 +10,6 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
-#include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/partition_schema.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"

@@ -2,12 +2,12 @@
 
 namespace opossum {
 
-RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds)
-    : _column_id(column_id), _bounds(bounds) {
+RangePartitionSchema::RangePartitionSchema(Table& table, ColumnID column_id, std::vector<AllTypeVariant> bounds)
+    : PartitionSchema(table), _column_id(column_id), _bounds(bounds) {
   _partitions.reserve(bounds.size() + 1);
 
   for (size_t index = 0; index < bounds.size() + 1; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>());
+    _partitions.emplace_back(std::make_shared<Partition>(table));
   }
 }
 
@@ -22,11 +22,6 @@ ChunkID RangePartitionSchema::chunk_count() const {
 }
 
 TableType RangePartitionSchema::get_type() const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-uint32_t RangePartitionSchema::max_chunk_size() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
 }

@@ -10,6 +10,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/partitioning/round_robin_partition_schema.hpp"
 #include "types.hpp"
@@ -53,8 +54,10 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size),
       _append_mutex(std::make_unique<std::mutex>()),
-      _partition_schema(std::make_shared<NullPartitionSchema>()) {
+      _partition_schema(std::make_shared<NullPartitionSchema>(*this)) {
   // TODO(partitioning group): Pass chunk information to partition schema and ignore them here
+  // TODO(partitioning group): Using pointer dereferencing is ugly.
+  // Maybe use this: http://en.cppreference.com/w/cpp/memory/enable_shared_from_this/shared_from_this
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
@@ -128,10 +131,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return {};
 }
 
-uint32_t Table::max_chunk_size() const {
-  // TODO(partitioning group): This should be kept in PartitonSchema
-  return _max_chunk_size;
-}
+uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 
@@ -156,16 +156,16 @@ const std::vector<bool>& Table::column_nullables() const { return _column_nullab
 
 Chunk& Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-  
+
   // TODO(partitioning group): Implement and use get_chunk on NullPartitionSchema
-  
+
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-  
+
   // TODO(partitioning group): Implement and use get_chunk on NullPartitionSchema
 
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
@@ -174,7 +174,7 @@ const Chunk& Table::get_chunk(ChunkID chunk_id) const {
 
 ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-  
+
   // TODO(partitioning group): Implement and use get_chunk_with_access_counting on NullPartitionSchema
 
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
@@ -183,7 +183,7 @@ ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
 
 const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-  
+
   // TODO(partitioning group): Implement and use get_chunk_with_access_counting on NullPartitionSchema
 
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
@@ -243,19 +243,17 @@ TableType Table::get_type() const {
 
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                      const size_t number_of_partitions) {
-  _partition_schema = std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions);
+  _partition_schema = std::make_shared<HashPartitionSchema>(*this, column_id, hash_function, number_of_partitions);
 }
 
 void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
-  _partition_schema = std::make_shared<RangePartitionSchema>(column_id, bounds);
+  _partition_schema = std::make_shared<RangePartitionSchema>(*this, column_id, bounds);
 }
 
 void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
-  _partition_schema = std::make_shared<RoundRobinPartitionSchema>(number_of_partitions);
+  _partition_schema = std::make_shared<RoundRobinPartitionSchema>(*this, number_of_partitions);
 }
 
-bool Table::is_partitioned() const {
-  return !_partition_schema->is_continous();
-}
+bool Table::is_partitioned() const { return _partition_schema->is_partitioned(); }
 
 }  // namespace opossum

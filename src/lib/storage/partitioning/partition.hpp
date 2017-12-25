@@ -6,8 +6,20 @@
 
 namespace opossum {
 
+class Table;
+
 class Partition {
-  std::vector<Chunk> chunks;
+ public:
+  explicit Partition(Table& table);
+
+  void append(std::vector<AllTypeVariant> values);
+  ChunkID chunk_count() const;
+  void create_new_chunk();
+  uint64_t row_count() const;
+
+ protected:
+  std::vector<Chunk> _chunks;
+  Table& _table;
 };
 
 }  // namespace opossum

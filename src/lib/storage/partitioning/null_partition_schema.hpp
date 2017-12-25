@@ -6,21 +6,22 @@
 
 namespace opossum {
 
+class Table;
+
 class NullPartitionSchema : public PartitionSchema {
  public:
-  NullPartitionSchema();
+  explicit NullPartitionSchema(Table& table);
 
-  // Return true, since NullPartitioningSchema is only a list of chunks.
+  // Return false, since NullPartitioningSchema is only a list of chunks.
   // Indicates that NullPartitionSchema can handle:
   // create_new_chunk, emplace_chunk, get_chunk, get_chunk_with_access_counting
-  bool is_continous() const override { return true; }
+  bool is_partitioned() const { return false; }
 
   // from abstract class PartitionSchema
-  void append(std::vector<AllTypeVariant> values) override;
-  ChunkID chunk_count() const override;
-  TableType get_type() const override;
-  uint32_t max_chunk_size() const override;
-  uint64_t row_count() const override;
+  void append(std::vector<AllTypeVariant> values);
+  ChunkID chunk_count() const;
+  TableType get_type() const;
+  uint64_t row_count() const;
 
   // specific for NullPartitionSchema
   void create_new_chunk();
@@ -28,7 +29,7 @@ class NullPartitionSchema : public PartitionSchema {
   Chunk& get_chunk(ChunkID chunk_id);
   const Chunk& get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
-  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const; 
+  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 };
 
 }  // namespace opossum

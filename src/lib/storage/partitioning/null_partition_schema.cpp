@@ -2,7 +2,9 @@
 
 namespace opossum {
 
-NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_shared<Partition>()); }
+NullPartitionSchema::NullPartitionSchema(Table& table) : PartitionSchema(table) {
+  _partitions.emplace_back(std::make_shared<Partition>(table));
+}
 
 void NullPartitionSchema::append(std::vector<AllTypeVariant> values) {
   // TODO(partitioning group): Implement
@@ -15,11 +17,6 @@ ChunkID NullPartitionSchema::chunk_count() const {
 }
 
 TableType NullPartitionSchema::get_type() const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-uint32_t NullPartitionSchema::max_chunk_size() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
 }

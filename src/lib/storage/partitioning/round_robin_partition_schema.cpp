@@ -2,12 +2,12 @@
 
 namespace opossum {
 
-RoundRobinPartitionSchema::RoundRobinPartitionSchema(size_t number_of_partitions)
-    : _number_of_partitions(number_of_partitions) {
+RoundRobinPartitionSchema::RoundRobinPartitionSchema(Table& table, size_t number_of_partitions)
+    : PartitionSchema(table), _number_of_partitions(number_of_partitions) {
   _partitions.reserve(number_of_partitions);
 
   for (size_t index = 0; index < number_of_partitions; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>());
+    _partitions.emplace_back(std::make_shared<Partition>(table));
   }
 }
 
@@ -22,11 +22,6 @@ ChunkID RoundRobinPartitionSchema::chunk_count() const {
 }
 
 TableType RoundRobinPartitionSchema::get_type() const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-uint32_t RoundRobinPartitionSchema::max_chunk_size() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
 }
