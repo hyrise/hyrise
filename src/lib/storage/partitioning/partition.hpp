@@ -13,6 +13,7 @@ class Partition {
  public:
   explicit Partition(Table& table);
 
+  void add_column(DataType data_type, bool nullable);
   void append(std::vector<AllTypeVariant> values);
   ChunkID chunk_count() const;
   void create_new_chunk();

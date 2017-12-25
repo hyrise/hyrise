@@ -11,6 +11,11 @@ RangePartitionSchema::RangePartitionSchema(Table& table, ColumnID column_id, std
   }
 }
 
+void RangePartitionSchema::add_column(DataType data_type, bool nullable) {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 void RangePartitionSchema::append(std::vector<AllTypeVariant> values) {
   // TODO(partitioning group): Implement
   throw "Not implemented";

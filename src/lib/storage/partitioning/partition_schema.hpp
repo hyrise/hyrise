@@ -15,6 +15,7 @@ class PartitionSchema {
   // This is for performance in insert operations, which are faster for unpartitioned tables.
   virtual bool is_partitioned() const { return true; }
 
+  virtual void add_column(DataType data_type, bool nullable) = 0;
   virtual void append(std::vector<AllTypeVariant> values) = 0;
   virtual ChunkID chunk_count() const = 0;
   virtual TableType get_type() const = 0;

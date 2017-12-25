@@ -55,7 +55,6 @@ Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size),
       _append_mutex(std::make_unique<std::mutex>()),
       _partition_schema(std::make_shared<NullPartitionSchema>(*this)) {
-  // TODO(partitioning group): Pass chunk information to partition schema and ignore them here
   // TODO(partitioning group): Using pointer dereferencing is ugly.
   // Maybe use this: http://en.cppreference.com/w/cpp/memory/enable_shared_from_this/shared_from_this
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");

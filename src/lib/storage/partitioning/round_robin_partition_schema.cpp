@@ -11,6 +11,11 @@ RoundRobinPartitionSchema::RoundRobinPartitionSchema(Table& table, size_t number
   }
 }
 
+void RoundRobinPartitionSchema::add_column(DataType data_type, bool nullable) {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values) {
   // TODO(partitioning group): Implement
   throw "Not implemented";

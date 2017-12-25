@@ -1,5 +1,6 @@
 #pragma once
 
+#include "all_type_variant.hpp"
 #include "hash_function.hpp"
 #include "storage/partitioning/partition_schema.hpp"
 #include "types.hpp"
@@ -12,6 +13,7 @@ class HashPartitionSchema : public PartitionSchema {
  public:
   HashPartitionSchema(Table& table, ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);
 
+  void add_column(DataType data_type, bool nullable);
   void append(std::vector<AllTypeVariant> values);
   ChunkID chunk_count() const;
   TableType get_type() const;

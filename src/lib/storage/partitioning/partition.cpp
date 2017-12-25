@@ -6,6 +6,12 @@ namespace opossum {
 
 Partition::Partition(Table& table) : _table(table) { _chunks.push_back(Chunk{ChunkUseMvcc::Yes}); }
 
+void Partition::add_column(DataType data_type, bool nullable) {
+  for (auto& chunk : _chunks) {
+    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
+  }
+}
+
 void Partition::append(std::vector<AllTypeVariant> values) {
   if (_chunks.back().size() == _table.max_chunk_size()) create_new_chunk();
 

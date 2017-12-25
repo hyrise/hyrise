@@ -15,6 +15,11 @@ HashPartitionSchema::HashPartitionSchema(Table& table, ColumnID column_id, HashF
   }
 }
 
+void HashPartitionSchema::add_column(DataType data_type, bool nullable) {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
   // TODO(partitioning group): Implement
   throw "Not implemented";

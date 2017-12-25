@@ -6,6 +6,10 @@ NullPartitionSchema::NullPartitionSchema(Table& table) : PartitionSchema(table) 
   _partitions.emplace_back(std::make_shared<Partition>(table));
 }
 
+void NullPartitionSchema::add_column(DataType data_type, bool nullable) {
+  _partitions.front()->add_column(data_type, nullable);
+}
+
 void NullPartitionSchema::append(std::vector<AllTypeVariant> values) { _partitions.front()->append(values); }
 
 ChunkID NullPartitionSchema::chunk_count() const { return _partitions.front()->chunk_count(); }
