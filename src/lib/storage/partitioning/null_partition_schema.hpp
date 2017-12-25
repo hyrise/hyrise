@@ -25,7 +25,7 @@ class NullPartitionSchema : public PartitionSchema {
 
   // specific for NullPartitionSchema
   void create_new_chunk();
-  void emplace_chunk(Chunk chunk);
+  void emplace_chunk(Chunk& chunk);
   Chunk& get_chunk(ChunkID chunk_id);
   const Chunk& get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
