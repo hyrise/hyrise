@@ -31,6 +31,11 @@ TableType RoundRobinPartitionSchema::get_type() const {
   throw "Not implemented";
 }
 
+AllTypeVariant RoundRobinPartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 uint64_t RoundRobinPartitionSchema::row_count() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";

@@ -35,6 +35,11 @@ TableType HashPartitionSchema::get_type() const {
   throw "Not implemented";
 }
 
+AllTypeVariant HashPartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 uint64_t HashPartitionSchema::row_count() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";

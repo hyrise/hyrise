@@ -16,6 +16,10 @@ ChunkID NullPartitionSchema::chunk_count() const { return _partitions.front()->c
 
 TableType NullPartitionSchema::get_type() const { return _partitions.front()->get_type(); }
 
+AllTypeVariant NullPartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
+  return _partitions.front()->get_value(column_id, row_number);
+}
+
 uint64_t NullPartitionSchema::row_count() const { return _partitions.front()->row_count(); }
 
 void NullPartitionSchema::create_new_chunk() { _partitions.front()->create_new_chunk(); }

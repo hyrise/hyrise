@@ -31,6 +31,11 @@ TableType RangePartitionSchema::get_type() const {
   throw "Not implemented";
 }
 
+AllTypeVariant RangePartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
+  // TODO(partitioning group): Implement
+  throw "Not implemented";
+}
+
 uint64_t RangePartitionSchema::row_count() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";

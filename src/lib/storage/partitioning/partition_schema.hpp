@@ -19,12 +19,8 @@ class PartitionSchema {
   virtual void append(std::vector<AllTypeVariant> values) = 0;
   virtual ChunkID chunk_count() const = 0;
   virtual TableType get_type() const = 0;
+  virtual AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const = 0;
   virtual uint64_t row_count() const = 0;
-
-  template <typename T>
-  T get_value(const ColumnID column_id, const size_t row_number) const {
-    throw "Cannot be called";
-  }
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;

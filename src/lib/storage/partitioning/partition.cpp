@@ -70,6 +70,19 @@ TableType Partition::get_type() const {
   }
 }
 
+AllTypeVariant Partition::get_value(const ColumnID column_id, const size_t row_number) const {
+  size_t row_counter = 0u;
+  for (auto& chunk : _chunks) {
+    size_t current_size = chunk.size();
+    row_counter += current_size;
+    if (row_counter > row_number) {
+      return (*chunk.get_column(column_id))[row_number + current_size - row_counter];
+    }
+  }
+  Fail("Row does not exist.");
+  return {};
+}
+
 void Partition::emplace_chunk(Chunk& chunk) {
   if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
     // the initial chunk was not used yet

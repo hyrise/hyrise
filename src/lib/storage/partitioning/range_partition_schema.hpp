@@ -13,10 +13,11 @@ class RangePartitionSchema : public PartitionSchema {
   RangePartitionSchema(Table& table, ColumnID column_id, std::vector<AllTypeVariant> bounds);
 
   void add_column(DataType data_type, bool nullable);
-  void append(std::vector<AllTypeVariant> values) override;
-  ChunkID chunk_count() const override;
-  TableType get_type() const override;
-  uint64_t row_count() const override;
+  void append(std::vector<AllTypeVariant> values);
+  ChunkID chunk_count() const;
+  TableType get_type() const;
+  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
+  uint64_t row_count() const;
 
  protected:
   ColumnID _column_id;

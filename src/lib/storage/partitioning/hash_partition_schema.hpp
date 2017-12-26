@@ -17,6 +17,7 @@ class HashPartitionSchema : public PartitionSchema {
   void append(std::vector<AllTypeVariant> values);
   ChunkID chunk_count() const;
   TableType get_type() const;
+  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
   uint64_t row_count() const;
 
  protected:

@@ -26,21 +26,8 @@ class Partition {
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
   TableType get_type() const;
+  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
   uint64_t row_count() const;
-
-  template <typename T>
-  T get_value(const ColumnID column_id, const size_t row_number) const {
-    size_t row_counter = 0u;
-    for (auto& chunk : _chunks) {
-      size_t current_size = chunk.size();
-      row_counter += current_size;
-      if (row_counter > row_number) {
-        return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
-      }
-    }
-    Fail("Row does not exist.");
-    return {};
-  }
 
  protected:
   std::vector<Chunk> _chunks;

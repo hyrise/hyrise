@@ -125,7 +125,7 @@ class Table : private Noncopyable {
     // Fail("Row does not exist.");
     // return {};
 
-    return _partition_schema->get_value<T>(column_id, row_number);
+    return get<T>(_partition_schema->get_value(column_id, row_number));
   }
 
   // creates a new chunk and appends it
