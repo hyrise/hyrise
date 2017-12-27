@@ -2,19 +2,24 @@
 
 namespace opossum {
 
-NullPartitionSchema::NullPartitionSchema(Table& table) : PartitionSchema(table) {
-  _partitions.emplace_back(std::make_shared<Partition>(table));
+NullPartitionSchema::NullPartitionSchema() {
+  _partitions.emplace_back(std::make_shared<Partition>());
 }
 
 void NullPartitionSchema::add_column(DataType data_type, bool nullable) {
   _partitions.front()->add_column(data_type, nullable);
 }
 
-void NullPartitionSchema::append(std::vector<AllTypeVariant> values) { _partitions.front()->append(values); }
+void NullPartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
+                                 const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) {
+  _partitions.front()->append(values, max_chunk_size, column_types, column_nullables);
+}
 
 ChunkID NullPartitionSchema::chunk_count() const { return _partitions.front()->chunk_count(); }
 
-TableType NullPartitionSchema::get_type() const { return _partitions.front()->get_type(); }
+TableType NullPartitionSchema::get_type(uint16_t column_count) const {
+  return _partitions.front()->get_type(column_count);
+}
 
 AllTypeVariant NullPartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
   return _partitions.front()->get_value(column_id, row_number);
@@ -22,28 +27,29 @@ AllTypeVariant NullPartitionSchema::get_value(const ColumnID column_id, const si
 
 uint64_t NullPartitionSchema::row_count() const { return _partitions.front()->row_count(); }
 
-void NullPartitionSchema::create_new_chunk() { _partitions.front()->create_new_chunk(); }
+void NullPartitionSchema::create_new_chunk(const std::vector<DataType>& column_types,
+                                           const std::vector<bool>& column_nullables) {
+  _partitions.front()->create_new_chunk(column_types, column_nullables);
+}
 
-void NullPartitionSchema::emplace_chunk(Chunk& chunk) { _partitions.front()->emplace_chunk(chunk); }
+void NullPartitionSchema::emplace_chunk(Chunk& chunk, uint16_t column_count) {
+  _partitions.front()->emplace_chunk(chunk, column_count);
+}
 
 Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) {
-  Chunk& chunk = _partitions.front()->get_chunk(chunk_id);
-  return chunk;
+  return _partitions.front()->get_chunk(chunk_id);
 }
 
 const Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) const {
-  const Chunk& chunk = _partitions.front()->get_chunk(chunk_id);
-  return chunk;
+  return _partitions.front()->get_chunk(chunk_id);
 }
 
 ProxyChunk NullPartitionSchema::get_chunk_with_access_counting(ChunkID chunk_id) {
-  ProxyChunk proxy_chunk = _partitions.front()->get_chunk_with_access_counting(chunk_id);
-  return proxy_chunk;
+  return _partitions.front()->get_chunk_with_access_counting(chunk_id);
 }
 
 const ProxyChunk NullPartitionSchema::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  const ProxyChunk proxy_chunk = _partitions.front()->get_chunk_with_access_counting(chunk_id);
-  return proxy_chunk;
+  return _partitions.front()->get_chunk_with_access_counting(chunk_id);
 }
 
 }  // namespace opossum

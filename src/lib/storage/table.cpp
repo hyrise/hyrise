@@ -17,6 +17,11 @@
 #include "utils/assert.hpp"
 #include "value_column.hpp"
 
+// TODO(partitioning group): Using dynamic_pointer_cast's
+// for accessing NullPartitionSchema specific functions seems ugly.
+// Maybe we can add all functions to PartitionSchema and throw an exception when called
+// on another partitioning schema which does not implement these functions.
+
 namespace opossum {
 
 std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<const Table>& in_table,
@@ -54,11 +59,8 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size),
       _append_mutex(std::make_unique<std::mutex>()),
-      _partition_schema(std::make_shared<NullPartitionSchema>(*this)) {
-  // TODO(partitioning group): Using pointer dereferencing is ugly. Improve.
-  // Maybe use this: http://en.cppreference.com/w/cpp/memory/enable_shared_from_this/shared_from_this
+      _partition_schema(std::make_shared<NullPartitionSchema>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
-  // _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
 
 void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {
@@ -73,58 +75,28 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
   add_column_definition(name, data_type, nullable);
 
   _partition_schema->add_column(data_type, nullable);
-  // for (auto& chunk : _chunks) {
-  //   chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
-  // }
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  // TODO(partitioning group): Pass to partition schema
-  // if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
-
-  //_chunks.back().append(values);
-  _partition_schema->append(values);
+  _partition_schema->append(values, _max_chunk_size, _column_types, _column_nullable);
 }
 
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk() {
-  // TODO(partitioning group): Pass to NullPartitioningSchema (or DebugAssert fail)
-  // Create chunk with mvcc columns
-  // Chunk new_chunk{ChunkUseMvcc::Yes};
-
-  // for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
-  //   const auto type = _column_types[column_id];
-  //   auto nullable = _column_nullable[column_id];
-
-  //   new_chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
-  // }
-  // _chunks.push_back(std::move(new_chunk));
   DebugAssert(!this->is_partitioned(), "create_new_chunk() does not work on partitioned tables");
-  // TODO(partition group): This seems ugly. Improve.
-  std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->create_new_chunk();
+
+  std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->create_new_chunk(_column_types, _column_nullable);
 }
 
 uint16_t Table::column_count() const { return _column_types.size(); }
 
-uint64_t Table::row_count() const {
-  // TODO(partitioning group): Pass to partitioning schema
-  // uint64_t ret = 0;
-  // for (const auto& chunk : _chunks) {
-  //   ret += chunk.size();
-  // }
-  // return ret;
-  return _partition_schema->row_count();
-}
+uint64_t Table::row_count() const { return _partition_schema->row_count(); }
 
 uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
-ChunkID Table::chunk_count() const {
-  // TODO(partitioning group): Pass to partitioning schema
-  // return static_cast<ChunkID>(_chunks.size());
-  return _partition_schema->chunk_count();
-}
+ChunkID Table::chunk_count() const { return _partition_schema->chunk_count(); }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
@@ -163,124 +135,47 @@ const std::vector<bool>& Table::column_nullables() const { return _column_nullab
 Chunk& Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  // TODO(partitioning group): Implement and use get_chunk on NullPartitionSchema
-
-  // DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  // return _chunks[chunk_id];
-  Chunk& chunk = std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk(chunk_id);
-  return chunk;
+  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk(chunk_id);
 }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  // TODO(partitioning group): Implement and use get_chunk on NullPartitionSchema
-
-  // DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  // return _chunks[chunk_id];
-  const Chunk& chunk = std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk(chunk_id);
-  return chunk;
+  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk(chunk_id);
 }
 
 ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  // TODO(partitioning group): Implement and use get_chunk_with_access_counting on NullPartitionSchema
-
-  // DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  // return ProxyChunk(_chunks[chunk_id]);
-  ProxyChunk proxy_chunk =
-    std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk_with_access_counting(chunk_id);
-  return proxy_chunk;
+  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk_with_access_counting(chunk_id);
 }
 
 const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  // TODO(partitioning group): Implement and use get_chunk_with_access_counting on NullPartitionSchema
-
-  // DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  // return ProxyChunk(_chunks[chunk_id]);
-  const ProxyChunk proxy_chunk =
-    std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk_with_access_counting(chunk_id);
-  return proxy_chunk;
+  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk_with_access_counting(chunk_id);
 }
 
 void Table::emplace_chunk(Chunk chunk) {
-  // TODO(partitioning group): Forward this to NullPartitionSchema (or DebugAssert fail)
-  // if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
-  //   // the initial chunk was not used yet
-  //   _chunks.clear();
-  // }
-  // DebugAssert(chunk.column_count() > 0, "Trying to add chunk without columns.");
-  // DebugAssert(chunk.column_count() == column_count(),
-  //             std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
-  //                 std::to_string(column_count()) + " columns");
-  // _chunks.emplace_back(std::move(chunk));
   DebugAssert(!this->is_partitioned(), "emplace_chunk() does not work on partitioned tables");
-  std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->emplace_chunk(chunk);
+  std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->emplace_chunk(chunk, this->column_count());
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
-TableType Table::get_type() const {
-  // TODO(partitioning group): In release mode, only consider ref_column. In debug mode, pass to partition schema.
-  // Cannot answer this if the table has no content
-  Assert(!_chunks.empty() && column_count() > 0, "Table has no content, can't specify type");
-
-// In debug mode we're pedantic and check whether all columns in all chunks are Reference Columns
-#if IS_DEBUG
-  return _partition_schema->get_type();
-#endif
-
-  // We assume if one column is a reference column, all are.
-  const auto column = _chunks[0].get_column(ColumnID{0});
-  const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-
-  if (ref_column != nullptr) {
-    return TableType::References;
-  } else {
-    return TableType::Data;
-  }
-
-//   if (ref_column != nullptr) {
-// // In debug mode we're pedantic and check whether all columns in all chunks are Reference Columns
-// #if IS_DEBUG
-//     for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
-//       for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
-//         const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
-//         const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-//         DebugAssert(ref_column2 != nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
-//       }
-//     }
-// #endif
-//     return TableType::References;
-//   } else {
-// // In debug mode we're pedantic and check whether all columns in all chunks are Value/Dict Columns
-// #if IS_DEBUG
-//     for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
-//       for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
-//         const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
-//         const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-//         DebugAssert(ref_column2 == nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
-//       }
-//     }
-// #endif
-//     return TableType::Data;
-//   }
-}
+TableType Table::get_type() const { return _partition_schema->get_type(this->column_count()); }
 
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                      const size_t number_of_partitions) {
-  _partition_schema = std::make_shared<HashPartitionSchema>(*this, column_id, hash_function, number_of_partitions);
+  _partition_schema = std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions);
 }
 
 void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
-  _partition_schema = std::make_shared<RangePartitionSchema>(*this, column_id, bounds);
+  _partition_schema = std::make_shared<RangePartitionSchema>(column_id, bounds);
 }
 
 void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
-  _partition_schema = std::make_shared<RoundRobinPartitionSchema>(*this, number_of_partitions);
+  _partition_schema = std::make_shared<RoundRobinPartitionSchema>(number_of_partitions);
 }
 
 bool Table::is_partitioned() const { return _partition_schema->is_partitioned(); }

@@ -7,11 +7,9 @@
 
 namespace opossum {
 
-class Table;
-
 class NullPartitionSchema : public PartitionSchema {
  public:
-  explicit NullPartitionSchema(Table& table);
+  explicit NullPartitionSchema();
 
   // Return false, since NullPartitioningSchema is only a list of chunks.
   // Indicates that NullPartitionSchema can handle:
@@ -20,15 +18,16 @@ class NullPartitionSchema : public PartitionSchema {
 
   // from abstract class PartitionSchema
   void add_column(DataType data_type, bool nullable);
-  void append(std::vector<AllTypeVariant> values);
+  void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
+              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
   ChunkID chunk_count() const;
-  TableType get_type() const;
+  TableType get_type(uint16_t column_count) const;
   AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
   uint64_t row_count() const;
 
   // specific for NullPartitionSchema
-  void create_new_chunk();
-  void emplace_chunk(Chunk& chunk);
+  void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
+  void emplace_chunk(Chunk& chunk, uint16_t column_count);
   Chunk& get_chunk(ChunkID chunk_id);
   const Chunk& get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
