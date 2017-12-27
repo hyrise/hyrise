@@ -4,8 +4,8 @@
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/proxy_chunk.hpp"
-#include "types.hpp"
 #include "type_cast.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

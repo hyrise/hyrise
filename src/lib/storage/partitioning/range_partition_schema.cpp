@@ -17,7 +17,8 @@ void RangePartitionSchema::add_column(DataType data_type, bool nullable) {
 }
 
 void RangePartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-                                  const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) {
+                                  const std::vector<DataType>& column_types,
+                                  const std::vector<bool>& column_nullables) {
   // TODO(partitioning group): Implement
   throw "Not implemented";
 }

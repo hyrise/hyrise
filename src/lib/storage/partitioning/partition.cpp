@@ -14,7 +14,9 @@ void Partition::add_column(DataType data_type, bool nullable) {
 
 void Partition::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
                        const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) {
-  if (_chunks.back().size() == max_chunk_size) { create_new_chunk(column_types, column_nullables); }
+  if (_chunks.back().size() == max_chunk_size) {
+    create_new_chunk(column_types, column_nullables);
+  }
 
   _chunks.back().append(values);
 }

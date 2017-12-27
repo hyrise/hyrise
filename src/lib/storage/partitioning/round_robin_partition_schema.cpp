@@ -16,7 +16,7 @@ void RoundRobinPartitionSchema::add_column(DataType data_type, bool nullable) {
   throw "Not implemented";
 }
 
-void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values,  const uint32_t max_chunk_size,
+void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
                                        const std::vector<DataType>& column_types,
                                        const std::vector<bool>& column_nullables) {
   // TODO(partitioning group): Implement

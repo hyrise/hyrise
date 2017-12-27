@@ -8,7 +8,7 @@ namespace opossum {
 
 class RoundRobinPartitionSchema : public PartitionSchema {
  public:
-  RoundRobinPartitionSchema(size_t number_of_partitions);
+  explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 
   void add_column(DataType data_type, bool nullable);
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,

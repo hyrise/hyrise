@@ -2,9 +2,7 @@
 
 namespace opossum {
 
-NullPartitionSchema::NullPartitionSchema() {
-  _partitions.emplace_back(std::make_shared<Partition>());
-}
+NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_shared<Partition>()); }
 
 void NullPartitionSchema::add_column(DataType data_type, bool nullable) {
   _partitions.front()->add_column(data_type, nullable);
@@ -36,13 +34,9 @@ void NullPartitionSchema::emplace_chunk(Chunk& chunk, uint16_t column_count) {
   _partitions.front()->emplace_chunk(chunk, column_count);
 }
 
-Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) {
-  return _partitions.front()->get_chunk(chunk_id);
-}
+Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) { return _partitions.front()->get_chunk(chunk_id); }
 
-const Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) const {
-  return _partitions.front()->get_chunk(chunk_id);
-}
+const Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) const { return _partitions.front()->get_chunk(chunk_id); }
 
 ProxyChunk NullPartitionSchema::get_chunk_with_access_counting(ChunkID chunk_id) {
   return _partitions.front()->get_chunk_with_access_counting(chunk_id);

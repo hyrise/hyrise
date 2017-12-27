@@ -34,16 +34,12 @@ class PartitionSchema {
   virtual void emplace_chunk(Chunk& chunk, uint16_t column_count) {
     throw "emplace_chunk can not be used on partitioned tables";
   }
-  virtual Chunk& get_chunk(ChunkID chunk_id) {
-    throw "get_chunk can not be used on partitioned tables";
-  }
-  virtual const Chunk& get_chunk(ChunkID chunk_id) const {
-    throw "get_chunk can not be used on partitioned tables";
-  }
+  virtual Chunk& get_chunk(ChunkID chunk_id) { throw "get_chunk can not be used on partitioned tables"; }
+  virtual const Chunk& get_chunk(ChunkID chunk_id) const { throw "get_chunk can not be used on partitioned tables"; }
   virtual ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) {
     throw "get_chunk_with_access_counting can not be used on partitioned tables";
   }
-  virtual const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const{
+  virtual const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const {
     throw "get_chunk_with_access_counting can not be used on partitioned tables";
   }
 
@@ -54,7 +50,6 @@ class PartitionSchema {
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;
-
 };
 
 }  // namespace opossum
