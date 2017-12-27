@@ -17,11 +17,6 @@
 #include "utils/assert.hpp"
 #include "value_column.hpp"
 
-// TODO(partitioning group): Using dynamic_pointer_cast's
-// for accessing NullPartitionSchema specific functions seems ugly.
-// Maybe we can add all functions to PartitionSchema and throw an exception when called
-// on another partitioning schema which does not implement these functions.
-
 namespace opossum {
 
 std::shared_ptr<Table> Table::create_with_layout_from(const std::shared_ptr<const Table>& in_table,
@@ -87,7 +82,7 @@ void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count +=
 void Table::create_new_chunk() {
   DebugAssert(!this->is_partitioned(), "create_new_chunk() does not work on partitioned tables");
 
-  std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->create_new_chunk(_column_types, _column_nullable);
+  _partition_schema->create_new_chunk(_column_types, _column_nullable);
 }
 
 uint16_t Table::column_count() const { return _column_types.size(); }
@@ -135,30 +130,30 @@ const std::vector<bool>& Table::column_nullables() const { return _column_nullab
 Chunk& Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk(chunk_id);
+  return _partition_schema->get_chunk(chunk_id);
 }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk(chunk_id);
+  return _partition_schema->get_chunk(chunk_id);
 }
 
 ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk_with_access_counting(chunk_id);
+  return _partition_schema->get_chunk_with_access_counting(chunk_id);
 }
 
 const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
 
-  return std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->get_chunk_with_access_counting(chunk_id);
+  return _partition_schema->get_chunk_with_access_counting(chunk_id);
 }
 
 void Table::emplace_chunk(Chunk chunk) {
   DebugAssert(!this->is_partitioned(), "emplace_chunk() does not work on partitioned tables");
-  std::dynamic_pointer_cast<NullPartitionSchema>(_partition_schema)->emplace_chunk(chunk, this->column_count());
+  _partition_schema->emplace_chunk(chunk, this->column_count());
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
