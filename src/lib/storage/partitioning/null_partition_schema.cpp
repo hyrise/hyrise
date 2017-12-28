@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_shared<Partition>()); }
+NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_shared<Partition>(PartitionID{0})); }
 
 void NullPartitionSchema::add_column(DataType data_type, bool nullable) {
   _partitions.front()->add_column(data_type, nullable);

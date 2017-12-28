@@ -11,13 +11,13 @@ class NullPartitionSchema : public PartitionSchema {
  public:
   NullPartitionSchema();
 
-  void add_column(DataType data_type, bool nullable);
+  void add_column(DataType data_type, bool nullable) override;
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
-  ChunkID chunk_count() const;
-  TableType get_type(uint16_t column_count) const;
-  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
-  uint64_t row_count() const;
+              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
+  ChunkID chunk_count() const override;
+  TableType get_type(uint16_t column_count) const override;
+  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const override;
+  uint64_t row_count() const override;
 
   // specific for NullPartitionSchema
   void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
@@ -30,7 +30,7 @@ class NullPartitionSchema : public PartitionSchema {
   // Return false, since NullPartitioningSchema is only a list of chunks.
   // Indicates that NullPartitionSchema can handle:
   // create_new_chunk, emplace_chunk, get_chunk, get_chunk_with_access_counting
-  bool is_partitioned() const { return false; }
+  bool is_partitioned() const override { return false; }
 };
 
 }  // namespace opossum

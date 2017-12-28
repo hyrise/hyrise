@@ -43,6 +43,28 @@ class PartitionSchema {
     throw "get_chunk_with_access_counting can not be used on partitioned tables";
   }
 
+  const std::shared_ptr<Partition> find_partition(PartitionID partition_to_find) {
+    for (std::shared_ptr<Partition> partition_ptr : _partitions) {
+      if (partition_ptr->get_partition_id() == partition_to_find) {
+        return partition_ptr;
+      }
+    }
+    throw "Cannot find specified partition!";
+  }
+
+  const PartitionID max_partition_id() {
+    if (_partitions.size() == 0) {
+      throw "The minimum number of partitions is 1!";
+    }
+    PartitionID max = PartitionID{0};
+    for (std::shared_ptr<Partition> partition_ptr : _partitions) {
+      if (partition_ptr->get_partition_id() > max) {
+        max = partition_ptr->get_partition_id();
+      }
+    }
+    return max;
+  }
+
   // Indicates that the functions above are
   //   1. not meaningfully implemented if true is returned (default case)
   //   2. meaningfully implemented if false is returned
