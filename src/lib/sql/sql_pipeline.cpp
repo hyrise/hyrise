@@ -177,6 +177,37 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   return _result_table;
 }
 
+void SQLPipeline::execute_async(std::function<void()> callback) {
+  if (_result_table || !_query_has_output) {
+    callback();
+    return;
+  }
+
+  const auto& op_tasks = get_task_sets();
+  const auto started = std::chrono::high_resolution_clock::now();
+
+  // Schedule a callback for the last task in the last task set
+  auto last_task = op_tasks.back().back();
+  last_task->set_done_callback([=]() {
+    if (_auto_commit) {
+      _transaction_context->commit();
+    }
+
+    const auto done = std::chrono::high_resolution_clock::now();
+    _execution_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+
+    // Get output from last task in last task set
+    _result_table = last_task->get_operator()->get_output();
+    if (_result_table == nullptr) _query_has_output = false;
+
+    callback();
+  });
+
+  for (const auto& task_set : op_tasks) {
+    CurrentScheduler::schedule_tasks(task_set);
+  }
+}
+
 const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() { return _transaction_context; }
 
 std::chrono::microseconds SQLPipeline::parse_time_microseconds() {

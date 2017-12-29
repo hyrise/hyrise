@@ -16,6 +16,7 @@ class AbstractCommand {
   virtual void start(std::size_t size) = 0;
   virtual void handle_packet_received(const InputPacket& input_packet, std::size_t size);
   virtual void handle_packet_sent();
+  virtual void handle_event_received();
 
  protected:
   HyriseSession& _session;

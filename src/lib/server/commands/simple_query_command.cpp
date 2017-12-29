@@ -1,6 +1,7 @@
 #include "simple_query_command.hpp"
 
 #include <server/hyrise_session.hpp>
+#include <sql/sql_pipeline.hpp>
 #include <utils/assert.hpp>
 
 namespace opossum {
@@ -14,16 +15,45 @@ void SimpleQueryCommand::handle_packet_received(const InputPacket& input_packet,
   switch (_state) {
     case SimpleQueryCommandState::Started: {
       auto sql = PostgresWireHandler::handle_query_packet(input_packet, size);
-      send_row_description(sql);
+      start_query(sql);
       break;
     }
     default:
-      DebugAssert(false, "Received a packet at an unknown stage in the command");
+      DebugAssert(false, "Received a packet at an unexpected stage in the command");
       break;
   }
 }
 
-void SimpleQueryCommand::send_row_description(const std::string& sql) {
+void SimpleQueryCommand::handle_event_received() {
+  switch (_state) {
+    case SimpleQueryCommandState::Executing: {
+      send_row_description();
+      break;
+    }
+    default:
+      DebugAssert(false, "Received an event at an unexpected stage in the command");
+      break;
+  }
+}
+
+void SimpleQueryCommand::start_query(const std::string& sql) {
+  _state = SimpleQueryCommandState::Executing;
+
+  auto sql_pipeline = std::make_shared<SQLPipeline>(sql);
+  sql_pipeline->execute_async([=]() {
+    auto table = sql_pipeline->get_result_table();
+
+    auto row_count = table ? table->row_count() : 0;
+    std::cout << row_count << std::endl;
+
+    _result_table = table;
+
+    // Dispatch an event onto the main thread
+    _session.signal_async_event();
+  });
+}
+
+void SimpleQueryCommand::send_row_description() {
   OutputPacket output_packet;
   PostgresWireHandler::write_value(output_packet, NetworkMessageType::RowDescription);
 

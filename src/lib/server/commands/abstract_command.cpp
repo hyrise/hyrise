@@ -10,4 +10,6 @@ void AbstractCommand::handle_packet_received(const InputPacket& input_packet, st
 
 void AbstractCommand::handle_packet_sent() { DebugAssert(false, "This command is not supposed to send packets"); }
 
+void AbstractCommand::handle_event_received() { DebugAssert(false, "This command is not supposed to receive events"); }
+
 }  // namespace opossum

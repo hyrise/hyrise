@@ -7,6 +7,8 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
+    # Temporarily link benchmarks for tpcc demo data
+    hyriseBenchmarkLib
     ${Boost_SYSTEM_LIBRARY}
     boost_program_options
 )

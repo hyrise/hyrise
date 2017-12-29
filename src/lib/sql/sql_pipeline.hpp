@@ -54,6 +54,8 @@ class SQLPipeline : public Noncopyable {
   // Executes all tasks, waits for them to finish, and returns the resulting table.
   const std::shared_ptr<const Table>& get_result_table();
 
+  void execute_async(std::function<void()> callback);
+
   // Returns the TransactionContext that was either passed to or created by the SQLPipeline.
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context();

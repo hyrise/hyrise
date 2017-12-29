@@ -101,6 +101,12 @@ void HyriseSession::handle_packet_sent(const boost::system::error_code& error) {
   }
 }
 
+void HyriseSession::handle_event_received() {
+  if (_current_command) {
+    _current_command->handle_event_received();
+  }
+}
+
 void HyriseSession::async_receive_packet(std::size_t size) {
   _expected_input_packet_length = size;
   _input_packet.offset = _input_packet.data.begin();
@@ -118,6 +124,10 @@ void HyriseSession::async_send_ready_for_query() {
   PostgresWireHandler::write_value(output_packet, TransactionStatusIndicator::Idle);
 
   async_send_packet(output_packet);
+}
+
+void HyriseSession::signal_async_event() {
+  _io_service.dispatch(boost::bind(&HyriseSession::handle_event_received, this));
 }
 
 }  // namespace opossum
