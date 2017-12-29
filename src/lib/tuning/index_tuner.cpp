@@ -6,8 +6,8 @@
 
 namespace opossum {
 
-IndexTuner::IndexTuner()
-    : _statistics{std::make_unique<SystemStatistics>()}, _heuristic{std::make_unique<IndexSelectionHeuristic>()} {}
+IndexTuner::IndexTuner(std::shared_ptr<SystemStatistics> statistics)
+    : _statistics{statistics}, _heuristic{std::make_unique<IndexSelectionHeuristic>()} {}
 
 void IndexTuner::execute() {
   const auto& proposals = _heuristic->recommend_changes(*_statistics);
@@ -16,7 +16,7 @@ void IndexTuner::execute() {
 
   for (const auto& proposal : proposals) {
     const auto& column_name = StorageManager::get().get_table(proposal.table_name)->column_name(proposal.column_id);
-    std::cout << "Create inedx on table " << proposal.table_name << ", column " << column_name << "\n";
+    std::cout << "Create index on table " << proposal.table_name << ", column " << column_name << "\n";
   }
 }
 

@@ -15,12 +15,12 @@ namespace opossum {
  */
 class IndexTuner {
  public:
-  IndexTuner();
+  explicit IndexTuner(std::shared_ptr<SystemStatistics> statistics);
 
   void execute();
 
  protected:
-  std::unique_ptr<SystemStatistics> _statistics;
+  std::shared_ptr<SystemStatistics> _statistics;
   std::unique_ptr<IndexSelectionHeuristic> _heuristic;
 };
 

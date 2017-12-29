@@ -5,16 +5,17 @@
 
 namespace opossum {
 
-SystemStatistics::SystemStatistics() : _recent_queries{} {}
+SystemStatistics::SystemStatistics(const SQLQueryCache<SQLQueryPlan>& cache) : _recent_queries{}, _cache(cache) {}
 
 const std::vector<SQLQueryPlan>& SystemStatistics::recent_queries() const {
   // TODO(group01) lazily initialize this and update only if there were changes
   _recent_queries.clear();
 
   // TODO(group01) introduce values() method in AbstractCache interface and implement in all subclasses
-  const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
+  // const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
+  const auto& query_plan_cache = _cache;
   // TODO(group01) implement for cache implementations other than GDFS cache
-  auto gdfs_cache_ptr = dynamic_cast<const GDFSCache<std::string, SQLQueryPlan>*>(&query_plan_cache);
+  auto gdfs_cache_ptr = dynamic_cast<const GDFSCache<std::string, SQLQueryPlan>*>(&query_plan_cache.cache());
   Assert(gdfs_cache_ptr, "Expected GDFS Cache");
 
   const boost::heap::fibonacci_heap<GDFSCache<std::string, SQLQueryPlan>::GDFSCacheEntry>& fibonacci_heap =

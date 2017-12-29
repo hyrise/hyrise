@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 
 namespace opossum {
@@ -13,7 +14,8 @@ namespace opossum {
  */
 class SystemStatistics {
  public:
-  SystemStatistics();
+  // TODO(group01) retrieve query cache from system-wide singleton as soon as that exists
+  explicit SystemStatistics(const SQLQueryCache<SQLQueryPlan>& cache);
 
   // Retrieves recent query plans from the currently active query cache implementation
   // TODO(group01) copying SQLQueryPlan instances is expensive, can we obtain shared_ptrs?
@@ -21,6 +23,7 @@ class SystemStatistics {
 
  protected:
   mutable std::vector<SQLQueryPlan> _recent_queries;
+  const SQLQueryCache<SQLQueryPlan>& _cache;
 };
 
 }  // namespace opossum
