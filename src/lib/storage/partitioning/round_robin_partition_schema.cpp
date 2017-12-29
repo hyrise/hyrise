@@ -11,12 +11,6 @@ RoundRobinPartitionSchema::RoundRobinPartitionSchema(size_t number_of_partitions
   }
 }
 
-void RoundRobinPartitionSchema::add_column(DataType data_type, bool nullable) {
-  for (std::shared_ptr<Partition> partition_ptr : _partitions) {
-    partition_ptr->add_column(data_type, nullable);
-  }
-}
-
 void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
                                        const std::vector<DataType>& column_types,
                                        const std::vector<bool>& column_nullables) {
@@ -29,14 +23,6 @@ void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values, const
   }
 }
 
-ChunkID RoundRobinPartitionSchema::chunk_count() const {
-  ChunkID num_of_chunks = ChunkID{0};
-  for (std::shared_ptr<Partition> partition_ptr : _partitions) {
-    num_of_chunks += partition_ptr->chunk_count();
-  }
-  return num_of_chunks;
-}
-
 TableType RoundRobinPartitionSchema::get_type(uint16_t column_count) const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
@@ -45,14 +31,6 @@ TableType RoundRobinPartitionSchema::get_type(uint16_t column_count) const {
 AllTypeVariant RoundRobinPartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
-}
-
-uint64_t RoundRobinPartitionSchema::row_count() const {
-  uint64_t num_of_rows = 0;
-  for (std::shared_ptr<Partition> partition_ptr : _partitions) {
-    num_of_rows += partition_ptr->row_count();
-  }
-  return num_of_rows;
 }
 
 }  // namespace opossum
