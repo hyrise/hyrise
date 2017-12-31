@@ -105,6 +105,7 @@ set(
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
+    server/postgres_wire_handler_test.cpp
 )
 
 set (
