@@ -404,12 +404,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   // We need to collect the column origins so that we can remove the duplicate columns used in the join condition
   std::vector<ColumnOrigin> column_origins;
   for (auto column_id = ColumnID{0u}; column_id < return_node->output_column_count(); ++column_id) {
-    const auto column_origin = return_node->get_column_origin_by_output_column_id(column_id);
+    const auto &column_name = return_node->output_column_names()[column_id];
 
-    if (std::find(column_origins.cbegin(), column_origins.cend(), column_origin) != column_origins.cend()) {
+    if (static_cast<size_t>(column_id) >= left_node->output_column_count() &&
+    std::find(join_column_names.begin(), join_column_names.end(), column_name) != join_column_names.end()) {
       continue;
     }
 
+    const auto &column_origin = return_node->output_column_origins()[column_id];
     column_origins.emplace_back(column_origin);
   }
 
@@ -667,10 +669,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       Assert(iter != groupby_column_origins.end(), std::string("Column '") + select_column_hsql_expr->getName() +
                                                        "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      const auto column_id = groupby_aliasing_node->find_output_column_id_by_column_origin(*column_origin);
-      DebugAssert(column_id, "Couldn't resolve groupby column.");
-
-      output_columns.emplace_back(*column_id, alias);
+      const auto column_id = static_cast<ColumnID>(std::distance(groupby_column_origins.begin(), iter));
+      output_columns.emplace_back(column_id, alias);
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }

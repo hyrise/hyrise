@@ -27,7 +27,19 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(const std::shared_p
 std::string UpdateNode::description() const {
   std::ostringstream desc;
 
-  desc << "[Update] Table: '" << _table_name << "'";
+  desc << "[Update] Table: '" << _table_name << "', Columns: ";
+
+  std::vector<std::string> verbose_column_names;
+  if (left_child()) {
+    verbose_column_names = left_child()->get_verbose_column_names();
+  }
+
+  for (size_t column_idx = 0; column_idx < _column_expressions.size(); ++column_idx) {
+    desc << _column_expressions[column_idx]->to_string(verbose_column_names);
+    if (column_idx + 1 < _column_expressions.size()) {
+      desc << ", ";
+    }
+  }
 
   return desc.str();
 }
