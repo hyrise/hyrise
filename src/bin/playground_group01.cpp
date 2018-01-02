@@ -13,12 +13,13 @@
 using std::chrono::high_resolution_clock;
 
 // Test set of queries - for development.
-// (as soon as caching is integrated into the SQLPipeline, we could run an arbitrary workload, e.g. the TPCC benchmark)
-// Idea behind the queries: have three indexable columns, but one only used once, one twice, and one thrice.
+// ToDo(group01): as soon as caching is integrated into the SQLPipeline, we should run a bigger and more standardized
+//                workload, e.g. the TPC-C benchmark
+// Idea behind the current queries: have three indexable columns, but one only used once, one twice, and one thrice.
 std::vector<std::string> test_queries{
-    "SELECT * FROM CUSTOMER WHERE C_DISCOUNT > 0.3", "SELECT * FROM CUSTOMER WHERE C_DISCOUNT < 0.6",
-    "SELECT * FROM CUSTOMER WHERE C_LAST = 'BARBARBAR'",      "SELECT * FROM CUSTOMER WHERE C_LAST = 'OUGHTPRIBAR'",
-    "SELECT * FROM CUSTOMER WHERE C_LAST = 'OUGHTANTIPRES'",  "SELECT * FROM CUSTOMER WHERE C_CREDIT = 'BC'"};
+    "SELECT * FROM CUSTOMER WHERE C_DISCOUNT > 0.3",         "SELECT * FROM CUSTOMER WHERE C_DISCOUNT < 0.6",
+    "SELECT * FROM CUSTOMER WHERE C_LAST = 'BARBARBAR'",     "SELECT * FROM CUSTOMER WHERE C_LAST = 'OUGHTPRIBAR'",
+    "SELECT * FROM CUSTOMER WHERE C_LAST = 'OUGHTANTIPRES'", "SELECT * FROM CUSTOMER WHERE C_CREDIT = 'BC'"};
 
 // Forward declarations
 std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
@@ -82,11 +83,14 @@ std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::stri
 int _execute_sample_queries(opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
   std::vector<std::shared_ptr<opossum::SQLPipeline>> pipelines;
 
-  for (const auto& query : test_queries) {
-    pipelines.push_back(_create_and_cache_pipeline(query, cache));
+  // Execute queries multiple times to get more stable timing results
+  for (auto counter = 0u; counter < 500; counter++) {
+    for (const auto& query : test_queries) {
+      pipelines.push_back(_create_and_cache_pipeline(query, cache));
+    }
   }
 
-  // ToDo(group01): Discuss which method calls to measure
+  // ToDo(group01): Discuss which method calls to measure. get timing result directly from pipeline(?).
   high_resolution_clock::time_point start_time = high_resolution_clock::now();
 
   for (const auto& pipeline : pipelines) {
