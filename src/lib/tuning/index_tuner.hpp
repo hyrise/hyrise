@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "tuning/index_selection_heuristic.hpp"
 #include "tuning/system_statistics.hpp"
@@ -18,6 +19,10 @@ class IndexTuner {
   explicit IndexTuner(std::shared_ptr<SystemStatistics> statistics);
 
   void execute();
+
+ protected:
+  // Creates an index on all chunks of the specified table/column
+  void _create_index(const std::string& table_name, const ColumnID& column_id);
 
  protected:
   std::shared_ptr<SystemStatistics> _statistics;
