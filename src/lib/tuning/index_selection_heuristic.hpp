@@ -32,12 +32,10 @@ class IndexProposal {
   bool operator<(const IndexProposal& other) const { return (desirablility < other.desirablility); }
   bool operator>(const IndexProposal& other) const { return (desirablility > other.desirablility); }
 
-  static bool compare_number_of_usages(const IndexProposal& a, const IndexProposal& b){
-      return (a.number_of_usages < b.number_of_usages);
+  static bool compare_number_of_usages(const IndexProposal& a, const IndexProposal& b) {
+    return (a.number_of_usages < b.number_of_usages);
   }
-static bool compare_cost(const IndexProposal& a, const IndexProposal& b){
-    return (a.cost < b.cost);
-}
+  static bool compare_cost(const IndexProposal& a, const IndexProposal& b) { return (a.cost < b.cost); }
 };
 
 /**
@@ -55,16 +53,16 @@ class IndexSelectionHeuristic {
   const std::vector<IndexProposal>& recommend_changes(const SystemStatistics& statistics);
 
  protected:
-    // Looks for table scans and extracts index proposals
+  // Looks for table scans and extracts index proposals
   void _inspect_operator(const std::shared_ptr<const AbstractOperator>& op);
-    // Sums up multiple index proposals to one
-    void _aggregate_usages();
+  // Sums up multiple index proposals to one
+  void _aggregate_usages();
 
-    // Estimates the cost of each index proposal
-    void _estimate_cost();
+  // Estimates the cost of each index proposal
+  void _estimate_cost();
 
-    // Calculate the overall desirablity of each proposal.
-    void _calculate_desirability();
+  // Calculate the overall desirablity of each proposal.
+  void _calculate_desirability();
 
   std::vector<IndexProposal> _index_proposals;
 };
