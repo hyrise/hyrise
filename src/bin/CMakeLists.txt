@@ -16,11 +16,19 @@ add_executable(
 
     playground.cpp
 )
+
 target_link_libraries(
     hyrisePlayground
     hyrise
     hyriseBenchmarkLib
+    uWS
+    ssl
+    crypto
+    z
+    uv
 )
+
+include_directories(/usr/local/opt/openssl/include)
 
 # Configure tpccTableGenerator
 add_executable(tpccTableGenerator tpcc_table_generator.cpp)
