@@ -12,7 +12,17 @@
 
 using std::chrono::high_resolution_clock;
 
+// Test set of queries - for development.
+// (as soon as caching is integrated into the SQLPipeline, we could run an arbitrary workload, e.g. the TPCC benchmark)
+// Idea behind the queries: have three indexable columns, but one only used once, one twice, and one thrice.
+std::vector<std::string> test_queries{
+    "SELECT * FROM CUSTOMER WHERE C_DISCOUNT > 0.3", "SELECT * FROM CUSTOMER WHERE C_DISCOUNT < 0.6",
+    "SELECT * FROM CUSTOMER WHERE C_LAST = 'BARBARBAR'",      "SELECT * FROM CUSTOMER WHERE C_LAST = 'OUGHTPRIBAR'",
+    "SELECT * FROM CUSTOMER WHERE C_LAST = 'OUGHTANTIPRES'",  "SELECT * FROM CUSTOMER WHERE C_CREDIT = 'BC'"};
+
 // Forward declarations
+std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
+                                                                 opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
 int _execute_sample_queries(opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
 
 int main() {
@@ -50,27 +60,38 @@ int main() {
   return 0;
 }
 
-// Executes some sample queries and manually stores them in the cache
-// Returns the execution time in microseconds
-int _execute_sample_queries(opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
+// Creates a Pipeline based on the supplied query and puts its query plan in the supplied cache
+std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
+                                                                 opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
   //  auto op = std::make_shared<opossum::SQLQueryOperator>("SELECT * FROM CUSTOMER WHERE C_DISCOUNT > 0.3 LIMIT 20");
   //  auto task = std::make_shared<opossum::OperatorTask>(op);
   //  task->execute();
+  auto pipeline = std::make_shared<opossum::SQLPipeline>(query);
 
-  const std::string query = "SELECT * FROM CUSTOMER WHERE C_DISCOUNT > 0.3 LIMIT 20";
-  opossum::SQLPipeline pipeline(query);
-  const auto& lqps = pipeline.get_optimized_logical_plans();
+  // const auto& lqps = pipeline->get_optimized_logical_plans();
+  // for (const auto& lqp : lqps) {
+  //   lqp->print();
+  // }
 
-  for (const auto& lqp : lqps) {
-    lqp->print();
+  cache.set(query, pipeline->get_query_plan());
+  return pipeline;
+}
+
+// Executes some sample queries and manually stores them in the cache
+// Returns the execution time in microseconds
+int _execute_sample_queries(opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
+  std::vector<std::shared_ptr<opossum::SQLPipeline>> pipelines;
+
+  for (const auto& query : test_queries) {
+    pipelines.push_back(_create_and_cache_pipeline(query, cache));
   }
-
-  cache.set(query, pipeline.get_query_plan());
 
   // ToDo(group01): Discuss which method calls to measure
   high_resolution_clock::time_point start_time = high_resolution_clock::now();
 
-  pipeline.get_result_table();
+  for (const auto& pipeline : pipelines) {
+    pipeline->get_result_table();
+  }
 
   high_resolution_clock::time_point end_time = high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
