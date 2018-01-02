@@ -23,7 +23,7 @@ class ColumnEncoderTemplate : public ColumnEncoder<ColumnEncoderTemplate> {
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::NewEncoding>;
 
   template <typename T>
-  std::shared_ptr<BaseColumn> _encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
     // TODO(you): Implement encoding
   }
 };

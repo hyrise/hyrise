@@ -74,6 +74,33 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
   _handle_dictionary_column(base_column, base_context);
 }
 
+void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+                                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+  auto context = std::static_pointer_cast<Context>(base_context);
+  auto& matches_out = context->_matches_out;
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto chunk_id = context->_chunk_id;
+
+  const auto left_column_type = _in_table->column_type(_left_column_id);
+
+  resolve_data_type(left_column_type, [&](auto type) {
+    using Type = typename decltype(type)::type;
+
+    resolve_encoded_column_type<Type>(base_column, [&](const auto& typed_column) {
+      auto left_column_iterable = create_iterable_from_column(typed_column);
+      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+
+      left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+        right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
+          with_comparator(_scan_type, [&](auto comparator) {
+            _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+          });
+        });
+      });
+    });
+  });
+}
+
 template <typename BaseDictionaryColumnType>
 void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryColumnType& left_column,
                                                           std::shared_ptr<ColumnVisitableContext> base_context) {

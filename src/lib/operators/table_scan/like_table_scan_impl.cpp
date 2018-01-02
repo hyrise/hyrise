@@ -64,6 +64,25 @@ void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& bas
   _handle_dictionary_column(left_column, base_context);
 }
 
+void LikeTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+                             std::shared_ptr<ColumnVisitableContext> base_context) {
+  auto context = std::static_pointer_cast<Context>(base_context);
+  auto& matches_out = context->_matches_out;
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto chunk_id = context->_chunk_id;
+
+  resolve_encoded_column_type<std::string>(base_column, [&](const auto& typed_column) {
+    auto left_iterable = create_iterable_from_column(typed_column);
+    auto right_iterable = ConstantValueIterable<std::regex>{_regex};
+
+    const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
+
+    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+      this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
+    });
+  });
+}
+
 template <typename DictionaryColumnType>
 void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& left_column,
                                                   std::shared_ptr<ColumnVisitableContext> base_context) {
