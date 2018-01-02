@@ -17,7 +17,8 @@ void IndexTuner::execute() {
 
   for (const auto& proposal : proposals) {
     const auto& column_name = StorageManager::get().get_table(proposal.table_name)->column_name(proposal.column_id);
-    std::cout << "Create index on table " << proposal.table_name << ", column " << column_name << "\n";
+    std::cout << "  Create index on table " << proposal.table_name << ", column " << column_name;
+    std::cout << " (desirablity " << proposal.desirablility * 100 << "%)\n";
     _create_index(proposal.table_name, proposal.column_id);
   }
 }

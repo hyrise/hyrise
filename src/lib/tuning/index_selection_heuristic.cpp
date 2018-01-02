@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "index_selection_heuristic.hpp"
 
 #include "operators/get_table.hpp"
@@ -19,6 +21,10 @@ const std::vector<IndexProposal>& IndexSelectionHeuristic::recommend_changes(con
       _inspect_operator(tree_root);
     }
   }
+
+  // Sort by desirability, highest value first
+  std::sort(_index_proposals.begin(), _index_proposals.end(), std::greater<IndexProposal>());
+
   return _index_proposals;
 }
 
@@ -28,7 +34,7 @@ void IndexSelectionHeuristic::_inspect_operator(const std::shared_ptr<const Abst
       if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
         const auto& table_name = get_table->table_name();
         ColumnID column_id = table_scan->left_column_id();
-        _index_proposals.emplace_back(IndexProposal{table_name, column_id});
+        _index_proposals.emplace_back(IndexProposal{table_name, column_id, 1.0});
         std::cout << "TableScan on table " << table_name << " and column " << column_id << "\n";
       }
     }
