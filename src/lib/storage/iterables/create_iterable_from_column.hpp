@@ -3,6 +3,7 @@
 #include "deprecated_dictionary_column_iterable.hpp"
 #include "dictionary_column_iterable.hpp"
 #include "reference_column_iterable.hpp"
+#include "run_length_column_iterable.hpp"
 #include "value_column_iterable.hpp"
 
 namespace opossum {
@@ -34,6 +35,11 @@ auto create_iterable_from_column(const ReferenceColumn& column) {
 template <typename T>
 auto create_iterable_from_column(const DictionaryColumn<T>& column) {
   return DictionaryColumnIterable<T>{column};
+}
+
+template <typename T>
+auto create_iterable_from_column(const RunLengthColumn<T>& column) {
+  return RunLengthColumnIterable<T>{column};
 }
 
 /**@}*/

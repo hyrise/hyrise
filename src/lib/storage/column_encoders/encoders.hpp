@@ -6,6 +6,7 @@
 // Include your column encoder file here!
 #include "deprecated_dictionary_encoder.hpp"
 #include "dictionary_encoder.hpp"
+#include "run_length_encoder.hpp"
 
 #include "storage/encoded_columns/column_encoding_type.hpp"
 
@@ -21,6 +22,7 @@ namespace opossum {
 constexpr auto encoder_for_type =
     hana::make_tuple(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>,
                                      hana::type_c<DeprecatedDictionaryEncoder>),
-                     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryEncoder>));
+                     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryEncoder>),
+                     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, hana::type_c<RunLengthEncoder>));
 
 }  // namespace opossum

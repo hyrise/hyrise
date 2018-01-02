@@ -5,6 +5,7 @@
 
 // Include your encoded column file here!
 #include "dictionary_column.hpp"
+#include "run_length_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 
 #include "column_encoding_type.hpp"
@@ -25,6 +26,7 @@ namespace opossum {
 constexpr auto encoded_column_info_for_type =
     hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>,
                                    hana::type_c<DeprecatedDictionaryColumnInfo>),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>));
+                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryColumnInfo>),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, hana::type_c<RunLengthColumnInfo>));
 
 }  // namespace opossum
