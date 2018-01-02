@@ -74,13 +74,15 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   // Creates a deep copy
   virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
+  ColumnOrigin clone_column_origin(const ColumnOrigin &origin,
+                                   const std::shared_ptr<AbstractLQPNode> &lqp_copy) const;
 
   // @{
   /**
    * Set and get the parents/children of this node.
    *
    * The _parents are implicitly set in set_left_child/set_right_child.
-   * For removing parents use remove_parent() or clear_parent().
+   * For removing parents use remove_parent() or clear_parents().
    *
    * set_child() is a shorthand for set_left_child() or set_right_child(), useful if the side is a runtime value
    */
@@ -240,15 +242,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(
       const NamedColumnReference& named_column_reference) const;
 
-  ColumnOrigin _clone_column_origin(const ColumnOrigin& origin,
-                                    const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
   std::shared_ptr<LQPExpression> _adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
                                                            const std::shared_ptr<AbstractLQPNode>& current_lqp, const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _children;
-
   std::shared_ptr<TableStatistics> _statistics;
 
   /**

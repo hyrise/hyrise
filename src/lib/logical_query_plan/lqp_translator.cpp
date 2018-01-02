@@ -162,7 +162,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   std::vector<ColumnID> groupby_columns;
   for (const auto& groupby_column_origin : aggregate_node->groupby_column_origins()) {
-    groupby_columns.emplace_back(node->get_output_column_id_by_column_origin(groupby_column_origin));
+    groupby_columns.emplace_back(node->left_child()->get_output_column_id_by_column_origin(groupby_column_origin));
   }
 
   auto aggregate_input_operator = input_operator;
@@ -388,11 +388,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::vector<std::shared_ptr<OperatorExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
+  Assert(node->left_child() && !node->right_child(), "Can only translate expressions if there is one input node");
+
   std::vector<std::shared_ptr<OperatorExpression>> operator_expressions;
   operator_expressions.reserve(lqp_expressions.size());
 
   for (const auto& lqp_expression : lqp_expressions) {
-    operator_expressions.emplace_back(std::make_shared<OperatorExpression>(lqp_expression, node));
+    operator_expressions.emplace_back(std::make_shared<OperatorExpression>(lqp_expression, node->left_child()));
   }
 
   return operator_expressions;

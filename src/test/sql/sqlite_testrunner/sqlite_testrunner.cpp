@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <planviz/sql_query_plan_visualizer.hpp>
 
 #include "SQLParser.h"
 #include "base_test.hpp"
@@ -83,7 +84,15 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   const std::string query = GetParam();
 
+  std::cout<<"Query:"<<query<<std::endl;
+
   SQLPipeline sql_pipeline{query};
+  sql_pipeline.get_unoptimized_logical_plans().at(0)->print();
+  VizGraphInfo info;
+  info.bg_color = "black";
+  SQLQueryPlanVisualizer{{}, info, {}, {}}.visualize(sql_pipeline.get_query_plan(), "lol.dot", "lol.png");
+
+
   const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);

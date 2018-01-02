@@ -20,7 +20,7 @@ class OperatorExpression : public Expression<OperatorExpression> {
 
   ColumnID column_id() const;
 
-  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names,
+  std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
                         bool is_root = true) const override;
 
   bool operator==(const OperatorExpression& other) const;

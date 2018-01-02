@@ -80,8 +80,8 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
 
-    JoinColumnIDs join_colum_ids{get_output_column_id_by_column_origin(_join_column_origins->first),
-                                 get_output_column_id_by_column_origin(_join_column_origins->second)};
+    JoinColumnIDs join_colum_ids{left_child->get_output_column_id_by_column_origin(_join_column_origins->first),
+                                 right_child->get_output_column_id_by_column_origin(_join_column_origins->second)};
 
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
                                                                              join_colum_ids, *_scan_type);

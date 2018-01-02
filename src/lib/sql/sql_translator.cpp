@@ -446,7 +446,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
   switch (table.type) {
     case hsql::kTableName:
       if (StorageManager::get().has_table(table.name)) {
-        node = _validate_if_active(std::make_shared<StoredTableNode>(table.name));
+        /**
+         * Make sure the ALIAS is applied to the StoredTableNode and not the ValidateNode
+         */
+        auto stored_table_node = std::make_shared<StoredTableNode>(table.name);
+        stored_table_node->set_alias(alias);
+        return _validate_if_active(stored_table_node);
       } else if (StorageManager::get().has_view(table.name)) {
         node = StorageManager::get().get_view(table.name);
         Assert(!_validate || node->subtree_is_validated(), "Trying to add non-validated view to validated query");
@@ -721,6 +726,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   } else {
     projection_node->set_left_child(aggregate_node);
   }
+
+  projection_node->print();
 
   return projection_node;
 }

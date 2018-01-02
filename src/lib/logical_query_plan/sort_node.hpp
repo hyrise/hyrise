@@ -20,22 +20,24 @@ struct OrderByDefinition {
   OrderByMode order_by_mode;
 };
 
+using OrderByDefinitions = std::vector<OrderByDefinition>;
+
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
 class SortNode : public AbstractLQPNode {
  public:
-  explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
+  explicit SortNode(const OrderByDefinitions& order_by_definitions);
 
   std::string description() const override;
 
-  const std::vector<OrderByDefinition>& order_by_definitions() const;
+  const OrderByDefinitions& order_by_definitions() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
  private:
-  const std::vector<OrderByDefinition> _order_by_definitions;
+  const OrderByDefinitions _order_by_definitions;
 };
 
 }  // namespace opossum

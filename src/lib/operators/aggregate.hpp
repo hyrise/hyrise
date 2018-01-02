@@ -70,6 +70,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   const std::string name() const override;
+  const std::string description() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   // write the aggregated output for a given aggregate column

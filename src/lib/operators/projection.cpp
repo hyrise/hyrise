@@ -20,6 +20,18 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const C
 
 const std::string Projection::name() const { return "Projection"; }
 
+const std::string Projection::description() const {
+  std::stringstream desc;
+  desc << "[Projection] ";
+  for (size_t expression_idx = 0; expression_idx < _column_expressions.size(); ++expression_idx) {
+    desc << _column_expressions[expression_idx]->description();
+    if (expression_idx + 1 < _column_expressions.size()) {
+      desc << ", ";
+    }
+  }
+  return desc.str();
+}
+
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {

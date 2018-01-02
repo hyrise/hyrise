@@ -38,6 +38,8 @@ OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp
   if (lqp_expression->right_child()) {
     _right_child = std::make_shared<OperatorExpression>(lqp_expression->right_child(), node);
   }
+
+  _alias = lqp_expression->_alias;
 }
 
 ColumnID OperatorExpression::column_id() const {
@@ -48,7 +50,7 @@ ColumnID OperatorExpression::column_id() const {
 std::string OperatorExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                           bool is_root) const {
   if (type() == ExpressionType::Column) {
-    if (!input_column_names) {
+    if (input_column_names) {
       DebugAssert(column_id() < input_column_names->size(),
                   std::string("_column_id ") + std::to_string(column_id()) + " out of range");
       return (*input_column_names)[column_id()];

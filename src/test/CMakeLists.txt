@@ -16,7 +16,9 @@ set(
     logical_query_plan/logical_query_plan_test.cpp
     logical_query_plan/projection_node_test.cpp
     logical_query_plan/union_node_test.cpp
+    optimizer/lqp_translator_test.cpp
     sql/sql_translator_test.cpp
+    sql/sqlite_testrunner/sqlite_testrunner.cpp
 )
 
 set (

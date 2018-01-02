@@ -24,6 +24,7 @@
 #include "operators/limit.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
+#include "operators/operator_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -42,34 +43,52 @@ class LQPTranslatorTest : public BaseTest {
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto node = std::make_shared<StoredTableNode>("table_int_float");
   const auto op = LQPTranslator{}.translate_node(node);
 
+  /**
+   * Check PQP
+   */
   const auto get_table_op = std::dynamic_pointer_cast<GetTable>(op);
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::Equals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node, ColumnID{1}), ScanType::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
+  /**
+   * Check PQP
+   */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op->scan_type(), ScanType::Equals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnID{0}, ScanType::Between, AllParameterVariant(42), AllTypeVariant(1337));
+      std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node, ColumnID{0}), ScanType::Between, AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
+  /**
+   * Check PQP
+   */
   const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op2);
   EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{0} /* "a" */);
@@ -84,12 +103,18 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  const auto expressions = std::vector<std::shared_ptr<Expression>>{Expression::create_column(ColumnID{0}, {"a"})};
+  const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{LQPExpression::create_column(ColumnOrigin(stored_table_node, ColumnID{0}), {"a"})};
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
 
+  /**
+   * Check PQP
+   */
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
   EXPECT_EQ(projection_op->column_expressions().size(), 1u);
@@ -98,8 +123,11 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
 }
 
 TEST_F(LQPTranslatorTest, SortNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnOrigin(stored_table_node, ColumnID{0}), OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(sort_node);
 
@@ -110,83 +138,113 @@ TEST_F(LQPTranslatorTest, SortNode) {
 }
 
 TEST_F(LQPTranslatorTest, JoinNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Outer, std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::Equals);
+      std::make_shared<JoinNode>(JoinMode::Outer, std::make_pair(ColumnOrigin(stored_table_node_left, ColumnID{1}), ColumnOrigin(stored_table_node_right, ColumnID{0})), ScanType::Equals);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
+  /**
+   * Check PQP
+   */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->column_ids(), join_node->join_column_ids());
+  EXPECT_EQ(join_op->column_ids(), JoinColumnIDs(ColumnID{1}, ColumnID{0}));
   EXPECT_EQ(join_op->scan_type(), ScanType::Equals);
   EXPECT_EQ(join_op->mode(), JoinMode::Outer);
 }
 
 TEST_F(LQPTranslatorTest, ShowTablesNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto show_tables_node = std::make_shared<ShowTablesNode>();
   const auto op = LQPTranslator{}.translate_node(show_tables_node);
 
+  /**
+   * Check PQP
+   */
   const auto show_tables_op = std::dynamic_pointer_cast<ShowTables>(op);
   ASSERT_TRUE(show_tables_op);
   EXPECT_EQ(show_tables_op->name(), "ShowTables");
 }
 
 TEST_F(LQPTranslatorTest, ShowColumnsNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto show_column_node = std::make_shared<ShowColumnsNode>("table_a");
   const auto op = LQPTranslator{}.translate_node(show_column_node);
 
+  /**
+   * Check PQP
+   */
   const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
   ASSERT_TRUE(show_columns_op);
   EXPECT_EQ(show_columns_op->name(), "ShowColumns");
 }
 
 TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  auto sum_expression = Expression::create_aggregate_function(AggregateFunction::Sum,
-                                                              {Expression::create_column(ColumnID{0})}, {"sum_of_a"});
+  auto sum_expression = LQPExpression::create_aggregate_function(AggregateFunction::Sum,
+                                                              {LQPExpression::create_column(ColumnOrigin(stored_table_node, ColumnID{0}))}, {"sum_of_a"});
 
-  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
-                                                        std::vector<ColumnID>{});
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+                                                        std::vector<ColumnOrigin>{});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
+  /**
+   * Check PQP
+   */
   const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
   EXPECT_EQ(aggregate_op->groupby_column_ids().size(), 0u);
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column_id, ColumnID{0});
+  EXPECT_EQ(aggregate_definition.column, ColumnID{0});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
   EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_a"));
 }
 
 TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = Expression::create_column(ColumnID{1});
-  const auto expr_literal = Expression::create_literal(2);
+  const auto expr_col_b = LQPExpression::create_column(ColumnOrigin{stored_table_node, ColumnID{1}});
+  const auto expr_literal = LQPExpression::create_literal(2);
   const auto expr_multiplication =
-      Expression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
+  LQPExpression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
 
   // Create aggregate with expression "SUM(b * 2)".
   // TODO(tim): Projection cannot handle expression `$a + $b`
   // because it is not able to handle columns with different data types.
   // Create issue with failing test.
   auto sum_expression =
-      Expression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
-  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
-                                                        std::vector<ColumnID>{ColumnID{0}});
+  LQPExpression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+                                                        std::vector<ColumnOrigin>{ColumnOrigin(stored_table_node, ColumnID{0})});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
+  /**
+   * Check PQP
+   */
   // Check aggregate operator.
   const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
   ASSERT_TRUE(aggregate_op);
@@ -196,7 +254,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(aggregate_op->groupby_column_ids()[0], ColumnID{0});
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column_id, ColumnID{1});
+  EXPECT_EQ(aggregate_definition.column, ColumnID{1});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
   EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_b_times_two"));
 
@@ -221,22 +279,28 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
 }
 
 TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node_left = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::Equals, AllParameterVariant(42));
+  auto predicate_node_left = std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node_left, ColumnID{0}), ScanType::Equals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
 
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto predicate_node_right =
-      std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, AllParameterVariant(30.0));
+      std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node_right, ColumnID{1}), ScanType::GreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
   auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::Equals);
+      std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins(ColumnOrigin(stored_table_node_left, ColumnID{0}), ColumnOrigin(stored_table_node_right, ColumnID{0})), ScanType::Equals);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 
   const auto op = LQPTranslator{}.translate_node(join_node);
 
+  /**
+   * Check PQP
+   */
   const auto join_op = std::dynamic_pointer_cast<const JoinHash>(op);
   ASSERT_TRUE(join_op);
 
@@ -258,12 +322,18 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
 }
 
 TEST_F(LQPTranslatorTest, LimitNode) {
+  /**
+   * Build LQP and translate to PQP
+   */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   const auto num_rows = 2u;
   auto limit_node = std::make_shared<LimitNode>(num_rows);
   limit_node->set_left_child(stored_table_node);
 
+  /**
+   * Check PQP
+   */
   const auto op = LQPTranslator{}.translate_node(limit_node);
   const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
   ASSERT_TRUE(limit_op);

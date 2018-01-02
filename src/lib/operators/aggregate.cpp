@@ -32,6 +32,39 @@ const std::vector<ColumnID>& Aggregate::groupby_column_ids() const { return _gro
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 
+const std::string Aggregate::description() const {
+  std::stringstream desc;
+  desc << "[Aggregate] GroupBy ColumnIDs: ";
+  for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
+    desc << _groupby_column_ids[groupby_column_idx];
+
+    if (groupby_column_idx + 1 < _groupby_column_ids.size()) {
+      desc << ", ";
+    }
+  }
+
+  desc << " Aggregates: ";
+  for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
+    const auto& aggregate = _aggregates[expression_idx];
+    desc << aggregate_function_to_string.left.at(aggregate.function);
+
+    if (aggregate.column) {
+      desc << "(Column #" << *aggregate.column << ")";
+    } else {
+      desc << "(*)";
+    }
+
+    if (aggregate.alias) {
+      desc << " AS " << *aggregate.alias;
+    }
+
+    if (expression_idx + 1 < _aggregates.size()) {
+      desc << ", ";
+    }
+  }
+  return desc.str();
+}
+
 std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Aggregate>(_input_left->recreate(args), _aggregates, _groupby_column_ids);
 }

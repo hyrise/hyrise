@@ -35,5 +35,9 @@ class MockNode : public AbstractLQPNode {
 
  private:
   std::vector<std::string> _output_column_names;
+
+  // Constructor args to keep around for deep_copy()
+  std::optional<ColumnDefinitions> _column_definitions;
+  std::optional<std::shared_ptr<TableStatistics>> _table_statistics;
 };
 }  // namespace opossum

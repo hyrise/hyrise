@@ -32,6 +32,7 @@ class Projection : public AbstractReadOnlyOperator {
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
   const std::string name() const override;
+  const std::string description() const override;
 
   const ColumnExpressions& column_expressions() const;
 
