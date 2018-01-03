@@ -727,8 +727,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
     projection_node->set_left_child(aggregate_node);
   }
 
-  projection_node->print();
-
   return projection_node;
 }
 

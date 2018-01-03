@@ -6,8 +6,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression.hpp"
 #include "operators/projection.hpp"
+#include "operators/operator_expression.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "storage/table.hpp"
@@ -43,7 +43,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
 
   auto projection = std::make_shared<Projection>(
       _table_wrapper_a,
-      Projection::ColumnExpressions{Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{1})});
+      Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{0}), OperatorExpression::create_column(ColumnID{1})});
   projection->execute();
 
   auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);

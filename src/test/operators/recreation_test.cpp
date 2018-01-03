@@ -58,7 +58,7 @@ TYPED_TEST(RecreationTestJoin, RecreationJoin) {
 
   // build and execute join
   auto join = std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          JoinColumnIDs(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+                                          JoinColumnIDs(ColumnID{0}, ColumnID{0}), ScanType::Equals);
   EXPECT_NE(join, nullptr) << "Could not build Join";
   join->execute();
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);

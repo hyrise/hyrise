@@ -180,7 +180,6 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
     DebugAssert(shared_from_this() == right_table_stats,
                 "Self joins should pass the same table as right_table_stats again.");
   }
-  DebugAssert(column_ids.first < _column_statistics.size() && column_ids.second < _column_statistics.size(), "ColumnID out of range");
 
   // copy column statistics and calculate cross join row count
   auto join_table_stats = generate_cross_join_statistics(right_table_stats);
