@@ -7,7 +7,7 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression.hpp"
+#include "base_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -67,10 +67,10 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
@@ -86,13 +86,13 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 5);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 5);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 1);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 1);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 9);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 9);
   predicate_node_2->set_left_child(predicate_node_1);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
@@ -108,23 +108,23 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 90);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
-  const auto& expressions = LQPExpression::create_columns({ColumnOrigin{stored_table_node, ColumnID{0}}, ColumnOrigin{stored_table_node, ColumnID{1}}});
+  const auto& expressions = LQPExpression::create_columns({LQPColumnOrigin{stored_table_node, ColumnID{0}}, LQPColumnOrigin{stored_table_node, ColumnID{1}}});
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+  auto predicate_node_3 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
   predicate_node_3->set_left_child(projection_node);
 
-  auto predicate_node_4 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
+  auto predicate_node_4 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
   predicate_node_4->set_left_child(predicate_node_3);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_4);
@@ -145,22 +145,22 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnOrigin{stored_table_node, ColumnID{0}}, OrderByMode::Ascending}});
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{LQPColumnOrigin{stored_table_node, ColumnID{0}}, OrderByMode::Ascending}});
   sort_node->set_left_child(predicate_node_1);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 90);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 90);
   predicate_node_2->set_left_child(sort_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
+  auto predicate_node_3 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{1}}, ScanType::GreaterThan, 50);
   predicate_node_3->set_left_child(predicate_node_2);
 
-  const auto& expressions = LQPExpression::create_columns({ColumnOrigin{stored_table_node, ColumnID{0}}, ColumnOrigin{stored_table_node, ColumnID{1}}});
+  const auto& expressions = LQPExpression::create_columns({LQPColumnOrigin{stored_table_node, ColumnID{0}}, LQPColumnOrigin{stored_table_node, ColumnID{1}}});
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_3);
 
@@ -184,10 +184,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 20);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 20);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 40);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 40);
   predicate_node_1->set_left_child(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -196,10 +196,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 40);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 40);
   predicate_node_2->set_left_child(stored_table_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 20);
+  auto predicate_node_3 = std::make_shared<PredicateNode>(LQPColumnOrigin{stored_table_node, ColumnID{0}}, ScanType::LessThan, 20);
   predicate_node_3->set_left_child(predicate_node_2);
 
   auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
@@ -238,11 +238,11 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   auto table_0 = std::make_shared<MockNode>(table_statistics);
   auto table_1 = std::make_shared<MockNode>(table_statistics);
   auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto predicate_0 = std::make_shared<PredicateNode>(ColumnOrigin{table_0, ColumnID{0}}, ScanType::GreaterThan, 80);
-  auto predicate_1 = std::make_shared<PredicateNode>(ColumnOrigin{table_0, ColumnID{0}}, ScanType::GreaterThan, 60);
-  auto predicate_2 = std::make_shared<PredicateNode>(ColumnOrigin{table_1, ColumnID{0}}, ScanType::GreaterThan, 90);
-  auto predicate_3 = std::make_shared<PredicateNode>(ColumnOrigin{table_1, ColumnID{0}}, ScanType::GreaterThan, 50);
-  auto predicate_4 = std::make_shared<PredicateNode>(ColumnOrigin{table_1, ColumnID{0}}, ScanType::GreaterThan, 30);
+  auto predicate_0 = std::make_shared<PredicateNode>(LQPColumnOrigin{table_0, ColumnID{0}}, ScanType::GreaterThan, 80);
+  auto predicate_1 = std::make_shared<PredicateNode>(LQPColumnOrigin{table_0, ColumnID{0}}, ScanType::GreaterThan, 60);
+  auto predicate_2 = std::make_shared<PredicateNode>(LQPColumnOrigin{table_1, ColumnID{0}}, ScanType::GreaterThan, 90);
+  auto predicate_3 = std::make_shared<PredicateNode>(LQPColumnOrigin{table_1, ColumnID{0}}, ScanType::GreaterThan, 50);
+  auto predicate_4 = std::make_shared<PredicateNode>(LQPColumnOrigin{table_1, ColumnID{0}}, ScanType::GreaterThan, 30);
 
   predicate_1->set_left_child(table_0);
   predicate_0->set_left_child(predicate_1);
@@ -288,8 +288,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
 
   auto table_node = std::make_shared<MockNode>(table_statistics);
   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
-  auto predicate_a_node = std::make_shared<PredicateNode>(ColumnOrigin{table_node, ColumnID{0}}, ScanType::GreaterThan, 90);
-  auto predicate_b_node = std::make_shared<PredicateNode>(ColumnOrigin{table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+  auto predicate_a_node = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::GreaterThan, 90);
+  auto predicate_b_node = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
 
   union_node->set_left_child(predicate_a_node);
   union_node->set_right_child(predicate_b_node);

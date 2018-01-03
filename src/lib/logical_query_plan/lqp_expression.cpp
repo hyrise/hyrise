@@ -1,13 +1,13 @@
 #include "lqp_expression.hpp"
 
-#include "column_origin.hpp"
+#include "lqp_column_origin.hpp"
 #include "constant_mappings.hpp"
 #include "operators/operator_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-std::shared_ptr<LQPExpression> LQPExpression::create_column(const ColumnOrigin& column_origin,
+std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnOrigin& column_origin,
                                                             const std::optional<std::string>& alias) {
   auto expression = std::make_shared<LQPExpression>(ExpressionType::Column);
   expression->_column_origin = column_origin;
@@ -17,7 +17,7 @@ std::shared_ptr<LQPExpression> LQPExpression::create_column(const ColumnOrigin& 
 }
 
 std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
-    const std::vector<ColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
+    const std::vector<LQPColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions;
   column_expressions.reserve(column_origins.size());
 
@@ -36,13 +36,13 @@ std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
   return column_expressions;
 }
 
-const ColumnOrigin& LQPExpression::column_origin() const {
-  DebugAssert(_column_origin, "Expression " + expression_type_to_string.at(_type) + " does not have a ColumnOrigin");
+const LQPColumnOrigin& LQPExpression::column_origin() const {
+  DebugAssert(_column_origin, "Expression " + expression_type_to_string.at(_type) + " does not have a LQPColumnOrigin");
   return *_column_origin;
 }
 
-void LQPExpression::set_column_origin(const ColumnOrigin& column_origin) {
-  Assert(_type == ExpressionType::Column, "Can't set a ColumnOrigin on a non-column");
+void LQPExpression::set_column_origin(const LQPColumnOrigin& column_origin) {
+  Assert(_type == ExpressionType::Column, "Can't set a LQPColumnOrigin on a non-column");
   _column_origin = column_origin;
 }
 
@@ -51,11 +51,11 @@ std::string LQPExpression::to_string(const std::optional<std::vector<std::string
   if (type() == ExpressionType::Column) {
     return column_origin().get_verbose_name();
   }
-  return Expression<LQPExpression>::to_string(input_column_names, is_root);
+  return BaseExpression<LQPExpression>::to_string(input_column_names, is_root);
 }
 
 bool LQPExpression::operator==(const LQPExpression& other) const {
-  if (!Expression<LQPExpression>::operator==(other)) {
+  if (!BaseExpression<LQPExpression>::operator==(other)) {
     return false;
   }
   return _column_origin == other._column_origin;

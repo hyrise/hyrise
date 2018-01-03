@@ -17,13 +17,13 @@ class SortNodeTest : public BaseTest {
 
     _table_node = std::make_shared<StoredTableNode>("table_a");
 
-    _a_a = ColumnOrigin{_table_node, ColumnID{0}};
-    _a_b = ColumnOrigin{_table_node, ColumnID{1}};
-    _a_c = ColumnOrigin{_table_node, ColumnID{2}};
+    _a_a = LQPColumnOrigin{_table_node, ColumnID{0}};
+    _a_b = LQPColumnOrigin{_table_node, ColumnID{1}};
+    _a_c = LQPColumnOrigin{_table_node, ColumnID{2}};
   }
 
   std::shared_ptr<StoredTableNode> _table_node;
-  ColumnOrigin _a_a, _a_b, _a_c;
+  LQPColumnOrigin _a_a, _a_b, _a_c;
 };
 
 TEST_F(SortNodeTest, Descriptions) {
@@ -54,7 +54,7 @@ TEST_F(SortNodeTest, UnchangedColumnMapping) {
   EXPECT_EQ(column_origins.size(), _table_node->output_column_names().size());
 
   for (ColumnID column_id{0}; column_id < column_origins.size(); ++column_id) {
-    EXPECT_EQ(column_origins[column_id], ColumnOrigin(_table_node, column_id));
+    EXPECT_EQ(column_origins[column_id], LQPColumnOrigin(_table_node, column_id));
   }
 }
 

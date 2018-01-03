@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "column_origin.hpp"
+#include "lqp_column_origin.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -31,7 +31,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   return deep_copy;
 }
 
-ColumnOrigin AbstractLQPNode::clone_column_origin(const ColumnOrigin &column_origin,
+LQPColumnOrigin AbstractLQPNode::clone_column_origin(const LQPColumnOrigin &column_origin,
                                                   const std::shared_ptr<AbstractLQPNode> &lqp_copy) const {
   Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
   return lqp_copy->output_column_origins()[get_output_column_id_by_column_origin(column_origin)];
@@ -181,7 +181,7 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<ColumnOrigin>& AbstractLQPNode::output_column_origins() const {
+const std::vector<LQPColumnOrigin>& AbstractLQPNode::output_column_origins() const {
   if (!_output_column_origins) {
     Assert(!left_child() || !right_child(), "Nodes with both children need to override");
     if (left_child()) {
@@ -197,7 +197,7 @@ const std::vector<ColumnOrigin>& AbstractLQPNode::output_column_origins() const 
   return *_output_column_origins;
 }
 
-std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(
+std::optional<LQPColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   /**
    * If this node carries an alias, that is different from that of the Column reference, we can't resolve the column
@@ -224,7 +224,7 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
    * Look for the Column in child nodes
    */
   const auto resolve_named_column_reference = [&](const auto& node,
-                                                  const auto& named_column_reference) -> std::optional<ColumnOrigin> {
+                                                  const auto& named_column_reference) -> std::optional<LQPColumnOrigin> {
     if (node) {
       const auto column_origin = node->find_column_origin_by_named_column_reference(named_column_reference);
       if (column_origin) {
@@ -250,7 +250,7 @@ std::optional<ColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_
   return column_origin_from_right;
 }
 
-ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(
+LQPColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   const auto colum_origin = find_column_origin_by_named_column_reference(named_column_reference);
   DebugAssert(colum_origin, "Couldn't resolve column origin of " + named_column_reference.as_string());
@@ -284,7 +284,7 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(
-    const ColumnOrigin& column_origin) const {
+    const LQPColumnOrigin& column_origin) const {
   const auto& output_column_origins = this->output_column_origins();
 
   const auto iter = std::find(output_column_origins.begin(), output_column_origins.end(), column_origin);
@@ -296,9 +296,9 @@ std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(
   return static_cast<ColumnID>(std::distance(output_column_origins.begin(), iter));
 }
 
-ColumnID AbstractLQPNode::get_output_column_id_by_column_origin(const ColumnOrigin& column_origin) const {
+ColumnID AbstractLQPNode::get_output_column_id_by_column_origin(const LQPColumnOrigin& column_origin) const {
   const auto column_id = find_output_column_id_by_column_origin(column_origin);
-  Assert(column_id, "Couldn't resolve ColumnOrigin");
+  Assert(column_id, "Couldn't resolve LQPColumnOrigin");
   return *column_id;
 }
 
@@ -488,20 +488,20 @@ void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>
 }
 
 std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
-const std::shared_ptr<AbstractLQPNode>& current_lqp,
-const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
+const std::shared_ptr<AbstractLQPNode>& original_lqp,
+const std::shared_ptr<AbstractLQPNode>& copied_lqp) const {
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {
-    expression->set_column_origin(current_lqp->clone_column_origin(expression->column_origin(), lqp_copy));
+    expression->set_column_origin(original_lqp->clone_column_origin(expression->column_origin(), copied_lqp));
   }
 
   for (auto& argument_expression : expression->aggregate_function_arguments()) {
-    _adjust_expression_to_lqp(argument_expression, current_lqp, lqp_copy);
+    _adjust_expression_to_lqp(argument_expression, original_lqp, copied_lqp);
   }
 
-  _adjust_expression_to_lqp(expression->left_child(), current_lqp, lqp_copy);
-  _adjust_expression_to_lqp(expression->right_child(), current_lqp, lqp_copy);
+  _adjust_expression_to_lqp(expression->left_child(), original_lqp, copied_lqp);
+  _adjust_expression_to_lqp(expression->right_child(), original_lqp, copied_lqp);
 
   return expression;
 }

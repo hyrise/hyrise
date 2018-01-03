@@ -18,7 +18,7 @@ std::shared_ptr<OperatorExpression> OperatorExpression::create_column(const Colu
 
 OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                                        const std::shared_ptr<AbstractLQPNode>& node)
-    : Expression<OperatorExpression>(lqp_expression->_type) {
+    : BaseExpression<OperatorExpression>(lqp_expression->_type) {
   _value = lqp_expression->_value;
   _aggregate_function = lqp_expression->_aggregate_function;
   _table_name = lqp_expression->_table_name;
@@ -57,11 +57,11 @@ std::string OperatorExpression::to_string(const std::optional<std::vector<std::s
     }
     return std::string("ColumnID #" + std::to_string(column_id()));
   }
-  return Expression<OperatorExpression>::to_string(input_column_names, is_root);
+  return BaseExpression<OperatorExpression>::to_string(input_column_names, is_root);
 }
 
 bool OperatorExpression::operator==(const OperatorExpression& other) const {
-  if (!Expression<OperatorExpression>::operator==(other)) {
+  if (!BaseExpression<OperatorExpression>::operator==(other)) {
     return false;
   }
   return _column_id == other._column_id;

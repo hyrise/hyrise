@@ -79,7 +79,7 @@ set(
     sql/sql_base_test.cpp
     sql/sql_base_test.hpp
     sql/sql_basic_cache_test.cpp
-    sql/sql_expression_translator_test.cpp
+    sql/hsql_expression_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp

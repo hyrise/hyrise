@@ -8,17 +8,17 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-class ColumnOrigin final {
+class LQPColumnOrigin final {
  public:
-  ColumnOrigin() = default;
-  ColumnOrigin(const std::shared_ptr<const AbstractLQPNode>& node, ColumnID column_id);
+  LQPColumnOrigin() = default;
+  LQPColumnOrigin(const std::shared_ptr<const AbstractLQPNode>& node, ColumnID column_id);
 
   std::shared_ptr<const AbstractLQPNode> node() const;
   ColumnID column_id() const;
 
   std::string get_verbose_name() const;
 
-  bool operator==(const ColumnOrigin& rhs) const;
+  bool operator==(const LQPColumnOrigin& rhs) const;
 
  private:
   // Needs to be weak since Nodes can hold ColumnOrigins referring to themselves
@@ -26,7 +26,5 @@ class ColumnOrigin final {
   ColumnID _column_id{INVALID_COLUMN_ID};
 };
 
-std::ostream& operator<<(std::ostream& os, const ColumnOrigin& column_origin);
+std::ostream& operator<<(std::ostream& os, const LQPColumnOrigin& column_origin);
 }
-
-opossum::ColumnID foo();

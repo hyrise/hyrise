@@ -9,11 +9,11 @@
 #include "types.hpp"
 
 #include "abstract_lqp_node.hpp"
-#include "column_origin.hpp"
+#include "lqp_column_origin.hpp"
 
 namespace opossum {
 
-using JoinColumnOrigins = std::pair<ColumnOrigin, ColumnOrigin>;
+using JoinColumnOrigins = std::pair<LQPColumnOrigin, LQPColumnOrigin>;
 
 /**
  * This node type is used to represent any type of Join, including cross products.
@@ -33,7 +33,7 @@ class JoinNode : public AbstractLQPNode {
 
   std::string description() const override;
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<ColumnOrigin>& output_column_origins() const override;
+  const std::vector<LQPColumnOrigin>& output_column_origins() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,

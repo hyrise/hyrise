@@ -25,8 +25,8 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
-    logical_query_plan/column_origin.cpp
-    logical_query_plan/column_origin.hpp
+    logical_query_plan/lqp_column_origin.cpp
+    logical_query_plan/lqp_column_origin.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -146,8 +146,8 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    expression.cpp
-    expression.hpp
+    base_expression.cpp
+    base_expression.hpp
     operators/operator_expression.cpp
     operators/operator_expression.hpp
     optimizer/optimizer.cpp

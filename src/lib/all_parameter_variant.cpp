@@ -10,7 +10,7 @@ std::string to_string(const AllParameterVariant& x) {
   } else if (is_column_id(x)) {
     return std::string("Col #") + std::to_string(boost::get<ColumnID>(x));
   } else if (is_column_origin(x)) {
-    return boost::get<ColumnOrigin>(x).get_verbose_name();
+    return boost::get<LQPColumnOrigin>(x).get_verbose_name();
   } else {
     return boost::lexical_cast<std::string>(x);
   }

@@ -13,7 +13,7 @@
 #include "concurrency/commit_context.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "expression.hpp"
+#include "base_expression.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/operator_expression.hpp"

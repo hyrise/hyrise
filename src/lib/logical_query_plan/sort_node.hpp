@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "column_origin.hpp"
+#include "lqp_column_origin.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -14,9 +14,9 @@ namespace opossum {
  * Order By items are defined by the column they operate on and their sort order.
  */
 struct OrderByDefinition {
-  OrderByDefinition(const ColumnOrigin& column_origin, const OrderByMode order_by_mode);
+  OrderByDefinition(const LQPColumnOrigin& column_origin, const OrderByMode order_by_mode);
 
-  ColumnOrigin column_origin;
+  LQPColumnOrigin column_origin;
   OrderByMode order_by_mode;
 };
 

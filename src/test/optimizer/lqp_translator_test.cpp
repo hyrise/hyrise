@@ -62,7 +62,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node = std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node, ColumnID{1}), ScanType::Equals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnOrigin(stored_table_node, ColumnID{1}), ScanType::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -82,7 +82,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node, ColumnID{0}), ScanType::Between, AllParameterVariant(42), AllTypeVariant(1337));
+      std::make_shared<PredicateNode>(LQPColumnOrigin(stored_table_node, ColumnID{0}), ScanType::Between, AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -107,7 +107,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{LQPExpression::create_column(ColumnOrigin(stored_table_node, ColumnID{0}), {"a"})};
+  const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{LQPExpression::create_column(LQPColumnOrigin(stored_table_node, ColumnID{0}), {"a"})};
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
@@ -127,7 +127,7 @@ TEST_F(LQPTranslatorTest, SortNode) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnOrigin(stored_table_node, ColumnID{0}), OrderByMode::Ascending}});
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{LQPColumnOrigin(stored_table_node, ColumnID{0}), OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(sort_node);
 
@@ -144,7 +144,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Outer, std::make_pair(ColumnOrigin(stored_table_node_left, ColumnID{1}), ColumnOrigin(stored_table_node_right, ColumnID{0})), ScanType::Equals);
+      std::make_shared<JoinNode>(JoinMode::Outer, std::make_pair(LQPColumnOrigin(stored_table_node_left, ColumnID{1}), LQPColumnOrigin(stored_table_node_right, ColumnID{0})), ScanType::Equals);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = LQPTranslator{}.translate_node(join_node);
@@ -196,10 +196,10 @@ TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression = LQPExpression::create_aggregate_function(AggregateFunction::Sum,
-                                                              {LQPExpression::create_column(ColumnOrigin(stored_table_node, ColumnID{0}))}, {"sum_of_a"});
+                                                              {LQPExpression::create_column(LQPColumnOrigin(stored_table_node, ColumnID{0}))}, {"sum_of_a"});
 
   auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
-                                                        std::vector<ColumnOrigin>{});
+                                                        std::vector<LQPColumnOrigin>{});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
@@ -225,7 +225,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = LQPExpression::create_column(ColumnOrigin{stored_table_node, ColumnID{1}});
+  const auto expr_col_b = LQPExpression::create_column(LQPColumnOrigin{stored_table_node, ColumnID{1}});
   const auto expr_literal = LQPExpression::create_literal(2);
   const auto expr_multiplication =
   LQPExpression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
@@ -237,7 +237,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   auto sum_expression =
   LQPExpression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
   auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
-                                                        std::vector<ColumnOrigin>{ColumnOrigin(stored_table_node, ColumnID{0})});
+                                                        std::vector<LQPColumnOrigin>{LQPColumnOrigin(stored_table_node, ColumnID{0})});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
@@ -283,16 +283,16 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node_left = std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node_left, ColumnID{0}), ScanType::Equals, AllParameterVariant(42));
+  auto predicate_node_left = std::make_shared<PredicateNode>(LQPColumnOrigin(stored_table_node_left, ColumnID{0}), ScanType::Equals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
 
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto predicate_node_right =
-      std::make_shared<PredicateNode>(ColumnOrigin(stored_table_node_right, ColumnID{1}), ScanType::GreaterThan, AllParameterVariant(30.0));
+      std::make_shared<PredicateNode>(LQPColumnOrigin(stored_table_node_right, ColumnID{1}), ScanType::GreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
   auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins(ColumnOrigin(stored_table_node_left, ColumnID{0}), ColumnOrigin(stored_table_node_right, ColumnID{0})), ScanType::Equals);
+      std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins(LQPColumnOrigin(stored_table_node_left, ColumnID{0}), LQPColumnOrigin(stored_table_node_right, ColumnID{0})), ScanType::Equals);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 

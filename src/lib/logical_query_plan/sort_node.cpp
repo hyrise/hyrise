@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-OrderByDefinition::OrderByDefinition(const ColumnOrigin& column_origin, const OrderByMode order_by_mode)
+OrderByDefinition::OrderByDefinition(const LQPColumnOrigin& column_origin, const OrderByMode order_by_mode)
     : column_origin(column_origin), order_by_mode(order_by_mode) {}
 
 SortNode::SortNode(const OrderByDefinitions& order_by_definitions)

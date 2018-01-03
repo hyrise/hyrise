@@ -20,7 +20,7 @@ class UnionNode : public AbstractLQPNode {
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<ColumnOrigin>& output_column_origins() const override;
+  const std::vector<LQPColumnOrigin>& output_column_origins() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,

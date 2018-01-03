@@ -6,7 +6,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression.hpp"
+#include "base_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -38,12 +38,12 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _table_node_b = std::make_shared<StoredTableNode>("b");
     _table_node_c = std::make_shared<StoredTableNode>("c");
 
-    _a_a = ColumnOrigin{_table_node_a, ColumnID{0}};
-    _a_b = ColumnOrigin{_table_node_a, ColumnID{1}};
-    _b_a = ColumnOrigin{_table_node_b, ColumnID{0}};
-    _b_b = ColumnOrigin{_table_node_b, ColumnID{1}};
-    _c_a = ColumnOrigin{_table_node_c, ColumnID{1}};
-    _c_b = ColumnOrigin{_table_node_c, ColumnID{1}};
+    _a_a = LQPColumnOrigin{_table_node_a, ColumnID{0}};
+    _a_b = LQPColumnOrigin{_table_node_a, ColumnID{1}};
+    _b_a = LQPColumnOrigin{_table_node_b, ColumnID{0}};
+    _b_b = LQPColumnOrigin{_table_node_b, ColumnID{1}};
+    _c_a = LQPColumnOrigin{_table_node_c, ColumnID{1}};
+    _c_b = LQPColumnOrigin{_table_node_c, ColumnID{1}};
 
     _rule = std::make_shared<JoinDetectionRule>();
   }
@@ -70,7 +70,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
   std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
   std::shared_ptr<JoinDetectionRule> _rule;
   
-  ColumnOrigin _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
+  LQPColumnOrigin _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
 };
 
 TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {

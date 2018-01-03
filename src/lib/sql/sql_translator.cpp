@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "expression.hpp"
+#include "base_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -403,7 +403,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   }
 
   // We need to collect the column origins so that we can remove the duplicate columns used in the join condition
-  std::vector<ColumnOrigin> column_origins;
+  std::vector<LQPColumnOrigin> column_origins;
   for (auto column_id = ColumnID{0u}; column_id < return_node->output_column_count(); ++column_id) {
     const auto &column_name = return_node->output_column_names()[column_id];
 
@@ -617,7 +617,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   /**
    * Collect the ColumnOrigins of the GroupByColumns
    */
-  std::vector<ColumnOrigin> groupby_column_origins;
+  std::vector<LQPColumnOrigin> groupby_column_origins;
   if (group_by) {
     groupby_column_origins.reserve(group_by->columns->size());
     for (const auto* groupby_hsql_expr : *group_by->columns) {
@@ -750,7 +750,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
 
     if (expr->type() == ExpressionType::Star) {
       // Resolve `SELECT *` or `SELECT prefix.*` to columns.
-      std::vector<ColumnOrigin> column_origins;
+      std::vector<LQPColumnOrigin> column_origins;
 
       if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
@@ -773,7 +773,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
 
         for (auto origin_node_column_id = ColumnID{0}; origin_node_column_id < origin_node->output_column_count();
              ++origin_node_column_id) {
-          const auto column_origin = ColumnOrigin{origin_node, origin_node_column_id};
+          const auto column_origin = LQPColumnOrigin{origin_node, origin_node_column_id};
           const auto input_node_column_id =
               input_node->find_output_column_id_by_column_origin({origin_node, origin_node_column_id});
           if (input_node_column_id) {
@@ -832,7 +832,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::Lim
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     const hsql::Expr& hsql_expr, bool allow_function_columns,
-    const std::function<ColumnOrigin(const hsql::Expr&)>& resolve_column,
+    const std::function<LQPColumnOrigin(const hsql::Expr&)>& resolve_column,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 

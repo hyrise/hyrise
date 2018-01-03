@@ -1,4 +1,4 @@
-#include "expression.hpp"
+#include "base_expression.hpp"
 
 #include <iomanip>
 #include <memory>
@@ -18,10 +18,10 @@
 namespace opossum {
 
 template <typename DerivedExpressionType>
-Expression<DerivedExpressionType>::Expression(ExpressionType type) : _type(type) {}
+BaseExpression<DerivedExpressionType>::BaseExpression(ExpressionType type) : _type(type) {}
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::deep_copy() const {
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::deep_copy() const {
   // We cannot use the copy constructor here, because it does not work with shared_from_this()
   auto deep_copy = std::make_shared<DerivedExpressionType>(_type);
   deep_copy->_value = _value;
@@ -46,32 +46,32 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::deep_c
 }
 
 template <typename DerivedExpressionType>
-const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::left_child() const {
+const std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::left_child() const {
   return _left_child;
 }
 
 template <typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_left_child(const std::shared_ptr<DerivedExpressionType>& left) {
+void BaseExpression<DerivedExpressionType>::set_left_child(const std::shared_ptr<DerivedExpressionType>& left) {
   _left_child = left;
 }
 
 template <typename DerivedExpressionType>
-const std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::right_child() const {
+const std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::right_child() const {
   return _right_child;
 }
 
 template <typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_right_child(const std::shared_ptr<DerivedExpressionType>& right) {
+void BaseExpression<DerivedExpressionType>::set_right_child(const std::shared_ptr<DerivedExpressionType>& right) {
   _right_child = right;
 }
 
 template <typename DerivedExpressionType>
-ExpressionType Expression<DerivedExpressionType>::type() const {
+ExpressionType BaseExpression<DerivedExpressionType>::type() const {
   return _type;
 }
 
 template <typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::print(const uint32_t level, std::ostream& out) const {
+void BaseExpression<DerivedExpressionType>::print(const uint32_t level, std::ostream& out) const {
   out << std::setw(level) << " ";
   out << description() << std::endl;
 
@@ -85,12 +85,12 @@ void Expression<DerivedExpressionType>::print(const uint32_t level, std::ostream
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_operator() const {
+bool BaseExpression<DerivedExpressionType>::is_operator() const {
   return is_arithmetic_operator() || is_logical_operator();
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_arithmetic_operator() const {
+bool BaseExpression<DerivedExpressionType>::is_arithmetic_operator() const {
   switch (_type) {
     case ExpressionType::Subtraction:
     case ExpressionType::Addition:
@@ -105,7 +105,7 @@ bool Expression<DerivedExpressionType>::is_arithmetic_operator() const {
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_logical_operator() const {
+bool BaseExpression<DerivedExpressionType>::is_logical_operator() const {
   switch (_type) {
     case ExpressionType::Equals:
     case ExpressionType::NotEquals:
@@ -127,7 +127,7 @@ bool Expression<DerivedExpressionType>::is_logical_operator() const {
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_binary_operator() const {
+bool BaseExpression<DerivedExpressionType>::is_binary_operator() const {
   if (is_arithmetic_operator()) return true;
 
   switch (_type) {
@@ -149,7 +149,7 @@ bool Expression<DerivedExpressionType>::is_binary_operator() const {
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_unary_operator() const {
+bool BaseExpression<DerivedExpressionType>::is_unary_operator() const {
   switch (_type) {
     case ExpressionType::Not:
     case ExpressionType::Exists:
@@ -160,17 +160,17 @@ bool Expression<DerivedExpressionType>::is_unary_operator() const {
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_null_literal() const {
+bool BaseExpression<DerivedExpressionType>::is_null_literal() const {
   return _type == ExpressionType::Literal && _value && variant_is_null(*_value);
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::is_operand() const {
+bool BaseExpression<DerivedExpressionType>::is_operand() const {
   return _type == ExpressionType::Literal || _type == ExpressionType::Column;
 }
 
 template <typename DerivedExpressionType>
-const std::string Expression<DerivedExpressionType>::description() const {
+const std::string BaseExpression<DerivedExpressionType>::description() const {
   std::ostringstream desc;
 
   auto alias_string = _alias ? *_alias : std::string("-");
@@ -201,37 +201,37 @@ const std::string Expression<DerivedExpressionType>::description() const {
 }
 
 template <typename DerivedExpressionType>
-const std::optional<std::string>& Expression<DerivedExpressionType>::table_name() const {
+const std::optional<std::string>& BaseExpression<DerivedExpressionType>::table_name() const {
   return _table_name;
 }
 
 template <typename DerivedExpressionType>
-AggregateFunction Expression<DerivedExpressionType>::aggregate_function() const {
+AggregateFunction BaseExpression<DerivedExpressionType>::aggregate_function() const {
   DebugAssert(_aggregate_function != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have an aggregate function");
   return *_aggregate_function;
 }
 
 template <typename DerivedExpressionType>
-const std::optional<std::string>& Expression<DerivedExpressionType>::alias() const {
+const std::optional<std::string>& BaseExpression<DerivedExpressionType>::alias() const {
   return _alias;
 }
 
 template <typename DerivedExpressionType>
-const AllTypeVariant Expression<DerivedExpressionType>::value() const {
+const AllTypeVariant BaseExpression<DerivedExpressionType>::value() const {
   DebugAssert(_value != std::nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value");
   return *_value;
 }
 
 template <typename DerivedExpressionType>
-ValuePlaceholder Expression<DerivedExpressionType>::value_placeholder() const {
+ValuePlaceholder BaseExpression<DerivedExpressionType>::value_placeholder() const {
   DebugAssert(_value_placeholder != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
   return *_value_placeholder;
 }
 
 template <typename DerivedExpressionType>
-std::string Expression<DerivedExpressionType>::to_string(
+std::string BaseExpression<DerivedExpressionType>::to_string(
     const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
   switch (_type) {
     case ExpressionType::Literal:
@@ -243,7 +243,7 @@ std::string Expression<DerivedExpressionType>::to_string(
       }
       return type_cast<std::string>(value());
     case ExpressionType::Column:
-      Fail("This should be handled in derived Expression type");
+      Fail("This should be handled in derived BaseExpression type");
       return "";
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
@@ -286,18 +286,18 @@ std::string Expression<DerivedExpressionType>::to_string(
 
 template <typename DerivedExpressionType>
 const std::vector<std::shared_ptr<DerivedExpressionType>>&
-Expression<DerivedExpressionType>::aggregate_function_arguments() const {
+BaseExpression<DerivedExpressionType>::aggregate_function_arguments() const {
   return _aggregate_function_arguments;
 }
 
 template <typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_aggregate_function_arguments(
+void BaseExpression<DerivedExpressionType>::set_aggregate_function_arguments(
     const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments) {
   _aggregate_function_arguments = aggregate_function_arguments;
 }
 
 template <typename DerivedExpressionType>
-bool Expression<DerivedExpressionType>::operator==(const Expression& other) const {
+bool BaseExpression<DerivedExpressionType>::operator==(const BaseExpression& other) const {
   auto compare_expression_ptrs = [](const auto& left_pointer, const auto& right_pointer) {
     if (left_pointer && right_pointer) {
       return *left_pointer == *right_pointer;
@@ -324,12 +324,12 @@ bool Expression<DerivedExpressionType>::operator==(const Expression& other) cons
 }
 
 template <typename DerivedExpressionType>
-void Expression<DerivedExpressionType>::set_alias(const std::string& alias) {
+void BaseExpression<DerivedExpressionType>::set_alias(const std::string& alias) {
   _alias = alias;
 }
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_literal(
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::create_literal(
     const AllTypeVariant& value, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Literal);
   expression->_alias = alias;
@@ -339,7 +339,7 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
 }
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_value_placeholder(
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::create_value_placeholder(
     ValuePlaceholder value_placeholder) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Placeholder);
   expression->_value_placeholder = value_placeholder;
@@ -347,7 +347,7 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
 }
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_aggregate_function(
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::create_aggregate_function(
     AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpressionType>>& function_arguments,
     const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Function);
@@ -358,7 +358,7 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
 }
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_binary_operator(
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::create_binary_operator(
     ExpressionType type, const std::shared_ptr<DerivedExpressionType>& left,
     const std::shared_ptr<DerivedExpressionType>& right, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(type);
@@ -373,7 +373,7 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
 }
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_unary_operator(
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::create_unary_operator(
     ExpressionType type, const std::shared_ptr<DerivedExpressionType>& input, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<DerivedExpressionType>(type);
   Assert(expression->is_unary_operator(), "Type is not a unary operator such as Not, Exists");
@@ -385,14 +385,14 @@ std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create
 }
 
 template <typename DerivedExpressionType>
-std::shared_ptr<DerivedExpressionType> Expression<DerivedExpressionType>::create_select_star(
+std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::create_select_star(
     const std::optional<std::string>& table_name) {
   auto expression = std::make_shared<DerivedExpressionType>(ExpressionType::Star);
   expression->_table_name = table_name;
   return expression;
 }
 
-template class Expression<LQPExpression>;
-template class Expression<OperatorExpression>;
+template class BaseExpression<LQPExpression>;
+template class BaseExpression<OperatorExpression>;
 
 }  // namespace opossum

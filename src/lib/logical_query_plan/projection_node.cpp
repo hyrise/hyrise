@@ -57,7 +57,7 @@ void ProjectionNode::_on_child_changed() {
   _output_column_names.reset();
 }
 
-const std::vector<ColumnOrigin>& ProjectionNode::output_column_origins() const {
+const std::vector<LQPColumnOrigin>& ProjectionNode::output_column_origins() const {
   if (!_output_column_origins) {
     _update_output();
   }

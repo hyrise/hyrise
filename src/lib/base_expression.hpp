@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "logical_query_plan/column_origin.hpp"
+#include "logical_query_plan/lqp_column_origin.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -26,7 +26,7 @@ class AbstractLQPNode;
  * approach used in hsql::Expr.
  */
 template <typename DerivedExpressionType>
-class Expression : public std::enable_shared_from_this<DerivedExpressionType>, private Noncopyable {
+class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType>, private Noncopyable {
  public:
   /*
    * This constructor is meant for internal use only and therefore should be private.
@@ -45,7 +45,7 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType>, p
    *
    * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
-  explicit Expression(ExpressionType type);
+  explicit BaseExpression(ExpressionType type);
 
   // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
   std::shared_ptr<DerivedExpressionType> deep_copy() const;
@@ -155,7 +155,7 @@ class Expression : public std::enable_shared_from_this<DerivedExpressionType>, p
 
  protected:
   // Not to be used directly, derived classes should implement it in the public scope and use this internally
-  bool operator==(const Expression& other) const;
+  bool operator==(const BaseExpression& other) const;
 
   virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpressionType> &copy) const = 0;
 

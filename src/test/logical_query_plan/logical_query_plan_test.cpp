@@ -7,7 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression.hpp"
+#include "base_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -28,10 +28,10 @@ class LogicalQueryPlanTest : public BaseTest {
     _mock_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
     _mock_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
 
-    _t_a_a = ColumnOrigin{_mock_node_a, ColumnID{0}};
-    _t_a_b = ColumnOrigin{_mock_node_a, ColumnID{1}};
-    _t_b_a = ColumnOrigin{_mock_node_b, ColumnID{0}};
-    _t_b_b = ColumnOrigin{_mock_node_b, ColumnID{1}};
+    _t_a_a = LQPColumnOrigin{_mock_node_a, ColumnID{0}};
+    _t_a_b = LQPColumnOrigin{_mock_node_a, ColumnID{1}};
+    _t_b_a = LQPColumnOrigin{_mock_node_b, ColumnID{0}};
+    _t_b_b = LQPColumnOrigin{_mock_node_b, ColumnID{1}};
 
     _predicate_node_a = std::make_shared<PredicateNode>(_t_a_a, ScanType::Equals, 42);
     _predicate_node_b = std::make_shared<PredicateNode>(_t_a_b, ScanType::Equals, 1337);
@@ -79,10 +79,10 @@ class LogicalQueryPlanTest : public BaseTest {
   std::shared_ptr<ProjectionNode> _projection_node;
   std::shared_ptr<JoinNode> _join_node;
 
-  ColumnOrigin _t_a_a;
-  ColumnOrigin _t_a_b;
-  ColumnOrigin _t_b_a;
-  ColumnOrigin _t_b_b;
+  LQPColumnOrigin _t_a_a;
+  LQPColumnOrigin _t_a_b;
+  LQPColumnOrigin _t_b_a;
+  LQPColumnOrigin _t_b_b;
 };
 
 TEST_F(LogicalQueryPlanTest, SimpleParentTest) {

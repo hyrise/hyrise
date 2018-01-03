@@ -8,7 +8,7 @@
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "column_origin.hpp"
+#include "lqp_column_origin.hpp"
 
 namespace opossum {
 
@@ -23,12 +23,12 @@ class TableStatistics;
  */
 class PredicateNode : public AbstractLQPNode {
  public:
-  PredicateNode(const ColumnOrigin& column_origin, const ScanType scan_type, const AllParameterVariant& value,
+  PredicateNode(const LQPColumnOrigin& column_origin, const ScanType scan_type, const AllParameterVariant& value,
                 const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 
-  const ColumnOrigin& column_origin() const;
+  const LQPColumnOrigin& column_origin() const;
   ScanType scan_type() const;
   const AllParameterVariant& value() const;
   const std::optional<AllTypeVariant>& value2() const;
@@ -41,7 +41,7 @@ class PredicateNode : public AbstractLQPNode {
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
  private:
-  const ColumnOrigin _column_origin;
+  const LQPColumnOrigin _column_origin;
   const ScanType _scan_type;
   const AllParameterVariant _value;
   const std::optional<AllTypeVariant> _value2;

@@ -14,7 +14,7 @@
 namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
-                             const std::vector<ColumnOrigin>& groupby_column_origins)
+                             const std::vector<LQPColumnOrigin>& groupby_column_origins)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_origins(groupby_column_origins) {
@@ -39,7 +39,7 @@ const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expr
   return _aggregate_expressions;
 }
 
-const std::vector<ColumnOrigin>& AggregateNode::groupby_column_origins() const { return _groupby_column_origins; }
+const std::vector<LQPColumnOrigin>& AggregateNode::groupby_column_origins() const { return _groupby_column_origins; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -121,20 +121,20 @@ const std::vector<std::string>& AggregateNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<ColumnOrigin>& AggregateNode::output_column_origins() const {
+const std::vector<LQPColumnOrigin>& AggregateNode::output_column_origins() const {
   if (!_output_column_origins) {
     _update_output();
   }
   return *_output_column_origins;
 }
 
-ColumnOrigin AggregateNode::get_column_origin_for_expression(const std::shared_ptr<LQPExpression>& expression) const {
+LQPColumnOrigin AggregateNode::get_column_origin_for_expression(const std::shared_ptr<LQPExpression>& expression) const {
   const auto column_id = find_column_origin_for_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
-std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
+std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_for_expression(
     const std::shared_ptr<LQPExpression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
@@ -162,7 +162,7 @@ std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return ColumnOrigin{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
+      return LQPColumnOrigin{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
     }
   }
 

@@ -24,7 +24,7 @@ class ProjectionNode : public AbstractLQPNode {
 
   std::string description() const override;
 
-  const std::vector<ColumnOrigin>& output_column_origins() const override;
+  const std::vector<LQPColumnOrigin>& output_column_origins() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;

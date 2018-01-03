@@ -187,7 +187,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 }
 
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type,
-                            const ColumnOrigin& left_column_origin, const ColumnOrigin& right_column_origin) {
+                            const LQPColumnOrigin& left_column_origin, const LQPColumnOrigin& right_column_origin) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise

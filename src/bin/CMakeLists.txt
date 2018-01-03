@@ -17,8 +17,8 @@ add_executable(
     playground.cpp
     ../lib/strong_typedef.hpp
     ../lib/types.hpp
-    ../lib/logical_query_plan/column_origin.cpp
-    ../lib/logical_query_plan/column_origin.hpp
+    ../lib/logical_query_plan/lqp_column_origin.cpp
+    ../lib/logical_query_plan/lqp_column_origin.hpp
     ../lib/all_parameter_variant.cpp
     ../lib/all_parameter_variant.hpp
 )

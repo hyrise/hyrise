@@ -6,7 +6,7 @@
 
 #include "base_test.hpp"
 
-#include "expression.hpp"
+#include "base_expression.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -41,11 +41,11 @@ class ProjectionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
-  ColumnOrigin _a;
-  ColumnOrigin _b;
-  ColumnOrigin _c;
-  ColumnOrigin _some_addition;
-  ColumnOrigin _a_plus_c;
+  LQPColumnOrigin _a;
+  LQPColumnOrigin _b;
+  LQPColumnOrigin _c;
+  LQPColumnOrigin _some_addition;
+  LQPColumnOrigin _a_plus_c;
 };
 
 TEST_F(ProjectionNodeTest, Description) {
