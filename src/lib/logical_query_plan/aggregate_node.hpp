@@ -11,7 +11,9 @@
 
 namespace opossum {
 
-using LQPAggregateColumnDefinition = AggregateColumnDefinition<ColumnOrigin>;
+// TODO(anybody) Use instead of LQPExpression once the AggregateNode doesn't need to contain expressions as function
+// args anymore and the SQLTranslator creates a ProjectionNode instead
+// using LQPAggregateColumnDefinition = AggregateColumnDefinition<ColumnOrigin>;
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
