@@ -65,7 +65,7 @@ void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& bas
 }
 
 void LikeTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
-                             std::shared_ptr<ColumnVisitableContext> base_context) {
+                                              std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;

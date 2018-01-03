@@ -16,13 +16,19 @@ RunLengthColumn<T>::RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& 
     : _values{values}, _end_positions{end_positions}, _null_value{null_value} {}
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> RunLengthColumn<T>::values() const { return _values; }
+std::shared_ptr<const pmr_vector<T>> RunLengthColumn<T>::values() const {
+  return _values;
+}
 
 template <typename T>
-std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthColumn<T>::end_positions() const { return _end_positions; }
+std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthColumn<T>::end_positions() const {
+  return _end_positions;
+}
 
 template <typename T>
-const T RunLengthColumn<T>::null_value() const { return _null_value; }
+const T RunLengthColumn<T>::null_value() const {
+  return _null_value;
+}
 
 template <typename T>
 const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -96,7 +102,9 @@ std::shared_ptr<BaseColumn> RunLengthColumn<T>::copy_using_allocator(const Polym
 }
 
 template <typename T>
-EncodingType RunLengthColumn<T>::encoding_type() const { return EncodingType::RunLength; }
+EncodingType RunLengthColumn<T>::encoding_type() const {
+  return EncodingType::RunLength;
+}
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(RunLengthColumn);
 

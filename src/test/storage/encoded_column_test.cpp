@@ -19,10 +19,9 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-using EncodingTypes =
-    ::testing::Types<enum_constant<EncodingType, EncodingType::Dictionary>,
-                     enum_constant<EncodingType, EncodingType::DeprecatedDictionary>,
-                     enum_constant<EncodingType, EncodingType::RunLength>>;
+using EncodingTypes = ::testing::Types<enum_constant<EncodingType, EncodingType::Dictionary>,
+                                       enum_constant<EncodingType, EncodingType::DeprecatedDictionary>,
+                                       enum_constant<EncodingType, EncodingType::RunLength>>;
 
 template <typename EncodingTypeT>
 class EncodedColumnTest : public BaseTest {
@@ -93,7 +92,8 @@ class EncodedColumnTest : public BaseTest {
   }
 
   template <typename T>
-  std::shared_ptr<EncodedColumnType<T>> encode_value_column(DataType data_type, const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<EncodedColumnType<T>> encode_value_column(DataType data_type,
+                                                            const std::shared_ptr<ValueColumn<T>>& value_column) {
     return std::dynamic_pointer_cast<EncodedColumnType<T>>(encode_column(encoding_type_t(), data_type, value_column));
   }
 };

@@ -128,7 +128,7 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
   }
 
   void handle_encoded_column(const BaseEncodedColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) final {
+                             std::shared_ptr<ColumnVisitableContext> base_context) final {
     Fail("CSV export not implemented yet for encoded columns.");
   }
 };

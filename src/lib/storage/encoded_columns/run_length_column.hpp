@@ -17,8 +17,7 @@ template <typename T>
 class RunLengthColumn : public BaseEncodedColumn {
  public:
   explicit RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
-                           const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
-                           const T null_value);
+                           const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions, const T null_value);
 
   std::shared_ptr<const pmr_vector<T>> values() const;
   std::shared_ptr<const pmr_vector<ChunkOffset>> end_positions() const;

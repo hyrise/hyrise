@@ -78,8 +78,8 @@ void IsNullTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_co
     resolve_encoded_column_type<Type>(base_column, [&](const auto& typed_column) {
       auto left_column_iterable = create_iterable_from_column(typed_column);
 
-      left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
-                                          [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+      left_column_iterable.with_iterators(
+          mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
     });
   });
 }

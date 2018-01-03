@@ -16,15 +16,18 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     auto begin = Iterator{_column.null_value(), _column.values()->cbegin(), _column.end_positions()->cbegin(), 0u};
-    auto end = Iterator{_column.null_value(), _column.values()->cend(), _column.end_positions()->cend(), static_cast<ChunkOffset>(_column.size())};
+    auto end = Iterator{_column.null_value(), _column.values()->cend(), _column.end_positions()->cend(),
+                        static_cast<ChunkOffset>(_column.size())};
 
     functor(begin, end);
   }
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = IndexedIterator{_column.null_value(), *_column.values(), *_column.end_positions(), mapped_chunk_offsets.cbegin()};
-    auto end = IndexedIterator{_column.null_value(), *_column.values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
+    auto begin = IndexedIterator{_column.null_value(), *_column.values(), *_column.end_positions(),
+                                 mapped_chunk_offsets.cbegin()};
+    auto end =
+        IndexedIterator{_column.null_value(), *_column.values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
 
     functor(begin, end);
   }
@@ -39,8 +42,12 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
    public:
-    explicit Iterator(const T null_value, const ValueIterator& value_it, const EndPositionIterator& end_position_it, const ChunkOffset start_position)
-        : _null_value{null_value}, _value_it{value_it}, _end_position_it{end_position_it}, _current_position{start_position} {}
+    explicit Iterator(const T null_value, const ValueIterator& value_it, const EndPositionIterator& end_position_it,
+                      const ChunkOffset start_position)
+        : _null_value{null_value},
+          _value_it{value_it},
+          _end_position_it{end_position_it},
+          _current_position{start_position} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -57,7 +64,9 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
     bool equal(const Iterator& other) const { return _current_position == other._current_position; }
 
     NullableColumnValue<T> dereference() const {
-      if (*_value_it == _null_value) { return NullableColumnValue{T{}, true, _current_position}; }
+      if (*_value_it == _null_value) {
+        return NullableColumnValue{T{}, true, _current_position};
+      }
 
       return NullableColumnValue<T>{*_value_it, false, _current_position};
     }
@@ -71,8 +80,8 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
 
   class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>> {
    public:
-    explicit IndexedIterator(const T null_value, const pmr_vector<T>& values, const pmr_vector<ChunkOffset>& end_positions,
-                             const ChunkOffsetsIterator& chunk_offsets_it)
+    explicit IndexedIterator(const T null_value, const pmr_vector<T>& values,
+                             const pmr_vector<ChunkOffset>& end_positions, const ChunkOffsetsIterator& chunk_offsets_it)
         : BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _null_value{null_value},
           _values{values},
@@ -94,10 +103,11 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
 
       auto end_position_it = _end_positions.cend();
       if (current_chunk_offset < _prev_chunk_offset) {
-        end_position_it = std::lower_bound(_end_positions.cbegin(), _end_positions.cbegin() + _prev_index, current_chunk_offset);
+        end_position_it =
+            std::lower_bound(_end_positions.cbegin(), _end_positions.cbegin() + _prev_index, current_chunk_offset);
       } else {
-        end_position_it = std::find_if_not(_end_positions.cbegin() + _prev_index, _end_positions.cend(),
-                                           less_than_current);
+        end_position_it =
+            std::find_if_not(_end_positions.cbegin() + _prev_index, _end_positions.cend(), less_than_current);
       }
 
       const auto current_index = std::distance(_end_positions.cbegin(), end_position_it);
