@@ -1,3 +1,5 @@
+set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/local/lib)
+
 # Configure server
 add_executable(
     hyriseServer
@@ -21,11 +23,14 @@ target_link_libraries(
     hyrisePlayground
     hyrise
     hyriseBenchmarkLib
-    uWS
-    ssl
-    crypto
+    # uWS
+    # ssl
+    # crypto
     z
-    uv
+    # uv
+    ${UWS_LIBRARY}
+    ${SSL_LIBRARY}
+    ${UV_LIBRARY}
 )
 
 include_directories(/usr/local/opt/openssl/include)

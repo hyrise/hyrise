@@ -38,6 +38,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
+set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES /usr/local/lib ${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES})
+
 # Link Time Optimization (LTO)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
@@ -58,6 +60,17 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
+# find_package(uWS REQUIRED)
+# find_package(ssl REQUIRED)
+# find_package(uv REQUIRED)
+FIND_LIBRARY(UWS_LIBRARY NAME uWS HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib )
+MESSAGE(STATUS "Found uws library: ${UWS_LIBRARY}")
+FIND_LIBRARY(SSL_LIBRARY NAME ssl HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib )
+MESSAGE(STATUS "Found ssl library: ${SSL_LIBRARY}")
+FIND_LIBRARY(UV_LIBRARY NAME uv HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib)
+MESSAGE(STATUS "Found uv library: ${UV_LIBRARY}")
+FIND_LIBRARY(CRYPTO_LIBRARY NAME crypto HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib)
+MESSAGE(STATUS "Found crypto library: ${CRYPTO_LIBRARY}")
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
