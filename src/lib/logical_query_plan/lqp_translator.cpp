@@ -65,18 +65,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 
   const auto column_id = table_scan_node->get_output_column_id_by_column_origin(table_scan_node->column_origin());
 
+  auto value = table_scan_node->value();
+  if (value.type() == typeid(ColumnOrigin)) {
+    value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const ColumnOrigin>(value));
+  }
+
   /**
    * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
    * `X >= a` and one for `X <= b`
    */
   if (table_scan_node->scan_type() == ScanType::Between) {
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
-    PerformanceWarning("TableScan executes BETWEEN as two separate selects");
-
-    auto value = table_scan_node->value();
-    if (value.type() == typeid(ColumnOrigin)) {
-      value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const ColumnOrigin>(value));
-    }
+    PerformanceWarning("TableScan executes BETWEEN as two separate scans");
 
     auto table_scan_gt =
         std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
@@ -84,7 +84,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals, *table_scan_node->value2());
   }
 
-  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(), table_scan_node->value());
+  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(), value);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(

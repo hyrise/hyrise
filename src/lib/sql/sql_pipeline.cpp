@@ -78,6 +78,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
 
   try {
     for (const auto& node : unoptimized_lqp) {
+      node->print();
       _optimized_logical_plans.push_back(Optimizer::get().optimize(node));
     }
   } catch (const std::exception& exception) {

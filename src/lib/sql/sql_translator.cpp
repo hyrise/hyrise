@@ -682,6 +682,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   }
 
   /**
+   * The SELECT-list has been resolved, so now we can (and have to!) remove the groupby_aliasing_node from the LQP
+   */
+  groupby_aliasing_node->remove_from_tree();
+
+  /**
    * Check for HAVING now, because it might contain more aggregations
    */
   if (has_having) {
@@ -695,7 +700,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
 
       if (result == aggregate_expressions.end()) {
         // expression not found! add to the other aggregations
-        aggregate_expressions.push_back(having_expr);
+        aggregate_expressions.emplace_back(having_expr);
       }
     }
   }

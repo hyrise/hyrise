@@ -34,3 +34,7 @@ std::ostream& operator<<(std::ostream& os, const ColumnOrigin& column_origin) {
   return os;
 }
 }
+
+opossum::ColumnID foo() {
+  return opossum::ColumnID{0};
+}

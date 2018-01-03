@@ -76,7 +76,9 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   // If value references a Column, we have to resolve its ColumnID (same as for _column_origin below)
   auto value = _value;
   if (value.type() == typeid(ColumnOrigin)) {
-    value = get_output_column_id_by_column_origin(boost::get<ColumnOrigin>(value));
+    // Doing just `value = boost::get<ColumnOrigin>(value)` triggers a compiler warning in GCC release builds about
+    // the assigned value being uninitialized. There seems to be no reason for this and this way seems to be fine... :(
+    value = static_cast<ColumnID::base_type>(get_output_column_id_by_column_origin(boost::get<ColumnOrigin>(value)));
   }
 
   return left_child->get_statistics()->predicate_statistics(get_output_column_id_by_column_origin(_column_origin),

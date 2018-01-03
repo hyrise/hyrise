@@ -16,6 +16,7 @@
 #include "expression.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
+#include "operators/operator_expression.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"

@@ -15,12 +15,18 @@ add_executable(
     hyrisePlayground
 
     playground.cpp
+    ../lib/strong_typedef.hpp
+    ../lib/types.hpp
+    ../lib/logical_query_plan/column_origin.cpp
+    ../lib/logical_query_plan/column_origin.hpp
+    ../lib/all_parameter_variant.cpp
+    ../lib/all_parameter_variant.hpp
 )
-target_link_libraries(
-    hyrisePlayground
-    hyrise
-    hyriseBenchmarkLib
-)
+#target_link_libraries(
+#    hyrisePlayground
+#    hyrise
+#    hyriseBenchmarkLib
+#)
 
 # Configure tpccTableGenerator
 add_executable(tpccTableGenerator tpcc_table_generator.cpp)

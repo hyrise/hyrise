@@ -11,7 +11,7 @@ class AbstractLQPNode;
 class ColumnOrigin final {
  public:
   ColumnOrigin() = default;
-  ColumnOrigin(const std::shared_ptr<const AbstractLQPNode>& node, ColumnID column_id = INVALID_COLUMN_ID);
+  ColumnOrigin(const std::shared_ptr<const AbstractLQPNode>& node, ColumnID column_id);
 
   std::shared_ptr<const AbstractLQPNode> node() const;
   ColumnID column_id() const;
@@ -23,8 +23,10 @@ class ColumnOrigin final {
  private:
   // Needs to be weak since Nodes can hold ColumnOrigins referring to themselves
   std::weak_ptr<const AbstractLQPNode> _node;
-  ColumnID _column_id = INVALID_COLUMN_ID;
+  ColumnID _column_id{INVALID_COLUMN_ID};
 };
 
 std::ostream& operator<<(std::ostream& os, const ColumnOrigin& column_origin);
 }
+
+opossum::ColumnID foo();
