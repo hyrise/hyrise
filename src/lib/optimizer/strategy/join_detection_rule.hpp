@@ -60,7 +60,8 @@ class JoinDetectionRule : public AbstractRule {
    *
    * left must be in range of [0, left_num_cols) and right in range [left_num_cols, left_num_cols + right_num_cols)
    */
-  bool _is_join_condition(LQPColumnOrigin left, LQPColumnOrigin right, size_t left_num_cols, size_t right_num_cols) const;
+  bool _is_join_condition(LQPColumnOrigin left, LQPColumnOrigin right, size_t left_num_cols,
+                          size_t right_num_cols) const;
 };
 
 }  // namespace opossum

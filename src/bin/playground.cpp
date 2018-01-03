@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "../lib/types.hpp"
 #include "../lib/all_parameter_variant.hpp"
+#include "../lib/types.hpp"
 
 using namespace opossum;
 

@@ -15,11 +15,15 @@ OrderByDefinition::OrderByDefinition(const LQPColumnOrigin& column_origin, const
 SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
     : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
-std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
+                                                           const std::shared_ptr<AbstractLQPNode>& right_child) const {
   OrderByDefinitions order_by_definitions;
-  std::transform(_order_by_definitions.begin(), _order_by_definitions.end(), std::back_inserter(order_by_definitions), [&](const auto & order_by_definition) {
-    return OrderByDefinition{this->left_child()->clone_column_origin(order_by_definition.column_origin, left_child), order_by_definition.order_by_mode};
-  });
+  std::transform(_order_by_definitions.begin(), _order_by_definitions.end(), std::back_inserter(order_by_definitions),
+                 [&](const auto& order_by_definition) {
+                   return OrderByDefinition{
+                       this->left_child()->clone_column_origin(order_by_definition.column_origin, left_child),
+                       order_by_definition.order_by_mode};
+                 });
 
   return std::make_shared<SortNode>(order_by_definitions);
 }

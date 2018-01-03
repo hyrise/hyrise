@@ -25,8 +25,10 @@ class LogicalQueryPlanTest : public BaseTest {
     /**
      * Init some nodes for the tests to use
      */
-    _mock_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
-    _mock_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
+    _mock_node_a =
+        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
+    _mock_node_b =
+        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
 
     _t_a_a = LQPColumnOrigin{_mock_node_a, ColumnID{0}};
     _t_a_b = LQPColumnOrigin{_mock_node_a, ColumnID{1}};
@@ -127,7 +129,7 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
   ASSERT_EQ(_mock_node_a->left_child(), nullptr);
   ASSERT_EQ(_mock_node_a->right_child(), nullptr);
   ASSERT_TRUE(_mock_node_a->parents().empty());
-  
+
   _predicate_node_a->set_left_child(_mock_node_a);
 
   ASSERT_EQ(_mock_node_a->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
@@ -141,7 +143,7 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
   ASSERT_EQ(_predicate_node_b->left_child(), _predicate_node_a);
   ASSERT_EQ(_predicate_node_b->right_child(), nullptr);
   ASSERT_TRUE(_predicate_node_b->parents().empty());
-  
+
   _projection_node->set_left_child(_predicate_node_b);
 
   ASSERT_EQ(_predicate_node_b->parents(), std::vector<std::shared_ptr<AbstractLQPNode>>{_projection_node});

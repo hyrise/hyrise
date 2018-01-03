@@ -180,7 +180,8 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     Projection::ColumnExpressions columns = {OperatorExpression::create_column(ColumnID{6} /* "OL_DELIVERY_D" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    Projection::ColumnExpressions values = {OperatorExpression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
+    Projection::ColumnExpressions values = {
+        OperatorExpression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("ORDER_LINE", projection, updated_rows);
 
@@ -259,7 +260,8 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto projection = std::make_shared<Projection>(val, columns);
 
     Projection::ColumnExpressions values = {OperatorExpression::create_binary_operator(
-        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{16}), OperatorExpression::create_literal(ol_total))};
+        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{16}),
+        OperatorExpression::create_literal(ol_total))};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("CUSTOMER", projection, updated_rows);
 

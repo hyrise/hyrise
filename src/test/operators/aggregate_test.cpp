@@ -86,7 +86,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_null_dict->execute();
   }
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<OperatorAggregateColumnDefinition>& aggregates,
+  void test_output(const std::shared_ptr<AbstractOperator> in,
+                   const std::vector<OperatorAggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_references = true) {
     // load expected results from file
@@ -136,24 +137,24 @@ class OperatorsAggregateTest : public BaseTest {
 };
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
-  auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1,
-                                               std::vector<OperatorAggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
-                                               std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<Aggregate>(
+      _table_wrapper_1_1, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
+      std::vector<ColumnID>{ColumnID{0}});
 
   EXPECT_EQ(aggregate->name(), "Aggregate");
 }
 
 TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
-  auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1_string,
-                                               std::vector<OperatorAggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
-                                               std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<Aggregate>(
+      _table_wrapper_1_1_string, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
+      std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
-  auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1_string,
-                                               std::vector<OperatorAggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
-                                               std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<Aggregate>(
+      _table_wrapper_1_1_string, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
+      std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
@@ -524,9 +525,8 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
 }
 
 TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
-  auto join =
-      std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
-                                       JoinColumnIDs(ColumnID{0}, ColumnID{0}), ScanType::LessThan);
+  auto join = std::make_shared<JoinNestedLoop>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
+                                               JoinColumnIDs(ColumnID{0}, ColumnID{0}), ScanType::LessThan);
   join->execute();
 
   this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

@@ -32,7 +32,8 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std
   set_alias(alias);
 }
 
-std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
+                                                           const std::shared_ptr<AbstractLQPNode>& right_child) const {
   if (_column_definitions) {
     return std::make_shared<MockNode>(*_column_definitions, _table_alias);
   }

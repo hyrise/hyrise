@@ -21,12 +21,12 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
-#include "sql/sql_translator.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
-std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string &query) {
+std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
   return opossum::SQLPipeline{query, false}.get_unoptimized_logical_plans().at(0);
 }
 
@@ -41,12 +41,8 @@ namespace opossum {
 
 class SQLTranslatorTest : public BaseTest {
  protected:
-  void SetUp() override {
-    load_test_tables();
-  }
-  void TearDown() override {
-    StorageManager::reset();
-  }
+  void SetUp() override { load_test_tables(); }
+  void TearDown() override { StorageManager::reset(); }
 };
 
 TEST_F(SQLTranslatorTest, SelectStarAllTest) {
@@ -166,7 +162,6 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const std::vector<LQPColumnOrigin> groupby_columns = {LQPColumnOrigin{stored_table_node, ColumnID{0}}};
   EXPECT_EQ(aggregate_node->groupby_column_origins(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
@@ -288,12 +283,8 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
 }
 
 class SQLTranslatorJoinTest : public ::testing::TestWithParam<JoinMode> {
-  void SetUp() override {
-    load_test_tables();
-  }
-  void TearDown() override {
-    StorageManager::reset();
-  }
+  void SetUp() override { load_test_tables(); }
+  void TearDown() override { StorageManager::reset(); }
 };
 
 // Verifies that LEFT/RIGHT JOIN are handled correctly and LEFT/RIGHT OUTER JOIN identically
@@ -328,10 +319,8 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
   EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnOrigin(table_b_node, ColumnID{0}));
 }
 
-INSTANTIATE_TEST_CASE_P(SQLTranslatorJoinTestInstanciation,
-                        SQLTranslatorJoinTest,
-                        ::testing::Values(JoinMode::Left, JoinMode::Right, JoinMode::Outer),);
-
+INSTANTIATE_TEST_CASE_P(SQLTranslatorJoinTestInstanciation, SQLTranslatorJoinTest,
+                        ::testing::Values(JoinMode::Left, JoinMode::Right, JoinMode::Outer), );
 
 TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto query = "SELECT * FROM table_a AS t1 JOIN table_a AS t2 ON t1.a = t2.b;";
@@ -550,12 +539,12 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
 
   const auto result = compile_query(query);
 
-  ASSERT_NE(result->left_child(), nullptr);  // Aggregate
-  ASSERT_NE(result->left_child()->left_child(), nullptr);  // CrossJoin
-  ASSERT_NE(result->left_child()->left_child()->left_child(), nullptr); // CrossJoin
-  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr); // table_b
-  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr); // table_c
-  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr); // table_a
+  ASSERT_NE(result->left_child(), nullptr);                                             // Aggregate
+  ASSERT_NE(result->left_child()->left_child(), nullptr);                               // CrossJoin
+  ASSERT_NE(result->left_child()->left_child()->left_child(), nullptr);                 // CrossJoin
+  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr);   // table_b
+  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr);  // table_c
+  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr);                // table_a
 
   ASSERT_EQ(result->left_child()->type(), LQPNodeType::Aggregate);
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result->left_child());
@@ -585,7 +574,8 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const auto sum_expression = aggregate_node->aggregate_expressions()[0];
   ASSERT_EQ(sum_expression->type(), ExpressionType::Function);
-  ASSERT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum, LQPColumnOrigin(table_c_node, ColumnID{0}));
+  ASSERT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum,
+                                       LQPColumnOrigin(table_c_node, ColumnID{0}));
 
   ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
   ASSERT_STORED_TABLE_NODE(table_c_node, "table_c");

@@ -146,11 +146,10 @@ AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
 }
 
 LQPColumnOrigin HSQLExprTranslator::to_column_origin(const hsql::Expr& hsql_expr,
-                                                  const std::shared_ptr<AbstractLQPNode>& input_node) {
+                                                     const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
   const auto named_column_reference = to_named_column_reference(hsql_expr);
-  const auto column_origin =
-      input_node->find_column_origin_by_named_column_reference(named_column_reference);
+  const auto column_origin = input_node->find_column_origin_by_named_column_reference(named_column_reference);
 
   Assert(column_origin, "Couldn't resolve named column reference '" + named_column_reference.as_string() + "'");
 

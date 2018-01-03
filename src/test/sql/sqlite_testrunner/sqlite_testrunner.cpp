@@ -4,10 +4,10 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <planviz/sql_query_plan_visualizer.hpp>
 #include <string>
 #include <utility>
 #include <vector>
-#include <planviz/sql_query_plan_visualizer.hpp>
 
 #include "SQLParser.h"
 #include "base_test.hpp"

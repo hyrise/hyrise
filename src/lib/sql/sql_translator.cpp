@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "base_expression.hpp"
+#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -177,8 +177,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
         DebugAssert(insert.type == hsql::kInsertSelect, "Unexpected Insert type");
         DebugAssert(insert_column_index < current_result_node->output_column_count(), "ColumnID out of range");
         // when projecting from another table, create a column reference expression
-        projections[column_id] = LQPExpression::create_column(
-            current_result_node->output_column_origins()[insert_column_index]);
+        projections[column_id] =
+            LQPExpression::create_column(current_result_node->output_column_origins()[insert_column_index]);
       }
 
       ++insert_column_index;
@@ -405,14 +405,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   // We need to collect the column origins so that we can remove the duplicate columns used in the join condition
   std::vector<LQPColumnOrigin> column_origins;
   for (auto column_id = ColumnID{0u}; column_id < return_node->output_column_count(); ++column_id) {
-    const auto &column_name = return_node->output_column_names()[column_id];
+    const auto& column_name = return_node->output_column_names()[column_id];
 
     if (static_cast<size_t>(column_id) >= left_node->output_column_count() &&
-    std::find(join_column_names.begin(), join_column_names.end(), column_name) != join_column_names.end()) {
+        std::find(join_column_names.begin(), join_column_names.end(), column_name) != join_column_names.end()) {
       continue;
     }
 
-    const auto &column_origin = return_node->output_column_origins()[column_id];
+    const auto& column_origin = return_node->output_column_origins()[column_id];
     column_origins.emplace_back(column_origin);
   }
 

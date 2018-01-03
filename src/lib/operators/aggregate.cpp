@@ -19,7 +19,8 @@
 
 namespace opossum {
 
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<OperatorAggregateColumnDefinition>& aggregates,
+Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
+                     const std::vector<OperatorAggregateColumnDefinition>& aggregates,
                      const std::vector<ColumnID> groupby_column_ids)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_column_ids(groupby_column_ids) {
   Assert(!(aggregates.empty() && groupby_column_ids.empty()),

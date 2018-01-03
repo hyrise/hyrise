@@ -50,14 +50,16 @@ class AggregateNode : public AbstractLQPNode {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<LQPColumnOrigin> find_column_origin_for_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  std::optional<LQPColumnOrigin> find_column_origin_for_expression(
+      const std::shared_ptr<LQPExpression>& expression) const;
   LQPColumnOrigin get_column_origin_for_expression(const std::shared_ptr<LQPExpression>& expression) const;
   // @}
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
+                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
   void _on_child_changed() override;
 
  private:

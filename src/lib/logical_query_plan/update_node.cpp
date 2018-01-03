@@ -14,11 +14,13 @@ UpdateNode::UpdateNode(const std::string& table_name,
                        const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Update), _table_name(table_name), _column_expressions(column_expressions) {}
 
-std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
-  std::transform(_column_expressions.begin(), _column_expressions.end(), column_expressions.begin(), [&](const auto & expression) {
-    return _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child);
-  });
+  std::transform(_column_expressions.begin(), _column_expressions.end(), column_expressions.begin(),
+                 [&](const auto& expression) {
+                   return _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child);
+                 });
 
   return std::make_shared<UpdateNode>(_table_name, column_expressions);
 }
@@ -48,7 +50,9 @@ std::string UpdateNode::description() const {
 
 bool UpdateNode::subtree_is_read_only() const { return false; }
 
-const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const { return _column_expressions; }
+const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const {
+  return _column_expressions;
+}
 
 const std::string& UpdateNode::table_name() const { return _table_name; }
 

@@ -59,7 +59,8 @@ TEST_F(ProjectionNodeTest, ColumnOriginByNamedColumnReference) {
   EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"a", "t_a"}), _a);
   EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"alias_for_b", std::nullopt}), _b);
   EXPECT_EQ(_projection_node->find_column_origin_by_named_column_reference({"alias_for_b", "t_a"}), std::nullopt);
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"some_addition", std::nullopt}), _some_addition);
+  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"some_addition", std::nullopt}),
+            _some_addition);
   EXPECT_EQ(_projection_node->find_column_origin_by_named_column_reference({"some_addition", "t_a"}), std::nullopt);
 }
 

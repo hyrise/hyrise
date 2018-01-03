@@ -23,9 +23,8 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& 
   }
 }
 
-std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
-
-
+std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
@@ -128,7 +127,8 @@ const std::vector<LQPColumnOrigin>& AggregateNode::output_column_origins() const
   return *_output_column_origins;
 }
 
-LQPColumnOrigin AggregateNode::get_column_origin_for_expression(const std::shared_ptr<LQPExpression>& expression) const {
+LQPColumnOrigin AggregateNode::get_column_origin_for_expression(
+    const std::shared_ptr<LQPExpression>& expression) const {
   const auto column_id = find_column_origin_for_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;

@@ -31,7 +31,8 @@ class MockNode : public AbstractLQPNode {
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
+                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
  private:
   std::vector<std::string> _output_column_names;

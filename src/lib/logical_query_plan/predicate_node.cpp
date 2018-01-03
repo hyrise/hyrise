@@ -20,9 +20,11 @@ PredicateNode::PredicateNode(const LQPColumnOrigin& column_origin, const ScanTyp
       _value(value),
       _value2(value2) {}
 
-std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   DebugAssert(this->left_child(), "Can't copy without child");
-  return std::make_shared<PredicateNode>(this->left_child()->clone_column_origin(_column_origin, left_child), _scan_type, _value, _value2);
+  return std::make_shared<PredicateNode>(this->left_child()->clone_column_origin(_column_origin, left_child),
+                                         _scan_type, _value, _value2);
 }
 
 std::string PredicateNode::description() const {

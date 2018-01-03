@@ -1,4 +1,4 @@
- #include "lqp_translator.hpp"
+#include "lqp_translator.hpp"
 
 #include <iostream>
 #include <memory>
@@ -78,8 +78,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate scans");
 
-    auto table_scan_gt =
-        std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
+    auto table_scan_gt = std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
 
     return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals, *table_scan_node->value2());
   }

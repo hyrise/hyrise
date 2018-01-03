@@ -12,7 +12,8 @@ namespace opossum {
 class UnionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+    _mock_node = std::make_shared<MockNode>(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = {_mock_node, ColumnID{0}};
     _b = {_mock_node, ColumnID{1}};
@@ -52,7 +53,8 @@ TEST_F(UnionNodeTest, MismatchingColumnNames) {
   /**
    * If the input tables have different column layouts get_verbose_column_name() will fail
    */
-  auto mock_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "d"}, {DataType::Int, "c"}}, "t_a");
+  auto mock_node_b = std::make_shared<MockNode>(
+      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "d"}, {DataType::Int, "c"}}, "t_a");
 
   auto invalid_union = std::make_shared<UnionNode>(UnionMode::Positions);
   invalid_union->set_left_child(_mock_node);

@@ -157,7 +157,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
   // Not to be used directly, derived classes should implement it in the public scope and use this internally
   bool operator==(const BaseExpression& other) const;
 
-  virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpressionType> &copy) const = 0;
+  virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpressionType>& copy) const = 0;
 
   // the type of the expression
   const ExpressionType _type;

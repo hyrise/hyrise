@@ -214,9 +214,10 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
 
   // "O_ID", "O_CARRIER_ID", "O_ENTRY_D"
   auto projection = std::make_shared<opossum::Projection>(
-      third_filter, opossum::Projection::ColumnExpressions({opossum::OperatorExpression::create_column(opossum::ColumnID{0}),
-                                                            opossum::OperatorExpression::create_column(opossum::ColumnID{5}),
-                                                            opossum::OperatorExpression::create_column(opossum::ColumnID{4})}));
+      third_filter,
+      opossum::Projection::ColumnExpressions({opossum::OperatorExpression::create_column(opossum::ColumnID{0}),
+                                              opossum::OperatorExpression::create_column(opossum::ColumnID{5}),
+                                              opossum::OperatorExpression::create_column(opossum::ColumnID{4})}));
 
   auto sort =
       std::make_shared<opossum::Sort>(projection, opossum::ColumnID{0} /* "O_ID" */, opossum::OrderByMode::Descending);

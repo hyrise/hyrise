@@ -11,7 +11,10 @@ namespace opossum {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) { _output_column_origins.emplace(); }
 
-std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const { return std::make_shared<DummyTableNode>(); }
+std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+  return std::make_shared<DummyTableNode>();
+}
 
 std::string DummyTableNode::description() const { return "[DummyTable]"; }
 

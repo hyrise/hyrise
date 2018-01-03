@@ -43,7 +43,8 @@ class JoinNode : public AbstractLQPNode {
 
  protected:
   void _on_child_changed() override;
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
+                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
  private:
   JoinMode _join_mode;

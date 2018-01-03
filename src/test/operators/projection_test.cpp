@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/print.hpp"
 #include "operators/operator_expression.hpp"
+#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -53,20 +53,21 @@ class OperatorsProjectionTest : public BaseTest {
     // Projection Expression: a + b + c
     _sum_a_b_c_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
         ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
-        OperatorExpression::create_binary_operator(ExpressionType::Addition, OperatorExpression::create_column(ColumnID{1}),
-                                           OperatorExpression::create_column(ColumnID{2})),
+        OperatorExpression::create_binary_operator(ExpressionType::Addition,
+                                                   OperatorExpression::create_column(ColumnID{1}),
+                                                   OperatorExpression::create_column(ColumnID{2})),
         {"sum"})};
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
-        ExpressionType::Multiplication,
-        OperatorExpression::create_binary_operator(ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
-                                           OperatorExpression::create_column(ColumnID{1})),
+        ExpressionType::Multiplication, OperatorExpression::create_binary_operator(
+                                            ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
+                                            OperatorExpression::create_column(ColumnID{1})),
         OperatorExpression::create_column(ColumnID{2}), {"mul"})};
 
-    _sum_a_b_expr = Projection::ColumnExpressions{
-        OperatorExpression::create_binary_operator(ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
-                                           OperatorExpression::create_column(ColumnID{1}), {"sum"})};
+    _sum_a_b_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
+        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
+        OperatorExpression::create_column(ColumnID{1}), {"sum"})};
 
     // Projection Expression: a
     _a_expr = Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{0})};
@@ -75,25 +76,27 @@ class OperatorsProjectionTest : public BaseTest {
     _b_expr = Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{1})};
 
     // Projection Expression: b, a
-    _b_a_expr =
-        Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{1}), OperatorExpression::create_column(ColumnID{0})};
+    _b_a_expr = Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{1}),
+                                              OperatorExpression::create_column(ColumnID{0})};
 
     // Projection Expression: a, b
-    _a_b_expr =
-        Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{0}), OperatorExpression::create_column(ColumnID{1})};
+    _a_b_expr = Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{0}),
+                                              OperatorExpression::create_column(ColumnID{1})};
 
     // Projection Expression: 123 AS a, A AS b
-    _literal_expr = Projection::ColumnExpressions{OperatorExpression::create_literal(123, std::string("a")),
-                                                  OperatorExpression::create_literal(std::string("A"), std::string("b"))};
+    _literal_expr =
+        Projection::ColumnExpressions{OperatorExpression::create_literal(123, std::string("a")),
+                                      OperatorExpression::create_literal(std::string("A"), std::string("b"))};
 
     // Projection Expression: a + 'hallo' AS b
     _concat_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
-        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}), OperatorExpression::create_literal("hallo"), {"b"})};
+        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
+        OperatorExpression::create_literal("hallo"), {"b"})};
 
     // Projection Expression: a + NULL AS b
-    _add_null_expr = Projection::ColumnExpressions{
-        OperatorExpression::create_binary_operator(ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
-                                           OperatorExpression::create_literal(NullValue{}), {"b"})};
+    _add_null_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
+        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
+        OperatorExpression::create_literal(NullValue{}), {"b"})};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;

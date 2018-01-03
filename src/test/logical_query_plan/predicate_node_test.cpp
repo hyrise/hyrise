@@ -25,15 +25,18 @@ TEST_F(PredicateNodeTest, Descriptions) {
   predicate_a->set_left_child(_table_node);
   EXPECT_EQ(predicate_a->description(), "[Predicate] table_a.i = 5");
 
-  auto predicate_b = std::make_shared<PredicateNode>(LQPColumnOrigin{_table_node, ColumnID{1}}, ScanType::NotEquals, 2.5);
+  auto predicate_b =
+      std::make_shared<PredicateNode>(LQPColumnOrigin{_table_node, ColumnID{1}}, ScanType::NotEquals, 2.5);
   predicate_b->set_left_child(_table_node);
   EXPECT_EQ(predicate_b->description(), "[Predicate] table_a.f != 2.5");
 
-  auto predicate_c = std::make_shared<PredicateNode>(LQPColumnOrigin{_table_node, ColumnID{2}}, ScanType::Between, 2.5, 10.0);
+  auto predicate_c =
+      std::make_shared<PredicateNode>(LQPColumnOrigin{_table_node, ColumnID{2}}, ScanType::Between, 2.5, 10.0);
   predicate_c->set_left_child(_table_node);
   EXPECT_EQ(predicate_c->description(), "[Predicate] table_a.d BETWEEN 2.5 AND 10");
 
-  auto predicate_d = std::make_shared<PredicateNode>(LQPColumnOrigin{_table_node, ColumnID{3}}, ScanType::Equals, "test");
+  auto predicate_d =
+      std::make_shared<PredicateNode>(LQPColumnOrigin{_table_node, ColumnID{3}}, ScanType::Equals, "test");
   predicate_d->set_left_child(_table_node);
   EXPECT_EQ(predicate_d->description(), "[Predicate] table_a.s = test");
 }

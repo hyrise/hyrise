@@ -31,8 +31,8 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   return deep_copy;
 }
 
-LQPColumnOrigin AbstractLQPNode::clone_column_origin(const LQPColumnOrigin &column_origin,
-                                                  const std::shared_ptr<AbstractLQPNode> &lqp_copy) const {
+LQPColumnOrigin AbstractLQPNode::clone_column_origin(const LQPColumnOrigin& column_origin,
+                                                     const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
   Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
   return lqp_copy->output_column_origins()[get_output_column_id_by_column_origin(column_origin)];
 }
@@ -223,8 +223,8 @@ std::optional<LQPColumnOrigin> AbstractLQPNode::find_column_origin_by_named_colu
   /**
    * Look for the Column in child nodes
    */
-  const auto resolve_named_column_reference = [&](const auto& node,
-                                                  const auto& named_column_reference) -> std::optional<LQPColumnOrigin> {
+  const auto resolve_named_column_reference = [&](
+      const auto& node, const auto& named_column_reference) -> std::optional<LQPColumnOrigin> {
     if (node) {
       const auto column_origin = node->find_column_origin_by_named_column_reference(named_column_reference);
       if (column_origin) {
@@ -487,9 +487,9 @@ void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>
   _parents.emplace_back(parent);
 }
 
-std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
-const std::shared_ptr<AbstractLQPNode>& original_lqp,
-const std::shared_ptr<AbstractLQPNode>& copied_lqp) const {
+std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(
+    const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+    const std::shared_ptr<AbstractLQPNode>& copied_lqp) const {
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {

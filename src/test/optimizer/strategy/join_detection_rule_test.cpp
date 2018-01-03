@@ -69,7 +69,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
 
   std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
   std::shared_ptr<JoinDetectionRule> _rule;
-  
+
   LQPColumnOrigin _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
 };
 
@@ -246,8 +246,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    * isn't manipulated.
    */
 
-  const auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_b), ScanType::Equals);
+  const auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_b), ScanType::Equals);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
