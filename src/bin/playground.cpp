@@ -91,10 +91,14 @@ int main() {
                 }
                 results["cacheHits"][strategy] = cache_hit;
             }
-            thread_pool.enqueue([](uWS::WebSocket<uWS::SERVER> *ws, nlohmann::json results) {
-                auto results_dump = results.dump();
-                ws->send(results_dump.c_str());
-            }, ws, results);
+            nlohmann::json package;
+            package["message"] = "query_execution";
+            package["data"] = results;
+
+            thread_pool.enqueue([](uWS::WebSocket<uWS::SERVER> *ws, nlohmann::json package) {
+                auto package_dump = package.dump();
+                ws->send(package_dump.c_str());
+            }, ws, package);
             std::this_thread::sleep_for(0.2s);
         }
     });
