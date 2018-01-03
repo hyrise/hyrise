@@ -21,6 +21,7 @@ using namespace std::chrono_literals;
 
 int main() {
     constexpr size_t EXECUTIONS = 100;
+    constexpr size_t CACHE_SIZE = 6;
     uWS::Hub h;
 
     h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
@@ -44,7 +45,6 @@ int main() {
         queries[14] = "SELECT * FROM o;";
         queries[15] = "SELECT * FROM p;";
 
-        constexpr size_t CACHE_SIZE = 6;
         std::map<std::string, std::shared_ptr<opossum::SQLQueryCache<std::string>>> caches;
 
         caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<std::string>>(CACHE_SIZE));
@@ -79,10 +79,8 @@ int main() {
                 bool cache_hit;
                 if (cached_plan) {
                     cache_hit = true;
-                    // std::cout << "hit ";
                 } else {
                     cache_hit = false;
-                    // std::cout << "miss ";
                     cache->set(queries[query_id], queries[query_id]);
                 }
                 results["cacheHits"][strategy] = cache_hit;
@@ -90,8 +88,6 @@ int main() {
             auto r_dump = results.dump();
             ws->send(r_dump.c_str());
             std::this_thread::sleep_for(1s);
-            // std::cout << results.dump() << std::endl;
-            // std::cout << std::endl;
         }
     });
 
