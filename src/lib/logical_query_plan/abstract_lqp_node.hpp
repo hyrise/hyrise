@@ -74,7 +74,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   // Creates a deep copy
   virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
-  ColumnOrigin clone_column_origin(const ColumnOrigin &origin,
+
+  /**
+   * @param lqp_copy must be a deep copy of this
+   * @param column_origin must point to a node within this subtree
+   * @return the ColumnOrigin equivalent to column_origin within the lqp_copy subtree
+   */
+  ColumnOrigin clone_column_origin(const ColumnOrigin &column_origin,
                                    const std::shared_ptr<AbstractLQPNode> &lqp_copy) const;
 
   // @{
@@ -119,7 +125,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   LQPNodeType type() const;
 
-  // Returns whether this subtree is read only. Defaults to true - if a node makes modications, it has to override this
+  // Returns whether this subtree is read only. Defaults to true - if a node makes modifications, it has to override this
   virtual bool subtree_is_read_only() const;
 
   // Returns whether all tables in this subtree were validated
@@ -148,20 +154,52 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @returns the names of the columns this node outputs without any alias added by this node
    */
   virtual const std::vector<std::string>& output_column_names() const;
+
+  /**
+   * @returns the ColumnOrigins of the columns this node outputs
+   */
   virtual const std::vector<ColumnOrigin>& output_column_origins() const;
+
+  /**
+   * @return the number of Columns this node outputs. Same as output_column_names().size()
+   */
   size_t output_column_count() const;
 
+
+  // @{
+  /**
+   * Name resolution for Columns and TableNames.
+   */
+
+  /**
+   * @param named_column_reference Must not be ambiguous in this subtree
+   * @return The ColumnOrigin of the named_column_reference if it can be resolved in this subtree,
+   *         std::nullopt otherwise.
+   */
   std::optional<ColumnOrigin> find_column_origin_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const;
+
+  /**
+   * Convenience method for (*find_column_origin_by_named_column_reference()), DebugAssert()s that the named_column_reference could be resolved
+   */
   ColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
-  // has to be overriden if there is != 1 child
-  ColumnOrigin get_column_origin_by_output_column_id(const ColumnID column_id) const;
-
-  // has to be overriden by StoredTableNode
+  /**
+   * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
+   *         nullptr if the no such node exists.
+   */
   virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
+  // @}
 
+
+  /**
+   * @return The leftmost output ColumnID that stems from column_origin, or std::nullopt if none does
+   */
   std::optional<ColumnID> find_output_column_id_by_column_origin(const ColumnOrigin& column_origin) const;
+
+  /**
+   * Convenience for *find_output_column_id_by_column_origin(), DebugAssert()s that the column_origin could be resolved
+   */
   ColumnID get_output_column_id_by_column_origin(const ColumnOrigin& column_origin) const;
 
   /**
@@ -183,6 +221,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * This is not part of the constructor because it is only used in SQLTranslator::_translate_table_ref.
    */
   void set_alias(const std::optional<std::string>& table_alias);
+
 
   // @{
   /**
@@ -211,8 +250,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::vector<std::string> get_verbose_column_names() const;
   // @}
 
+
  protected:
-  // creates a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
+  /**
+   * Override and creat a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
+   * left_child and right_child are deep copies of the left and right child respectively, used for deep-copying ColumnOrigins
+   */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const = 0;
 
   /**

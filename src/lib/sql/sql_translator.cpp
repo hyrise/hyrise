@@ -175,9 +175,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
         projections[column_id] = HSQLExprTranslator::to_lqp_expression(hsql_expr, nullptr);
       } else {
         DebugAssert(insert.type == hsql::kInsertSelect, "Unexpected Insert type");
+        DebugAssert(insert_column_index < current_result_node->output_column_count(), "ColumnID out of range");
         // when projecting from another table, create a column reference expression
         projections[column_id] = LQPExpression::create_column(
-            current_result_node->get_column_origin_by_output_column_id(insert_column_index));
+            current_result_node->output_column_origins()[insert_column_index]);
       }
 
       ++insert_column_index;
@@ -226,7 +227,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   // pre-fill with regular column references
   for (ColumnID column_idx{0}; column_idx < current_values_node->output_column_count(); ++column_idx) {
     update_expressions.emplace_back(
-        LQPExpression::create_column(current_values_node->get_column_origin_by_output_column_id(column_idx)));
+        LQPExpression::create_column(current_values_node->output_column_origins()[column_idx]));
   }
 
   // now update with new values
@@ -593,7 +594,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   groupby_aliasing_expressions.reserve(input_node->output_column_count());
   for (auto input_column_id = ColumnID{0}; input_column_id < input_node->output_column_count(); ++input_column_id) {
     groupby_aliasing_expressions.emplace_back(
-        LQPExpression::create_column(input_node->get_column_origin_by_output_column_id(input_column_id)));
+        LQPExpression::create_column(input_node->output_column_origins()[input_column_id]));
   }
   // Set aliases for columns that receive one by the select list
   for (const auto* select_column_hsql_expr : select_list) {
@@ -716,7 +717,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
    */
   std::vector<std::shared_ptr<LQPExpression>> projection_expressions;
   for (const auto& output_column : output_columns) {
-    const auto column_origin = aggregate_node->get_column_origin_by_output_column_id(output_column.first);
+    DebugAssert(output_column.first < aggregate_node->output_column_count(), "ColumnID out of range");
+    const auto column_origin = aggregate_node->output_column_origins()[output_column.first];
     projection_expressions.emplace_back(LQPExpression::create_column(column_origin, output_column.second));
   }
   auto projection_node = std::make_shared<ProjectionNode>(projection_expressions);
@@ -753,7 +755,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
       if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
         for (ColumnID column_idx{0}; column_idx < input_node->output_column_count(); ++column_idx) {
-          column_origins.emplace_back(input_node->get_column_origin_by_output_column_id(column_idx));
+          column_origins.emplace_back(input_node->output_column_origins()[column_idx]);
         }
       } else {
         /**

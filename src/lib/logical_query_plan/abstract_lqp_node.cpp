@@ -257,11 +257,6 @@ ColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(
   return *colum_origin;
 }
 
-ColumnOrigin AbstractLQPNode::get_column_origin_by_output_column_id(const ColumnID column_id) const {
-  Assert(column_id < output_column_count(), "ColumnID out of range");
-  return output_column_origins()[column_id];
-}
-
 std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(const std::string& table_name) const {
   if (_table_alias && *_table_alias == table_name) {
     return shared_from_this();

@@ -149,8 +149,9 @@ std::optional<ColumnOrigin> AggregateNode::find_column_origin_for_expression(
         [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
 
     if (iter != _groupby_column_origins.end()) {
-      return get_column_origin_by_output_column_id(
-          static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter)));
+      const auto column_id = static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter));
+      DebugAssert(column_id < output_column_count(), "ColumnID out of range");
+      return output_column_origins()[column_id];
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =
