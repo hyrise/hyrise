@@ -100,8 +100,9 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
   return stream.str();
 }
 
-template <typename T, typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
+template <typename T>
 bool almost_equals(T left_val, T right_val, opossum::FloatComparisonMode float_comparison_mode) {
+  static_assert(std::is_floating_point_v<T>, "Values must be have floating point type.");
   if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
   } else {
