@@ -8,6 +8,8 @@
 
 #include "json.hpp"
 
+#include "queries.cpp"
+
 #include "sql/gds_cache.hpp"
 #include "sql/gdfs_cache.hpp"
 #include "sql/lru_cache.hpp"
@@ -26,23 +28,7 @@ int main() {
 
     ThreadPool thread_pool(2);
 
-    std::array<std::string, 15> queries;
-    queries[0] = "SELECT * FROM a;";
-    queries[1] = "SELECT * FROM b;";
-    queries[2] = "SELECT * FROM c;";
-    queries[3] = "SELECT * FROM d;";
-    queries[4] = "SELECT * FROM e;";
-    queries[5] = "SELECT * FROM f;";
-    queries[6] = "SELECT * FROM g;";
-    queries[7] = "SELECT * FROM h;";
-    queries[8] = "SELECT * FROM i;";
-    queries[9] = "SELECT * FROM j;";
-    queries[10] = "SELECT * FROM k;";
-    queries[11] = "SELECT * FROM l;";
-    queries[12] = "SELECT * FROM m;";
-    queries[13] = "SELECT * FROM n;";
-    queries[14] = "SELECT * FROM o;";
-    queries[15] = "SELECT * FROM p;";
+    auto queries = load_queries();
 
     std::map<std::string, std::shared_ptr<opossum::SQLQueryCache<std::string>>> caches;
 
@@ -81,13 +67,13 @@ int main() {
             results["queryId"] = query_id;
             results["cacheHits"] = {};
             for (auto &[strategy, cache] : caches) {
-                std::optional<std::string> cached_plan = cache->try_get(queries[query_id]);
+                std::optional<std::string> cached_plan = cache->try_get(queries[query_id].sql_string);
                 bool cache_hit;
                 if (cached_plan) {
                     cache_hit = true;
                 } else {
                     cache_hit = false;
-                    cache->set(queries[query_id], queries[query_id]);
+                    cache->set(queries[query_id].sql_string, queries[query_id].sql_string);
                 }
                 results["cacheHits"][strategy] = cache_hit;
             }
