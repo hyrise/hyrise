@@ -454,7 +454,12 @@ void AbstractLQPNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
   /**
    *
    */
-  out << "[" << this_node_id << "] " << description() << std::endl;
+  out << "[" << this_node_id << "] " << description();
+
+  if (_table_alias) {
+    out << " -- ALIAS: '" << *_table_alias << "'";
+  }
+  out << std::endl;
 
   levels.emplace_back(right_child() != nullptr);
 

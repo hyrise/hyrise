@@ -312,7 +312,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
 
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
-
+  
   const hsql::Expr& condition = *join.condition;
 
   Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
