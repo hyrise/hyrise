@@ -111,10 +111,6 @@ class ReferenceColumn : public BaseColumn {
     }
   }
 
-  // copies one of its own values to a different ValueColumn - mainly used for materialization
-  // we cannot always use the materialize method below because sort results might come from different BaseColumns
-  void copy_value_to_value_column(BaseColumn&, ChunkOffset) const override;
-
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:
