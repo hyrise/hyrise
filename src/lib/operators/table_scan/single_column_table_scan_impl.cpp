@@ -47,12 +47,12 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
   const auto left_column_type = _in_table->column_type(_left_column_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
-    using Type = typename decltype(type)::type;
+    using ColumnDataType = typename decltype(type)::type;
 
-    auto& left_column = static_cast<const ValueColumn<Type>&>(base_column);
+    auto& left_column = static_cast<const ValueColumn<ColumnDataType>&>(base_column);
 
     auto left_column_iterable = create_iterable_from_column(left_column);
-    auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+    auto right_value_iterable = ConstantValueIterable<ColumnDataType>{_right_value};
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {

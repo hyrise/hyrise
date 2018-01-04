@@ -132,8 +132,8 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
                                                          bool is_nullable) {
   std::shared_ptr<BaseColumn> result;
   resolve_data_type(data_type, [&](auto type) {
-    using ColumnType = typename decltype(type)::type;
-    result = _import_column<ColumnType>(file, row_count, is_nullable);
+    using ColumnDataType = typename decltype(type)::type;
+    result = _import_column<ColumnDataType>(file, row_count, is_nullable);
   });
 
   return result;
