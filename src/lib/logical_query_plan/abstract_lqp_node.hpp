@@ -80,8 +80,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @param column_origin must be a ColumnOrigin this node outputs
    * @return the ColumnOrigin equivalent to column_origin within the lqp_copy subtree
    */
-  LQPColumnOrigin deep_copy_column_origin(const LQPColumnOrigin &column_origin,
-                                          const std::shared_ptr<AbstractLQPNode> &lqp_copy) const;
+  LQPColumnOrigin deep_copy_column_origin(const LQPColumnOrigin& column_origin,
+                                          const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 
   // @{
   /**

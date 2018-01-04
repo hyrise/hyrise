@@ -252,7 +252,7 @@ class Noncopyable {
 template <typename ColumnReferenceType>
 struct AggregateColumnDefinitionTemplate {
   AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
-                            const std::optional<std::string>& alias = std::nullopt)
+                                    const std::optional<std::string>& alias = std::nullopt)
       : column(column), function(function), alias(alias) {}
 
   std::optional<ColumnReferenceType> column;

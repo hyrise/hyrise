@@ -21,7 +21,7 @@ std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(const std::shared_ptr
   std::transform(_order_by_definitions.begin(), _order_by_definitions.end(), std::back_inserter(order_by_definitions),
                  [&](const auto& order_by_definition) {
                    return OrderByDefinition{
-                   this->left_child()->deep_copy_column_origin(order_by_definition.column_origin, left_child),
+                       this->left_child()->deep_copy_column_origin(order_by_definition.column_origin, left_child),
                        order_by_definition.order_by_mode};
                  });
 

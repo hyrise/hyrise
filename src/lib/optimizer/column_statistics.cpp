@@ -83,7 +83,7 @@ void ColumnStatistics<ColumnType>::_initialize_min_max() const {
   table_wrapper->execute();
 
   auto aggregate_args = std::vector<AggregateColumnDefinition>{{_column_id, AggregateFunction::Min},
-                                                                       {_column_id, AggregateFunction::Max}};
+                                                               {_column_id, AggregateFunction::Max}};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<ColumnID>{});
   aggregate->execute();
 

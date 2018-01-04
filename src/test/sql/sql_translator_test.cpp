@@ -320,7 +320,7 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
 }
 
 INSTANTIATE_TEST_CASE_P(SQLTranslatorJoinTestInstanciation, SQLTranslatorJoinTest,
-                        ::testing::Values(JoinMode::Left, JoinMode::Right, JoinMode::Outer),);  // NOLINT
+                        ::testing::Values(JoinMode::Left, JoinMode::Right, JoinMode::Outer), );  // NOLINT
 
 TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto query = "SELECT * FROM table_a AS t1 JOIN table_a AS t2 ON t1.a = t2.b;";

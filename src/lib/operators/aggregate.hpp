@@ -63,8 +63,7 @@ using DistinctAggregateType = int8_t;
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in,
-            const std::vector<AggregateColumnDefinition>& aggregates,
+  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
             const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateColumnDefinition>& aggregates() const;

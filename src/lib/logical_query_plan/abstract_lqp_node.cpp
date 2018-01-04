@@ -31,8 +31,8 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   return deep_copy;
 }
 
-LQPColumnOrigin AbstractLQPNode::deep_copy_column_origin(const LQPColumnOrigin &column_origin,
-                                                         const std::shared_ptr<AbstractLQPNode> &lqp_copy) const {
+LQPColumnOrigin AbstractLQPNode::deep_copy_column_origin(const LQPColumnOrigin& column_origin,
+                                                         const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
   Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
   return lqp_copy->output_column_origins()[get_output_column_id_by_column_origin(column_origin)];
 }
