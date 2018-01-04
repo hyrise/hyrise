@@ -45,46 +45,6 @@ size_t DictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
-  PerformanceWarning("DictionaryColumn<T>::write_string_representation is potentially very slow.");
-
-  std::stringstream buffer;
-  // buffering value at chunk_offset
-  auto decoder = _attribute_vector->create_base_decoder();
-  const auto value_id = decoder->get(chunk_offset);
-  Assert(value_id != _null_value_id, "This operation does not support NULL values.");
-
-  const auto value = _dictionary->at(value_id);
-  buffer << value;
-  const auto length = buffer.str().length();
-  // writing byte representation of length
-  buffer.write(reinterpret_cast<const char*>(&length), sizeof(length));
-
-  // appending the new string to the already present string
-  row_string += buffer.str();
-}
-
-template <typename T>
-void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
-  PerformanceWarning("DictionaryColumn<T>::copy_value_to_value_column is potentially very slow.");
-
-  auto& output_column = static_cast<ValueColumn<T>&>(value_column);
-  auto& values_out = output_column.values();
-
-  auto decoder = _attribute_vector->create_base_decoder();
-  const auto value_id = decoder->get(chunk_offset);
-
-  if (output_column.is_nullable()) {
-    output_column.null_values().push_back(value_id == _null_value_id);
-    values_out.push_back(value_id == _null_value_id ? T{} : _dictionary->at(value_id));
-  } else {
-    DebugAssert(value_id != _null_value_id, "Target column needs to be nullable.");
-
-    values_out.push_back(_dictionary->at(value_id));
-  }
-}
-
-template <typename T>
 std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};

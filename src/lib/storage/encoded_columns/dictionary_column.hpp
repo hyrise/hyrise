@@ -37,10 +37,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   size_t size() const final;
 
-  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const final;
-
-  void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const final;
-
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   /**@}*/
