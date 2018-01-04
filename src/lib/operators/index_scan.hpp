@@ -29,7 +29,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   /**
    * @brief If set, only the specified chunks will be scanned.
    *
-   * @see TableScann::set_excluded_chunk_ids for usage
+   * @see TableScan::set_excluded_chunk_ids for usage
    */
   void set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
