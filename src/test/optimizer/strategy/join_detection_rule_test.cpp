@@ -105,6 +105,10 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   // Verification of the new JOIN
   ASSERT_INNER_JOIN_NODE(output, ScanType::Equals, _a_a, _b_a);
 
+  output->print();
+
+  ASSERT_NE(output->left_child(), nullptr);
+  ASSERT_NE(output->right_child(), nullptr);
   EXPECT_EQ(output->left_child()->type(), LQPNodeType::StoredTable);
   EXPECT_EQ(output->right_child()->type(), LQPNodeType::StoredTable);
 }
