@@ -41,7 +41,6 @@ class TableScan : public AbstractReadOnlyOperator {
   void _on_cleanup() override;
 
   void _init_scan();
-  void _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
 
  private:
   const ColumnID _left_column_id;
