@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 
     // Install a multi threaded scheduler for testing
     opossum::CurrentScheduler::set(
-        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_fake_numa_topology(8, 4)));
+        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
 
     boost::asio::io_service io_service;
 
