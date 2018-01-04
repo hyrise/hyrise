@@ -60,9 +60,6 @@ class ValueColumn : public BaseValueColumn {
   // Visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
-  // Write the length and value at the chunk_offset to the end of row_string.
-  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
-
   // Copy own value to a different ValueColumn - mainly used for materialization.
   // We cannot always use the materialize method below because sort results might come from different BaseColumns.
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
