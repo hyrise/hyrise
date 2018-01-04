@@ -344,4 +344,28 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_c, lqp_copy).node(), lqp_copy);
 }
 
+TEST_F(LogicalQueryPlanTest, ColumnIDByColumnOrigin) {
+  /**
+   * Test AbstractLQPNode::{get, find}_output_column_id_by_column_origin
+   */
+
+  auto mock_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
+  auto mock_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+  const auto column_origin_a = LQPColumnOrigin{mock_node_a, ColumnID{0}};
+  const auto column_origin_b = LQPColumnOrigin{mock_node_a, ColumnID{1}};
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(AggregateFunction::Sum, {LQPExpression::create_column(column_origin_a)})}),
+                                                        std::vector<LQPColumnOrigin>{{column_origin_b}});
+
+  aggregate_node->set_left_child(mock_node_a);
+
+  const auto column_origin_c = LQPColumnOrigin{aggregate_node, ColumnID{1}};
+
+  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_origin(column_origin_a), ColumnID{0});
+  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_origin(column_origin_b), ColumnID{1});
+  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_origin(column_origin_b), ColumnID{0});
+  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_origin(column_origin_c), ColumnID{1});
+  EXPECT_EQ(aggregate_node->find_output_column_id_by_column_origin(column_origin_a), std::nullopt);
+  EXPECT_EQ(mock_node_a->find_output_column_id_by_column_origin(LQPColumnOrigin{mock_node_b, ColumnID{0}}), std::nullopt);
+}
+
 }  // namespace opossum
