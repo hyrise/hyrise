@@ -391,9 +391,10 @@ std::vector<std::shared_ptr<OperatorExpression>> LQPTranslator::_translate_expre
 
   std::vector<std::shared_ptr<OperatorExpression>> operator_expressions(lqp_expressions.size());
 
-  std::transform(lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(), [&](const auto &lqp_expression) {
-    return std::make_shared<OperatorExpression>(lqp_expression, node->left_child());
-  });
+  std::transform(lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(),
+                 [&](const auto& lqp_expression) {
+                   return std::make_shared<OperatorExpression>(lqp_expression, node->left_child());
+                 });
 
   return operator_expressions;
 }
