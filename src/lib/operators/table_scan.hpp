@@ -22,6 +22,11 @@ class TableScan : public AbstractReadOnlyOperator {
 
   ~TableScan();
 
+  /**
+   * If set, the specified chunks will not be scanned.
+   */
+  void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
+
   ColumnID left_column_id() const;
   ScanType scan_type() const;
   const AllParameterVariant& right_parameter() const;
@@ -36,11 +41,14 @@ class TableScan : public AbstractReadOnlyOperator {
   void _on_cleanup() override;
 
   void _init_scan();
+  void _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
 
  private:
   const ColumnID _left_column_id;
   const ScanType _scan_type;
   const AllParameterVariant _right_parameter;
+
+  std::vector<ChunkID> _excluded_chunk_ids;
 
   std::shared_ptr<const Table> _in_table;
   std::unique_ptr<BaseTableScanImpl> _impl;
