@@ -1,18 +1,18 @@
 #include "difference.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <sstream>
-#include <algorithm>
-#include <iterator>
 
 #include "storage/reference_column.hpp"
-#include "utils/assert.hpp"
 #include "type_cast.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 Difference::Difference(const std::shared_ptr<const AbstractOperator> left_in,
@@ -53,7 +53,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Remove duplicate rows by adding all rows to a unordered set
     std::transform(string_row_vector.cbegin(), string_row_vector.cend(),
-        std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& x) { return x.str(); });
+                   std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& x) { return x.str(); });
   }
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output

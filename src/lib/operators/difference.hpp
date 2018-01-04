@@ -1,9 +1,9 @@
 #pragma once
 
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
 
 #include "abstract_read_only_operator.hpp"
 #include "types.hpp"
