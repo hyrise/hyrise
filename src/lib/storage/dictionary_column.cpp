@@ -135,23 +135,6 @@ void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<Colu
 }
 
 template <typename T>
-void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
-  std::stringstream buffer;
-  // buffering value at chunk_offset
-  auto value_id = _attribute_vector->get(chunk_offset);
-  Assert(value_id != NULL_VALUE_ID, "This operation does not support NULL values.");
-
-  T value = _dictionary->at(value_id);
-  buffer << value;
-  uint32_t length = buffer.str().length();
-  // writing byte representation of length
-  buffer.write(reinterpret_cast<const char*>(&length), sizeof(length));
-
-  // appending the new string to the already present string
-  row_string += buffer.str();
-}
-
-template <typename T>
 void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
   auto& values_out = output_column.values();

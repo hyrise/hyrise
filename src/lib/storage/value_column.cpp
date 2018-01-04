@@ -145,23 +145,6 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
 }
 
 template <typename T>
-void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
-  std::stringstream buffer;
-
-  bool is_null = is_nullable() && (*_null_values)[chunk_offset];
-  Assert(!is_null, "This operation does not support NULL values.");
-
-  // buffering value at chunk_offset
-  buffer << _values[chunk_offset];
-  uint32_t length = buffer.str().length();
-  // writing byte representation of length
-  buffer.write(reinterpret_cast<const char*>(&length), sizeof(length));
-
-  // appending the new string to the already present string
-  row_string += buffer.str();
-}
-
-template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
 

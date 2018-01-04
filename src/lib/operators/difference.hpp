@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include "abstract_read_only_operator.hpp"
 #include "types.hpp"
@@ -22,7 +23,10 @@ class Difference : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
-  void initialize_chunk(const size_t chunk_id);
   std::shared_ptr<const Table> _on_execute() override;
+
+ private:
+  void initialize_chunk(const size_t chunk_id);
+  void append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value);
 };
 }  // namespace opossum
