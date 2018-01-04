@@ -90,7 +90,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
     if (node->type() == LQPNodeType::Predicate) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-      if (predicate_node->value().type() != typeid(LQPColumnOrigin)) {
+      if (is_lqp_column_origin(predicate_node->value())) {
         continue;
       }
 

@@ -119,6 +119,7 @@ set (
     ${SHARED_SOURCES}
     tpc/tpcc_ref_test.cpp
     tpc/tpch_test.cpp
+    tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
 )
 
@@ -132,11 +133,6 @@ set(
 
 # Build special sanitizer version of googletest
 include_directories(../../third_party/googletest/googletest/)
-
-set(
-    GTEST_SOURCES
-    ../../third_party/googletest/googletest/src/gtest-all.cc
-)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

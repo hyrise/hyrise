@@ -287,7 +287,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
       const NamedColumnReference& named_column_reference) const;
 
   /**
-   * @return a deep copy of expression, with all ColumnOrigins pointing to their equivalent in a deep_copy()ed LQP
+   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnOrigins pointing to
+   * their equivalent in a deep_copy()ed LQP
    */
   std::shared_ptr<LQPExpression> _adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
                                                            const std::shared_ptr<AbstractLQPNode>& original_lqp,

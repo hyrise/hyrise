@@ -34,7 +34,7 @@ std::string SortNode::description() const {
   s << "[Sort] ";
 
   auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << definition.column_origin.get_verbose_name();
+    s << definition.column_origin.description();
     s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
   };
 

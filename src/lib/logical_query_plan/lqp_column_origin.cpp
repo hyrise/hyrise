@@ -12,7 +12,7 @@ std::shared_ptr<const AbstractLQPNode> LQPColumnOrigin::node() const { return _n
 
 ColumnID LQPColumnOrigin::column_id() const { return _column_id; }
 
-std::string LQPColumnOrigin::get_verbose_name() const {
+std::string LQPColumnOrigin::description() const {
   const auto node = this->node();
 
   DebugAssert(node, "LQPColumnOrigin state not sufficient to retrieve column name");
@@ -27,7 +27,7 @@ std::ostream& operator<<(std::ostream& os, const LQPColumnOrigin& column_origin)
   const auto node = column_origin.node();
 
   if (column_origin.node()) {
-    os << column_origin.get_verbose_name();
+    os << column_origin.description();
   } else {
     os << "[Invalid LQPColumnOrigin, ColumnID:" << column_origin.column_id() << "]";
   }

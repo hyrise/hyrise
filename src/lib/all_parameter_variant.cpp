@@ -9,8 +9,8 @@ std::string to_string(const AllParameterVariant& x) {
     return std::string("Placeholder #") + std::to_string(boost::get<ValuePlaceholder>(x).index());
   } else if (is_column_id(x)) {
     return std::string("Col #") + std::to_string(boost::get<ColumnID>(x));
-  } else if (is_column_origin(x)) {
-    return boost::get<LQPColumnOrigin>(x).get_verbose_name();
+  } else if (is_lqp_column_origin(x)) {
+    return boost::get<LQPColumnOrigin>(x).description();
   } else {
     return boost::lexical_cast<std::string>(x);
   }

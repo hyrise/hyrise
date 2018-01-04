@@ -40,7 +40,7 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
 
 // Function to check if AllParameterVariant is a column origin
-inline bool is_column_origin(const AllParameterVariant& variant) { return (variant.type() == typeid(LQPColumnOrigin)); }
+inline bool is_lqp_column_origin(const AllParameterVariant& variant) { return (variant.type() == typeid(LQPColumnOrigin)); }
 
 // Function to check if AllParameterVariant is a placeholder
 inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.type() == typeid(ValuePlaceholder)); }

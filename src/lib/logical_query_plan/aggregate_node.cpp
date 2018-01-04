@@ -81,7 +81,7 @@ std::string AggregateNode::description() const {
   if (!_groupby_column_origins.empty()) {
     s << " GROUP BY [";
     for (size_t group_by_idx = 0; group_by_idx < _groupby_column_origins.size(); ++group_by_idx) {
-      s << _groupby_column_origins[group_by_idx].get_verbose_name();
+      s << _groupby_column_origins[group_by_idx].description();
       if (group_by_idx + 1 < _groupby_column_origins.size()) {
         s << ", ";
       }
@@ -96,7 +96,7 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
   if (column_id < _groupby_column_origins.size()) {
-    return _groupby_column_origins[column_id].get_verbose_name();
+    return _groupby_column_origins[column_id].description();
   }
 
   const auto aggregate_column_id = column_id - _groupby_column_origins.size();

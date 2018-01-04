@@ -16,7 +16,7 @@ class LQPColumnOrigin final {
   std::shared_ptr<const AbstractLQPNode> node() const;
   ColumnID column_id() const;
 
-  std::string get_verbose_name() const;
+  std::string description() const;
 
   bool operator==(const LQPColumnOrigin& rhs) const;
 

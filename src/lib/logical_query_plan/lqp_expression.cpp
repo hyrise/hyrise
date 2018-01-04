@@ -49,7 +49,7 @@ void LQPExpression::set_column_origin(const LQPColumnOrigin& column_origin) {
 std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                      bool is_root) const {
   if (type() == ExpressionType::Column) {
-    return column_origin().get_verbose_name();
+    return column_origin().description();
   }
   return BaseExpression<LQPExpression>::to_string(input_column_names, is_root);
 }

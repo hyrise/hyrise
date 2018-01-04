@@ -53,9 +53,9 @@ std::string JoinNode::description() const {
   desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
 
   if (_join_column_origins && _scan_type) {
-    desc << " " << _join_column_origins->first.get_verbose_name();
+    desc << " " << _join_column_origins->first.description();
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << _join_column_origins->second.get_verbose_name();
+    desc << " " << _join_column_origins->second.description();
   }
 
   return desc.str();

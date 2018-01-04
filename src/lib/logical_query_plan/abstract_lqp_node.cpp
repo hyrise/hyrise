@@ -182,6 +182,12 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
 }
 
 const std::vector<LQPColumnOrigin>& AbstractLQPNode::output_column_origins() const {
+  /**
+   * Default implementation of output_column_origins() will return the ColumnOrigins of the left_child if it exists,
+   * otherwise will pretend the all Columns originate in this node.
+   * Nodes with both children need to override this as the default implementation can't cover their behaviour.
+   */
+
   if (!_output_column_origins) {
     Assert(!left_child() || !right_child(), "Nodes with both children need to override");
     if (left_child()) {
@@ -200,8 +206,8 @@ const std::vector<LQPColumnOrigin>& AbstractLQPNode::output_column_origins() con
 std::optional<LQPColumnOrigin> AbstractLQPNode::find_column_origin_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   /**
-   * If this node carries an alias, that is different from that of the Column reference, we can't resolve the column
-   * in this node
+   * If this node carries an alias, that is different from that of the NamedColumnReference, we can't resolve the column
+   * in this node.
    */
   const auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
   if (!named_column_reference_without_local_column_prefix) {
@@ -258,10 +264,13 @@ LQPColumnOrigin AbstractLQPNode::get_column_origin_by_named_column_reference(
 }
 
 std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(const std::string& table_name) const {
+  // If this node has an ALIAS that matches the table_name, this is the node we're looking for
   if (_table_alias && *_table_alias == table_name) {
     return shared_from_this();
   }
 
+  // If this node has an ALIAS, looking for the table_name for children is "blocked". THe same is true if there are no
+  // children
   if (!left_child() || _table_alias) {
     return nullptr;
   }
@@ -272,6 +281,7 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     const auto table_name_origin_in_right_child = right_child()->find_table_name_origin(table_name);
 
     if (table_name_origin_in_left_child && table_name_origin_in_right_child) {
+      // Both children could resolve to the same Node, i.e. in UnionNodes that emulate an OR
       Assert(table_name_origin_in_left_child == table_name_origin_in_right_child,
              "If a node has two children, both have to resolve a table name to the same node");
       return table_name_origin_in_left_child;
@@ -286,7 +296,6 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
 std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_origin(
     const LQPColumnOrigin& column_origin) const {
   const auto& output_column_origins = this->output_column_origins();
-
   const auto iter = std::find(output_column_origins.begin(), output_column_origins.end(), column_origin);
 
   if (iter == output_column_origins.end()) {

@@ -66,7 +66,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto column_id = table_scan_node->get_output_column_id_by_column_origin(table_scan_node->column_origin());
 
   auto value = table_scan_node->value();
-  if (value.type() == typeid(LQPColumnOrigin)) {
+  if (is_lqp_column_origin(value)) {
     value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const LQPColumnOrigin>(value));
   }
 
@@ -389,12 +389,11 @@ std::vector<std::shared_ptr<OperatorExpression>> LQPTranslator::_translate_expre
     const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->left_child() && !node->right_child(), "Can only translate expressions if there is one input node");
 
-  std::vector<std::shared_ptr<OperatorExpression>> operator_expressions;
-  operator_expressions.reserve(lqp_expressions.size());
+  std::vector<std::shared_ptr<OperatorExpression>> operator_expressions(lqp_expressions.size());
 
-  for (const auto& lqp_expression : lqp_expressions) {
-    operator_expressions.emplace_back(std::make_shared<OperatorExpression>(lqp_expression, node->left_child()));
-  }
+  std::transform(lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(), [&](const auto &lqp_expression) {
+    return std::make_shared<OperatorExpression>(lqp_expression, node->left_child());
+  });
 
   return operator_expressions;
 }

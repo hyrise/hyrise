@@ -19,6 +19,10 @@ std::shared_ptr<OperatorExpression> OperatorExpression::create_column(const Colu
 OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                                        const std::shared_ptr<AbstractLQPNode>& node)
     : BaseExpression<OperatorExpression>(lqp_expression->_type) {
+  /**
+   * Ugly, but anyway: Copy all fields from LQPExpression and transform ColumnOrigins to ColumnIDs
+   */
+
   _value = lqp_expression->_value;
   _aggregate_function = lqp_expression->_aggregate_function;
   _table_name = lqp_expression->_table_name;
