@@ -77,12 +77,12 @@ class Sort::SortImplMaterializeOutput {
       const auto column_data_type = output->column_type(column_id);
 
       resolve_data_type(column_data_type, [&](auto type) {
-        using Type = typename decltype(type)::type;
+        using ColumnDataType = typename decltype(type)::type;
 
         // Initialize value columns
-        auto columns_out = std::vector<std::shared_ptr<ValueColumn<Type>>>(chunk_count_out);
+        auto columns_out = std::vector<std::shared_ptr<ValueColumn<ColumnDataType>>>(chunk_count_out);
         std::generate(columns_out.begin(), columns_out.end(),
-                      []() { return std::make_shared<ValueColumn<Type>>(true); });
+                      []() { return std::make_shared<ValueColumn<ColumnDataType>>(true); });
 
         auto column_it = columns_out.begin();
         auto chunk_it = chunks_out.begin();
