@@ -148,8 +148,8 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
  *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
  *   resolve_data_type(data_type, [&](auto type) {
- *     using Type = typename decltype(type)::type;
- *     const auto var = type_cast<Type>(variant_from_elsewhere);
+ *     using ColumnDataType = typename decltype(type)::type;
+ *     const auto var = type_cast<ColumnDataType>(variant_from_elsewhere);
  *     process_variant(var);
  *
  *     process_type(type);
