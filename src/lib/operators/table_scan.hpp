@@ -31,9 +31,10 @@ class TableScan : public AbstractReadOnlyOperator {
    * Depending on the situation, it is advantageous to use
    * the index scan for some chunks and the standard scan for
    * others. However one has to ensure that all chunks including
-   * newly added are scanned. This is why this scan accepts a list
-   * of excluded chunks while all other scans accept a list of
-   * included chunks.
+   * newly added are scanned including those that were added
+   * since the optimizer had distributed the chunks between
+   * operators. This is why this scan accepts a list of
+   * excluded chunks and all others a list of included chunks.
    */
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
