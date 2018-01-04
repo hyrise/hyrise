@@ -46,6 +46,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // filling the row vector with all values from this column
       auto row_string_buffer = std::stringstream{};
       for (ChunkOffset chunk_offset = 0; chunk_offset < base_column->size(); chunk_offset++) {
+        // Previously we called a virtual method of the BaseColumn interface here.
+        // It was replaced with a call to the subscript operator as that is equally slow.
         const auto value = (*base_column)[chunk_offset];
         append_string_representation(string_row_vector[chunk_offset], value);
       }
@@ -100,6 +102,9 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       auto row_string_buffer = std::stringstream{};
       for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); column_id++) {
         const auto base_column = in_chunk.get_column(column_id);
+
+        // Previously a virtual method of the BaseColumn interface was called here.
+        // It was replaced with a call to the subscript operator as that is equally slow.
         const auto value = (*base_column)[chunk_offset];
         append_string_representation(row_string_buffer, value);
       }
