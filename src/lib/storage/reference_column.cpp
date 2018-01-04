@@ -45,12 +45,6 @@ void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVi
   visitable.handle_reference_column(*this, std::move(context));
 }
 
-// copies one of its own values to a different ValueColumn - mainly used for materialization
-// we cannot always use the materialize method below because sort results might come from different BaseColumns
-void ReferenceColumn::copy_value_to_value_column(BaseColumn&, ChunkOffset) const {
-  Fail("It is not allowed to copy directly from a reference column");
-}
-
 std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   // ReferenceColumns are considered as intermediate datastructures and are
   // therefore not subject to NUMA-aware chunk migrations.

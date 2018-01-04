@@ -135,23 +135,6 @@ void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<Colu
 }
 
 template <typename T>
-void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
-  auto& output_column = static_cast<ValueColumn<T>&>(value_column);
-  auto& values_out = output_column.values();
-
-  auto value_id = _attribute_vector->get(chunk_offset);
-
-  if (output_column.is_nullable()) {
-    output_column.null_values().push_back(value_id == NULL_VALUE_ID);
-    values_out.push_back(value_id == NULL_VALUE_ID ? T{} : value_by_value_id(value_id));
-  } else {
-    DebugAssert(value_id != NULL_VALUE_ID, "Target column needs to be nullable");
-
-    values_out.push_back(value_by_value_id(value_id));
-  }
-}
-
-template <typename T>
 std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   const pmr_vector<T> new_dictionary(*_dictionary, alloc);

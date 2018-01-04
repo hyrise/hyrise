@@ -145,33 +145,6 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
 }
 
 template <typename T>
-void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
-  auto& output_column = static_cast<ValueColumn<T>&>(value_column);
-
-  auto& values_out = output_column.values();
-
-  if (is_nullable()) {
-    bool is_null = (*_null_values)[chunk_offset];
-
-    DebugAssert(!is_null || output_column.is_nullable(), "Target ValueColumn needs to be nullable as well");
-
-    if (output_column.is_nullable()) {
-      auto& null_values_out = output_column.null_values();
-      null_values_out.push_back(is_null);
-    }
-
-    values_out.push_back(is_null ? T{} : _values[chunk_offset]);
-
-  } else {
-    values_out.push_back(_values[chunk_offset]);
-
-    if (output_column.is_nullable()) {
-      output_column.null_values().push_back(false);
-    }
-  }
-}
-
-template <typename T>
 std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);
   if (is_nullable()) {
