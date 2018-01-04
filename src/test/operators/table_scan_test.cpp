@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
@@ -452,8 +451,7 @@ TEST_F(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
 
   // 2**16 + 1 values require a data type of 32bit.
   const auto table_wrapper_dict_32 = get_table_op_with_n_dict_entries((1 << 16) + 1);
-  auto scan_2 =
-      std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::GreaterThan, 65500);
+  auto scan_2 = std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::GreaterThan, 65500);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
@@ -563,8 +561,8 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
 
 TEST_F(OperatorsTableScanTest, NullSemantics) {
   const auto scan_types =
-      std::vector<ScanType>({ScanType::Equals, ScanType::NotEquals, ScanType::LessThan,
-                             ScanType::LessThanEquals, ScanType::GreaterThan, ScanType::GreaterThanEquals});
+      std::vector<ScanType>({ScanType::Equals, ScanType::NotEquals, ScanType::LessThan, ScanType::LessThanEquals,
+                             ScanType::GreaterThan, ScanType::GreaterThanEquals});
 
   for (auto scan_type : scan_types) {
     auto scan = std::make_shared<TableScan>(_table_wrapper_null, ColumnID{0}, scan_type, NULL_VALUE);
@@ -576,6 +574,17 @@ TEST_F(OperatorsTableScanTest, NullSemantics) {
       EXPECT_EQ(scan->get_output()->get_chunk(i).column_count(), 2u);
     }
   }
+}
+
+TEST_F(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
+  const auto expected = std::vector<AllTypeVariant>{110, 112, 114, 116, 118, 120, 122, 124};
+
+  auto scan =
+      std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, ScanType::GreaterThanEquals, 0);
+  scan->set_excluded_chunk_ids({ChunkID{0u}});
+  scan->execute();
+
+  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
 }
 
 }  // namespace opossum
