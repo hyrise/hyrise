@@ -63,12 +63,12 @@ class Sort::SortImplMaterializeOutput {
     // copied column by column for each output row. For each column in a row we visit the input column with a reference
     // to the output column. This enables for the SortImplMaterializeOutput class to ignore the column types during the
     // copying of the values.
-    const auto output_row_count = _row_id_value_vector->size();
+    const auto row_count_out = _row_id_value_vector->size();
 
-    // Ceiling of integer devision
+    // Ceiling of integer division
     const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
 
-    const auto chunk_count_out = div_ceil(output_row_count, _output_chunk_size);
+    const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
 
     auto chunks_out = std::vector<Chunk>(chunk_count_out);
 
@@ -86,8 +86,8 @@ class Sort::SortImplMaterializeOutput {
 
         auto column_it = columns_out.begin();
         auto chunk_it = chunks_out.begin();
-        auto column_chunk_offset = 0u;
-        for (auto row_index = 0u; row_index < output_row_count; ++row_index) {
+        auto chunk_offset_out = 0u;
+        for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto[chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
 
           const auto column = _table_in->get_chunk(chunk_id).get_column(column_id);
@@ -97,11 +97,11 @@ class Sort::SortImplMaterializeOutput {
           const auto value = (*column)[chunk_offset];
           (*column_it)->append(value);
 
-          ++column_chunk_offset;
+          ++chunk_offset_out;
 
           // Check if value column is full
-          if (column_chunk_offset >= _output_chunk_size) {
-            column_chunk_offset = 0u;
+          if (chunk_offset_out >= _output_chunk_size) {
+            chunk_offset_out = 0u;
             chunk_it->add_column(*column_it);
             ++column_it;
             ++chunk_it;
@@ -109,7 +109,7 @@ class Sort::SortImplMaterializeOutput {
         }
 
         // Last column has not been added
-        if (column_chunk_offset > 0u) {
+        if (chunk_offset_out > 0u) {
           chunk_it->add_column(*column_it);
         }
       });
