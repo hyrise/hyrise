@@ -48,12 +48,12 @@ TEST_F(PostgresWireHandlerTest, HandleStartupPackage) {
   ByteBuffer buffer = {};
   uint32_t value = ntohl(100);
   char* chars = reinterpret_cast<char*>(&value);
-  buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t)); // length
-  buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t)); // version
+  buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t));  // length
+  buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t));  // version
   _input_packet.data = buffer;
 
   uint32_t result = postgres_wire_handler.handle_startup_package(_input_packet);
-  ASSERT_EQ(result, 92ul); // 100 - 2 * sizeof(uint32_t)
+  ASSERT_EQ(result, 92ul);  // 100 - 2 * sizeof(uint32_t)
 }
 
 TEST_F(PostgresWireHandlerTest, WriteString) {
@@ -62,7 +62,7 @@ TEST_F(PostgresWireHandlerTest, WriteString) {
   postgres_wire_handler.write_string(_output_packet, value, true);
 
   ASSERT_EQ(_output_packet.data.size(), value.length() + 1);
-  //string should be terminated
+  // string should be terminated
   ASSERT_EQ(_output_packet.data[value.length()], '\0');
 }
 }  // namespace opossum

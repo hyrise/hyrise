@@ -54,14 +54,21 @@ void SimpleQueryCommand::start_query(const std::string& sql) {
 }
 
 void SimpleQueryCommand::send_row_description() {
-  OutputPacket output_packet;
-  PostgresWireHandler::write_value(output_packet, NetworkMessageType::RowDescription);
-
-  auto total_bytes = sizeof(uint32_t) + 6 + 3 * sizeof(uint32_t) + 4 * sizeof(uint16_t);
-  PostgresWireHandler::write_value(output_packet, htonl(total_bytes));
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
 
   // Int16 Specifies the number of fields in a row (can be zero).
-  PostgresWireHandler::write_value(output_packet, htons(1u));
+  if (!_result_table) {
+    // There is no result table, e.g. after an INSERT command
+    PostgresWireHandler::write_value(output_packet, htons(0u));
+    _session.async_send_packet(output_packet);
+    _state = SimpleQueryCommandState::RowDescriptionSent;
+    return;
+  }
+
+  const auto& column_names = _result_table->column_names();
+
+  // Int16 Specifies the number of fields in a row (can be zero).
+  PostgresWireHandler::write_value(output_packet, htons(column_names.size()));
 
   /* FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
    *
@@ -82,15 +89,44 @@ void SimpleQueryCommand::send_row_description() {
 
    Int16 - The format code being used for the field. Currently will be zero (text) or one (binary). In a RowDescription returned from the statement variant of Describe, the format code is not yet known and will always be zero.
    */
-  PostgresWireHandler::write_string(output_packet, "foo_a");   // 6 bytes (null terminated)
-  PostgresWireHandler::write_value(output_packet, htonl(0u));  // no object id
-  PostgresWireHandler::write_value(output_packet, htons(0u));  // no attribute number
+  const auto& column_types = _result_table->column_types();
+  for (auto column_id = 0u; column_id < _result_table->column_count(); ++column_id) {
+    PostgresWireHandler::write_string(output_packet, column_names[column_id]);
+    PostgresWireHandler::write_value(output_packet, htonl(0u));  // no object id
+    PostgresWireHandler::write_value(output_packet, htons(0u));  // no attribute number
 
-  PostgresWireHandler::write_value(output_packet, htonl(23));  // object id of int32
+    auto object_id = 0u;
+    auto type_width = 0;
+    switch (column_types[column_id]) {
+      case DataType::Int:
+        object_id = 23;
+        type_width = 4;
+        break;
+      case DataType::Long:
+        object_id = 20;
+        type_width = 8;
+        break;
+      case DataType::Float:
+        object_id = 700;
+        type_width = 4;
+        break;
+      case DataType::Double:
+        object_id = 701;
+        type_width = 8;
+        break;
+      case DataType::String:
+        object_id = 25;
+        type_width = -1;
+        break;
+      default:
+        Fail("Bad DataType");
+    }
 
-  PostgresWireHandler::write_value(output_packet, htons(sizeof(uint32_t)));  // regular int
-  PostgresWireHandler::write_value(output_packet, htonl(-1));                // no modifier
-  PostgresWireHandler::write_value(output_packet, htons(0u));                // text format
+    PostgresWireHandler::write_value(output_packet, htonl(object_id));   // object id of type
+    PostgresWireHandler::write_value(output_packet, htons(type_width));  // regular int
+    PostgresWireHandler::write_value(output_packet, htonl(-1));          // no modifier
+    PostgresWireHandler::write_value(output_packet, htons(0u));          // text format
+  }
 
   _session.async_send_packet(output_packet);
   _state = SimpleQueryCommandState::RowDescriptionSent;
@@ -116,35 +152,47 @@ void SimpleQueryCommand::send_row_data() {
     Byten
     The value of the column, in the format indicated by the associated format code. n is the above length.
     */
+  const auto num_columns = _result_table->column_count();
 
-  OutputPacket output_packet;
-  PostgresWireHandler::write_value(output_packet, NetworkMessageType::DataRow);
+  for (ChunkID chunk_id{0}; chunk_id < _result_table->chunk_count(); ++chunk_id) {
+    const auto& chunk = _result_table->get_chunk(chunk_id);
 
-  auto total_bytes = sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t) + 3;
-  PostgresWireHandler::write_value(output_packet, htonl(total_bytes));
+    for (ChunkOffset chunk_offset{0}; chunk_offset < chunk.size(); ++chunk_offset) {
+      // New packet for each row
+      auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::DataRow);
 
-  // 1 column
-  PostgresWireHandler::write_value(output_packet, htons(1u));
+      // Number of columns in row
+      PostgresWireHandler::write_value(output_packet, htons(num_columns));
 
-  // Size of string representation of value, NOT of value type's size
-  PostgresWireHandler::write_value(output_packet, htonl(3u));
+      for (ColumnID column_id{0}; column_id < num_columns; ++column_id) {
+        std::string value_string_buffer;
 
-  // Text mode means that all values are sent as non-terminated strings
-  PostgresWireHandler::write_string(output_packet, "100", false);
+        const auto& column = chunk.get_column(column_id);
+        column->write_string_representation(value_string_buffer, chunk_offset);
 
-  _session.async_send_packet(output_packet);
+        const auto value_size = value_string_buffer.length() - sizeof(uint32_t);
+        // Remove unnecessary size at end of string
+        value_string_buffer.resize(value_size);
+
+        // Size of string representation of value, NOT of value type's size
+        PostgresWireHandler::write_value(output_packet, htonl(value_size));
+
+        // Text mode means that all values are sent as non-terminated strings
+        PostgresWireHandler::write_string(output_packet, value_string_buffer, false);
+      }
+
+      _row_count++;
+      _session.async_send_packet(output_packet);
+    }
+  }
   _state = SimpleQueryCommandState::RowDataSent;
 }
 
 void SimpleQueryCommand::send_command_complete() {
-  OutputPacket output_packet;
-  PostgresWireHandler::write_value(output_packet, NetworkMessageType::CommandComplete);
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
 
-  auto total_bytes = sizeof(uint32_t) + 9;
-  PostgresWireHandler::write_value(output_packet, htonl(total_bytes));
-
-  // Completed SELECT statement with 1 result row
-  PostgresWireHandler::write_string(output_packet, "SELECT 1");
+  const auto completed = "SELECT " + std::to_string(_row_count);
+  PostgresWireHandler::write_string(output_packet, completed);
 
   _session.async_send_packet(output_packet);
   _state = SimpleQueryCommandState::CommandCompleteSent;

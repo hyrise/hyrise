@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -66,6 +67,30 @@ void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& 
   if (terminate) {
     // 0-terminate the string
     data.emplace_back('\0');
+  }
+}
+
+OutputPacket PostgresWireHandler::new_output_packet(NetworkMessageType type) {
+  OutputPacket output_packet;
+  write_value(output_packet, type);
+  write_value(output_packet, htonl(0u));
+  return output_packet;
+}
+
+void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
+  auto& data = packet.data;
+  DebugAssert(
+      data.size() >= 5,
+      "Cannot update the packet size of a packet which is less than NetworkIMessageType + dummy size (i.e. 5 bytes)");
+
+  // - 1 because the message type byte does not contribute to the total size
+  auto total_bytes = htonl(data.size() - 1);
+  auto size_chars = reinterpret_cast<char*>(&total_bytes);
+
+  // The size starts at byte position 1
+  const auto size_offset = 1u;
+  for (auto byte_offset = 0u; byte_offset < sizeof(total_bytes); ++byte_offset) {
+    data[size_offset + byte_offset] = size_chars[byte_offset];
   }
 }
 

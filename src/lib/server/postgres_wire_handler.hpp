@@ -35,6 +35,9 @@ struct RequestHeader {
 
 class PostgresWireHandler {
  public:
+  static OutputPacket new_output_packet(NetworkMessageType type);
+  static void write_output_packet_size(OutputPacket& packet);
+
   static uint32_t handle_startup_package(const InputPacket& packet);
   static void handle_startup_package_content(const InputPacket& packet, size_t length);
 

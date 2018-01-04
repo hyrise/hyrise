@@ -1,10 +1,10 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
+
+#include <memory>
+#include <optional>
 
 #include "postgres_wire_handler.hpp"
 #include "types.hpp"
@@ -32,7 +32,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void set_started() { _is_started = true; }
 
   void async_receive_packet(std::size_t size);
-  void async_send_packet(const OutputPacket& output_packet);
+  void async_send_packet(OutputPacket& output_packet);
 
   void signal_async_event();
 

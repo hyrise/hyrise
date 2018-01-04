@@ -1,21 +1,21 @@
+#include <boost/asio/io_service.hpp>
+
 #include <cstdlib>
 #include <iostream>
 
-#include <boost/asio/io_service.hpp>
-
-#include <scheduler/current_scheduler.hpp>
-#include <scheduler/node_queue_scheduler.hpp>
-#include <scheduler/topology.hpp>
-#include <server/hyrise_server.hpp>
-#include <storage/storage_manager.hpp>
-#include <tpcc/tpcc_table_generator.hpp>
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "server/hyrise_server.hpp"
+#include "storage/storage_manager.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
 
 int main(int argc, char* argv[]) {
   try {
     auto port = 5432;
 
     if (argc >= 2) {
-      port = (uint16_t)std::atoi(argv[1]);
+      port = static_cast<uint16_t>(std::atoi(argv[1]));
     }
 
     // Generate some data for testing

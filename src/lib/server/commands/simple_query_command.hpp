@@ -26,6 +26,7 @@ class SimpleQueryCommand : public AbstractCommand {
 
   SimpleQueryCommandState _state;
   std::shared_ptr<const Table> _result_table;
+  uint32_t _row_count = 0;
 };
 
 }  // namespace opossum

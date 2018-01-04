@@ -37,9 +37,7 @@ void StartupCommand::handle_packet_received(const InputPacket& input_packet, std
 
 void StartupCommand::send_auth() {
   // This packet is our AuthenticationOK, which means we do not require any auth.
-  OutputPacket output_packet;
-  PostgresWireHandler::write_value(output_packet, NetworkMessageType::AuthenticationRequest);
-  PostgresWireHandler::write_value(output_packet, htonl(8u));
+  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
   PostgresWireHandler::write_value(output_packet, htonl(0u));
 
   _session.async_send_packet(output_packet);

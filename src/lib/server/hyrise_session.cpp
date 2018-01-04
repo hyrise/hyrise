@@ -1,17 +1,16 @@
 #include "hyrise_session.hpp"
 
-#include <iostream>
-
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/bind.hpp>
 
-#include <utils/assert.hpp>
+#include <iostream>
 
 #include "commands/abstract_command.hpp"
 #include "commands/simple_query_command.hpp"
 #include "commands/startup_command.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,7 +21,12 @@ void HyriseSession::start() {
   async_receive_packet(StartupCommand::STARTUP_HEADER_LENGTH);
 }
 
-void HyriseSession::async_send_packet(const OutputPacket& output_packet) {
+void HyriseSession::async_send_packet(OutputPacket& output_packet) {
+  // If the packet is SslNo (size == 1), it has a special format and does not require a size
+  if (output_packet.data.size() > 1) {
+    PostgresWireHandler::write_output_packet_size(output_packet);
+  }
+
   boost::asio::async_write(_socket, boost::asio::buffer(output_packet.data),
                            boost::bind(&HyriseSession::handle_packet_sent, this, boost::asio::placeholders::error));
 }
@@ -30,10 +34,10 @@ void HyriseSession::async_send_packet(const OutputPacket& output_packet) {
 void HyriseSession::handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred) {
   if (error) {
     std::cout << error.category().name() << ':' << error.value() << std::endl;
-    DebugAssert(false, "An error occurred when reading from the connection");
+    Fail("An error occurred while reading from the connection.");
   }
 
-  DebugAssert(bytes_transferred == _expected_input_packet_length, "Client sent less data than expected.");
+  Assert(bytes_transferred == _expected_input_packet_length, "Client sent less data than expected.");
 
   if (_current_command) {
     _current_command->handle_packet_received(_input_packet, bytes_transferred);
