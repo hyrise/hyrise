@@ -31,4 +31,4 @@ class OperatorExpression : public BaseExpression<OperatorExpression> {
  private:
   std::optional<ColumnID> _column_id;
 };
-}
+}  // namespace opossum

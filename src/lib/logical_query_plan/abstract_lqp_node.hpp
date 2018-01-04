@@ -125,7 +125,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   LQPNodeType type() const;
 
-  // Returns whether this subtree is read only. Defaults to true - if a node makes modifications, it has to override this
+  // Returns whether this subtree is read only. Defaults to true - if a node makes modifications, it has to override
+  // this
   virtual bool subtree_is_read_only() const;
 
   // Returns whether all tables in this subtree were validated
@@ -179,7 +180,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
       const NamedColumnReference& named_column_reference) const;
 
   /**
-   * Convenience method for (*find_column_origin_by_named_column_reference()), DebugAssert()s that the named_column_reference could be resolved
+   * Convenience method for (*find_column_origin_by_named_column_reference()), DebugAssert()s that the
+   * named_column_reference could be resolved
    */
   LQPColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
@@ -250,7 +252,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
  protected:
   /**
    * Override and creat a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
-   * left_child and right_child are deep copies of the left and right child respectively, used for deep-copying ColumnOrigins
+   * left_child and right_child are deep copies of the left and right child respectively, used for deep-copying
+   * ColumnOrigins
    */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& left_child,

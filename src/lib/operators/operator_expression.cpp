@@ -70,4 +70,4 @@ bool OperatorExpression::operator==(const OperatorExpression& other) const {
 void OperatorExpression::_deep_copy_impl(const std::shared_ptr<OperatorExpression>& copy) const {
   copy->_column_id = _column_id;
 }
-}
+}  // namespace opossum

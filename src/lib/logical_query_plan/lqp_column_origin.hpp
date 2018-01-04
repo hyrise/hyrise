@@ -27,4 +27,4 @@ class LQPColumnOrigin final {
 };
 
 std::ostream& operator<<(std::ostream& os, const LQPColumnOrigin& column_origin);
-}
+}  // namespace opossum

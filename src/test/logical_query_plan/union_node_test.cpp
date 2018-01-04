@@ -39,8 +39,11 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
 
 TEST_F(UnionNodeTest, ColumnOriginByNamedColumnReference) {
   EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"a"}), _a);
+  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"a", {"t_a"}}), _a);
   EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"b"}), _b);
+  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"b", {"t_a"}}), _b);
   EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"c"}), _c);
+  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"c", {"t_a"}}), _c);
 }
 
 TEST_F(UnionNodeTest, OutputColumnOrigins) {
@@ -77,26 +80,5 @@ TEST_F(UnionNodeTest, VerboseColumnNames) {
   EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{0}), "union_alias.a");
   EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{1}), "union_alias.b");
 }
-//
-//TEST_F(UnionNodeTest, FindingColumnReferences) {
-//  /**
-//    * UnionNode can only resolve column references without a table_name
-//    */
-//
-//  // finding column named "a"
-//  EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"a", std::nullopt}), ColumnID{0});
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"a", {"table_a"}}), std::nullopt);
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"a", {"table_b"}}), std::nullopt);
-//
-//  // finding column named "b"
-//  EXPECT_EQ(_union_node->get_column_id_by_named_column_reference({"b", std::nullopt}), ColumnID{1});
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"b", {"table_a"}}), std::nullopt);
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"b", {"table_b"}}), std::nullopt);
-//
-//  // invalid names
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"c", std::nullopt}), std::nullopt);
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"c", {"table_a"}}), std::nullopt);
-//  EXPECT_EQ(_union_node->find_column_id_by_named_column_reference({"c", {"table_b"}}), std::nullopt);
-//}
 
 }  // namespace opossum

@@ -295,16 +295,19 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
   ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Right, new_node_b);
 }
 
-//TEST_F(LogicalQueryPlanTest, DeepCopyColumnOrigins) {
+//  TEST_F(LogicalQueryPlanTest, DeepCopyColumnOrigins) {
 //  /**
-//   * Test that when calling AbstractLQPNode::deep_copy(), all ColumnOrigins in the new LQP actually reference the Nodes
+//   * Test that when calling AbstractLQPNode::deep_copy(), all ColumnOrigins in the new LQP actually reference the
+//   Nodes
 //   * in that LQP
 //   */
 //
 //  auto mock_node_a = std::make_shared<MockNode>({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
 //  auto mock_node_b = std::make_shared<MockNode>({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
-//  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins{{mock_node_a, ColumnID{2}, {mock_node_b, ColumnID{1}}}}, ScanType::Equals);
-//  auto aggregate_node = std::make_shared<AggregateNode>(JoinMode::Inner, JoinColumnOrigins{{mock_node_a, ColumnID{2}, {mock_node_b, ColumnID{1}}}}, ScanType::Equals);
-//}
+//  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins{{mock_node_a, ColumnID{2},
+//  {mock_node_b, ColumnID{1}}}}, ScanType::Equals);
+//  auto aggregate_node = std::make_shared<AggregateNode>(JoinMode::Inner, JoinColumnOrigins{{mock_node_a, ColumnID{2},
+//  {mock_node_b, ColumnID{1}}}}, ScanType::Equals);
+//  }
 
 }  // namespace opossum

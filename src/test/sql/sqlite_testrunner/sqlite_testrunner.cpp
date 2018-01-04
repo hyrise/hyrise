@@ -4,7 +4,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <planviz/sql_query_plan_visualizer.hpp>
 #include <string>
 #include <utility>
 #include <vector>

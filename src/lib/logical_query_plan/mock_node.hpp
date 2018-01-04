@@ -22,8 +22,10 @@ class MockNode : public AbstractLQPNode {
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
   explicit MockNode(const std::optional<std::string>& alias = std::nullopt);
-  MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& alias = std::nullopt);
-  MockNode(const std::shared_ptr<TableStatistics>& statistics, const std::optional<std::string>& alias = std::nullopt);
+  explicit MockNode(const ColumnDefinitions& column_definitions,
+                    const std::optional<std::string>& alias = std::nullopt);
+  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics,
+                    const std::optional<std::string>& alias = std::nullopt);
 
   const std::vector<std::string>& output_column_names() const override;
 

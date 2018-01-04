@@ -33,4 +33,4 @@ class LQPExpression : public BaseExpression<LQPExpression> {
  private:
   std::optional<LQPColumnOrigin> _column_origin;
 };
-}
+}  // namespace opossum

@@ -50,7 +50,6 @@ std::string JoinNode::description() const {
     desc << " " << _join_column_origins->first.get_verbose_name();
     desc << " " << scan_type_to_string.left.at(*_scan_type);
     desc << " " << _join_column_origins->second.get_verbose_name();
-    ;
   }
 
   return desc.str();
