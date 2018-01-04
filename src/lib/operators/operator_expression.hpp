@@ -9,12 +9,19 @@ namespace opossum {
 
 class LQPExpression;
 
+/**
+ * Expression type used in PQPs, using ColumnIDs to refer to Columns
+ */
 class OperatorExpression : public BaseExpression<OperatorExpression> {
  public:
   static std::shared_ptr<OperatorExpression> create_column(const ColumnID column_id,
                                                            const std::optional<std::string>& alias = std::nullopt);
 
   using BaseExpression<OperatorExpression>::BaseExpression;
+
+  /**
+   * Translates a LQPExpression into a OperatorExpression, given the node that the LQPExpression is contained in
+   */
   OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                      const std::shared_ptr<AbstractLQPNode>& node);
 

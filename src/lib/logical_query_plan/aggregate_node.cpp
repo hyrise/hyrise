@@ -25,13 +25,19 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& 
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+  Assert(this->left_child(), "Can't clone without child");
+
   std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
-    aggregate_expressions.emplace_back(expression->deep_copy());
+    aggregate_expressions.emplace_back(_adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child));
   }
 
-  return std::make_shared<AggregateNode>(std::move(aggregate_expressions), _groupby_column_origins);
+  std::vector<LQPColumnOrigin> groupby_column_origins(_groupby_column_origins.size());
+  std::transform(_groupby_column_origins.begin(), _groupby_column_origins.end(), groupby_column_origins.begin(),
+                 [&] (const auto &column_origin) { return this->left_child()->deep_copy_column_origin(column_origin, left_child); });
+
+  return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_origins);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {

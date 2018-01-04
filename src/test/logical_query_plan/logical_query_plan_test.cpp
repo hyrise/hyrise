@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "base_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -295,19 +296,52 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
   ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Right, new_node_b);
 }
 
-//  TEST_F(LogicalQueryPlanTest, DeepCopyColumnOrigins) {
-//  /**
-//   * Test that when calling AbstractLQPNode::deep_copy(), all ColumnOrigins in the new LQP actually reference the
-//   Nodes
-//   * in that LQP
-//   */
-//
-//  auto mock_node_a = std::make_shared<MockNode>({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
-//  auto mock_node_b = std::make_shared<MockNode>({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
-//  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins{{mock_node_a, ColumnID{2},
-//  {mock_node_b, ColumnID{1}}}}, ScanType::Equals);
-//  auto aggregate_node = std::make_shared<AggregateNode>(JoinMode::Inner, JoinColumnOrigins{{mock_node_a, ColumnID{2},
-//  {mock_node_b, ColumnID{1}}}}, ScanType::Equals);
-//  }
+TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
+  /**
+   * Test AbstractLQPNode::deep_copy_column_origin()
+   */
+
+  auto mock_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
+  auto mock_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+  auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnOrigin{mock_node_b, ColumnID{0}}, ScanType::Equals, 3);
+
+  const auto column_origin_a = LQPColumnOrigin{mock_node_a, ColumnID{1}};
+  const auto column_origin_b = LQPColumnOrigin{mock_node_b, ColumnID{0}};
+
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(AggregateFunction::Sum, {LQPExpression::create_column(column_origin_a)})}),
+  std::vector<LQPColumnOrigin>{{column_origin_b}});
+
+  aggregate_node->set_left_child(predicate_node);
+  predicate_node->set_left_child(join_node);
+  join_node->set_left_child(mock_node_a);
+  join_node->set_right_child(mock_node_b);
+
+  const auto lqp = aggregate_node;
+  const auto lqp_copy = lqp->deep_copy();
+
+  const auto column_origin_c = LQPColumnOrigin{aggregate_node, ColumnID{1}};
+
+  /**
+   * Test that column_origin_a and column_origin_b can be resolved from the JoinNode
+   */
+  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_a, lqp_copy->left_child()).column_id(), column_origin_a.column_id());
+  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_a, lqp_copy->left_child()).node(), lqp_copy->left_child()->left_child()->left_child());
+
+  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_b, lqp_copy->left_child()).column_id(), column_origin_b.column_id());
+  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_b, lqp_copy->left_child()).node(), lqp_copy->left_child()->left_child()->right_child());
+
+  /**
+   * column_origin_b can be resolved from the Aggregate since it is a GroupByColumn
+   */
+  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_b, lqp_copy).column_id(), column_origin_b.column_id());
+  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_b, lqp_copy).node(), lqp_copy->left_child()->left_child()->right_child());
+
+  /**
+   * SUM(a) can be resolved from the Aggregate
+   */
+  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_c, lqp_copy).column_id(), column_origin_c.column_id());
+  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_c, lqp_copy).node(), lqp_copy);
+}
 
 }  // namespace opossum

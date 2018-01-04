@@ -87,7 +87,7 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   void test_output(const std::shared_ptr<AbstractOperator> in,
-                   const std::vector<OperatorAggregateColumnDefinition>& aggregates,
+                   const std::vector<AggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_references = true) {
     // load expected results from file
@@ -138,7 +138,7 @@ class OperatorsAggregateTest : public BaseTest {
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
+      _table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
       std::vector<ColumnID>{ColumnID{0}});
 
   EXPECT_EQ(aggregate->name(), "Aggregate");
@@ -146,14 +146,14 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
 
 TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1_string, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
+      _table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
       std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1_string, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
+      _table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
       std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
@@ -392,7 +392,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
 }
 
 TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
-  EXPECT_THROW(std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<OperatorAggregateColumnDefinition>{},
+  EXPECT_THROW(std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{},
                                            std::vector<ColumnID>{}),
                std::logic_error);
 }

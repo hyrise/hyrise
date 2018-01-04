@@ -223,7 +223,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto val = std::make_shared<Validate>(ts3);
 
     auto sum = std::make_shared<Aggregate>(
-        val, std::vector<OperatorAggregateColumnDefinition>{{ColumnID{8} /* "OL_AMOUNT" */, AggregateFunction::Sum}},
+        val, std::vector<AggregateColumnDefinition>{{ColumnID{8} /* "OL_AMOUNT" */, AggregateFunction::Sum}},
         std::vector<ColumnID>{});
 
     auto t_gt = std::make_shared<OperatorTask>(gt);

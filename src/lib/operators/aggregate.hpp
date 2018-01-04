@@ -48,7 +48,7 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
-using OperatorAggregateColumnDefinition = AggregateColumnDefinition<ColumnID>;
+using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -64,10 +64,10 @@ using DistinctAggregateType = int8_t;
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in,
-            const std::vector<OperatorAggregateColumnDefinition>& aggregates,
+            const std::vector<AggregateColumnDefinition>& aggregates,
             const std::vector<ColumnID> groupby_column_ids);
 
-  const std::vector<OperatorAggregateColumnDefinition>& aggregates() const;
+  const std::vector<AggregateColumnDefinition>& aggregates() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   const std::string name() const override;
@@ -99,7 +99,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
-  const std::vector<OperatorAggregateColumnDefinition> _aggregates;
+  const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   std::shared_ptr<Table> _output;

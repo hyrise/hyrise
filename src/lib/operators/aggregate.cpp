@@ -20,14 +20,14 @@
 namespace opossum {
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
-                     const std::vector<OperatorAggregateColumnDefinition>& aggregates,
+                     const std::vector<AggregateColumnDefinition>& aggregates,
                      const std::vector<ColumnID> groupby_column_ids)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_column_ids(groupby_column_ids) {
   Assert(!(aggregates.empty() && groupby_column_ids.empty()),
          "Neither aggregate nor groupby columns have been specified");
 }
 
-const std::vector<OperatorAggregateColumnDefinition>& Aggregate::aggregates() const { return _aggregates; }
+const std::vector<AggregateColumnDefinition>& Aggregate::aggregates() const { return _aggregates; }
 
 const std::vector<ColumnID>& Aggregate::groupby_column_ids() const { return _groupby_column_ids; }
 

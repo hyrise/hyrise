@@ -7,6 +7,9 @@
 
 namespace opossum {
 
+/**
+ * Expression type used in LQPs, using LQPColumnOrigins to refer to Columns
+ */
 class LQPExpression : public BaseExpression<LQPExpression> {
  public:
   static std::shared_ptr<LQPExpression> create_column(const LQPColumnOrigin& column_origin,

@@ -15,6 +15,8 @@ namespace opossum {
 class AbstractLQPNode;
 
 /**
+ * CRTP class forming the base class for LQPExpression and OperatorExpression
+ *
  * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
  * and especially its optimizer.
  *

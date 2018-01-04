@@ -232,7 +232,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   /**
    * 2. Build Aggregate
    */
-  std::vector<OperatorAggregateColumnDefinition> aggregate_definitions;
+  std::vector<AggregateColumnDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregate_expressions.size());
 
   for (const auto& aggregate_expression : aggregate_expressions) {
