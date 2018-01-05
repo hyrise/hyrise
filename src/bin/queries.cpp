@@ -13,8 +13,6 @@ public:
         hsql::SQLParser::tokenize(sql_string, &tokens);
 
         planning_time = tokens.size() * 0.01f;
-
-        std::cout << planning_time << std::endl;
     }
 
     std::string sql_string;
@@ -23,7 +21,9 @@ public:
     float planning_time;
 };
 
-void load_join_order_queries(std::vector<Query>& queries) {
+std::vector<Query> load_join_order_queries() {
+    std::vector<Query> queries;
+
     queries.emplace_back("EXPLAIN ANALYZE SELECT MIN(chn.name) AS uncredited_voiced_character, MIN(t.title) AS russian_movie FROM char_name AS chn, cast_info AS ci, company_name AS cn, company_type AS ct, movie_companies AS mc, role_type AS rt, title AS t WHERE ci.note  like '%(voice)%' and ci.note like '%(uncredited)%' AND cn.country_code  = '[ru]' AND rt.role  = 'actor' AND t.production_year > 2005 AND t.id = mc.movie_id AND t.id = ci.movie_id AND ci.movie_id = mc.movie_id AND chn.id = ci.person_role_id AND rt.id = ci.role_id AND cn.id = mc.company_id AND ct.id = mc.company_type_id;", "Join Order", "0", 6.744000);
     queries.emplace_back("EXPLAIN ANALYZE SELECT MIN(chn.name) AS character, MIN(t.title) AS russian_mov_with_actor_producer FROM char_name AS chn, cast_info AS ci, company_name AS cn, company_type AS ct, movie_companies AS mc, role_type AS rt, title AS t WHERE ci.note  like '%(producer)%' AND cn.country_code  = '[ru]' AND rt.role  = 'actor' AND t.production_year > 2010 AND t.id = mc.movie_id AND t.id = ci.movie_id AND ci.movie_id = mc.movie_id AND chn.id = ci.person_role_id AND rt.id = ci.role_id AND cn.id = mc.company_id AND ct.id = mc.company_type_id;", "Join Order", "1", 3.579000);
     queries.emplace_back("EXPLAIN ANALYZE SELECT MIN(chn.name) AS character, MIN(t.title) AS movie_with_american_producer FROM char_name AS chn, cast_info AS ci, company_name AS cn, company_type AS ct, movie_companies AS mc, role_type AS rt, title AS t WHERE ci.note  like '%(producer)%' AND cn.country_code  = '[us]' AND t.production_year > 1990 AND t.id = mc.movie_id AND t.id = ci.movie_id AND ci.movie_id = mc.movie_id AND chn.id = ci.person_role_id AND rt.id = ci.role_id AND cn.id = mc.company_id AND ct.id = mc.company_type_id;", "Join Order", "2", 3.491000);
@@ -137,9 +137,13 @@ void load_join_order_queries(std::vector<Query>& queries) {
     queries.emplace_back("EXPLAIN ANALYZE SELECT MIN(an.name) AS alternative_name, MIN(chn.name) AS voiced_character, MIN(n.name) AS voicing_actress, MIN(t.title) AS american_movie FROM aka_name AS an, char_name AS chn, cast_info AS ci, company_name AS cn, movie_companies AS mc, name AS n, role_type AS rt, title AS t WHERE ci.note  = '(voice)' AND cn.country_code ='[us]' AND mc.note  like '%(200%)%' and (mc.note like '%(USA)%' or mc.note like '%(worldwide)%') AND n.gender ='f' and n.name like '%Angel%' AND rt.role ='actress' AND t.production_year  between 2007 and 2010 AND ci.movie_id = t.id AND t.id = mc.movie_id AND ci.movie_id = mc.movie_id AND mc.company_id = cn.id AND ci.role_id = rt.id AND n.id = ci.person_id AND chn.id = ci.person_role_id AND an.person_id = n.id AND an.person_id = ci.person_id;", "Join Order", "110", 6.875000);
     queries.emplace_back("EXPLAIN ANALYZE SELECT MIN(an.name) AS alternative_name, MIN(chn.name) AS voiced_character_name, MIN(n.name) AS voicing_actress, MIN(t.title) AS american_movie FROM aka_name AS an, char_name AS chn, cast_info AS ci, company_name AS cn, movie_companies AS mc, name AS n, role_type AS rt, title AS t WHERE ci.note  in ('(voice)', '(voice: Japanese version)', '(voice) (uncredited)', '(voice: English version)') AND cn.country_code ='[us]' AND n.gender ='f' and n.name like '%An%' AND rt.role ='actress' AND ci.movie_id = t.id AND t.id = mc.movie_id AND ci.movie_id = mc.movie_id AND mc.company_id = cn.id AND ci.role_id = rt.id AND n.id = ci.person_id AND chn.id = ci.person_role_id AND an.person_id = n.id AND an.person_id = ci.person_id;", "Join Order", "111", 6.598000);
     queries.emplace_back("EXPLAIN ANALYZE SELECT MIN(an.name) AS alternative_name, MIN(chn.name) AS voiced_char_name, MIN(n.name) AS voicing_actress, MIN(t.title) AS american_movie FROM aka_name AS an, char_name AS chn, cast_info AS ci, company_name AS cn, movie_companies AS mc, name AS n, role_type AS rt, title AS t WHERE ci.note  in ('(voice)', '(voice: Japanese version)', '(voice) (uncredited)', '(voice: English version)') AND cn.country_code ='[us]' AND n.gender ='f' AND rt.role ='actress' AND ci.movie_id = t.id AND t.id = mc.movie_id AND ci.movie_id = mc.movie_id AND mc.company_id = cn.id AND ci.role_id = rt.id AND n.id = ci.person_id AND chn.id = ci.person_role_id AND an.person_id = n.id AND an.person_id = ci.person_id;", "Join Order", "112", 6.716000);
+
+    return queries;
 }
 
-void load_tpch_queries(std::vector<Query>& queries) {
+std::vector<Query> load_tpch_queries() {
+    std::vector<Query> queries;
+
     queries.emplace_back("SELECT l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order FROM lineitem WHERE l_shipdate <= date '1998-12-01' - interval '90' day GROUP BY l_returnflag, l_linestatus ORDER BY l_returnflag, l_linestatus;", "TPC-H", "unknown");
     queries.emplace_back("select s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment from part, supplier, partsupp, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and p_size = :1 and p_type like '%:2' and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = ':3' and ps_supplycost = ( select min(ps_supplycost) from partsupp, supplier, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = ':3' ) order by s_acctbal desc, n_name, s_name, p_partkey LIMIT 100;", "TPC-H", "unknown");
     queries.emplace_back("SELECT l_orderkey, sum(l_extendedprice * (1 - l_discount)) as revenue, o_orderdate, o_shippriority FROM customer, orders, lineitem WHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate < date '1995-03-15' AND l_shipdate > date '1995-03-15' GROUP BY l_orderkey, o_orderdate, o_shippriority ORDER BY revenue desc, o_orderdate LIMIT 20;", "TPC-H", "unknown");
@@ -162,9 +166,13 @@ void load_tpch_queries(std::vector<Query>& queries) {
     queries.emplace_back("select s_name, s_address from supplier, nation where s_suppkey in ( select ps_suppkey from partsupp, ( select l_partkey agg_partkey, l_suppkey agg_suppkey, 0.5 * sum(l_quantity) AS agg_quantity from lineitem where l_shipdate >= date ':2' and l_shipdate < date ':2' + interval '1' year group by l_partkey, l_suppkey ) agg_lineitem where agg_partkey = ps_partkey and agg_suppkey = ps_suppkey and ps_partkey in ( select p_partkey from part where p_name like ':1%' ) and ps_availqty > agg_quantity ) and s_nationkey = n_nationkey and n_name = ':3' order by s_name LIMIT 1;", "TPC-H", "unknown");
     queries.emplace_back("select s_name, count(*) as numwait from supplier, lineitem l1, orders, nation where s_suppkey = l1.l_suppkey and o_orderkey = l1.l_orderkey and o_orderstatus = 'F' and l1.l_receiptdate > l1.l_commitdate and exists ( select * from lineitem l2 where l2.l_orderkey = l1.l_orderkey and l2.l_suppkey <> l1.l_suppkey ) and not exists ( select * from lineitem l3 where l3.l_orderkey = l1.l_orderkey and l3.l_suppkey <> l1.l_suppkey and l3.l_receiptdate > l3.l_commitdate ) and s_nationkey = n_nationkey and n_name = ':1' group by s_name order by numwait desc, s_name LIMIT 100;", "TPC-H", "unknown");
     queries.emplace_back("select cntrycode, count(*) as numcust, sum(c_acctbal) as totacctbal from ( select substring(c_phone from 1 for 2) as cntrycode, c_acctbal from customer where substring(c_phone from 1 for 2) in (':1', ':2', ':3', ':4', ':5', ':6', ':7') and c_acctbal > ( select avg(c_acctbal) from customer where c_acctbal > 0.00 and substring(c_phone from 1 for 2) in (':1', ':2', ':3', ':4', ':5', ':6', ':7') ) and not exists ( select * from orders where o_custkey = c_custkey ) ) as custsale group by cntrycode order by cntrycode LIMIT 1;", "TPC-H", "unknown");
+
+    return queries;
 }
 
-void load_tpcc_queries(std::vector<Query>& queries) {
+std::vector<Query> load_tpcc_queries() {
+    std::vector<Query> queries;
+
     queries.emplace_back("SELECT NO_O_ID FROM NEW_ORDER WHERE NO_D_ID = ? AND NO_W_ID = ? AND NO_O_ID > -1 LIMIT 1", "TPC-C", "Unknown");
     queries.emplace_back("SELECT O_C_ID FROM ORDERS WHERE O_ID = ? AND O_D_ID = ? AND O_W_ID = ?", "TPC-C", "Unknown");
     queries.emplace_back("SELECT SUM(OL_AMOUNT) FROM ORDER_LINE WHERE OL_O_ID = ? AND OL_D_ID = ? AND OL_W_ID = ?", "TPC-C", "Unknown");
@@ -183,14 +191,16 @@ void load_tpcc_queries(std::vector<Query>& queries) {
     queries.emplace_back("SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_DATA FROM CUSTOMER WHERE C_W_ID = ? AND C_D_ID = ? AND C_LAST = ? ORDER BY C_FIRST", "TPC-C", "Unknown");
     queries.emplace_back("SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = ? AND D_ID = ?", "TPC-C", "Unknown");
     queries.emplace_back("SELECT COUNT(DISTINCT(OL_I_ID)) FROM ORDER_LINE, STOCK WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID < ? AND OL_O_ID >= ? AND S_W_ID = ? AND S_I_ID = OL_I_ID AND S_QUANTITY < ?", "TPC-C", "Unknown");
-}
-
-std::vector<Query> load_queries() {
-    std::vector<Query> queries;
-
-    load_join_order_queries(queries);
-    load_tpch_queries(queries);
-    load_tpcc_queries(queries);
 
     return queries;
+}
+
+std::map<std::string, std::vector<Query>> initialize_workloads() {
+    std::map<std::string, std::vector<Query>> workloads;
+
+    workloads["join_order"] = load_join_order_queries();
+    workloads["tpch"] = load_tpch_queries();
+    workloads["tpcc"] = load_tpcc_queries();
+
+    return workloads;
 }
