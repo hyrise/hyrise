@@ -17,10 +17,18 @@
 #include "sql/random_cache.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "sql/sql_translator.hpp"
 #include "utils/thread_pool.h"
 
 
 using namespace std::chrono_literals;
+using hsql::SQLStatement;
+using hsql::PrepareStatement;
+using hsql::ExecuteStatement;
+using hsql::kStmtPrepare;
+using hsql::kStmtExecute;
+using hsql::SQLParser;
+using hsql::SQLParserResult;
 
 int main() {
     constexpr size_t EXECUTIONS = 1000;
