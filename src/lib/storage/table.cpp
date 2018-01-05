@@ -139,12 +139,12 @@ const std::vector<DataType>& Table::column_types() const { return _column_types;
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
-Chunk& Table::get_chunk(ChunkID chunk_id) {
+std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
 
-const Chunk& Table::get_chunk(ChunkID chunk_id) const {
+std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
@@ -159,16 +159,16 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::emplace_chunk(Chunk chunk) {
-  if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
+void Table::emplace_chunk(const std::shared_ptr<Chunk>& chunk) {
+  if (_chunks.size() == 1 && (_chunks.back()->column_count() == 0 || _chunks.back()->size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  DebugAssert(chunk.column_count() > 0, "Trying to add chunk without columns.");
-  DebugAssert(chunk.column_count() == column_count(),
-              std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
+  DebugAssert(chunk->column_count() > 0, "Trying to add chunk without columns.");
+  DebugAssert(chunk->column_count() == column_count(),
+              std::string("adding chunk with ") + std::to_string(chunk->column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");
-  _chunks.emplace_back(std::move(chunk));
+  _chunks.emplace_back(chunk);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

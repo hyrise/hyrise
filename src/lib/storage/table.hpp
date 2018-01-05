@@ -58,13 +58,13 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // returns the chunk with the given id
-  Chunk& get_chunk(ChunkID chunk_id);
-  const Chunk& get_chunk(ChunkID chunk_id) const;
+  std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
+  std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
-  void emplace_chunk(Chunk chunk);
+  void emplace_chunk(const std::shared_ptr<Chunk>& chunk);
 
   // Returns a list of all column names.
   const std::vector<std::string>& column_names() const;
@@ -142,7 +142,7 @@ class Table : private Noncopyable {
 
  protected:
   const uint32_t _max_chunk_size;
-  std::vector<Chunk> _chunks;
+  std::vector<std::shared_ptr<Chunk>> _chunks;
 
   // Stores the number of invalid (deleted) rows.
   // This is currently not an atomic due to performance considerations.
