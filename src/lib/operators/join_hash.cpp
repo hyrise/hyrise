@@ -26,7 +26,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                    const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
-  DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
+  DebugAssert(scan_type == ScanType::Equals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }

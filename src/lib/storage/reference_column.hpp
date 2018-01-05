@@ -79,9 +79,6 @@ class ReferenceColumn : public BaseColumn {
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
-  // writes the length and value at the chunk_offset to the end off row_string
-  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
-
   template <typename ContextClass>
   void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
     /*
@@ -113,10 +110,6 @@ class ReferenceColumn : public BaseColumn {
       referenced_column->visit(visitable, context);
     }
   }
-
-  // copies one of its own values to a different ValueColumn - mainly used for materialization
-  // we cannot always use the materialize method below because sort results might come from different BaseColumns
-  void copy_value_to_value_column(BaseColumn&, ChunkOffset) const override;
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 

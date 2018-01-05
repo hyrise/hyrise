@@ -5,6 +5,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -36,6 +37,8 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID 
       _right_parameter{right_parameter} {}
 
 TableScan::~TableScan() = default;
+
+void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
 ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
@@ -75,10 +78,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   std::mutex output_mutex;
 
+  const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
+
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_in_table->chunk_count());
+  jobs.reserve(_in_table->chunk_count() - excluded_chunk_set.size());
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+    if (excluded_chunk_set.count(chunk_id)) continue;
+
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
@@ -157,7 +164,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
 
-  if (_scan_type == ScanType::OpLike || _scan_type == ScanType::OpNotLike) {
+  if (_scan_type == ScanType::Like || _scan_type == ScanType::NotLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
@@ -174,7 +181,7 @@ void TableScan::_init_scan() {
     return;
   }
 
-  if (_scan_type == ScanType::OpIsNull || _scan_type == ScanType::OpIsNotNull) {
+  if (_scan_type == ScanType::IsNull || _scan_type == ScanType::IsNotNull) {
     _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
     return;
   }

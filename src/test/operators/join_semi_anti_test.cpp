@@ -40,45 +40,45 @@ class JoinSemiAntiTest : public JoinTest {
 };
 
 TEST_F(JoinSemiAntiTest, SemiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals,
+  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, ScanType::Equals,
                              JoinMode::Semi, "src/test/tables/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinRefColumns) {
-  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, ColumnID{0}, ScanType::GreaterThanEquals, 0);
   scan_a->execute();
 
-  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals, JoinMode::Semi,
+  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, ScanType::Equals, JoinMode::Semi,
                              "src/test/tables/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             ScanType::OpEquals, JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1);
+                             ScanType::Equals, JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals,
+  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, ScanType::Equals,
                              JoinMode::Anti, "src/test/tables/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinRefColumns) {
-  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, ColumnID{0}, ScanType::GreaterThanEquals, 0);
   scan_a->execute();
 
-  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, ScanType::OpEquals, JoinMode::Anti,
+  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, ScanType::Equals, JoinMode::Anti,
                              "src/test/tables/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             ScanType::OpEquals, JoinMode::Anti, "src/test/tables/joinoperators/anti_result.tbl", 1);
+                             ScanType::Equals, JoinMode::Anti, "src/test/tables/joinoperators/anti_result.tbl", 1);
 }
 
 }  // namespace opossum

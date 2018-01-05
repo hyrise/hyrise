@@ -45,22 +45,6 @@ void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVi
   visitable.handle_reference_column(*this, std::move(context));
 }
 
-// writes the length and value at the chunk_offset to the end off row_string
-void ReferenceColumn::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
-  // retrieving the chunk_id for the given chunk_offset
-  auto row_id = (*_pos_list).at(chunk_offset);
-  // call the equivalent function of the referenced value column
-  _referenced_table->get_chunk(row_id.chunk_id)
-      .get_column(_referenced_column_id)
-      ->write_string_representation(row_string, chunk_offset);
-}
-
-// copies one of its own values to a different ValueColumn - mainly used for materialization
-// we cannot always use the materialize method below because sort results might come from different BaseColumns
-void ReferenceColumn::copy_value_to_value_column(BaseColumn&, ChunkOffset) const {
-  Fail("It is not allowed to copy directly from a reference column");
-}
-
 std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   // ReferenceColumns are considered as intermediate datastructures and are
   // therefore not subject to NUMA-aware chunk migrations.

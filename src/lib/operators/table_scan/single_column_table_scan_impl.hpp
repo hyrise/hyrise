@@ -51,21 +51,21 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   template <typename Functor>
   void _with_operator_for_dict_column_scan(const ScanType scan_type, const Functor& func) {
     switch (scan_type) {
-      case ScanType::OpEquals:
+      case ScanType::Equals:
         func(std::equal_to<void>{});
         return;
 
-      case ScanType::OpNotEquals:
+      case ScanType::NotEquals:
         func(std::not_equal_to<void>{});
         return;
 
-      case ScanType::OpLessThan:
-      case ScanType::OpLessThanEquals:
+      case ScanType::LessThan:
+      case ScanType::LessThanEquals:
         func(std::less<void>{});
         return;
 
-      case ScanType::OpGreaterThan:
-      case ScanType::OpGreaterThanEquals:
+      case ScanType::GreaterThan:
+      case ScanType::GreaterThanEquals:
         func(std::greater_equal<void>{});
         return;
 

@@ -40,12 +40,12 @@ class TableStatisticsTest : public BaseTest {
     table_wrapper->execute();
 
     std::shared_ptr<TableScan> table_scan;
-    if (scan_type == ScanType::OpBetween) {
+    if (scan_type == ScanType::Between) {
       auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, column_id, ScanType::OpGreaterThanEquals, value);
+          std::make_shared<TableScan>(table_wrapper, column_id, ScanType::GreaterThanEquals, value);
       first_table_scan->execute();
 
-      table_scan = std::make_shared<TableScan>(first_table_scan, column_id, ScanType::OpLessThanEquals, *value2);
+      table_scan = std::make_shared<TableScan>(first_table_scan, column_id, ScanType::LessThanEquals, *value2);
     } else {
       table_scan = std::make_shared<TableScan>(table_wrapper, column_id, scan_type, value);
     }
@@ -103,7 +103,7 @@ TEST_F(TableStatisticsTest, GetTableTest) {
 }
 
 TEST_F(TableStatisticsTest, NotEqualTest) {
-  ScanType scan_type = ScanType::OpNotEquals;
+  ScanType scan_type = ScanType::NotEquals;
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, _int_values);
   check_column_with_values(_table_a_with_statistics, ColumnID{1}, scan_type, _float_values);
   check_column_with_values(_table_a_with_statistics, ColumnID{2}, scan_type, _double_values);
@@ -111,7 +111,7 @@ TEST_F(TableStatisticsTest, NotEqualTest) {
 }
 
 TEST_F(TableStatisticsTest, EqualsTest) {
-  ScanType scan_type = ScanType::OpEquals;
+  ScanType scan_type = ScanType::Equals;
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, _int_values);
   check_column_with_values(_table_a_with_statistics, ColumnID{1}, scan_type, _float_values);
   check_column_with_values(_table_a_with_statistics, ColumnID{2}, scan_type, _double_values);
@@ -119,7 +119,7 @@ TEST_F(TableStatisticsTest, EqualsTest) {
 }
 
 TEST_F(TableStatisticsTest, LessThanTest) {
-  ScanType scan_type = ScanType::OpLessThan;
+  ScanType scan_type = ScanType::LessThan;
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, _int_values);
   //  table statistics assigns for floating point values greater and greater equals same selectivity
   std::vector<float> custom_float_values{0.f, 1.f, 5.1f, 7.f};
@@ -131,7 +131,7 @@ TEST_F(TableStatisticsTest, LessThanTest) {
 }
 
 TEST_F(TableStatisticsTest, LessEqualThanTest) {
-  ScanType scan_type = ScanType::OpLessThanEquals;
+  ScanType scan_type = ScanType::LessThanEquals;
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, _int_values);
   std::vector<float> custom_float_values{0.f, 1.9f, 5.f, 7.f};
   check_column_with_values(_table_a_with_statistics, ColumnID{1}, scan_type, custom_float_values);
@@ -142,7 +142,7 @@ TEST_F(TableStatisticsTest, LessEqualThanTest) {
 }
 
 TEST_F(TableStatisticsTest, GreaterThanTest) {
-  ScanType scan_type = ScanType::OpGreaterThan;
+  ScanType scan_type = ScanType::GreaterThan;
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, _int_values);
   //  table statistics assigns for floating point values greater and greater equals same selectivity
   std::vector<float> custom_float_values{0.f, 1.5f, 6.f, 7.f};
@@ -154,7 +154,7 @@ TEST_F(TableStatisticsTest, GreaterThanTest) {
 }
 
 TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
-  ScanType scan_type = ScanType::OpGreaterThanEquals;
+  ScanType scan_type = ScanType::GreaterThanEquals;
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, _int_values);
   std::vector<float> custom_float_values{0.f, 1.f, 5.1f, 7.f};
   check_column_with_values(_table_a_with_statistics, ColumnID{1}, scan_type, custom_float_values);
@@ -165,7 +165,7 @@ TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
 }
 
 TEST_F(TableStatisticsTest, BetweenTest) {
-  ScanType scan_type = ScanType::OpBetween;
+  ScanType scan_type = ScanType::Between;
   std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   check_column_with_values(_table_a_with_statistics, ColumnID{0}, scan_type, int_values);
   std::vector<std::pair<float, float>> float_values{{-1.f, 0.f}, {-1.f, 1.9f}, {1.f, 1.9f}, {0.f, 7.f},
@@ -181,9 +181,9 @@ TEST_F(TableStatisticsTest, BetweenTest) {
 }
 
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
-  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, ScanType::OpBetween,
+  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, ScanType::Between,
                                                    AllParameterVariant(2.), AllTypeVariant(5.));
-  container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThanEquals,
+  container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::GreaterThanEquals,
                                               AllParameterVariant(4), AllTypeVariant(5));
 }
 
@@ -191,18 +191,18 @@ TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
   /**
    * check that min and max values of columns are set
    */
-  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{3}, ScanType::OpEquals,
+  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{3}, ScanType::Equals,
                                                    AllParameterVariant("f"));
-  check_statistic_with_table_scan(container, ColumnID{3}, ScanType::OpNotEquals, AllParameterVariant("f"));
+  check_statistic_with_table_scan(container, ColumnID{3}, ScanType::NotEquals, AllParameterVariant("f"));
 
-  container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{1}, ScanType::OpLessThanEquals,
+  container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{1}, ScanType::LessThanEquals,
                                               AllParameterVariant(3.5f));
-  check_statistic_with_table_scan(container, ColumnID{1}, ScanType::OpGreaterThan, AllParameterVariant(3.5f));
+  check_statistic_with_table_scan(container, ColumnID{1}, ScanType::GreaterThan, AllParameterVariant(3.5f));
 
-  container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{0}, ScanType::OpLessThan,
+  container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{0}, ScanType::LessThan,
                                               AllParameterVariant(4));
-  container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThan, AllParameterVariant(2));
-  check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpEquals, AllParameterVariant(3));
+  container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::GreaterThan, AllParameterVariant(2));
+  check_statistic_with_table_scan(container, ColumnID{0}, ScanType::Equals, AllParameterVariant(3));
 }
 
 }  // namespace opossum

@@ -162,17 +162,17 @@ class ValuePlaceholder {
 
 // TODO(anyone): integrate and replace with ExpressionType
 enum class ScanType {
-  OpEquals,
-  OpNotEquals,
-  OpLessThan,
-  OpLessThanEquals,
-  OpGreaterThan,
-  OpGreaterThanEquals,
-  OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
-  OpLike,
-  OpNotLike,
-  OpIsNull,
-  OpIsNotNull
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  Like,
+  NotLike,
+  IsNull,
+  IsNotNull
 };
 
 enum class ExpressionType {

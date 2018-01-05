@@ -21,17 +21,17 @@ boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>:
 }
 
 const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
-    {ScanType::OpEquals, "="},
-    {ScanType::OpNotEquals, "!="},
-    {ScanType::OpLessThan, "<"},
-    {ScanType::OpLessThanEquals, "<="},
-    {ScanType::OpGreaterThan, ">"},
-    {ScanType::OpGreaterThanEquals, ">="},
-    {ScanType::OpBetween, "BETWEEN"},
-    {ScanType::OpLike, "LIKE"},
-    {ScanType::OpNotLike, "NOT LIKE"},
-    {ScanType::OpIsNull, "IS NULL"},
-    {ScanType::OpIsNotNull, "IS NOT NULL"},
+    {ScanType::Equals, "="},
+    {ScanType::NotEquals, "!="},
+    {ScanType::LessThan, "<"},
+    {ScanType::LessThanEquals, "<="},
+    {ScanType::GreaterThan, ">"},
+    {ScanType::GreaterThanEquals, ">="},
+    {ScanType::Between, "BETWEEN"},
+    {ScanType::Like, "LIKE"},
+    {ScanType::NotLike, "NOT LIKE"},
+    {ScanType::IsNull, "IS NULL"},
+    {ScanType::IsNotNull, "IS NOT NULL"},
 });
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
