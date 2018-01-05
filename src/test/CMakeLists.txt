@@ -64,7 +64,7 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
-    optimizer/ast_to_operator_translator_test.cpp
+    optimizer/lqp_translator_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/expression_test.cpp

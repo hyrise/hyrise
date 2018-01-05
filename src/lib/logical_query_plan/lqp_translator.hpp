@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
@@ -43,6 +44,10 @@ class LQPTranslator final : private Noncopyable {
   std::shared_ptr<AbstractOperator> _translate_show_columns_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+
+  // Cache operator subtrees by LQP node to avoid executing operators below a diamond shape multiple times
+  mutable std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractOperator>>
+      _operator_by_lqp_node;
 };
 
 }  // namespace opossum
