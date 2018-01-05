@@ -74,16 +74,17 @@ int main() {
             results["executionId"] = execution;
             results["queryId"] = query_id;
             results["cacheHits"] = {};
+            results["planningTime"] = {};
             for (auto &[strategy, cache] : caches) {
                 std::optional<std::string> cached_plan = cache->try_get(queries[query_id].sql_string);
-                bool cache_hit;
                 if (cached_plan) {
-                    cache_hit = true;
+                    results["cacheHits"][strategy] = true;
+                    results["planningTime"][strategy] = 0.0f;
                 } else {
-                    cache_hit = false;
+                    results["cacheHits"][strategy] = false;
+                    results["planningTime"][strategy] = queries[query_id].planning_time;
                     cache->set(queries[query_id].sql_string, queries[query_id].sql_string);
                 }
-                results["cacheHits"][strategy] = cache_hit;
             }
             nlohmann::json package;
             package["message"] = "query_execution";
