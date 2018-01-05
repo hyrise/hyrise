@@ -596,11 +596,11 @@ TEST_P(OperatorsTableScanTest, NullSemantics) {
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
+TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   const auto expected = std::vector<AllTypeVariant>{110, 112, 114, 116, 118, 120, 122, 124};
 
   auto scan =
-      std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, ScanType::GreaterThanEquals, 0);
+      std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0}, ScanType::GreaterThanEquals, 0);
   scan->set_excluded_chunk_ids({ChunkID{0u}});
   scan->execute();
 
