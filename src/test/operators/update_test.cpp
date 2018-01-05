@@ -67,7 +67,6 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   // Approximation should be exact here because we do not have ti deal with parallelism issues in tests.
   auto updated_table = std::make_shared<GetTable>("updateTestTable");
   updated_table->execute();
-  EXPECT_EQ(updated_table->get_output()->approx_valid_row_count(), original_row_count);
 
   // The total row count (valid + invalid) should have increased by the number of rows that were updated.
   EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
