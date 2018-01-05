@@ -316,7 +316,8 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   ASSERT_NE(pqp->input_right(), nullptr);
   ASSERT_NE(pqp->input_left()->input_left(), nullptr);
   ASSERT_NE(pqp->input_right()->input_left(), nullptr);
-  ASSERT_EQ(pqp->input_left()->input_left(), pqp->input_right()->input_left());
+  EXPECT_EQ(pqp->input_left()->input_left(), pqp->input_right()->input_left());
+  EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
 }
 
 }  // namespace opossum
