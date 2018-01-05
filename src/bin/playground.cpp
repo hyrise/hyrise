@@ -122,11 +122,28 @@ int main() {
 
             auto package_dump = package.dump();
             ws->send(package_dump.c_str());
-        }
+        } else if (message_json["message"] == "update_config") {
+            size_t cache_size = message_json["data"]["cacheSize"];
 
-        // std::mt19937 rng;
-        // rng.seed(std::random_device()());
-        // std::uniform_int_distribution<std::mt19937::result_type> dist(0, queries.size() - 1);
+            caches.clear();
+
+            caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<std::string>>(cache_size));
+            caches["GDS"]->replace_cache_impl<opossum::GDSCache<std::string, std::string>>(cache_size);
+
+            caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<std::string>>(cache_size));
+            caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<std::string, std::string>>(cache_size);
+
+            caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<std::string>>(cache_size));
+            caches["LRU"]->replace_cache_impl<opossum::LRUCache<std::string, std::string>>(cache_size);
+
+            caches.emplace("LRU_K", std::make_shared<opossum::SQLQueryCache<std::string>>(cache_size));
+            caches["LRU_K"]->replace_cache_impl<opossum::LRUKCache<2, std::string, std::string>>(cache_size);
+
+            caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<std::string>>(cache_size));
+            caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<std::string, std::string>>(cache_size);
+
+            std::cout << "Cache size set to " << cache_size << std::endl;
+        }
 
     });
 
