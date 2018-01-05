@@ -77,18 +77,14 @@ std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::stri
 // Executes a query repeatedly and measures the execution time
 int _execute_query(const std::string& query, unsigned int execution_count,
                    opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
-  high_resolution_clock::duration accumulated_duration = high_resolution_clock::duration::zero();
+  int accumulated_duration = 0;
 
   // Execute queries multiple times to get more stable timing results
   for (auto counter = 0u; counter < execution_count; counter++) {
     auto pipeline = _create_and_cache_pipeline(query, cache);
-    // ToDo(group01): Discuss which method calls to measure. get timing result directly from pipeline(?).
-    auto start_time = high_resolution_clock::now();
     pipeline->get_result_table();
-    auto end_time = high_resolution_clock::now();
-    accumulated_duration += end_time - start_time;
+    accumulated_duration += pipeline->execution_time_microseconds().count();
   }
 
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(accumulated_duration).count();
-  return static_cast<int>(duration) / execution_count;
+  return accumulated_duration / execution_count;
 }
