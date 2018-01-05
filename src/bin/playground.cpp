@@ -20,6 +20,9 @@
 
 using namespace std::chrono_literals;
 
+using CacheKeyType = int;
+using CacheValueType = std::string;
+
 int main() {
     constexpr size_t EXECUTIONS = 1000;
     constexpr size_t CACHE_SIZE = 6;
@@ -44,22 +47,21 @@ int main() {
     queries[14] = "SELECT * FROM o;";
     queries[15] = "SELECT * FROM p;";
 
-    std::map<std::string, std::shared_ptr<opossum::SQLQueryCache<std::string>>> caches;
+    std::map<std::string, std::shared_ptr<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>> caches;
+    caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["GDS"]->replace_cache_impl<opossum::GDSCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
-    caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<std::string>>(CACHE_SIZE));
-    caches["GDS"]->replace_cache_impl<opossum::GDSCache<std::string, std::string>>(CACHE_SIZE);
+    caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
-    caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<std::string>>(CACHE_SIZE));
-    caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<std::string, std::string>>(CACHE_SIZE);
+    caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU"]->replace_cache_impl<opossum::LRUCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
-    caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<std::string>>(CACHE_SIZE));
-    caches["LRU"]->replace_cache_impl<opossum::LRUCache<std::string, std::string>>(CACHE_SIZE);
+    caches.emplace("LRU_K", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_K"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
-    caches.emplace("LRU_K", std::make_shared<opossum::SQLQueryCache<std::string>>(CACHE_SIZE));
-    caches["LRU_K"]->replace_cache_impl<opossum::LRUKCache<2, std::string, std::string>>(CACHE_SIZE);
-
-    caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<std::string>>(CACHE_SIZE));
-    caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<std::string, std::string>>(CACHE_SIZE);
+    caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
 
     uWS::Hub h;
@@ -81,21 +83,46 @@ int main() {
             results["queryId"] = query_id;
             results["cacheHits"] = {};
             for (auto &[strategy, cache] : caches) {
-                std::optional<std::string> cached_plan = cache->try_get(queries[query_id]);
-                bool cache_hit;
+                std::optional<CacheValueType> cached_plan = cache->try_get(query_id);
+                std::optional<CacheKeyType> evicted;
                 if (cached_plan) {
                     cache_hit = true;
                 } else {
-                    cache_hit = false;
-                    cache->set(queries[query_id], queries[query_id]);
+                    results["cacheHits"][strategy] = false;
+                    results["planningTime"][strategy] = query.planning_time;
+                    evicted = cache->set(query_id, query.sql_string);
                 }
-                results["cacheHits"][strategy] = cache_hit;
+
+                results["evictedQuery"][strategy] = evicted ? *evicted : -1;
             }
-            thread_pool.enqueue([](uWS::WebSocket<uWS::SERVER> *ws, nlohmann::json results) {
-                auto results_dump = results.dump();
-                ws->send(results_dump.c_str());
-            }, ws, results);
-            std::this_thread::sleep_for(0.2s);
+            nlohmann::json package;
+            package["message"] = "query_execution";
+            package["data"] = results;
+
+
+            auto package_dump = package.dump();
+            ws->send(package_dump.c_str());
+        } else if (message_json["message"] == "update_config") {
+            size_t cache_size = message_json["data"]["cacheSize"];
+
+            caches.clear();
+
+            caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
+            caches["GDS"]->replace_cache_impl<opossum::GDSCache<CacheKeyType, CacheValueType>>(cache_size);
+
+            caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
+            caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<CacheKeyType, CacheValueType>>(cache_size);
+
+            caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
+            caches["LRU"]->replace_cache_impl<opossum::LRUCache<CacheKeyType, CacheValueType>>(cache_size);
+
+            caches.emplace("LRU_K", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
+            caches["LRU_K"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(cache_size);
+
+            caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
+            caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<CacheKeyType, CacheValueType>>(cache_size);
+
+            std::cout << "Cache size set to " << cache_size << std::endl;
         }
     });
 
