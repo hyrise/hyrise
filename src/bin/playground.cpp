@@ -83,13 +83,12 @@ int main() {
         initial_data["data"]["workloads"] = {tpch, tpcc, join_order};
 
         auto initial_data_dump = initial_data.dump();
-        std::cout << initial_data_dump << std::endl;
         ws->send(initial_data_dump.c_str());
 
     });
 
     h.onMessage([&caches, &workloads, &execution_id](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
-        auto message_json = nlohmann::json::parse(message);
+        auto message_json = nlohmann::json::parse(std::string(message, length));
         if (message_json["message"] == "execute_query") {
             auto workload_id = message_json["data"]["workload"];
             auto query_id = message_json["data"]["query"];
