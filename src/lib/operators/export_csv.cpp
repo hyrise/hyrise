@@ -126,6 +126,11 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
                                 std::shared_ptr<ColumnVisitableContext> base_context) final {
     Fail("CSV export not implemented yet for new version of dictionary column.");
   }
+
+  void handle_encoded_column(const BaseEncodedColumn& base_column,
+                             std::shared_ptr<ColumnVisitableContext> base_context) final {
+    Fail("CSV export not implemented yet for encoded columns.");
+  }
 };
 
 }  // namespace opossum

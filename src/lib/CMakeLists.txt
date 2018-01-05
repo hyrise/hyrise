@@ -211,18 +211,21 @@ set(
     storage/fitted_attribute_vector.hpp
     storage/column_encoders/base_column_encoder.hpp
     storage/column_encoders/deprecated_dictionary_encoder.hpp
-    storage/column_encoders/encoders.hpp
     storage/column_encoders/dictionary_encoder.hpp
+    storage/column_encoders/encoders.hpp
+    storage/column_encoders/run_length_encoder.hpp
     storage/column_encoders/utils.cpp
     storage/column_encoders/utils.hpp
-    storage/encoded_columns/base_encoded_column.cpp
-    storage/encoded_columns/base_encoded_column.hpp
     storage/encoded_columns/base_dictionary_column.cpp
     storage/encoded_columns/base_dictionary_column.hpp
+    storage/encoded_columns/base_encoded_column.cpp
+    storage/encoded_columns/base_encoded_column.hpp
     storage/encoded_columns/column_encoding_type.hpp
-    storage/encoded_columns/encoded_columns.hpp
     storage/encoded_columns/dictionary_column.cpp
     storage/encoded_columns/dictionary_column.hpp
+    storage/encoded_columns/encoded_columns.hpp
+    storage/encoded_columns/run_length_column.cpp
+    storage/encoded_columns/run_length_column.hpp
     storage/encoded_columns/utils.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
@@ -257,6 +260,7 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
+    storage/iterables/run_length_column_iterable.hpp
     storage/zero_suppression/base_zero_suppression_decoder.hpp
     storage/zero_suppression/base_zero_suppression_encoder.hpp
     storage/zero_suppression/base_zero_suppression_vector.hpp
