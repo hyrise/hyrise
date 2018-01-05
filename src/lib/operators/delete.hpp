@@ -25,7 +25,6 @@ class Delete : public AbstractReadWriteOperator {
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   void _on_commit_records(const CommitID cid) override;
-  void _finish_commit() override;
   void _on_rollback_records() override;
 
  private:
