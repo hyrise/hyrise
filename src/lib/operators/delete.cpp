@@ -64,11 +64,6 @@ void Delete::_on_commit_records(const CommitID cid) {
   }
 }
 
-void Delete::_finish_commit() {
-  const auto num_rows_deleted = _input_table_left()->row_count();
-  _table->inc_invalid_row_count(num_rows_deleted);
-}
-
 void Delete::_on_rollback_records() {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
