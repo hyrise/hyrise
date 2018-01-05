@@ -136,7 +136,7 @@ class Table : private Noncopyable {
  protected:
   const uint32_t _max_chunk_size;
   std::vector<Chunk> _chunks;
-  
+
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
