@@ -59,7 +59,7 @@ class LRUKCache : public AbstractCache<Key, Value> {
 
   explicit LRUKCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _access_counter(0) {}
 
-  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+  std::optional<Key> set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     ++_access_counter;
 
     auto it = _map.find(key);
@@ -71,13 +71,15 @@ class LRUKCache : public AbstractCache<Key, Value> {
       entry.value = value;
       entry.add_history_entry(_access_counter);
       _queue.update(handle);
-      return;
+      return {};
     }
 
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
+    std::optional<Key> evicted;
     if (_queue.size() >= this->_capacity) {
       auto top = _queue.top();
+      evicted = std::make_optional(top.key);
       _map.erase(top.key);
       _queue.pop();
     }
@@ -86,6 +88,8 @@ class LRUKCache : public AbstractCache<Key, Value> {
     entry_t entry{key, value, {_access_counter}};
     handle_t handle = _queue.push(entry);
     _map[key] = handle;
+
+    return evicted;
   }
 
   Value& get(const Key& key) {

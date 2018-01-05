@@ -22,27 +22,30 @@ class RandomCache : public AbstractCache<Key, Value> {
   }
 
   // Sets the value to be cached at the given key.
-  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+  std::optional<Key> set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     // Override old element at that key, if it exists.
     auto it = _map.find(key);
     if (it != _map.end()) {
       it->second->second = value;
-      return;
+      return {};
     }
 
     // If capacity is exceeded, pick a random element and replace it.
     if (_list.size() >= this->_capacity) {
       size_t index = _rand(_gen);
+      auto evicted = std::make_optional(_list[index].first);
       _map.erase(_list[index].first);
 
       _list[index] = KeyValuePair(key, value);
       _map[key] = _list.begin() + index;
-      return;
+      return evicted;
     }
 
     // Otherwise simply add to the end of the vector.
     _list.push_back(KeyValuePair(key, value));
     _map[key] = _list.begin() + (_list.size() - 1);
+
+    return {};
   }
 
   // Retrieves the value cached at the key.

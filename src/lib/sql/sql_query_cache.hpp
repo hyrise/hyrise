@@ -23,11 +23,11 @@ class SQLQueryCache {
   virtual ~SQLQueryCache() {}
 
   // Adds or refreshes the cache entry [query, value].
-  void set(const Key& query, const Value& value) {
-    if (_cache->capacity() == 0) return;
+  std::optional<Key> set(const Key& query, const Value& value) {
+    if (_cache->capacity() == 0) return {};
 
     std::lock_guard<std::mutex> lock(_mutex);
-    _cache->set(query, value);
+    return _cache->set(query, value);
   }
 
   // Tries to fetch the cache entry for the query into the result object.

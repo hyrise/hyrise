@@ -18,7 +18,7 @@ class LRUCache : public AbstractCache<Key, Value> {
   explicit LRUCache(size_t capacity) : AbstractCache<Key, Value>(capacity) {}
 
   // Sets the value to be cached at the given key.
-  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+  std::optional<Key> set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     _list.push_front(KeyValuePair(key, std::move(value)));
 
     // Override old element at that key, if it exists.
@@ -34,9 +34,15 @@ class LRUCache : public AbstractCache<Key, Value> {
       auto last = _list.end();
       last--;
 
+      auto evicted = std::make_optional(last->first);
+
       _map.erase(last->first);
       _list.pop_back();
+
+      return evicted;
     }
+
+    return {};
   }
 
   // Retrieves the value cached at the key.

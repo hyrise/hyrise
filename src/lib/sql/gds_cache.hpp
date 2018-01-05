@@ -32,7 +32,7 @@ class GDSCache : public AbstractCache<Key, Value> {
 
   explicit GDSCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
-  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+  std::optional<Key> set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -45,13 +45,17 @@ class GDSCache : public AbstractCache<Key, Value> {
       entry.priority = _inflation + entry.cost / entry.size;
       _queue.update(handle);
 
-      return;
+      return {};
     }
 
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
+    std::optional<Key> evicted;
     if (_queue.size() >= this->_capacity) {
       auto top = _queue.top();
+
+      evicted = std::make_optional(top.key);
+
       _inflation = top.priority;
       _map.erase(top.key);
       _queue.pop();
@@ -62,6 +66,8 @@ class GDSCache : public AbstractCache<Key, Value> {
     entry.priority = _inflation + entry.cost / entry.size;
     handle_t handle = _queue.push(entry);
     _map[key] = handle;
+
+    return evicted;
   }
 
   Value& get(const Key& key) {
