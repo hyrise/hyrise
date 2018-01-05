@@ -37,8 +37,8 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State
   auto warm_up = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::GreaterThanEquals, ColumnID{1});
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */,
-                                                  ScanType::GreaterThanEquals, ColumnID{1} /* "b" */);
+    auto table_scan = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, ScanType::GreaterThanEquals,
+                                                  ColumnID{1} /* "b" */);
     table_scan->execute();
   }
 }

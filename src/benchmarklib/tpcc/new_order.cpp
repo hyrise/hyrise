@@ -168,8 +168,8 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(const 
   const auto c_ts1 =
       std::make_shared<opossum::TableScan>(c_v, opossum::ColumnID{2} /* "C_W_ID" */, opossum::ScanType::Equals, w_id);
 
-  const auto c_ts2 = std::make_shared<opossum::TableScan>(c_ts1, opossum::ColumnID{1} /* "C_D_ID" */,
-                                                          opossum::ScanType::Equals, d_id);
+  const auto c_ts2 =
+      std::make_shared<opossum::TableScan>(c_ts1, opossum::ColumnID{1} /* "C_D_ID" */, opossum::ScanType::Equals, d_id);
 
   const auto c_ts3 =
       std::make_shared<opossum::TableScan>(c_ts2, opossum::ColumnID{0} /* "C_ID" */, opossum::ScanType::Equals, c_id);
@@ -268,8 +268,8 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
 
   const auto ts1 =
       std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0} /* "D_ID" */, opossum::ScanType::Equals, d_id);
-  const auto ts2 = std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1} /* "D_W_ID" */,
-                                                        opossum::ScanType::Equals, d_w_id);
+  const auto ts2 =
+      std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1} /* "D_W_ID" */, opossum::ScanType::Equals, d_w_id);
 
   const auto original_rows = std::make_shared<opossum::Projection>(
       ts2, opossum::Projection::ColumnExpressions({opossum::Expression::create_column(opossum::ColumnID{10})}));
@@ -419,8 +419,8 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(const int32_t ol_i_id, cons
   const auto gt = std::make_shared<opossum::GetTable>("STOCK");
   const auto v = std::make_shared<opossum::Validate>(gt);
 
-  const auto ts1 = std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0} /* "S_I_ID" */,
-                                                        opossum::ScanType::Equals, ol_i_id);
+  const auto ts1 =
+      std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0} /* "S_I_ID" */, opossum::ScanType::Equals, ol_i_id);
   const auto ts2 = std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1} /* "S_W_ID" */,
                                                         opossum::ScanType::Equals, ol_supply_w_id);
 
@@ -466,8 +466,8 @@ TaskVector NewOrderRefImpl::get_update_stock_tasks(const int32_t s_quantity, con
   const auto gt = std::make_shared<opossum::GetTable>("STOCK");
   const auto v = std::make_shared<opossum::Validate>(gt);
 
-  const auto ts1 = std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0} /* "S_I_ID" */,
-                                                        opossum::ScanType::Equals, ol_i_id);
+  const auto ts1 =
+      std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0} /* "S_I_ID" */, opossum::ScanType::Equals, ol_i_id);
 
   const auto ts2 = std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1} /* "S_W_ID" */,
                                                         opossum::ScanType::Equals, ol_supply_w_id);

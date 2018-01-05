@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "concurrency/transaction_manager.hpp"
+#include "operators/import_binary.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
@@ -9,7 +10,6 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tuning/index_tuner.hpp"
 #include "tuning/system_statistics.hpp"
-#include "operators/import_binary.hpp"
 
 using std::chrono::high_resolution_clock;
 
@@ -18,17 +18,15 @@ using std::chrono::high_resolution_clock;
 //                workload, e.g. the TPC-C benchmark
 // Idea behind the current queries: have three indexable columns, but one only used once, one twice, and one thrice.
 std::vector<std::string> test_queries{
-    "SELECT * FROM CUSTOMER WHERE INTEREST > 0.3",
-    "SELECT * FROM CUSTOMER WHERE INTEREST < 0.6",
-    "SELECT * FROM CUSTOMER WHERE NAME = 'BARBARBAR'",
-    "SELECT * FROM CUSTOMER WHERE NAME = 'OUGHTPRIBAR'",
-    "SELECT * FROM CUSTOMER WHERE NAME = 'OUGHTANTIPRES'",
-    "SELECT * FROM CUSTOMER WHERE LEVEL = 3"};
+    "SELECT * FROM CUSTOMER WHERE INTEREST > 0.3",         "SELECT * FROM CUSTOMER WHERE INTEREST < 0.6",
+    "SELECT * FROM CUSTOMER WHERE NAME = 'BARBARBAR'",     "SELECT * FROM CUSTOMER WHERE NAME = 'OUGHTPRIBAR'",
+    "SELECT * FROM CUSTOMER WHERE NAME = 'OUGHTANTIPRES'", "SELECT * FROM CUSTOMER WHERE LEVEL = 3"};
 
 // Forward declarations
 std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
                                                                  opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
-int _execute_sample_queries(opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
+int _execute_query(const std::string& query, unsigned int execution_count,
+                   opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
 
 int main() {
   opossum::SQLQueryCache<opossum::SQLQueryPlan> cache(1024);
@@ -38,22 +36,31 @@ int main() {
   auto importer = std::make_shared<opossum::ImportBinary>("group01_CUSTOMER.bin", "CUSTOMER");
   importer->execute();
 
+  constexpr unsigned int execution_count = 5;
+
+  std::vector<int> first_execution_times(test_queries.size());
+  std::vector<int> second_execution_times(test_queries.size());
+
   // Fire SQL query and cache it
-  auto first_execution_time = _execute_sample_queries(cache);
+  for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
+    first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, cache);
+  }
 
   // Let the tuner optimize tables based on the values of the cache
   tuner.execute();
 
-  // Execute the same queries a second time and measure the speedup
-  auto second_execution_time = _execute_sample_queries(cache);
-
-  float percentage = (static_cast<float>(second_execution_time) / static_cast<float>(first_execution_time));
-  percentage *= 100;
-
   std::cout << "Execution times (microseconds):\n";
-  std::cout << "  Before tuning: " << first_execution_time << "\n";
-  std::cout << "  After tuning:  " << second_execution_time << "\n";
-  std::cout << "                 (" << percentage << "%)\n";
+
+  // Execute the same queries a second time and measure the speedup
+  for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
+    second_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, cache);
+
+    float percentage = (static_cast<float>(second_execution_times[query_index]) /
+                        static_cast<float>(first_execution_times[query_index])) *
+                       100.0;
+    std::cout << "Query " << query_index << ": " << percentage << "% (" << first_execution_times[query_index] << " / "
+              << second_execution_times[query_index] << ")\n";
+  }
 
   return 0;
 }
@@ -67,33 +74,21 @@ std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::stri
   return pipeline;
 }
 
-// Executes some sample queries and manually stores them in the cache
-// Returns the execution time in microseconds
-int _execute_sample_queries(opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
-  std::vector<std::shared_ptr<opossum::SQLPipeline>> pipelines;
+// Executes a query repeatedly and measures the execution time
+int _execute_query(const std::string& query, unsigned int execution_count,
+                   opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
+  high_resolution_clock::duration accumulated_duration = high_resolution_clock::duration::zero();
 
   // Execute queries multiple times to get more stable timing results
-  for (auto counter = 0u; counter < 5; counter++) {
-    for (const auto& query : test_queries) {
-      pipelines.push_back(_create_and_cache_pipeline(query, cache));
-    }
-  }
-
-  // ToDo(group01): Discuss which method calls to measure. get timing result directly from pipeline(?).
-  high_resolution_clock::time_point start_time;
-  high_resolution_clock::time_point end_time;
-  high_resolution_clock::duration accumulated_time = high_resolution_clock::duration::zero();
-
-  for (auto& pipeline : pipelines) {
-    start_time = high_resolution_clock::now();
+  for (auto counter = 0u; counter < execution_count; counter++) {
+    auto pipeline = _create_and_cache_pipeline(query, cache);
+    // ToDo(group01): Discuss which method calls to measure. get timing result directly from pipeline(?).
+    auto start_time = high_resolution_clock::now();
     pipeline->get_result_table();
-    end_time = high_resolution_clock::now();
-    accumulated_time += end_time - start_time;
-
-    // Delete pipeline -- otherwise we would keep all materialized tables in memory
-    pipeline.reset();
+    auto end_time = high_resolution_clock::now();
+    accumulated_duration += end_time - start_time;
   }
 
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(accumulated_time).count();
-  return static_cast<int>(duration);
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(accumulated_duration).count();
+  return static_cast<int>(duration) / execution_count;
 }
