@@ -22,6 +22,8 @@ class StorageChunkTest : public BaseTest {
     vc_str->append("Hello,");
     vc_str->append("world");
     vc_str->append("!");
+
+    c = std::make_shared<Chunk>();
   }
 
   std::shared_ptr<Chunk> c;

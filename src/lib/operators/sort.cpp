@@ -71,6 +71,7 @@ class Sort::SortImplMaterializeOutput {
     const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
 
     auto chunks_out = std::vector<std::shared_ptr<Chunk>>(chunk_count_out);
+    std::generate(chunks_out.begin(), chunks_out.end(), []() { return std::make_shared<Chunk>(); });
 
     // Materialize column-wise
     for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {

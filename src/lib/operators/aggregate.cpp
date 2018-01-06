@@ -292,6 +292,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   auto input_table = _input_table_left();
+  _out_chunk = std::make_shared<Chunk>();
 
   // check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
