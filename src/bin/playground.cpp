@@ -34,7 +34,7 @@ void evaluate_query(uWS::WebSocket<uWS::SERVER> *ws, Query& query, std::map<std:
     return;
 }
 
-using CacheKeyType = int;
+using CacheKeyType = std::string;
 using CacheValueType = std::string;
 
 int main() {
@@ -93,8 +93,9 @@ int main() {
     h.onMessage([&caches, &workloads, &execution_id](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
         auto message_json = nlohmann::json::parse(std::string(message, length));
         if (message_json["message"] == "execute_query") {
-            auto workload_id = message_json["data"]["workload"];
-            auto query_id = message_json["data"]["query"];
+            std::string workload_id = message_json["data"]["workload"];
+            size_t query_id = message_json["data"]["query"];
+            std::string query_key = workload_id + std::string("__") + std::to_string(query_id);
 
             std::cout << "Execute query: " << query_id << " from workload: " << workload_id << std::endl;
 
@@ -108,18 +109,20 @@ int main() {
             results["cacheHits"] = {};
             results["planningTime"] = {};
             for (auto &[strategy, cache] : caches) {
-                std::optional<CacheValueType> cached_plan = cache->try_get(query_id);
+                std::optional<CacheValueType> cached_plan = cache->try_get(query_key);
                 std::optional<CacheKeyType> evicted;
                 if (cached_plan) {
+                    std::cout << "Cache Hit: " << query_key << std::endl;
                     results["cacheHits"][strategy] = true;
                     results["planningTime"][strategy] = 0.0f;
                 } else {
+                    std::cout << "Cache Miss: " << query_key << std::endl;
                     results["cacheHits"][strategy] = false;
                     results["planningTime"][strategy] = query.planning_time;
-                    evicted = cache->set(query_id, query.sql_string);
+                    evicted = cache->set(query_key, query.sql_string);
                 }
 
-                results["evictedQuery"][strategy] = evicted ? *evicted : -1;
+                results["evictedQuery"][strategy] = evicted ? *evicted : "-1";
             }
             nlohmann::json package;
             package["message"] = "query_execution";
@@ -131,22 +134,9 @@ int main() {
         } else if (message_json["message"] == "update_config") {
             size_t cache_size = message_json["data"]["cacheSize"];
 
-            caches.clear();
-
-            caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
-            caches["GDS"]->replace_cache_impl<opossum::GDSCache<CacheKeyType, CacheValueType>>(cache_size);
-
-            caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
-            caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<CacheKeyType, CacheValueType>>(cache_size);
-
-            caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
-            caches["LRU"]->replace_cache_impl<opossum::LRUCache<CacheKeyType, CacheValueType>>(cache_size);
-
-            caches.emplace("LRU_K", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
-            caches["LRU_K"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(cache_size);
-
-            caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(cache_size));
-            caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<CacheKeyType, CacheValueType>>(cache_size);
+            for (auto &[strategy, cache] : caches) {
+                cache->resize(cache_size);
+            }
 
             std::cout << "Cache size set to " << cache_size << std::endl;
         }
