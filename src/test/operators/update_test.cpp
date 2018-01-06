@@ -25,9 +25,7 @@ class OperatorsUpdateTest : public BaseTest {
     StorageManager::get().add_table(_table_name, t);
   }
 
-  void TearDown() override {
-    StorageManager::reset();
-  }
+  void TearDown() override { StorageManager::reset(); }
 
   void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
               std::shared_ptr<Table> expected_result);
@@ -37,7 +35,6 @@ class OperatorsUpdateTest : public BaseTest {
 
 void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
                                  std::shared_ptr<Table> expected_result) {
-
   auto t_context = TransactionManager::get().new_transaction_context();
 
   // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
@@ -164,7 +161,8 @@ TEST_F(OperatorsUpdateTest, MissingChunks) {
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 
-  Projection::ColumnExpressions column_expressions{Expression::create_literal(1, {"a"}), Expression::create_literal(1, {"b"})};
+  Projection::ColumnExpressions column_expressions{Expression::create_literal(1, {"a"}),
+                                                   Expression::create_literal(1, {"b"})};
   auto updated_rows = std::make_shared<Projection>(table_scan1, column_expressions);
   updated_rows->set_transaction_context(t_context);
   updated_rows->execute();
