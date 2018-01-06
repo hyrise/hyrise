@@ -26,7 +26,7 @@ void ChunkMigrationTask::_on_execute() {
   for (auto chunk_id : _chunk_ids) {
     DebugAssert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
-    auto& chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_chunk(chunk_id);
 
     // Only completed chunks are supported for migration, because they
     // are largely immutable. Currently there is no concurrency control
@@ -38,7 +38,7 @@ void ChunkMigrationTask::_on_execute() {
   }
 }
 
-bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
+bool ChunkMigrationTask::chunk_is_completed(const std::shared_ptr<const Chunk>& chunk, const uint32_t max_chunk_size) {
   if (chunk->size() != max_chunk_size) return false;
 
   if (chunk->has_mvcc_columns()) {

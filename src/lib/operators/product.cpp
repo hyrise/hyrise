@@ -100,6 +100,6 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
     }
   }
 
-  output.emplace_chunk(std::move(output_chunk));
+  output->emplace_chunk(std::move(output_chunk));
 }
 }  // namespace opossum

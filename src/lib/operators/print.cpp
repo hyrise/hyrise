@@ -55,7 +55,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
-    auto& chunk = _input_table_left()->get_chunk(chunk_id);
+    auto chunk = _input_table_left()->get_chunk(chunk_id);
     if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
       continue;
     }
@@ -113,7 +113,7 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max, s
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
-    auto& chunk = _input_table_left()->get_chunk(chunk_id);
+    auto chunk = _input_table_left()->get_chunk(chunk_id);
 
     for (ColumnID col{0}; col < chunk->column_count(); ++col) {
       for (size_t row = 0; row < chunk->size(); ++row) {

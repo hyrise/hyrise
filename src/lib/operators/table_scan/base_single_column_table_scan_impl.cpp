@@ -19,7 +19,7 @@ BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<con
     : BaseTableScanImpl{in_table, left_column_id, scan_type}, _skip_null_row_ids{skip_null_row_ids} {}
 
 PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
-  const auto& chunk = _in_table->get_chunk(chunk_id);
+  const auto chunk = _in_table->get_chunk(chunk_id);
   const auto left_column = chunk->get_column(_left_column_id);
 
   auto matches_out = PosList{};
@@ -43,7 +43,7 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColum
     const auto& referenced_chunk_id = pair.first;
     auto& mapped_chunk_offsets = pair.second;
 
-    const auto& chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
+    const auto chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
     auto referenced_column = chunk->get_column(left_column.referenced_column_id());
 
     auto mapped_chunk_offsets_ptr = std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));

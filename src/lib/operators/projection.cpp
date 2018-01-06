@@ -26,8 +26,8 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 }
 
 template <typename T>
-void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk, const ChunkID chunk_id,
-                                const std::shared_ptr<Expression>& expression,
+void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
+                                const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
                                 std::shared_ptr<const Table> input_table_left) {
   // check whether term is a just a simple column and bypass this column
   if (expression->type() == ExpressionType::Column) {
@@ -150,7 +150,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    * On the other hand this is not used for nested arithmetic Expressions, such as 'SELECT a + 5 FROM table_a'.
    */
   if (expression->type() == ExpressionType::Literal) {
-    return pmr_concurrent_vector<std::optional<T>>(table->get_chunk(chunk_id).size(),
+    return pmr_concurrent_vector<std::optional<T>>(table->get_chunk(chunk_id)->size(),
                                                    boost::get<T>(expression->value()));
   }
 
@@ -182,7 +182,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
   const auto& arithmetic_operator_function = _get_operator_function<T>(expression->type());
 
   pmr_concurrent_vector<std::optional<T>> values;
-  values.resize(table->get_chunk(chunk_id).size());
+  values.resize(table->get_chunk(chunk_id)->size());
 
   const auto& left = expression->left_child();
   const auto& right = expression->right_child();

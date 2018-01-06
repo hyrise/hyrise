@@ -107,7 +107,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (_in_table->get_type() == TableType::References) {
-        const auto& chunk_in = _in_table->get_chunk(chunk_id);
+        const auto chunk_in = _in_table->get_chunk(chunk_id);
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 

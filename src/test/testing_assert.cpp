@@ -38,7 +38,7 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   // set values
   unsigned row_offset = 0;
   for (auto chunk_id = opossum::ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    const opossum::Chunk& chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
     if (chunk->size() == 0) continue;

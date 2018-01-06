@@ -318,9 +318,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, this]() {
-      const Chunk& chunk_in = input_table->get_chunk(chunk_id);
+      auto chunk_in = input_table->get_chunk(chunk_id);
 
-      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in.size());
+      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in->size());
 
       // Partition by group columns
       for (const auto column_id : _groupby_column_ids) {
@@ -373,7 +373,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    const Chunk& chunk_in = input_table->get_chunk(chunk_id);
+    auto chunk_in = input_table->get_chunk(chunk_id);
 
     auto hash_keys = _keys_per_chunk[chunk_id];
 

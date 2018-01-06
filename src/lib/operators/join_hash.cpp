@@ -583,13 +583,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     size_t offset_left = 0;
     for (ChunkID i{0}; i < left_chunk_count; ++i) {
       left_chunk_offsets->operator[](i) = offset_left;
-      offset_left += _left_in_table->get_chunk(i).size();
+      offset_left += _left_in_table->get_chunk(i)->size();
     }
 
     size_t offset_right = 0;
     for (ChunkID i{0}; i < right_chunk_count; ++i) {
       right_chunk_offsets->operator[](i) = offset_right;
-      offset_right += _right_in_table->get_chunk(i).size();
+      offset_right += _right_in_table->get_chunk(i)->size();
     }
 
     // Materialization phase
@@ -657,10 +657,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
             ? true
             : false;
-    auto ref_col_right =
-        std::dynamic_pointer_cast<const ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
-            ? true
-            : false;
+    auto ref_col_right = std::dynamic_pointer_cast<const ReferenceColumn>(
+                             _right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
+                             ? true
+                             : false;
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       auto& left = left_pos_lists[partition_id];
@@ -670,7 +670,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      Chunk output_chunk;
+      auto output_chunk = std::make_shared<Chunk>();
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
@@ -690,8 +690,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return _output_table;
   }
 
-  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                                  PosList& pos_list, bool is_ref_column) {
+  static void write_output_chunks(const std::shared_ptr<Chunk>& output_chunk,
+                                  const std::shared_ptr<const Table> input_table, PosList& pos_list,
+                                  bool is_ref_column) {
     if (pos_list.empty()) return;
 
     // Add columns from input table to output chunk

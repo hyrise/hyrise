@@ -50,7 +50,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
-  _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
+  _chunks.push_back(std::make_shared<Chunk>(ChunkUseMvcc::Yes));
 }
 
 void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {

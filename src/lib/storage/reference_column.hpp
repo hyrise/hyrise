@@ -35,7 +35,7 @@ class ReferenceColumn : public BaseColumn {
     values.reserve(_pos_list->size());
 
     for (const RowID& row : *_pos_list) {
-      auto& chunk = _referenced_table->get_chunk(row.chunk_id);
+      auto chunk = _referenced_table->get_chunk(row.chunk_id);
       std::shared_ptr<const BaseColumn> column = chunk->get_column(_referenced_column_id);
 
       if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
@@ -103,7 +103,7 @@ class ReferenceColumn : public BaseColumn {
       auto& chunk_id = pair.first;
       auto& chunk_offsets = pair.second;
 
-      auto& chunk = _referenced_table->get_chunk(chunk_id);
+      auto chunk = _referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk->get_column(_referenced_column_id);
 
       auto context = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);

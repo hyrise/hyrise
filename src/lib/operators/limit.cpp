@@ -29,7 +29,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < _num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
-    const auto& input_chunk = input_table->get_chunk(chunk_id);
+    const auto input_chunk = input_table->get_chunk(chunk_id);
     auto output_chunk = std::make_shared<Chunk>();
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), _num_rows - i);

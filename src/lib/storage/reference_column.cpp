@@ -28,7 +28,7 @@ const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset)
 
   if (chunk_info == NULL_ROW_ID) return NULL_VALUE;
 
-  auto& chunk = _referenced_table->get_chunk(chunk_info.chunk_id);
+  auto chunk = _referenced_table->get_chunk(chunk_info.chunk_id);
 
   return (*chunk->get_column(_referenced_column_id))[chunk_info.chunk_offset];
 }

@@ -58,7 +58,7 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
-    const auto& chunk = _in_table->get_chunk(chunk_id);
+    const auto chunk = _in_table->get_chunk(chunk_id);
     // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.

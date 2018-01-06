@@ -218,7 +218,8 @@ void JoinNestedLoop::_perform_join() {
   _output_table->emplace_chunk(std::move(output_chunk));
 }
 
-void JoinNestedLoop::_write_output_chunks(const std::shared_ptr<Chunk>& output_chunk, const std::shared_ptr<const Table> input_table,
+void JoinNestedLoop::_write_output_chunks(const std::shared_ptr<Chunk>& output_chunk,
+                                          const std::shared_ptr<const Table> input_table,
                                           std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {

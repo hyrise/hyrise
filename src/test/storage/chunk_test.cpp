@@ -33,14 +33,14 @@ TEST_F(StorageChunkTest, AddColumnToChunk) {
   EXPECT_EQ(c->size(), 0u);
   c->add_column(vc_int);
   c->add_column(vc_str);
-  EXPECT_EQ(c.size(), 3u);
+  EXPECT_EQ(c->size(), 3u);
 }
 
 TEST_F(StorageChunkTest, AddValuesToChunk) {
   c->add_column(vc_int);
   c->add_column(vc_str);
   c->append({2, "two"});
-  EXPECT_EQ(c.size(), 4u);
+  EXPECT_EQ(c->size(), 4u);
 
   if (IS_DEBUG) {
     EXPECT_THROW(c->append({}), std::exception);

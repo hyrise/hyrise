@@ -181,7 +181,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     auto& null_value_rows = *_null_value_rows;
 
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
-      auto& chunk = _table_in->get_chunk(chunk_id);
+      auto chunk = _table_in->get_chunk(chunk_id);
 
       auto base_column = chunk->get_column(_column_id);
 
