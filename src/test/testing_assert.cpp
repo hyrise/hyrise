@@ -41,16 +41,16 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
     const opossum::Chunk& chunk = table->get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
-    if (chunk.size() == 0) continue;
+    if (chunk->size() == 0) continue;
 
     for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto column = chunk->get_column(column_id);
 
-      for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset + 2][column_id] = (*column)[chunk_offset];
       }
     }
-    row_offset += chunk.size();
+    row_offset += chunk->size();
   }
 
   return matrix;

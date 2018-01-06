@@ -112,7 +112,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
-          auto column_in = chunk_in.get_column(column_id);
+          auto column_in = chunk_in->get_column(column_id);
 
           auto ref_column_in = std::dynamic_pointer_cast<const ReferenceColumn>(column_in);
           DebugAssert(ref_column_in != nullptr, "All columns should be of type ReferenceColumn.");

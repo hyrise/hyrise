@@ -161,7 +161,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // fill work queue
     size_t output_offset = 0;
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-      auto column = in_table->get_chunk(chunk_id).get_column(column_id);
+      auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
 
       chunk_offsets[chunk_id] = output_offset;
       output_offset += column->size();
@@ -178,7 +178,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         // Get information from work queue
         auto output_offset = chunk_offsets[chunk_id];
-        auto column = in_table->get_chunk(chunk_id).get_column(column_id);
+        auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
         auto& output = static_cast<Partition<T>&>(*elements);
 
         // prepare histogram
@@ -654,11 +654,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
     */
     auto ref_col_left =
-        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
             ? true
             : false;
     auto ref_col_right =
-        std::dynamic_pointer_cast<const ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
             ? true
             : false;
 

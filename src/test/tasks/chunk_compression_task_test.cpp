@@ -101,7 +101,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
 
   for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
     auto dict_column =
-        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i).get_column(ColumnID{0}));
+        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i)->get_column(ColumnID{0}));
     ASSERT_NE(dict_column, nullptr);
   }
 

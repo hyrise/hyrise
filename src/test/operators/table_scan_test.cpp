@@ -114,7 +114,7 @@ class OperatorsTableScanTest : public BaseTest {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
         pos_list->push_back(RowID{chunk_id, chunk_offset});
       }
     }
@@ -179,7 +179,7 @@ class OperatorsTableScanTest : public BaseTest {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
         const auto& column = *chunk->get_column(column_id);
 
         const auto found_value = column[chunk_offset];

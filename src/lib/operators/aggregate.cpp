@@ -324,7 +324,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
       // Partition by group columns
       for (const auto column_id : _groupby_column_ids) {
-        auto base_column = chunk_in.get_column(column_id);
+        auto base_column = chunk_in->get_column(column_id);
         auto column_type = input_table->column_type(column_id);
 
         resolve_data_and_column_type(column_type, *base_column, [&](auto type, auto& typed_column) {
@@ -445,7 +445,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
           continue;
         }
 
-        auto base_column = chunk_in.get_column(aggregate.column_id);
+        auto base_column = chunk_in->get_column(aggregate.column_id);
         auto data_type = input_table->column_type(aggregate.column_id);
 
         /*

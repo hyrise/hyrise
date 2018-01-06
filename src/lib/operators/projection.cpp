@@ -158,7 +158,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    * Handle column reference
    */
   if (expression->type() == ExpressionType::Column) {
-    auto column = table->get_chunk(chunk_id).get_column(expression->column_id());
+    auto column = table->get_chunk(chunk_id)->get_column(expression->column_id());
 
     if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
       // values are copied

@@ -37,7 +37,7 @@ void ChunkCompressionTask::_on_execute() {
 }
 
 bool ChunkCompressionTask::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
-  if (chunk.size() != max_chunk_size) return false;
+  if (chunk->size() != max_chunk_size) return false;
 
   auto mvcc_columns = chunk.mvcc_columns();
 

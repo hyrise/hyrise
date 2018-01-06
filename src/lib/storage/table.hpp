@@ -114,7 +114,7 @@ class Table : private Noncopyable {
 
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
-      size_t current_size = chunk.size();
+      size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
         return get<T>((*chunk->get_column(column_id))[row_number + current_size - row_counter]);

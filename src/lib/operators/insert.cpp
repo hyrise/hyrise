@@ -119,7 +119,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     start_chunk_id = _target_table->chunk_count() - 1;
     auto& last_chunk = _target_table->get_chunk(start_chunk_id);
-    start_index = last_chunk.size();
+    start_index = last_chunk->size();
 
     // If last chunk is compressed, add a new uncompressed chunk
     if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
@@ -130,7 +130,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
       auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
-      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk.size(), remaining_rows);
+      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
       // Resize MVCC vectors.
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
@@ -163,15 +163,15 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto& target_chunk = _target_table->get_chunk(target_chunk_id);
 
     const auto current_num_rows_to_insert =
-        std::min(target_chunk.size() - start_index, total_rows_to_insert - input_offset);
+        std::min(target_chunk->size() - start_index, total_rows_to_insert - input_offset);
 
     auto target_start_index = start_index;
     auto still_to_insert = current_num_rows_to_insert;
 
     // while target chunk is not full
-    while (target_start_index != target_chunk.size()) {
+    while (target_start_index != target_chunk->size()) {
       const auto& source_chunk = _input_table_left()->get_chunk(source_chunk_id);
-      auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, still_to_insert);
+      auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto& source_column = source_chunk->get_column(column_id);
         typed_column_processors[column_id]->copy_data(source_column, source_chunk_start_index,
@@ -182,7 +182,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       target_start_index += num_to_insert;
       source_chunk_start_index += num_to_insert;
 
-      bool source_chunk_depleted = source_chunk_start_index == source_chunk.size();
+      bool source_chunk_depleted = source_chunk_start_index == source_chunk->size();
       if (source_chunk_depleted) {
         source_chunk_id++;
         source_chunk_start_index = 0u;

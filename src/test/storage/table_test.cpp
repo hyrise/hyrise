@@ -112,8 +112,8 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   chunk->shrink_mvcc_columns();
 
-  ASSERT_EQ(previous_size, chunk.size());
-  ASSERT_TRUE(chunk.has_mvcc_columns());
+  ASSERT_EQ(previous_size, chunk->size());
+  ASSERT_TRUE(chunk->has_mvcc_columns());
 
   auto new_mvcc_columns = chunk->mvcc_columns();
 

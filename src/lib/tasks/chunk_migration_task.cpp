@@ -39,9 +39,9 @@ void ChunkMigrationTask::_on_execute() {
 }
 
 bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
-  if (chunk.size() != max_chunk_size) return false;
+  if (chunk->size() != max_chunk_size) return false;
 
-  if (chunk.has_mvcc_columns()) {
+  if (chunk->has_mvcc_columns()) {
     auto mvcc_columns = chunk.mvcc_columns();
 
     for (const auto begin_cid : mvcc_columns->begin_cids) {

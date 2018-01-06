@@ -41,7 +41,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
     auto& chunk = table.get_chunk(chunk_id);
     auto mvcc_columns = chunk.mvcc_columns();
 
-    for (auto i = 0u; i < chunk.size(); ++i) {
+    for (auto i = 0u; i < chunk->size(); ++i) {
       mvcc_columns->begin_cids[i] = 0u;
       mvcc_columns->end_cids[i] = Chunk::MAX_COMMIT_ID;
     }

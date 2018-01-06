@@ -247,7 +247,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto& first_chunk_left = _input_table_left()->get_chunk(ChunkID{0});
   for (const auto& segment_begin : _column_segment_offsets) {
-    const auto column = first_chunk_left.get_column(segment_begin);
+    const auto column = first_chunk_left->get_column(segment_begin);
     const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
     _referenced_tables.emplace_back(ref_column->referenced_table());
   }
@@ -257,7 +257,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * in the #if IS_DEBUG block below)
    */
   for (auto column_id = ColumnID{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    const auto column = first_chunk_left.get_column(column_id);
+    const auto column = first_chunk_left->get_column(column_id);
     const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
     _referenced_column_ids.emplace_back(ref_column->referenced_column_id());
   }

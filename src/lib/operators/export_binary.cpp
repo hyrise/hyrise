@@ -155,7 +155,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   const auto chunk = table->get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
 
-  _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));
+  _export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {

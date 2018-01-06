@@ -606,7 +606,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto b_column = input_table->get_chunk(chunk_id).get_column(column_id);
+      auto b_column = input_table->get_chunk(chunk_id)->get_column(column_id);
       auto r_column = std::dynamic_pointer_cast<const ReferenceColumn>(b_column);
       input_pos_lists.push_back(r_column->pos_list());
     }

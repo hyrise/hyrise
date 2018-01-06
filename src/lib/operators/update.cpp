@@ -47,7 +47,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
         current_row_in_left_chunk = 0u;
         current_pos_list = std::static_pointer_cast<const ReferenceColumn>(
-                               _input_table_left()->get_chunk(current_left_chunk_id).get_column(ColumnID{0}))
+                               _input_table_left()->get_chunk(current_left_chunk_id)->get_column(ColumnID{0}))
                                ->pos_list();
         current_left_chunk_id++;
       }

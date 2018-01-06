@@ -88,7 +88,7 @@ void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
 }
 
 void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
-  Assert(chunk.has_mvcc_columns(), "Passed chunk needs to have mvcc columns.");
+  Assert(chunk->has_mvcc_columns(), "Passed chunk needs to have mvcc columns.");
   _mvcc_columns = chunk._mvcc_columns;
 }
 

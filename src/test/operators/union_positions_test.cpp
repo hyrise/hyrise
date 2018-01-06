@@ -200,7 +200,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
    * make sure we're not creating redundant data.
    */
   const auto get_pos_list = [](const auto& table, ColumnID column_id) {
-    const auto column = table->get_chunk(ChunkID{0}).get_column(column_id);
+    const auto column = table->get_chunk(ChunkID{0})->get_column(column_id);
     const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
     return *ref_column->pos_list();
   };

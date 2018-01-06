@@ -127,7 +127,7 @@ void JoinNestedLoop::_perform_join() {
 
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
+    auto column_left = left_table->get_chunk(chunk_id_left)->get_column(left_column_id);
 
     // for Outer joins, remember matches on the left side
     std::vector<bool> left_matches;
@@ -138,7 +138,7 @@ void JoinNestedLoop::_perform_join() {
 
     // Scan all chunks for right input
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+      auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
 
       resolve_data_and_column_type(left_data_type, *column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
@@ -186,7 +186,7 @@ void JoinNestedLoop::_perform_join() {
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::Outer) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+      auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
 
       resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;
