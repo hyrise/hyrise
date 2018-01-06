@@ -119,12 +119,12 @@ class TableBuilder {
   size_t _current_chunk_row_count() const { return _column_vectors[boost::hana::llong_c<0>].size(); }
 
   void _emit_chunk() {
-    opossum::Chunk chunk(_use_mvcc);
+    auto chunk = std::make_shared<opossum::Chunk>(_use_mvcc);
 
     // Create a column from each column vector and add it to the Chunk, then re-initialize the vector
     boost::hana::for_each(_column_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
-      chunk.add_column(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
+      chunk->add_column(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
       vector = std::decay_t<decltype(vector)>();
     });
     _table->emplace_chunk(std::move(chunk));

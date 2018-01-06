@@ -62,11 +62,11 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
     // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
-    Chunk chunk_out{chunk.get_allocator(), chunk.access_counter()};
+    auto chunk_out = std::make_shared<Chunk>(chunk.get_allocator(), chunk.access_counter());
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
       auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-      chunk_out.add_column(ref_column_out);
+      chunk_out->add_column(ref_column_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);

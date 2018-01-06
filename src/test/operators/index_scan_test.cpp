@@ -57,7 +57,7 @@ class OperatorsIndexScanTest : public BaseTest {
       const auto& chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
-        const auto& column = *chunk.get_column(column_id);
+        const auto& column = *chunk->get_column(column_id);
 
         const auto found_value = column[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {

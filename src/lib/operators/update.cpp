@@ -57,9 +57,9 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    Chunk chunk{ChunkUseMvcc::No};
+    auto chunk = std::make_shared<Chunk>(ChunkUseMvcc::No);
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-      chunk.add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
+      chunk->add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
 
     insert_table->emplace_chunk(std::move(chunk));
@@ -72,11 +72,11 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto& right_chunk = _input_table_right()->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-      auto right_col = right_chunk.get_mutable_column(column_id);
+      auto right_col = right_chunk->get_mutable_column(column_id);
 
-      auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk.get_column(column_id));
+      auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk->get_column(column_id));
 
-      insert_chunk.replace_column(left_col->referenced_column_id(), right_col);
+      insert_chunk->replace_column(left_col->referenced_column_id(), right_col);
     }
   }
 
@@ -121,7 +121,7 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk.references_exactly_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk.get_column(ColumnID{0}));
+    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk->get_column(ColumnID{0}));
     if (table_to_update != first_column->referenced_table()) return false;
   }
 

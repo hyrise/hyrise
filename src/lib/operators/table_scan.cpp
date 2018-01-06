@@ -94,7 +94,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
-      Chunk chunk_out(chunk_guard->get_allocator(), chunk_guard->access_counter());
+      auto chunk_out = std::make_shared<Chunk>(chunk_guard->get_allocator(), chunk_guard->access_counter());
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
@@ -135,17 +135,17 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           }
 
           auto ref_column_out = std::make_shared<ReferenceColumn>(table_out, column_id_out, filtered_pos_list);
-          chunk_out.add_column(ref_column_out);
+          chunk_out->add_column(ref_column_out);
         }
       } else {
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
           auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-          chunk_out.add_column(ref_column_out);
+          chunk_out->add_column(ref_column_out);
         }
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      if (chunk_out.size() > 0 || _output_table->get_chunk(ChunkID{0}).size() == 0) {
+      if (chunk_out->size() > 0 || _output_table->get_chunk(ChunkID{0})->size() == 0) {
         _output_table->emplace_chunk(std::move(chunk_out));
       }
     });

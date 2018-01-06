@@ -122,7 +122,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     start_index = last_chunk.size();
 
     // If last chunk is compressed, add a new uncompressed chunk
-    if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk.get_column(ColumnID{0})) != nullptr) {
+    if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
       _target_table->create_new_chunk();
       total_chunks_inserted++;
     }
@@ -136,9 +136,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
-      auto old_size = current_chunk.size();
-      for (ColumnID column_id{0}; column_id < current_chunk.column_count(); ++column_id) {
-        typed_column_processors[column_id]->resize_vector(current_chunk.get_mutable_column(column_id),
+      auto old_size = current_chunk->size();
+      for (ColumnID column_id{0}; column_id < current_chunk->column_count(); ++column_id) {
+        typed_column_processors[column_id]->resize_vector(current_chunk->get_mutable_column(column_id),
                                                           old_size + rows_to_insert_this_loop);
       }
 
@@ -172,10 +172,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     while (target_start_index != target_chunk.size()) {
       const auto& source_chunk = _input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, still_to_insert);
-      for (ColumnID column_id{0}; column_id < target_chunk.column_count(); ++column_id) {
-        const auto& source_column = source_chunk.get_column(column_id);
+      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
+        const auto& source_column = source_chunk->get_column(column_id);
         typed_column_processors[column_id]->copy_data(source_column, source_chunk_start_index,
-                                                      target_chunk.get_mutable_column(column_id), target_start_index,
+                                                      target_chunk->get_mutable_column(column_id), target_start_index,
                                                       num_to_insert);
       }
       still_to_insert -= num_to_insert;

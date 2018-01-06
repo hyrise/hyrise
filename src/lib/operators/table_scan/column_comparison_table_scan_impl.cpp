@@ -25,8 +25,8 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto left_column_type = _in_table->column_type(_left_column_id);
   const auto right_column_type = _in_table->column_type(_right_column_id);
 
-  const auto left_column = chunk.get_column(_left_column_id);
-  const auto right_column = chunk.get_column(_right_column_id);
+  const auto left_column = chunk->get_column(_left_column_id);
+  const auto right_column = chunk->get_column(_right_column_id);
 
   auto matches_out = PosList{};
 

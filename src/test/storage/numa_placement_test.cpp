@@ -55,14 +55,14 @@ class NUMAPlacementTest : public BaseTest {
 
     for (size_t i = 0; i < num_chunks; i++) {
       const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));
-      auto chunk = Chunk(alloc, ChunkUseMvcc::Yes, ChunkUseAccessCounter::Yes);
+      auto chunk = std::make_shared<Chunk>(alloc, ChunkUseMvcc::Yes, ChunkUseAccessCounter::Yes);
       auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
       auto& values = value_column->values();
       values.reserve(num_rows_per_chunk);
       for (size_t row = 0; row < num_rows_per_chunk; row++) {
         values.push_back(static_cast<int>(row % 1000));
       }
-      chunk.add_column(value_column);
+      chunk->add_column(value_column);
       table->emplace_chunk(std::move(chunk));
     }
     DictionaryCompression::compress_table(*table);

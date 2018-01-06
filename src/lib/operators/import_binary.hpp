@@ -77,7 +77,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * ¹Number of columns is provided in the binary header
    */
-  static Chunk _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
+  static std::shared_ptr<Chunk> _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,

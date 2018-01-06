@@ -700,14 +700,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (is_ref_column) {
         auto ref_col =
-            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
+            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
 
         // Get all the input pos lists so that we only have to pointer cast the columns once
         auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
           // This works because we assume that the columns have to be either all ReferenceColumns or none.
           auto ref_column =
-              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));
+              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id)->get_column(column_id));
           input_pos_lists.push_back(ref_column->pos_list());
         }
 
@@ -726,7 +726,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         column = std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list));
       }
 
-      output_chunk.add_column(column);
+      output_chunk->add_column(column);
     }
   }
 };

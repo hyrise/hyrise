@@ -65,28 +65,28 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
   add_column_definition(name, data_type, nullable);
 
   for (auto& chunk : _chunks) {
-    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
+    chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
+  if (_chunks.back()->size() == _max_chunk_size) create_new_chunk();
 
-  _chunks.back().append(values);
+  _chunks.back()->append(values);
 }
 
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk() {
   // Create chunk with mvcc columns
-  Chunk new_chunk{ChunkUseMvcc::Yes};
+  auto new_chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
     const auto type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
-    new_chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
+    new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
   _chunks.push_back(std::move(new_chunk));
 }
@@ -96,7 +96,7 @@ uint16_t Table::column_count() const { return _column_types.size(); }
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
   for (const auto& chunk : _chunks) {
-    ret += chunk.size();
+    ret += chunk->size();
   }
   return ret;
 }

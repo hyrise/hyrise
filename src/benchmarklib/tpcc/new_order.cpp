@@ -322,15 +322,15 @@ TaskVector NewOrderRefImpl::get_create_order_tasks(const int32_t d_next_o_id, co
                                      false);
   }
 
-  opossum::Chunk chunk;
-  chunk.add_column(create_single_value_column<int32_t>(d_next_o_id));
-  chunk.add_column(create_single_value_column<int32_t>(d_id));
-  chunk.add_column(create_single_value_column<int32_t>(w_id));
-  chunk.add_column(create_single_value_column<int32_t>(c_id));
-  chunk.add_column(create_single_value_column<int32_t>(o_entry_d));
-  chunk.add_column(create_single_value_column<int32_t>(o_carrier_id));
-  chunk.add_column(create_single_value_column<int32_t>(o_ol_cnt));
-  chunk.add_column(create_single_value_column<int32_t>(o_all_local));
+  auto chunk = std::make_shared<opossum::Chunk>();
+  chunk->add_column(create_single_value_column<int32_t>(d_next_o_id));
+  chunk->add_column(create_single_value_column<int32_t>(d_id));
+  chunk->add_column(create_single_value_column<int32_t>(w_id));
+  chunk->add_column(create_single_value_column<int32_t>(c_id));
+  chunk->add_column(create_single_value_column<int32_t>(o_entry_d));
+  chunk->add_column(create_single_value_column<int32_t>(o_carrier_id));
+  chunk->add_column(create_single_value_column<int32_t>(o_ol_cnt));
+  chunk->add_column(create_single_value_column<int32_t>(o_all_local));
   new_table->emplace_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
@@ -357,10 +357,10 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(const int32_t o_id, const
                                      false);
   }
 
-  opossum::Chunk chunk;
-  chunk.add_column(create_single_value_column<int32_t>(o_id));
-  chunk.add_column(create_single_value_column<int32_t>(d_id));
-  chunk.add_column(create_single_value_column<int32_t>(w_id));
+  auto chunk = std::make_shared<opossum::Chunk>();
+  chunk->add_column(create_single_value_column<int32_t>(o_id));
+  chunk->add_column(create_single_value_column<int32_t>(d_id));
+  chunk->add_column(create_single_value_column<int32_t>(w_id));
   new_table->emplace_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
@@ -523,17 +523,17 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
                                      false);
   }
 
-  opossum::Chunk chunk;
-  chunk.add_column(create_single_value_column<int32_t>(ol_o_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_d_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_w_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_number));
-  chunk.add_column(create_single_value_column<int32_t>(ol_i_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_supply_w_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_delivery_d));
-  chunk.add_column(create_single_value_column<int32_t>(ol_quantity));
-  chunk.add_column(create_single_value_column<float>(ol_amount));
-  chunk.add_column(create_single_value_column<std::string>(ol_dist_info));
+  auto chunk = std::make_shared<opossum::Chunk>();
+  chunk->add_column(create_single_value_column<int32_t>(ol_o_id));
+  chunk->add_column(create_single_value_column<int32_t>(ol_d_id));
+  chunk->add_column(create_single_value_column<int32_t>(ol_w_id));
+  chunk->add_column(create_single_value_column<int32_t>(ol_number));
+  chunk->add_column(create_single_value_column<int32_t>(ol_i_id));
+  chunk->add_column(create_single_value_column<int32_t>(ol_supply_w_id));
+  chunk->add_column(create_single_value_column<int32_t>(ol_delivery_d));
+  chunk->add_column(create_single_value_column<int32_t>(ol_quantity));
+  chunk->add_column(create_single_value_column<float>(ol_amount));
+  chunk->add_column(create_single_value_column<std::string>(ol_dist_info));
   new_table->emplace_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);

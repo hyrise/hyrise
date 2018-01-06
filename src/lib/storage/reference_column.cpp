@@ -30,7 +30,7 @@ const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset)
 
   auto& chunk = _referenced_table->get_chunk(chunk_info.chunk_id);
 
-  return (*chunk.get_column(_referenced_column_id))[chunk_info.chunk_offset];
+  return (*chunk->get_column(_referenced_column_id))[chunk_info.chunk_offset];
 }
 
 void ReferenceColumn::append(const AllTypeVariant&) { Fail("ReferenceColumn is immutable"); }

@@ -83,7 +83,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
       context->current_row = row;
       for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-        chunk.get_column(column_id)->visit(*(visitors[column_id]), context);
+        chunk->get_column(column_id)->visit(*(visitors[column_id]), context);
       }
       writer.end_line();
     }
