@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
@@ -24,15 +25,21 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
 
     auto customer_table = std::make_shared<opossum::Table>(_chunk_size);
 
+    std::random_device rd;
+    std::mt19937 e2(rd());
+    // gaussian normal distribution for customer "VIP" level
+    std::normal_distribution<> level_dist(3, 0.5);  // level 1-5 where most customers have level 3
+
     add_column<int>(customer_table, "ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
-    add_column<std::string>(customer_table, "NAME", cardinalities,
-                            [&](std::vector<size_t> indices) { return _random_gen.last_name(indices[0]); });
-    add_column<float>(customer_table, "BALANCE", cardinalities,
-                      [&](std::vector<size_t>) { return _random_gen.random_number(-_row_count, _row_count) / 100.f; });
+    add_column<std::string>(customer_table, "NAME", cardinalities, [&](std::vector<size_t> indices) {
+      return _random_gen.generate_string(5, 10, 'a', 26) + " " + _random_gen.generate_string(5, 10, 'a', 26);
+    });
+    add_column<int>(customer_table, "BALANCE", cardinalities,
+                    [&](std::vector<size_t>) { return _random_gen.random_number(-_row_count, _row_count); });
     add_column<float>(customer_table, "INTEREST", cardinalities,
                       [&](std::vector<size_t>) { return _random_gen.random_number(0, 1000) / 1000.f; });
     add_column<int>(customer_table, "LEVEL", cardinalities,
-                    [&](std::vector<size_t>) { return _random_gen.random_number(0, 5); });
+                    [&](std::vector<size_t>) { return std::round(level_dist(e2)); });
 
     opossum::DictionaryCompression::compress_table(*customer_table);
 
@@ -57,11 +64,16 @@ int main() {
   }
 
   std::cout << " > Dumping as binary" << std::endl;
+
   auto customer_table = opossum::StorageManager::get().get_table("CUSTOMER");
   auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(customer_table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, "group01_CUSTOMER.bin");
   ex->execute();
+
+  std::cout << " > Dumping as CSV" << std::endl;
+  auto csv_ex = std::make_shared<opossum::ExportCsv>(table_wrapper, "group01_CUSTOMER.csv");
+  csv_ex->execute();
 
   std::cout << " > Done" << std::endl;
 
