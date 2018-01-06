@@ -69,6 +69,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    */
   float row_count() const;
 
+  // Returns the number of valid rows (using approximate count of deleted rows)
+  uint64_t approx_valid_row_count() const;
+
   const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics() const;
 
   /**
@@ -90,6 +93,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
       const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
       const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type);
+
+  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
+  void increment_invalid_row_count(uint64_t count);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);
@@ -139,6 +145,11 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // it is multiplied with selectivity factor of a corresponding operator to predict the operator's output
   // precision is lost, if row count is rounded
   float _row_count = 0.0f;
+
+  // Stores the number of invalid (deleted) rows.
+  // This is currently not an atomic due to performance considerations.
+  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
+  uint64_t _approx_invalid_row_count{0};
 
   std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
 

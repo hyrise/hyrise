@@ -11,6 +11,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -18,13 +19,25 @@ namespace opossum {
 
 class OperatorsUpdateTest : public BaseTest {
  protected:
-  void SetUp() override {}
+  void SetUp() override {
+    auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+    // Update operator works on the StorageManager
+    StorageManager::get().add_table(_table_name, t);
+  }
+
+  void TearDown() override {
+    StorageManager::reset();
+  }
+
   void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
               std::shared_ptr<Table> expected_result);
+
+  std::string _table_name{"updateTestTable"};
 };
 
 void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
                                  std::shared_ptr<Table> expected_result) {
+
   auto t_context = TransactionManager::get().new_transaction_context();
 
   // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
@@ -64,20 +77,21 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
 
   // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
-  // Approximation should be exact here because we do not have ti deal with parallelism issues in tests.
+  // Approximation should be exact here because we do not have to deal with parallelism issues in tests.
   auto updated_table = std::make_shared<GetTable>("updateTestTable");
   updated_table->execute();
-  EXPECT_EQ(updated_table->get_output()->approx_valid_row_count(), original_row_count);
+  ASSERT_NE(updated_table->get_output()->table_statistics(), nullptr);
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), original_row_count);
+  // TODO(anybody) atm the statistics will just be informed about the new invalid rows, not about the inserted rows.
+  // fix this
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->approx_valid_row_count(), 0u);
+  EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count * 2);
 
   // The total row count (valid + invalid) should have increased by the number of rows that were updated.
   EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
-  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
-  // Update operator works on the StorageManager
-  StorageManager::get().add_table("updateTestTable", t);
-
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
@@ -85,9 +99,6 @@ TEST_F(OperatorsUpdateTest, SelfUpdate) {
 }
 
 TEST_F(OperatorsUpdateTest, NormalUpdate) {
-  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
-  StorageManager::get().add_table("updateTestTable", t);
-
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
@@ -102,9 +113,6 @@ TEST_F(OperatorsUpdateTest, NormalUpdate) {
 }
 
 TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
-  auto t = load_table("src/test/tables/int_int.tbl", 2u);
-  StorageManager::get().add_table("updateTestTable", t);
-
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
@@ -119,9 +127,6 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
 }
 
 TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
-  auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
-  StorageManager::get().add_table("updateTestTable", t);
-
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
@@ -136,9 +141,6 @@ TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
 }
 
 TEST_F(OperatorsUpdateTest, MultipleChunks) {
-  auto t = load_table("src/test/tables/int_int.tbl", 2u);
-  StorageManager::get().add_table("updateTestTable", t);
-
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
@@ -152,13 +154,9 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
   helper(gt, gt2, expected_result);
 }
 TEST_F(OperatorsUpdateTest, MissingChunks) {
-  auto t = load_table("src/test/tables/int.tbl", 1u);
-  std::string table_name = "updateTestTable";
-  StorageManager::get().add_table(table_name, t);
-
   auto t_context = TransactionManager::get().new_transaction_context();
 
-  auto gt = std::make_shared<GetTable>(table_name);
+  auto gt = std::make_shared<GetTable>(_table_name);
   gt->execute();
 
   // table scan will leave out first two chunks
@@ -166,12 +164,12 @@ TEST_F(OperatorsUpdateTest, MissingChunks) {
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 
-  Projection::ColumnExpressions column_expressions{Expression::create_literal(1, {"a"})};
+  Projection::ColumnExpressions column_expressions{Expression::create_literal(1, {"a"}), Expression::create_literal(1, {"b"})};
   auto updated_rows = std::make_shared<Projection>(table_scan1, column_expressions);
   updated_rows->set_transaction_context(t_context);
   updated_rows->execute();
 
-  auto update = std::make_shared<Update>(table_name, table_scan1, updated_rows);
+  auto update = std::make_shared<Update>(_table_name, table_scan1, updated_rows);
   update->set_transaction_context(t_context);
   // execute will fail, if not checked for leading empty chunks
   update->execute();

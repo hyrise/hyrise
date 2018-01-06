@@ -48,12 +48,6 @@ class Table : private Noncopyable {
   // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
 
-  // Returns the number of valid rows (using approximate count of deleted rows)
-  uint64_t approx_valid_row_count() const;
-
-  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
-  void inc_invalid_row_count(uint64_t count);
-
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
@@ -132,6 +126,7 @@ class Table : private Noncopyable {
   void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
 
   std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
+  std::shared_ptr<const TableStatistics> table_statistics() const { return _table_statistics; }
 
   /**
    * Determines whether this table consists solely of ReferenceColumns, in which case it is a TableType::References,
@@ -143,11 +138,6 @@ class Table : private Noncopyable {
  protected:
   const uint32_t _max_chunk_size;
   std::vector<Chunk> _chunks;
-
-  // Stores the number of invalid (deleted) rows.
-  // This is currently not an atomic due to performance considerations.
-  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
-  uint64_t _approx_invalid_row_count{0};
 
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers
