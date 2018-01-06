@@ -93,6 +93,19 @@ class GDFSCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
+  void resize(size_t capacity) {
+    if (_queue.size() > capacity) {
+      for (size_t difference = 0; difference < _queue.size() - capacity; ++difference) {
+        auto top = _queue.top();
+
+        _inflation = top.priority;
+        _map.erase(top.key);
+        _queue.pop();
+      }
+    }
+    this->_capacity = capacity;
+  }
+
   const boost::heap::fibonacci_heap<GDFSCacheEntry>& queue() const { return _queue; }
 
   double inflation() const { return _inflation; }

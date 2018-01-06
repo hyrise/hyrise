@@ -37,6 +37,9 @@ class AbstractCache {
   // Remove all elements from the cache and resize to the given capacity.
   virtual void clear_and_resize(size_t capacity) = 0;
 
+  // Resize to the given capacity.
+  virtual void resize(size_t capacity) = 0;
+
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
 

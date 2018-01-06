@@ -70,6 +70,19 @@ class LRUCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
+  void resize(size_t capacity) {
+    if (_map.size() > capacity) {
+      for (size_t difference = 0; difference < _map.size() - capacity; ++difference) {
+        auto last = _list.end();
+        last--;
+
+        _map.erase(last->first);
+        _list.pop_back();
+      }
+    }
+    this->_capacity = capacity;
+  }
+
  protected:
   // Doubly-linked list to hold all elements.
   std::list<KeyValuePair> _list;

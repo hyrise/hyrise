@@ -102,6 +102,19 @@ class GDSCache : public AbstractCache<Key, Value> {
     return (*it->second).priority;
   }
 
+  void resize(size_t capacity) {
+    if (_queue.size() > capacity) {
+      for (size_t difference = 0; difference < _queue.size() - capacity; ++difference) {
+        auto top = _queue.top();
+
+        _inflation = top.priority;
+        _map.erase(top.key);
+        _queue.pop();
+      }
+    }
+    this->_capacity = capacity;
+  }
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<entry_t> _queue;
