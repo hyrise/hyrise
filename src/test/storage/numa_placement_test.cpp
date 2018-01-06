@@ -42,7 +42,7 @@ class NUMAPlacementTest : public BaseTest {
     const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto& chunk = table->get_chunk(i);
-      const auto node_id = MigrationPreparationTask::get_node_id(chunk.get_allocator());
+      const auto node_id = MigrationPreparationTask::get_node_id(chunk->get_allocator());
       result.at(node_id)++;
     }
     return result;
@@ -83,8 +83,8 @@ TEST_F(NUMAPlacementTest, ChunkMigration) {
   for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
     auto& chunk = table->get_chunk(i);
     for (size_t j = 0; j < 100; j++) {
-      chunk.access_counter()->increment(100);
-      chunk.access_counter()->process();
+      chunk->access_counter()->increment(100);
+      chunk->access_counter()->process();
     }
   }
 
@@ -118,7 +118,7 @@ TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
   for (size_t j = 0; j < 150; j++) {
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
       auto& chunk = table->get_chunk(i);
-      chunk.access_counter()->increment(100);
+      chunk->access_counter()->increment(100);
     }
     std::this_thread::sleep_for(options.counter_history_interval);
   }

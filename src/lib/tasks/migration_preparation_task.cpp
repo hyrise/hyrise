@@ -144,12 +144,12 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
     const auto chunk_count = table.chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto& chunk = table.get_chunk(i);
-      if (ChunkMigrationTask::chunk_is_completed(chunk, table.max_chunk_size()) && chunk.has_access_counter()) {
-        const double temperature = static_cast<double>(chunk.access_counter()->history_sample(lookback_samples));
+      if (ChunkMigrationTask::chunk_is_completed(chunk, table.max_chunk_size()) && chunk->has_access_counter()) {
+        const double temperature = static_cast<double>(chunk->access_counter()->history_sample(lookback_samples));
         sum_temperature += temperature;
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,
                                            /* .id = */ i,
-                                           /* .node = */ MigrationPreparationTask::get_node_id(chunk.get_allocator()),
+                                           /* .node = */ MigrationPreparationTask::get_node_id(chunk->get_allocator()),
                                            /* .temperature = */ temperature});
       }
     }

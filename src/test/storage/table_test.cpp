@@ -98,7 +98,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   {
     // acquiring mvcc_columns locks them
-    auto mvcc_columns = chunk.mvcc_columns();
+    auto mvcc_columns = chunk->mvcc_columns();
 
     mvcc_columns->tids[0u] = values[0u];
     mvcc_columns->tids[1u] = values[1u];

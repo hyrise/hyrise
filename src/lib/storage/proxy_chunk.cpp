@@ -16,7 +16,7 @@ namespace opossum {
 ProxyChunk::ProxyChunk(const Chunk& chunk) : _chunk(chunk), _begin_rdtsc(rdtsc()) {}
 
 ProxyChunk::~ProxyChunk() {
-  if (const auto& access_counter = _chunk.access_counter()) {
+  if (const auto& access_counter = _chunk->access_counter()) {
     access_counter->increment(rdtsc() - _begin_rdtsc);
   }
 }

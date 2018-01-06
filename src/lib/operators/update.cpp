@@ -119,7 +119,7 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
     const auto& chunk = _input_table_left()->get_chunk(chunk_id);
 
-    if (!chunk.references_exactly_one_table()) return false;
+    if (!chunk->references_exactly_one_table()) return false;
 
     const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk->get_column(ColumnID{0}));
     if (table_to_update != first_column->referenced_table()) return false;

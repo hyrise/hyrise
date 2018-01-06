@@ -34,7 +34,7 @@ void ChunkMigrationTask::_on_execute() {
     DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be migrated.");
 
-    chunk.migrate(NUMAPlacementManager::get().get_memory_resource(_target_node_id));
+    chunk->migrate(NUMAPlacementManager::get().get_memory_resource(_target_node_id));
   }
 }
 
@@ -42,7 +42,7 @@ bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t m
   if (chunk->size() != max_chunk_size) return false;
 
   if (chunk->has_mvcc_columns()) {
-    auto mvcc_columns = chunk.mvcc_columns();
+    auto mvcc_columns = chunk->mvcc_columns();
 
     for (const auto begin_cid : mvcc_columns->begin_cids) {
       if (begin_cid == Chunk::MAX_COMMIT_ID) return false;
