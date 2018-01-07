@@ -139,6 +139,13 @@ int main() {
             }
 
             std::cout << "Cache size set to " << cache_size << std::endl;
+        } else if (message_json["message"] == "stop_benchmark") {
+
+            for (auto &[strategy, cache] : caches) {
+                cache->clear();
+            }
+
+            std::cout << "Benchmark stopped. Caches are cleared." << std::endl;
         }
 
     });
