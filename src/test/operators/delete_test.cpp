@@ -14,6 +14,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -57,7 +58,8 @@ void OperatorsDeleteTest::helper(bool commit) {
   EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
 
   // Table has three rows initially.
-  EXPECT_EQ(_table->approx_valid_row_count(), 3u);
+  ASSERT_NE(_table->table_statistics(), nullptr);
+  EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 3u);
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
@@ -65,13 +67,13 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
-    EXPECT_EQ(_table->approx_valid_row_count(), 1u);
+    EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 1u);
   } else {
     transaction_context->rollback();
     expected_end_cid = Chunk::MAX_COMMIT_ID;
 
     // Delete rolled back, three rows left.
-    EXPECT_EQ(_table->approx_valid_row_count(), 3u);
+    EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 3u);
   }
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(0u), expected_end_cid);
