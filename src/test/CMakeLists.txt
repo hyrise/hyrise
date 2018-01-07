@@ -87,12 +87,15 @@ set(
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
+    storage/deprecated_dictionary_column_test.cpp
     storage/dictionary_column_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
+    storage/zero_suppression_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_column_test.cpp
+    storage/simd_bp128_test.cpp
     storage/single_column_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp

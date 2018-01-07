@@ -187,13 +187,13 @@ std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream
 }
 
 template <typename T>
-std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
-                                                                             ChunkOffset row_count) {
+std::shared_ptr<DeprecatedDictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
+                                                                                       ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _read_values<T>(file, dictionary_size);
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
-  return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
+  return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
 }
 
 }  // namespace opossum

@@ -198,17 +198,32 @@ set(
     sql/sql_translator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
-    storage/base_dictionary_column.hpp
+    storage/base_deprecated_dictionary_column.hpp
     storage/base_value_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
-    storage/dictionary_column.cpp
-    storage/dictionary_column.hpp
+    storage/deprecated_dictionary_column.cpp
+    storage/deprecated_dictionary_column.hpp
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
+    storage/column_encoders/base_column_encoder.hpp
+    storage/column_encoders/deprecated_dictionary_encoder.hpp
+    storage/column_encoders/encoders.hpp
+    storage/column_encoders/dictionary_encoder.hpp
+    storage/column_encoders/utils.cpp
+    storage/column_encoders/utils.hpp
+    storage/encoded_columns/base_encoded_column.cpp
+    storage/encoded_columns/base_encoded_column.hpp
+    storage/encoded_columns/base_dictionary_column.cpp
+    storage/encoded_columns/base_dictionary_column.hpp
+    storage/encoded_columns/column_encoding_type.hpp
+    storage/encoded_columns/encoded_columns.hpp
+    storage/encoded_columns/dictionary_column.cpp
+    storage/encoded_columns/dictionary_column.hpp
+    storage/encoded_columns/utils.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -228,18 +243,43 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/iterables/attribute_vector_iterable.hpp
+    storage/iterables/deprecated_attribute_vector_iterable.hpp
     storage/iterables/base_iterators.hpp
     storage/iterables/chunk_offset_mapping.cpp
     storage/iterables/chunk_offset_mapping.hpp
     storage/iterables/column_value.hpp
     storage/iterables/constant_value_iterable.hpp
     storage/iterables/create_iterable_from_column.hpp
-    storage/iterables/dictionary_column_iterable.hpp
+    storage/iterables/deprecated_dictionary_column_iterable.hpp
     storage/iterables/iterables.hpp
+    storage/iterables/attribute_vector_iterable.hpp
+    storage/iterables/dictionary_column_iterable.hpp
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
+    storage/zero_suppression/base_zero_suppression_decoder.hpp
+    storage/zero_suppression/base_zero_suppression_encoder.hpp
+    storage/zero_suppression/base_zero_suppression_vector.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_decoder.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_encoder.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_vector.hpp
+    storage/zero_suppression/decoders.hpp
+    storage/zero_suppression/encoders.hpp
+    storage/zero_suppression/zs_type.hpp
+    storage/zero_suppression/utils.cpp
+    storage/zero_suppression/utils.hpp
+    storage/zero_suppression/vectors.hpp
+    storage/zero_suppression/oversized_types.hpp
+    storage/zero_suppression/simd_bp128_decoder.cpp
+    storage/zero_suppression/simd_bp128_decoder.hpp
+    storage/zero_suppression/simd_bp128_encoder.cpp
+    storage/zero_suppression/simd_bp128_encoder.hpp
+    storage/zero_suppression/simd_bp128_iterator.cpp
+    storage/zero_suppression/simd_bp128_iterator.hpp
+    storage/zero_suppression/simd_bp128_packing.cpp
+    storage/zero_suppression/simd_bp128_packing.hpp
+    storage/zero_suppression/simd_bp128_vector.cpp
+    storage/zero_suppression/simd_bp128_vector.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
@@ -268,6 +308,7 @@ set(
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
+    utils/enum_constant.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp

@@ -223,9 +223,9 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
-    const BaseDictionaryColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const BaseDeprecatedDictionaryColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+  const auto& column = static_cast<const DeprecatedDictionaryColumn<T>&>(base_column);
 
   _export_value(context->ofstream, BinaryColumnType::dictionary_column);
   _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(column.attribute_vector()->width()));
@@ -235,6 +235,12 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
   _export_values(context->ofstream, *column.dictionary());
 
   _export_attribute_vector(context->ofstream, *column.attribute_vector());
+}
+
+template <typename T>
+void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
+    const BaseDictionaryColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  Fail("Binary export not implemented yet for new version of dictionary column.");
 }
 
 template <typename T>

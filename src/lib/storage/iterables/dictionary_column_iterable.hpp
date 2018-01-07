@@ -1,11 +1,15 @@
 #pragma once
 
-#include <utility>
-#include <vector>
+#include <boost/iterator/counting_iterator.hpp>
+#include <boost/iterator/transform_iterator.hpp>
+#include <boost/iterator/zip_iterator.hpp>
 
 #include "iterables.hpp"
-#include "storage/base_attribute_vector.hpp"
-#include "storage/dictionary_column.hpp"
+
+#include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/zero_suppression/decoders.hpp"
+#include "storage/zero_suppression/utils.hpp"
+#include "storage/zero_suppression/vectors.hpp"
 
 namespace opossum {
 
@@ -16,84 +20,92 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
-    auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
-    functor(begin, end);
+    resolve_zs_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+      auto begin = create_iterator(vector.cbegin(), ChunkOffset{0u});
+      auto end = create_iterator(vector.cend(), static_cast<ChunkOffset>(vector.size()));
+      functor(begin, end);
+    });
   }
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cbegin()};
-    auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cend()};
-    functor(begin, end);
+    resolve_zs_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+      auto decoder = vector.create_decoder();
+
+      auto begin = create_indexed_iterator(mapped_chunk_offsets.cbegin(), *decoder);
+      auto end = create_indexed_iterator(mapped_chunk_offsets.cend(), *decoder);
+      functor(begin, end);
+    });
   }
 
  private:
   const DictionaryColumn<T>& _column;
 
  private:
-  class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
+  class IteratorLookup {
    public:
-    using Dictionary = pmr_vector<T>;
+    IteratorLookup() = default;
+    explicit IteratorLookup(ValueID null_value_id, const pmr_vector<T>& dictionary)
+        : _null_value_id{null_value_id}, _dictionary{dictionary} {}
 
-   public:
-    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
-                      ChunkOffset chunk_offset)
-        : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
+    NullableColumnValue<T> operator()(const boost::tuple<uint32_t, ChunkOffset>& tuple) const {
+      ValueID value_id{};
+      ChunkOffset chunk_offset{};
+      boost::tie(value_id, chunk_offset) = tuple;
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+      const auto is_null = (value_id == _null_value_id);
+      if (is_null) return {T{}, true, chunk_offset};
 
-    void increment() { ++_chunk_offset; }
-    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
-
-    NullableColumnValue<T> dereference() const {
-      const auto value_id = _attribute_vector.get(_chunk_offset);
-      const auto is_null = (value_id == NULL_VALUE_ID);
-
-      if (is_null) return NullableColumnValue<T>{T{}, true, _chunk_offset};
-
-      return NullableColumnValue<T>{_dictionary[value_id], false, _chunk_offset};
+      return {_dictionary[value_id], false, chunk_offset};
     }
 
    private:
-    const Dictionary& _dictionary;
-    const BaseAttributeVector& _attribute_vector;
-    ChunkOffset _chunk_offset;
+    const ValueID _null_value_id;
+    const pmr_vector<T>& _dictionary;
   };
 
-  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>> {
+  template <typename ZsIteratorType>
+  using Iterator = boost::transform_iterator<
+      IteratorLookup, boost::zip_iterator<boost::tuple<ZsIteratorType, boost::counting_iterator<ChunkOffset>>>>;
+
+  template <typename ZsIteratorType>
+  Iterator<ZsIteratorType> create_iterator(ZsIteratorType ns_iterator, ChunkOffset chunk_offset) const {
+    const auto lookup = IteratorLookup{_column.null_value_id(), *_column.dictionary()};
+    return Iterator<ZsIteratorType>(
+        boost::make_tuple(std::move(ns_iterator), boost::make_counting_iterator(chunk_offset)), lookup);
+  }
+
+  template <typename ZsDecoderType>
+  class IndexedIteratorLookup {
    public:
-    using Dictionary = pmr_vector<T>;
+    IndexedIteratorLookup(ValueID null_value_id, const pmr_vector<T>& dictionary, ZsDecoderType& ns_decoder)
+        : _null_value_id{null_value_id}, _dictionary{dictionary}, _ns_decoder{ns_decoder} {}
 
-   public:
-    explicit IndexedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
-                             const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
-          _dictionary{dictionary},
-          _attribute_vector{attribute_vector} {}
+    NullableColumnValue<T> operator()(const ChunkOffsetMapping& chunk_offsets) const {
+      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET) return {T{}, true, chunk_offsets.into_referencing};
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+      const auto value_id = _ns_decoder.get(chunk_offsets.into_referenced);
+      const auto is_null = (value_id == _null_value_id);
+      if (is_null) return {T{}, true, chunk_offsets.into_referencing};
 
-    NullableColumnValue<T> dereference() const {
-      const auto& chunk_offsets = this->chunk_offsets();
-
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
-
-      const auto value_id = _attribute_vector.get(chunk_offsets.into_referenced);
-      const auto is_null = (value_id == NULL_VALUE_ID);
-
-      if (is_null) return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
-
-      return NullableColumnValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
+      return {_dictionary[value_id], false, chunk_offsets.into_referencing};
     }
 
    private:
-    const Dictionary& _dictionary;
-    const BaseAttributeVector& _attribute_vector;
+    const ValueID _null_value_id;
+    const pmr_vector<T>& _dictionary;
+    ZsDecoderType& _ns_decoder;
   };
+
+  template <typename ZsDecoderType>
+  using IndexedIterator = boost::transform_iterator<IndexedIteratorLookup<ZsDecoderType>, ChunkOffsetsIterator>;
+
+  template <typename ZsDecoderType>
+  IndexedIterator<ZsDecoderType> create_indexed_iterator(ChunkOffsetsIterator chunk_offsets_it,
+                                                         ZsDecoderType& decoder) const {
+    const auto lookup = IndexedIteratorLookup<ZsDecoderType>{_column.null_value_id(), *_column.dictionary(), decoder};
+    return IndexedIterator<ZsDecoderType>{chunk_offsets_it, lookup};
+  }
 };
 
 }  // namespace opossum

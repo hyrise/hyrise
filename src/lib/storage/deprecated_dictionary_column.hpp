@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "base_dictionary_column.hpp"
+#include "base_deprecated_dictionary_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -17,16 +17,17 @@ class BaseColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>
-class DictionaryColumn : public BaseDictionaryColumn {
+class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
  public:
   /**
    * Creates a Dictionary column from a given dictionary and attribute vector.
    * See dictionary_compression.cpp for more.
    */
-  explicit DictionaryColumn(pmr_vector<T>&& dictionary, const std::shared_ptr<BaseAttributeVector>& attribute_vector);
+  explicit DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
-  explicit DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<BaseAttributeVector>& attribute_vector);
+  explicit DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
@@ -37,9 +38,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // return the value at a certain position.
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
-
-  // dictionary columns are immutable
-  void append(const AllTypeVariant&) override;
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
@@ -76,12 +74,17 @@ class DictionaryColumn : public BaseDictionaryColumn {
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
-  // Copies a DictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
+  // Copies a DeprecatedDictionaryColumn using a new allocator. This is useful for placing it on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
+};
+
+struct DeprecatedDictionaryColumnInfo {
+  template <typename T>
+  using ColumnTemplate = DeprecatedDictionaryColumn<T>;
 };
 
 }  // namespace opossum

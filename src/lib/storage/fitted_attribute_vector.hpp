@@ -20,7 +20,6 @@ namespace opossum {
  * Note: Because in most cases NULL_VALUE_ID cannot be stored inside uintX_t,
  *       it is represented by max(uintX_t)
  */
-
 template <typename uintX_t>
 class FittedAttributeVector : public BaseAttributeVector {
  public:

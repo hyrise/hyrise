@@ -55,7 +55,7 @@ class ValueColumn : public BaseValueColumn {
   pmr_concurrent_vector<bool>& null_values() final;
 
   // Return the number of entries in the column.
-  size_t size() const override;
+  size_t size() const final;
 
   // Visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
@@ -66,8 +66,9 @@ class ValueColumn : public BaseValueColumn {
  protected:
   pmr_concurrent_vector<T> _values;
 
-  // While a ValueColumn knows if it is nullable or not by looking at this optional, a DictionaryColumn does not.
-  // For this reason, we need to store the nullable information separately in the table's definition.
+  // While a ValueColumn knows if it is nullable or not by looking at this optional, most other column types
+  // (e.g. DictionaryColumn) does not. For this reason, we need to store the nullable information separately
+  // in the table's definition.
   std::optional<pmr_concurrent_vector<bool>> _null_values;
 };
 

@@ -15,6 +15,8 @@ namespace opossum {
 
 class Table;
 class ReferenceColumn;
+class AttributeVectorIterable;
+class DeprecatedAttributeVectorIterable;
 
 /**
  * @brief The base class of table scan impls that scan a single column
@@ -47,6 +49,21 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
 
     std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
   };
+
+  /**
+   * @defgroup Create attribute vector iterable from dictionary column
+   *
+   * Only needed as long as there are two dictionary column implementations
+   *
+   * @{
+   */
+
+  static AttributeVectorIterable create_attribute_vector_iterable(const BaseDictionaryColumn& column);
+
+  static DeprecatedAttributeVectorIterable create_attribute_vector_iterable(
+      const BaseDeprecatedDictionaryColumn& column);
+
+  /**@}*/
 
  private:
   const bool _skip_null_row_ids;  // see chunk_offset_mapping.hpp for explanation

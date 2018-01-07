@@ -73,13 +73,16 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
         return _value_from_value_column(*value_column, chunk_offset);
       }
 
-      if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+      if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
         _dictionary_columns[chunk_id] = dict_column;
         return _value_from_dictionary_column(*dict_column, chunk_offset);
       }
 
-      Fail("Referenced column is neither value nor dictionary column.");
-      return NullableColumnValue<T>{T{}, false, 0u};
+      /**
+       * This is just a temporary solution to supporting encoded column type.
+       * It’s very slow and is going to be replaced very soon!
+       */
+      return _value_from_any_column(*column, chunk_offset);
     }
 
    private:
@@ -97,7 +100,8 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
       return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
-    auto _value_from_dictionary_column(const DictionaryColumn<T>& column, const ChunkOffset& chunk_offset) const {
+    auto _value_from_dictionary_column(const DeprecatedDictionaryColumn<T>& column,
+                                       const ChunkOffset& chunk_offset) const {
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
       auto attribute_vector = column.attribute_vector();
@@ -113,6 +117,19 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
       return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
+    auto _value_from_any_column(const BaseColumn& column, const ChunkOffset& chunk_offset) const {
+      const auto variant_value = column[chunk_offset];
+
+      const auto chunk_offset_into_ref_column =
+          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+
+      if (variant_is_null(variant_value)) {
+        return NullableColumnValue<T>{T{}, true, chunk_offset_into_ref_column};
+      }
+
+      return NullableColumnValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_column};
+    }
+
    private:
     const std::shared_ptr<const Table> _table;
     const ColumnID _column_id;
@@ -121,7 +138,7 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
     PosListIterator _pos_list_it;
 
     mutable std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> _value_columns;
-    mutable std::map<ChunkID, std::shared_ptr<const DictionaryColumn<T>>> _dictionary_columns;
+    mutable std::map<ChunkID, std::shared_ptr<const DeprecatedDictionaryColumn<T>>> _dictionary_columns;
   };
 };
 

@@ -8,8 +8,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
-#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/iterables/deprecated_attribute_vector_iterable.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -109,7 +109,8 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary columns
    */
-  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DeprecatedDictionaryColumn<T>& column,
+                                                             ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());

@@ -44,7 +44,7 @@ class JoinTest : public BaseTest {
     _table_wrapper_n = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
 
-    // load and create DictionaryColumn tables
+    // load and create DeprecatedDictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
     DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));

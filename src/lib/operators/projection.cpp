@@ -164,7 +164,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
       // values are copied
       return value_column->materialize_values();
     }
-    if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+    if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
       return dict_column->materialize_values();
     }
     if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {

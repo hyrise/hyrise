@@ -14,7 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
@@ -43,8 +43,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
   DebugAssert(op == ScanType::Equals || op == ScanType::LessThan || op == ScanType::GreaterThan ||
-                  op == ScanType::LessThanEquals || op == ScanType::GreaterThanEquals ||
-                  op == ScanType::NotEquals,
+                  op == ScanType::LessThanEquals || op == ScanType::GreaterThanEquals || op == ScanType::NotEquals,
               "Unsupported scan type");
   DebugAssert(op != ScanType::NotEquals || mode == JoinMode::Inner,
               "Outer joins are not implemented for not-equals joins.");
@@ -370,7 +369,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
     DebugAssert(_op != ScanType::Equals, "Complete table order is required for _table_min_value which is only " +
-                                               "available in the non-equi case");
+                                             "available in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
     for (auto partition : *sorted_table) {

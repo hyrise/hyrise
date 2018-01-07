@@ -32,6 +32,9 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   void handle_value_column(const BaseValueColumn& base_column,
                            std::shared_ptr<ColumnVisitableContext> base_context) override;
 
+  void handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+
   void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
@@ -40,6 +43,10 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @defgroup Methods used for handling dictionary columns
    * @{
    */
+
+  template <typename DictionaryColumnType>
+  void _handle_dictionary_column(const DictionaryColumnType& left_column,
+                                 std::shared_ptr<ColumnVisitableContext> base_context);
 
   /**
    * @returns number of matches and the result of each dictionary entry
