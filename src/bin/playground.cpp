@@ -39,6 +39,7 @@ using CacheValueType = std::string;
 
 int main() {
     constexpr size_t CACHE_SIZE = 30;
+    size_t lru_k_value = 2;
     size_t execution_id = 1;
 
     std::map<std::string, std::shared_ptr<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>> caches;
@@ -51,8 +52,24 @@ int main() {
     caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
     caches["LRU"]->replace_cache_impl<opossum::LRUCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
-    caches.emplace("LRU_K", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_K"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_2", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_2"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_3", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_3"]->replace_cache_impl<opossum::LRUKCache<3, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_4", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_4"]->replace_cache_impl<opossum::LRUKCache<4, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_5", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_5"]->replace_cache_impl<opossum::LRUKCache<5, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_6", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_6"]->replace_cache_impl<opossum::LRUKCache<6, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_7", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_7"]->replace_cache_impl<opossum::LRUKCache<7, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_8", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_8"]->replace_cache_impl<opossum::LRUKCache<8, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_9", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_9"]->replace_cache_impl<opossum::LRUKCache<9, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_10", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
+    caches["LRU_10"]->replace_cache_impl<opossum::LRUKCache<10, CacheKeyType, CacheValueType>>(CACHE_SIZE);
 
     caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
     caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
@@ -90,7 +107,7 @@ int main() {
 
     });
 
-    h.onMessage([&caches, &workloads, &execution_id](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+    h.onMessage([&caches, &workloads, &execution_id, &lru_k_value](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
         auto message_json = nlohmann::json::parse(std::string(message, length));
         if (message_json["message"] == "execute_query") {
             std::string workload_id = message_json["data"]["workload"];
@@ -111,18 +128,28 @@ int main() {
             for (auto &[strategy, cache] : caches) {
                 std::optional<CacheValueType> cached_plan = cache->try_get(query_key);
                 std::optional<CacheKeyType> evicted;
+                bool hit;
+                float planning_time;
                 if (cached_plan) {
-                    std::cout << "Cache Hit: " << query_key << std::endl;
-                    results["cacheHits"][strategy] = true;
-                    results["planningTime"][strategy] = 0.0f;
+                    // std::cout << "Cache Hit: " << query_key << std::endl;
+                    hit = true;
+                    planning_time = 0.0f;
                 } else {
-                    std::cout << "Cache Miss: " << query_key << std::endl;
-                    results["cacheHits"][strategy] = false;
-                    results["planningTime"][strategy] = query.planning_time;
+                    // std::cout << "Cache Miss: " << query_key << std::endl;
+                    hit = false;
+                    planning_time = query.planning_time;
                     evicted = cache->set(query_key, query.sql_string);
                 }
+                if (strategy.find("LRU_") == std::string::npos || strategy.find(std::to_string(lru_k_value)) != std::string::npos) {
+                    auto current_strategy = strategy;
+                    if (strategy.find("LRU_") != std::string::npos) {
+                        current_strategy = "LRU_K";
+                    }
 
-                results["evictedQuery"][strategy] = evicted ? *evicted : "-1";
+                    results["cacheHits"][current_strategy] = hit;
+                    results["planningTime"][current_strategy] = planning_time;
+                    results["evictedQuery"][current_strategy] = evicted ? *evicted : "-1";
+                }
             }
             nlohmann::json package;
             package["message"] = "query_execution";
@@ -137,13 +164,21 @@ int main() {
             for (auto &[strategy, cache] : caches) {
                 cache->resize(cache_size);
             }
-
             std::cout << "Cache size set to " << cache_size << std::endl;
+
+            size_t new_k_value = message_json["data"]["lruKValue"];
+            if (new_k_value != lru_k_value) {
+                lru_k_value = new_k_value;
+
+                std::cout << "LRU's K value set to: " << message_json["data"]["lruKValue"] << std::endl;
+            }
         } else if (message_json["message"] == "stop_benchmark") {
 
             for (auto &[strategy, cache] : caches) {
                 cache->clear();
             }
+
+            execution_id = 1;
 
             std::cout << "Benchmark stopped. Caches are cleared." << std::endl;
         }
