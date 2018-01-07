@@ -41,8 +41,8 @@ class NUMAPlacementTest : public BaseTest {
     std::vector<size_t> result(_node_count);
     const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
-      const auto& chunk = table->get_chunk(i);
-      const auto node_id = MigrationPreparationTask::get_node_id(chunk.get_allocator());
+      const auto chunk = table->get_chunk(i);
+      const auto node_id = MigrationPreparationTask::get_node_id(chunk->get_allocator());
       result.at(node_id)++;
     }
     return result;
@@ -55,14 +55,14 @@ class NUMAPlacementTest : public BaseTest {
 
     for (size_t i = 0; i < num_chunks; i++) {
       const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));
-      auto chunk = Chunk(alloc, ChunkUseMvcc::Yes, ChunkUseAccessCounter::Yes);
+      auto chunk = std::make_shared<Chunk>(alloc, ChunkUseMvcc::Yes, ChunkUseAccessCounter::Yes);
       auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
       auto& values = value_column->values();
       values.reserve(num_rows_per_chunk);
       for (size_t row = 0; row < num_rows_per_chunk; row++) {
         values.push_back(static_cast<int>(row % 1000));
       }
-      chunk.add_column(value_column);
+      chunk->add_column(value_column);
       table->emplace_chunk(std::move(chunk));
     }
     DictionaryCompression::compress_table(*table);
@@ -81,10 +81,10 @@ TEST_F(NUMAPlacementTest, ChunkMigration) {
 
   // Set mocked chunk access times
   for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
-    auto& chunk = table->get_chunk(i);
+    auto chunk = table->get_chunk(i);
     for (size_t j = 0; j < 100; j++) {
-      chunk.access_counter()->increment(100);
-      chunk.access_counter()->process();
+      chunk->access_counter()->increment(100);
+      chunk->access_counter()->process();
     }
   }
 
@@ -117,8 +117,8 @@ TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
   // those up
   for (size_t j = 0; j < 150; j++) {
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
-      auto& chunk = table->get_chunk(i);
-      chunk.access_counter()->increment(100);
+      auto chunk = table->get_chunk(i);
+      chunk->access_counter()->increment(100);
     }
     std::this_thread::sleep_for(options.counter_history_interval);
   }

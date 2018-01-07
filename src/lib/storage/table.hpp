@@ -52,13 +52,13 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // returns the chunk with the given id
-  Chunk& get_chunk(ChunkID chunk_id);
-  const Chunk& get_chunk(ChunkID chunk_id) const;
+  std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
+  std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
-  void emplace_chunk(Chunk chunk);
+  void emplace_chunk(const std::shared_ptr<Chunk>& chunk);
 
   // Returns a list of all column names.
   const std::vector<std::string>& column_names() const;
@@ -108,10 +108,10 @@ class Table : private Noncopyable {
 
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
-      size_t current_size = chunk.size();
+      size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
+        return get<T>((*chunk->get_column(column_id))[row_number + current_size - row_counter]);
       }
     }
     Fail("Row does not exist.");
@@ -137,7 +137,7 @@ class Table : private Noncopyable {
 
  protected:
   const uint32_t _max_chunk_size;
-  std::vector<Chunk> _chunks;
+  std::vector<std::shared_ptr<Chunk>> _chunks;
 
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers

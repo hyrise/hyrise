@@ -70,7 +70,8 @@ class Sort::SortImplMaterializeOutput {
 
     const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
 
-    auto chunks_out = std::vector<Chunk>(chunk_count_out);
+    auto chunks_out = std::vector<std::shared_ptr<Chunk>>(chunk_count_out);
+    std::generate(chunks_out.begin(), chunks_out.end(), []() { return std::make_shared<Chunk>(); });
 
     // Materialize column-wise
     for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
@@ -90,7 +91,7 @@ class Sort::SortImplMaterializeOutput {
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto[chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
 
-          const auto column = _table_in->get_chunk(chunk_id).get_column(column_id);
+          const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
 
           // Previously the value was retrieved by calling a virtual method,
           // which was just as slow as using the subscript operator.
@@ -102,7 +103,7 @@ class Sort::SortImplMaterializeOutput {
           // Check if value column is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            chunk_it->add_column(*column_it);
+            (*chunk_it)->add_column(*column_it);
             ++column_it;
             ++chunk_it;
           }
@@ -110,7 +111,7 @@ class Sort::SortImplMaterializeOutput {
 
         // Last column has not been added
         if (chunk_offset_out > 0u) {
-          chunk_it->add_column(*column_it);
+          (*chunk_it)->add_column(*column_it);
         }
       });
     }
@@ -181,9 +182,9 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     auto& null_value_rows = *_null_value_rows;
 
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
-      auto& chunk = _table_in->get_chunk(chunk_id);
+      auto chunk = _table_in->get_chunk(chunk_id);
 
-      auto base_column = chunk.get_column(_column_id);
+      auto base_column = chunk->get_column(_column_id);
 
       resolve_column_type<SortColumnType>(*base_column, [&](auto& typed_column) {
         auto iterable = create_iterable_from_column<SortColumnType>(typed_column);

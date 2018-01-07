@@ -53,27 +53,27 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
   for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
-    const auto& chunk_in = _in_table->get_chunk(chunk_id);
+    const auto chunk_in = _in_table->get_chunk(chunk_id);
 
-    auto chunk_out = Chunk{};
+    auto chunk_out = std::make_shared<Chunk>();
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
-    const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in.get_column(ColumnID{0}));
+    const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(ColumnID{0}));
 
     // If the columns in this chunk reference a column, build a poslist for a reference column.
     if (ref_col_in) {
-      DebugAssert(chunk_in.references_exactly_one_table(),
+      DebugAssert(chunk_in->references_exactly_one_table(),
                   "Input to Validate contains a Chunk referencing more than one table.");
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();
-      DebugAssert(referenced_table->get_chunk(ChunkID{0}).has_mvcc_columns(),
+      DebugAssert(referenced_table->get_chunk(ChunkID{0})->has_mvcc_columns(),
                   "Trying to use Validate on a table that has no MVCC columns");
 
       for (auto row_id : *ref_col_in->pos_list()) {
-        const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+        const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
-        auto mvcc_columns = referenced_chunk.mvcc_columns();
+        auto mvcc_columns = referenced_chunk->mvcc_columns();
 
         if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_columns)) {
           pos_list_out->emplace_back(row_id);
@@ -81,21 +81,21 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       }
 
       // Construct the actual ReferenceColumn objects and add them to the chunk.
-      for (ColumnID column_id{0}; column_id < chunk_in.column_count(); ++column_id) {
-        const auto column = std::static_pointer_cast<const ReferenceColumn>(chunk_in.get_column(column_id));
+      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+        const auto column = std::static_pointer_cast<const ReferenceColumn>(chunk_in->get_column(column_id));
         const auto referenced_column_id = column->referenced_column_id();
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, referenced_column_id, pos_list_out);
-        chunk_out.add_column(ref_col_out);
+        chunk_out->add_column(ref_col_out);
       }
 
       // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = _in_table;
-      DebugAssert(chunk_in.has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
-      const auto mvcc_columns = chunk_in.mvcc_columns();
+      DebugAssert(chunk_in->has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
+      const auto mvcc_columns = chunk_in->mvcc_columns();
 
       // Generate pos_list_out.
-      auto chunk_size = chunk_in.size();  // The compiler fails to optimize this in the for clause :(
+      auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {
         if (is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_columns)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
@@ -103,13 +103,13 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       }
 
       // Create actual ReferenceColumn objects.
-      for (ColumnID column_id{0}; column_id < chunk_in.column_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
-        chunk_out.add_column(ref_col_out);
+        chunk_out->add_column(ref_col_out);
       }
     }
 
-    if (chunk_out.size() > 0 || output->get_chunk(ChunkID{0}).size() == 0) {
+    if (chunk_out->size() > 0 || output->get_chunk(ChunkID{0})->size() == 0) {
       output->emplace_chunk(std::move(chunk_out));
     }
   }

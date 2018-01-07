@@ -59,8 +59,8 @@ class Projection : public AbstractReadOnlyOperator {
   ColumnExpressions _column_expressions;
 
   template <typename T>
-  static void _create_column(boost::hana::basic_type<T> type, Chunk& chunk, const ChunkID chunk_id,
-                             const std::shared_ptr<Expression>& expression,
+  static void _create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
+                             const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
                              std::shared_ptr<const Table> input_table_left);
 
   static DataType _get_type_of_expression(const std::shared_ptr<Expression>& expression,

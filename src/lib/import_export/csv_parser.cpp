@@ -44,12 +44,12 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<Chunk> chunks;
+  std::list<std::shared_ptr<Chunk>> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
-    chunks.emplace_back(ChunkUseMvcc::Yes);
+    chunks.emplace_back(std::make_shared<Chunk>(ChunkUseMvcc::Yes));
     auto& chunk = chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
@@ -61,7 +61,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
       _parse_into_chunk(relevant_content, field_ends, *table, chunk);
-      if (_meta.auto_compress && chunk.size() == _meta.chunk_size) {
+      if (_meta.auto_compress && chunk->size() == _meta.chunk_size) {
         DictionaryCompression::compress_chunk(table->column_types(), chunk);
       }
     }));
@@ -149,7 +149,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 }
 
 void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  Chunk& chunk) {
+                                  const std::shared_ptr<Chunk>& chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
@@ -186,7 +186,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
 
   // Transform the field_offsets to columns and add columns to chunk.
   for (auto& converter : converters) {
-    chunk.add_column(converter->finish());
+    chunk->add_column(converter->finish());
   }
 }
 
