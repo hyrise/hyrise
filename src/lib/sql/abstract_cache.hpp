@@ -43,6 +43,8 @@ class AbstractCache {
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
 
+  virtual std::vector<Key> dump_cache() { return {}; }
+
  protected:
   size_t _capacity;
 };

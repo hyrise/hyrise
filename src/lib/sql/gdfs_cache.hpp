@@ -115,6 +115,14 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return (*it->second).priority;
   }
 
+  std::vector<Key> dump_cache() {
+    std::vector<Key> cache;
+    for (auto& entry : _queue) {
+      cache.push_back(entry.key);
+    }
+    return cache;
+  }
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;
