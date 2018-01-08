@@ -14,6 +14,7 @@
 
 #include "copyable_atomic.hpp"
 #include "index/column_index_type.hpp"
+#include "optimizer/chunk_statistics.hpp"
 #include "scoped_locking_ptr.hpp"
 
 #include "all_type_variant.hpp"
@@ -206,6 +207,10 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
+  std::shared_ptr<ChunkStatistics> statistics() const { return _statistics; }
+
+  void set_statistics(std::shared_ptr<ChunkStatistics> stats) { _statistics = stats; }
+
  private:
   std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
 
@@ -215,6 +220,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<MvccColumns> _mvcc_columns;
   std::shared_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
+  std::shared_ptr<ChunkStatistics> _statistics;
 };
 
 }  // namespace opossum

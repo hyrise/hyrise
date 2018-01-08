@@ -141,7 +141,10 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
     chunk->shrink_mvcc_columns();
   }
 
-  return std::make_shared<ChunkStatistics>(column_stats);
+  auto stats = std::make_shared<ChunkStatistics>(column_stats);
+  chunk.set_statistics(stats);
+
+  return stats;
 }
 
 std::vector<std::shared_ptr<ChunkStatistics>> DictionaryCompression::compress_chunks(
