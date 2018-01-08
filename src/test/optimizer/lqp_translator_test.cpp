@@ -378,9 +378,12 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
    */
 
   auto table_node = std::make_shared<StoredTableNode>("table_int_float2");
-  auto predicate_node_a = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::Equals, 3);
-  auto predicate_node_b = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::Equals, 4);
-  auto predicate_node_c = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{1}}, ScanType::Equals, 5.0);
+  auto predicate_node_a =
+      std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::Equals, 3);
+  auto predicate_node_b =
+      std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::Equals, 4);
+  auto predicate_node_c =
+      std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{1}}, ScanType::Equals, 5.0);
   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
   const auto& lqp = union_node;
 
