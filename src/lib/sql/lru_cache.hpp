@@ -83,6 +83,15 @@ class LRUCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
+  std::vector<Key> dump_cache() {
+    std::vector<Key> cache;
+    cache.reserve(_list.size());
+    for (auto &kv : _list) {
+      cache.push_back(kv.first);
+    }
+    return cache;
+  }
+
  protected:
   // Doubly-linked list to hold all elements.
   std::list<KeyValuePair> _list;

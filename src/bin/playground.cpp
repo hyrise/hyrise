@@ -125,6 +125,8 @@ int main() {
             results["query"] = query_id;
             results["cacheHits"] = {};
             results["planningTime"] = {};
+            results["cacheContents"] = {};
+
             for (auto &[strategy, cache] : caches) {
                 std::optional<CacheValueType> cached_plan = cache->try_get(query_key);
                 std::optional<CacheKeyType> evicted;
@@ -141,6 +143,7 @@ int main() {
                     evicted = cache->set(query_key, query.sql_string, query.planning_time, query.num_tokens);
                 }
                 if (strategy.find("LRU_") == std::string::npos || strategy.find(std::to_string(lru_k_value)) != std::string::npos) {
+                    
                     auto current_strategy = strategy;
                     if (strategy.find("LRU_") != std::string::npos) {
                         current_strategy = "LRU_K";
@@ -149,6 +152,11 @@ int main() {
                     results["cacheHits"][current_strategy] = hit;
                     results["planningTime"][current_strategy] = planning_time;
                     results["evictedQuery"][current_strategy] = evicted ? *evicted : "-1";
+
+                    auto cache_content = cache->dump_cache();
+                    if (cache_content.size() > 0) {
+                        results["cacheContents"][current_strategy] = cache_content;
+                    }
                 }
             }
             nlohmann::json package;

@@ -84,6 +84,14 @@ class RandomCache : public AbstractCache<Key, Value> {
     _rand = std::uniform_int_distribution<>(0, capacity - 1);
   }
 
+  std::vector<Key> dump_cache() {
+    std::vector<Key> cache;
+    for (auto& kv : _list) {
+      cache.push_back(kv.first);
+    }
+    return cache;
+  }
+
  protected:
   // List to hold all elements.
   std::vector<KeyValuePair> _list;

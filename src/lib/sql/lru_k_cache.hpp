@@ -59,6 +59,14 @@ class LRUKCache : public AbstractCache<Key, Value> {
 
   explicit LRUKCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _access_counter(0) {}
 
+  std::vector<Key> dump_cache() {
+    std::vector<Key> cache;
+    for (auto& entry : _queue) {
+      cache.push_back(entry.key);
+    }
+    return cache;
+  }
+
   std::optional<Key> set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     ++_access_counter;
 

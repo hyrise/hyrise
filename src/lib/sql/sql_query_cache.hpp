@@ -80,6 +80,11 @@ class SQLQueryCache {
     _cache = std::make_unique<cache_t>(capacity);
   }
 
+  std::vector<Key> dump_cache() {
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _cache->dump_cache();
+  }
+
  protected:
   // Underlying cache strategy.
   std::unique_ptr<AbstractCache<Key, Value>> _cache;
