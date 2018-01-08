@@ -38,7 +38,7 @@ int main() {
   importer->execute();
   std::cout << "Table loaded.\n";
 
-  constexpr unsigned int execution_count = 1;
+  constexpr unsigned int execution_count = 5;
 
   std::vector<int> first_execution_times(test_queries.size());
   std::vector<int> second_execution_times(test_queries.size());
@@ -46,7 +46,6 @@ int main() {
   std::cout << "Executing queries a first time to fill up the cache...\n";
   // Fire SQL query and cache it
   for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
-    std::cout << "  (query: " << test_queries[query_index] << ")\n";
     first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, cache);
   }
 
@@ -64,8 +63,9 @@ int main() {
     float percentage = (static_cast<float>(second_execution_times[query_index]) /
                         static_cast<float>(first_execution_times[query_index])) *
                        100.0;
-    std::cout << "Query " << query_index << ": " << percentage << "% (" << first_execution_times[query_index] << " / "
-              << second_execution_times[query_index] << ")\n";
+    std::cout << "Query: " << test_queries[query_index] << " reduced to: " << percentage << "%\n";
+    std::cout << "  before/after: " << first_execution_times[query_index] << " / "
+              << second_execution_times[query_index] << "%\n";
   }
 
   return 0;
