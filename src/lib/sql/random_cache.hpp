@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "abstract_cache.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -26,7 +27,8 @@ class RandomCache : public AbstractCache<Key, Value> {
     // Override old element at that key, if it exists.
     auto it = _map.find(key);
     if (it != _map.end()) {
-      it->second->second = value;
+      // it->second->second = value;
+      _list[it->second].second = value;
       return {};
     }
 
@@ -37,13 +39,15 @@ class RandomCache : public AbstractCache<Key, Value> {
       _map.erase(_list[index].first);
 
       _list[index] = KeyValuePair(key, value);
-      _map[key] = _list.begin() + index;
+      // _map[key] = _list.begin() + index;
+      _map[key] = index;
       return evicted;
     }
 
     // Otherwise simply add to the end of the vector.
     _list.push_back(KeyValuePair(key, value));
-    _map[key] = _list.begin() + (_list.size() - 1);
+    // _map[key] = _list.begin() + (_list.size() - 1);
+    _map[key] = _list.size() - 1;
 
     return {};
   }
@@ -51,7 +55,11 @@ class RandomCache : public AbstractCache<Key, Value> {
   // Retrieves the value cached at the key.
   Value& get(const Key& key) {
     auto it = _map.find(key);
-    return it->second->second;
+    // if (it == _map.end()) {
+    //   Fail("Wusa");
+    // }
+    return _list[it->second].second;
+    // return it->second->second;
   }
 
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }
@@ -89,7 +97,7 @@ class RandomCache : public AbstractCache<Key, Value> {
   std::vector<KeyValuePair> _list;
 
   // Map to point towards element in the list.
-  std::unordered_map<Key, typename std::vector<KeyValuePair>::iterator> _map;
+  std::unordered_map<Key, size_t> _map;
 
   // Random number generation to determine which item to evict.
   std::random_device _rd;
