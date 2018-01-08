@@ -5,17 +5,17 @@
 
 #include "../base_test.hpp"
 
+#include "base_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/expression.hpp"
 #include "sql/SQLStatement.h"
-#include "sql/sql_expression_translator.hpp"
+#include "sql/hsql_expr_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-class SQLExpressionTranslatorTest : public BaseTest {
+class HSQLExpressionTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     // We need a base table to be able to lookup column names for ColumnIDs.
@@ -34,7 +34,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
    * Hopefully this is fixed once hsql::SQLParser uses Smart Pointers as proposed in #55 in hyrise/sql-parser.
    * TODO(anyone): refactor these two methods
    */
-  std::shared_ptr<Expression> compile_where_expression(const std::string& query) {
+  std::shared_ptr<LQPExpression> compile_where_expression(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -47,14 +47,14 @@ class SQLExpressionTranslatorTest : public BaseTest {
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto* select = static_cast<const hsql::SelectStatement*>(statement);
-        return _translator.translate_expression(*(select->whereClause), _stored_table_node);
+        return _translator.to_lqp_expression(*(select->whereClause), _stored_table_node);
       }
       default:
         throw std::runtime_error("Translating statement failed.");
     }
   }
 
-  std::vector<std::shared_ptr<Expression>> compile_select_expression(const std::string& query) {
+  std::vector<std::shared_ptr<LQPExpression>> compile_select_expression(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -63,13 +63,13 @@ class SQLExpressionTranslatorTest : public BaseTest {
     }
 
     const auto* statement = parse_result.getStatements().at(0);
-    std::vector<std::shared_ptr<Expression>> expressions;
+    std::vector<std::shared_ptr<LQPExpression>> expressions;
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto* select = static_cast<const hsql::SelectStatement*>(statement);
         for (auto expr : *(select->selectList)) {
-          expressions.emplace_back(_translator.translate_expression(*expr, _stored_table_node));
+          expressions.emplace_back(_translator.to_lqp_expression(*expr, _stored_table_node));
         }
         return expressions;
       }
@@ -78,11 +78,11 @@ class SQLExpressionTranslatorTest : public BaseTest {
     }
   }
 
-  SQLExpressionTranslator _translator;
+  HSQLExprTranslator _translator;
   std::shared_ptr<AbstractLQPNode> _stored_table_node;
 };
 
-TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {
+TEST_F(HSQLExpressionTranslatorTest, ArithmeticExpression) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto predicate = compile_where_expression(query);
 
@@ -95,7 +95,7 @@ TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {
   EXPECT_EQ(plus_expression->right_child()->type(), ExpressionType::Literal);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionColumnReference) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionColumnReference) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   auto predicate = compile_where_expression(query);
 
@@ -104,7 +104,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionColumnReference) {
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Column);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionString) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionString) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   auto predicate = compile_where_expression(query);
 
@@ -113,7 +113,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionString) {
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Literal);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterThan) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionGreaterThan) {
   const auto query = "SELECT * FROM table_a WHERE a > 1";
   auto predicate = compile_where_expression(query);
 
@@ -122,7 +122,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterThan) {
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Literal);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionLessThan) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionLessThan) {
   const auto query = "SELECT * FROM table_a WHERE a < 1";
   auto predicate = compile_where_expression(query);
 
@@ -131,7 +131,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionLessThan) {
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Literal);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterEqualsParameter) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionGreaterEqualsParameter) {
   const auto query = "SELECT * FROM table_a WHERE a >= ?";
   auto predicate = compile_where_expression(query);
 
@@ -140,7 +140,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterEqualsParameter) {
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Placeholder);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionLessEqualsParameter) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionLessEqualsParameter) {
   const auto query = "SELECT * FROM table_a WHERE a <= ?";
   auto predicate = compile_where_expression(query);
 
@@ -149,7 +149,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionLessEqualsParameter) {
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Placeholder);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionStar) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionStar) {
   const auto query = "SELECT * FROM table_a";
   auto expressions = compile_select_expression(query);
 
@@ -161,7 +161,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStar) {
   EXPECT_EQ(first->right_child(), nullptr);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionFunction) {
   const auto query = "SELECT a, SUM(b) FROM table_a GROUP BY a";
   auto expressions = compile_select_expression(query);
 
@@ -174,11 +174,11 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
   EXPECT_EQ(first->right_child(), nullptr);
 
   EXPECT_EQ(second->type(), ExpressionType::Function);
-  ASSERT_EQ(second->expression_list().size(), 1u);
-  EXPECT_EQ(second->expression_list().at(0)->type(), ExpressionType::Column);
+  ASSERT_EQ(second->aggregate_function_arguments().size(), 1u);
+  EXPECT_EQ(second->aggregate_function_arguments().at(0)->type(), ExpressionType::Column);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionComplexFunction) {
   const auto query = "SELECT SUM(a * b) as d FROM table_a";
   auto expressions = compile_select_expression(query);
 
@@ -186,15 +186,15 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
   auto& first = expressions.at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::Function);
-  ASSERT_EQ(first->expression_list().size(), 1u);
+  ASSERT_EQ(first->aggregate_function_arguments().size(), 1u);
 
-  auto function_expression = first->expression_list().at(0);
+  auto function_expression = first->aggregate_function_arguments().at(0);
   EXPECT_EQ(function_expression->type(), ExpressionType::Multiplication);
   EXPECT_EQ(function_expression->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(function_expression->right_child()->type(), ExpressionType::Column);
 }
 
-TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
+TEST_F(HSQLExpressionTranslatorTest, ExpressionStringConcatenation) {
   const auto query = "SELECT 'b' + 'c' as d FROM table_a";
   auto expressions = compile_select_expression(query);
 
@@ -207,7 +207,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
 }
 
 // TODO(mp): Subselects are not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn /* #279 */) {
+TEST_F(HSQLExpressionTranslatorTest, DISABLED_ExpressionIn /* #279 */) {
   const auto query = "SELECT * FROM table_a WHERE a in (SELECT a FROM table_b)";
   auto expression = compile_where_expression(query);
 
@@ -217,7 +217,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn /* #279 */) {
 }
 
 // TODO(mp): Subselects are not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist /* #279 */) {
+TEST_F(HSQLExpressionTranslatorTest, DISABLED_ExpressionExist /* #279 */) {
   const auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b)";
   auto expression = compile_where_expression(query);
 
@@ -226,7 +226,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist /* #279 */) {
 }
 
 // TODO(mp): implement, CASE not supported yet
-TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionCase /* #493 */) {
+TEST_F(HSQLExpressionTranslatorTest, DISABLED_ExpressionCase /* #493 */) {
   const auto query = "SELECT CASE WHEN a = 'something' THEN 'yes' ELSE 'no' END AS a_new FROM table_a";
   auto expressions = compile_select_expression(query);
 }

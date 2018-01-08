@@ -114,8 +114,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_statistics(
-    const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
-    const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type) {
+    const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const JoinColumnIDs column_ids,
+    const ScanType scan_type) {
   DebugAssert(mode != JoinMode::Cross, "Use function generate_cross_join_statistics for cross joins.");
   DebugAssert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 

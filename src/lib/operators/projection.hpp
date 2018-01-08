@@ -11,13 +11,14 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "optimizer/expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class OperatorExpression;
 
 /**
  * Operator to select a subset of the set of all columns found in the table
@@ -26,11 +27,12 @@ namespace opossum {
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<Expression>>;
+  using ColumnExpressions = std::vector<std::shared_ptr<OperatorExpression>>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
   const std::string name() const override;
+  const std::string description() const override;
 
   const ColumnExpressions& column_expressions() const;
 
@@ -60,10 +62,10 @@ class Projection : public AbstractReadOnlyOperator {
 
   template <typename T>
   static void _create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
-                             const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
+                             const ChunkID chunk_id, const std::shared_ptr<OperatorExpression>& expression,
                              std::shared_ptr<const Table> input_table_left);
 
-  static DataType _get_type_of_expression(const std::shared_ptr<Expression>& expression,
+  static DataType _get_type_of_expression(const std::shared_ptr<OperatorExpression>& expression,
                                           const std::shared_ptr<const Table>& table);
 
   /**
@@ -72,7 +74,8 @@ class Projection : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
-      const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id);
+      const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table,
+      const ChunkID chunk_id);
 
   /**
    * Operators that all numerical types support.

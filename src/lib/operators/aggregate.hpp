@@ -48,22 +48,7 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
-// ColumnID representing the '*' when using COUNT(*)
-constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
-
-/**
- * Struct to specify aggregates.
- * Aggregates are defined by the column_id they operate on and the aggregate function they use.
- * Optionally, an alias can be specified to use as the output name.
- */
-struct AggregateDefinition {
-  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const std::optional<std::string>& alias = std::nullopt);
-
-  ColumnID column_id;
-  AggregateFunction function;
-  std::optional<std::string> alias;
-};
+using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -78,13 +63,14 @@ using DistinctAggregateType = int8_t;
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
+  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
             const std::vector<ColumnID> groupby_column_ids);
 
-  const std::vector<AggregateDefinition>& aggregates() const;
+  const std::vector<AggregateColumnDefinition>& aggregates() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   const std::string name() const override;
+  const std::string description() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   // write the aggregated output for a given aggregate column
@@ -112,7 +98,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
-  const std::vector<AggregateDefinition> _aggregates;
+  const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   std::shared_ptr<Table> _output;
