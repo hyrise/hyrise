@@ -7,7 +7,6 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
-    boost_program_options
 )
 
 # Configure playground
@@ -39,7 +38,6 @@ add_executable(
 target_link_libraries(
     hyriseClient
     hyrise
-    boost_program_options
 )
 
 # Configure Console
