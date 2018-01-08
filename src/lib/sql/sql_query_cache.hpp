@@ -30,6 +30,13 @@ class SQLQueryCache {
     return _cache->set(query, value);
   }
 
+  std::optional<Key> set(const Key& query, const Value& value, double cost, double size) {
+    if (_cache->capacity() == 0) return {};
+
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _cache->set(query, value, cost, size);
+  }
+
   // Tries to fetch the cache entry for the query into the result object.
   // Returns true if the entry was found, false otherwise.
   std::optional<Value> try_get(const Key& query) {

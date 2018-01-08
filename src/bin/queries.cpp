@@ -6,19 +6,26 @@
 class Query
 {
 public:
-    Query(const char* sql_string, const char* benchmark, const char* benchmark_query_id, float planning_time) : sql_string(sql_string), benchmark(benchmark), benchmark_query_id(benchmark_query_id), planning_time(planning_time) {}
+    Query(const char* sql_string, const char* benchmark, const char* benchmark_query_id, float planning_time) : sql_string(sql_string), benchmark(benchmark), benchmark_query_id(benchmark_query_id), planning_time(planning_time) {
+        std::vector<int16_t> tokens;
+        hsql::SQLParser::tokenize(sql_string, &tokens);
+
+        num_tokens = static_cast<double>(tokens.size());
+    }
 
     Query(const char* sql_string, const char* benchmark, const char* benchmark_query_id) : sql_string(sql_string), benchmark(benchmark), benchmark_query_id(benchmark_query_id) {
         std::vector<int16_t> tokens;
         hsql::SQLParser::tokenize(sql_string, &tokens);
 
-        planning_time = tokens.size() * 0.01f;
+        num_tokens = static_cast<double>(tokens.size());
+        planning_time = num_tokens * 0.01;
     }
 
     std::string sql_string;
     std::string benchmark;
     std::string benchmark_query_id;
-    float planning_time;
+    double planning_time;
+    double num_tokens;
 };
 
 std::vector<Query> load_join_order_queries() {

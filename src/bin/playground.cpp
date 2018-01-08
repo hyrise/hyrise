@@ -138,7 +138,7 @@ int main() {
                     // std::cout << "Cache Miss: " << query_key << std::endl;
                     hit = false;
                     planning_time = query.planning_time;
-                    evicted = cache->set(query_key, query.sql_string);
+                    evicted = cache->set(query_key, query.sql_string, query.planning_time, query.num_tokens);
                 }
                 if (strategy.find("LRU_") == std::string::npos || strategy.find(std::to_string(lru_k_value)) != std::string::npos) {
                     auto current_strategy = strategy;
