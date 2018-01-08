@@ -31,10 +31,10 @@ void IndexTuner::_create_index(const std::string& table_name, const ColumnID& co
   column_ids.emplace_back(column_id);
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto& chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_chunk(chunk_id);
     // ToDo(group01): Who decides what type of index is created? Is it static config or
     //                is it decided dynamically during runtime?
-    chunk.create_index<GroupKeyIndex>(column_ids);
+    chunk->create_index<GroupKeyIndex>(column_ids);
   }
 }
 
