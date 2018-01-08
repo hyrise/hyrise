@@ -19,6 +19,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
@@ -40,6 +41,8 @@
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
 #include "sort_node.hpp"
+#include "storage/index/base_index.hpp"
+#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -93,6 +96,28 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   auto value = table_scan_node->value();
   if (is_lqp_column_origin(value)) {
     value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const LQPColumnOrigin>(value));
+  }
+
+  // ToDo(group01): extract this into optimizer and make it less hacky
+  std::shared_ptr<const AbstractLQPNode> original_node = table_scan_node->column_origin().node();
+  std::shared_ptr<const StoredTableNode> original_table_node =
+      std::dynamic_pointer_cast<const StoredTableNode>(original_node);
+  auto table_name = original_table_node->table_name();
+
+  auto table = StorageManager::get().get_table(table_name);
+  auto first_chunk = table->get_chunk(ChunkID{0});
+  auto indices = first_chunk->get_indices(std::vector<ColumnID>({table_scan_node->column_origin().column_id()}));
+  auto has_indices = indices.size() > 0 ? true : false;
+
+  // std::cout << "Table " << table_name << " has indices? --> " << has_indices << "\n";
+
+  if (has_indices) {
+    std::shared_ptr<BaseIndex> column_index = indices[0];
+
+    return std::make_shared<IndexScan>(
+        input_operator->mutable_input_left(),  // Skip validation and directly get the raw table
+        column_index->type(), std::vector<ColumnID>({column_id}), table_scan_node->scan_type(),
+        std::vector<AllTypeVariant>({boost::get<AllTypeVariant>(value)}));
   }
 
   /**
