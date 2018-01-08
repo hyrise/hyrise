@@ -143,7 +143,6 @@ int main() {
                     evicted = cache->set(query_key, query.sql_string, query.planning_time, query.num_tokens);
                 }
                 if (strategy.find("LRU_") == std::string::npos || strategy.find(std::to_string(lru_k_value)) != std::string::npos) {
-                    
                     auto current_strategy = strategy;
                     if (strategy.find("LRU_") != std::string::npos) {
                         current_strategy = "LRU_K";
