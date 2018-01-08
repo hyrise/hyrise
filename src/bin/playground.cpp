@@ -38,41 +38,41 @@ using CacheKeyType = std::string;
 using CacheValueType = std::string;
 
 int main() {
-    constexpr size_t CACHE_SIZE = 30;
+    size_t current_cache_size = 30;
     size_t lru_k_value = 2;
     size_t execution_id = 1;
 
     std::map<std::string, std::shared_ptr<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>> caches;
-    caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["GDS"]->replace_cache_impl<opossum::GDSCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("GDS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["GDS"]->replace_cache_impl<opossum::GDSCache<CacheKeyType, CacheValueType>>(current_cache_size);
 
-    caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("GDFS", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["GDFS"]->replace_cache_impl<opossum::GDFSCache<CacheKeyType, CacheValueType>>(current_cache_size);
 
-    caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU"]->replace_cache_impl<opossum::LRUCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU"]->replace_cache_impl<opossum::LRUCache<CacheKeyType, CacheValueType>>(current_cache_size);
 
-    caches.emplace("LRU_2", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_2"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_3", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_3"]->replace_cache_impl<opossum::LRUKCache<3, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_4", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_4"]->replace_cache_impl<opossum::LRUKCache<4, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_5", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_5"]->replace_cache_impl<opossum::LRUKCache<5, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_6", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_6"]->replace_cache_impl<opossum::LRUKCache<6, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_7", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_7"]->replace_cache_impl<opossum::LRUKCache<7, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_8", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_8"]->replace_cache_impl<opossum::LRUKCache<8, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_9", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_9"]->replace_cache_impl<opossum::LRUKCache<9, CacheKeyType, CacheValueType>>(CACHE_SIZE);
-    caches.emplace("LRU_10", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["LRU_10"]->replace_cache_impl<opossum::LRUKCache<10, CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("LRU_2", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_2"]->replace_cache_impl<opossum::LRUKCache<2, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_3", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_3"]->replace_cache_impl<opossum::LRUKCache<3, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_4", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_4"]->replace_cache_impl<opossum::LRUKCache<4, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_5", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_5"]->replace_cache_impl<opossum::LRUKCache<5, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_6", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_6"]->replace_cache_impl<opossum::LRUKCache<6, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_7", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_7"]->replace_cache_impl<opossum::LRUKCache<7, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_8", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_8"]->replace_cache_impl<opossum::LRUKCache<8, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_9", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_9"]->replace_cache_impl<opossum::LRUKCache<9, CacheKeyType, CacheValueType>>(current_cache_size);
+    caches.emplace("LRU_10", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["LRU_10"]->replace_cache_impl<opossum::LRUKCache<10, CacheKeyType, CacheValueType>>(current_cache_size);
 
-    caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(CACHE_SIZE));
-    caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<CacheKeyType, CacheValueType>>(CACHE_SIZE);
+    caches.emplace("RANDOM", std::make_shared<opossum::SQLQueryCache<CacheValueType, CacheKeyType>>(current_cache_size));
+    caches["RANDOM"]->replace_cache_impl<opossum::RandomCache<CacheKeyType, CacheValueType>>(current_cache_size);
 
     auto workloads = initialize_workloads();
 
@@ -107,7 +107,7 @@ int main() {
 
     });
 
-    h.onMessage([&caches, &workloads, &execution_id, &lru_k_value](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+    h.onMessage([&caches, &workloads, &execution_id, &lru_k_value, &current_cache_size](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
         auto message_json = nlohmann::json::parse(std::string(message, length));
         if (message_json["message"] == "execute_query") {
             std::string workload_id = message_json["data"]["workload"];
@@ -161,10 +161,13 @@ int main() {
         } else if (message_json["message"] == "update_config") {
             size_t cache_size = message_json["data"]["cacheSize"];
 
-            for (auto &[strategy, cache] : caches) {
-                cache->resize(cache_size);
+            if (cache_size != current_cache_size) {
+                current_cache_size = cache_size;
+                for (auto &[strategy, cache] : caches) {
+                    cache->resize(cache_size);
+                }
+                std::cout << "Cache size set to " << cache_size << std::endl;
             }
-            std::cout << "Cache size set to " << cache_size << std::endl;
 
             size_t new_k_value = message_json["data"]["lruKValue"];
             if (new_k_value != lru_k_value) {
