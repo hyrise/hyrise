@@ -33,22 +33,28 @@ int main() {
   auto statistics = std::make_shared<opossum::SystemStatistics>(cache);
   opossum::IndexTuner tuner(statistics);
 
+  std::cout << "Loading binary table...\n";
   auto importer = std::make_shared<opossum::ImportBinary>("group01_CUSTOMER.bin", "CUSTOMER");
   importer->execute();
+  std::cout << "Table loaded.\n";
 
-  constexpr unsigned int execution_count = 5;
+  constexpr unsigned int execution_count = 1;
 
   std::vector<int> first_execution_times(test_queries.size());
   std::vector<int> second_execution_times(test_queries.size());
 
+  std::cout << "Executing queries a first time to fill up the cache...\n";
   // Fire SQL query and cache it
   for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
+    std::cout << "  (query: " << test_queries[query_index] << ")\n";
     first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, cache);
   }
 
   // Let the tuner optimize tables based on the values of the cache
+  std::cout << "Execute IndexTuner...\n";
   tuner.execute();
 
+  std::cout << "Executing queries a second time (with optimized indices)...\n";
   std::cout << "Execution times (microseconds):\n";
 
   // Execute the same queries a second time and measure the speedup
