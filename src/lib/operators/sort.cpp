@@ -63,62 +63,69 @@ class Sort::SortImplMaterializeOutput {
     // copied column by column for each output row. For each column in a row we visit the input column with a reference
     // to the output column. This enables for the SortImplMaterializeOutput class to ignore the column types during the
     // copying of the values.
-    ChunkID chunk_count_out;
-    size_t output_row_count = _row_id_value_vector->size();
-    if (_output_chunk_size) {
-      chunk_count_out = output_row_count % _output_chunk_size ? (output_row_count / _output_chunk_size) + 1
-                                                              : output_row_count / _output_chunk_size;
-    } else {
-      chunk_count_out = 1;
-      _output_chunk_size = output_row_count;
+    const auto row_count_out = _row_id_value_vector->size();
+
+    // Ceiling of integer division
+    const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
+
+    const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
+
+    auto chunks_out = std::vector<std::shared_ptr<Chunk>>(chunk_count_out);
+    std::generate(chunks_out.begin(), chunks_out.end(), []() { return std::make_shared<Chunk>(); });
+
+    // Materialize column-wise
+    for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
+      const auto column_data_type = output->column_type(column_id);
+
+      resolve_data_type(column_data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+
+        // Initialize value columns
+        auto columns_out = std::vector<std::shared_ptr<ValueColumn<ColumnDataType>>>(chunk_count_out);
+        std::generate(columns_out.begin(), columns_out.end(),
+                      []() { return std::make_shared<ValueColumn<ColumnDataType>>(true); });
+
+        auto column_it = columns_out.begin();
+        auto chunk_it = chunks_out.begin();
+        auto chunk_offset_out = 0u;
+        for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
+          const auto[chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
+
+          const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
+
+          // Previously the value was retrieved by calling a virtual method,
+          // which was just as slow as using the subscript operator.
+          const auto value = (*column)[chunk_offset];
+          (*column_it)->append(value);
+
+          ++chunk_offset_out;
+
+          // Check if value column is full
+          if (chunk_offset_out >= _output_chunk_size) {
+            chunk_offset_out = 0u;
+            (*chunk_it)->add_column(*column_it);
+            ++column_it;
+            ++chunk_it;
+          }
+        }
+
+        // Last column has not been added
+        if (chunk_offset_out > 0u) {
+          (*chunk_it)->add_column(*column_it);
+        }
+      });
     }
 
-    auto row_index = 0u;
-
-    for (auto chunk_id_out = ChunkID{0}; chunk_id_out < chunk_count_out; chunk_id_out++) {
-      // Because we want to add the values row wise we have to save all columns temporarily before we can add them to
-      // the
-      // output chunk.
-      auto column_vectors = std::vector<std::shared_ptr<BaseColumn>>(output->column_count());
-      for (ColumnID column_id{0}; column_id < output->column_count(); column_id++) {
-        auto column_type = _table_in->column_type(column_id);
-        column_vectors[column_id] =
-            make_shared_by_data_type<BaseColumn, ValueColumn>(column_type, _table_in->column_is_nullable(column_id));
-      }
-
-      Chunk chunk_out;
-      // The last chunk might not be completely filled, so we have to check if we got out of range.
-      for (ChunkOffset chunk_offset_out = 0; chunk_offset_out < _output_chunk_size && row_index < output_row_count;
-           chunk_offset_out++) {
-        auto row_id_in = _row_id_value_vector->at(row_index).first;
-        for (ColumnID column_id{0}; column_id < output->column_count(); column_id++) {
-          // The actual value is added by visiting the input column, which then calls a function on the output column to
-          // copy the value
-          auto column = _table_in->get_chunk(row_id_in.chunk_id).get_column(column_id);
-          auto chunk_offset_in = row_id_in.chunk_offset;
-          if (auto reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
-            auto pos = reference_column->pos_list()->operator[](row_id_in.chunk_offset);
-            column = reference_column->referenced_table()
-                         ->get_chunk(pos.chunk_id)
-                         .get_column(reference_column->referenced_column_id());
-            chunk_offset_in = pos.chunk_offset;
-          }
-          column->copy_value_to_value_column(*column_vectors[column_id], chunk_offset_in);
-        }
-        row_index++;
-      }
-      for (ColumnID column_id{0}; column_id < output->column_count(); column_id++) {
-        chunk_out.add_column(std::move(column_vectors[column_id]));
-      }
-      output->emplace_chunk(std::move(chunk_out));
+    for (auto& chunk : chunks_out) {
+      output->emplace_chunk(std::move(chunk));
     }
 
     return output;
   }
 
-  std::shared_ptr<const Table> _table_in;
-  size_t _output_chunk_size;
-  std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
+  const std::shared_ptr<const Table> _table_in;
+  const size_t _output_chunk_size;
+  const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
@@ -175,9 +182,9 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     auto& null_value_rows = *_null_value_rows;
 
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
-      auto& chunk = _table_in->get_chunk(chunk_id);
+      auto chunk = _table_in->get_chunk(chunk_id);
 
-      auto base_column = chunk.get_column(_column_id);
+      auto base_column = chunk->get_column(_column_id);
 
       resolve_column_type<SortColumnType>(*base_column, [&](auto& typed_column) {
         auto iterable = create_iterable_from_column<SortColumnType>(typed_column);

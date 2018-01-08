@@ -14,7 +14,7 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
                                  const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos)
     : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
 #if IS_DEBUG
-  auto referenced_column = _referenced_table->get_chunk(ChunkID{0}).get_column(referenced_column_id);
+  auto referenced_column = _referenced_table->get_chunk(ChunkID{0})->get_column(referenced_column_id);
   auto reference_col = std::dynamic_pointer_cast<const ReferenceColumn>(referenced_column);
 
   DebugAssert(!(reference_col), "referenced_column must not be a ReferenceColumn");
@@ -28,9 +28,9 @@ const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset)
 
   if (chunk_info == NULL_ROW_ID) return NULL_VALUE;
 
-  auto& chunk = _referenced_table->get_chunk(chunk_info.chunk_id);
+  auto chunk = _referenced_table->get_chunk(chunk_info.chunk_id);
 
-  return (*chunk.get_column(_referenced_column_id))[chunk_info.chunk_offset];
+  return (*chunk->get_column(_referenced_column_id))[chunk_info.chunk_offset];
 }
 
 void ReferenceColumn::append(const AllTypeVariant&) { Fail("ReferenceColumn is immutable"); }
@@ -43,22 +43,6 @@ size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
 void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
   visitable.handle_reference_column(*this, std::move(context));
-}
-
-// writes the length and value at the chunk_offset to the end off row_string
-void ReferenceColumn::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
-  // retrieving the chunk_id for the given chunk_offset
-  auto row_id = (*_pos_list).at(chunk_offset);
-  // call the equivalent function of the referenced value column
-  _referenced_table->get_chunk(row_id.chunk_id)
-      .get_column(_referenced_column_id)
-      ->write_string_representation(row_string, chunk_offset);
-}
-
-// copies one of its own values to a different ValueColumn - mainly used for materialization
-// we cannot always use the materialize method below because sort results might come from different BaseColumns
-void ReferenceColumn::copy_value_to_value_column(BaseColumn&, ChunkOffset) const {
-  Fail("It is not allowed to copy directly from a reference column");
 }
 
 std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {

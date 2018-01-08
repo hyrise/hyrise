@@ -174,7 +174,7 @@ class Chunk : private Noncopyable {
    * so that they are effectively shared between the two
    * chunks. This is used in the Projection class.
    */
-  void use_mvcc_columns_from(const Chunk& chunk);
+  void use_mvcc_columns_from(const std::shared_ptr<const Chunk>& chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;

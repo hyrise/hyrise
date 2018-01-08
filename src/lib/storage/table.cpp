@@ -50,7 +50,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
-  _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
+  _chunks.push_back(std::make_shared<Chunk>(ChunkUseMvcc::Yes));
 }
 
 void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {
@@ -65,28 +65,26 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
   add_column_definition(name, data_type, nullable);
 
   for (auto& chunk : _chunks) {
-    chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
+    chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunks.back().size() == _max_chunk_size) create_new_chunk();
+  if (_chunks.back()->size() == _max_chunk_size) create_new_chunk();
 
-  _chunks.back().append(values);
+  _chunks.back()->append(values);
 }
-
-void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk() {
   // Create chunk with mvcc columns
-  Chunk new_chunk{ChunkUseMvcc::Yes};
+  auto new_chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
     const auto type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
-    new_chunk.add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
+    new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
   _chunks.push_back(std::move(new_chunk));
 }
@@ -96,12 +94,10 @@ uint16_t Table::column_count() const { return _column_types.size(); }
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
   for (const auto& chunk : _chunks) {
-    ret += chunk.size();
+    ret += chunk->size();
   }
   return ret;
 }
-
-uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
@@ -139,12 +135,12 @@ const std::vector<DataType>& Table::column_types() const { return _column_types;
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
-Chunk& Table::get_chunk(ChunkID chunk_id) {
+std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
 
-const Chunk& Table::get_chunk(ChunkID chunk_id) const {
+std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
@@ -159,16 +155,16 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::emplace_chunk(Chunk chunk) {
-  if (_chunks.size() == 1 && (_chunks.back().column_count() == 0 || _chunks.back().size() == 0)) {
+void Table::emplace_chunk(const std::shared_ptr<Chunk>& chunk) {
+  if (_chunks.size() == 1 && (_chunks.back()->column_count() == 0 || _chunks.back()->size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  DebugAssert(chunk.column_count() > 0, "Trying to add chunk without columns.");
-  DebugAssert(chunk.column_count() == column_count(),
-              std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
+  DebugAssert(chunk->column_count() > 0, "Trying to add chunk without columns.");
+  DebugAssert(chunk->column_count() == column_count(),
+              std::string("adding chunk with ") + std::to_string(chunk->column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");
-  _chunks.emplace_back(std::move(chunk));
+  _chunks.emplace_back(chunk);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
@@ -178,7 +174,7 @@ TableType Table::get_type() const {
   Assert(!_chunks.empty() && column_count() > 0, "Table has no content, can't specify type");
 
   // We assume if one column is a reference column, all are.
-  const auto column = _chunks[0].get_column(ColumnID{0});
+  const auto column = _chunks[0]->get_column(ColumnID{0});
   const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
 
   if (ref_column != nullptr) {
@@ -186,7 +182,7 @@ TableType Table::get_type() const {
 #if IS_DEBUG
     for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
       for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
-        const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
+        const auto column2 = _chunks[chunk_idx]->get_column(ColumnID{column_idx});
         const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
         DebugAssert(ref_column2 != nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
       }
@@ -198,7 +194,7 @@ TableType Table::get_type() const {
 #if IS_DEBUG
     for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
       for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
-        const auto column2 = _chunks[chunk_idx].get_column(ColumnID{column_idx});
+        const auto column2 = _chunks[chunk_idx]->get_column(ColumnID{column_idx});
         const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
         DebugAssert(ref_column2 == nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
       }

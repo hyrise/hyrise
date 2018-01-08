@@ -152,15 +152,15 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
                                 const ChunkID& chunk_id) {
-  const auto& chunk = table->get_chunk(chunk_id);
+  const auto chunk = table->get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
 
-  _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));
+  _export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Iterating over all columns of this chunk and exporting them
-  for (ColumnID col_id{0}; col_id < chunk.column_count(); col_id++) {
-    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
-    chunk.get_column(col_id)->visit(*visitor, context);
+  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
+    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(column_id));
+    chunk->get_column(column_id)->visit(*visitor, context);
   }
 }
 

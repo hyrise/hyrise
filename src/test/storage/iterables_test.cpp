@@ -57,9 +57,9 @@ class IterablesTest : public BaseTest {
 };
 
 TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
 
   auto iterable = ValueColumnIterable<int>{*int_column};
@@ -71,9 +71,9 @@ TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -87,9 +87,9 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueColumnNullableIteratorWithIterators) {
-  auto& chunk = table_with_null->get_chunk(ChunkID{0u});
+  auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
 
   auto iterable = ValueColumnIterable<int>{*int_column};
@@ -101,9 +101,9 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
-  auto& chunk = table_with_null->get_chunk(ChunkID{0u});
+  auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -119,9 +119,9 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
 TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   DictionaryCompression::compress_table(*table);
 
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
 
   auto iterable = DictionaryColumnIterable<int>{*dict_column};
@@ -135,9 +135,9 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
 TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorWithIterators) {
   DictionaryCompression::compress_table(*table);
 
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -177,9 +177,9 @@ TEST_F(IterablesTest, ConstantValueIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueColumnIteratorForEach) {
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
 
   auto iterable = ValueColumnIterable<int>{*int_column};
@@ -191,9 +191,9 @@ TEST_F(IterablesTest, ValueColumnIteratorForEach) {
 }
 
 TEST_F(IterablesTest, ValueColumnNullableIteratorForEach) {
-  auto& chunk = table_with_null->get_chunk(ChunkID{0u});
+  auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto column = chunk.get_column(ColumnID{0u});
+  auto column = chunk->get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
 
   auto iterable = ValueColumnIterable<int>{*int_column};

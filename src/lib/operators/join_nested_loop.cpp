@@ -127,7 +127,7 @@ void JoinNestedLoop::_perform_join() {
 
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
+    auto column_left = left_table->get_chunk(chunk_id_left)->get_column(left_column_id);
 
     // for Outer joins, remember matches on the left side
     std::vector<bool> left_matches;
@@ -138,7 +138,7 @@ void JoinNestedLoop::_perform_join() {
 
     // Scan all chunks for right input
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+      auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
 
       resolve_data_and_column_type(left_data_type, *column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
@@ -186,7 +186,7 @@ void JoinNestedLoop::_perform_join() {
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::Outer) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+      auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
 
       resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;
@@ -205,7 +205,7 @@ void JoinNestedLoop::_perform_join() {
   }
 
   // write output chunks
-  auto output_chunk = Chunk();
+  auto output_chunk = std::make_shared<Chunk>();
 
   if (_mode == JoinMode::Right) {
     _write_output_chunks(output_chunk, right_table, _pos_list_right);
@@ -218,14 +218,15 @@ void JoinNestedLoop::_perform_join() {
   _output_table->emplace_chunk(std::move(output_chunk));
 }
 
-void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
+void JoinNestedLoop::_write_output_chunks(const std::shared_ptr<Chunk>& output_chunk,
+                                          const std::shared_ptr<const Table> input_table,
                                           std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
 
     if (auto reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
-            input_table->get_chunk(ChunkID{0}).get_column(column_id))) {
+            input_table->get_chunk(ChunkID{0})->get_column(column_id))) {
       auto new_pos_list = std::make_shared<PosList>();
 
       ChunkID current_chunk_id{0};
@@ -236,7 +237,7 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
           current_chunk_id = row.chunk_id;
 
           reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
-              input_table->get_chunk(current_chunk_id).get_column(column_id));
+              input_table->get_chunk(current_chunk_id)->get_column(column_id));
         }
         if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
           new_pos_list->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
@@ -251,7 +252,7 @@ void JoinNestedLoop::_write_output_chunks(Chunk& output_chunk, const std::shared
       column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
     }
 
-    output_chunk.add_column(column);
+    output_chunk->add_column(column);
   }
 }
 

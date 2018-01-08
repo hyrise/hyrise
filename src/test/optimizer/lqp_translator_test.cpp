@@ -17,6 +17,7 @@
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -349,6 +350,55 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
   ASSERT_TRUE(limit_op);
   EXPECT_EQ(limit_op->num_rows(), num_rows);
+}
+
+TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
+  /**
+   * Test that
+   *
+   *    _____union____
+   *   /              \
+   *  predicate_a     predicate_b
+   *  \                /
+   *   \__predicate_c_/
+   *          |
+   *     table_int_float2
+   *
+   * has a diamond shape in the PQP as well. If it wouldn't have it might look like this:
+   *
+   *    _____union____
+   *   /              \
+   *  predicate_a     predicate_b
+   *      |             |
+   *  predicate_c(1)  predicate_c(2)
+   *      |             |
+   * table_int_float2 table_int_float2
+   *
+   * which is still semantically correct, but would mean predicate_c gets executed twice
+   */
+
+  auto table_node = std::make_shared<StoredTableNode>("table_int_float2");
+  auto predicate_node_a = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::Equals, 3);
+  auto predicate_node_b = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{0}}, ScanType::Equals, 4);
+  auto predicate_node_c = std::make_shared<PredicateNode>(LQPColumnOrigin{table_node, ColumnID{1}}, ScanType::Equals, 5.0);
+  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+  const auto& lqp = union_node;
+
+  union_node->set_left_child(predicate_node_a);
+  union_node->set_right_child(predicate_node_b);
+  predicate_node_a->set_left_child(predicate_node_c);
+  predicate_node_b->set_left_child(predicate_node_c);
+  predicate_node_c->set_left_child(table_node);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+  ASSERT_NE(pqp->input_right(), nullptr);
+  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
+  ASSERT_NE(pqp->input_right()->input_left(), nullptr);
+  EXPECT_EQ(pqp->input_left()->input_left(), pqp->input_right()->input_left());
+  EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
 }
 
 }  // namespace opossum

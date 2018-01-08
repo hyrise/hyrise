@@ -14,7 +14,7 @@ class Chunk;
 class ChunkMigrationTask : public AbstractTask {
  public:
   explicit ChunkMigrationTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids, int target_node_id);
-  static bool chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size);
+  static bool chunk_is_completed(const std::shared_ptr<const Chunk>& chunk, const uint32_t max_chunk_size);
 
  protected:
   void _on_execute() override;

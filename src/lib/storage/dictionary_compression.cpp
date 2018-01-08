@@ -114,18 +114,19 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data
   return compressor->compress_column(column);
 }
 
-void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk) {
-  DebugAssert((column_types.size() == chunk.column_count()),
+void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
+                                           const std::shared_ptr<Chunk>& chunk) {
+  DebugAssert((column_types.size() == chunk->column_count()),
               "Number of column types does not match the chunk’s column count.");
 
-  for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
-    auto value_column = chunk.get_mutable_column(column_id);
+  for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+    auto value_column = chunk->get_mutable_column(column_id);
     auto dict_column = compress_column(column_types[column_id], value_column);
-    chunk.replace_column(column_id, dict_column);
+    chunk->replace_column(column_id, dict_column);
   }
 
-  if (chunk.has_mvcc_columns()) {
-    chunk.shrink_mvcc_columns();
+  if (chunk->has_mvcc_columns()) {
+    chunk->shrink_mvcc_columns();
   }
 }
 
@@ -139,8 +140,7 @@ void DictionaryCompression::compress_chunks(Table& table, const std::vector<Chun
 
 void DictionaryCompression::compress_table(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    auto& chunk = table.get_chunk(chunk_id);
-
+    auto chunk = table.get_chunk(chunk_id);
     compress_chunk(table.column_types(), chunk);
   }
 }

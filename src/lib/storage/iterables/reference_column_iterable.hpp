@@ -65,8 +65,8 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
         return _value_from_dictionary_column(*(dict_column_it->second), chunk_offset);
       }
 
-      const auto& chunk = _table->get_chunk(chunk_id);
-      const auto column = chunk.get_column(_column_id);
+      const auto chunk = _table->get_chunk(chunk_id);
+      const auto column = chunk->get_column(_column_id);
 
       if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
         _value_columns[chunk_id] = value_column;

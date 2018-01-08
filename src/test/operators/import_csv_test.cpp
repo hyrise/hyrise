@@ -150,8 +150,8 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
   EXPECT_EQ(importer->get_output()->max_chunk_size(), 20U);
 
   // check if actual chunk_size is correct
-  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 20U);
-  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{1}).size(), 20U);
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0})->size(), 20U);
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{1})->size(), 20U);
 }
 
 TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
@@ -163,7 +163,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   EXPECT_EQ(importer->get_output()->max_chunk_size(), Chunk::MAX_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
-  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 100U);
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0})->size(), 100U);
   EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
 
   auto expected_table = std::make_shared<Table>(20);
@@ -294,9 +294,9 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
 
   // Check if columns are compressed into DictionaryColumns
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
-    auto& chunk = result_table->get_chunk(chunk_id);
-    for (ColumnID column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
-      auto base_column = chunk.get_column(column_id);
+    auto chunk = result_table->get_chunk(chunk_id);
+    for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
+      auto base_column = chunk->get_column(column_id);
       auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(base_column);
 
       EXPECT_TRUE(dict_column != nullptr);
