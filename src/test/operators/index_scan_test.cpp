@@ -36,8 +36,8 @@ class OperatorsIndexScanTest : public BaseTest {
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
-      auto& chunk = table->get_chunk(chunk_id);
-      chunk.template create_index<DerivedIndex>(_column_ids);
+      auto chunk = table->get_chunk(chunk_id);
+      chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
     _table_wrapper = std::make_shared<TableWrapper>(table);
@@ -54,10 +54,10 @@ class OperatorsIndexScanTest : public BaseTest {
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
-        const auto& column = *chunk.get_column(column_id);
+      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
+        const auto& column = *chunk->get_column(column_id);
 
         const auto found_value = column[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {

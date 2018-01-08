@@ -200,7 +200,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
    * make sure we're not creating redundant data.
    */
   const auto get_pos_list = [](const auto& table, ColumnID column_id) {
-    const auto column = table->get_chunk(ChunkID{0}).get_column(column_id);
+    const auto column = table->get_chunk(ChunkID{0})->get_column(column_id);
     const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
     return *ref_column->pos_list();
   };
@@ -282,16 +282,16 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   table_left->add_column_definition("b", DataType::Float);
   table_left->add_column_definition("c", DataType::Int);
 
-  Chunk chunk_left_0;
-  chunk_left_0.add_column(column_left_0_0);
-  chunk_left_0.add_column(column_left_0_1);
-  chunk_left_0.add_column(column_left_0_2);
+  auto chunk_left_0 = std::make_shared<Chunk>();
+  chunk_left_0->add_column(column_left_0_0);
+  chunk_left_0->add_column(column_left_0_1);
+  chunk_left_0->add_column(column_left_0_2);
   table_left->emplace_chunk(std::move(chunk_left_0));
 
-  Chunk chunk_left_1;
-  chunk_left_1.add_column(column_left_1_0);
-  chunk_left_1.add_column(column_left_1_1);
-  chunk_left_1.add_column(column_left_1_2);
+  auto chunk_left_1 = std::make_shared<Chunk>();
+  chunk_left_1->add_column(column_left_1_0);
+  chunk_left_1->add_column(column_left_1_1);
+  chunk_left_1->add_column(column_left_1_2);
   table_left->emplace_chunk(std::move(chunk_left_1));
 
   auto table_right = std::make_shared<Table>(4);
@@ -299,16 +299,16 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   table_right->add_column_definition("b", DataType::Float);
   table_right->add_column_definition("c", DataType::Int);
 
-  Chunk chunk_right_0;
-  chunk_right_0.add_column(column_right_0_0);
-  chunk_right_0.add_column(column_right_0_1);
-  chunk_right_0.add_column(column_right_0_2);
+  auto chunk_right_0 = std::make_shared<Chunk>();
+  chunk_right_0->add_column(column_right_0_0);
+  chunk_right_0->add_column(column_right_0_1);
+  chunk_right_0->add_column(column_right_0_2);
   table_right->emplace_chunk(std::move(chunk_right_0));
 
-  Chunk chunk_right_1;
-  chunk_right_1.add_column(column_right_1_0);
-  chunk_right_1.add_column(column_right_1_1);
-  chunk_right_1.add_column(column_right_1_2);
+  auto chunk_right_1 = std::make_shared<Chunk>();
+  chunk_right_1->add_column(column_right_1_0);
+  chunk_right_1->add_column(column_right_1_1);
+  chunk_right_1->add_column(column_right_1_2);
   table_right->emplace_chunk(std::move(chunk_right_1));
 
   auto table_wrapper_left_op = std::make_shared<TableWrapper>(table_left);

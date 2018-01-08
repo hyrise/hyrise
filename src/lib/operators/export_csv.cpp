@@ -79,11 +79,11 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
    * takes some effort.
    */
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto& chunk = table->get_chunk(chunk_id);
-    for (ChunkOffset row = 0; row < chunk.size(); ++row) {
+    auto chunk = table->get_chunk(chunk_id);
+    for (ChunkOffset row = 0; row < chunk->size(); ++row) {
       context->current_row = row;
       for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-        chunk.get_column(column_id)->visit(*(visitors[column_id]), context);
+        chunk->get_column(column_id)->visit(*(visitors[column_id]), context);
       }
       writer.end_line();
     }

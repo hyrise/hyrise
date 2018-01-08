@@ -78,9 +78,9 @@ class OperatorsTableScanTest : public BaseTest {
     auto col_a = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{1}, pos_list);
 
-    Chunk chunk;
-    chunk.add_column(col_a);
-    chunk.add_column(col_b);
+    auto chunk = std::make_shared<Chunk>();
+    chunk->add_column(col_a);
+    chunk->add_column(col_b);
 
     table->emplace_chunk(std::move(chunk));
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -112,20 +112,20 @@ class OperatorsTableScanTest : public BaseTest {
     pos_list->reserve(table->row_count());
 
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
         pos_list->push_back(RowID{chunk_id, chunk_offset});
       }
     }
 
-    auto chunk_out = Chunk{};
+    auto chunk_out = std::make_shared<Chunk>();
 
     for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
       table_out->add_column_definition(table->column_name(column_id), table->column_type(column_id));
 
       auto column_out = std::make_shared<ReferenceColumn>(table, column_id, pos_list);
-      chunk_out.add_column(column_out);
+      chunk_out->add_column(column_out);
     }
 
     table_out->emplace_chunk(std::move(chunk_out));
@@ -151,9 +151,9 @@ class OperatorsTableScanTest : public BaseTest {
     ref_table->add_column_definition("a", DataType::Int, true);
     ref_table->add_column_definition("b", DataType::Float, true);
 
-    auto chunk = Chunk{};
-    chunk.add_column(ref_column_a);
-    chunk.add_column(ref_column_b);
+    auto chunk = std::make_shared<Chunk>();
+    chunk->add_column(ref_column_a);
+    chunk->add_column(ref_column_b);
 
     ref_table->emplace_chunk(std::move(chunk));
 
@@ -177,10 +177,10 @@ class OperatorsTableScanTest : public BaseTest {
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
-        const auto& column = *chunk.get_column(column_id);
+      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
+        const auto& column = *chunk->get_column(column_id);
 
         const auto found_value = column[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
@@ -219,7 +219,7 @@ TEST_F(OperatorsTableScanTest, EmptyResultScan) {
   scan_1->execute();
 
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
-    EXPECT_EQ(scan_1->get_output()->get_chunk(i).column_count(), 2u);
+    EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
@@ -571,7 +571,7 @@ TEST_F(OperatorsTableScanTest, NullSemantics) {
     EXPECT_EQ(scan->get_output()->row_count(), 0u);
 
     for (auto i = ChunkID{0}; i < scan->get_output()->chunk_count(); i++) {
-      EXPECT_EQ(scan->get_output()->get_chunk(i).column_count(), 2u);
+      EXPECT_EQ(scan->get_output()->get_chunk(i)->column_count(), 2u);
     }
   }
 }

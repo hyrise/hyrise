@@ -27,16 +27,16 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
     // iterating over all chunks of table input
     for (ChunkID in_chunk_id{0}; in_chunk_id < input->chunk_count(); in_chunk_id++) {
       // creating empty chunk to add columns with positions
-      Chunk chunk_output;
+      auto chunk_output = std::make_shared<Chunk>();
 
       // iterating over all columns of the current chunk
       for (ColumnID column_id{0}; column_id < input->column_count(); ++column_id) {
         // While we don't modify the column, we need to get a non-const pointer so that we can put it into the chunk
-        chunk_output.add_column(input->get_chunk(in_chunk_id).get_mutable_column(column_id));
+        chunk_output->add_column(input->get_chunk(in_chunk_id)->get_mutable_column(column_id));
       }
 
       // adding newly filled chunk to the output table
-      output->emplace_chunk(std::move(chunk_output));
+      output->emplace_chunk(chunk_output);
     }
   }
 

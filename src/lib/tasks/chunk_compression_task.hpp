@@ -48,7 +48,7 @@ class ChunkCompressionTask : public AbstractTask {
    *
    * See class comment for further explanation
    */
-  bool chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size);
+  bool chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size);
 
  private:
   const std::string _table_name;

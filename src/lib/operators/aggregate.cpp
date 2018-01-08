@@ -292,6 +292,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   auto input_table = _input_table_left();
+  _out_chunk = std::make_shared<Chunk>();
 
   // check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
@@ -318,13 +319,13 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, this]() {
-      const Chunk& chunk_in = input_table->get_chunk(chunk_id);
+      auto chunk_in = input_table->get_chunk(chunk_id);
 
-      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in.size());
+      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in->size());
 
       // Partition by group columns
       for (const auto column_id : _groupby_column_ids) {
-        auto base_column = chunk_in.get_column(column_id);
+        auto base_column = chunk_in->get_column(column_id);
         auto column_type = input_table->column_type(column_id);
 
         resolve_data_and_column_type(column_type, *base_column, [&](auto type, auto& typed_column) {
@@ -373,7 +374,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    const Chunk& chunk_in = input_table->get_chunk(chunk_id);
+    auto chunk_in = input_table->get_chunk(chunk_id);
 
     auto hash_keys = _keys_per_chunk[chunk_id];
 
@@ -445,7 +446,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
           continue;
         }
 
-        auto base_column = chunk_in.get_column(aggregate.column_id);
+        auto base_column = chunk_in->get_column(aggregate.column_id);
         auto data_type = input_table->column_type(aggregate.column_id);
 
         /*
@@ -493,7 +494,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     _output->add_column_definition(column_name, column_type, true);
 
     _groupby_columns.emplace_back(make_shared_by_data_type<BaseColumn, ValueColumn>(column_type, true));
-    _out_chunk.add_column(_groupby_columns.back());
+    _out_chunk->add_column(_groupby_columns.back());
   }
 
   /**
@@ -691,7 +692,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the column
   _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
-  _out_chunk.add_column(col);
+  _out_chunk->add_column(col);
 }
 
 }  // namespace opossum

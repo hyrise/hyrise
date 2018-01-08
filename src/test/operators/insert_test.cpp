@@ -41,14 +41,14 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   context->commit();
 
   // Check that row has been inserted.
-  EXPECT_EQ(t->get_chunk(ChunkID{0}).size(), 6u);
-  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{0}))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[3], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{0}))[3], AllTypeVariant(458.7f));
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 6u);
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{1}))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{1}))[3], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{0}))[3], AllTypeVariant(458.7f));
 
-  EXPECT_EQ(t->get_chunk(ChunkID{0}).get_column(ColumnID{0})->size(), 6u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0}).get_column(ColumnID{1})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_column(ColumnID{0})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_column(ColumnID{1})->size(), 6u);
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
@@ -73,7 +73,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   context->commit();
 
   EXPECT_EQ(t->chunk_count(), 4u);
-  EXPECT_EQ(t->get_chunk(ChunkID{3}).size(), 1u);
+  EXPECT_EQ(t->get_chunk(ChunkID{3})->size(), 1u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
@@ -99,7 +99,7 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 1u);
+  EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 1u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
@@ -126,7 +126,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 2u);
+  EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 2u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
@@ -177,7 +177,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   EXPECT_EQ(t->chunk_count(), 2u);
   EXPECT_EQ(t->row_count(), 8u);
 
-  auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[2];
+  auto null_val = (*(t->get_chunk(ChunkID{1})->get_column(ColumnID{0})))[2];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
@@ -203,10 +203,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   EXPECT_EQ(t->chunk_count(), 3u);
   EXPECT_EQ(t->row_count(), 8u);
 
-  auto null_val_int = (*(t->get_chunk(ChunkID{2}).get_column(ColumnID{0})))[0];
+  auto null_val_int = (*(t->get_chunk(ChunkID{2})->get_column(ColumnID{0})))[0];
   EXPECT_TRUE(variant_is_null(null_val_int));
 
-  auto null_val_float = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{1})))[2];
+  auto null_val_float = (*(t->get_chunk(ChunkID{1})->get_column(ColumnID{1})))[2];
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
@@ -232,7 +232,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   EXPECT_EQ(t->chunk_count(), 2u);
   EXPECT_EQ(t->row_count(), 5u);
 
-  auto null_val = (*(t->get_chunk(ChunkID{1}).get_column(ColumnID{0})))[0];
+  auto null_val = (*(t->get_chunk(ChunkID{1})->get_column(ColumnID{0})))[0];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
