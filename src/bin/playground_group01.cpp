@@ -17,10 +17,15 @@ using std::chrono::high_resolution_clock;
 // ToDo(group01): as soon as caching is integrated into the SQLPipeline, we should run a bigger and more standardized
 //                workload, e.g. the TPC-C benchmark
 // Idea behind the current queries: have three indexable columns, but one only used once, one twice, and one thrice.
+// std::vector<std::string> test_queries{
+//     "SELECT * FROM CUSTOMER WHERE INTEREST > 0.3",         "SELECT * FROM CUSTOMER WHERE INTEREST < 0.6",
+//    "SELECT * FROM CUSTOMER WHERE NAME = 'Kameko Phillida'",     "SELECT * FROM CUSTOMER WHERE NAME = 'Chlo Winna'",
+//    "SELECT * FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'", "SELECT * FROM CUSTOMER WHERE LEVEL = 3"};
+
 std::vector<std::string> test_queries{
-    "SELECT * FROM CUSTOMER WHERE INTEREST > 0.3",         "SELECT * FROM CUSTOMER WHERE INTEREST < 0.6",
-    "SELECT * FROM CUSTOMER WHERE NAME = 'BARBARBAR'",     "SELECT * FROM CUSTOMER WHERE NAME = 'OUGHTPRIBAR'",
-    "SELECT * FROM CUSTOMER WHERE NAME = 'OUGHTANTIPRES'", "SELECT * FROM CUSTOMER WHERE LEVEL = 3"};
+        "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'",
+        "SELECT NAME FROM CUSTOMER WHERE LEVEL = 5",
+        "SELECT INTEREST FROM CUSTOMER WHERE NAME  = 'Rosemary Picardi'"};
 
 // Forward declarations
 std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
