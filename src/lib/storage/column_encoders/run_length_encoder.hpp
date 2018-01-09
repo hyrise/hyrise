@@ -19,7 +19,7 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::RunLength>;
 
   template <typename T>
-  std::shared_ptr<BaseColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
     auto null_value = get_null_value<T>();
 
     const auto alloc = value_column->values().get_allocator();

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "storage/base_value_column.hpp"
+#include "storage/encoded_columns/base_encoded_column.hpp"
 #include "storage/encoded_columns/column_encoding_type.hpp"
 
 #include "all_type_variant.hpp"
@@ -33,7 +34,7 @@ class BaseColumnEncoder {
    *
    * @return encoded column if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) = 0;
+  virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) = 0;
 };
 
 template <typename Derived>
@@ -50,8 +51,8 @@ class ColumnEncoder : public BaseColumnEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) final {
-    auto encoded_column = std::shared_ptr<BaseColumn>{};
+  std::shared_ptr<BaseEncodedColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) final {
+    auto encoded_column = std::shared_ptr<BaseEncodedColumn>{};
     resolve_data_type(data_type, [&](auto type_obj) {
       const auto data_type_supported = this->supports(type_obj);
       // clang-format off
@@ -97,7 +98,7 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Compiles only for supported data types.
    */
   template <typename ColumnDataType>
-  std::shared_ptr<BaseColumn> encode(hana::basic_type<ColumnDataType> data_type,
+  std::shared_ptr<BaseEncodedColumn> encode(hana::basic_type<ColumnDataType> data_type,
                                      const std::shared_ptr<BaseValueColumn>& value_column) {
     static_assert(decltype(supports(data_type))::value);
 

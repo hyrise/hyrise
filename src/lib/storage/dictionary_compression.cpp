@@ -9,6 +9,7 @@
 #include "types.hpp"
 
 #include "storage/column_encoders/utils.hpp"
+#include "storage/encoded_columns/base_encoded_column.hpp"
 #include "storage/encoded_columns/column_encoding_type.hpp"
 #include "utils/assert.hpp"
 
