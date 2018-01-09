@@ -36,14 +36,15 @@ const std::vector<IndexProposal>& IndexSelectionHeuristic::recommend_changes(con
 
 void IndexSelectionHeuristic::_inspect_operator(const std::shared_ptr<const AbstractOperator>& op) {
   if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(op)) {
-    if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
-      if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
+    // skipped because it is skippen in lqp_translator
+    //if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
+      if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(table_scan->input_left())) {
         const auto& table_name = get_table->table_name();
         ColumnID column_id = table_scan->left_column_id();
         _index_proposals.emplace_back(IndexProposal{table_name, column_id, 0.0f, 1, 0});
         std::cout << "TableScan on table " << table_name << " and column " << column_id << "\n";
       }
-    }
+    //}
   } else {
     if (op->input_left()) {
       _inspect_operator(op->input_left());

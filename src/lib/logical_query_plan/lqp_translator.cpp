@@ -133,7 +133,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals, *table_scan_node->value2());
   }
 
-  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(), value);
+  // In order to make the table scan comparable, we need to skip the validation here as well
+  auto direct_table = input_operator->mutable_input_left();
+  return std::make_shared<TableScan>(direct_table, column_id, table_scan_node->scan_type(), value);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
