@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -31,8 +32,15 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
     std::normal_distribution<> level_dist(3, 0.5);  // level 1-5 where most customers have level 3
 
     add_column<int>(customer_table, "ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+
+    auto firstNames = read_vector_from_file("../firstNames.txt");
+    auto lastNames = read_vector_from_file("../lastNames.txt");
+
     add_column<std::string>(customer_table, "NAME", cardinalities, [&](std::vector<size_t> indices) {
-      return _random_gen.generate_string(5, 10, 'a', 26) + " " + _random_gen.generate_string(5, 10, 'a', 26);
+      // return _random_gen.generate_string(5, 10, 'a', 26) + " " + _random_gen.generate_string(5, 10, 'a', 26);
+      auto firstName = (*firstNames)[_random_gen.random_number(0, firstNames->size())];
+      auto lastName = (*lastNames)[_random_gen.random_number(0, lastNames->size())];
+      return firstName + " " + lastName;
     });
     add_column<int>(customer_table, "BALANCE", cardinalities,
                     [&](std::vector<size_t>) { return _random_gen.random_number(-_row_count, _row_count); });
@@ -47,6 +55,18 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
     tables.insert(std::make_pair("CUSTOMER", customer_table));
     return tables;
   }
+
+ std::shared_ptr<std::vector<std::string>> read_vector_from_file(std::string filename) {
+     std::string line;
+     auto output = std::make_shared<std::vector<std::string>>();
+     std::ifstream inputfile(filename);
+
+     while(std::getline(inputfile, line)){
+         output->push_back(line);
+     }
+
+     return output;
+ }
 
  private:
   size_t _row_count;
