@@ -25,6 +25,8 @@ using std::chrono::high_resolution_clock;
 std::vector<std::string> test_queries{
         "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'",
         "SELECT NAME FROM CUSTOMER WHERE LEVEL = 5",
+        "SELECT NAME FROM CUSTOMER WHERE LEVEL = 4",
+        "SELECT NAME FROM CUSTOMER WHERE LEVEL = 3",
         "SELECT INTEREST FROM CUSTOMER WHERE NAME  = 'Rosemary Picardi'"};
 
 // Forward declarations
