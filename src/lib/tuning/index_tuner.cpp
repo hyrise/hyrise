@@ -2,6 +2,7 @@
 
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -34,7 +35,8 @@ void IndexTuner::_create_index(const std::string& table_name, const ColumnID& co
     auto chunk = table->get_chunk(chunk_id);
     // ToDo(group01): Who decides what type of index is created? Is it static config or
     //                is it decided dynamically during runtime?
-    chunk->create_index<GroupKeyIndex>(column_ids);
+    chunk->create_index<AdaptiveRadixTreeIndex>(column_ids);
+      //chunk->create_index<GroupKeyIndex>(column_ids);
   }
 }
 
