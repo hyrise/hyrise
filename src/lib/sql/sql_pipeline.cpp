@@ -59,8 +59,6 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
       // This statements is now owned by the parse result, which will free the memory.
       num_statements_released++;
 
-      // We know each statement is always valid because the check above would fail otherwise.
-      // Set each single statement to true to avoid inconsistencies.
       parsed_statement->setIsValid(true);
 
       auto pipeline_statement =
