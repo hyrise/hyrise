@@ -56,7 +56,9 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
     throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
   }
 
-  Assert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one statement");
+  Assert(_parsed_sql_statement->size() == 1,
+         "SQLPipelineStatement must hold exactly one statement. "
+         "Use SQLPipeline when you have multiple statements.");
 
   return _parsed_sql_statement;
 }
@@ -69,7 +71,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   const auto& parsed_sql = get_parsed_sql_statement();
   try {
     const auto lqp_roots = SQLTranslator{_use_mvcc}.translate_parse_result(*parsed_sql);
-    DebugAssert(lqp_roots.size() == 1, "LQP translation returned an invalid number of LQP roots");
+    DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
     _unoptimized_logical_plan = lqp_roots.front();
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while compiling query plan:\n  " + std::string(exception.what()));
@@ -132,7 +134,8 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
   }
 
   const auto& query_plan = get_query_plan();
-  DebugAssert(query_plan->tree_roots().size() == 1, "Invalid number of roots in the physical query plan");
+  DebugAssert(query_plan->tree_roots().size() == 1,
+              "Physical query qlan creation returned no or more than one plan for a single statement.");
 
   try {
     const auto& root = query_plan->tree_roots().front();

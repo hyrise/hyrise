@@ -12,6 +12,22 @@
 
 namespace opossum {
 
+/**
+ * This is the unified interface to handle SQL queries and related operations.
+ * This should be preferred over using SQLPipelineStatement directly, unless you really know why you need it.
+ *
+ * The SQLPipeline represents the flow from the basic SQL string to the result table with all intermediate steps.
+ *
+ * The basic idea of the SQLPipeline is that is splits a given SQL string into its single SQL statements and wraps each
+ * statement in an SQLPipelineStatement. If a single statement is present, it creates just one SQLPipelineStatement.
+ * If N statements are present, it creates N SQLPipelineStatements.
+ *
+ * The advantage of using this over a self created vector of SQLPipelineStatements is that some sanity checks are
+ * performed here, e.g. TransactionContexts and dependant statements (CREATE VIEW X followed by SELECT * FROM X)
+ *
+ * The SQLPipeline holds all results and only hands them out as const references. If the SQLPipeline goes out of scope
+ * while the results are still needed, the result references are invalid (except maybe the result table).
+ */
 class SQLPipeline : public Noncopyable {
  public:
   explicit SQLPipeline(const std::string& sql, bool use_mvcc = true);

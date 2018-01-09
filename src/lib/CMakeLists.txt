@@ -185,8 +185,10 @@ set(
     sql/sql_planner.hpp
     sql/sql_expression_translator.cpp
     sql/sql_expression_translator.hpp
-        sql/sql_pipeline_statement.cpp
-        sql/sql_pipeline_statement.hpp
+    sql/sql_pipeline.cpp
+    sql/sql_pipeline.hpp
+    sql/sql_pipeline_statement.cpp
+    sql/sql_pipeline_statement.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
@@ -278,7 +280,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-        sql/sql_pipeline.cpp sql/sql_pipeline.hpp)
+)
 
 set(
     LIBRARIES

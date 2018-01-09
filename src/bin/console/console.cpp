@@ -237,13 +237,8 @@ int Console::_eval_sql(const std::string& sql) {
     _sql_pipeline->get_result_table();
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + "\n");
-    const auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-    if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
-      out("The transaction has been rolled back.\n");
-      if (_explicitly_created_transaction_context != nullptr) {
-        out("All previous statements have been committed.\n");
-      }
-      _explicitly_created_transaction_context = nullptr;
+    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr) {
+      out("All previous statements have been committed.\n");
     }
     return ReturnCode::Error;
   }
@@ -455,6 +450,10 @@ int Console::visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
+  const std::string noexec_string = "noexec";
+  const std::string lqp_string = "lqp";
+  const std::string lqpopt_string = "lqpopt";
+
   std::string first_word, second_word;
   if (!input_words.empty()) {
     first_word = input_words[0];
@@ -464,16 +463,16 @@ int Console::visualize(const std::string& input) {
     second_word = input_words[1];
   }
 
-  const bool no_execute = (first_word == "noexec" || second_word == "noexec");
+  const bool no_execute = (first_word == noexec_string || second_word == noexec_string);
 
   std::string mode;
-  if (first_word == "lqp" || first_word == "lqpopt")
+  if (first_word == lqp_string || first_word == lqpopt_string)
     mode = first_word;
-  else if (second_word == "lqp" || second_word == "lqpopt")
+  else if (second_word == lqp_string || second_word == lqpopt_string)
     mode = second_word;
 
   // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
-  const auto noexec_size = no_execute ? 6ul : 0ul;
+  const auto noexec_size = no_execute ? noexec_string.length() : 0u;
   auto sql_begin_pos = mode.size() + noexec_size;
 
   // If we have both words present, we need to remove additional whitespace
@@ -494,7 +493,7 @@ int Console::visualize(const std::string& input) {
   std::string graph_filename, img_filename;
 
   // Visualize the Logical Query Plan
-  if (mode == "lqp" || mode == "lqpopt") {
+  if (mode == lqp_string || mode == lqpopt_string) {
     std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
     try {
@@ -503,18 +502,14 @@ int Console::visualize(const std::string& input) {
         _sql_pipeline->get_result_table();
       }
 
-      const auto& lqps = (mode == "lqp") ? _sql_pipeline->get_unoptimized_logical_plans()
-                                         : _sql_pipeline->get_optimized_logical_plans();
+      const auto& lqps = (mode == lqp_string) ? _sql_pipeline->get_unoptimized_logical_plans()
+                                              : _sql_pipeline->get_optimized_logical_plans();
       for (const auto& lqp : lqps) {
         lqp_roots.push_back(lqp);
       }
     } catch (const std::exception& exception) {
       out(std::string(exception.what()) + "\n");
-      auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-      if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
-        out("The transaction has been rolled back.\n");
-        _explicitly_created_transaction_context = nullptr;
-      }
+      _handle_rollback();
       return ReturnCode::Error;
     }
 
@@ -529,7 +524,6 @@ int Console::visualize(const std::string& input) {
 
     try {
       if (!no_execute) {
-        // Run the query and then collect the QueryPlans
         _sql_pipeline->get_result_table();
       }
 
@@ -540,11 +534,7 @@ int Console::visualize(const std::string& input) {
       }
     } catch (const std::exception& exception) {
       out(std::string(exception.what()) + "\n");
-      auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-      if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
-        out("The transaction has been rolled back.\n");
-        _explicitly_created_transaction_context = nullptr;
-      }
+      _handle_rollback();
       return ReturnCode::Error;
     }
 
@@ -763,6 +753,17 @@ char* Console::command_generator_tpcc(const char* text, int state) {
     }
   }
   return nullptr;
+}
+
+bool Console::_handle_rollback() {
+  auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+    out("The transaction has been rolled back.\n");
+    _explicitly_created_transaction_context = nullptr;
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace opossum

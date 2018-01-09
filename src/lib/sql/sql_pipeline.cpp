@@ -11,6 +11,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::Transa
     : SQLPipeline(sql, std::move(transaction_context), true) {
   DebugAssert(_sql_pipeline_statements.front()->transaction_context() != nullptr,
               "Cannot pass nullptr as explicit transaction context.");
+  DebugAssert(_sql_pipeline_statements.front()->transaction_context()->phase() == TransactionPhase::Active,
+              "The transaction context cannot have been committed already.");
 }
 
 // Private constructor
@@ -32,32 +34,52 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
   bool seen_altering_statement = false;
 
-  for (auto* statement : parse_result.releaseStatements()) {
+  // We have to keep count of how many statements are owned by an SQLParseResult, which will free the memory on
+  // deletion. In case of an error, we need to manually free the memory of all statements still owned by us.
+  auto num_statements_released = 0u;
+  auto released_statements = parse_result.releaseStatements();
+  for (auto statement : released_statements) {
     switch (statement->type()) {
-      // Check if statement alters table in any way that would possibly not be seen in a later statement.
+      // Check if statement alters the structure of the database in a way that following statements might depend upon.
       case hsql::StatementType::kStmtImport:
       case hsql::StatementType::kStmtCreate:
       case hsql::StatementType::kStmtDrop:
       case hsql::StatementType::kStmtAlter:
-      case hsql::StatementType::kStmtRename:
+      case hsql::StatementType::kStmtRename: {
         seen_altering_statement = true;
+        break;
+      }
       default: { /* do nothing */
       }
     }
 
-    auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement);
-    // We know this is always true because the check above would fail otherwise
-    parsed_statement->setIsValid(true);
+    try {
+      auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement);
 
-    auto pipeline_statement =
-        std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _transaction_context, use_mvcc);
-    _sql_pipeline_statements.push_back(std::move(pipeline_statement));
+      // This statements is now owned by the parse result, which will free the memory.
+      num_statements_released++;
+
+      // We know each statement is always valid because the check above would fail otherwise.
+      // Set each single statement to true to avoid inconsistencies.
+      parsed_statement->setIsValid(true);
+
+      auto pipeline_statement =
+          std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _transaction_context, use_mvcc);
+      _sql_pipeline_statements.push_back(std::move(pipeline_statement));
+    } catch (const std::exception&) {
+      // Free all statements owned by us and pass on the error
+      for (auto pos = num_statements_released; pos < released_statements.size(); ++pos) {
+        delete released_statements[pos];
+      }
+
+      throw;
+    }
   }
 
   _num_statements = _sql_pipeline_statements.size();
 
-  // If we see at least one altering statement and we have more than one statement, we require execution of a statement
-  // before the next one can be translated.
+  // If we see at least one structure altering statement and we have more than one statement, we require execution of a
+  // statement before the next one can be translated (so the next statement sees the previous structural changes).
   _requires_execution = seen_altering_statement && _num_statements > 1;
 }
 
@@ -87,7 +109,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimize
   }
 
   Assert(!_requires_execution || _pipeline_was_executed,
-         "Cannot translate all statements without executing the previous ones.");
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
   _unoptimized_logical_plans.reserve(_num_statements);
   for (auto& pipeline : _sql_pipeline_statements) {
@@ -111,7 +134,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
   }
 
   Assert(!_requires_execution || _pipeline_was_executed,
-         "Cannot translate all statements without executing the previous ones.");
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
   _optimized_logical_plans.reserve(_num_statements);
   for (auto& pipeline : _sql_pipeline_statements) {
@@ -140,7 +164,8 @@ const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans()
   }
 
   Assert(!_requires_execution || _pipeline_was_executed,
-         "Cannot compile all statements without executing the previous ones.");
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
   _query_plans.reserve(_num_statements);
   for (auto& pipeline : _sql_pipeline_statements) {
@@ -164,7 +189,8 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   }
 
   Assert(!_requires_execution || _pipeline_was_executed,
-         "Cannot generate tasks for all statements without executing the previous ones.");
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot generate tasks for all statements without executing, i.e. calling get_result_table()");
 
   _tasks.reserve(_num_statements);
   for (auto& pipeline : _sql_pipeline_statements) {

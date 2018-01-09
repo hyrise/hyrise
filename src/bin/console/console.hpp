@@ -123,6 +123,11 @@ class Console {
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);
 
+  // Checks whether the execution of the SQLPipeline has been rolled back and displays information accordingly.
+  // If rollback == true, the explicit context is deleted.
+  // Returns true if rollbacked, else false
+  bool _handle_rollback();
+
   // GNU readline interface to our commands
   static char** command_completion(const char* text, int start, int end);
   static char* command_generator(const char* text, int state);

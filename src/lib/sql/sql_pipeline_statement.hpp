@@ -12,15 +12,17 @@ namespace opossum {
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
+ * This should rarely be used directly - use SQLPipeline instead, as it creates the correct SQLPipelineStatement(s).
  *
- * The basic idea of the SQLPipeline is that it represents the flow from the basic SQL string to the result table with
- * all intermediate steps. These intermediate steps call the previous step that is required. The intermediate results
- * are all cached so calling a method twice will return the already existing value.
+ * The basic idea of the SQLPipelineStatement is that it represents the flow from a single SQL statement to the result
+ * table with all intermediate steps. These intermediate steps call the previous step that is required. The intermediate
+ * results are all cached so calling a method twice will return the already existing value.
  *
- * The SQLPipeline holds all results and only hands them out as const references. If the SQLPipeline goes out of scope
- * while the results are still needed, the result references are invalid (except maybe the result_table).
+ * The SQLPipelineStatement holds all results and only hands them out as const references. If the SQLPipelineStatement
+ * goes out of scope while the results are still needed, the result references are invalid (except maybe the
+ * result table).
  *
- * E.g: calling sql_pipeline.get_result_table() will result in the following "call stack"
+ * E.g: calling sql_pipeline_statement.get_result_table() will result in the following "call stack"
  * get_result_table -> get_tasks -> get_query_plan -> get_optimized_logical_plan -> get_parsed_sql
  */
 class SQLPipelineStatement : public Noncopyable {
