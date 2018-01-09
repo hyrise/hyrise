@@ -29,7 +29,7 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
     std::random_device rd;
     std::mt19937 e2(rd());
     // gaussian normal distribution for customer "VIP" level
-    std::normal_distribution<> level_dist(3, 0.5);  // level 1-5 where most customers have level 3
+    std::normal_distribution<> level_dist(3, 2);  // level 1-5 where most customers have level 3
 
     add_column<int>(customer_table, "ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
 
@@ -47,7 +47,7 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
     add_column<float>(customer_table, "INTEREST", cardinalities,
                       [&](std::vector<size_t>) { return _random_gen.random_number(0, 1000) / 1000.f; });
     add_column<int>(customer_table, "LEVEL", cardinalities,
-                    [&](std::vector<size_t>) { return std::round(level_dist(e2)); });
+                    [&](std::vector<size_t>) { return std::max(1, std::min(5, static_cast<int>(std::round(level_dist(e2))))); });
 
     opossum::DictionaryCompression::compress_table(*customer_table);
 
