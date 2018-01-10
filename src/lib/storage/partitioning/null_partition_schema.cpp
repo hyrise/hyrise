@@ -25,13 +25,4 @@ AllTypeVariant NullPartitionSchema::get_value(const ColumnID column_id, const si
 
 uint64_t NullPartitionSchema::row_count() const { return _partitions.front()->row_count(); }
 
-void NullPartitionSchema::create_new_chunk(const std::vector<DataType>& column_types,
-                                           const std::vector<bool>& column_nullables) {
-  _partitions.front()->create_new_chunk(column_types, column_nullables);
-}
-
-void NullPartitionSchema::emplace_chunk(Chunk& chunk, uint16_t column_count) {
-  _partitions.front()->emplace_chunk(chunk, column_count);
-}
-
 }  // namespace opossum

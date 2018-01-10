@@ -79,10 +79,8 @@ void Table::append(std::vector<AllTypeVariant> values) {
 
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
-void Table::create_new_chunk() {
-  DebugAssert(!this->is_partitioned(), "create_new_chunk() does not work on partitioned tables");
-
-  _partition_schema->create_new_chunk(_column_types, _column_nullable);
+void Table::create_new_chunk(PartitionID partition_id) {
+  _partition_schema->create_new_chunk(_column_types, _column_nullable, partition_id);
 }
 
 uint16_t Table::column_count() const { return _column_types.size(); }
@@ -143,9 +141,8 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id, Partiti
   return _partition_schema->get_chunk_with_access_counting(chunk_id, partition_id);
 }
 
-void Table::emplace_chunk(Chunk chunk) {
-  DebugAssert(!this->is_partitioned(), "emplace_chunk() does not work on partitioned tables");
-  _partition_schema->emplace_chunk(chunk, this->column_count());
+void Table::emplace_chunk(Chunk chunk, PartitionID partition_id) {
+  _partition_schema->emplace_chunk(chunk, this->column_count(), partition_id);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

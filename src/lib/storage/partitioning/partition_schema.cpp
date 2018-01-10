@@ -25,12 +25,12 @@ uint64_t PartitionSchema::row_count() const {
 }
 
 void PartitionSchema::create_new_chunk(const std::vector<DataType>& column_types,
-                                               const std::vector<bool>& column_nullables) {
-  throw "create_new_chunk can not be used on partitioned tables";
+                                               const std::vector<bool>& column_nullables, PartitionID partition_id) {
+  _partitions.at(partition_id)->create_new_chunk(column_types, column_nullables);
 }
 
-void PartitionSchema::emplace_chunk(Chunk& chunk, uint16_t column_count) {
-  throw "emplace_chunk can not be used on partitioned tables";
+void PartitionSchema::emplace_chunk(Chunk& chunk, uint16_t column_count, PartitionID partition_id) {
+  _partitions.at(partition_id)->emplace_chunk(chunk, column_count);
 }
 
 Chunk& PartitionSchema::get_modifiable_chunk(ChunkID chunk_id, PartitionID partition_id) {

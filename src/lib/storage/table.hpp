@@ -60,16 +60,16 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // creates a new chunk and appends it
-  void create_new_chunk();
+  void create_new_chunk(PartitionID partition_id = PartitionID{0});
 
   // returns the chunk with the given id
-  Chunk& get_modifiable_chunk(ChunkID chunk_id, PartitionID partition_id=PartitionID{0});
-  const Chunk& get_chunk(ChunkID chunk_id, PartitionID partition_id=PartitionID{0}) const;
-  ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id=PartitionID{0});
-  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id=PartitionID{0}) const;
+  Chunk& get_modifiable_chunk(ChunkID chunk_id, PartitionID partition_id = PartitionID{0});
+  const Chunk& get_chunk(ChunkID chunk_id, PartitionID partition_id = PartitionID{0}) const;
+  ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id = PartitionID{0});
+  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id = PartitionID{0}) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
-  void emplace_chunk(Chunk chunk);
+  void emplace_chunk(Chunk chunk, PartitionID partition_id = PartitionID{0});
 
   // Returns a list of all column names.
   const std::vector<std::string>& column_names() const;

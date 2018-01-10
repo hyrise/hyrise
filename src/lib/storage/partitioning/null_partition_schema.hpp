@@ -19,13 +19,7 @@ class NullPartitionSchema : public PartitionSchema {
   AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const override;
   uint64_t row_count() const;
 
-  // specific for NullPartitionSchema
-  void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
-  void emplace_chunk(Chunk& chunk, uint16_t column_count) override;
-
   // Return false, since NullPartitioningSchema is only a list of chunks.
-  // Indicates that NullPartitionSchema can handle:
-  // create_new_chunk, emplace_chunk, get_chunk, get_chunk_with_access_counting
   bool is_partitioned() const override { return false; }
 };
 
