@@ -13,14 +13,14 @@ namespace opossum {
 
 std::unique_ptr<BaseZeroSuppressionVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t>& vector,
                                                                     const PolymorphicAllocator<size_t>& alloc) {
-  init(vector.size());
+  init(vector.size(), alloc);
   for (auto value : vector) append(value);
   finish();
 
-  return std::make_unique<SimdBp128Vector>(std::move(_data), _size);
+  return std::make_unique<SimdBp128Vector>(std::move(*_data), _size);
 }
 
-void SimdBp128Encoder::init(size_t size) {
+void SimdBp128Encoder::init(size_t size, const PolymorphicAllocator<size_t>& alloc) {
   constexpr auto max_bit_size = 32u;
 
   // Ceiling of integer devision
@@ -29,8 +29,8 @@ void SimdBp128Encoder::init(size_t size) {
   const auto num_blocks = div_ceil(size, Packing::block_size) * max_bit_size;
   const auto num_meta_blocks = div_ceil(size, Packing::meta_block_size);
   const auto data_size = num_blocks + num_meta_blocks;
-  _data = pmr_vector<uint128_t>(data_size);
 
+  _data = std::make_unique<pmr_vector<uint128_t>>(data_size, alloc);
   _data_index = 0u;
   _meta_block_index = 0u;
   _size = size;
@@ -50,8 +50,8 @@ void SimdBp128Encoder::finish() {
   }
 
   // Resize vector to actual size
-  _data.resize(_data_index);
-  _data.shrink_to_fit();
+  _data->resize(_data_index);
+  _data->shrink_to_fit();
 }
 
 bool SimdBp128Encoder::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
@@ -97,7 +97,7 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Packing::b
 }
 
 void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
-  Packing::write_meta_info(bits_needed.data(), _data.data() + _data_index);
+  Packing::write_meta_info(bits_needed.data(), _data->data() + _data_index);
   ++_data_index;
 }
 
@@ -107,7 +107,7 @@ void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,
 
   auto in = _pending_meta_block.data();
   for (auto block_index = 0u; block_index < num_blocks; ++block_index) {
-    const auto out = _data.data() + _data_index;
+    const auto out = _data->data() + _data_index;
     Packing::pack_block(in, out, bits_needed[block_index]);
 
     in += Packing::block_size;

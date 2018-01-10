@@ -34,7 +34,7 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
 }
 
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
-                                          std::shared_ptr<BaseValueColumn> column) {
+                                                 std::shared_ptr<BaseValueColumn> column) {
   auto encoder = create_encoder(encoding_type);
   return encoder->encode(data_type, column);
 }

@@ -12,22 +12,19 @@ class FixedSizeByteAlignedEncoder : public BaseZeroSuppressionEncoder {
  public:
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
                                                     const PolymorphicAllocator<size_t>& alloc) final;
-
- private:
-  pmr_vector<UnsignedIntType> _data;
 };
 
 template <typename UnsignedIntType>
 std::unique_ptr<BaseZeroSuppressionVector> FixedSizeByteAlignedEncoder<UnsignedIntType>::encode(
     const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc) {
-  _data = pmr_vector<UnsignedIntType>{alloc};
-  _data.reserve(vector.size());
+  auto data = pmr_vector<UnsignedIntType>(alloc);
+  data.reserve(vector.size());
 
   for (auto value : vector) {
-    _data.push_back(static_cast<UnsignedIntType>(value));
+    data.push_back(static_cast<UnsignedIntType>(value));
   }
 
-  return std::make_unique<FixedSizeByteAlignedVector<UnsignedIntType>>(std::move(_data));
+  return std::make_unique<FixedSizeByteAlignedVector<UnsignedIntType>>(std::move(data));
 }
 
 }  // namespace opossum

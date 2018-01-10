@@ -9,6 +9,7 @@
 #include "storage/encoded_columns/dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/zero_suppression/utils.hpp"
+#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -29,7 +30,9 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()};
+    const auto alloc = values.get_allocator();
+
+    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -84,13 +87,13 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     }
 
     // We need to increment the dictionary size here because of possible null values.
-    const auto zs_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
+    [[maybe_unused]] const auto zs_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
 
-    auto encoded_attribute_vector = encode_by_zs_type(zs_type, attribute_vector, attribute_vector.get_allocator());
+    auto encoded_attribute_vector = encode_by_zs_type(ZsType::SimdBp128, attribute_vector, alloc);
 
-    auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
+    auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
-    return std::make_shared<DictionaryColumn<T>>(dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
+    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
   }
 
  private:
