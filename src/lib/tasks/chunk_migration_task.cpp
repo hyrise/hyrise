@@ -26,7 +26,7 @@ void ChunkMigrationTask::_on_execute() {
   for (auto chunk_id : _chunk_ids) {
     DebugAssert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
-    auto& chunk = table->get_chunk(chunk_id);
+    auto& chunk = table->get_modifiable_chunk(chunk_id);
 
     // Only completed chunks are supported for migration, because they
     // are largely immutable. Currently there is no concurrency control

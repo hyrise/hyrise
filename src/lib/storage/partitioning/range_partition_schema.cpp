@@ -7,7 +7,7 @@ RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTy
   _partitions.reserve(bounds.size() + 1);
 
   for (size_t index = 0; index < bounds.size() + 1; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>(PartitionID{index}));
+    _partitions.emplace_back(std::make_shared<Partition>(static_cast<PartitionID>(index)));
   }
 }
 

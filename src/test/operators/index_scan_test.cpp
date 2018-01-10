@@ -36,7 +36,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
-      auto& chunk = table->get_chunk(chunk_id);
+      auto& chunk = table->get_modifiable_chunk(chunk_id);
       chunk.template create_index<DerivedIndex>(_column_ids);
     }
 
