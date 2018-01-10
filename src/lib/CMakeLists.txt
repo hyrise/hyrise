@@ -148,8 +148,8 @@ set(
     optimizer/column_statistics.hpp
     base_expression.cpp
     base_expression.hpp
-    operators/operator_expression.cpp
-    operators/operator_expression.hpp
+    operators/pqp_expression.cpp
+    operators/pqp_expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp

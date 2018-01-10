@@ -12,7 +12,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -124,10 +124,10 @@ TaskVector OrderStatusRefImpl::get_customer_by_name(const std::string c_last, co
 
   auto projection = std::make_shared<opossum::Projection>(
       third_filter, opossum::Projection::ColumnExpressions(
-                        {opossum::OperatorExpression::create_column(opossum::ColumnID{16} /* "C_BALANCE" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{3}) /* "C_FIRST" */,
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{4} /* "C_MIDDLE" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{0} /* "C_ID" */)}));
+                        {opossum::PQPExpression::create_column(opossum::ColumnID{16} /* "C_BALANCE" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{3}) /* "C_FIRST" */,
+                         opossum::PQPExpression::create_column(opossum::ColumnID{4} /* "C_MIDDLE" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{0} /* "C_ID" */)}));
 
   auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{1} /* "C_FIRST" */,
                                               opossum::OrderByMode::Ascending);
@@ -171,10 +171,10 @@ TaskVector OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_
 
   auto projection = std::make_shared<opossum::Projection>(
       third_filter, opossum::Projection::ColumnExpressions(
-                        {opossum::OperatorExpression::create_column(opossum::ColumnID{16} /* "C_BALANCE" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{3} /* "C_FIRST" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{4} /* "C_MIDDLE" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{5} /* "C_LAST" */)}));
+                        {opossum::PQPExpression::create_column(opossum::ColumnID{16} /* "C_BALANCE" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{3} /* "C_FIRST" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{4} /* "C_MIDDLE" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{5} /* "C_LAST" */)}));
 
   auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
   auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
@@ -215,9 +215,9 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
   // "O_ID", "O_CARRIER_ID", "O_ENTRY_D"
   auto projection = std::make_shared<opossum::Projection>(
       third_filter,
-      opossum::Projection::ColumnExpressions({opossum::OperatorExpression::create_column(opossum::ColumnID{0}),
-                                              opossum::OperatorExpression::create_column(opossum::ColumnID{5}),
-                                              opossum::OperatorExpression::create_column(opossum::ColumnID{4})}));
+      opossum::Projection::ColumnExpressions({opossum::PQPExpression::create_column(opossum::ColumnID{0}),
+                                              opossum::PQPExpression::create_column(opossum::ColumnID{5}),
+                                              opossum::PQPExpression::create_column(opossum::ColumnID{4})}));
 
   auto sort =
       std::make_shared<opossum::Sort>(projection, opossum::ColumnID{0} /* "O_ID" */, opossum::OrderByMode::Descending);
@@ -265,11 +265,11 @@ TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, c
 
   auto projection = std::make_shared<opossum::Projection>(
       third_filter, opossum::Projection::ColumnExpressions(
-                        {opossum::OperatorExpression::create_column(opossum::ColumnID{4} /* "OL_I_ID" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{5} /* "OL_SUPPLY_W_ID" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{7} /* "OL_QUANTITY" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{8} /* "OL_AMOUNT" */),
-                         opossum::OperatorExpression::create_column(opossum::ColumnID{6} /* "OL_DELIVERY_D" */)}));
+                        {opossum::PQPExpression::create_column(opossum::ColumnID{4} /* "OL_I_ID" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{5} /* "OL_SUPPLY_W_ID" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{7} /* "OL_QUANTITY" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{8} /* "OL_AMOUNT" */),
+                         opossum::PQPExpression::create_column(opossum::ColumnID{6} /* "OL_DELIVERY_D" */)}));
 
   auto gt_order_lines_task = std::make_shared<opossum::OperatorTask>(gt_order_lines);
   auto validate_task = std::make_shared<opossum::OperatorTask>(validate);

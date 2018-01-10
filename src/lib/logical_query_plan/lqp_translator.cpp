@@ -27,7 +27,7 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -240,14 +240,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
       Assert(aggregate_expression->aggregate_function_arguments().size() == 1,
              "Aggregate functions with more than one argument not supported right now");
       const auto argument_lqp_expression =
-          std::dynamic_pointer_cast<OperatorExpression>(aggregate_expression->aggregate_function_arguments()[0]);
+          std::dynamic_pointer_cast<PQPExpression>(aggregate_expression->aggregate_function_arguments()[0]);
       DebugAssert(argument_lqp_expression, "Expression in AggregateNode was not an LQPExpression");
 
       projection_expressions.emplace_back(argument_lqp_expression);
 
       // Change the expression list of the expression representing the aggregate.
       aggregate_expression->set_aggregate_function_arguments(
-          {OperatorExpression::create_column(ColumnID{current_column_id})});
+          {PQPExpression::create_column(ColumnID{current_column_id})});
       current_column_id++;
     }
 
@@ -265,8 +265,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();
     const auto argument_expression =
-        std::dynamic_pointer_cast<OperatorExpression>(aggregate_expression->aggregate_function_arguments()[0]);
-    DebugAssert(argument_expression, "Couldn't cast Expression to OperatorExpression.");
+        std::dynamic_pointer_cast<PQPExpression>(aggregate_expression->aggregate_function_arguments()[0]);
+    DebugAssert(argument_expression, "Couldn't cast Expression to PQPExpression.");
 
     if (aggregate_function_type == AggregateFunction::Count && argument_expression->type() == ExpressionType::Star) {
       // COUNT(*) does not specify a ColumnID
@@ -409,16 +409,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
   }
 }
 
-std::vector<std::shared_ptr<OperatorExpression>> LQPTranslator::_translate_expressions(
+std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->left_child() && !node->right_child(), "Can only translate expressions if there is one input node");
 
-  std::vector<std::shared_ptr<OperatorExpression>> operator_expressions(lqp_expressions.size());
+  std::vector<std::shared_ptr<PQPExpression>> operator_expressions(lqp_expressions.size());
 
   std::transform(lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(),
                  [&](const auto& lqp_expression) {
-                   return std::make_shared<OperatorExpression>(lqp_expression, node->left_child());
+                   return std::make_shared<PQPExpression>(lqp_expression, node->left_child());
                  });
 
   return operator_expressions;

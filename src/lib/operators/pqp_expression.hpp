@@ -12,17 +12,17 @@ class LQPExpression;
 /**
  * Expression type used in PQPs, using ColumnIDs to refer to Columns
  */
-class OperatorExpression : public BaseExpression<OperatorExpression> {
+class PQPExpression : public BaseExpression<PQPExpression> {
  public:
-  static std::shared_ptr<OperatorExpression> create_column(const ColumnID column_id,
+  static std::shared_ptr<PQPExpression> create_column(const ColumnID column_id,
                                                            const std::optional<std::string>& alias = std::nullopt);
 
-  using BaseExpression<OperatorExpression>::BaseExpression;
+  using BaseExpression<PQPExpression>::BaseExpression;
 
   /**
    * Translates a LQPExpression into a OperatorExpression, given the node that the LQPExpression is contained in
    */
-  OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
+  PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                      const std::shared_ptr<AbstractLQPNode>& node);
 
   ColumnID column_id() const;
@@ -30,10 +30,10 @@ class OperatorExpression : public BaseExpression<OperatorExpression> {
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
                         bool is_root = true) const override;
 
-  bool operator==(const OperatorExpression& other) const;
+  bool operator==(const PQPExpression& other) const;
 
  protected:
-  void _deep_copy_impl(const std::shared_ptr<OperatorExpression>& copy) const override;
+  void _deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const override;
 
  private:
   std::optional<ColumnID> _column_id;

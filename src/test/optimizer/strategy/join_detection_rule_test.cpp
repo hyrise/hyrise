@@ -12,7 +12,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "optimizer/strategy/join_detection_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_translator.hpp"

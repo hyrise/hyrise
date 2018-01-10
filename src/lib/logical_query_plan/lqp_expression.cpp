@@ -2,7 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "lqp_column_origin.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

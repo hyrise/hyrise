@@ -12,7 +12,7 @@ namespace opossum {
 class AbstractOperator;
 class TransactionContext;
 class LQPExpression;
-class OperatorExpression;
+class PQPExpression;
 
 /**
  * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
@@ -46,7 +46,7 @@ class LQPTranslator final : private Noncopyable {
   std::shared_ptr<AbstractOperator> _translate_show_columns_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Translate LQP- to OperatorExpressions
-  std::vector<std::shared_ptr<OperatorExpression>> _translate_expressions(
+  std::vector<std::shared_ptr<PQPExpression>> _translate_expressions(
       const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
 

@@ -1,4 +1,4 @@
-#include "operator_expression.hpp"
+#include "pqp_expression.hpp"
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -7,18 +7,18 @@
 
 namespace opossum {
 
-std::shared_ptr<OperatorExpression> OperatorExpression::create_column(const ColumnID column_id,
+std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID column_id,
                                                                       const std::optional<std::string>& alias) {
-  auto expression = std::make_shared<OperatorExpression>(ExpressionType::Column);
+  auto expression = std::make_shared<PQPExpression>(ExpressionType::Column);
   expression->_column_id = column_id;
   expression->_alias = alias;
 
   return expression;
 }
 
-OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
+PQPExpression::PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                                        const std::shared_ptr<AbstractLQPNode>& node)
-    : BaseExpression<OperatorExpression>(lqp_expression->_type) {
+    : BaseExpression<PQPExpression>(lqp_expression->_type) {
   /**
    * Ugly, but anyway: Copy all fields from LQPExpression and transform ColumnOrigins to ColumnIDs
    */
@@ -33,25 +33,25 @@ OperatorExpression::OperatorExpression(const std::shared_ptr<LQPExpression>& lqp
   }
 
   for (auto& aggregate_function_argument : lqp_expression->_aggregate_function_arguments) {
-    _aggregate_function_arguments.emplace_back(std::make_shared<OperatorExpression>(aggregate_function_argument, node));
+    _aggregate_function_arguments.emplace_back(std::make_shared<PQPExpression>(aggregate_function_argument, node));
   }
 
   if (lqp_expression->left_child()) {
-    _left_child = std::make_shared<OperatorExpression>(lqp_expression->left_child(), node);
+    _left_child = std::make_shared<PQPExpression>(lqp_expression->left_child(), node);
   }
   if (lqp_expression->right_child()) {
-    _right_child = std::make_shared<OperatorExpression>(lqp_expression->right_child(), node);
+    _right_child = std::make_shared<PQPExpression>(lqp_expression->right_child(), node);
   }
 
   _alias = lqp_expression->_alias;
 }
 
-ColumnID OperatorExpression::column_id() const {
+ColumnID PQPExpression::column_id() const {
   DebugAssert(_column_id, "Expression " + expression_type_to_string.at(_type) + " does not have a ColumnID");
   return *_column_id;
 }
 
-std::string OperatorExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
+std::string PQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                           bool is_root) const {
   if (type() == ExpressionType::Column) {
     if (input_column_names) {
@@ -61,17 +61,17 @@ std::string OperatorExpression::to_string(const std::optional<std::vector<std::s
     }
     return std::string("ColumnID #" + std::to_string(column_id()));
   }
-  return BaseExpression<OperatorExpression>::to_string(input_column_names, is_root);
+  return BaseExpression<PQPExpression>::to_string(input_column_names, is_root);
 }
 
-bool OperatorExpression::operator==(const OperatorExpression& other) const {
-  if (!BaseExpression<OperatorExpression>::operator==(other)) {
+bool PQPExpression::operator==(const PQPExpression& other) const {
+  if (!BaseExpression<PQPExpression>::operator==(other)) {
     return false;
   }
   return _column_id == other._column_id;
 }
 
-void OperatorExpression::_deep_copy_impl(const std::shared_ptr<OperatorExpression>& copy) const {
+void PQPExpression::_deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const {
   copy->_column_id = _column_id;
 }
 }  // namespace opossum

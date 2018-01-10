@@ -25,7 +25,7 @@
 #include "operators/limit.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"

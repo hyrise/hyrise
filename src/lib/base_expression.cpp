@@ -11,7 +11,7 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 
@@ -393,6 +393,6 @@ std::shared_ptr<DerivedExpressionType> BaseExpression<DerivedExpressionType>::cr
 }
 
 template class BaseExpression<LQPExpression>;
-template class BaseExpression<OperatorExpression>;
+template class BaseExpression<PQPExpression>;
 
 }  // namespace opossum

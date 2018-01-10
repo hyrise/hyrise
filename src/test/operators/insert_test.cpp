@@ -9,7 +9,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -220,7 +220,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
   dummy_wrapper->execute();
 
-  auto literal = Projection::ColumnExpressions{OperatorExpression::create_literal(NullValue{})};
+  auto literal = Projection::ColumnExpressions{PQPExpression::create_literal(NullValue{})};
   auto projection = std::make_shared<Projection>(dummy_wrapper, literal);
   projection->execute();
 

@@ -10,7 +10,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -40,7 +40,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{0} /* "NO_O_ID" */, ScanType::GreaterThan, -1);
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {OperatorExpression::create_column(ColumnID{0} /* "NO_O_ID" */)};
+    Projection::ColumnExpressions columns = {PQPExpression::create_column(ColumnID{0} /* "NO_O_ID" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
     auto sort = std::make_shared<Sort>(projection, ColumnID{0} /* "NO_O_ID" */, OrderByMode::Ascending);
@@ -100,7 +100,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2} /* "O_W_ID" */, ScanType::Equals, w_id);
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {OperatorExpression::create_column(ColumnID{3} /* "O_C_ID" */)};
+    Projection::ColumnExpressions columns = {PQPExpression::create_column(ColumnID{3} /* "O_C_ID" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
@@ -134,11 +134,11 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {OperatorExpression::create_column(ColumnID{5} /* "O_CARRIER_ID" */)};
+    Projection::ColumnExpressions columns = {PQPExpression::create_column(ColumnID{5} /* "O_CARRIER_ID" */)};
 
     auto projection = std::make_shared<Projection>(val, columns);
 
-    Projection::ColumnExpressions values = {OperatorExpression::create_literal(o_carrier_id, {"O_CARRIER_ID"})};
+    Projection::ColumnExpressions values = {PQPExpression::create_literal(o_carrier_id, {"O_CARRIER_ID"})};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("ORDER", projection, updated_rows);
 
@@ -178,11 +178,11 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {OperatorExpression::create_column(ColumnID{6} /* "OL_DELIVERY_D" */)};
+    Projection::ColumnExpressions columns = {PQPExpression::create_column(ColumnID{6} /* "OL_DELIVERY_D" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
     Projection::ColumnExpressions values = {
-        OperatorExpression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
+        PQPExpression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("ORDER_LINE", projection, updated_rows);
 
@@ -257,12 +257,12 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {OperatorExpression::create_column(ColumnID{16} /* "C_BALANCE" */)};
+    Projection::ColumnExpressions columns = {PQPExpression::create_column(ColumnID{16} /* "C_BALANCE" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    Projection::ColumnExpressions values = {OperatorExpression::create_binary_operator(
-        ExpressionType::Addition, OperatorExpression::create_column(ColumnID{16}),
-        OperatorExpression::create_literal(ol_total))};
+    Projection::ColumnExpressions values = {PQPExpression::create_binary_operator(
+        ExpressionType::Addition, PQPExpression::create_column(ColumnID{16}),
+        PQPExpression::create_literal(ol_total))};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("CUSTOMER", projection, updated_rows);
 

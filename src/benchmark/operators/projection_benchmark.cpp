@@ -5,7 +5,7 @@
 
 #include "../benchmark_basic_fixture.hpp"
 #include "../table_generator.hpp"
-#include "operators/operator_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -36,7 +36,7 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {
   clear_cache();
 
-  Projection::ColumnExpressions expressions = {OperatorExpression::create_column(ColumnID{0} /* "a" */)};
+  Projection::ColumnExpressions expressions = {PQPExpression::create_column(ColumnID{0} /* "a" */)};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -48,9 +48,9 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark:
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benchmark::State& state) {
   clear_cache();
   // "a" + "b"
-  Projection::ColumnExpressions expressions = {OperatorExpression::create_binary_operator(
-      ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
-      OperatorExpression::create_column(ColumnID{1}))};
+  Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(
+      ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
+      PQPExpression::create_column(ColumnID{1}))};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -63,8 +63,8 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benc
   clear_cache();
 
   // "a" + 5
-  Projection::ColumnExpressions expressions = {OperatorExpression::create_binary_operator(
-      ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}), OperatorExpression::create_literal(5))};
+  Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(
+      ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_literal(5))};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {

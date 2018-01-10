@@ -190,7 +190,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
   // @}
 
   friend class LQPExpression;
-  friend class OperatorExpression;  // For creating OperatorExpressions from LQPExpressions
+  friend class PQPExpression;  // For creating OperatorExpressions from LQPExpressions
 };
 
 }  // namespace opossum
