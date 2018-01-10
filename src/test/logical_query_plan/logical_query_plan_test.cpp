@@ -43,22 +43,27 @@ class LogicalQueryPlanTest : public BaseTest {
 
     /**
      * Init complex graph.
-     * #[0] [MockTable]
-     *   \_[1] [MockTable]
-     *   |  \_[2] [MockTable]
-     *   |  |  \_[3] [MockTable]
-     *   |  |     \_[4] [MockTable]
-     *   |  |     \_[5] [MockTable]
-     *   |  \_[6] [MockTable]
-     *   |     \_Recurring Node --> [3]
-     *   |     \_Recurring Node --> [5]
-     *   \_[7] [MockTable]
+     * [0] [Cross Join]
+     *  \_[1] [Cross Join]
+     *  |  \_[2] [Predicate] a = 42
+     *  |  |  \_[3] [Cross Join]
+     *  |  |     \_[4] [MockTable]
+     *  |  |     \_[5] [MockTable]
+     *  |  \_[6] [Cross Join]
+     *  |     \_Recurring Node --> [3]
+     *  |     \_Recurring Node --> [5]
+     *  \_[7] [Cross Join]
      *     \_Recurring Node --> [3]
      *     \_Recurring Node --> [5]
      */
-    for (auto& node : _nodes) {
-      node = std::make_shared<MockNode>();
-    }
+    _nodes[6] = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "a"}}});
+    _nodes[7] = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
+    _nodes[0] = std::make_shared<JoinNode>(JoinMode::Cross);
+    _nodes[1] = std::make_shared<JoinNode>(JoinMode::Cross);
+    _nodes[2] = std::make_shared<PredicateNode>(LQPColumnOrigin{_nodes[6], ColumnID{0}}, ScanType::Equals, 42);
+    _nodes[3] = std::make_shared<JoinNode>(JoinMode::Cross);
+    _nodes[4] = std::make_shared<JoinNode>(JoinMode::Cross);
+    _nodes[5] = std::make_shared<JoinNode>(JoinMode::Cross);
 
     _nodes[5]->set_right_child(_nodes[7]);
     _nodes[0]->set_right_child(_nodes[4]);
@@ -73,7 +78,7 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[0]->set_left_child(_nodes[1]);
   }
 
-  std::array<std::shared_ptr<MockNode>, 8> _nodes;
+  std::array<std::shared_ptr<AbstractLQPNode>, 8> _nodes;
 
   std::shared_ptr<MockNode> _mock_node_a;
   std::shared_ptr<MockNode> _mock_node_b;
@@ -202,16 +207,16 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphPrinted) {
   std::stringstream stream;
   _nodes[0]->print(stream);
 
-  ASSERT_EQ(stream.str(), R"([0] [MockTable]
- \_[1] [MockTable]
- |  \_[2] [MockTable]
- |  |  \_[3] [MockTable]
+  ASSERT_EQ(stream.str(), R"([0] [Cross Join]
+ \_[1] [Cross Join]
+ |  \_[2] [Predicate] a = 42
+ |  |  \_[3] [Cross Join]
  |  |     \_[4] [MockTable]
  |  |     \_[5] [MockTable]
- |  \_[6] [MockTable]
+ |  \_[6] [Cross Join]
  |     \_Recurring Node --> [3]
  |     \_Recurring Node --> [5]
- \_[7] [MockTable]
+ \_[7] [Cross Join]
     \_Recurring Node --> [3]
     \_Recurring Node --> [5]
 )");
@@ -249,7 +254,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = std::make_shared<MockNode>();
+  auto new_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
   _nodes[5]->replace_with(new_node);
 
@@ -275,8 +280,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
-  auto new_node_a = std::make_shared<MockNode>();
-  auto new_node_b = std::make_shared<MockNode>();
+  auto new_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
   _nodes[6]->replace_with(new_node_a);
   _nodes[7]->replace_with(new_node_b);

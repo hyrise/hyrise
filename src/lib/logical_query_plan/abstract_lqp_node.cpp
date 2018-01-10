@@ -184,12 +184,12 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
 const std::vector<LQPColumnOrigin>& AbstractLQPNode::output_column_origins() const {
   /**
    * Default implementation of output_column_origins() will return the ColumnOrigins of the left_child if it exists,
-   * otherwise will pretend the all Columns originate in this node.
+   * otherwise will pretend that all Columns originate in this node.
    * Nodes with both children need to override this as the default implementation can't cover their behaviour.
    */
 
   if (!_output_column_origins) {
-    Assert(!left_child() || !right_child(), "Nodes with both children need to override");
+    Assert(!left_child() || !right_child(), "Nodes that have two children must override this method");
     if (left_child()) {
       _output_column_origins = left_child()->output_column_origins();
     } else {
@@ -207,7 +207,7 @@ std::optional<LQPColumnOrigin> AbstractLQPNode::find_column_origin_by_named_colu
     const NamedColumnReference& named_column_reference) const {
   /**
    * If this node carries an alias, that is different from that of the NamedColumnReference, we can't resolve the column
-   * in this node.
+   * in this node. E.g. in `SELECT t1.a FROM t1 AS something_else;` "t1.a" can't be resolved since it carries an alias.
    */
   const auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
   if (!named_column_reference_without_local_column_prefix) {
@@ -215,7 +215,7 @@ std::optional<LQPColumnOrigin> AbstractLQPNode::find_column_origin_by_named_colu
   }
 
   /**
-   * If the table name got resolved, look for the Column in the output of this node
+   * If the table name got resolved (i.e., the alias or name of this node equals the table name), look for the Column in the output of this node
    */
   if (!named_column_reference_without_local_column_prefix->table_name) {
     for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
@@ -269,8 +269,8 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     return shared_from_this();
   }
 
-  // If this node has an ALIAS, looking for the table_name for children is "blocked". THe same is true if there are no
-  // children
+  // If this node has an alias, it hides the names of tables in its children and search does not continue.
+  // Also, it does not need to continue if there are no children
   if (!left_child() || _table_alias) {
     return nullptr;
   }
@@ -281,7 +281,8 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     const auto table_name_origin_in_right_child = right_child()->find_table_name_origin(table_name);
 
     if (table_name_origin_in_left_child && table_name_origin_in_right_child) {
-      // Both children could resolve to the same Node, i.e. in UnionNodes that emulate an OR
+      // Both children could contain the table in the case of a diamond-shaped LQP as produced by an OR.
+      // This is legal as long as they ultimately resolve to the same table origin.
       Assert(table_name_origin_in_left_child == table_name_origin_in_right_child,
              "If a node has two children, both have to resolve a table name to the same node");
       return table_name_origin_in_left_child;

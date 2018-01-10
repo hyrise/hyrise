@@ -8,7 +8,8 @@
 namespace opossum {
 
 /**
- * Expression type used in LQPs, using LQPColumnOrigins to refer to Columns
+ * Expression type used in LQPs, using LQPColumnOrigins to refer to Columns.
+ * AbstractExpression handles all other possible contained types (literals, operators, ...).
  */
 class LQPExpression : public AbstractExpression<LQPExpression> {
  public:
@@ -19,6 +20,7 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
       const std::vector<LQPColumnOrigin>& column_origins,
       const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
+  // Necessary for the AbstractExpression<T>::create_*() methods
   using AbstractExpression<LQPExpression>::AbstractExpression;
 
   const LQPColumnOrigin& column_origin() const;

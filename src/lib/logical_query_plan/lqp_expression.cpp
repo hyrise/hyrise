@@ -42,7 +42,7 @@ const LQPColumnOrigin& LQPExpression::column_origin() const {
 }
 
 void LQPExpression::set_column_origin(const LQPColumnOrigin& column_origin) {
-  Assert(_type == ExpressionType::Column, "Can't set a LQPColumnOrigin on a non-column");
+  Assert(_type == ExpressionType::Column, "Can't set an LQPColumnOrigin on a non-column");
   _column_origin = column_origin;
 }
 

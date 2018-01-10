@@ -245,20 +245,4 @@ class Noncopyable {
   const Noncopyable& operator=(const Noncopyable&) = delete;
 };
 
-/**
- * Aggregates are defined by the Column (ColumnID for Operators, ColumnOrigin in LQP) they operate on and the aggregate
- * function they use.
- * Optionally, an alias can be specified to use as the output name.
- */
-template <typename ColumnReferenceType>
-struct AggregateColumnDefinitionTemplate {
-  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
-                                    const std::optional<std::string>& alias = std::nullopt)
-      : column(column), function(function), alias(alias) {}
-
-  std::optional<ColumnReferenceType> column;
-  AggregateFunction function;
-  std::optional<std::string> alias;
-};
-
 }  // namespace opossum

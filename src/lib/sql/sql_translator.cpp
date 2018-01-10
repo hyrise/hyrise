@@ -524,7 +524,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_having(const hsql::Ex
                               [&](const hsql::Expr& hsql_expr) {
                                 const auto column_operand_expression =
                                     HSQLExprTranslator::to_lqp_expression(hsql_expr, aggregate_node->left_child());
-                                return aggregate_node->get_column_origin_for_expression(column_operand_expression);
+                                return aggregate_node->get_column_origin_by_expression(column_operand_expression);
                               },
                               input_node);
 }

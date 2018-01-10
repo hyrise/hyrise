@@ -251,8 +251,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
  protected:
   /**
-   * Override and creat a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
-   * left_child and right_child are deep copies of the left and right child respectively, used for deep-copying
+   * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
+   * @param left_child and @param right_child are deep copies of the left and right child respectively, used for deep-copying
    * ColumnOrigins
    */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

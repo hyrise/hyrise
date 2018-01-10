@@ -204,7 +204,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
       });
 
   /**
-   * If there are arithmetic expressions create a Projection with:   *
+   * If there are arithmetic expressions create a Projection with:
    *  - GROUPBY columns
    *  - arithmetic expressions used as arguments for aggregate functions,
    *  - columns used as arguments for aggregate functions
@@ -241,7 +241,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
              "Aggregate functions with more than one argument not supported right now");
       const auto argument_lqp_expression =
           std::dynamic_pointer_cast<PQPExpression>(aggregate_expression->aggregate_function_arguments()[0]);
-      DebugAssert(argument_lqp_expression, "Expression in AggregateNode was not an LQPExpression");
+      DebugAssert(argument_lqp_expression, "Wrong expression type found in LQP. Bug.");
 
       projection_expressions.emplace_back(argument_lqp_expression);
 
@@ -412,7 +412,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  Assert(node->left_child() && !node->right_child(), "Can only translate expressions if there is one input node");
+  Assert(node->left_child() && !node->right_child(), "Can only translate expressions if there is one input node, can't resolve ColumnOrigins otherwise.");
 
   std::vector<std::shared_ptr<PQPExpression>> operator_expressions(lqp_expressions.size());
 

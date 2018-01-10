@@ -20,7 +20,8 @@ PQPExpression::PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expressio
                                        const std::shared_ptr<AbstractLQPNode>& node)
     : AbstractExpression<PQPExpression>(lqp_expression->_type) {
   /**
-   * Ugly, but anyway: Copy all fields from LQPExpression and transform ColumnOrigins to ColumnIDs
+   * Ugly, but unavoidable since LQPExpression and PQPExpression are distinct types and can't rely on default generated
+   * operator=(): Copy all fields from LQPExpression and transform ColumnOrigins to ColumnIDs
    */
 
   _value = lqp_expression->_value;

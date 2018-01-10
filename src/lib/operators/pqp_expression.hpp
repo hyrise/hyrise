@@ -10,13 +10,15 @@ namespace opossum {
 class LQPExpression;
 
 /**
- * Expression type used in PQPs, using ColumnIDs to refer to Columns
+ * Expression type used in PQPs, using ColumnIDs to refer to Columns.
+ * AbstractExpression handles all other possible contained types (literals, operators, ...).
  */
 class PQPExpression : public AbstractExpression<PQPExpression> {
  public:
   static std::shared_ptr<PQPExpression> create_column(const ColumnID column_id,
                                                            const std::optional<std::string>& alias = std::nullopt);
 
+  // Necessary for the AbstractExpression<T>::create_*() methods
   using AbstractExpression<PQPExpression>::AbstractExpression;
 
   /**

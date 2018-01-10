@@ -24,6 +24,22 @@ namespace opossum {
 
 struct GroupByContext;
 
+/**
+ * Aggregates are defined by the Column (ColumnID for Operators, ColumnOrigin in LQP) they operate on and the aggregate
+ * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
+ * Optionally, an alias can be specified to use as the output name.
+ */
+template <typename ColumnReferenceType>
+struct AggregateColumnDefinitionTemplate {
+  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
+                                    const std::optional<std::string>& alias = std::nullopt)
+  : column(column), function(function), alias(alias) {}
+
+  std::optional<ColumnReferenceType> column;
+  AggregateFunction function;
+  std::optional<std::string> alias;
+};
+
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
