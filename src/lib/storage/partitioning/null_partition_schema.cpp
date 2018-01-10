@@ -34,16 +34,4 @@ void NullPartitionSchema::emplace_chunk(Chunk& chunk, uint16_t column_count) {
   _partitions.front()->emplace_chunk(chunk, column_count);
 }
 
-Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) { return _partitions.front()->get_chunk(chunk_id); }
-
-const Chunk& NullPartitionSchema::get_chunk(ChunkID chunk_id) const { return _partitions.front()->get_chunk(chunk_id); }
-
-ProxyChunk NullPartitionSchema::get_chunk_with_access_counting(ChunkID chunk_id) {
-  return _partitions.front()->get_chunk_with_access_counting(chunk_id);
-}
-
-const ProxyChunk NullPartitionSchema::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  return _partitions.front()->get_chunk_with_access_counting(chunk_id);
-}
-
 }  // namespace opossum

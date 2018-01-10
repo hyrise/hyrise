@@ -127,28 +127,20 @@ const std::vector<DataType>& Table::column_types() const { return _column_types;
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
-Chunk& Table::get_chunk(ChunkID chunk_id) {
-  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-
-  return _partition_schema->get_chunk(chunk_id);
+Chunk& Table::get_modifiable_chunk(ChunkID chunk_id, PartitionID partition_id) {
+  return _partition_schema->get_modifiable_chunk(chunk_id, partition_id);
 }
 
-const Chunk& Table::get_chunk(ChunkID chunk_id) const {
-  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-
-  return _partition_schema->get_chunk(chunk_id);
+const Chunk& Table::get_chunk(ChunkID chunk_id, PartitionID partition_id) const {
+  return _partition_schema->get_chunk(chunk_id, partition_id);
 }
 
-ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
-  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-
-  return _partition_schema->get_chunk_with_access_counting(chunk_id);
+ProxyChunk Table::get_modifiable_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) {
+  return _partition_schema->get_modifiable_chunk_with_access_counting(chunk_id, partition_id);
 }
 
-const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  DebugAssert(!this->is_partitioned(), "get_chunk() does not work on partitioned tables");
-
-  return _partition_schema->get_chunk_with_access_counting(chunk_id);
+const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) const {
+  return _partition_schema->get_chunk_with_access_counting(chunk_id, partition_id);
 }
 
 void Table::emplace_chunk(Chunk chunk) {

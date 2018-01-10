@@ -68,7 +68,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right
   const auto& left_chunk = _input_table_left()->get_chunk(ChunkID{0});
   for (ChunkID chunk_id{0}; chunk_id < insert_table->chunk_count(); ++chunk_id) {
-    auto& insert_chunk = insert_table->get_chunk(chunk_id);
+    auto& insert_chunk = insert_table->get_modifiable_chunk(chunk_id);
     auto& right_chunk = _input_table_right()->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {

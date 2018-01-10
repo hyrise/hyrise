@@ -35,7 +35,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
     _pos_lists.emplace_back(pos_list);
 
     for (const auto& row_id : *pos_list) {
-      auto& referenced_chunk = _table->get_chunk(row_id.chunk_id);
+      auto& referenced_chunk = _table->get_modifiable_chunk(row_id.chunk_id);
 
       auto expected = 0u;
       // Actual row lock for delete happens here
@@ -56,7 +56,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 void Delete::_on_commit_records(const CommitID cid) {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
-      auto& chunk = _table->get_chunk(row_id.chunk_id);
+      auto& chunk = _table->get_modifiable_chunk(row_id.chunk_id);
 
       chunk.mvcc_columns()->end_cids[row_id.chunk_offset] = cid;
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
@@ -72,7 +72,7 @@ void Delete::_finish_commit() {
 void Delete::_on_rollback_records() {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
-      auto& chunk = _table->get_chunk(row_id.chunk_id);
+      auto& chunk = _table->get_modifiable_chunk(row_id.chunk_id);
 
       auto expected = _transaction_id;
 

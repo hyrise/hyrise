@@ -129,7 +129,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
-      auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
+      auto& current_chunk = _target_table->get_modifiable_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
       auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
@@ -160,7 +160,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
        target_chunk_id++) {
-    auto& target_chunk = _target_table->get_chunk(target_chunk_id);
+    auto& target_chunk = _target_table->get_modifiable_chunk(target_chunk_id);
 
     const auto current_num_rows_to_insert =
         std::min(target_chunk.size() - start_index, total_rows_to_insert - input_offset);
@@ -208,7 +208,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
 void Insert::_on_commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
-    auto& chunk = _target_table->get_chunk(row_id.chunk_id);
+    auto& chunk = _target_table->get_modifiable_chunk(row_id.chunk_id);
 
     auto mvcc_columns = chunk.mvcc_columns();
     mvcc_columns->begin_cids[row_id.chunk_offset] = cid;
@@ -218,7 +218,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 
 void Insert::_on_rollback_records() {
   for (auto row_id : _inserted_rows) {
-    auto& chunk = _target_table->get_chunk(row_id.chunk_id);
+    auto& chunk = _target_table->get_modifiable_chunk(row_id.chunk_id);
     // We set the begin and end cids to 0 (effectively making it invisible for everyone) so that the ChunkCompression
     // does not think that this row is still incomplete. We need to make sure that the end is written before the begin.
     chunk.mvcc_columns()->end_cids[row_id.chunk_offset] = 0u;

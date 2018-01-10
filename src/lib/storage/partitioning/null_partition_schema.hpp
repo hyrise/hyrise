@@ -22,10 +22,6 @@ class NullPartitionSchema : public PartitionSchema {
   // specific for NullPartitionSchema
   void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
   void emplace_chunk(Chunk& chunk, uint16_t column_count) override;
-  Chunk& get_chunk(ChunkID chunk_id) override;
-  const Chunk& get_chunk(ChunkID chunk_id) const override;
-  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) override;
-  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const override;
 
   // Return false, since NullPartitioningSchema is only a list of chunks.
   // Indicates that NullPartitionSchema can handle:

@@ -589,10 +589,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
         auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
                                                                 ref_column->referenced_column_id(), new_pos_list);
-        output_table->get_chunk(ChunkID{0}).add_column(new_ref_column);
+        output_table->get_modifiable_chunk(ChunkID{0}).add_column(new_ref_column);
       } else {
         auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
-        output_table->get_chunk(ChunkID{0}).add_column(new_ref_column);
+        output_table->get_modifiable_chunk(ChunkID{0}).add_column(new_ref_column);
       }
     }
   }

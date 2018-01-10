@@ -133,13 +133,13 @@ void DictionaryCompression::compress_chunks(Table& table, const std::vector<Chun
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 
-    compress_chunk(table.column_types(), table.get_chunk(chunk_id));
+    compress_chunk(table.column_types(), table.get_modifiable_chunk(chunk_id));
   }
 }
 
 void DictionaryCompression::compress_table(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    auto& chunk = table.get_chunk(chunk_id);
+    auto& chunk = table.get_modifiable_chunk(chunk_id);
 
     compress_chunk(table.column_types(), chunk);
   }

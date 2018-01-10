@@ -24,9 +24,9 @@ class Partition {
   ChunkID chunk_count() const;
   void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
   void emplace_chunk(Chunk& chunk, uint16_t column_count);
-  Chunk& get_chunk(ChunkID chunk_id);
+  Chunk& get_modifiable_chunk(ChunkID chunk_id);
   const Chunk& get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
+  ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
   TableType get_type(uint16_t column_count) const;
   AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;

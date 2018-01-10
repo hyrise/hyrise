@@ -59,11 +59,14 @@ class Table : private Noncopyable {
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
+  // creates a new chunk and appends it
+  void create_new_chunk();
+
   // returns the chunk with the given id
-  Chunk& get_chunk(ChunkID chunk_id);
-  const Chunk& get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
-  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
+  Chunk& get_modifiable_chunk(ChunkID chunk_id, PartitionID partition_id=PartitionID{0});
+  const Chunk& get_chunk(ChunkID chunk_id, PartitionID partition_id=PartitionID{0}) const;
+  ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id=PartitionID{0});
+  const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id=PartitionID{0}) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
   void emplace_chunk(Chunk chunk);
@@ -127,9 +130,6 @@ class Table : private Noncopyable {
 
     return get<T>(_partition_schema->get_value(column_id, row_number));
   }
-
-  // creates a new chunk and appends it
-  void create_new_chunk();
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 

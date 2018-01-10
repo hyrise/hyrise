@@ -99,7 +99,7 @@ void Partition::emplace_chunk(Chunk& chunk, uint16_t column_count) {
   _chunks.emplace_back(std::move(chunk));
 }
 
-Chunk& Partition::get_chunk(ChunkID chunk_id) {
+Chunk& Partition::get_modifiable_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
@@ -109,7 +109,7 @@ const Chunk& Partition::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
-ProxyChunk Partition::get_chunk_with_access_counting(ChunkID chunk_id) {
+ProxyChunk Partition::get_modifiable_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return ProxyChunk(_chunks[chunk_id]);
 }
