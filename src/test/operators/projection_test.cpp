@@ -72,12 +72,13 @@ class OperatorsProjectionTest : public BaseTest {
         ExpressionType::Addition, OperatorExpression::create_column(ColumnID{0}),
         OperatorExpression::create_column(ColumnID{1}), {"sum"})};
 
-    _div_a_b_expr = Projection::ColumnExpressions{
-        OperatorExpression::create_binary_operator(ExpressionType::Division, OperatorExpression::create_column(ColumnID{0}),
-                                                   OperatorExpression::create_column(ColumnID{1}), {"div"})};
+    _div_a_b_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
+        ExpressionType::Division, OperatorExpression::create_column(ColumnID{0}),
+        OperatorExpression::create_column(ColumnID{1}), {"div"})};
 
     _div_a_zero_expr = Projection::ColumnExpressions{OperatorExpression::create_binary_operator(
-        ExpressionType::Division, OperatorExpression::create_column(ColumnID{0}), OperatorExpression::create_literal(0), {"div"})};
+        ExpressionType::Division, OperatorExpression::create_column(ColumnID{0}), OperatorExpression::create_literal(0),
+        {"div"})};
 
     // Projection Expression: a
     _a_expr = Projection::ColumnExpressions{OperatorExpression::create_column(ColumnID{0})};
