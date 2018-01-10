@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_expression.hpp"
+#include "abstract_expression.hpp"
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

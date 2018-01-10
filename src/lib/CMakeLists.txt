@@ -146,8 +146,8 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    base_expression.cpp
-    base_expression.hpp
+    abstract_expression.cpp
+    abstract_expression.hpp
     operators/pqp_expression.cpp
     operators/pqp_expression.hpp
     optimizer/optimizer.cpp

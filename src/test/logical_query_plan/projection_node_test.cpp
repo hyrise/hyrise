@@ -6,7 +6,7 @@
 
 #include "base_test.hpp"
 
-#include "base_expression.hpp"
+#include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"

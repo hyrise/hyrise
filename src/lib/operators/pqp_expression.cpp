@@ -18,7 +18,7 @@ std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID colum
 
 PQPExpression::PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                                        const std::shared_ptr<AbstractLQPNode>& node)
-    : BaseExpression<PQPExpression>(lqp_expression->_type) {
+    : AbstractExpression<PQPExpression>(lqp_expression->_type) {
   /**
    * Ugly, but anyway: Copy all fields from LQPExpression and transform ColumnOrigins to ColumnIDs
    */
@@ -61,11 +61,11 @@ std::string PQPExpression::to_string(const std::optional<std::vector<std::string
     }
     return std::string("ColumnID #" + std::to_string(column_id()));
   }
-  return BaseExpression<PQPExpression>::to_string(input_column_names, is_root);
+  return AbstractExpression<PQPExpression>::to_string(input_column_names, is_root);
 }
 
 bool PQPExpression::operator==(const PQPExpression& other) const {
-  if (!BaseExpression<PQPExpression>::operator==(other)) {
+  if (!AbstractExpression<PQPExpression>::operator==(other)) {
     return false;
   }
   return _column_id == other._column_id;

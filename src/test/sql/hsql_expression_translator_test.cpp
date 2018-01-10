@@ -5,7 +5,7 @@
 
 #include "../base_test.hpp"
 
-#include "base_expression.hpp"
+#include "abstract_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"

@@ -51,11 +51,11 @@ std::string LQPExpression::to_string(const std::optional<std::vector<std::string
   if (type() == ExpressionType::Column) {
     return column_origin().description();
   }
-  return BaseExpression<LQPExpression>::to_string(input_column_names, is_root);
+  return AbstractExpression<LQPExpression>::to_string(input_column_names, is_root);
 }
 
 bool LQPExpression::operator==(const LQPExpression& other) const {
-  if (!BaseExpression<LQPExpression>::operator==(other)) {
+  if (!AbstractExpression<LQPExpression>::operator==(other)) {
     return false;
   }
   return _column_origin == other._column_origin;

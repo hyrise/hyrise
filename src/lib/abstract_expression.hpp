@@ -15,7 +15,8 @@ namespace opossum {
 class AbstractLQPNode;
 
 /**
- * CRTP class forming the base class for LQPExpression and OperatorExpression
+ * CRTP class forming the base class for LQPExpression and PQPExpression. CRTP so pointers to children have the
+ * correct type et al. PQPExpressions use ColumnIDs to refer to Columns, LQPExpressions use LQPColumnOrigins.
  *
  * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
  * and especially its optimizer.
@@ -28,7 +29,7 @@ class AbstractLQPNode;
  * approach used in hsql::Expr.
  */
 template <typename DerivedExpressionType>
-class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType>, private Noncopyable {
+class AbstractExpression : public std::enable_shared_from_this<DerivedExpressionType>, private Noncopyable {
  public:
   /*
    * This constructor is meant for internal use only and therefore should be private.
@@ -47,7 +48,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
    *
    * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
-  explicit BaseExpression(ExpressionType type);
+  explicit AbstractExpression(ExpressionType type);
 
   // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
   std::shared_ptr<DerivedExpressionType> deep_copy() const;
@@ -157,7 +158,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
 
  protected:
   // Not to be used directly, derived classes should implement it in the public scope and use this internally
-  bool operator==(const BaseExpression& other) const;
+  bool operator==(const AbstractExpression& other) const;
 
   virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpressionType>& copy) const = 0;
 

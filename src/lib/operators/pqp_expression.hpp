@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "base_expression.hpp"
+#include "abstract_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -12,15 +12,15 @@ class LQPExpression;
 /**
  * Expression type used in PQPs, using ColumnIDs to refer to Columns
  */
-class PQPExpression : public BaseExpression<PQPExpression> {
+class PQPExpression : public AbstractExpression<PQPExpression> {
  public:
   static std::shared_ptr<PQPExpression> create_column(const ColumnID column_id,
                                                            const std::optional<std::string>& alias = std::nullopt);
 
-  using BaseExpression<PQPExpression>::BaseExpression;
+  using AbstractExpression<PQPExpression>::AbstractExpression;
 
   /**
-   * Translates a LQPExpression into a OperatorExpression, given the node that the LQPExpression is contained in
+   * Translates a LQPExpression into a PQPExpression, given the node that the LQPExpression is contained in
    */
   PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                      const std::shared_ptr<AbstractLQPNode>& node);

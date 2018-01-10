@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "base_expression.hpp"
+#include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_column_origin.hpp"
 
 namespace opossum {
@@ -10,7 +10,7 @@ namespace opossum {
 /**
  * Expression type used in LQPs, using LQPColumnOrigins to refer to Columns
  */
-class LQPExpression : public BaseExpression<LQPExpression> {
+class LQPExpression : public AbstractExpression<LQPExpression> {
  public:
   static std::shared_ptr<LQPExpression> create_column(const LQPColumnOrigin& column_origin,
                                                       const std::optional<std::string>& alias = std::nullopt);
@@ -19,7 +19,7 @@ class LQPExpression : public BaseExpression<LQPExpression> {
       const std::vector<LQPColumnOrigin>& column_origins,
       const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
-  using BaseExpression<LQPExpression>::BaseExpression;
+  using AbstractExpression<LQPExpression>::AbstractExpression;
 
   const LQPColumnOrigin& column_origin() const;
 
