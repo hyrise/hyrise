@@ -59,13 +59,12 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
    */
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
   static std::shared_ptr<DerivedExpression> create_literal(const AllTypeVariant& value,
-                                                               const std::optional<std::string>& alias = std::nullopt);
+                                                           const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<DerivedExpression> create_value_placeholder(ValuePlaceholder value_placeholder);
 
   static std::shared_ptr<DerivedExpression> create_aggregate_function(
-      AggregateFunction aggregate_function,
-      const std::vector<std::shared_ptr<DerivedExpression>>& function_arguments,
+      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpression>>& function_arguments,
       const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<DerivedExpression> create_binary_operator(

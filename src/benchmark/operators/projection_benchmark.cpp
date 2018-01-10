@@ -49,8 +49,7 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benc
   clear_cache();
   // "a" + "b"
   Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(
-      ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-      PQPExpression::create_column(ColumnID{1}))};
+      ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_column(ColumnID{1}))};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {

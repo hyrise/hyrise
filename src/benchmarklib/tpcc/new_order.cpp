@@ -275,9 +275,9 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
   const auto original_rows = std::make_shared<opossum::Projection>(
       ts2, opossum::Projection::ColumnExpressions({opossum::PQPExpression::create_column(opossum::ColumnID{10})}));
 
-  const auto op = opossum::PQPExpression::create_binary_operator(
-      opossum::ExpressionType::Addition, opossum::PQPExpression::create_literal(d_next_o_id),
-      opossum::PQPExpression::create_literal(1), {"fix"});
+  const auto op = opossum::PQPExpression::create_binary_operator(opossum::ExpressionType::Addition,
+                                                                 opossum::PQPExpression::create_literal(d_next_o_id),
+                                                                 opossum::PQPExpression::create_literal(1), {"fix"});
   const auto updated_rows = std::make_shared<opossum::Projection>(ts2, opossum::Projection::ColumnExpressions{op});
 
   const auto update = std::make_shared<opossum::Update>("DISTRICT", original_rows, updated_rows);

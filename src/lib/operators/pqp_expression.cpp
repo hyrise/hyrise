@@ -8,7 +8,7 @@
 namespace opossum {
 
 std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID column_id,
-                                                                      const std::optional<std::string>& alias) {
+                                                            const std::optional<std::string>& alias) {
   auto expression = std::make_shared<PQPExpression>(ExpressionType::Column);
   expression->_column_id = column_id;
   expression->_alias = alias;
@@ -17,7 +17,7 @@ std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID colum
 }
 
 PQPExpression::PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
-                                       const std::shared_ptr<AbstractLQPNode>& node)
+                             const std::shared_ptr<AbstractLQPNode>& node)
     : AbstractExpression<PQPExpression>(lqp_expression->_type) {
   /**
    * Ugly, but unavoidable since LQPExpression and PQPExpression are distinct types and can't rely on default generated
@@ -53,7 +53,7 @@ ColumnID PQPExpression::column_id() const {
 }
 
 std::string PQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
-                                          bool is_root) const {
+                                     bool is_root) const {
   if (type() == ExpressionType::Column) {
     if (input_column_names) {
       DebugAssert(column_id() < input_column_names->size(),
@@ -72,7 +72,5 @@ bool PQPExpression::operator==(const PQPExpression& other) const {
   return _column_id == other._column_id;
 }
 
-void PQPExpression::_deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const {
-  copy->_column_id = _column_id;
-}
+void PQPExpression::_deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const { copy->_column_id = _column_id; }
 }  // namespace opossum

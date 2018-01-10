@@ -412,14 +412,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  Assert(node->left_child() && !node->right_child(), "Can only translate expressions if there is one input node, can't resolve ColumnOrigins otherwise.");
+  Assert(node->left_child() && !node->right_child(),
+         "Can only translate expressions if there is one input node, can't resolve ColumnOrigins otherwise.");
 
   std::vector<std::shared_ptr<PQPExpression>> operator_expressions(lqp_expressions.size());
 
-  std::transform(lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(),
-                 [&](const auto& lqp_expression) {
-                   return std::make_shared<PQPExpression>(lqp_expression, node->left_child());
-                 });
+  std::transform(
+      lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(),
+      [&](const auto& lqp_expression) { return std::make_shared<PQPExpression>(lqp_expression, node->left_child()); });
 
   return operator_expressions;
 }

@@ -33,7 +33,7 @@ std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::deep_c
   if (!_aggregate_function_arguments.empty()) {
     std::vector<std::shared_ptr<DerivedExpression>> aggregate_function_arguments;
     aggregate_function_arguments.reserve(_aggregate_function_arguments.size());
-    for (const auto &expression : _aggregate_function_arguments) {
+    for (const auto& expression : _aggregate_function_arguments) {
       aggregate_function_arguments.emplace_back(expression->deep_copy());
     }
     deep_copy->_aggregate_function_arguments = std::move(aggregate_function_arguments);

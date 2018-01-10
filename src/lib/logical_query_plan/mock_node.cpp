@@ -33,7 +33,8 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std
 std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
                                                            const std::shared_ptr<AbstractLQPNode>& right_child) const {
   if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {
-    return std::make_shared<MockNode>(boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments), _table_alias);
+    return std::make_shared<MockNode>(boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments),
+                                      _table_alias);
   }
 
   Assert(_constructor_arguments.type() == typeid(ColumnDefinitions), "Invalid constructor args state. Bug.");

@@ -56,29 +56,28 @@ class OperatorsProjectionTest : public BaseTest {
     // Projection Expression: a + b + c
     _sum_a_b_c_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
         ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-        PQPExpression::create_binary_operator(ExpressionType::Addition,
-                                                   PQPExpression::create_column(ColumnID{1}),
-                                                   PQPExpression::create_column(ColumnID{2})),
+        PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{1}),
+                                              PQPExpression::create_column(ColumnID{2})),
         {"sum"})};
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Multiplication, PQPExpression::create_binary_operator(
-                                            ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-                                            PQPExpression::create_column(ColumnID{1})),
+        ExpressionType::Multiplication,
+        PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
+                                              PQPExpression::create_column(ColumnID{1})),
         PQPExpression::create_column(ColumnID{2}), {"mul"})};
 
-    _sum_a_b_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-        PQPExpression::create_column(ColumnID{1}), {"sum"})};
+    _sum_a_b_expr = Projection::ColumnExpressions{
+        PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
+                                              PQPExpression::create_column(ColumnID{1}), {"sum"})};
 
-    _div_a_b_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Division, PQPExpression::create_column(ColumnID{0}),
-        PQPExpression::create_column(ColumnID{1}), {"div"})};
+    _div_a_b_expr = Projection::ColumnExpressions{
+        PQPExpression::create_binary_operator(ExpressionType::Division, PQPExpression::create_column(ColumnID{0}),
+                                              PQPExpression::create_column(ColumnID{1}), {"div"})};
 
-    _div_a_zero_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Division, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_literal(0),
-        {"div"})};
+    _div_a_zero_expr = Projection::ColumnExpressions{
+        PQPExpression::create_binary_operator(ExpressionType::Division, PQPExpression::create_column(ColumnID{0}),
+                                              PQPExpression::create_literal(0), {"div"})};
 
     // Projection Expression: a
     _a_expr = Projection::ColumnExpressions{PQPExpression::create_column(ColumnID{0})};
@@ -95,19 +94,18 @@ class OperatorsProjectionTest : public BaseTest {
                                               PQPExpression::create_column(ColumnID{1})};
 
     // Projection Expression: 123 AS a, A AS b
-    _literal_expr =
-        Projection::ColumnExpressions{PQPExpression::create_literal(123, std::string("a")),
-                                      PQPExpression::create_literal(std::string("A"), std::string("b"))};
+    _literal_expr = Projection::ColumnExpressions{PQPExpression::create_literal(123, std::string("a")),
+                                                  PQPExpression::create_literal(std::string("A"), std::string("b"))};
 
     // Projection Expression: a + 'hallo' AS b
-    _concat_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-        PQPExpression::create_literal("hallo"), {"b"})};
+    _concat_expr = Projection::ColumnExpressions{
+        PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
+                                              PQPExpression::create_literal("hallo"), {"b"})};
 
     // Projection Expression: a + NULL AS b
-    _add_null_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-        PQPExpression::create_literal(NullValue{}), {"b"})};
+    _add_null_expr = Projection::ColumnExpressions{
+        PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
+                                              PQPExpression::create_literal(NullValue{}), {"b"})};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;

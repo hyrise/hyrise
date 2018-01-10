@@ -136,15 +136,14 @@ const std::vector<LQPColumnOrigin>& AggregateNode::output_column_origins() const
   return *_output_column_origins;
 }
 
-LQPColumnOrigin AggregateNode::get_column_origin_by_expression(
-const std::shared_ptr<LQPExpression> &expression) const {
+LQPColumnOrigin AggregateNode::get_column_origin_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
   const auto column_id = find_column_origin_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
 std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_by_expression(
-const std::shared_ptr<LQPExpression> &expression) const {
+    const std::shared_ptr<LQPExpression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
