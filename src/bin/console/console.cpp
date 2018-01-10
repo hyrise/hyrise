@@ -7,7 +7,6 @@
 #include <readline/readline.h>
 #include <setjmp.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <chrono>
 #include <csignal>
 #include <ctime>
