@@ -51,6 +51,9 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
       }
     });
 
+    values.shrink_to_fit();
+    end_positions.shrink_to_fit();
+
     auto values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(values));
     auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(end_positions));
     return std::allocate_shared<RunLengthColumn<T>>(alloc, values_ptr, end_positions_ptr, null_value);
