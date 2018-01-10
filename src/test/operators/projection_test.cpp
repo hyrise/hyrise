@@ -30,6 +30,9 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_int_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_int_null.tbl", 2));
     _table_wrapper_int_null->execute();
 
+    _table_wrapper_int_zero = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 2));
+    _table_wrapper_int_zero->execute();
+
     _table_wrapper_string = std::make_shared<TableWrapper>(load_table("src/test/tables/string.tbl", 2));
     _table_wrapper_string->execute();
 
@@ -67,6 +70,13 @@ class OperatorsProjectionTest : public BaseTest {
         Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
                                            Expression::create_column(ColumnID{1}), {"sum"})};
 
+    _div_a_b_expr = Projection::ColumnExpressions{
+        Expression::create_binary_operator(ExpressionType::Division, Expression::create_column(ColumnID{0}),
+                                           Expression::create_column(ColumnID{1}), {"div"})};
+
+    _div_a_zero_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
+        ExpressionType::Division, Expression::create_column(ColumnID{0}), Expression::create_literal(0), {"div"})};
+
     // Projection Expression: a
     _a_expr = Projection::ColumnExpressions{Expression::create_column(ColumnID{0})};
 
@@ -96,6 +106,8 @@ class OperatorsProjectionTest : public BaseTest {
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;
+  Projection::ColumnExpressions _div_a_b_expr;
+  Projection::ColumnExpressions _div_a_zero_expr;
   Projection::ColumnExpressions _sum_a_b_c_expr;
   Projection::ColumnExpressions _mul_a_b_c_expr;
   Projection::ColumnExpressions _a_expr;
@@ -105,8 +117,9 @@ class OperatorsProjectionTest : public BaseTest {
   Projection::ColumnExpressions _literal_expr;
   Projection::ColumnExpressions _concat_expr;
   Projection::ColumnExpressions _add_null_expr;
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_null, _table_wrapper_int_dict,
-      _table_wrapper_int_dict_null, _table_wrapper_float, _dummy_wrapper, _table_wrapper_string;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_null, _table_wrapper_int_zero,
+      _table_wrapper_int_dict, _table_wrapper_int_dict_null, _table_wrapper_float, _dummy_wrapper,
+      _table_wrapper_string;
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumnInt) {
@@ -189,6 +202,14 @@ TEST_F(OperatorsProjectionTest, StringConcat) {
   projection->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, DivisionByZero) {
+  auto projection = std::make_shared<Projection>(_table_wrapper_int_zero, _div_a_b_expr);
+  EXPECT_THROW(projection->execute(), std::runtime_error);
+
+  auto projection_literal = std::make_shared<Projection>(_table_wrapper_int_zero, _div_a_zero_expr);
+  EXPECT_THROW(projection_literal->execute(), std::runtime_error);
 }
 
 TEST_F(OperatorsProjectionTest, AddNull) {
