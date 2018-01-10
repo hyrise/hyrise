@@ -287,7 +287,7 @@ inline std::function<double(const double&, const double&)> Projection::_get_oper
 
 /**
  * Specialized arithmetic operator implementation for int
- * Division by 0 needs to be caught by integers.
+ * Division by 0 needs to be caught when using integers.
  */
 template <>
 inline std::function<int(const int&, const int&)> Projection::_get_operator_function(ExpressionType type) {
