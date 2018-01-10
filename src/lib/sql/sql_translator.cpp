@@ -486,11 +486,58 @@ AllParameterVariant SQLTranslator::translate_hsql_operand(
       return NULL_VALUE;
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
+    case hsql::kExprOperator:
+      return AllTypeVariant(resolve_expr_operator(expr));
     case hsql::kExprColumnRef:
       Assert(input_node, "Cannot generate ColumnID without input_node");
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
       Fail("Could not translate expression: type not supported.");
+      return {};
+  }
+}
+
+int64_t SQLTranslator::resolve_expr_operator(const hsql::Expr& expr) {
+  const auto expr0 = expr.expr;
+  const auto expr1 = expr.expr2;
+
+  auto result0 = int64_t{};
+
+  if (expr0->type == hsql::kExprOperator) {
+    result0 = resolve_expr_operator(*expr0);
+  } else if (expr0->type == hsql::kExprLiteralInt) {
+    result0 = expr0->ival;
+  } else {
+    Fail("Could not translate expression: operands must be integers.");
+    return {};
+  }
+
+  auto result1 = int64_t{};
+
+  if (expr1->type == hsql::kExprOperator) {
+    result1 = resolve_expr_operator(*expr1);
+  } else if (expr1->type == hsql::kExprLiteralInt) {
+    result1 = expr1->ival;
+  } else {
+    Fail("Could not translate expression: operands must be integers.");
+    return {};
+  }
+
+  switch (expr.opType) {
+    case hsql::kOpPlus:
+      return result0 + result1;
+    case hsql::kOpMinus:
+      return result0 - result1;
+    case hsql::kOpAsterisk:
+      return result0 * result1;
+    case hsql::kOpSlash:
+      return result0 / result1;
+    case hsql::kOpPercentage:
+      return result0 % result1;
+    case hsql::kOpCaret:
+      return result0 ^ result1;
+    default:
+      Fail("Could not translate expression: operator type not supported.");
       return {};
   }
 }
