@@ -545,7 +545,7 @@ int Console::exec_script(const std::string& script_file) {
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
-  auto is_regular_file = [](const std::string& path) {
+  const auto is_regular_file = [](const std::string& path) {
     struct stat path_stat;
     stat(path.c_str(), &path_stat);
     return S_ISREG(path_stat.st_mode);
