@@ -23,9 +23,7 @@ class PartitionSchema {
   virtual AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const = 0;
   
   void add_column(DataType data_type, bool nullable);
-
   ChunkID chunk_count() const;
-
   uint64_t row_count() const;
 
   // The following functions can be overriden,
@@ -38,10 +36,6 @@ class PartitionSchema {
   virtual const Chunk& get_chunk(ChunkID chunk_id, PartitionID partition_id) const;
   virtual ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id);
   virtual const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) const;
-
-  const std::shared_ptr<Partition> find_partition(PartitionID partition_to_find);
-
-  const PartitionID max_partition_id();
 
   // Indicates that the functions above are
   //   1. not meaningfully implemented if true is returned (default case)
