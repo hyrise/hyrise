@@ -14,7 +14,9 @@ class Table;
 
 class Partition {
  public:
-  Partition();
+  Partition(PartitionID partition_id);
+
+  const PartitionID get_partition_id();
 
   void add_column(DataType data_type, bool nullable);
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
@@ -35,6 +37,7 @@ class Partition {
 
  protected:
   std::vector<Chunk> _chunks;
+  const PartitionID _partition_id;
 };
 
 }  // namespace opossum

@@ -7,23 +7,13 @@ RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTy
   _partitions.reserve(bounds.size() + 1);
 
   for (size_t index = 0; index < bounds.size() + 1; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>());
+    _partitions.emplace_back(std::make_shared<Partition>(PartitionID{index}));
   }
-}
-
-void RangePartitionSchema::add_column(DataType data_type, bool nullable) {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
 }
 
 void RangePartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
                                   const std::vector<DataType>& column_types,
                                   const std::vector<bool>& column_nullables) {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-ChunkID RangePartitionSchema::chunk_count() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
 }
@@ -34,11 +24,6 @@ TableType RangePartitionSchema::get_type(uint16_t column_count) const {
 }
 
 AllTypeVariant RangePartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-uint64_t RangePartitionSchema::row_count() const {
   // TODO(partitioning group): Implement
   throw "Not implemented";
 }
