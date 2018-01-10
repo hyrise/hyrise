@@ -299,6 +299,23 @@ inline std::function<double(const double&, const double&)> Projection::_get_oper
   return _get_base_operator_function<double>(type);
 }
 
+/**
+ * Specialized arithmetic operator implementation for int
+ * Division by 0 needs to be caught when using integers.
+ */
+template <>
+inline std::function<int(const int&, const int&)> Projection::_get_operator_function(ExpressionType type) {
+  if (type == ExpressionType::Division) {
+    return [](const int& lhs, const int& rhs) {
+      if (rhs == 0) {
+        throw std::runtime_error("Cannot divide integers by 0.");
+      }
+      return lhs / rhs;
+    };
+  }
+  return _get_base_operator_function<int>(type);
+}
+
 // returns the singleton dummy table used for literal projections
 std::shared_ptr<Table> Projection::dummy_table() {
   static auto shared_dummy = std::make_shared<DummyTable>();
