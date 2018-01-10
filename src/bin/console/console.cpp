@@ -6,6 +6,8 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <chrono>
 #include <csignal>
 #include <ctime>
@@ -544,8 +546,17 @@ int Console::exec_script(const std::string& script_file) {
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
+  auto is_regular_file = [](const std::string& path) {
+    struct stat path_stat;
+    stat(path.c_str(), &path_stat);
+    return S_ISREG(path_stat.st_mode);
+  };
+
   if (!script.good()) {
     out("Error: Script file '" + filepath + "' does not exist.\n");
+    return ReturnCode::Error;
+  } else if (!is_regular_file(filepath)) {
+    out("Error: '" + filepath + "' is not a regular file.\n");
     return ReturnCode::Error;
   }
 
