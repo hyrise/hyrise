@@ -43,6 +43,9 @@ class AbstractCache {
   size_t capacity() const { return _capacity; }
 
  protected:
+  // Remove an element from the cache according to the cache algorithm's strategy
+  virtual void _evict() = 0;
+
   size_t _capacity;
 };
 

@@ -69,11 +69,8 @@ class RandomCache : public AbstractCache<Key, Value> {
   }
 
   void resize(size_t capacity) {
-    if (_list.size() > capacity) {
-      for (size_t difference = 0; difference < _list.size() - capacity; ++difference) {
-        _map.erase(_list[difference].first);
-        _list.erase(_list.cbegin() + difference);
-      }
+    while (_list.size() > capacity) {
+      _evict();
     }
 
     this->_capacity = capacity;
@@ -91,6 +88,11 @@ class RandomCache : public AbstractCache<Key, Value> {
   std::random_device _rd;
   std::mt19937 _gen;
   std::uniform_int_distribution<> _rand;
+
+  void _evict() {
+    _map.erase(_list[0].first);
+    _list.erase(_list.cbegin());
+  }
 };
 
 }  // namespace opossum

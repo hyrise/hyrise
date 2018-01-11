@@ -88,14 +88,8 @@ class GDFSCache : public AbstractCache<Key, Value> {
   }
 
   void resize(size_t capacity) {
-    if (_queue.size() > capacity) {
-      for (size_t difference = 0; difference < _queue.size() - capacity; ++difference) {
-        auto top = _queue.top();
-
-        _inflation = top.priority;
-        _map.erase(top.key);
-        _queue.pop();
-      }
+    while (_queue.size() > capacity) {
+      _evict();
     }
     this->_capacity = capacity;
   }
@@ -118,6 +112,14 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;
+
+  void _evict() {
+    auto top = _queue.top();
+
+    _inflation = top.priority;
+    _map.erase(top.key);
+    _queue.pop();
+  }
 };
 
 }  // namespace opossum

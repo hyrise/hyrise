@@ -233,14 +233,14 @@ TEST_F(SQLBasicCacheTest, RandomCacheTest) {
 }
 
 template <typename T>
-class CacheResizeTest : public BaseTest {};
+class CacheTest : public BaseTest {};
 
 // here we define all Join types
 using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
                                     RandomCache<int, int>>;
-TYPED_TEST_CASE(CacheResizeTest, CacheTypes);
+TYPED_TEST_CASE(CacheTest, CacheTypes);
 
-TYPED_TEST(CacheResizeTest, Size) {
+TYPED_TEST(CacheTest, Size) {
   TypeParam cache(3);
 
   cache.set(1, 2);
@@ -249,7 +249,7 @@ TYPED_TEST(CacheResizeTest, Size) {
   ASSERT_EQ(2u, cache.size());
 }
 
-TYPED_TEST(CacheResizeTest, Clear) {
+TYPED_TEST(CacheTest, Clear) {
   TypeParam cache(3);
 
   cache.set(1, 2);
@@ -266,7 +266,7 @@ TYPED_TEST(CacheResizeTest, Clear) {
   ASSERT_FALSE(cache.has(2));
 }
 
-TYPED_TEST(CacheResizeTest, ClearAndResize) {
+TYPED_TEST(CacheTest, ClearAndResize) {
   TypeParam cache(3);
 
   ASSERT_EQ(3u, cache.capacity());
@@ -287,7 +287,7 @@ TYPED_TEST(CacheResizeTest, ClearAndResize) {
   ASSERT_FALSE(cache.has(3));
 }
 
-TYPED_TEST(CacheResizeTest, ResizeGrow) {
+TYPED_TEST(CacheTest, ResizeGrow) {
   TypeParam cache(3);
 
   ASSERT_EQ(3u, cache.capacity());
@@ -304,7 +304,7 @@ TYPED_TEST(CacheResizeTest, ResizeGrow) {
   ASSERT_TRUE(cache.has(2));
 }
 
-TYPED_TEST(CacheResizeTest, ResizeShrink) {
+TYPED_TEST(CacheTest, ResizeShrink) {
   TypeParam cache(3);
 
   ASSERT_EQ(3u, cache.capacity());
@@ -313,13 +313,13 @@ TYPED_TEST(CacheResizeTest, ResizeShrink) {
   cache.set(2, 4);
   cache.set(3, 6);
 
-  cache.resize(2);
+  cache.resize(1);
 
-  ASSERT_EQ(2u, cache.capacity());
-  ASSERT_EQ(2u, cache.size());
+  ASSERT_EQ(1u, cache.capacity());
+  ASSERT_EQ(1u, cache.size());
 
   ASSERT_FALSE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
+  ASSERT_FALSE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
   ASSERT_EQ(cache.get(3), 6);
 }
