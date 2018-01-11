@@ -233,10 +233,11 @@ TEST_F(SQLBasicCacheTest, RandomCacheTest) {
 }
 
 template <typename T>
-class CacheResizeTest : public BaseTest {} ;
+class CacheResizeTest : public BaseTest {};
 
 // here we define all Join types
-using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>, RandomCache<int, int>>;
+using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
+                                    RandomCache<int, int>>;
 TYPED_TEST_CASE(CacheResizeTest, CacheTypes);
 
 TYPED_TEST(CacheResizeTest, Size) {
