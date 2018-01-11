@@ -68,6 +68,18 @@ class RandomCache : public AbstractCache<Key, Value> {
     _rand = std::uniform_int_distribution<>(0, capacity - 1);
   }
 
+  void resize(size_t capacity) {
+    if (_list.size() > capacity) {
+      for (size_t difference = 0; difference < _list.size() - capacity; ++difference) {
+        _map.erase(_list[difference].first);
+        _list.erase(_list.cbegin() + difference);
+      }
+    }
+
+    this->_capacity = capacity;
+    _rand = std::uniform_int_distribution<>(0, capacity - 1);
+  }
+
  protected:
   // List to hold all elements.
   std::vector<KeyValuePair> _list;
