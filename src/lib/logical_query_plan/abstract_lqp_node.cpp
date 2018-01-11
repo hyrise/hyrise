@@ -502,9 +502,9 @@ void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>
   _parents.emplace_back(parent);
 }
 
-std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(
+std::shared_ptr<LQPExpression> AbstractLQPNode::_adapt_expression_to_different_lqp(
     const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-    const std::shared_ptr<AbstractLQPNode>& copied_lqp) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {
@@ -512,11 +512,11 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(
   }
 
   for (auto& argument_expression : expression->aggregate_function_arguments()) {
-    _adjust_expression_to_lqp(argument_expression, original_lqp, copied_lqp);
+    _adapt_expression_to_different_lqp(argument_expression, original_lqp, copied_lqp);
   }
 
-  _adjust_expression_to_lqp(expression->left_child(), original_lqp, copied_lqp);
-  _adjust_expression_to_lqp(expression->right_child(), original_lqp, copied_lqp);
+  _adapt_expression_to_different_lqp(expression->left_child(), original_lqp, copied_lqp);
+  _adapt_expression_to_different_lqp(expression->right_child(), original_lqp, copied_lqp);
 
   return expression;
 }

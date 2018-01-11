@@ -31,7 +31,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
     aggregate_expressions.emplace_back(
-        _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child));
+        _adapt_expression_to_different_lqp(expression->deep_copy(), this->left_child(), left_child));
   }
 
   std::vector<LQPColumnOrigin> groupby_column_origins(_groupby_column_origins.size());
