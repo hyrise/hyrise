@@ -286,4 +286,40 @@ TYPED_TEST(CacheResizeTest, ClearAndResize) {
   ASSERT_FALSE(cache.has(3));
 }
 
+TYPED_TEST(CacheResizeTest, ResizeGrow) {
+  TypeParam cache(3);
+
+  ASSERT_EQ(3u, cache.capacity());
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+
+  cache.resize(5);
+
+  ASSERT_EQ(5u, cache.capacity());
+  ASSERT_EQ(2u, cache.size());
+
+  ASSERT_TRUE(cache.has(1));
+  ASSERT_TRUE(cache.has(2));
+}
+
+TYPED_TEST(CacheResizeTest, ResizeShrink) {
+  TypeParam cache(3);
+
+  ASSERT_EQ(3u, cache.capacity());
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+  cache.set(3, 6);
+
+  cache.resize(2);
+
+  ASSERT_EQ(2u, cache.capacity());
+  ASSERT_EQ(2u, cache.size());
+
+  ASSERT_FALSE(cache.has(1));
+  ASSERT_TRUE(cache.has(2));
+  ASSERT_TRUE(cache.has(3));
+}
+
 }  // namespace opossum
