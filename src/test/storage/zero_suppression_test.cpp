@@ -10,10 +10,10 @@
 #include "gtest/gtest.h"
 
 #include "storage/zero_suppression/encoders.hpp"
+#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
 #include "storage/zero_suppression/utils.hpp"
 #include "storage/zero_suppression/vectors.hpp"
 #include "storage/zero_suppression/zs_type.hpp"
-#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -72,7 +72,7 @@ class ZeroSuppressionTest : public BaseTest {
 
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
     auto encoder = EncoderType{};
-    auto encoded_vector = encoder.encode(vector.get_allocator(), vector, { max() });
+    auto encoded_vector = encoder.encode(vector.get_allocator(), vector, {max()});
     EXPECT_EQ(encoded_vector->size(), vector.size());
 
     return encoded_vector;
@@ -80,7 +80,8 @@ class ZeroSuppressionTest : public BaseTest {
 };
 
 template <typename ZeroSuppressionVectorT>
-void compare_using_iterator(const ZeroSuppressionVectorT& encoded_sequence, const pmr_vector<uint32_t>& expected_values) {
+void compare_using_iterator(const ZeroSuppressionVectorT& encoded_sequence,
+                            const pmr_vector<uint32_t>& expected_values) {
   auto expected_it = expected_values.cbegin();
   auto encoded_seq_it = encoded_sequence.cbegin();
   const auto encoded_seq_end = encoded_sequence.cend();
@@ -95,9 +96,8 @@ TYPED_TEST(ZeroSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  resolve_zs_vector_type(*encoded_sequence_base, [&](auto& encoded_sequence) {
-    compare_using_iterator(encoded_sequence, sequence);
-  });
+  resolve_zs_vector_type(*encoded_sequence_base,
+                         [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
 TYPED_TEST(ZeroSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
@@ -118,9 +118,8 @@ TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingIterators) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  resolve_zs_vector_type(*encoded_sequence_base, [&](auto& encoded_sequence) {
-    compare_using_iterator(encoded_sequence, sequence);
-  });
+  resolve_zs_vector_type(*encoded_sequence_base,
+                         [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
 TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {

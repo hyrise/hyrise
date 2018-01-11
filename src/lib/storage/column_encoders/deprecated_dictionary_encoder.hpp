@@ -89,7 +89,8 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
 
-  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size, const PolymorphicAllocator<size_t>& alloc) {
+  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(
+      size_t unique_values_count, size_t size, const PolymorphicAllocator<size_t>& alloc) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
       return std::make_shared<FittedAttributeVector<uint8_t>>(size, alloc);
     } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {

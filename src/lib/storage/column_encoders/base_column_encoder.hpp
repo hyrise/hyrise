@@ -34,7 +34,8 @@ class BaseColumnEncoder {
    *
    * @return encoded column if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) = 0;
+  virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
+                                                    const std::shared_ptr<BaseValueColumn>& column) = 0;
 };
 
 template <typename Derived>

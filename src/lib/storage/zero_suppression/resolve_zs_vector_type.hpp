@@ -3,8 +3,8 @@
 #include <boost/hana/fold.hpp>
 #include <boost/hana/value.hpp>
 
-#include "zs_vector_type.hpp"
 #include "vectors.hpp"
+#include "zs_vector_type.hpp"
 
 namespace opossum {
 

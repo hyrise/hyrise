@@ -39,11 +39,14 @@ class SimdBp128Vector;
  *
  * Note: Add your vector class here!
  */
-constexpr auto zs_vector_for_type = hana::make_map(
-    hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-    hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-    hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
-    hana::make_pair(enum_c<ZsVectorType, ZsVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
+constexpr auto zs_vector_for_type =
+    hana::make_map(hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize4ByteAligned>,
+                                   hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
+                   hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize2ByteAligned>,
+                                   hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
+                   hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize1ByteAligned>,
+                                   hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
+                   hana::make_pair(enum_c<ZsVectorType, ZsVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
 
 template <typename ZsVectorT>
 ZsVectorType get_zs_vector_type() {

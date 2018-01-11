@@ -8,8 +8,8 @@
 
 #include "storage/encoded_columns/dictionary_column.hpp"
 #include "storage/value_column.hpp"
-#include "storage/zero_suppression/utils.hpp"
 #include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+#include "storage/zero_suppression/utils.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -89,11 +89,13 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
-    auto encoded_attribute_vector = encode_by_zs_type(ZsType::FixedSizeByteAligned, attribute_vector, alloc, { max_value });
+    auto encoded_attribute_vector =
+        encode_by_zs_type(ZsType::FixedSizeByteAligned, attribute_vector, alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
-    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
+    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                     ValueID{null_value_id});
   }
 
  private:
