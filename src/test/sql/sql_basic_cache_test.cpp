@@ -320,6 +320,7 @@ TYPED_TEST(CacheResizeTest, ResizeShrink) {
   ASSERT_FALSE(cache.has(1));
   ASSERT_TRUE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
+  ASSERT_EQ(cache.get(3), 6);
 }
 
 }  // namespace opossum
