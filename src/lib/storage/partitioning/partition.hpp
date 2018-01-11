@@ -14,7 +14,7 @@ class Table;
 
 class Partition {
  public:
-  Partition(PartitionID partition_id);
+  explicit Partition(PartitionID partition_id);
 
   const PartitionID get_partition_id();
 

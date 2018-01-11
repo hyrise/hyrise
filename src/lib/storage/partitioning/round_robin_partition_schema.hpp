@@ -12,8 +12,6 @@ class RoundRobinPartitionSchema : public PartitionSchema {
 
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
               const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
-  TableType get_type(uint16_t column_count) const;
-  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
 
   RoundRobinPartitionSchema(RoundRobinPartitionSchema&&) = default;
   RoundRobinPartitionSchema& operator=(RoundRobinPartitionSchema&&) = default;

@@ -19,18 +19,8 @@ void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values, const
   if (_next_partition >= static_cast<PartitionID>(_partitions.size())) {
     _next_partition = 0;
   } else {
-      _next_partition += 1;
+    _next_partition += 1;
   }
-}
-
-TableType RoundRobinPartitionSchema::get_type(uint16_t column_count) const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-AllTypeVariant RoundRobinPartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
 }
 
 }  // namespace opossum

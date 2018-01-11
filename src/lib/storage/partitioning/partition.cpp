@@ -4,11 +4,11 @@
 
 namespace opossum {
 
-Partition::Partition(PartitionID partition_id) : _partition_id(partition_id) { _chunks.push_back(Chunk{ChunkUseMvcc::Yes}); }
-
-const PartitionID Partition::get_partition_id() {
-  return _partition_id;
+Partition::Partition(PartitionID partition_id) : _partition_id(partition_id) {
+  _chunks.push_back(Chunk{ChunkUseMvcc::Yes});
 }
+
+const PartitionID Partition::get_partition_id() { return _partition_id; }
 
 void Partition::add_column(DataType data_type, bool nullable) {
   for (auto& chunk : _chunks) {

@@ -19,12 +19,12 @@ class PartitionSchema {
   void add_column(DataType data_type, bool nullable);
   ChunkID chunk_count() const;
   uint64_t row_count() const;
+  TableType get_type(uint16_t column_count) const;
+  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
 
   // These function have to be implemented by non-abstract PartitionSchemas.
   virtual void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
                       const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) = 0;
-  virtual TableType get_type(uint16_t column_count) const = 0;
-  virtual AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const = 0;
 
   // These function me be overriden to check if chunk modifications obey partitioning rules.
   virtual void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables,
@@ -39,7 +39,6 @@ class PartitionSchema {
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;
-
 };
 
 }  // namespace opossum
