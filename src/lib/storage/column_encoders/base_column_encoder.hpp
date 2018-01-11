@@ -99,7 +99,7 @@ class ColumnEncoder : public BaseColumnEncoder {
    */
   template <typename ColumnDataType>
   std::shared_ptr<BaseEncodedColumn> encode(hana::basic_type<ColumnDataType> data_type,
-                                     const std::shared_ptr<BaseValueColumn>& value_column) {
+                                            const std::shared_ptr<BaseValueColumn>& value_column) {
     static_assert(decltype(supports(data_type))::value);
 
     return _self()._on_encode(std::static_pointer_cast<ValueColumn<ColumnDataType>>(value_column));

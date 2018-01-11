@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <memory>
 
+#include "zs_vector_meta_info.hpp"
+
 #include "types.hpp"
 
 namespace opossum {
@@ -18,8 +20,9 @@ class BaseZeroSuppressionEncoder {
  public:
   virtual ~BaseZeroSuppressionEncoder() = default;
 
-  virtual std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
-                                                            const PolymorphicAllocator<size_t>& alloc) = 0;
+  virtual std::unique_ptr<BaseZeroSuppressionVector> encode(const PolymorphicAllocator<size_t>& alloc,
+                                                            const pmr_vector<uint32_t>& vector,
+                                                            const ZsVectorMetaInfo& meta_info = {}) = 0;
 };
 
 }  // namespace opossum

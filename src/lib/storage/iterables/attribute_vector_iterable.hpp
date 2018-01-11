@@ -7,9 +7,7 @@
 #include <utility>
 
 #include "iterables.hpp"
-#include "storage/zero_suppression/decoders.hpp"
-#include "storage/zero_suppression/utils.hpp"
-#include "storage/zero_suppression/vectors.hpp"
+#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
 
 namespace opossum {
 

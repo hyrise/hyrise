@@ -3,12 +3,11 @@
 #include "base_zero_suppression_vector.hpp"
 #include "oversized_types.hpp"
 #include "simd_bp128_iterator.hpp"
+#include "simd_bp128_decoder.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
-
-class SimdBp128Decoder;
 
 class SimdBp128Vector : public ZeroSuppressionVector<SimdBp128Vector> {
  public:

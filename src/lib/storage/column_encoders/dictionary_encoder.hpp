@@ -87,9 +87,9 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     }
 
     // We need to increment the dictionary size here because of possible null values.
-    [[maybe_unused]] const auto zs_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
+    const auto max_value = dictionary.size() + 1u;
 
-    auto encoded_attribute_vector = encode_by_zs_type(ZsType::SimdBp128, attribute_vector, alloc);
+    auto encoded_attribute_vector = encode_by_zs_type(ZsType::FixedSizeByteAligned, attribute_vector, alloc, { max_value });
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
@@ -101,16 +101,6 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
-  }
-
-  ZsType get_fixed_size_byte_aligned_encoding(size_t unique_values_count) {
-    if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return ZsType::FixedSize1ByteAligned;
-    } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return ZsType::FixedSize2ByteAligned;
-    } else {
-      return ZsType::FixedSize4ByteAligned;
-    }
   }
 };
 

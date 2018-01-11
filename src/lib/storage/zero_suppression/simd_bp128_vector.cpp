@@ -1,7 +1,5 @@
 #include "simd_bp128_vector.hpp"
 
-#include "simd_bp128_decoder.hpp"
-
 namespace opossum {
 
 SimdBp128Vector::SimdBp128Vector(pmr_vector<uint128_t> vector, size_t size) : _data{std::move(vector)}, _size{size} {}
