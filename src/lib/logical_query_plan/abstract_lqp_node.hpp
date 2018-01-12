@@ -255,8 +255,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * ColumnReferences
    */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& left_child,
-      const std::shared_ptr<AbstractLQPNode>& right_child) const = 0;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const = 0;
 
   /**
    * In derived nodes, clear all data that depends on children and only set it lazily on request (see, e.g.

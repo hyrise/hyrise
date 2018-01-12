@@ -20,13 +20,13 @@ class TableStatistics;
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
-  auto left_child = this->left_child() ? this->left_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
-  auto right_child = this->right_child() ? this->right_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
+  auto copied_left_child = left_child() ? left_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
+  auto copied_right_child = this->right_child() ? this->right_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
 
   // We cannot use the copy constructor here, because it does not work with shared_from_this()
-  auto deep_copy = _deep_copy_impl(left_child, right_child);
-  deep_copy->set_left_child(left_child);
-  deep_copy->set_right_child(right_child);
+  auto deep_copy = _deep_copy_impl(copied_left_child, copied_right_child);
+  deep_copy->set_left_child(copied_left_child);
+  deep_copy->set_right_child(copied_right_child);
 
   return deep_copy;
 }
