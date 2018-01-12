@@ -416,13 +416,14 @@ std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expression
   Assert(node->left_child() && !node->right_child(),
          "Can only translate expressions if there is one input node, can't resolve ColumnReferences otherwise.");
 
-  std::vector<std::shared_ptr<PQPExpression>> operator_expressions(lqp_expressions.size());
+  std::vector<std::shared_ptr<PQPExpression>> pqp_expressions;
+  pqp_expressions.reserve(lqp_expressions.size());
 
-  std::transform(
-      lqp_expressions.begin(), lqp_expressions.end(), operator_expressions.begin(),
-      [&](const auto& lqp_expression) { return std::make_shared<PQPExpression>(lqp_expression, node->left_child()); });
+  for (const auto& lqp_expression : lqp_expressions) {
+    pqp_expressions.emplace_back(std::make_shared<PQPExpression>(lqp_expression, node->left_child()));
+  }
 
-  return operator_expressions;
+  return pqp_expressions;
 }
 
 }  // namespace opossum

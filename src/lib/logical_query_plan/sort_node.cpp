@@ -18,12 +18,12 @@ SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
 std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
                                                            const std::shared_ptr<AbstractLQPNode>& right_child) const {
   OrderByDefinitions order_by_definitions;
-  std::transform(_order_by_definitions.begin(), _order_by_definitions.end(), std::back_inserter(order_by_definitions),
-                 [&](const auto& order_by_definition) {
-                   return OrderByDefinition{
-                       this->left_child()->deep_copy_column_reference(order_by_definition.column_reference, left_child),
-                       order_by_definition.order_by_mode};
-                 });
+  order_by_definitions.reserve(_order_by_definitions.size());
+
+  for (const auto& order_by_definition : _order_by_definitions) {
+    const auto column_reference = this->left_child()->deep_copy_column_reference(order_by_definition.column_reference, left_child);
+    order_by_definitions.emplace_back(column_reference, order_by_definition.order_by_mode);
+  }
 
   return std::make_shared<SortNode>(order_by_definitions);
 }

@@ -17,10 +17,11 @@ UpdateNode::UpdateNode(const std::string& table_name,
 std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
-  std::transform(_column_expressions.begin(), _column_expressions.end(), column_expressions.begin(),
-                 [&](const auto& expression) {
-                   return _adapt_expression_to_different_lqp(expression->deep_copy(), this->left_child(), left_child);
-                 });
+  column_expressions.reserve(_column_expressions.size());
+
+  for (const auto& expression : column_expressions) {
+    column_expressions.emplace_back(_adapt_expression_to_different_lqp(expression->deep_copy(), this->left_child(), left_child));
+  }
 
   return std::make_shared<UpdateNode>(_table_name, column_expressions);
 }
