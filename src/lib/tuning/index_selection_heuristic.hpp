@@ -54,7 +54,7 @@ class IndexSelectionHeuristic {
 
  protected:
   // Looks for table scans and extracts index proposals
-  void _inspect_operator(const std::shared_ptr<const AbstractOperator>& op);
+  void _inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
   // Sums up multiple index proposals to one
   void _aggregate_usages();
 
