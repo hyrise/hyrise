@@ -61,7 +61,6 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 
@@ -75,7 +74,6 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 

@@ -53,7 +53,6 @@ const std::vector<ColumnID>& UnionNode::output_column_ids_to_input_column_ids() 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
-  return nullptr;  // Return something
 }
 
 std::optional<ColumnID> UnionNode::find_column_id_by_named_column_reference(
@@ -83,7 +82,6 @@ bool UnionNode::knows_table(const std::string& table_name) const {
 
 std::vector<ColumnID> UnionNode::get_output_column_ids_for_table(const std::string& table_name) const {
   Fail("get_output_column_ids_for_table() is not a concept that applies to Unions");
-  return {};
 }
 
 }  // namespace opossum

@@ -47,7 +47,6 @@ class TableStatisticsMock : public TableStatistics {
     }
 
     Fail("Tried to access TableStatisticsMock with unexpected column");
-    return nullptr;
   }
 };
 

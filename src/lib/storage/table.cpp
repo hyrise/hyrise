@@ -109,7 +109,6 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
     }
   }
   Fail("Column " + column_name + " not found.");
-  return {};
 }
 
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
