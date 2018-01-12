@@ -266,27 +266,6 @@ TYPED_TEST(CacheTest, Clear) {
   ASSERT_FALSE(cache.has(2));
 }
 
-TYPED_TEST(CacheTest, ClearAndResize) {
-  TypeParam cache(3);
-
-  ASSERT_EQ(3u, cache.capacity());
-
-  cache.set(1, 2);
-  cache.set(2, 4);
-  cache.set(3, 6);
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-
-  cache.clear_and_resize(5);
-
-  ASSERT_EQ(5u, cache.capacity());
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-}
-
 TYPED_TEST(CacheTest, ResizeGrow) {
   TypeParam cache(3);
 

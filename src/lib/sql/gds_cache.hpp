@@ -79,11 +79,6 @@ class GDSCache : public AbstractCache<Key, Value> {
     _queue.clear();
   }
 
-  void clear_and_resize(size_t capacity) {
-    clear();
-    this->_capacity = capacity;
-  }
-
   void resize(size_t capacity) {
     while (_queue.size() > capacity) {
       _evict();

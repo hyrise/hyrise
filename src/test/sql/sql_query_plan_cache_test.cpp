@@ -28,9 +28,10 @@ class SQLQueryPlanCacheTest : public SQLBaseTest {
   }
 
   void TearDown() override {
-    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
-    SQLQueryOperator::get_prepared_statement_cache().clear_and_resize(1024);
+    SQLQueryOperator::get_parse_tree_cache().resize(0);
+    SQLQueryOperator::get_query_plan_cache().resize(0);
+    SQLQueryOperator::get_prepared_statement_cache().clear();
+    SQLQueryOperator::get_prepared_statement_cache().resize(1024);
   }
 };
 

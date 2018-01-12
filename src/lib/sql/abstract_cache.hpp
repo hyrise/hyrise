@@ -33,9 +33,6 @@ class AbstractCache {
   // Remove all elements from the cache.
   virtual void clear() = 0;
 
-  // Remove all elements from the cache and resize to the given capacity.
-  virtual void clear_and_resize(size_t capacity) = 0;
-
   // Resize to the given capacity.
   virtual void resize(size_t capacity) = 0;
 

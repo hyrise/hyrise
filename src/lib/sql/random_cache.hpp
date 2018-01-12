@@ -60,14 +60,6 @@ class RandomCache : public AbstractCache<Key, Value> {
     _map.clear();
   }
 
-  void clear_and_resize(size_t capacity) {
-    clear();
-    this->_capacity = capacity;
-    _list.shrink_to_fit();
-    _list.reserve(capacity);
-    _rand = std::uniform_int_distribution<>(0, capacity - 1);
-  }
-
   void resize(size_t capacity) {
     while (_list.size() > capacity) {
       _evict();

@@ -55,11 +55,6 @@ class LRUCache : public AbstractCache<Key, Value> {
     _map.clear();
   }
 
-  void clear_and_resize(size_t capacity) {
-    clear();
-    this->_capacity = capacity;
-  }
-
   void resize(size_t capacity) {
     while (_map.size() > capacity) {
       _evict();
