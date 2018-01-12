@@ -323,11 +323,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode()) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
-<<<<<<< HEAD
-=======
     default:
       Fail("UnionMode not supported");
->>>>>>> a55e0ccf50c5e3e010b6383c84c2935116b2409a
   }
 }
 
