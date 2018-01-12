@@ -77,8 +77,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /**
    * @param lqp_copy must be a deep copy of this
-   * @param column_reference must be a ColumnOrigin this node outputs
-   * @return the ColumnOrigin equivalent to column_reference within the lqp_copy subtree
+   * @param column_reference must be a ColumnReference this node outputs
+   * @return the ColumnReference equivalent to column_reference within the lqp_copy subtree
    */
   LQPColumnReference deep_copy_column_reference(const LQPColumnReference& column_reference,
                                                 const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
@@ -157,7 +157,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual const std::vector<std::string>& output_column_names() const;
 
   /**
-   * @returns the ColumnOrigins of the columns this node outputs
+   * @returns the ColumnReferences of the columns this node outputs
    */
   virtual const std::vector<LQPColumnReference>& output_column_references() const;
 
@@ -173,7 +173,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /**
    * @param named_column_reference Must not be ambiguous in this subtree
-   * @return The ColumnOrigin of the named_column_reference if it can be resolved in this subtree,
+   * @return The ColumnReference of the named_column_reference if it can be resolved in this subtree,
    *         std::nullopt otherwise.
    */
   std::optional<LQPColumnReference> find_column_reference(const NamedColumnReference& named_column_reference) const;
@@ -252,7 +252,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   /**
    * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
    * @param left_child and @param right_child are deep copies of the left and right child respectively, used for deep-copying
-   * ColumnOrigins
+   * ColumnReferences
    */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& left_child,
@@ -286,7 +286,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
       const NamedColumnReference& named_column_reference) const;
 
   /**
-   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnOrigins pointing to
+   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnReferences pointing to
    * their equivalent in a deep_copy()ed LQP
    */
   static std::shared_ptr<LQPExpression> _adapt_expression_to_different_lqp(

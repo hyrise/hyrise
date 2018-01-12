@@ -414,7 +414,7 @@ std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expression
     const std::vector<std::shared_ptr<LQPExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->left_child() && !node->right_child(),
-         "Can only translate expressions if there is one input node, can't resolve ColumnOrigins otherwise.");
+         "Can only translate expressions if there is one input node, can't resolve ColumnReferences otherwise.");
 
   std::vector<std::shared_ptr<PQPExpression>> operator_expressions(lqp_expressions.size());
 

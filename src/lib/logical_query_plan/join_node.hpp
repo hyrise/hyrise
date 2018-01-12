@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-using JoinColumnOrigins = std::pair<LQPColumnReference, LQPColumnReference>;
+using JoinColumnReferences = std::pair<LQPColumnReference, LQPColumnReference>;
 
 /**
  * This node type is used to represent any type of Join, including cross products.
@@ -25,9 +25,9 @@ class JoinNode : public AbstractLQPNode {
   explicit JoinNode(const JoinMode join_mode);
 
   // Constructor for predicated Joins
-  JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_references, const ScanType scan_type);
+  JoinNode(const JoinMode join_mode, const JoinColumnReferences& join_column_references, const ScanType scan_type);
 
-  const std::optional<JoinColumnOrigins>& join_column_references() const;
+  const std::optional<JoinColumnReferences>& join_column_references() const;
   const std::optional<ScanType>& scan_type() const;
   JoinMode join_mode() const;
 
@@ -48,7 +48,7 @@ class JoinNode : public AbstractLQPNode {
 
  private:
   JoinMode _join_mode;
-  std::optional<JoinColumnOrigins> _join_column_references;
+  std::optional<JoinColumnReferences> _join_column_references;
   std::optional<ScanType> _scan_type;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;

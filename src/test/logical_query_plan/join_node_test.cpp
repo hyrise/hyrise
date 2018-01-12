@@ -58,7 +58,7 @@ TEST_F(JoinNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{4}), "t_b.y");
 }
 
-TEST_F(JoinNodeTest, ColumnOriginByNamedColumnReference) {
+TEST_F(JoinNodeTest, ColumnReferenceByNamedColumnReference) {
   EXPECT_EQ(_join_node->get_column_reference({"a", std::nullopt}), _t_a_a);
   EXPECT_EQ(_join_node->get_column_reference({"a", "t_a"}), _t_a_a);
   EXPECT_EQ(_join_node->get_column_reference({"b", std::nullopt}), _t_a_b);
@@ -71,7 +71,7 @@ TEST_F(JoinNodeTest, ColumnOriginByNamedColumnReference) {
   EXPECT_EQ(_join_node->get_column_reference({"y", "t_b"}), _t_b_y);
 }
 
-TEST_F(JoinNodeTest, OutputColumnOrigins) {
+TEST_F(JoinNodeTest, OutputColumnReferences) {
   ASSERT_EQ(_join_node->output_column_references().size(), 5u);
   EXPECT_EQ(_join_node->output_column_references().at(0), _t_a_a);
   EXPECT_EQ(_join_node->output_column_references().at(1), _t_a_b);

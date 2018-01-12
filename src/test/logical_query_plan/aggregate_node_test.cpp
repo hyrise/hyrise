@@ -50,7 +50,7 @@ class AggregateNodeTest : public BaseTest {
   LQPColumnReference _c;
 };
 
-TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
+TEST_F(AggregateNodeTest, ColumnReferenceByNamedColumnReference) {
   /**
    * Find GROUPBY columns
    */
@@ -69,7 +69,7 @@ TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
   EXPECT_EQ(_aggregate_node->find_column_reference({"some_sum", {"t_a"}}), std::nullopt);
 }
 
-TEST_F(AggregateNodeTest, OutputColumnOrigins) {
+TEST_F(AggregateNodeTest, OutputColumnReferences) {
   ASSERT_EQ(_aggregate_node->output_column_references().size(), 4u);
   EXPECT_EQ(_aggregate_node->output_column_references().at(0), _a);
   EXPECT_EQ(_aggregate_node->output_column_references().at(1), _c);

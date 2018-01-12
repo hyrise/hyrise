@@ -8,7 +8,7 @@
 namespace opossum {
 
 /**
- * Expression type used in LQPs, using LQPColumnOrigins to refer to Columns.
+ * Expression type used in LQPs, using LQPColumnReferences to refer to Columns.
  * AbstractExpression handles all other possible contained types (literals, operators, ...).
  */
 class LQPExpression : public AbstractExpression<LQPExpression> {

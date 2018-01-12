@@ -25,7 +25,7 @@ namespace opossum {
 struct GroupByContext;
 
 /**
- * Aggregates are defined by the Column (ColumnID for Operators, ColumnOrigin in LQP) they operate on and the aggregate
+ * Aggregates are defined by the Column (ColumnID for Operators, ColumnReference in LQP) they operate on and the aggregate
  * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
  * Optionally, an alias can be specified to use as the output name.
  */

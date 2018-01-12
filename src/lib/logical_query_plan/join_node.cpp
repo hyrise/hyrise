@@ -21,7 +21,8 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_references, const ScanType scan_type)
+JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnReferences& join_column_references,
+                   const ScanType scan_type)
     : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
       _join_column_references(join_column_references),
@@ -37,7 +38,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(const std::shared_ptr
   } else {
     Assert(this->left_child(), "Can't clone without child");
 
-    const auto column_references = JoinColumnOrigins{
+    const auto column_references = JoinColumnReferences{
         this->left_child()->deep_copy_column_reference(_join_column_references->first, left_child),
         this->right_child()->deep_copy_column_reference(_join_column_references->first, right_child),
     };
@@ -95,7 +96,7 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   }
 }
 
-const std::optional<JoinColumnOrigins>& JoinNode::join_column_references() const { return _join_column_references; }
+const std::optional<JoinColumnReferences>& JoinNode::join_column_references() const { return _join_column_references; }
 
 const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 

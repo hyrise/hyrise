@@ -183,7 +183,7 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
 
 const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references() const {
   /**
-   * Default implementation of output_column_references() will return the ColumnOrigins of the left_child if it exists,
+   * Default implementation of output_column_references() will return the ColumnReferences of the left_child if it exists,
    * otherwise will pretend that all Columns originate in this node.
    * Nodes with both children need to override this as the default implementation can't cover their behaviour.
    */

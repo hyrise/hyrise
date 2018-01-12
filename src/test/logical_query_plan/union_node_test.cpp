@@ -37,7 +37,7 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
   EXPECT_THROW(_union_node->derive_statistics_from(_mock_node, _mock_node), std::exception);
 }
 
-TEST_F(UnionNodeTest, ColumnOriginByNamedColumnReference) {
+TEST_F(UnionNodeTest, ColumnReferenceByNamedColumnReference) {
   EXPECT_EQ(_union_node->get_column_reference({"a"}), _a);
   EXPECT_EQ(_union_node->get_column_reference({"a", {"t_a"}}), _a);
   EXPECT_EQ(_union_node->get_column_reference({"b"}), _b);
@@ -46,7 +46,7 @@ TEST_F(UnionNodeTest, ColumnOriginByNamedColumnReference) {
   EXPECT_EQ(_union_node->get_column_reference({"c", {"t_a"}}), _c);
 }
 
-TEST_F(UnionNodeTest, OutputColumnOrigins) {
+TEST_F(UnionNodeTest, OutputColumnReferences) {
   EXPECT_EQ(_union_node->output_column_references().at(0), _a);
   EXPECT_EQ(_union_node->output_column_references().at(1), _b);
   EXPECT_EQ(_union_node->output_column_references().at(2), _c);

@@ -52,7 +52,7 @@ TEST_F(ProjectionNodeTest, Description) {
   EXPECT_EQ(_projection_node->description(), "[Projection] t_a.c, t_a.a, t_a.b, t_a.b + t_a.c, t_a.a + t_a.c");
 }
 
-TEST_F(ProjectionNodeTest, ColumnOriginByNamedColumnReference) {
+TEST_F(ProjectionNodeTest, ColumnReferenceByNamedColumnReference) {
   EXPECT_EQ(_projection_node->get_column_reference({"c", std::nullopt}), _c);
   EXPECT_EQ(_projection_node->get_column_reference({"c", "t_a"}), _c);
   EXPECT_EQ(_projection_node->get_column_reference({"a", std::nullopt}), _a);
@@ -63,7 +63,7 @@ TEST_F(ProjectionNodeTest, ColumnOriginByNamedColumnReference) {
   EXPECT_EQ(_projection_node->find_column_reference({"some_addition", "t_a"}), std::nullopt);
 }
 
-TEST_F(ProjectionNodeTest, ColumnOriginByOutputColumnID) {
+TEST_F(ProjectionNodeTest, ColumnReferenceByOutputColumnID) {
   ASSERT_EQ(_projection_node->output_column_references().size(), 5u);
   EXPECT_EQ(_projection_node->output_column_references().at(0), _c);
   EXPECT_EQ(_projection_node->output_column_references().at(1), _a);

@@ -614,7 +614,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   groupby_aliasing_node->set_left_child(input_node);
 
   /**
-   * Collect the ColumnOrigins of the GroupByColumns
+   * Collect the ColumnReferences of the GroupByColumns
    */
   std::vector<LQPColumnReference> groupby_column_references;
   if (group_by) {

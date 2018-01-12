@@ -39,7 +39,7 @@ class LogicalQueryPlanTest : public BaseTest {
     _predicate_node_a = std::make_shared<PredicateNode>(_t_a_a, ScanType::Equals, 42);
     _predicate_node_b = std::make_shared<PredicateNode>(_t_a_b, ScanType::Equals, 1337);
     _projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({_t_a_a, _t_a_b}));
-    _join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnOrigins{_t_a_a, _t_b_a}, ScanType::Equals);
+    _join_node = std::make_shared<JoinNode>(JoinMode::Inner, JoinColumnReferences{_t_a_a, _t_b_a}, ScanType::Equals);
 
     /**
      * Init complex graph.
@@ -301,7 +301,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
   ASSERT_LQP_TIE(_nodes[4], LQPChildSide::Right, new_node_b);
 }
 
-TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
+TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
   /**
    * Test AbstractLQPNode::deep_copy_column_reference()
    */
@@ -361,7 +361,7 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_c, lqp_copy).original_node(), lqp_copy);
 }
 
-TEST_F(LogicalQueryPlanTest, ColumnIDByColumnOrigin) {
+TEST_F(LogicalQueryPlanTest, ColumnIDByColumnReference) {
   /**
    * Test AbstractLQPNode::{get, find}_output_column_id_by_column_reference
    */

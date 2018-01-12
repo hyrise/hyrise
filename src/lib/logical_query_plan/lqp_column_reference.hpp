@@ -26,7 +26,7 @@ class LQPColumnReference final {
   bool operator==(const LQPColumnReference& rhs) const;
 
  private:
-  // Needs to be weak since Nodes can hold ColumnOrigins referring to themselves
+  // Needs to be weak since Nodes can hold ColumnReferences referring to themselves
   std::weak_ptr<const AbstractLQPNode> _original_node;
   ColumnID _original_column_id{INVALID_COLUMN_ID};
 };

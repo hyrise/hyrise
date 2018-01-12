@@ -16,7 +16,7 @@ class AbstractLQPNode;
 
 /**
  * CRTP class forming the base class for LQPExpression and PQPExpression. CRTP so pointers to children have the
- * correct type et al. PQPExpressions use ColumnIDs to refer to Columns, LQPExpressions use LQPColumnOrigins.
+ * correct type et al. PQPExpressions use ColumnIDs to refer to Columns, LQPExpressions use LQPColumnReferences.
  *
  * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
  * and especially its optimizer.
