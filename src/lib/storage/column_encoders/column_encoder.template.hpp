@@ -22,8 +22,11 @@ class ColumnEncoderTemplate : public ColumnEncoder<ColumnEncoderTemplate> {
   // TODO(you): Add new encoding to column_encoding_type.hpp and update _encoding_type
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::NewEncoding>;
 
+  // Specify if the new encoding scheme uses zero suppression
+  static constexpr auto _uses_zero_suppression = false;
+
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     // TODO(you): Implement encoding
   }
 };

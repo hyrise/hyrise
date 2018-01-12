@@ -34,8 +34,14 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
 }
 
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
-                                                 std::shared_ptr<BaseValueColumn> column) {
+                                                 std::shared_ptr<const BaseValueColumn> column,
+                                                 std::optional<ZsType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
+
+  if (zero_suppression_type.has_value()) {
+    encoder->set_zs_type(zero_suppression_type.value());
+  }
+
   return encoder->encode(data_type, column);
 }
 

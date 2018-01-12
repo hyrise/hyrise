@@ -202,6 +202,8 @@ set(
     storage/base_value_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
+    storage/chunk_encoder.cpp
+    storage/chunk_encoder.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
     storage/deprecated_dictionary_column.cpp

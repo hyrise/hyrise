@@ -24,9 +24,10 @@ namespace opossum {
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _uses_zero_suppression = true;
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
@@ -90,7 +91,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     const auto max_value = dictionary.size() + 1u;
 
     auto encoded_attribute_vector =
-        encode_by_zs_type(ZsType::FixedSizeByteAligned, attribute_vector, alloc, {max_value});
+        encode_by_zs_type(zs_type(), attribute_vector, alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
