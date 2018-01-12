@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-OrderByDefinition::OrderByDefinition(const LQPColumnReference& column_origin, const OrderByMode order_by_mode)
-    : column_origin(column_origin), order_by_mode(order_by_mode) {}
+OrderByDefinition::OrderByDefinition(const LQPColumnReference& column_reference, const OrderByMode order_by_mode)
+    : column_reference(column_reference), order_by_mode(order_by_mode) {}
 
 SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
     : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
@@ -21,7 +21,7 @@ std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(const std::shared_ptr
   std::transform(_order_by_definitions.begin(), _order_by_definitions.end(), std::back_inserter(order_by_definitions),
                  [&](const auto& order_by_definition) {
                    return OrderByDefinition{
-                       this->left_child()->deep_copy_column_origin(order_by_definition.column_origin, left_child),
+                       this->left_child()->deep_copy_column_origin(order_by_definition.column_reference, left_child),
                        order_by_definition.order_by_mode};
                  });
 
@@ -34,7 +34,7 @@ std::string SortNode::description() const {
   s << "[Sort] ";
 
   auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << definition.column_origin.description();
+    s << definition.column_reference.description();
     s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
   };
 

@@ -28,12 +28,12 @@ class AggregateNode : public AbstractLQPNode {
                          const std::vector<LQPColumnReference>& groupy_column_origins);
 
   const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
-  const std::vector<LQPColumnReference>& groupby_column_origins() const;
+  const std::vector<LQPColumnReference>& groupby_column_references() const;
 
   std::string description() const override;
 
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<LQPColumnReference>& output_column_origins() const override;
+  const std::vector<LQPColumnReference>& output_column_references() const override;
 
   // @{
   /**
@@ -50,9 +50,9 @@ class AggregateNode : public AbstractLQPNode {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<LQPColumnReference> find_column_origin_by_expression(
-      const std::shared_ptr<LQPExpression>& expression) const;
-  LQPColumnReference get_column_origin_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  std::optional<LQPColumnReference> find_column_reference_by_expression(
+  const std::shared_ptr<LQPExpression> &expression) const;
+  LQPColumnReference get_column_reference_by_expression(const std::shared_ptr<LQPExpression> &expression) const;
   // @}
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
@@ -64,7 +64,7 @@ class AggregateNode : public AbstractLQPNode {
 
  private:
   std::vector<std::shared_ptr<LQPExpression>> _aggregate_expressions;
-  std::vector<LQPColumnReference> _groupby_column_origins;
+  std::vector<LQPColumnReference> _groupby_column_references;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

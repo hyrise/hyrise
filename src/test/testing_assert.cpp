@@ -262,7 +262,7 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanTy
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
   EXPECT_EQ(join_node->scan_type(), scan_type);
-  EXPECT_EQ(join_node->join_column_origins(), std::make_pair(left_column_origin, right_column_origin));
+  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_origin, right_column_origin));
 }
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}

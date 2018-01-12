@@ -114,7 +114,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
  */
 #define ASSERT_COLUMN_EXPRESSION(expression, actual_column_origin) \
   ASSERT_EQ(expression->type(), ExpressionType::Column);           \
-  ASSERT_EQ(expression->column_origin(), actual_column_origin);
+  ASSERT_EQ(expression->column_reference(), actual_column_origin);
 
 /**
  * Assert that `expression` models an Aggregate Function operating on `actual_column_id`
@@ -124,7 +124,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                                 \
   ASSERT_EQ(expression->aggregate_function_arguments().size(), 1u);                                       \
   ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);               \
-  ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_origin(), actual_column_origin);
+  ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_reference(), actual_column_origin);
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();

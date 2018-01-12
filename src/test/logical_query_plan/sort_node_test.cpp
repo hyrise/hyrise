@@ -49,12 +49,12 @@ TEST_F(SortNodeTest, UnchangedColumnMapping) {
       std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}});
   sort_node->set_left_child(_table_node);
 
-  auto column_origins = sort_node->output_column_origins();
+  auto column_references = sort_node->output_column_references();
 
-  EXPECT_EQ(column_origins.size(), _table_node->output_column_names().size());
+  EXPECT_EQ(column_references.size(), _table_node->output_column_names().size());
 
-  for (ColumnID column_id{0}; column_id < column_origins.size(); ++column_id) {
-    EXPECT_EQ(column_origins[column_id], LQPColumnReference(_table_node, column_id));
+  for (ColumnID column_id{0}; column_id < column_references.size(); ++column_id) {
+    EXPECT_EQ(column_references[column_id], LQPColumnReference(_table_node, column_id));
   }
 }
 

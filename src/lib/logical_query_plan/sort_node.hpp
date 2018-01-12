@@ -14,9 +14,9 @@ namespace opossum {
  * Order By items are defined by the column they operate on and their sort order.
  */
 struct OrderByDefinition {
-  OrderByDefinition(const LQPColumnReference& column_origin, const OrderByMode order_by_mode);
+  OrderByDefinition(const LQPColumnReference& column_reference, const OrderByMode order_by_mode);
 
-  LQPColumnReference column_origin;
+  LQPColumnReference column_reference;
   OrderByMode order_by_mode;
 };
 

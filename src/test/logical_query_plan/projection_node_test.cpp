@@ -53,24 +53,24 @@ TEST_F(ProjectionNodeTest, Description) {
 }
 
 TEST_F(ProjectionNodeTest, ColumnOriginByNamedColumnReference) {
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"c", std::nullopt}), _c);
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"c", "t_a"}), _c);
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"a", std::nullopt}), _a);
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"a", "t_a"}), _a);
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"alias_for_b", std::nullopt}), _b);
-  EXPECT_EQ(_projection_node->find_column_origin_by_named_column_reference({"alias_for_b", "t_a"}), std::nullopt);
-  EXPECT_EQ(_projection_node->get_column_origin_by_named_column_reference({"some_addition", std::nullopt}),
+  EXPECT_EQ(_projection_node->get_column_reference({"c", std::nullopt}), _c);
+  EXPECT_EQ(_projection_node->get_column_reference({"c", "t_a"}), _c);
+  EXPECT_EQ(_projection_node->get_column_reference({"a", std::nullopt}), _a);
+  EXPECT_EQ(_projection_node->get_column_reference({"a", "t_a"}), _a);
+  EXPECT_EQ(_projection_node->get_column_reference({"alias_for_b", std::nullopt}), _b);
+  EXPECT_EQ(_projection_node->find_column_reference({"alias_for_b", "t_a"}), std::nullopt);
+  EXPECT_EQ(_projection_node->get_column_reference({"some_addition", std::nullopt}),
             _some_addition);
-  EXPECT_EQ(_projection_node->find_column_origin_by_named_column_reference({"some_addition", "t_a"}), std::nullopt);
+  EXPECT_EQ(_projection_node->find_column_reference({"some_addition", "t_a"}), std::nullopt);
 }
 
 TEST_F(ProjectionNodeTest, ColumnOriginByOutputColumnID) {
-  ASSERT_EQ(_projection_node->output_column_origins().size(), 5u);
-  EXPECT_EQ(_projection_node->output_column_origins().at(0), _c);
-  EXPECT_EQ(_projection_node->output_column_origins().at(1), _a);
-  EXPECT_EQ(_projection_node->output_column_origins().at(2), _b);
-  EXPECT_EQ(_projection_node->output_column_origins().at(3), _some_addition);
-  EXPECT_EQ(_projection_node->output_column_origins().at(4), _a_plus_c);
+  ASSERT_EQ(_projection_node->output_column_references().size(), 5u);
+  EXPECT_EQ(_projection_node->output_column_references().at(0), _c);
+  EXPECT_EQ(_projection_node->output_column_references().at(1), _a);
+  EXPECT_EQ(_projection_node->output_column_references().at(2), _b);
+  EXPECT_EQ(_projection_node->output_column_references().at(3), _some_addition);
+  EXPECT_EQ(_projection_node->output_column_references().at(4), _a_plus_c);
 }
 
 TEST_F(ProjectionNodeTest, VerboseColumnNames) {

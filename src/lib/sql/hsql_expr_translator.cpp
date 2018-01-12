@@ -44,8 +44,8 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
 
       auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
       NamedColumnReference named_column_reference{name, table_name};
-      auto column_origin = input_node->get_column_origin_by_named_column_reference(named_column_reference);
-      node = LQPExpression::create_column(column_origin, alias);
+      auto column_reference = input_node->get_column_reference(named_column_reference);
+      node = LQPExpression::create_column(column_reference, alias);
       break;
     }
     case hsql::kExprFunctionRef: {
@@ -149,11 +149,11 @@ LQPColumnReference HSQLExprTranslator::to_column_origin(const hsql::Expr& hsql_e
                                                      const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
   const auto named_column_reference = to_named_column_reference(hsql_expr);
-  const auto column_origin = input_node->find_column_origin_by_named_column_reference(named_column_reference);
+  const auto column_reference = input_node->find_column_reference(named_column_reference);
 
-  Assert(column_origin, "Couldn't resolve named column reference '" + named_column_reference.as_string() + "'");
+  Assert(column_reference, "Couldn't resolve named column reference '" + named_column_reference.as_string() + "'");
 
-  return *column_origin;
+  return *column_reference;
 }
 
 NamedColumnReference HSQLExprTranslator::to_named_column_reference(const hsql::Expr& hsql_expr) {

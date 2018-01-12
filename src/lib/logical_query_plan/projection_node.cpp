@@ -59,12 +59,12 @@ void ProjectionNode::_on_child_changed() {
   _output_column_names.reset();
 }
 
-const std::vector<LQPColumnReference>& ProjectionNode::output_column_origins() const {
-  if (!_output_column_origins) {
+const std::vector<LQPColumnReference>& ProjectionNode::output_column_references() const {
+  if (!_output_column_references) {
     _update_output();
   }
 
-  return *_output_column_origins;
+  return *_output_column_references;
 }
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const {
@@ -105,8 +105,8 @@ void ProjectionNode::_update_output() const {
   _output_column_names.emplace();
   _output_column_names->reserve(_column_expressions.size());
 
-  _output_column_origins.emplace();
-  _output_column_origins->reserve(_column_expressions.size());
+  _output_column_references.emplace();
+  _output_column_references->reserve(_column_expressions.size());
 
   auto column_id = ColumnID{0};
   for (const auto& expression : _column_expressions) {
@@ -119,16 +119,16 @@ void ProjectionNode::_update_output() const {
     if (expression->type() == ExpressionType::Column) {
       DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-      _output_column_origins->emplace_back(expression->column_origin());
+      _output_column_references->emplace_back(expression->column_reference());
 
       if (!expression->alias()) {
-        const auto input_column_id = left_child()->get_output_column_id_by_column_origin(expression->column_origin());
+        const auto input_column_id = left_child()->get_output_column_id_by_column_reference(expression->column_reference());
         const auto& column_name = left_child()->output_column_names()[input_column_id];
         _output_column_names->emplace_back(column_name);
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_origins->emplace_back(shared_from_this(), column_id);
+      _output_column_references->emplace_back(shared_from_this(), column_id);
 
       if (!expression->alias()) {
         _output_column_names->emplace_back(expression->to_string(left_child()->output_column_names()));

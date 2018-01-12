@@ -44,13 +44,13 @@ const std::vector<std::string>& UnionNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<LQPColumnReference>& UnionNode::output_column_origins() const {
-  if (!_output_column_origins) {
-    DebugAssert(left_child()->output_column_origins() == right_child()->output_column_origins(),
+const std::vector<LQPColumnReference>& UnionNode::output_column_references() const {
+  if (!_output_column_references) {
+    DebugAssert(left_child()->output_column_references() == right_child()->output_column_references(),
                 "Input layouts differ.");
-    _output_column_origins = left_child()->output_column_origins();
+    _output_column_references = left_child()->output_column_references();
   }
-  return *_output_column_origins;
+  return *_output_column_references;
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(

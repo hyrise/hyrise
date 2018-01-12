@@ -184,9 +184,9 @@ TEST_F(LogicalQueryPlanTest, AliasedSubqueryTest) {
   ASSERT_EQ(_predicate_node_a->find_table_name_origin("foo"), _predicate_node_a);
   ASSERT_EQ(_predicate_node_a->find_table_name_origin("t_a"), nullptr);
 
-  ASSERT_EQ(_predicate_node_a->get_column_origin_by_named_column_reference({"b"}), _t_a_b);
-  ASSERT_EQ(_predicate_node_a->get_column_origin_by_named_column_reference({"b", {"foo"}}), _t_a_b);
-  ASSERT_EQ(_predicate_node_a->find_column_origin_by_named_column_reference({"b", "t_a"}), std::nullopt);
+  ASSERT_EQ(_predicate_node_a->get_column_reference({"b"}), _t_a_b);
+  ASSERT_EQ(_predicate_node_a->get_column_reference({"b", {"foo"}}), _t_a_b);
+  ASSERT_EQ(_predicate_node_a->find_column_reference({"b", "t_a"}), std::nullopt);
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphStructure) {
@@ -360,7 +360,7 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
 
 TEST_F(LogicalQueryPlanTest, ColumnIDByColumnOrigin) {
   /**
-   * Test AbstractLQPNode::{get, find}_output_column_id_by_column_origin
+   * Test AbstractLQPNode::{get, find}_output_column_id_by_column_reference
    */
 
   auto mock_node_a = std::make_shared<MockNode>(
@@ -378,12 +378,12 @@ TEST_F(LogicalQueryPlanTest, ColumnIDByColumnOrigin) {
 
   const auto column_origin_c = LQPColumnReference{aggregate_node, ColumnID{1}};
 
-  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_origin(column_origin_a), ColumnID{0});
-  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_origin(column_origin_b), ColumnID{1});
-  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_origin(column_origin_b), ColumnID{0});
-  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_origin(column_origin_c), ColumnID{1});
-  EXPECT_EQ(aggregate_node->find_output_column_id_by_column_origin(column_origin_a), std::nullopt);
-  EXPECT_EQ(mock_node_a->find_output_column_id_by_column_origin(LQPColumnReference{mock_node_b, ColumnID{0}}),
+  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_reference(column_origin_a), ColumnID{0});
+  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_reference(column_origin_b), ColumnID{1});
+  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_reference(column_origin_b), ColumnID{0});
+  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_reference(column_origin_c), ColumnID{1});
+  EXPECT_EQ(aggregate_node->find_output_column_id_by_column_reference(column_origin_a), std::nullopt);
+  EXPECT_EQ(mock_node_a->find_output_column_id_by_column_reference(LQPColumnReference{mock_node_b, ColumnID{0}}),
             std::nullopt);
 }
 

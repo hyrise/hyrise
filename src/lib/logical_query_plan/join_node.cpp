@@ -21,10 +21,10 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_origins, const ScanType scan_type)
+JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_references, const ScanType scan_type)
     : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
-      _join_column_origins(join_column_origins),
+      _join_column_origins(join_column_references),
       _scan_type(scan_type) {
   DebugAssert(join_mode != JoinMode::Cross && join_mode != JoinMode::Natural,
               "Specified JoinMode must specify neither column ids nor scan type.");
@@ -37,11 +37,11 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(const std::shared_ptr
   } else {
     Assert(this->left_child(), "Can't clone without child");
 
-    const auto column_origins = JoinColumnOrigins{
+    const auto column_references = JoinColumnOrigins{
         this->left_child()->deep_copy_column_origin(_join_column_origins->first, left_child),
         this->right_child()->deep_copy_column_origin(_join_column_origins->first, right_child),
     };
-    return std::make_shared<JoinNode>(_join_mode, column_origins, *_scan_type);
+    return std::make_shared<JoinNode>(_join_mode, column_references, *_scan_type);
   }
 }
 
@@ -69,12 +69,12 @@ const std::vector<std::string>& JoinNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<LQPColumnReference>& JoinNode::output_column_origins() const {
-  if (!_output_column_origins) {
+const std::vector<LQPColumnReference>& JoinNode::output_column_references() const {
+  if (!_output_column_references) {
     _update_output();
   }
 
-  return *_output_column_origins;
+  return *_output_column_references;
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
@@ -86,15 +86,15 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
 
-    JoinColumnIDs join_colum_ids{left_child->get_output_column_id_by_column_origin(_join_column_origins->first),
-                                 right_child->get_output_column_id_by_column_origin(_join_column_origins->second)};
+    JoinColumnIDs join_colum_ids{left_child->get_output_column_id_by_column_reference(_join_column_origins->first),
+                                 right_child->get_output_column_id_by_column_reference(_join_column_origins->second)};
 
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
                                                                              join_colum_ids, *_scan_type);
   }
 }
 
-const std::optional<JoinColumnOrigins>& JoinNode::join_column_origins() const { return _join_column_origins; }
+const std::optional<JoinColumnOrigins>& JoinNode::join_column_references() const { return _join_column_origins; }
 
 const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 
@@ -135,12 +135,12 @@ void JoinNode::_update_output() const {
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
    */
-  _output_column_origins.emplace();
+  _output_column_references.emplace();
 
-  _output_column_origins->insert(_output_column_origins->end(), left_child()->output_column_origins().begin(),
-                                 left_child()->output_column_origins().end());
-  _output_column_origins->insert(_output_column_origins->end(), right_child()->output_column_origins().begin(),
-                                 right_child()->output_column_origins().end());
+  _output_column_references->insert(_output_column_references->end(), left_child()->output_column_references().begin(),
+                                 left_child()->output_column_references().end());
+  _output_column_references->insert(_output_column_references->end(), right_child()->output_column_references().begin(),
+                                 right_child()->output_column_references().end());
 }
 
 }  // namespace opossum

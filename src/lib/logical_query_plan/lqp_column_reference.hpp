@@ -31,5 +31,5 @@ class LQPColumnReference final {
   ColumnID _original_column_id{INVALID_COLUMN_ID};
 };
 
-std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_origin);
+std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference);
 }  // namespace opossum

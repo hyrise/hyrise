@@ -88,11 +88,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-  const auto column_id = table_scan_node->get_output_column_id_by_column_origin(table_scan_node->column_origin());
+  const auto column_id = table_scan_node->get_output_column_id_by_column_reference(table_scan_node->column_reference());
 
   auto value = table_scan_node->value();
   if (is_lqp_column_reference(value)) {
-    value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const LQPColumnReference>(value));
+    value = table_scan_node->get_output_column_id_by_column_reference(boost::get<const LQPColumnReference>(value));
   }
 
   /**
@@ -139,7 +139,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
     const auto& definition = *it;
     result_operator =
-        std::make_shared<Sort>(input_operator, node->get_output_column_id_by_column_origin(definition.column_origin),
+        std::make_shared<Sort>(input_operator, node->get_output_column_id_by_column_reference(definition.column_reference),
                                definition.order_by_mode);
     input_operator = result_operator;
   }
@@ -159,14 +159,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  DebugAssert(static_cast<bool>(join_node->join_column_origins()), "Cannot translate Join without columns.");
+  DebugAssert(static_cast<bool>(join_node->join_column_references()), "Cannot translate Join without columns.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
 
   JoinColumnIDs join_column_ids;
   join_column_ids.first =
-      join_node->left_child()->get_output_column_id_by_column_origin(join_node->join_column_origins()->first);
+      join_node->left_child()->get_output_column_id_by_column_reference(join_node->join_column_references()->first);
   join_column_ids.second =
-      join_node->right_child()->get_output_column_id_by_column_origin(join_node->join_column_origins()->second);
+      join_node->right_child()->get_output_column_id_by_column_reference(join_node->join_column_references()->second);
 
   if (*join_node->scan_type() == ScanType::Equals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
@@ -185,8 +185,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   auto aggregate_expressions = _translate_expressions(aggregate_node->aggregate_expressions(), node);
 
   std::vector<ColumnID> groupby_columns;
-  for (const auto& groupby_column_origin : aggregate_node->groupby_column_origins()) {
-    groupby_columns.emplace_back(node->left_child()->get_output_column_id_by_column_origin(groupby_column_origin));
+  for (const auto& groupby_column_reference : aggregate_node->groupby_column_references()) {
+    groupby_columns.emplace_back(node->left_child()->get_output_column_id_by_column_reference(groupby_column_reference));
   }
 
   auto aggregate_input_operator = input_operator;
@@ -213,7 +213,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
    */
   if (need_projection) {
     auto projection_expressions =
-        _translate_expressions(LQPExpression::create_columns(aggregate_node->groupby_column_origins()), node);
+        _translate_expressions(LQPExpression::create_columns(aggregate_node->groupby_column_references()), node);
     projection_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.

@@ -38,18 +38,18 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
 }
 
 TEST_F(UnionNodeTest, ColumnOriginByNamedColumnReference) {
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"a"}), _a);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"a", {"t_a"}}), _a);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"b"}), _b);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"b", {"t_a"}}), _b);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"c"}), _c);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"c", {"t_a"}}), _c);
+  EXPECT_EQ(_union_node->get_column_reference({"a"}), _a);
+  EXPECT_EQ(_union_node->get_column_reference({"a", {"t_a"}}), _a);
+  EXPECT_EQ(_union_node->get_column_reference({"b"}), _b);
+  EXPECT_EQ(_union_node->get_column_reference({"b", {"t_a"}}), _b);
+  EXPECT_EQ(_union_node->get_column_reference({"c"}), _c);
+  EXPECT_EQ(_union_node->get_column_reference({"c", {"t_a"}}), _c);
 }
 
 TEST_F(UnionNodeTest, OutputColumnOrigins) {
-  EXPECT_EQ(_union_node->output_column_origins().at(0), _a);
-  EXPECT_EQ(_union_node->output_column_origins().at(1), _b);
-  EXPECT_EQ(_union_node->output_column_origins().at(2), _c);
+  EXPECT_EQ(_union_node->output_column_references().at(0), _a);
+  EXPECT_EQ(_union_node->output_column_references().at(1), _b);
+  EXPECT_EQ(_union_node->output_column_references().at(2), _c);
 }
 
 TEST_F(UnionNodeTest, MismatchingColumnNames) {

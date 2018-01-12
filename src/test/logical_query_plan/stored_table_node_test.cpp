@@ -27,18 +27,18 @@ class StoredTableNodeTest : public BaseTest {
 TEST_F(StoredTableNodeTest, Description) { EXPECT_EQ(_stored_table_node->description(), "[StoredTable] Name: 't_a'"); }
 
 TEST_F(StoredTableNodeTest, ColumnOriginByNamedColumnReference) {
-  EXPECT_EQ(_stored_table_node->get_column_origin_by_named_column_reference({"a", std::nullopt}), _a);
-  EXPECT_EQ(_stored_table_node->get_column_origin_by_named_column_reference({"a", {"t_a"}}), _a);
-  EXPECT_EQ(_stored_table_node->get_column_origin_by_named_column_reference({"b", {"t_a"}}), _b);
-  EXPECT_EQ(_stored_table_node->find_column_origin_by_named_column_reference({"c", {"t_a"}}), std::nullopt);
-  EXPECT_EQ(_stored_table_node->find_column_origin_by_named_column_reference({"c", {"garbage"}}), std::nullopt);
-  EXPECT_EQ(_stored_table_node->find_column_origin_by_named_column_reference({"b", {"garbage"}}), std::nullopt);
+  EXPECT_EQ(_stored_table_node->get_column_reference({"a", std::nullopt}), _a);
+  EXPECT_EQ(_stored_table_node->get_column_reference({"a", {"t_a"}}), _a);
+  EXPECT_EQ(_stored_table_node->get_column_reference({"b", {"t_a"}}), _b);
+  EXPECT_EQ(_stored_table_node->find_column_reference({"c", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_stored_table_node->find_column_reference({"c", {"garbage"}}), std::nullopt);
+  EXPECT_EQ(_stored_table_node->find_column_reference({"b", {"garbage"}}), std::nullopt);
 }
 
 TEST_F(StoredTableNodeTest, ColumnOriginByOutputColumnID) {
-  ASSERT_EQ(_stored_table_node->output_column_origins().size(), 2u);
-  EXPECT_EQ(_stored_table_node->output_column_origins().at(0), _a);
-  EXPECT_EQ(_stored_table_node->output_column_origins().at(1), _b);
+  ASSERT_EQ(_stored_table_node->output_column_references().size(), 2u);
+  EXPECT_EQ(_stored_table_node->output_column_references().at(0), _a);
+  EXPECT_EQ(_stored_table_node->output_column_references().at(1), _b);
 }
 
 TEST_F(StoredTableNodeTest, UnknownTableColumns) {

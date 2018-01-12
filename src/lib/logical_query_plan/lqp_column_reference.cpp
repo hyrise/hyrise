@@ -23,13 +23,13 @@ bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
   return original_node() == rhs.original_node() && _original_column_id == rhs._original_column_id;
 }
 
-std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_origin) {
-  const auto node = column_origin.original_node();
+std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
+  const auto node = column_reference.original_node();
 
-  if (column_origin.original_node()) {
-    os << column_origin.description();
+  if (column_reference.original_node()) {
+    os << column_reference.description();
   } else {
-    os << "[Invalid LQPColumnReference, ColumnID:" << column_origin.original_column_id() << "]";
+    os << "[Invalid LQPColumnReference, ColumnID:" << column_reference.original_column_id() << "]";
   }
   return os;
 }

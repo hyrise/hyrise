@@ -59,25 +59,25 @@ TEST_F(JoinNodeTest, VerboseColumnNames) {
 }
 
 TEST_F(JoinNodeTest, ColumnOriginByNamedColumnReference) {
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"a", std::nullopt}), _t_a_a);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"a", "t_a"}), _t_a_a);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"b", std::nullopt}), _t_a_b);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"b", "t_a"}), _t_a_b);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"c", std::nullopt}), _t_a_c);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"c", "t_a"}), _t_a_c);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"x", std::nullopt}), _t_b_x);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"x", "t_b"}), _t_b_x);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"y", std::nullopt}), _t_b_y);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"y", "t_b"}), _t_b_y);
+  EXPECT_EQ(_join_node->get_column_reference({"a", std::nullopt}), _t_a_a);
+  EXPECT_EQ(_join_node->get_column_reference({"a", "t_a"}), _t_a_a);
+  EXPECT_EQ(_join_node->get_column_reference({"b", std::nullopt}), _t_a_b);
+  EXPECT_EQ(_join_node->get_column_reference({"b", "t_a"}), _t_a_b);
+  EXPECT_EQ(_join_node->get_column_reference({"c", std::nullopt}), _t_a_c);
+  EXPECT_EQ(_join_node->get_column_reference({"c", "t_a"}), _t_a_c);
+  EXPECT_EQ(_join_node->get_column_reference({"x", std::nullopt}), _t_b_x);
+  EXPECT_EQ(_join_node->get_column_reference({"x", "t_b"}), _t_b_x);
+  EXPECT_EQ(_join_node->get_column_reference({"y", std::nullopt}), _t_b_y);
+  EXPECT_EQ(_join_node->get_column_reference({"y", "t_b"}), _t_b_y);
 }
 
 TEST_F(JoinNodeTest, OutputColumnOrigins) {
-  ASSERT_EQ(_join_node->output_column_origins().size(), 5u);
-  EXPECT_EQ(_join_node->output_column_origins().at(0), _t_a_a);
-  EXPECT_EQ(_join_node->output_column_origins().at(1), _t_a_b);
-  EXPECT_EQ(_join_node->output_column_origins().at(2), _t_a_c);
-  EXPECT_EQ(_join_node->output_column_origins().at(3), _t_b_x);
-  EXPECT_EQ(_join_node->output_column_origins().at(4), _t_b_y);
+  ASSERT_EQ(_join_node->output_column_references().size(), 5u);
+  EXPECT_EQ(_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_join_node->output_column_references().at(2), _t_a_c);
+  EXPECT_EQ(_join_node->output_column_references().at(3), _t_b_x);
+  EXPECT_EQ(_join_node->output_column_references().at(4), _t_b_y);
 }
 
 }  // namespace opossum
