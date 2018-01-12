@@ -5,7 +5,8 @@
 
 namespace opossum {
 
-LQPColumnReference::LQPColumnReference(const std::shared_ptr<const AbstractLQPNode>& original_node, ColumnID original_column_id)
+LQPColumnReference::LQPColumnReference(const std::shared_ptr<const AbstractLQPNode>& original_node,
+                                       ColumnID original_column_id)
     : _original_node(original_node), _original_column_id(original_column_id) {}
 
 std::shared_ptr<const AbstractLQPNode> LQPColumnReference::original_node() const { return _original_node.lock(); }

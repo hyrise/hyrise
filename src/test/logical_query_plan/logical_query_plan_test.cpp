@@ -311,7 +311,8 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   auto mock_node_b =
       std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
   auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference{mock_node_b, ColumnID{0}}, ScanType::Equals, 3);
+  auto predicate_node =
+      std::make_shared<PredicateNode>(LQPColumnReference{mock_node_b, ColumnID{0}}, ScanType::Equals, 3);
 
   const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{1}};
   const auto column_reference_b = LQPColumnReference{mock_node_b, ColumnID{0}};
@@ -347,14 +348,16 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   /**
    * column_reference_b can be resolved from the Aggregate since it is a GroupByColumn
    */
-  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_b, lqp_copy).original_column_id(), column_reference_b.original_column_id());
+  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_b, lqp_copy).original_column_id(),
+            column_reference_b.original_column_id());
   EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_b, lqp_copy).original_node(),
             lqp_copy->left_child()->left_child()->right_child());
 
   /**
    * SUM(a) can be resolved from the Aggregate
    */
-  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_c, lqp_copy).original_column_id(), column_reference_c.original_column_id());
+  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_c, lqp_copy).original_column_id(),
+            column_reference_c.original_column_id());
   EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_c, lqp_copy).original_node(), lqp_copy);
 }
 

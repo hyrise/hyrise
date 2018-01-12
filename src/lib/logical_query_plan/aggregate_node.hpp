@@ -51,8 +51,8 @@ class AggregateNode : public AbstractLQPNode {
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
   std::optional<LQPColumnReference> find_column_reference_by_expression(
-  const std::shared_ptr<LQPExpression> &expression) const;
-  LQPColumnReference get_column_reference_by_expression(const std::shared_ptr<LQPExpression> &expression) const;
+      const std::shared_ptr<LQPExpression>& expression) const;
+  LQPColumnReference get_column_reference_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
   // @}
 
   std::string get_verbose_column_name(ColumnID column_id) const override;

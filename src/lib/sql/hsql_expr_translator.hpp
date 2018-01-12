@@ -25,7 +25,7 @@ class HSQLExprTranslator {
       const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node = std::nullopt);
 
   static LQPColumnReference to_column_reference(const hsql::Expr& hsql_expr,
-                                          const std::shared_ptr<AbstractLQPNode>& input_node);
+                                                const std::shared_ptr<AbstractLQPNode>& input_node);
 
   static NamedColumnReference to_named_column_reference(const hsql::Expr& hsql_expr);
 };

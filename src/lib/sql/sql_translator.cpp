@@ -348,8 +348,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   const auto left_in_left_node = left_node->find_column_reference(left_named_column_reference);
   const auto left_in_right_node = right_node->find_column_reference(left_named_column_reference);
   const auto right_in_left_node = left_node->find_column_reference(right_named_column_reference);
-  const auto right_in_right_node =
-  right_node->find_column_reference(right_named_column_reference);
+  const auto right_in_right_node = right_node->find_column_reference(right_named_column_reference);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
          std::string("Left operand ") + left_named_column_reference.as_string() +
@@ -359,7 +358,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
              " must be in exactly one of the input nodes");
 
   const auto column_references = left_in_left_node ? std::make_pair(*left_in_left_node, *right_in_right_node)
-                                                : std::make_pair(*left_in_right_node, *right_in_left_node);
+                                                   : std::make_pair(*left_in_right_node, *right_in_left_node);
 
   // Joins currently only support one simple condition (i.e., not multiple conditions).
   auto scan_type = translate_operator_type_to_scan_type(condition.opType);
@@ -624,8 +623,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       Assert(groupby_hsql_expr->isType(hsql::kExprColumnRef), "Grouping on complex expressions is not yet supported.");
 
       const auto named_column_reference = HSQLExprTranslator::to_named_column_reference(*groupby_hsql_expr);
-      const auto column_reference =
-      groupby_aliasing_node->find_column_reference(named_column_reference);
+      const auto column_reference = groupby_aliasing_node->find_column_reference(named_column_reference);
       DebugAssert(column_reference, "Couldn't resolve groupby column.");
 
       groupby_column_references.emplace_back(*column_reference);
@@ -666,14 +664,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       const auto named_column_reference = HSQLExprTranslator::to_named_column_reference(*select_column_hsql_expr);
-      const auto column_reference =
-      groupby_aliasing_node->find_column_reference(named_column_reference);
+      const auto column_reference = groupby_aliasing_node->find_column_reference(named_column_reference);
       DebugAssert(column_reference, "Couldn't resolve groupby column.");
 
-      const auto iter = std::find(groupby_column_references.begin(), groupby_column_references.end(), *column_reference);
+      const auto iter =
+          std::find(groupby_column_references.begin(), groupby_column_references.end(), *column_reference);
 
       Assert(iter != groupby_column_references.end(), std::string("Column '") + select_column_hsql_expr->getName() +
-                                                       "' is specified in SELECT list, but not in GROUP BY clause.");
+                                                          "' is specified in SELECT list, but not in GROUP BY clause.");
 
       const auto column_id = static_cast<ColumnID>(std::distance(groupby_column_references.begin(), iter));
       output_columns.emplace_back(column_id, alias);

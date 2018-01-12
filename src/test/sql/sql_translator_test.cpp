@@ -93,7 +93,8 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   EXPECT_FALSE(predicate_node->right_child());
   EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(predicate_node->value(), AllParameterVariant(LQPColumnReference(predicate_node->left_child(), ColumnID{1})));
+  EXPECT_EQ(predicate_node->value(),
+            AllParameterVariant(LQPColumnReference(predicate_node->left_child(), ColumnID{1})));
 
   EXPECT_EQ(result_node->output_column_references()[0], LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
   EXPECT_EQ(result_node->output_column_references()[1], LQPColumnReference(predicate_node->left_child(), ColumnID{1}));
@@ -214,7 +215,8 @@ TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
   EXPECT_NE(aggregate_node, nullptr);
   EXPECT_NE(aggregate_node->left_child(), nullptr);
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-  const std::vector<LQPColumnReference> groupby_columns({LQPColumnReference{aggregate_node->left_child(), ColumnID{0}}});
+  const std::vector<LQPColumnReference> groupby_columns(
+      {LQPColumnReference{aggregate_node->left_child(), ColumnID{0}}});
   EXPECT_EQ(aggregate_node->groupby_column_references(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);

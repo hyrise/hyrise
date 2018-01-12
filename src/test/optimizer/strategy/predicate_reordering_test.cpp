@@ -259,11 +259,16 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   auto table_0 = std::make_shared<MockNode>(table_statistics);
   auto table_1 = std::make_shared<MockNode>(table_statistics);
   auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto predicate_0 = std::make_shared<PredicateNode>(LQPColumnReference{table_0, ColumnID{0}}, ScanType::GreaterThan, 80);
-  auto predicate_1 = std::make_shared<PredicateNode>(LQPColumnReference{table_0, ColumnID{0}}, ScanType::GreaterThan, 60);
-  auto predicate_2 = std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, ScanType::GreaterThan, 90);
-  auto predicate_3 = std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, ScanType::GreaterThan, 50);
-  auto predicate_4 = std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, ScanType::GreaterThan, 30);
+  auto predicate_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{table_0, ColumnID{0}}, ScanType::GreaterThan, 80);
+  auto predicate_1 =
+      std::make_shared<PredicateNode>(LQPColumnReference{table_0, ColumnID{0}}, ScanType::GreaterThan, 60);
+  auto predicate_2 =
+      std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, ScanType::GreaterThan, 90);
+  auto predicate_3 =
+      std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, ScanType::GreaterThan, 50);
+  auto predicate_4 =
+      std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, ScanType::GreaterThan, 30);
 
   predicate_1->set_left_child(table_0);
   predicate_0->set_left_child(predicate_1);

@@ -19,9 +19,9 @@ namespace hana = boost::hana;
 // This holds pairs of all types and their respective string representation
 static constexpr auto parameter_types =
     hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
-                     hana::make_pair("ColumnID", hana::type_c<ColumnID>),                // NOLINT
+                     hana::make_pair("ColumnID", hana::type_c<ColumnID>),                      // NOLINT
                      hana::make_pair("LQPColumnReference", hana::type_c<LQPColumnReference>),  // NOLINT
-                     hana::make_pair("Placeholder", hana::type_c<ValuePlaceholder>));    // NOLINT
+                     hana::make_pair("Placeholder", hana::type_c<ValuePlaceholder>));          // NOLINT
 
 // This holds only the possible data types.
 static constexpr auto parameter_types_as_hana_sequence = hana::transform(parameter_types, hana::second);  // NOLINT
@@ -40,7 +40,7 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
 
 // Function to check if AllParameterVariant is a column origin
-inline bool is_lqp_column_reference(const AllParameterVariant &variant) {
+inline bool is_lqp_column_reference(const AllParameterVariant& variant) {
   return (variant.type() == typeid(LQPColumnReference));
 }
 

@@ -37,7 +37,8 @@ std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
 }
 
 const LQPColumnReference& LQPExpression::column_reference() const {
-  DebugAssert(_column_references, "Expression " + expression_type_to_string.at(_type) + " does not have a LQPColumnReference");
+  DebugAssert(_column_references,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a LQPColumnReference");
   return *_column_references;
 }
 

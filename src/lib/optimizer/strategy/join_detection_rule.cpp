@@ -29,7 +29,8 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
        */
       auto join_condition = _find_predicate_for_cross_join(cross_join_node);
       if (join_condition) {
-        JoinColumnOrigins join_column_ids(join_condition->left_column_reference, join_condition->right_column_reference);
+        JoinColumnOrigins join_column_ids(join_condition->left_column_reference,
+                                          join_condition->right_column_reference);
 
         auto predicate_node = join_condition->predicate_node;
         const auto new_join_node =

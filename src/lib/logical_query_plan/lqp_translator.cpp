@@ -138,9 +138,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   }
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
     const auto& definition = *it;
-    result_operator =
-        std::make_shared<Sort>(input_operator, node->get_output_column_id_by_column_reference(definition.column_reference),
-                               definition.order_by_mode);
+    result_operator = std::make_shared<Sort>(
+        input_operator, node->get_output_column_id_by_column_reference(definition.column_reference),
+        definition.order_by_mode);
     input_operator = result_operator;
   }
 
@@ -186,7 +186,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   std::vector<ColumnID> groupby_columns;
   for (const auto& groupby_column_reference : aggregate_node->groupby_column_references()) {
-    groupby_columns.emplace_back(node->left_child()->get_output_column_id_by_column_reference(groupby_column_reference));
+    groupby_columns.emplace_back(
+        node->left_child()->get_output_column_id_by_column_reference(groupby_column_reference));
   }
 
   auto aggregate_input_operator = input_operator;

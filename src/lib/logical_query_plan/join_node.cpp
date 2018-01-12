@@ -86,8 +86,9 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
 
-    JoinColumnIDs join_colum_ids{left_child->get_output_column_id_by_column_reference(_join_column_references->first),
-                                 right_child->get_output_column_id_by_column_reference(_join_column_references->second)};
+    JoinColumnIDs join_colum_ids{
+        left_child->get_output_column_id_by_column_reference(_join_column_references->first),
+        right_child->get_output_column_id_by_column_reference(_join_column_references->second)};
 
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
                                                                              join_colum_ids, *_scan_type);
@@ -138,9 +139,9 @@ void JoinNode::_update_output() const {
   _output_column_references.emplace();
 
   _output_column_references->insert(_output_column_references->end(), left_child()->output_column_references().begin(),
-                                 left_child()->output_column_references().end());
+                                    left_child()->output_column_references().end());
   _output_column_references->insert(_output_column_references->end(), right_child()->output_column_references().begin(),
-                                 right_child()->output_column_references().end());
+                                    right_child()->output_column_references().end());
 }
 
 }  // namespace opossum

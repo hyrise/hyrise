@@ -32,7 +32,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
 }
 
 LQPColumnReference AbstractLQPNode::deep_copy_column_reference(const LQPColumnReference& column_reference,
-                                                         const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
+                                                               const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
   Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
   return lqp_copy->output_column_references()[get_output_column_id_by_column_reference(column_reference)];
 }
@@ -204,7 +204,7 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
 }
 
 std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
-const NamedColumnReference &named_column_reference) const {
+    const NamedColumnReference& named_column_reference) const {
   /**
    * If this node carries an alias, that is different from that of the NamedColumnReference, we can't resolve the column
    * in this node. E.g. in `SELECT t1.a FROM t1 AS something_else;` "t1.a" can't be resolved since it carries an alias.
@@ -247,7 +247,8 @@ const NamedColumnReference &named_column_reference) const {
   const auto column_reference_from_right =
       resolve_named_column_reference(right_child(), *named_column_reference_without_local_column_prefix);
 
-  Assert(!column_reference_from_left || !column_reference_from_right || column_reference_from_left == column_reference_from_right,
+  Assert(!column_reference_from_left || !column_reference_from_right ||
+             column_reference_from_left == column_reference_from_right,
          "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
 
   if (column_reference_from_left) {
@@ -256,8 +257,7 @@ const NamedColumnReference &named_column_reference) const {
   return column_reference_from_right;
 }
 
-LQPColumnReference AbstractLQPNode::get_column_reference(
-    const NamedColumnReference& named_column_reference) const {
+LQPColumnReference AbstractLQPNode::get_column_reference(const NamedColumnReference& named_column_reference) const {
   const auto colum_origin = find_column_reference(named_column_reference);
   DebugAssert(colum_origin, "Couldn't resolve column origin of " + named_column_reference.as_string());
   return *colum_origin;
@@ -508,7 +508,8 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::_adapt_expression_to_different_l
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {
-    expression->set_column_reference(original_lqp->deep_copy_column_reference(expression->column_reference(), copied_lqp));
+    expression->set_column_reference(
+        original_lqp->deep_copy_column_reference(expression->column_reference(), copied_lqp));
   }
 
   for (auto& argument_expression : expression->aggregate_function_arguments()) {

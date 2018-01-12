@@ -35,8 +35,8 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
   }
 
   std::vector<LQPColumnReference> groupby_column_references(_groupby_column_references.size());
-  std::transform(_groupby_column_references.begin(), _groupby_column_references.end(), groupby_column_references.begin(),
-                 [&](const auto& column_reference) {
+  std::transform(_groupby_column_references.begin(), _groupby_column_references.end(),
+                 groupby_column_references.begin(), [&](const auto& column_reference) {
                    return this->left_child()->deep_copy_column_reference(column_reference, left_child);
                  });
 
@@ -47,7 +47,9 @@ const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expr
   return _aggregate_expressions;
 }
 
-const std::vector<LQPColumnReference>& AggregateNode::groupby_column_references() const { return _groupby_column_references; }
+const std::vector<LQPColumnReference>& AggregateNode::groupby_column_references() const {
+  return _groupby_column_references;
+}
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -136,14 +138,15 @@ const std::vector<LQPColumnReference>& AggregateNode::output_column_references()
   return *_output_column_references;
 }
 
-LQPColumnReference AggregateNode::get_column_reference_by_expression(const std::shared_ptr<LQPExpression> &expression) const {
+LQPColumnReference AggregateNode::get_column_reference_by_expression(
+    const std::shared_ptr<LQPExpression>& expression) const {
   const auto column_id = find_column_reference_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
 std::optional<LQPColumnReference> AggregateNode::find_column_reference_by_expression(
-const std::shared_ptr<LQPExpression> &expression) const {
+    const std::shared_ptr<LQPExpression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
@@ -152,9 +155,10 @@ const std::shared_ptr<LQPExpression> &expression) const {
    *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
    */
   if (expression->type() == ExpressionType::Column) {
-    const auto iter = std::find_if(
-        _groupby_column_references.begin(), _groupby_column_references.end(),
-        [&](const auto& groupby_column_reference) { return expression->column_reference() == groupby_column_reference; });
+    const auto iter = std::find_if(_groupby_column_references.begin(), _groupby_column_references.end(),
+                                   [&](const auto& groupby_column_reference) {
+                                     return expression->column_reference() == groupby_column_reference;
+                                   });
 
     if (iter != _groupby_column_references.end()) {
       const auto column_id = static_cast<ColumnID>(std::distance(_groupby_column_references.begin(), iter));

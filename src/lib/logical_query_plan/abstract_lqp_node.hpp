@@ -81,7 +81,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return the ColumnOrigin equivalent to column_reference within the lqp_copy subtree
    */
   LQPColumnReference deep_copy_column_reference(const LQPColumnReference& column_reference,
-                                          const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
+                                                const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 
   // @{
   /**
@@ -176,8 +176,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return The ColumnOrigin of the named_column_reference if it can be resolved in this subtree,
    *         std::nullopt otherwise.
    */
-  std::optional<LQPColumnReference> find_column_reference(
-  const NamedColumnReference &named_column_reference) const;
+  std::optional<LQPColumnReference> find_column_reference(const NamedColumnReference& named_column_reference) const;
 
   /**
    * Convenience method for (*find_column_reference_by_named_column_reference()), DebugAssert()s that the
