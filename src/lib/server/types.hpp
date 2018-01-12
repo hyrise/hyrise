@@ -33,6 +33,7 @@ enum class NetworkMessageType : unsigned char {
   // SSL willingness
   SslYes = 'S',
   SslNo = 'N',
+  Notice = 'N',
 };
 
 enum class TransactionStatusIndicator : unsigned char {

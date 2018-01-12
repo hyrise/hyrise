@@ -1,67 +1,15 @@
-#include "simple_query_command.hpp"
-
-#include <server/hyrise_session.hpp>
-#include <sql/sql_pipeline.hpp>
-#include <utils/assert.hpp>
+#include "send_query_response_task.hpp"
 
 namespace opossum {
 
-void SimpleQueryCommand::start(std::size_t size) {
-  // Read the SQL query rom the connection
-  _session.async_receive_packet(size);
-}
-
-void SimpleQueryCommand::handle_packet_received(const InputPacket& input_packet, std::size_t size) {
-  switch (_state) {
-    case SimpleQueryCommandState::Started: {
-      auto sql = PostgresWireHandler::handle_query_packet(input_packet, size);
-      start_query(sql);
-      break;
-    }
-    default:
-      DebugAssert(false, "Received a packet at an unexpected stage in the command");
-      break;
-  }
-}
-
-void SimpleQueryCommand::handle_event_received() {
-  switch (_state) {
-    case SimpleQueryCommandState::Executing: {
-      send_row_description();
-      break;
-    }
-    default:
-      DebugAssert(false, "Received an event at an unexpected stage in the command");
-      break;
-  }
-}
-
-void SimpleQueryCommand::start_query(const std::string& sql) {
-  _state = SimpleQueryCommandState::Executing;
-
-  auto sql_pipeline = std::make_shared<SQLPipeline>(sql);
-  sql_pipeline->execute_async([=]() {
-    auto table = sql_pipeline->get_result_table();
-
-    auto row_count = table ? table->row_count() : 0;
-    std::cout << row_count << std::endl;
-
-    _result_table = table;
-
-    // Dispatch an event onto the main thread
-    _session.signal_async_event();
-  });
-}
-
-void SimpleQueryCommand::send_row_description() {
+void SendQueryResponseTask::_send_row_description() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
 
   // Int16 Specifies the number of fields in a row (can be zero).
   if (!_result_table) {
     // There is no result table, e.g. after an INSERT command
     PostgresWireHandler::write_value(output_packet, htons(0u));
-    _session.async_send_packet(output_packet);
-    _state = SimpleQueryCommandState::RowDescriptionSent;
+    _session->async_send_packet(output_packet);
     return;
   }
 
@@ -128,11 +76,10 @@ void SimpleQueryCommand::send_row_description() {
     PostgresWireHandler::write_value(output_packet, htons(0u));          // text format
   }
 
-  _session.async_send_packet(output_packet);
-  _state = SimpleQueryCommandState::RowDescriptionSent;
+  _session->async_send_packet(output_packet);
 }
 
-void SimpleQueryCommand::send_row_data() {
+void SendQueryResponseTask::_send_row_data() {
   /*
     DataRow (B)
     Byte1('D')
@@ -181,38 +128,26 @@ void SimpleQueryCommand::send_row_data() {
         PostgresWireHandler::write_string(output_packet, value_string_buffer, false);
       }
 
-      _row_count++;
-      _session.async_send_packet(output_packet);
+      ++_row_count;
+      _session->async_send_packet(output_packet);
     }
   }
-  _state = SimpleQueryCommandState::RowDataSent;
 }
 
-void SimpleQueryCommand::send_command_complete() {
+void SendQueryResponseTask::_send_command_complete() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
 
   const auto completed = "SELECT " + std::to_string(_row_count);
   PostgresWireHandler::write_string(output_packet, completed);
 
-  _session.async_send_packet(output_packet);
-  _state = SimpleQueryCommandState::CommandCompleteSent;
+  _session->async_send_packet(output_packet);
 }
 
-void SimpleQueryCommand::handle_packet_sent() {
-  switch (_state) {
-    case SimpleQueryCommandState::RowDescriptionSent:
-      send_row_data();
-      break;
-    case SimpleQueryCommandState::RowDataSent:
-      send_command_complete();
-      break;
-    case SimpleQueryCommandState::CommandCompleteSent:
-      _session.terminate_command();
-      break;
-    default:
-      DebugAssert(false, "Sent a packet at an unknown stage in the command");
-      break;
-  }
+void SendQueryResponseTask::_on_execute() {
+  _send_row_description();
+  _send_row_data();
+  _send_command_complete();
+  _session->query_response_sent();
 }
 
 }  // namespace opossum

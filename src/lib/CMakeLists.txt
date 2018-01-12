@@ -187,12 +187,6 @@ set(
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
     server/types.hpp
-    server/commands/abstract_command.cpp
-    server/commands/abstract_command.hpp
-    server/commands/simple_query_command.cpp
-    server/commands/simple_query_command.hpp
-    server/commands/startup_command.cpp
-    server/commands/startup_command.hpp
     sql/lru_cache.hpp
     sql/sql_planner.cpp
     sql/sql_planner.hpp
@@ -274,6 +268,13 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tasks/server/send_query_response_task.cpp
+    tasks/server/send_query_response_task.hpp
+    tasks/server/server_task.hpp
+    tasks/server/create_pipeline_task.cpp
+    tasks/server/create_pipeline_task.hpp
+    tasks/server/execute_server_query_task.cpp
+    tasks/server/execute_server_query_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

@@ -7,9 +7,16 @@
 #include <optional>
 
 #include "postgres_wire_handler.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+enum SessionState {
+  Setup = 100,
+  WaitingForQuery,
+  ExecutingQuery,
+};
 
 using boost::asio::ip::tcp;
 
@@ -17,33 +24,38 @@ class AbstractCommand;
 
 class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
  public:
+  static const uint32_t STARTUP_HEADER_LENGTH = 8u;
+  static const uint32_t HEADER_LENGTH = 5u;
+
   explicit HyriseSession(tcp::socket socket, boost::asio::io_service& io_service)
-      : _socket(std::move(socket)),
-        _io_service(io_service),
-        _input_packet(),
-        _is_started(false),
-        _expected_input_packet_length(0),
-        _current_command(),
-        _self() {}
+      : _socket(std::move(socket)), _io_service(io_service), _input_packet(), _expected_input_packet_length(0) {}
 
   void start();
 
-  // Interface used by Commands
-  void set_started() { _is_started = true; }
-
-  void async_receive_packet(std::size_t size);
   void async_send_packet(OutputPacket& output_packet);
 
-  void signal_async_event();
+  // Interface used by Tasks
+  void pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline);
+  void query_executed();
+  void query_response_sent();
 
-  void terminate_command();
+  void pipeline_error(const std::string& error_msg);
 
- private:
+ protected:
+  void async_receive_header(const size_t size = HEADER_LENGTH);
+  void async_receive_content(const size_t size);
+  void async_receive_packet(size_t size, bool is_header);
+
+  void send_ssl_denied();
+  void send_auth();
+  void send_ready_for_query();
+  void accept_query();
+  void send_error(const std::string& error_msg);
+
+  void handle_header_received(const boost::system::error_code& error, size_t bytes_transferred);
   void handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
-  void handle_packet_sent(const boost::system::error_code& error);
-  void handle_event_received();
 
-  void async_send_ready_for_query();
+  void handle_packet_sent(const boost::system::error_code& error);
 
   void terminate_session();
 
@@ -51,10 +63,10 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   boost::asio::io_service& _io_service;
   InputPacket _input_packet;
 
-  bool _is_started;
-  std::size_t _expected_input_packet_length{};
-  std::shared_ptr<AbstractCommand> _current_command;
+  SessionState _state = SessionState::Setup;
+  std::size_t _expected_input_packet_length;
   std::shared_ptr<HyriseSession> _self;
+  std::unique_ptr<SQLPipeline> _sql_pipeline;
 };
 
 }  // namespace opossum

@@ -36,7 +36,6 @@ void PostgresWireHandler::handle_startup_package_content(const InputPacket& pack
 
 RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
   auto tag = read_value<NetworkMessageType>(packet);
-  std::cout << "Received message tag: " << static_cast<unsigned char>(tag) << std::endl;
 
   auto n_length = read_value<uint32_t>(packet);
   auto length = ntohl(n_length);
