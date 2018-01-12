@@ -39,8 +39,8 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(const std::shared_ptr
     Assert(left_child(), "Can't clone without child");
 
     const auto join_column_references = JoinColumnReferences{
-        left_child()->deep_copy_column_reference(_join_column_references->first, copied_left_child),
-        this->right_child()->deep_copy_column_reference(_join_column_references->first, copied_right_child),
+    adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
+    adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
     };
     return std::make_shared<JoinNode>(_join_mode, join_column_references, *_scan_type);
   }

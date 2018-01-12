@@ -31,10 +31,19 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   return deep_copy;
 }
 
-LQPColumnReference AbstractLQPNode::deep_copy_column_reference(const LQPColumnReference& column_reference,
-                                                               const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
-  Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
-  return lqp_copy->output_column_references()[get_output_column_id_by_column_reference(column_reference)];
+LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(const LQPColumnReference &column_reference,
+                                                                            const std::shared_ptr<AbstractLQPNode> &original_lqp,
+                                                                            const std::shared_ptr<AbstractLQPNode> &copied_lqp) {
+  Assert(original_lqp->output_column_count() == copied_lqp->output_column_count(), "lqp_copy must be a copy of this");
+
+  /**
+   * Map a ColumnReference to the same ColumnReference in a different LQP, by
+   * (1) Figuring out the ColumnID it has in the original node
+   * (2) Returning the ColumnReference at that ColumnID in the copied node
+   */
+
+  const auto output_column_id = original_lqp->get_output_column_id_by_column_reference(column_reference);
+  return copied_lqp->output_column_references()[output_column_id];
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
@@ -502,22 +511,22 @@ void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>
   _parents.emplace_back(parent);
 }
 
-std::shared_ptr<LQPExpression> AbstractLQPNode::_adapt_expression_to_different_lqp(
-    const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-    const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
+std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lqp(
+const std::shared_ptr<LQPExpression> &expression, const std::shared_ptr<AbstractLQPNode> &original_lqp,
+const std::shared_ptr<AbstractLQPNode> &copied_lqp) {
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {
     expression->set_column_reference(
-        original_lqp->deep_copy_column_reference(expression->column_reference(), copied_lqp));
+    adapt_column_reference_to_different_lqp(expression->column_reference(), original_lqp, copied_lqp));
   }
 
   for (auto& argument_expression : expression->aggregate_function_arguments()) {
-    _adapt_expression_to_different_lqp(argument_expression, original_lqp, copied_lqp);
+    adapt_expression_to_different_lqp(argument_expression, original_lqp, copied_lqp);
   }
 
-  _adapt_expression_to_different_lqp(expression->left_child(), original_lqp, copied_lqp);
-  _adapt_expression_to_different_lqp(expression->right_child(), original_lqp, copied_lqp);
+  adapt_expression_to_different_lqp(expression->left_child(), original_lqp, copied_lqp);
+  adapt_expression_to_different_lqp(expression->right_child(), original_lqp, copied_lqp);
 
   return expression;
 }

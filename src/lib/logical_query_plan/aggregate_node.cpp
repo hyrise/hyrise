@@ -31,13 +31,14 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
     aggregate_expressions.emplace_back(
-        _adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
+    adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
   }
 
   std::vector<LQPColumnReference> groupby_column_references;
   groupby_column_references.reserve(_groupby_column_references.size());
   for (const auto& groupby_column_reference : _groupby_column_references) {
-    groupby_column_references.emplace_back(left_child()->deep_copy_column_reference(groupby_column_reference, copied_left_child));
+    groupby_column_references.emplace_back(
+    adapt_column_reference_to_different_lqp(groupby_column_reference, left_child(), copied_left_child));
   }
 
   return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_references);
