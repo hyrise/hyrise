@@ -335,30 +335,41 @@ TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
   /**
    * Test that column_reference_a and column_reference_b can be resolved from the JoinNode
    */
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_a, lqp->left_child(), lqp_copy->left_child()).original_column_id(),
+  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_a, lqp->left_child(),
+                                                                     lqp_copy->left_child())
+                .original_column_id(),
             column_reference_a.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_a, lqp->left_child(), lqp_copy->left_child()).original_node(),
+  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_a, lqp->left_child(),
+                                                                     lqp_copy->left_child())
+                .original_node(),
             lqp_copy->left_child()->left_child()->left_child());
 
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_child(), lqp_copy->left_child()).original_column_id(),
+  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_child(),
+                                                                     lqp_copy->left_child())
+                .original_column_id(),
             column_reference_b.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_child(), lqp_copy->left_child()).original_node(),
+  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_child(),
+                                                                     lqp_copy->left_child())
+                .original_node(),
             lqp_copy->left_child()->left_child()->right_child());
 
   /**
    * column_reference_b can be resolved from the Aggregate since it is a GroupByColumn
    */
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_column_id(),
-            column_reference_b.original_column_id());
+  EXPECT_EQ(
+      AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_column_id(),
+      column_reference_b.original_column_id());
   EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_node(),
             lqp_copy->left_child()->left_child()->right_child());
 
   /**
    * SUM(a) can be resolved from the Aggregate
    */
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_c, lqp, lqp_copy).original_column_id(),
-            column_reference_c.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_c, lqp, lqp_copy).original_node(), lqp_copy);
+  EXPECT_EQ(
+      AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_c, lqp, lqp_copy).original_column_id(),
+      column_reference_c.original_column_id());
+  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_c, lqp, lqp_copy).original_node(),
+            lqp_copy);
 }
 
 TEST_F(LogicalQueryPlanTest, ColumnIDByColumnReference) {

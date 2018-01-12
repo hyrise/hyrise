@@ -161,6 +161,6 @@ QualifiedColumnName HSQLExprTranslator::to_qualified_column_name(const hsql::Exp
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
   return QualifiedColumnName{hsql_expr.name,
-                              hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
+                             hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
 }
 }  // namespace opossum

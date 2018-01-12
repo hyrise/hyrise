@@ -21,11 +21,12 @@ PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const S
       _value2(value2) {}
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child, const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   DebugAssert(left_child(), "Can't copy without child");
   return std::make_shared<PredicateNode>(
-  adapt_column_reference_to_different_lqp(_column_references, left_child(), copied_left_child),
-                                         _scan_type, _value, _value2);
+      adapt_column_reference_to_different_lqp(_column_references, left_child(), copied_left_child), _scan_type, _value,
+      _value2);
 }
 
 std::string PredicateNode::description() const {

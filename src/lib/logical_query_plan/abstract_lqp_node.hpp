@@ -249,21 +249,20 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * their equivalent in a deep_copy()ed LQP
    */
   static std::shared_ptr<LQPExpression> adapt_expression_to_different_lqp(
-  const std::shared_ptr<LQPExpression> &expression, const std::shared_ptr<AbstractLQPNode> &original_lqp,
-  const std::shared_ptr<AbstractLQPNode> &copied_lqp);
+      const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
 
   /**
    * @param copied_lqp must be a deep copy of original_lqp
    * @param column_reference must be a ColumnReference original_lqp node outputs
    * @return the ColumnReference equivalent to column_reference within the copied_lqp subtree
    */
-  static LQPColumnReference adapt_column_reference_to_different_lqp(const LQPColumnReference &column_reference,
-                                                                    const std::shared_ptr<AbstractLQPNode> &original_lqp,
-                                                                    const std::shared_ptr<AbstractLQPNode> &copied_lqp);
+  static LQPColumnReference adapt_column_reference_to_different_lqp(
+      const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
   /**
    * @}
    */
-
 
  protected:
   /**
@@ -300,7 +299,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * match it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
   virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
-  const QualifiedColumnName &qualified_column_name) const;
+      const QualifiedColumnName& qualified_column_name) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;

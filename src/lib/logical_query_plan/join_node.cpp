@@ -31,16 +31,17 @@ JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnReferences& join_co
               "Specified JoinMode must specify neither column ids nor scan type.");
 }
 
-std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-                                                           const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   if (_join_mode == JoinMode::Cross || _join_mode == JoinMode::Natural) {
     return std::make_shared<JoinNode>(_join_mode);
   } else {
     Assert(left_child(), "Can't clone without child");
 
     const auto join_column_references = JoinColumnReferences{
-    adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
-    adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
+        adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
+        adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
     };
     return std::make_shared<JoinNode>(_join_mode, join_column_references, *_scan_type);
   }

@@ -31,9 +31,9 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   return deep_copy;
 }
 
-LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(const LQPColumnReference &column_reference,
-                                                                            const std::shared_ptr<AbstractLQPNode> &original_lqp,
-                                                                            const std::shared_ptr<AbstractLQPNode> &copied_lqp) {
+LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
+    const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+    const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
   Assert(original_lqp->output_column_count() == copied_lqp->output_column_count(), "lqp_copy must be a copy of this");
 
   /**
@@ -418,7 +418,7 @@ std::vector<std::string> AbstractLQPNode::get_verbose_column_names() const {
 }
 
 std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
-const QualifiedColumnName &reference) const {
+    const QualifiedColumnName& reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the QualifiedColumnName for further search
@@ -512,13 +512,13 @@ void AbstractLQPNode::_add_parent_pointer(const std::shared_ptr<AbstractLQPNode>
 }
 
 std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lqp(
-const std::shared_ptr<LQPExpression> &expression, const std::shared_ptr<AbstractLQPNode> &original_lqp,
-const std::shared_ptr<AbstractLQPNode> &copied_lqp) {
+    const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+    const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {
     expression->set_column_reference(
-    adapt_column_reference_to_different_lqp(expression->column_reference(), original_lqp, copied_lqp));
+        adapt_column_reference_to_different_lqp(expression->column_reference(), original_lqp, copied_lqp));
   }
 
   for (auto& argument_expression : expression->aggregate_function_arguments()) {
