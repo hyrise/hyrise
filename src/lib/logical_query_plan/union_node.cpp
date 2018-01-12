@@ -57,6 +57,5 @@ const std::vector<LQPColumnReference>& UnionNode::output_column_references() con
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
-  return nullptr;  // Return something
 }
 }  // namespace opossum

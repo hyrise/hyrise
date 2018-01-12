@@ -141,7 +141,6 @@ AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
       return HSQLExprTranslator::to_column_reference(expr, *input_node);
     default:
       Fail("Could not translate expression: type not supported.");
-      return {};
   }
 }
 

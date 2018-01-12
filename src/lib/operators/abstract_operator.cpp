@@ -68,7 +68,6 @@ const std::string AbstractOperator::description() const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
   Fail("Operator " + name() + " does not implement recreation.");
-  return {};
 }
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }

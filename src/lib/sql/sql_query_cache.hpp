@@ -52,11 +52,10 @@ class SQLQueryCache {
     return _cache->get(query);
   }
 
-  // Purges all entries from the cache and reinitializes it with the given capacity.
-  void clear_and_resize(size_t capacity) { _cache->clear_and_resize(capacity); }
-
   // Purges all entries from the cache.
   void clear() { _cache->clear(); }
+
+  void resize(size_t capacity) { _cache->resize(capacity); }
 
   size_t size() const { return _cache->size(); }
 

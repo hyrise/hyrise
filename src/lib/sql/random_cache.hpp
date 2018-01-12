@@ -26,7 +26,7 @@ class RandomCache : public AbstractCache<Key, Value> {
     // Override old element at that key, if it exists.
     auto it = _map.find(key);
     if (it != _map.end()) {
-      it->second->second = value;
+      _list[it->second].second = value;
       return;
     }
 
@@ -36,19 +36,19 @@ class RandomCache : public AbstractCache<Key, Value> {
       _map.erase(_list[index].first);
 
       _list[index] = KeyValuePair(key, value);
-      _map[key] = _list.begin() + index;
+      _map[key] = index;
       return;
     }
 
     // Otherwise simply add to the end of the vector.
     _list.push_back(KeyValuePair(key, value));
-    _map[key] = _list.begin() + (_list.size() - 1);
+    _map[key] = _list.size() - 1;
   }
 
   // Retrieves the value cached at the key.
   Value& get(const Key& key) {
     auto it = _map.find(key);
-    return it->second->second;
+    return _list[it->second].second;
   }
 
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }
@@ -60,11 +60,12 @@ class RandomCache : public AbstractCache<Key, Value> {
     _map.clear();
   }
 
-  void clear_and_resize(size_t capacity) {
-    clear();
+  void resize(size_t capacity) {
+    while (_list.size() > capacity) {
+      _evict();
+    }
+
     this->_capacity = capacity;
-    _list.shrink_to_fit();
-    _list.reserve(capacity);
     _rand = std::uniform_int_distribution<>(0, capacity - 1);
   }
 
@@ -73,12 +74,17 @@ class RandomCache : public AbstractCache<Key, Value> {
   std::vector<KeyValuePair> _list;
 
   // Map to point towards element in the list.
-  std::unordered_map<Key, typename std::vector<KeyValuePair>::iterator> _map;
+  std::unordered_map<Key, size_t> _map;
 
   // Random number generation to determine which item to evict.
   std::random_device _rd;
   std::mt19937 _gen;
   std::uniform_int_distribution<> _rand;
+
+  void _evict() {
+    _map.erase(_list[0].first);
+    _list.erase(_list.cbegin());
+  }
 };
 
 }  // namespace opossum

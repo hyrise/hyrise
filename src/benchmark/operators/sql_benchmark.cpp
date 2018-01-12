@@ -19,8 +19,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
     // Disable and clear all SQL caches.
-    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
+    SQLQueryOperator::get_parse_tree_cache().resize(0);
+    SQLQueryOperator::get_query_plan_cache().resize(0);
     SQLQueryOperator::get_prepared_statement_cache().clear();
 
     // Add tables to StorageManager.
@@ -85,7 +85,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   // Run a benchmark that executes the query operator with the given query with enabled parse tree caching.
   void BM_ParseTreeCache(benchmark::State& st, const std::string& query) {
     // Enable parse tree cache.
-    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(16);
+    SQLQueryOperator::get_parse_tree_cache().clear();
+    SQLQueryOperator::get_parse_tree_cache().resize(16);
 
     while (st.KeepRunning()) {
       SQLQueryOperator op(query, false);
@@ -96,7 +97,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   // Run a benchmark that executes the query operator with the given query with enabled query plan caching.
   void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {
     // Enable query plan cache.
-    SQLQueryOperator::get_query_plan_cache().clear_and_resize(16);
+    SQLQueryOperator::get_query_plan_cache().clear();
+    SQLQueryOperator::get_query_plan_cache().resize(16);
 
     while (st.KeepRunning()) {
       SQLQueryOperator op(query, false);
