@@ -48,8 +48,8 @@ class JoinDetectionRule : public AbstractRule {
  private:
   struct JoinCondition {
     std::shared_ptr<PredicateNode> predicate_node;
-    LQPColumnReference left_column_origin;
-    LQPColumnReference right_column_origin;
+    LQPColumnReference left_column_reference;
+    LQPColumnReference right_column_reference;
   };
 
   std::optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);

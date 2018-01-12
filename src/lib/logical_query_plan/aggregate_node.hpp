@@ -25,7 +25,7 @@ namespace opossum {
 class AggregateNode : public AbstractLQPNode {
  public:
   explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
-                         const std::vector<LQPColumnReference>& groupy_column_origins);
+                         const std::vector<LQPColumnReference>& groupy_column_references);
 
   const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;
@@ -37,10 +37,10 @@ class AggregateNode : public AbstractLQPNode {
 
   // @{
   /**
-   * AggregateNode::find_column_origin_by_expression() looks for the @param expression in the columns this
+   * AggregateNode::find_column_reference_by_expression() looks for the @param expression in the columns this
    * node outputs, checking by semantic and NOT by Expression object's address. If it can find it, it will be returned,
    * otherwise std::nullopt is returned.
-   * AggregateNode::get_column_origin_by_expression() is more strict and will fail, if the
+   * AggregateNode::get_column_reference_by_expression() is more strict and will fail, if the
    * @param expression cannot be found
    *
    * Since we're using a TableScan added AFTER the actual aggregate to implement HAVING, in a query like

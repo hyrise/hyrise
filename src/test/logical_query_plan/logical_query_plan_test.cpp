@@ -303,7 +303,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
 
 TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   /**
-   * Test AbstractLQPNode::deep_copy_column_origin()
+   * Test AbstractLQPNode::deep_copy_column_reference()
    */
 
   auto mock_node_a = std::make_shared<MockNode>(
@@ -313,13 +313,13 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference{mock_node_b, ColumnID{0}}, ScanType::Equals, 3);
 
-  const auto column_origin_a = LQPColumnReference{mock_node_a, ColumnID{1}};
-  const auto column_origin_b = LQPColumnReference{mock_node_b, ColumnID{0}};
+  const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{1}};
+  const auto column_reference_b = LQPColumnReference{mock_node_b, ColumnID{0}};
 
   auto aggregate_node = std::make_shared<AggregateNode>(
       std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
-          AggregateFunction::Sum, {LQPExpression::create_column(column_origin_a)})}),
-      std::vector<LQPColumnReference>{{column_origin_b}});
+          AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
+      std::vector<LQPColumnReference>{{column_reference_b}});
 
   aggregate_node->set_left_child(predicate_node);
   predicate_node->set_left_child(join_node);
@@ -329,33 +329,33 @@ TEST_F(LogicalQueryPlanTest, ColumnOriginCloning) {
   const auto lqp = aggregate_node;
   const auto lqp_copy = lqp->deep_copy();
 
-  const auto column_origin_c = LQPColumnReference{aggregate_node, ColumnID{1}};
+  const auto column_reference_c = LQPColumnReference{aggregate_node, ColumnID{1}};
 
   /**
-   * Test that column_origin_a and column_origin_b can be resolved from the JoinNode
+   * Test that column_reference_a and column_reference_b can be resolved from the JoinNode
    */
-  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_a, lqp_copy->left_child()).original_column_id(),
-            column_origin_a.original_column_id());
-  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_a, lqp_copy->left_child()).original_node(),
+  EXPECT_EQ(join_node->deep_copy_column_reference(column_reference_a, lqp_copy->left_child()).original_column_id(),
+            column_reference_a.original_column_id());
+  EXPECT_EQ(join_node->deep_copy_column_reference(column_reference_a, lqp_copy->left_child()).original_node(),
             lqp_copy->left_child()->left_child()->left_child());
 
-  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_b, lqp_copy->left_child()).original_column_id(),
-            column_origin_b.original_column_id());
-  EXPECT_EQ(join_node->deep_copy_column_origin(column_origin_b, lqp_copy->left_child()).original_node(),
+  EXPECT_EQ(join_node->deep_copy_column_reference(column_reference_b, lqp_copy->left_child()).original_column_id(),
+            column_reference_b.original_column_id());
+  EXPECT_EQ(join_node->deep_copy_column_reference(column_reference_b, lqp_copy->left_child()).original_node(),
             lqp_copy->left_child()->left_child()->right_child());
 
   /**
-   * column_origin_b can be resolved from the Aggregate since it is a GroupByColumn
+   * column_reference_b can be resolved from the Aggregate since it is a GroupByColumn
    */
-  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_b, lqp_copy).original_column_id(), column_origin_b.original_column_id());
-  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_b, lqp_copy).original_node(),
+  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_b, lqp_copy).original_column_id(), column_reference_b.original_column_id());
+  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_b, lqp_copy).original_node(),
             lqp_copy->left_child()->left_child()->right_child());
 
   /**
    * SUM(a) can be resolved from the Aggregate
    */
-  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_c, lqp_copy).original_column_id(), column_origin_c.original_column_id());
-  EXPECT_EQ(lqp->deep_copy_column_origin(column_origin_c, lqp_copy).original_node(), lqp_copy);
+  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_c, lqp_copy).original_column_id(), column_reference_c.original_column_id());
+  EXPECT_EQ(lqp->deep_copy_column_reference(column_reference_c, lqp_copy).original_node(), lqp_copy);
 }
 
 TEST_F(LogicalQueryPlanTest, ColumnIDByColumnOrigin) {
@@ -367,22 +367,22 @@ TEST_F(LogicalQueryPlanTest, ColumnIDByColumnOrigin) {
       MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
   auto mock_node_b =
       std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-  const auto column_origin_a = LQPColumnReference{mock_node_a, ColumnID{0}};
-  const auto column_origin_b = LQPColumnReference{mock_node_a, ColumnID{1}};
+  const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{0}};
+  const auto column_reference_b = LQPColumnReference{mock_node_a, ColumnID{1}};
   auto aggregate_node = std::make_shared<AggregateNode>(
       std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
-          AggregateFunction::Sum, {LQPExpression::create_column(column_origin_a)})}),
-      std::vector<LQPColumnReference>{{column_origin_b}});
+          AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
+      std::vector<LQPColumnReference>{{column_reference_b}});
 
   aggregate_node->set_left_child(mock_node_a);
 
-  const auto column_origin_c = LQPColumnReference{aggregate_node, ColumnID{1}};
+  const auto column_reference_c = LQPColumnReference{aggregate_node, ColumnID{1}};
 
-  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_reference(column_origin_a), ColumnID{0});
-  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_reference(column_origin_b), ColumnID{1});
-  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_reference(column_origin_b), ColumnID{0});
-  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_reference(column_origin_c), ColumnID{1});
-  EXPECT_EQ(aggregate_node->find_output_column_id_by_column_reference(column_origin_a), std::nullopt);
+  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_reference(column_reference_a), ColumnID{0});
+  EXPECT_EQ(mock_node_a->get_output_column_id_by_column_reference(column_reference_b), ColumnID{1});
+  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_reference(column_reference_b), ColumnID{0});
+  EXPECT_EQ(aggregate_node->get_output_column_id_by_column_reference(column_reference_c), ColumnID{1});
+  EXPECT_EQ(aggregate_node->find_output_column_id_by_column_reference(column_reference_a), std::nullopt);
   EXPECT_EQ(mock_node_a->find_output_column_id_by_column_reference(LQPColumnReference{mock_node_b, ColumnID{0}}),
             std::nullopt);
 }

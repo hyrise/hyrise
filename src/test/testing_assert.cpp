@@ -257,12 +257,12 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 }
 
 void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type,
-                            const LQPColumnReference& left_column_origin, const LQPColumnReference& right_column_origin) {
+                            const LQPColumnReference& left_column_reference, const LQPColumnReference& right_column_reference) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
   EXPECT_EQ(join_node->scan_type(), scan_type);
-  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_origin, right_column_origin));
+  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
 }
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}

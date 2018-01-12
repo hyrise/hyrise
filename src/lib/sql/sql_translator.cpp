@@ -395,9 +395,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   return_node->set_right_child(right_node);
 
   for (const auto& join_column_name : join_column_names) {
-    auto left_column_origin = left_node->get_column_reference({join_column_name});
-    auto right_column_origin = right_node->get_column_reference({join_column_name});
-    auto predicate = std::make_shared<PredicateNode>(left_column_origin, ScanType::Equals, right_column_origin);
+    auto left_column_reference = left_node->get_column_reference({join_column_name});
+    auto right_column_reference = right_node->get_column_reference({join_column_name});
+    auto predicate = std::make_shared<PredicateNode>(left_column_reference, ScanType::Equals, right_column_reference);
     predicate->set_left_child(return_node);
     return_node = predicate;
   }
@@ -499,7 +499,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Exp
 
   return _translate_predicate(
       expr, false,
-      [&](const hsql::Expr& hsql_expr) { return HSQLExprTranslator::to_column_origin(hsql_expr, input_node); },
+      [&](const hsql::Expr& hsql_expr) { return HSQLExprTranslator::to_column_reference(hsql_expr, input_node); },
       input_node);
 }
 
@@ -811,7 +811,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
     // TODO(anybody): handle non-column refs
     DebugAssert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
-    const auto column_reference = HSQLExprTranslator::to_column_origin(order_expr, input_node);
+    const auto column_reference = HSQLExprTranslator::to_column_reference(order_expr, input_node);
     const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
 
     order_by_definitions.emplace_back(column_reference, order_by_mode);

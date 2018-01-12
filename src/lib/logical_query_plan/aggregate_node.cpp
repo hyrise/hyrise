@@ -37,7 +37,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
   std::vector<LQPColumnReference> groupby_column_references(_groupby_column_references.size());
   std::transform(_groupby_column_references.begin(), _groupby_column_references.end(), groupby_column_references.begin(),
                  [&](const auto& column_reference) {
-                   return this->left_child()->deep_copy_column_origin(column_reference, left_child);
+                   return this->left_child()->deep_copy_column_reference(column_reference, left_child);
                  });
 
   return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_references);

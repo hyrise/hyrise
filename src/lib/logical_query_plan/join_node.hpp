@@ -48,7 +48,7 @@ class JoinNode : public AbstractLQPNode {
 
  private:
   JoinMode _join_mode;
-  std::optional<JoinColumnOrigins> _join_column_origins;
+  std::optional<JoinColumnOrigins> _join_column_references;
   std::optional<ScanType> _scan_type;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;

@@ -138,14 +138,14 @@ AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
       Assert(input_node, "Cannot generate ColumnID without input_node");
-      return HSQLExprTranslator::to_column_origin(expr, *input_node);
+      return HSQLExprTranslator::to_column_reference(expr, *input_node);
     default:
       Fail("Could not translate expression: type not supported.");
       return {};
   }
 }
 
-LQPColumnReference HSQLExprTranslator::to_column_origin(const hsql::Expr& hsql_expr,
+LQPColumnReference HSQLExprTranslator::to_column_reference(const hsql::Expr& hsql_expr,
                                                      const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
   const auto named_column_reference = to_named_column_reference(hsql_expr);

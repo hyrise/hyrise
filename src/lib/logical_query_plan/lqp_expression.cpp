@@ -41,7 +41,7 @@ const LQPColumnReference& LQPExpression::column_reference() const {
   return *_column_references;
 }
 
-void LQPExpression::set_column_origin(const LQPColumnReference& column_reference) {
+void LQPExpression::set_column_reference(const LQPColumnReference& column_reference) {
   Assert(_type == ExpressionType::Column, "Can't set an LQPColumnReference on a non-column");
   _column_references = column_reference;
 }

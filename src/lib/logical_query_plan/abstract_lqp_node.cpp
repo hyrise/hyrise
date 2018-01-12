@@ -31,7 +31,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   return deep_copy;
 }
 
-LQPColumnReference AbstractLQPNode::deep_copy_column_origin(const LQPColumnReference& column_reference,
+LQPColumnReference AbstractLQPNode::deep_copy_column_reference(const LQPColumnReference& column_reference,
                                                          const std::shared_ptr<AbstractLQPNode>& lqp_copy) const {
   Assert(output_column_count() == lqp_copy->output_column_count(), "lqp_copy must be a copy of this");
   return lqp_copy->output_column_references()[get_output_column_id_by_column_reference(column_reference)];
@@ -242,18 +242,18 @@ const NamedColumnReference &named_column_reference) const {
     return std::nullopt;
   };
 
-  const auto column_origin_from_left =
+  const auto column_reference_from_left =
       resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
-  const auto column_origin_from_right =
+  const auto column_reference_from_right =
       resolve_named_column_reference(right_child(), *named_column_reference_without_local_column_prefix);
 
-  Assert(!column_origin_from_left || !column_origin_from_right || column_origin_from_left == column_origin_from_right,
+  Assert(!column_reference_from_left || !column_reference_from_right || column_reference_from_left == column_reference_from_right,
          "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
 
-  if (column_origin_from_left) {
-    return column_origin_from_left;
+  if (column_reference_from_left) {
+    return column_reference_from_left;
   }
-  return column_origin_from_right;
+  return column_reference_from_right;
 }
 
 LQPColumnReference AbstractLQPNode::get_column_reference(
@@ -508,7 +508,7 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::_adjust_expression_to_lqp(
   if (!expression) return nullptr;
 
   if (expression->type() == ExpressionType::Column) {
-    expression->set_column_origin(original_lqp->deep_copy_column_origin(expression->column_reference(), copied_lqp));
+    expression->set_column_reference(original_lqp->deep_copy_column_reference(expression->column_reference(), copied_lqp));
   }
 
   for (auto& argument_expression : expression->aggregate_function_arguments()) {

@@ -25,7 +25,7 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
 
   const LQPColumnReference& column_reference() const;
 
-  void set_column_origin(const LQPColumnReference& column_reference);
+  void set_column_reference(const LQPColumnReference& column_reference);
 
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
                         bool is_root = true) const override;
