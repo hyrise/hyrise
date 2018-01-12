@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
+#include <map>
 #include <optional>
 #include <utility>
-#include <map>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -16,7 +16,10 @@ namespace opossum {
 class Chunk;
 class Table;
 
-struct ColumnEncodingSpec { EncodingType encoding_type; std::optional<ZsType> zs_type = {}; };
+struct ColumnEncodingSpec {
+  EncodingType encoding_type;
+  std::optional<ZsType> zs_type = {};
+};
 
 using ChunkEncodingSpec = std::vector<ColumnEncodingSpec>;
 

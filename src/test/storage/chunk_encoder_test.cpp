@@ -1,18 +1,18 @@
 #include <cstdint>
-#include <vector>
-#include <memory>
 #include <map>
+#include <memory>
+#include <vector>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "all_type_variant.hpp"
+#include "storage/base_value_column.hpp"
+#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoded_columns/base_encoded_column.hpp"
 #include "storage/encoded_columns/encoded_columns.hpp"
-#include "storage/base_value_column.hpp"
 #include "storage/table.hpp"
-#include "storage/chunk.hpp"
-#include "all_type_variant.hpp"
 
 namespace opossum {
 
@@ -21,7 +21,6 @@ class ChunkEncoderTest : public BaseTest {
   void SetUp() override {
     static const auto max_chunk_size = 5u;
     _table = std::make_shared<Table>(max_chunk_size);
-
 
     static const auto column_count = 3u;
     for (auto column_id = 0u; column_id < column_count; ++column_id) {

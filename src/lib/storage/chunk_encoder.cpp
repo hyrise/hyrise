@@ -16,23 +16,20 @@ namespace opossum {
 
 void ChunkEncoder::encode_chunk(Chunk& chunk, const std::vector<DataType>& data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert((data_types.size() == chunk.column_count()),
-          "Number of column types must match the chunk’s column count.");
+  Assert((data_types.size() == chunk.column_count()), "Number of column types must match the chunk’s column count.");
   Assert((chunk_encoding_spec.size() == chunk.column_count()),
-          "Number of column encoding specs must match the chunk’s column count.");
+         "Number of column encoding specs must match the chunk’s column count.");
 
   for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
-    if (spec.encoding_type == EncodingType::Invalid)
-      continue;
+    if (spec.encoding_type == EncodingType::Invalid) continue;
 
     const auto data_type = data_types[column_id];
     const auto base_column = chunk.get_column(column_id);
     const auto value_column = std::dynamic_pointer_cast<const BaseValueColumn>(base_column);
 
     Assert(value_column != nullptr, "One of the columns in the passed chunk is not a value column.");
-
 
     auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.zs_type);
     chunk.replace_column(column_id, encoded_column);
@@ -44,7 +41,7 @@ void ChunkEncoder::encode_chunk(Chunk& chunk, const std::vector<DataType>& data_
 }
 
 void ChunkEncoder::encode_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
-                                     const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
+                                 const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
   const auto data_types = table.column_types();
 
   for (auto chunk_id : chunk_ids) {

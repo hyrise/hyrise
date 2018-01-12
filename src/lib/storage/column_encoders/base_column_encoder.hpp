@@ -63,7 +63,8 @@ class ColumnEncoder : public BaseColumnEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseEncodedColumn> encode(DataType data_type, const std::shared_ptr<const BaseValueColumn>& column) final {
+  std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
+                                            const std::shared_ptr<const BaseValueColumn>& column) final {
     auto encoded_column = std::shared_ptr<BaseEncodedColumn>{};
     resolve_data_type(data_type, [&](auto type_obj) {
       const auto data_type_supported = this->supports(type_obj);

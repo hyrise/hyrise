@@ -90,8 +90,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
-    auto encoded_attribute_vector =
-        encode_by_zs_type(zs_type(), attribute_vector, alloc, {max_value});
+    auto encoded_attribute_vector = encode_by_zs_type(zs_type(), attribute_vector, alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
