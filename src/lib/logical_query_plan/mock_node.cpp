@@ -24,7 +24,6 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics) : Abstrac
 
 std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl() const {
   Fail("Cannot deep_copy MockNodes because we cannot get a deep copy of the statistics");
-  return nullptr;
 }
 
 const std::vector<ColumnID>& MockNode::output_column_ids_to_input_column_ids() const {

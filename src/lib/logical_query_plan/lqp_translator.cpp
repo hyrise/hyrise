@@ -306,11 +306,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode()) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
-      break;
     default:
       Fail("UnionMode not supported");
   }
-  return nullptr;  // Shouldn't be reached, but makes compilers happy
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
@@ -392,7 +390,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 
     default:
       Fail("Unknown node type encountered.");
-      return nullptr;
   }
 }
 

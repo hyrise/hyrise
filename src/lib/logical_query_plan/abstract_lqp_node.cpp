@@ -60,7 +60,6 @@ LQPChildSide AbstractLQPNode::get_child_side(const std::shared_ptr<AbstractLQPNo
     return LQPChildSide::Right;
   } else {
     Fail("Specified parent node is not actually a parent node of this node.");
-    return LQPChildSide::Left;  // Make compilers happy
   }
 }
 

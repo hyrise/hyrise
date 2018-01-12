@@ -244,7 +244,6 @@ std::function<T(const T&, const T&)> Projection::_get_base_operator_function(Exp
 
     default:
       Fail("Unknown arithmetic operator");
-      return {};
   }
 }
 

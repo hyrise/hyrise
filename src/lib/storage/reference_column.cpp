@@ -49,7 +49,6 @@ std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const Polymorp
   // ReferenceColumns are considered as intermediate datastructures and are
   // therefore not subject to NUMA-aware chunk migrations.
   Fail("Cannot migrate a ReferenceColumn");
-  return nullptr;
 }
 
 }  // namespace opossum

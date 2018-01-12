@@ -115,7 +115,6 @@ class Table : private Noncopyable {
       }
     }
     Fail("Row does not exist.");
-    return {};
   }
 
   // creates a new chunk and appends it

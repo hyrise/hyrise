@@ -123,7 +123,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
       return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
     default:
       Fail("SQL statement type not supported");
-      return {};
   }
 }
 
@@ -467,7 +466,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
       break;
     default:
       Fail("Unable to translate source table.");
-      return {};
   }
   node->set_alias(alias);
   return node;
@@ -491,7 +489,6 @@ AllParameterVariant SQLTranslator::translate_hsql_operand(
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
       Fail("Could not translate expression: type not supported.");
-      return {};
   }
 }
 
@@ -962,8 +959,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
     default:
       Fail("hsql::ShowType is not supported.");
   }
-
-  return {};
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
@@ -996,8 +991,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
     default:
       Fail("hsql::CreateType is not supported.");
   }
-
-  return {};
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
@@ -1008,8 +1001,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
     default:
       Fail("hsql::DropType is not supported.");
   }
-
-  return {};
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
