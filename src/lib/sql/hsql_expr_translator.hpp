@@ -27,7 +27,7 @@ class HSQLExprTranslator {
   static LQPColumnReference to_column_reference(const hsql::Expr& hsql_expr,
                                                 const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  static NamedColumnReference to_named_column_reference(const hsql::Expr& hsql_expr);
+  static QualifiedColumnName to_qualified_column_name(const hsql::Expr& hsql_expr);
 };
 
 }  // namespace opossum

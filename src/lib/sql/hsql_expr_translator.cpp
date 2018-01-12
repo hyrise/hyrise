@@ -43,8 +43,8 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
       DebugAssert(expr.name != nullptr, "hsql::Expr::name needs to be set");
 
       auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
-      NamedColumnReference named_column_reference{name, table_name};
-      auto column_reference = input_node->get_column_reference(named_column_reference);
+      QualifiedColumnName qualified_column_name{name, table_name};
+      auto column_reference = input_node->get_column_reference(qualified_column_name);
       node = LQPExpression::create_column(column_reference, alias);
       break;
     }
@@ -148,19 +148,19 @@ AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
 LQPColumnReference HSQLExprTranslator::to_column_reference(const hsql::Expr& hsql_expr,
                                                            const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
-  const auto named_column_reference = to_named_column_reference(hsql_expr);
-  const auto column_reference = input_node->find_column_reference(named_column_reference);
+  const auto qualified_column_name = to_qualified_column_name(hsql_expr);
+  const auto column_reference = input_node->find_column_reference(qualified_column_name);
 
-  Assert(column_reference, "Couldn't resolve named column reference '" + named_column_reference.as_string() + "'");
+  Assert(column_reference, "Couldn't resolve named column reference '" + qualified_column_name.as_string() + "'");
 
   return *column_reference;
 }
 
-NamedColumnReference HSQLExprTranslator::to_named_column_reference(const hsql::Expr& hsql_expr) {
+QualifiedColumnName HSQLExprTranslator::to_qualified_column_name(const hsql::Expr& hsql_expr) {
   DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
-  return NamedColumnReference{hsql_expr.name,
+  return QualifiedColumnName{hsql_expr.name,
                               hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
 }
 }  // namespace opossum

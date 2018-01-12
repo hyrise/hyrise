@@ -213,22 +213,22 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
 }
 
 std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
-    const NamedColumnReference& named_column_reference) const {
+    const QualifiedColumnName& qualified_column_name) const {
   /**
    * If this node carries an alias, that is different from that of the NamedColumnReference, we can't resolve the column
    * in this node. E.g. in `SELECT t1.a FROM t1 AS something_else;` "t1.a" can't be resolved since it carries an alias.
    */
-  const auto named_column_reference_without_local_column_prefix = _resolve_local_column_prefix(named_column_reference);
-  if (!named_column_reference_without_local_column_prefix) {
+  const auto qualified_column_name_without_local_table_name = _resolve_local_table_name(qualified_column_name);
+  if (!qualified_column_name_without_local_table_name) {
     return std::nullopt;
   }
 
   /**
    * If the table name got resolved (i.e., the alias or name of this node equals the table name), look for the Column in the output of this node
    */
-  if (!named_column_reference_without_local_column_prefix->table_name) {
+  if (!qualified_column_name_without_local_table_name->table_name) {
     for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
-      if (output_column_names()[column_id] == named_column_reference_without_local_column_prefix->column_name) {
+      if (output_column_names()[column_id] == qualified_column_name_without_local_table_name->column_name) {
         return output_column_references()[column_id];
       }
     }
@@ -238,10 +238,10 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
   /**
    * Look for the Column in child nodes
    */
-  const auto resolve_named_column_reference = [&](
-      const auto& node, const auto& named_column_reference) -> std::optional<LQPColumnReference> {
+  const auto resolve_qualified_column_name = [&](
+      const auto& node, const auto& qualified_column_name) -> std::optional<LQPColumnReference> {
     if (node) {
-      const auto column_reference = node->find_column_reference(named_column_reference);
+      const auto column_reference = node->find_column_reference(qualified_column_name);
       if (column_reference) {
         if (find_output_column_id_by_column_reference(*column_reference)) {
           return column_reference;
@@ -252,13 +252,13 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
   };
 
   const auto column_reference_from_left =
-      resolve_named_column_reference(left_child(), *named_column_reference_without_local_column_prefix);
+      resolve_qualified_column_name(left_child(), *qualified_column_name_without_local_table_name);
   const auto column_reference_from_right =
-      resolve_named_column_reference(right_child(), *named_column_reference_without_local_column_prefix);
+      resolve_qualified_column_name(right_child(), *qualified_column_name_without_local_table_name);
 
   Assert(!column_reference_from_left || !column_reference_from_right ||
              column_reference_from_left == column_reference_from_right,
-         "Column '" + named_column_reference_without_local_column_prefix->as_string() + "' is ambiguous");
+         "Column '" + qualified_column_name_without_local_table_name->as_string() + "' is ambiguous");
 
   if (column_reference_from_left) {
     return column_reference_from_left;
@@ -266,9 +266,9 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
   return column_reference_from_right;
 }
 
-LQPColumnReference AbstractLQPNode::get_column_reference(const NamedColumnReference& named_column_reference) const {
-  const auto colum_origin = find_column_reference(named_column_reference);
-  DebugAssert(colum_origin, "Couldn't resolve column origin of " + named_column_reference.as_string());
+LQPColumnReference AbstractLQPNode::get_column_reference(const QualifiedColumnName& qualified_column_name) const {
+  const auto colum_origin = find_column_reference(qualified_column_name);
+  DebugAssert(colum_origin, "Couldn't resolve column origin of " + qualified_column_name.as_string());
   return *colum_origin;
 }
 
@@ -417,11 +417,11 @@ std::vector<std::string> AbstractLQPNode::get_verbose_column_names() const {
   return verbose_names;
 }
 
-std::optional<NamedColumnReference> AbstractLQPNode::_resolve_local_column_prefix(
-    const NamedColumnReference& reference) const {
+std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
+const QualifiedColumnName &reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
-      // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
+      // The used table name is the alias of this table. Remove id from the QualifiedColumnName for further search
       auto reference_without_local_alias = reference;
       reference_without_local_alias.table_name = std::nullopt;
       return reference_without_local_alias;
@@ -531,7 +531,7 @@ const std::shared_ptr<AbstractLQPNode> &copied_lqp) {
   return expression;
 }
 
-std::string NamedColumnReference::as_string() const {
+std::string QualifiedColumnName::as_string() const {
   std::stringstream ss;
   if (table_name) ss << *table_name << ".";
   ss << column_name;

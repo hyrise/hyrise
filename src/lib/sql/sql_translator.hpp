@@ -32,7 +32,7 @@ class LQPExpression;
  * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
  * Most of the lifting for this is done in the overrides of
- * AbstractLQPNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
+ * AbstractLQPNode::{get, find}_column_id_by_qualified_column_name() which Nodes that add, remove or rearrange columns
  * have to have an implementation of (Projection, Join, ...).
  * The handling of ColumnIdentifierName::table_name is also done in these overrides. StoredTableNode handles table
  * ALIASes and names (`SELECT t1.a, alias_t2.b FROM t1, t2 AS alias_t2`), ProjectionNode ALIASes for Expressions

@@ -41,7 +41,7 @@ enum class LQPNodeType {
 
 enum class LQPChildSide { Left, Right };
 
-struct NamedColumnReference {
+struct QualifiedColumnName {
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
 
@@ -164,17 +164,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
 
   /**
-   * @param named_column_reference Must not be ambiguous in this subtree
-   * @return The ColumnReference of the named_column_reference if it can be resolved in this subtree,
+   * @param qualified_column_name Must not be ambiguous in this subtree
+   * @return The ColumnReference of the qualified_column_name if it can be resolved in this subtree,
    *         std::nullopt otherwise.
    */
-  std::optional<LQPColumnReference> find_column_reference(const NamedColumnReference& named_column_reference) const;
+  std::optional<LQPColumnReference> find_column_reference(const QualifiedColumnName& qualified_column_name) const;
 
   /**
-   * Convenience method for (*find_column_reference_by_named_column_reference()), DebugAssert()s that the
-   * named_column_reference could be resolved
+   * Convenience method for (*find_column_reference_by_qualified_column_name()), DebugAssert()s that the
+   * qualified_column_name could be resolved
    */
-  LQPColumnReference get_column_reference(const NamedColumnReference& named_column_reference) const;
+  LQPColumnReference get_column_reference(const QualifiedColumnName& qualified_column_name) const;
 
   /**
    * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
@@ -295,12 +295,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   mutable std::optional<std::vector<LQPColumnReference>> _output_column_references;
 
   /**
-   * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
-   * only operate on the column name. If an alias for this subtree is set, but this reference does not match
-   * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
+   * If qualified_column_name.table_name is the alias set for this subtree, remove the table_name so that we
+   * only operate on the column name. If an alias for this subtree is set, but qualified_column_name.table_name does not
+   * match it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(
-      const NamedColumnReference& named_column_reference) const;
+  virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
+  const QualifiedColumnName &qualified_column_name) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;
