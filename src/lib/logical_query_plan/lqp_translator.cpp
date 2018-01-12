@@ -91,8 +91,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto column_id = table_scan_node->get_output_column_id_by_column_origin(table_scan_node->column_origin());
 
   auto value = table_scan_node->value();
-  if (is_lqp_column_origin(value)) {
-    value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const LQPColumnOrigin>(value));
+  if (is_lqp_column_reference(value)) {
+    value = table_scan_node->get_output_column_id_by_column_origin(boost::get<const LQPColumnReference>(value));
   }
 
   /**
@@ -404,7 +404,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
       return _translate_drop_view_node(node);
 
     default:
-      Fail("Unknown node type encountered.");
+      Fail("Unknown original_node type encountered.");
       return nullptr;
   }
 }

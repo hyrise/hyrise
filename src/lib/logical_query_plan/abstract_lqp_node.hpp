@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lqp_column_origin.hpp"
+#include "lqp_column_reference.hpp"
 #include "lqp_expression.hpp"
 #include "types.hpp"
 
@@ -80,7 +80,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @param column_origin must be a ColumnOrigin this node outputs
    * @return the ColumnOrigin equivalent to column_origin within the lqp_copy subtree
    */
-  LQPColumnOrigin deep_copy_column_origin(const LQPColumnOrigin& column_origin,
+  LQPColumnReference deep_copy_column_origin(const LQPColumnReference& column_origin,
                                           const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 
   // @{
@@ -159,7 +159,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   /**
    * @returns the ColumnOrigins of the columns this node outputs
    */
-  virtual const std::vector<LQPColumnOrigin>& output_column_origins() const;
+  virtual const std::vector<LQPColumnReference>& output_column_origins() const;
 
   /**
    * @return the number of Columns this node outputs. Same as output_column_names().size()
@@ -176,14 +176,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return The ColumnOrigin of the named_column_reference if it can be resolved in this subtree,
    *         std::nullopt otherwise.
    */
-  std::optional<LQPColumnOrigin> find_column_origin_by_named_column_reference(
+  std::optional<LQPColumnReference> find_column_origin_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const;
 
   /**
    * Convenience method for (*find_column_origin_by_named_column_reference()), DebugAssert()s that the
    * named_column_reference could be resolved
    */
-  LQPColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
+  LQPColumnReference get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
 
   /**
    * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
@@ -195,12 +195,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   /**
    * @return The leftmost output ColumnID that stems from column_origin, or std::nullopt if none does
    */
-  std::optional<ColumnID> find_output_column_id_by_column_origin(const LQPColumnOrigin& column_origin) const;
+  std::optional<ColumnID> find_output_column_id_by_column_origin(const LQPColumnReference& column_origin) const;
 
   /**
    * Convenience for *find_output_column_id_by_column_origin(), DebugAssert()s that the column_origin could be resolved
    */
-  ColumnID get_output_column_id_by_column_origin(const LQPColumnOrigin& column_origin) const;
+  ColumnID get_output_column_id_by_column_origin(const LQPColumnReference& column_origin) const;
 
   /**
    * Makes this nodes parents point to this node's left child
@@ -276,7 +276,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::optional<std::string> _table_alias;
 
   // mutable, so it can be lazily initialized in output_column_origins() overrides
-  mutable std::optional<std::vector<LQPColumnOrigin>> _output_column_origins;
+  mutable std::optional<std::vector<LQPColumnReference>> _output_column_origins;
 
   /**
    * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we

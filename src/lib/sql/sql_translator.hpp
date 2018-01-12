@@ -107,7 +107,7 @@ class SQLTranslator final : public Noncopyable {
    */
   std::shared_ptr<AbstractLQPNode> _translate_predicate(
       const hsql::Expr& hsql_expr, bool allow_function_columns,
-      const std::function<LQPColumnOrigin(const hsql::Expr&)>& resolve_column,
+      const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);

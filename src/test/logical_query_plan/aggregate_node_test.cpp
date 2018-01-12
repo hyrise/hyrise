@@ -39,15 +39,15 @@ class AggregateNodeTest : public BaseTest {
                 AggregateFunction::Sum,
                 {LQPExpression::create_binary_operator(ExpressionType::Addition, a_expr, c_expr)},
                 {std::string("some_sum")})},
-        std::vector<LQPColumnOrigin>{_a, _c});
+        std::vector<LQPColumnReference>{_a, _c});
     _aggregate_node->set_left_child(_mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<AggregateNode> _aggregate_node;
-  LQPColumnOrigin _a;
-  LQPColumnOrigin _b;
-  LQPColumnOrigin _c;
+  LQPColumnReference _a;
+  LQPColumnReference _b;
+  LQPColumnReference _c;
 };
 
 TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
@@ -65,7 +65,7 @@ TEST_F(AggregateNodeTest, ColumnOriginByNamedColumnReference) {
    * Find Aggregates
    */
   EXPECT_EQ(_aggregate_node->get_column_origin_by_named_column_reference({"some_sum", std::nullopt}),
-            LQPColumnOrigin(_aggregate_node, ColumnID{3}));
+            LQPColumnReference(_aggregate_node, ColumnID{3}));
   EXPECT_EQ(_aggregate_node->find_column_origin_by_named_column_reference({"some_sum", {"t_a"}}), std::nullopt);
 }
 
@@ -73,8 +73,8 @@ TEST_F(AggregateNodeTest, OutputColumnOrigins) {
   ASSERT_EQ(_aggregate_node->output_column_origins().size(), 4u);
   EXPECT_EQ(_aggregate_node->output_column_origins().at(0), _a);
   EXPECT_EQ(_aggregate_node->output_column_origins().at(1), _c);
-  EXPECT_EQ(_aggregate_node->output_column_origins().at(2), LQPColumnOrigin(_aggregate_node, ColumnID{2}));
-  EXPECT_EQ(_aggregate_node->output_column_origins().at(3), LQPColumnOrigin(_aggregate_node, ColumnID{3}));
+  EXPECT_EQ(_aggregate_node->output_column_origins().at(2), LQPColumnReference(_aggregate_node, ColumnID{2}));
+  EXPECT_EQ(_aggregate_node->output_column_origins().at(3), LQPColumnReference(_aggregate_node, ColumnID{3}));
 }
 
 TEST_F(AggregateNodeTest, ExpressionToColumnID) {
@@ -92,7 +92,7 @@ TEST_F(AggregateNodeTest, ExpressionToColumnID) {
                 AggregateFunction::Sum,
                 {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_a),
                                                        LQPExpression::create_column(_b))})),
-            LQPColumnOrigin(_aggregate_node, ColumnID{2}));
+            LQPColumnReference(_aggregate_node, ColumnID{2}));
 
   // But there is no SUM(b+c)
   EXPECT_EQ(_aggregate_node->find_column_origin_by_expression(LQPExpression::create_aggregate_function(

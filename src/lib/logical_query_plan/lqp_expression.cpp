@@ -1,13 +1,13 @@
 #include "lqp_expression.hpp"
 
 #include "constant_mappings.hpp"
-#include "lqp_column_origin.hpp"
+#include "lqp_column_reference.hpp"
 #include "operators/pqp_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnOrigin& column_origin,
+std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnReference& column_origin,
                                                             const std::optional<std::string>& alias) {
   auto expression = std::make_shared<LQPExpression>(ExpressionType::Column);
   expression->_column_origin = column_origin;
@@ -17,7 +17,7 @@ std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnOrigi
 }
 
 std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
-    const std::vector<LQPColumnOrigin>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
+    const std::vector<LQPColumnReference>& column_origins, const std::optional<std::vector<std::string>>& aliases) {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions;
   column_expressions.reserve(column_origins.size());
 
@@ -36,13 +36,13 @@ std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
   return column_expressions;
 }
 
-const LQPColumnOrigin& LQPExpression::column_origin() const {
-  DebugAssert(_column_origin, "Expression " + expression_type_to_string.at(_type) + " does not have a LQPColumnOrigin");
+const LQPColumnReference& LQPExpression::column_origin() const {
+  DebugAssert(_column_origin, "Expression " + expression_type_to_string.at(_type) + " does not have a LQPColumnReference");
   return *_column_origin;
 }
 
-void LQPExpression::set_column_origin(const LQPColumnOrigin& column_origin) {
-  Assert(_type == ExpressionType::Column, "Can't set an LQPColumnOrigin on a non-column");
+void LQPExpression::set_column_origin(const LQPColumnReference& column_origin) {
+  Assert(_type == ExpressionType::Column, "Can't set an LQPColumnReference on a non-column");
   _column_origin = column_origin;
 }
 

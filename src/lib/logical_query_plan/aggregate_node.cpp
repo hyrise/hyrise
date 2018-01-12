@@ -14,7 +14,7 @@
 namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
-                             const std::vector<LQPColumnOrigin>& groupby_column_origins)
+                             const std::vector<LQPColumnReference>& groupby_column_origins)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_origins(groupby_column_origins) {
@@ -34,7 +34,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
         _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child));
   }
 
-  std::vector<LQPColumnOrigin> groupby_column_origins(_groupby_column_origins.size());
+  std::vector<LQPColumnReference> groupby_column_origins(_groupby_column_origins.size());
   std::transform(_groupby_column_origins.begin(), _groupby_column_origins.end(), groupby_column_origins.begin(),
                  [&](const auto& column_origin) {
                    return this->left_child()->deep_copy_column_origin(column_origin, left_child);
@@ -47,7 +47,7 @@ const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expr
   return _aggregate_expressions;
 }
 
-const std::vector<LQPColumnOrigin>& AggregateNode::groupby_column_origins() const { return _groupby_column_origins; }
+const std::vector<LQPColumnReference>& AggregateNode::groupby_column_origins() const { return _groupby_column_origins; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -129,20 +129,20 @@ const std::vector<std::string>& AggregateNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<LQPColumnOrigin>& AggregateNode::output_column_origins() const {
+const std::vector<LQPColumnReference>& AggregateNode::output_column_origins() const {
   if (!_output_column_origins) {
     _update_output();
   }
   return *_output_column_origins;
 }
 
-LQPColumnOrigin AggregateNode::get_column_origin_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
+LQPColumnReference AggregateNode::get_column_origin_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
   const auto column_id = find_column_origin_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
-std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_by_expression(
+std::optional<LQPColumnReference> AggregateNode::find_column_origin_by_expression(
     const std::shared_ptr<LQPExpression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
@@ -170,7 +170,7 @@ std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_by_expression(
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return LQPColumnOrigin{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
+      return LQPColumnReference{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
     }
   }
 

@@ -56,8 +56,8 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   EXPECT_FALSE(result_node->left_child()->left_child());
   ASSERT_EQ(result_node->output_column_origins().size(), 2u);
 
-  EXPECT_EQ(result_node->output_column_origins()[0], LQPColumnOrigin(result_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(result_node->output_column_origins()[1], LQPColumnOrigin(result_node->left_child(), ColumnID{1}));
+  EXPECT_EQ(result_node->output_column_origins()[0], LQPColumnReference(result_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(result_node->output_column_origins()[1], LQPColumnReference(result_node->left_child(), ColumnID{1}));
 }
 
 /*
@@ -76,7 +76,7 @@ TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->column_origin(), LQPColumnOrigin(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(predicate_node->column_origin(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
   EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
   // TODO(anybody): once this is implemented, the value side has to be checked.
 }
@@ -92,11 +92,11 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_FALSE(predicate_node->right_child());
   EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
-  EXPECT_EQ(predicate_node->column_origin(), LQPColumnOrigin(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(predicate_node->value(), AllParameterVariant(LQPColumnOrigin(predicate_node->left_child(), ColumnID{1})));
+  EXPECT_EQ(predicate_node->column_origin(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(predicate_node->value(), AllParameterVariant(LQPColumnReference(predicate_node->left_child(), ColumnID{1})));
 
-  EXPECT_EQ(result_node->output_column_origins()[0], LQPColumnOrigin(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(result_node->output_column_origins()[1], LQPColumnOrigin(predicate_node->left_child(), ColumnID{1}));
+  EXPECT_EQ(result_node->output_column_origins()[0], LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(result_node->output_column_origins()[1], LQPColumnReference(predicate_node->left_child(), ColumnID{1}));
 }
 
 TEST_F(SQLTranslatorTest, ExpressionStringTest) {
@@ -109,7 +109,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(predicate_node->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->column_origin(), LQPColumnOrigin(predicate_node->left_child(), ColumnID{0}));
+  EXPECT_EQ(predicate_node->column_origin(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
   EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
   EXPECT_EQ(predicate_node->value(), AllParameterVariant{std::string{"b"}});
 }
@@ -159,7 +159,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   EXPECT_FALSE(stored_table_node->right_child());
 
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-  const std::vector<LQPColumnOrigin> groupby_columns = {LQPColumnOrigin{stored_table_node, ColumnID{0}}};
+  const std::vector<LQPColumnReference> groupby_columns = {LQPColumnReference{stored_table_node, ColumnID{0}}};
   EXPECT_EQ(aggregate_node->groupby_column_origins(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
 }
@@ -214,7 +214,7 @@ TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
   EXPECT_NE(aggregate_node, nullptr);
   EXPECT_NE(aggregate_node->left_child(), nullptr);
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-  const std::vector<LQPColumnOrigin> groupby_columns({LQPColumnOrigin{aggregate_node->left_child(), ColumnID{0}}});
+  const std::vector<LQPColumnReference> groupby_columns({LQPColumnReference{aggregate_node->left_child(), ColumnID{0}}});
   EXPECT_EQ(aggregate_node->groupby_column_origins(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
@@ -243,11 +243,11 @@ TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
   EXPECT_EQ(order_by_definitions.size(), 2u);
 
   const auto& definition_1 = order_by_definitions[0];
-  EXPECT_EQ(definition_1.column_origin, LQPColumnOrigin(stored_table_node, ColumnID{0}));
+  EXPECT_EQ(definition_1.column_origin, LQPColumnReference(stored_table_node, ColumnID{0}));
   EXPECT_EQ(definition_1.order_by_mode, OrderByMode::Descending);
 
   const auto& definition_2 = order_by_definitions[1];
-  EXPECT_EQ(definition_2.column_origin, LQPColumnOrigin(stored_table_node, ColumnID{1}));
+  EXPECT_EQ(definition_2.column_origin, LQPColumnReference(stored_table_node, ColumnID{1}));
   EXPECT_EQ(definition_2.order_by_mode, OrderByMode::Ascending);
 
   // The sort node has an input node, but we don't care what kind it is in this test.
@@ -278,8 +278,8 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
 
   EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
-  EXPECT_EQ(join_node->join_column_origins()->first, LQPColumnOrigin(table_a_node, ColumnID{0}));
-  EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnOrigin(table_b_node, ColumnID{0}));
+  EXPECT_EQ(join_node->join_column_origins()->first, LQPColumnReference(table_a_node, ColumnID{0}));
+  EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnReference(table_b_node, ColumnID{0}));
 }
 
 class SQLTranslatorJoinTest : public ::testing::TestWithParam<JoinMode> {
@@ -315,8 +315,8 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
 
   EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
   EXPECT_EQ(join_node->join_mode(), mode);
-  EXPECT_EQ(join_node->join_column_origins()->first, LQPColumnOrigin(table_a_node, ColumnID{0}));
-  EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnOrigin(table_b_node, ColumnID{0}));
+  EXPECT_EQ(join_node->join_column_origins()->first, LQPColumnReference(table_a_node, ColumnID{0}));
+  EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnReference(table_b_node, ColumnID{0}));
 }
 
 INSTANTIATE_TEST_CASE_P(SQLTranslatorJoinTestInstanciation, SQLTranslatorJoinTest,
@@ -342,8 +342,8 @@ TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
 
   ASSERT_TRUE(join_node->join_column_origins());
-  EXPECT_EQ(join_node->join_column_origins()->first, LQPColumnOrigin(t1_node, ColumnID{0}));
-  EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnOrigin(t2_node, ColumnID{1}));
+  EXPECT_EQ(join_node->join_column_origins()->first, LQPColumnReference(t1_node, ColumnID{0}));
+  EXPECT_EQ(join_node->join_column_origins()->second, LQPColumnReference(t2_node, ColumnID{1}));
 }
 
 TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
@@ -375,9 +375,9 @@ TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
   const auto table_b_node = cross_node->right_child();
 
   EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->column_origin(), LQPColumnOrigin(table_a_node, ColumnID{0}));
+  EXPECT_EQ(predicate_node->column_origin(), LQPColumnReference(table_a_node, ColumnID{0}));
   EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
-  EXPECT_EQ(predicate_node->value(), AllParameterVariant{LQPColumnOrigin(table_b_node, ColumnID{0})});
+  EXPECT_EQ(predicate_node->value(), AllParameterVariant{LQPColumnReference(table_b_node, ColumnID{0})});
 }
 
 TEST_F(SQLTranslatorTest, SelectCrossJoin) {
@@ -485,9 +485,9 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
   const auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Column);
-  EXPECT_EQ(expressions[0]->column_origin(), LQPColumnOrigin(table_b_node, ColumnID{0}));
+  EXPECT_EQ(expressions[0]->column_origin(), LQPColumnReference(table_b_node, ColumnID{0}));
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Column);
-  EXPECT_EQ(expressions[1]->column_origin(), LQPColumnOrigin(table_b_node, ColumnID{1}));
+  EXPECT_EQ(expressions[1]->column_origin(), LQPColumnReference(table_b_node, ColumnID{1}));
 }
 
 TEST_F(SQLTranslatorTest, Update) {
@@ -504,7 +504,7 @@ TEST_F(SQLTranslatorTest, Update) {
 
   const auto expressions = update_node->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Column);
-  EXPECT_EQ(expressions[0]->column_origin(), LQPColumnOrigin(table_a_node, ColumnID{0}));
+  EXPECT_EQ(expressions[0]->column_origin(), LQPColumnReference(table_a_node, ColumnID{0}));
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
   EXPECT_FLOAT_EQ(boost::get<float>(expressions[1]->value()), 3.2);
   EXPECT_TRUE(expressions[1]->alias());
@@ -558,24 +558,24 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_EQ(result->type(), LQPNodeType::Projection);
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result);
   ASSERT_EQ(projection_node->column_expressions().size(), 4u);
-  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], LQPColumnOrigin(table_b_node, ColumnID{0}));
-  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], LQPColumnOrigin(aggregate_node, ColumnID{4}));
-  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], LQPColumnOrigin(table_a_node, ColumnID{1}));
-  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], LQPColumnOrigin(table_b_node, ColumnID{1}));
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], LQPColumnReference(table_b_node, ColumnID{0}));
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], LQPColumnReference(aggregate_node, ColumnID{4}));
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], LQPColumnReference(table_a_node, ColumnID{1}));
+  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], LQPColumnReference(table_b_node, ColumnID{1}));
 
   /**
    * Assert the Aggregate
    */
   ASSERT_EQ(aggregate_node->groupby_column_origins().size(), 4u);
-  EXPECT_EQ(aggregate_node->groupby_column_origins()[0], LQPColumnOrigin(table_a_node, ColumnID{1}));
-  EXPECT_EQ(aggregate_node->groupby_column_origins()[1], LQPColumnOrigin(table_a_node, ColumnID{0}));
-  EXPECT_EQ(aggregate_node->groupby_column_origins()[2], LQPColumnOrigin(table_b_node, ColumnID{0}));
-  EXPECT_EQ(aggregate_node->groupby_column_origins()[3], LQPColumnOrigin(table_b_node, ColumnID{1}));
+  EXPECT_EQ(aggregate_node->groupby_column_origins()[0], LQPColumnReference(table_a_node, ColumnID{1}));
+  EXPECT_EQ(aggregate_node->groupby_column_origins()[1], LQPColumnReference(table_a_node, ColumnID{0}));
+  EXPECT_EQ(aggregate_node->groupby_column_origins()[2], LQPColumnReference(table_b_node, ColumnID{0}));
+  EXPECT_EQ(aggregate_node->groupby_column_origins()[3], LQPColumnReference(table_b_node, ColumnID{1}));
   ASSERT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const auto sum_expression = aggregate_node->aggregate_expressions()[0];
   ASSERT_EQ(sum_expression->type(), ExpressionType::Function);
   ASSERT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum,
-                                       LQPColumnOrigin(table_c_node, ColumnID{0}));
+                                       LQPColumnReference(table_c_node, ColumnID{0}));
 
   ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
   ASSERT_STORED_TABLE_NODE(table_c_node, "table_c");
@@ -600,7 +600,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
   EXPECT_FALSE(ts_node_1->right_child());
   const auto table_a_node = ts_node_1->left_child();
 
-  EXPECT_EQ(ts_node_1->column_origin(), LQPColumnOrigin(table_a_node, ColumnID{0}));
+  EXPECT_EQ(ts_node_1->column_origin(), LQPColumnReference(table_a_node, ColumnID{0}));
   EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }

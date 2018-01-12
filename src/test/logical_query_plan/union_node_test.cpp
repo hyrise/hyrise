@@ -26,9 +26,9 @@ class UnionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<UnionNode> _union_node;
-  LQPColumnOrigin _a;
-  LQPColumnOrigin _b;
-  LQPColumnOrigin _c;
+  LQPColumnReference _a;
+  LQPColumnReference _b;
+  LQPColumnReference _c;
 };
 
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: UnionPositions"); }

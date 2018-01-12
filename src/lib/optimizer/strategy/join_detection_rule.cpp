@@ -90,7 +90,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
     if (node->type() == LQPNodeType::Predicate) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-      if (!is_lqp_column_origin(predicate_node->value())) {
+      if (!is_lqp_column_reference(predicate_node->value())) {
         continue;
       }
 
@@ -101,7 +101,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
        * used in the predicate.
        */
       auto predicate_left_column_origin = predicate_node->column_origin();
-      auto predicate_right_column_origin = boost::get<LQPColumnOrigin>(predicate_node->value());
+      auto predicate_right_column_origin = boost::get<LQPColumnReference>(predicate_node->value());
 
       const auto left_in_left =
           cross_join->left_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);

@@ -4,7 +4,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "logical_query_plan/lqp_column_origin.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -20,7 +20,7 @@ namespace hana = boost::hana;
 static constexpr auto parameter_types =
     hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
                      hana::make_pair("ColumnID", hana::type_c<ColumnID>),                // NOLINT
-                     hana::make_pair("LQPColumnOrigin", hana::type_c<LQPColumnOrigin>),  // NOLINT
+                     hana::make_pair("LQPColumnReference", hana::type_c<LQPColumnReference>),  // NOLINT
                      hana::make_pair("Placeholder", hana::type_c<ValuePlaceholder>));    // NOLINT
 
 // This holds only the possible data types.
@@ -40,8 +40,8 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
 
 // Function to check if AllParameterVariant is a column origin
-inline bool is_lqp_column_origin(const AllParameterVariant& variant) {
-  return (variant.type() == typeid(LQPColumnOrigin));
+inline bool is_lqp_column_reference(const AllParameterVariant &variant) {
+  return (variant.type() == typeid(LQPColumnReference));
 }
 
 // Function to check if AllParameterVariant is a placeholder

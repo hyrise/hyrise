@@ -69,7 +69,7 @@ const std::vector<std::string>& JoinNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<LQPColumnOrigin>& JoinNode::output_column_origins() const {
+const std::vector<LQPColumnReference>& JoinNode::output_column_origins() const {
   if (!_output_column_origins) {
     _update_output();
   }

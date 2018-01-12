@@ -41,11 +41,11 @@ class ProjectionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
-  LQPColumnOrigin _a;
-  LQPColumnOrigin _b;
-  LQPColumnOrigin _c;
-  LQPColumnOrigin _some_addition;
-  LQPColumnOrigin _a_plus_c;
+  LQPColumnReference _a;
+  LQPColumnReference _b;
+  LQPColumnReference _c;
+  LQPColumnReference _some_addition;
+  LQPColumnReference _a_plus_c;
 };
 
 TEST_F(ProjectionNodeTest, Description) {

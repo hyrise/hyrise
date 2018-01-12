@@ -39,11 +39,11 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_b;
   std::shared_ptr<JoinNode> _inner_join_node;
   std::shared_ptr<JoinNode> _join_node;
-  LQPColumnOrigin _t_a_a;
-  LQPColumnOrigin _t_a_b;
-  LQPColumnOrigin _t_a_c;
-  LQPColumnOrigin _t_b_x;
-  LQPColumnOrigin _t_b_y;
+  LQPColumnReference _t_a_a;
+  LQPColumnReference _t_a_b;
+  LQPColumnReference _t_a_c;
+  LQPColumnReference _t_b_x;
+  LQPColumnReference _t_b_y;
 };
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Cross Join]"); }

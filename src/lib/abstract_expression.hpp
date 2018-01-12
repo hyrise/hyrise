@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "logical_query_plan/lqp_column_origin.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const LQPColumnOrigin& column_origin, const ScanType scan_type,
+PredicateNode::PredicateNode(const LQPColumnReference& column_origin, const ScanType scan_type,
                              const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2)
     : AbstractLQPNode(LQPNodeType::Predicate),
       _column_origin(column_origin),
@@ -63,7 +63,7 @@ std::string PredicateNode::description() const {
   return desc.str();
 }
 
-const LQPColumnOrigin& PredicateNode::column_origin() const { return _column_origin; }
+const LQPColumnReference& PredicateNode::column_origin() const { return _column_origin; }
 
 ScanType PredicateNode::scan_type() const { return _scan_type; }
 
@@ -77,10 +77,10 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
 
   // If value references a Column, we have to resolve its ColumnID (same as for _column_origin below)
   auto value = _value;
-  if (is_lqp_column_origin(value)) {
-    // Doing just `value = boost::get<LQPColumnOrigin>(value)` triggers a compiler warning in GCC release builds about
+  if (is_lqp_column_reference(value)) {
+    // Doing just `value = boost::get<LQPColumnReference>(value)` triggers a compiler warning in GCC release builds about
     // the assigned value being uninitialized. There seems to be no reason for this and this way seems to be fine... :(
-    value = static_cast<ColumnID::base_type>(get_output_column_id_by_column_origin(boost::get<LQPColumnOrigin>(value)));
+    value = static_cast<ColumnID::base_type>(get_output_column_id_by_column_origin(boost::get<LQPColumnReference>(value)));
   }
 
   return left_child->get_statistics()->predicate_statistics(get_output_column_id_by_column_origin(_column_origin),

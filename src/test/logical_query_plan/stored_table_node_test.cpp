@@ -16,12 +16,12 @@ class StoredTableNodeTest : public BaseTest {
     StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
-    _a = LQPColumnOrigin(_stored_table_node, ColumnID{0});
-    _b = LQPColumnOrigin(_stored_table_node, ColumnID{1});
+    _a = LQPColumnReference(_stored_table_node, ColumnID{0});
+    _b = LQPColumnReference(_stored_table_node, ColumnID{1});
   }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
-  LQPColumnOrigin _a, _b;
+  LQPColumnReference _a, _b;
 };
 
 TEST_F(StoredTableNodeTest, Description) { EXPECT_EQ(_stored_table_node->description(), "[StoredTable] Name: 't_a'"); }
