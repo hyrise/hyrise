@@ -22,14 +22,16 @@ const std::pair<ColumnID, ColumnID>& AbstractJoinOperator::column_ids() const { 
 
 ScanType AbstractJoinOperator::scan_type() const { return _scan_type; }
 
-const std::string AbstractJoinOperator::description() const {
+const std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
   std::string column_name_left = std::string("Col #") + std::to_string(_column_ids.first);
   std::string column_name_right = std::string("Col #") + std::to_string(_column_ids.second);
 
   if (_input_table_left()) column_name_left = _input_table_left()->column_name(_column_ids.first);
   if (_input_table_right()) column_name_right = _input_table_right()->column_name(_column_ids.second);
 
-  return name() + "\\n(" + join_mode_to_string.at(_mode) + " Join where " + column_name_left + " " +
+  const auto separator = description_mode == DescriptionMode::MultiLine ? "\\n(" : " ";
+
+  return name() + separator + join_mode_to_string.at(_mode) + " Join where " + column_name_left + " " +
          scan_type_to_string.left.at(_scan_type) + " " + column_name_right + ")";
 }
 

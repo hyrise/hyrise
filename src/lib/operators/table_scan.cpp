@@ -48,14 +48,15 @@ const AllParameterVariant& TableScan::right_parameter() const { return _right_pa
 
 const std::string TableScan::name() const { return "TableScan"; }
 
-const std::string TableScan::description() const {
+const std::string TableScan::description(DescriptionMode description_mode) const {
   std::string column_name = std::string("Col #") + std::to_string(_left_column_id);
 
   if (_input_table_left()) column_name = _input_table_left()->column_name(_left_column_id);
 
   std::string predicate_string = to_string(_right_parameter);
 
-  return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
+  const auto separator = description_mode == DescriptionMode::MultiLine ?  "\\n" : " ";
+  return name() + separator + "(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
 }
 
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {

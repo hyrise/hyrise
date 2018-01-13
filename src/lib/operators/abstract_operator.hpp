@@ -27,7 +27,7 @@ class TransactionContext;
 //
 // Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
 
-class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
+class AbstractOperator : private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
@@ -46,7 +46,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> get_output() const;
 
   virtual const std::string name() const = 0;
-  virtual const std::string description() const;
+  virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
@@ -91,7 +91,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // clean up after execution (if it makes sense)
   virtual void _on_cleanup();
 
-  void
+  void _print_impl(std::ostream& out, std::vector<bool>& levels,
+                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
+                   size_t& id_counter) const;
 
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;
