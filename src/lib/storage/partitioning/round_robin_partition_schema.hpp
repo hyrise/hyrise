@@ -11,10 +11,12 @@ class RoundRobinPartitionSchema : public PartitionSchema {
   explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
+              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
 
   RoundRobinPartitionSchema(RoundRobinPartitionSchema&&) = default;
   RoundRobinPartitionSchema& operator=(RoundRobinPartitionSchema&&) = default;
+
+  const PartitionID get_matching_partition_for(AllTypeVariant value) const override;
 
  protected:
   int _number_of_partitions;

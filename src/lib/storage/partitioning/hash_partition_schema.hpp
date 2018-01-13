@@ -12,12 +12,12 @@ class HashPartitionSchema : public PartitionSchema {
   HashPartitionSchema(ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);
 
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
-  TableType get_type(uint16_t column_count) const;
-  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
+              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
 
   HashPartitionSchema(HashPartitionSchema&&) = default;
   HashPartitionSchema& operator=(HashPartitionSchema&&) = default;
+
+  const PartitionID get_matching_partition_for(AllTypeVariant value) const override;
 
  protected:
   ColumnID _column_id;

@@ -11,12 +11,12 @@ class RangePartitionSchema : public PartitionSchema {
   RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
 
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
-  TableType get_type(uint16_t column_count) const;
-  AllTypeVariant get_value(const ColumnID column_id, const size_t row_number) const;
+              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
 
   RangePartitionSchema(RangePartitionSchema&&) = default;
   RangePartitionSchema& operator=(RangePartitionSchema&&) = default;
+
+  const PartitionID get_matching_partition_for(AllTypeVariant value) const override;
 
  protected:
   ColumnID _column_id;

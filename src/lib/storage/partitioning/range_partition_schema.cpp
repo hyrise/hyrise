@@ -12,20 +12,20 @@ RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTy
 }
 
 void RangePartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-                                  const std::vector<DataType>& column_types,
-                                  const std::vector<bool>& column_nullables) {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
+                                  const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) {
+  AllTypeVariant value_to_find_in_range = values.at(_column_id);
+  PartitionID matching_partition = get_matching_partition_for(value_to_find_in_range);
+  std::shared_ptr<Partition> partition_to_append = _partitions.at(matching_partition);
+  partition_to_append->append(values, max_chunk_size, column_types, column_nullables);
 }
 
-TableType RangePartitionSchema::get_type(uint16_t column_count) const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
-
-AllTypeVariant RangePartitionSchema::get_value(const ColumnID column_id, const size_t row_number) const {
-  // TODO(partitioning group): Implement
-  throw "Not implemented";
-}
+const PartitionID RangePartitionSchema::get_matching_partition_for(AllTypeVariant value) const {
+  for (size_t index = 0; index < _bounds.size(); ++index) {
+    if (value <= _bounds.at(index)) {
+      return PartitionID{index};
+    }
+  }
+  return PartitionID{_bounds.size()};
+};
 
 }  // namespace opossum

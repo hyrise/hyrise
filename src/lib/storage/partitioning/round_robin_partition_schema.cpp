@@ -23,4 +23,10 @@ void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values, const
   }
 }
 
+const PartitionID RoundRobinPartitionSchema::get_matching_partition_for(AllTypeVariant value) const {
+  // TODO(partitioning group/Felix): Implement
+  throw "Not implemented";
+};
+
+
 }  // namespace opossum

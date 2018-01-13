@@ -279,6 +279,7 @@ set(
     utils/performance_warning.cpp
     utils/performance_warning.hpp
     hash_function.hpp
+    hash_function.cpp
     storage/partitioning/partition.cpp
     storage/partitioning/partition.hpp
     storage/partitioning/partition_schema.cpp

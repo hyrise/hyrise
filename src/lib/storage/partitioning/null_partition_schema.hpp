@@ -16,6 +16,8 @@ class NullPartitionSchema : public PartitionSchema {
 
   // Return false, since NullPartitioningSchema is only a list of chunks.
   bool is_partitioned() const override { return false; }
+
+  const PartitionID get_matching_partition_for(AllTypeVariant value) const override { return PartitionID{0}; };
 };
 
 }  // namespace opossum

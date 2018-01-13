@@ -36,6 +36,7 @@ class PartitionSchema {
   virtual const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) const;
 
   virtual bool is_partitioned() const { return true; }
+  virtual const PartitionID get_matching_partition_for(AllTypeVariant value) const;
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;
