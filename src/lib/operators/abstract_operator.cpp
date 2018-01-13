@@ -118,6 +118,13 @@ void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& op
   _operator_task = operator_task;
 }
 
+void AbstractOperator::print(std::ostream& stream) const {
+  std::vector<bool> levels;
+  std::unordered_map<std::shared_ptr<const AbstractOperator>, size_t> id_by_operator;
+  size_t id_counter = 0;
+  _print_impl(stream, levels, id_by_operator, id_counter);
+}
+
 void AbstractOperator::_on_cleanup() {}
 
 }  // namespace opossum

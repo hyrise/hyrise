@@ -27,7 +27,7 @@ class TransactionContext;
 //
 // Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
 
-class AbstractOperator : private Noncopyable {
+class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
@@ -78,6 +78,8 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<OperatorTask> operator_task();
   void set_operator_task(const std::shared_ptr<OperatorTask>&);
 
+  void print(std::ostream& stream = std::cout) const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -88,6 +90,8 @@ class AbstractOperator : private Noncopyable {
   // separate from _on_execute for readability and as a reminder to
   // clean up after execution (if it makes sense)
   virtual void _on_cleanup();
+
+  void
 
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;
