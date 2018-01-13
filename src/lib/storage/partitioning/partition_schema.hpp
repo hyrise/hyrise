@@ -25,6 +25,7 @@ class PartitionSchema {
   // These function have to be implemented by non-abstract PartitionSchemas.
   virtual void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
                       const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) = 0;
+  virtual const PartitionID get_matching_partition_for(AllTypeVariant value) const = 0;
 
   // These function me be overriden to check if chunk modifications obey partitioning rules.
   virtual void create_new_chunk(const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables,
@@ -36,7 +37,6 @@ class PartitionSchema {
   virtual const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) const;
 
   virtual bool is_partitioned() const { return true; }
-  virtual const PartitionID get_matching_partition_for(AllTypeVariant value) const;
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;
