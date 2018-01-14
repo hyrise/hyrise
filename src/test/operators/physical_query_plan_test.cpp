@@ -1,4 +1,6 @@
-#include <iostream>
+#include <sstream>
+
+#include "gtest/gtest.h"
 
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -6,9 +8,13 @@
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
 
-using namespace opossum;
+namespace opossum {
 
-int main() {
+class PhysicalQueryPlanTest : public ::testing::Test {
+
+};
+
+TEST_F(PhysicalQueryPlanTest, Print) {
   StorageManager::get().add_table("int_int_int_100", load_table("src/test/tables/sqlite/int_int_int_100.tbl", 20));
 
   auto get_table = std::make_shared<GetTable>("int_int_int_100");
@@ -16,12 +22,15 @@ int main() {
   auto table_scan_b = std::make_shared<TableScan>(get_table, ColumnID{1}, ScanType::GreaterThan, 30);
   auto union_positions = std::make_shared<UnionPositions>(table_scan_a, table_scan_b);
 
-  union_positions->print();
+  std::stringstream stream;
+  union_positions->print(stream);
 
-  get_table->execute();
-  table_scan_a->execute();
-  get_table->execute();
-  get_table->execute();
+  EXPECT_EQ(stream.str(), R"([0] UnionPositions in 0ns
+ \_[1] TableScan (Col #0 > 20) in 0ns
+ |  \_[2] GetTable (int_int_int_100) in 0ns
+ \_[3] TableScan (Col #1 > 30) in 0ns
+    \_Recurring Operator --> [2]
+)");
+}
 
-  return 0;
 }

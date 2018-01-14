@@ -31,6 +31,7 @@ set(
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
+    operators/physical_query_plan_test.cpp
     operators/print_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp
