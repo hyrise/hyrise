@@ -26,8 +26,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     if (child->type() == LQPNodeType::Join) {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(child);
 
-      const bool valid =
-          join_node->join_mode() == JoinMode::Inner && _predicate_value_valid(predicate_node, join_node);
+      const bool valid = join_node->join_mode() == JoinMode::Inner && _predicate_value_valid(predicate_node, join_node);
 
       if (valid) {
         node->remove_from_tree();
@@ -37,7 +36,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
           const auto prev_left_child = join_node->left_child();
           join_node->set_left_child(node);
           node->set_left_child(prev_left_child);
-        } else if (_contained_in_right_subtree(join_node, predicate_column)){
+        } else if (_contained_in_right_subtree(join_node, predicate_column)) {
           const auto prev_right_child = join_node->right_child();
           join_node->set_right_child(node);
           node->set_left_child(prev_right_child);
@@ -54,7 +53,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 }
 
 bool PredicatePushdownRule::_predicate_value_valid(const std::shared_ptr<PredicateNode>& predicate_node,
-const std::shared_ptr<AbstractLQPNode>& node) const {
+                                                   const std::shared_ptr<AbstractLQPNode>& node) const {
   // The predicate must not be demoted if it combines columns of both join partners.
   // This can happen if the value to compare against is indeed another column ID
   // which references a table different from the filtered column's table.
@@ -63,11 +62,11 @@ const std::shared_ptr<AbstractLQPNode>& node) const {
   if (is_lqp_column_reference(predicate_node->value())) {
     const LQPColumnReference value = boost::get<LQPColumnReference>(predicate_node->value());
 
-    const bool all_left = _contained_in_left_subtree(node, predicate_node->column_reference()) &&
-      _contained_in_left_subtree(node, value);
+    const bool all_left =
+        _contained_in_left_subtree(node, predicate_node->column_reference()) && _contained_in_left_subtree(node, value);
 
     const bool all_right = _contained_in_right_subtree(node, predicate_node->column_reference()) &&
-      _contained_in_right_subtree(node, value);
+                           _contained_in_right_subtree(node, value);
 
     return all_left ^ all_right;
   }
@@ -75,19 +74,22 @@ const std::shared_ptr<AbstractLQPNode>& node) const {
   return true;
 }
 
-bool PredicatePushdownRule::_contained_in_left_subtree(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column) const {
+bool PredicatePushdownRule::_contained_in_left_subtree(const std::shared_ptr<AbstractLQPNode>& node,
+                                                       const LQPColumnReference& column) const {
   Assert(node->left_child(), "must have a left child");
   return _contained_in_node(node->left_child(), column);
 }
 
-bool PredicatePushdownRule::_contained_in_right_subtree(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column) const {
+bool PredicatePushdownRule::_contained_in_right_subtree(const std::shared_ptr<AbstractLQPNode>& node,
+                                                        const LQPColumnReference& column) const {
   if (node->right_child()) {
     return _contained_in_node(node->right_child(), column);
   }
   return false;
 }
 
-bool PredicatePushdownRule::_contained_in_node(const std::shared_ptr<AbstractLQPNode>&  node, const LQPColumnReference& column) const {
+bool PredicatePushdownRule::_contained_in_node(const std::shared_ptr<AbstractLQPNode>& node,
+                                               const LQPColumnReference& column) const {
   const auto& columns = node->output_column_references();
   return std::find(columns.cbegin(), columns.cend(), column) != columns.cend();
 }
