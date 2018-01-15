@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     auto table2 = opossum::load_table("src/test/tables/int.tbl", 100);
     opossum::StorageManager::get().add_table("foo", table2);
 
-    // Install a multi threaded scheduler for testing
+    // Install a multi threaded scheduler
     opossum::CurrentScheduler::set(
         std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
 

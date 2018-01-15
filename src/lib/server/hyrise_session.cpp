@@ -143,10 +143,18 @@ void HyriseSession::accept_query() {
   CurrentScheduler::schedule_tasks(tasks);
 }
 
-void HyriseSession::send_error(const std::string&) {
+void HyriseSession::send_error(const std::string& message) {
   OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
-  // TODO(anyone): find out why we get: message contents do not agree with length in message type "E"
+  
+  // An error response has to include at least one identified field
+  
+  // Send the error message
+  PostgresWireHandler::write_value(output_packet, 'M');
+  PostgresWireHandler::write_string(output_packet, message, true);
+  
+  // Terminate the error response
   PostgresWireHandler::write_value(output_packet, '\0');
+  
   async_send_packet(output_packet);
 }
 
