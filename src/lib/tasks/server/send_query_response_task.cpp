@@ -144,7 +144,7 @@ void SendQueryResponseTask::_send_command_complete() {
 
   std::string completed_msg;
   const auto* statement = _sql_pipeline.get_parsed_sql().getStatements().front();
-  switch (_statement_type) {
+  switch (statement->type()) {
     case hsql::StatementType::kStmtSelect: {
       completed_msg = "SELECT " + std::to_string(_row_count);
       break;
