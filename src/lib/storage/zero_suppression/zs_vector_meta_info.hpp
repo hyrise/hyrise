@@ -12,7 +12,7 @@ namespace opossum {
  * about the vector which is to be encoded.
  */
 struct ZsVectorMetaInfo {
-  std::optional<uint32_t> max_value;
+  std::optional<uint32_t> max_value = std::nullopt;
 };
 
 }  // namespace opossum
