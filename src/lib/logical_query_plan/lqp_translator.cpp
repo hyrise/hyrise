@@ -192,7 +192,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
    * 1. Handle arithmetic expressions in the arguments of aggregate functions via a Projection.
    *
    * If there are arithmetic expressions in aggregates, e.g. `a+b` in `SUM(a+b)`, we create a Projection to compute it.
-   * If there are no arithmetics expressions we don't need the Projection (i.e. need_projection is false)
+   * If there are no arithmetic expressions, we don't need the Projection (i.e. need_projection is false)
    */
   auto need_projection =
       std::any_of(aggregate_expressions.begin(), aggregate_expressions.end(), [&](const auto& aggregate_expression) {

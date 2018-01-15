@@ -34,9 +34,6 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
     const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
     const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
-  Assert(original_lqp->output_column_count() == copied_lqp->output_column_count(),
-         "copied_lqp must be a deep copy of original_lqp");
-
   /**
    * Map a ColumnReference to the same ColumnReference in a different LQP, by
    * (1) Figuring out the ColumnID it has in the original node
@@ -223,7 +220,8 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column(const QualifiedCo
   }
 
   /**
-   * If the table name got resolved (i.e., the alias or name of this node equals the table name), look for the Column in the output of this node
+   * If the table name got resolved (i.e., the alias or name of this node equals the table name), look for the Column
+   * in the output of this node
    */
   if (!qualified_column_name_without_local_table_name->table_name) {
     for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
@@ -416,18 +414,18 @@ std::vector<std::string> AbstractLQPNode::get_verbose_column_names() const {
 }
 
 std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
-    const QualifiedColumnName& reference) const {
-  if (reference.table_name && _table_alias) {
-    if (*reference.table_name == *_table_alias) {
+    const QualifiedColumnName& qualified_column_name) const {
+  if (qualified_column_name.table_name && _table_alias) {
+    if (*qualified_column_name.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the QualifiedColumnName for further search
-      auto reference_without_local_alias = reference;
+      auto reference_without_local_alias = qualified_column_name;
       reference_without_local_alias.table_name = std::nullopt;
       return reference_without_local_alias;
     } else {
       return {};
     }
   }
-  return reference;
+  return qualified_column_name;
 }
 
 void AbstractLQPNode::_print_impl(std::ostream& out, std::vector<bool>& levels,

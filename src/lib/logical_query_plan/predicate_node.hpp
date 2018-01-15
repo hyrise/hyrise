@@ -43,7 +43,7 @@ class PredicateNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
 
  private:
-  const LQPColumnReference _column_references;
+  const LQPColumnReference _column_reference;
   const ScanType _scan_type;
   const AllParameterVariant _value;
   const std::optional<AllTypeVariant> _value2;
