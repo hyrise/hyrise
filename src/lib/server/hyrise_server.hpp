@@ -13,6 +13,7 @@ class HyriseServer {
 
  protected:
   void accept_next_connection();
+  void start_session(boost::system::error_code error);
 
   boost::asio::io_service& _io_service;
   tcp::acceptor _acceptor;

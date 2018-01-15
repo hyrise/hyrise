@@ -19,7 +19,7 @@ RUN_TEST () {
 
 # start server
 
-echo -e "Sarting to run server tests...\n"
+echo -e "Starting to run server tests...\n"
 
 # TEST 1: create table
 RUN_TEST "CREATE TABLE" "CREATE TABLE TEST (id char(5) PRIMARY KEY, name VARCHAR(10));"
