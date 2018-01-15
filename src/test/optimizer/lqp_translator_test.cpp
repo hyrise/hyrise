@@ -161,7 +161,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
    */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->column_ids(), JoinColumnIDs(ColumnID{1}, ColumnID{0}));
+  EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
   EXPECT_EQ(join_op->scan_type(), ScanType::Equals);
   EXPECT_EQ(join_op->mode(), JoinMode::Outer);
 }
@@ -302,7 +302,7 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   predicate_node_right->set_left_child(stored_table_node_right);
 
   auto join_node = std::make_shared<JoinNode>(
-      JoinMode::Inner, JoinColumnReferences(LQPColumnReference(stored_table_node_left, ColumnID{0}),
+      JoinMode::Inner, LQPColumnReferencePair(LQPColumnReference(stored_table_node_left, ColumnID{0}),
                                             LQPColumnReference(stored_table_node_right, ColumnID{0})),
       ScanType::Equals);
   join_node->set_left_child(predicate_node_left);

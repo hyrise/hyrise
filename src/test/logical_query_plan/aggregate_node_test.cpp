@@ -54,19 +54,19 @@ TEST_F(AggregateNodeTest, ColumnReferenceByNamedColumnReference) {
   /**
    * Find GROUPBY columns
    */
-  EXPECT_EQ(_aggregate_node->get_column_reference({"a", std::nullopt}), _a);
-  EXPECT_EQ(_aggregate_node->get_column_reference({"a", {"t_a"}}), _a);
-  EXPECT_EQ(_aggregate_node->find_column_reference({"b", std::nullopt}), std::nullopt);
-  EXPECT_EQ(_aggregate_node->find_column_reference({"b", {"t_a"}}), std::nullopt);
-  EXPECT_EQ(_aggregate_node->get_column_reference({"c", std::nullopt}), _c);
-  EXPECT_EQ(_aggregate_node->get_column_reference({"c", {"t_a"}}), _c);
+  EXPECT_EQ(_aggregate_node->get_column({"a", std::nullopt}), _a);
+  EXPECT_EQ(_aggregate_node->get_column({"a", {"t_a"}}), _a);
+  EXPECT_EQ(_aggregate_node->find_column({"b", std::nullopt}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->find_column({"b", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->get_column({"c", std::nullopt}), _c);
+  EXPECT_EQ(_aggregate_node->get_column({"c", {"t_a"}}), _c);
 
   /**
    * Find Aggregates
    */
-  EXPECT_EQ(_aggregate_node->get_column_reference({"some_sum", std::nullopt}),
+  EXPECT_EQ(_aggregate_node->get_column({"some_sum", std::nullopt}),
             LQPColumnReference(_aggregate_node, ColumnID{3}));
-  EXPECT_EQ(_aggregate_node->find_column_reference({"some_sum", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_aggregate_node->find_column({"some_sum", {"t_a"}}), std::nullopt);
 }
 
 TEST_F(AggregateNodeTest, OutputColumnReferences) {
@@ -78,35 +78,35 @@ TEST_F(AggregateNodeTest, OutputColumnReferences) {
 }
 
 TEST_F(AggregateNodeTest, ExpressionToColumnID) {
-  EXPECT_EQ(_aggregate_node->get_column_reference_by_expression(LQPExpression::create_column(_a)), _a);
-  EXPECT_EQ(_aggregate_node->find_column_reference_by_expression(LQPExpression::create_column(_b)), std::nullopt);
-  EXPECT_EQ(_aggregate_node->get_column_reference_by_expression(LQPExpression::create_column(_c)), _c);
+  EXPECT_EQ(_aggregate_node->get_column_by_expression(LQPExpression::create_column(_a)), _a);
+  EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_column(_b)), std::nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_by_expression(LQPExpression::create_column(_c)), _c);
 
   // "a+b" is not allowed
-  EXPECT_EQ(_aggregate_node->find_column_reference_by_expression(LQPExpression::create_binary_operator(
-                ExpressionType::Addition, LQPExpression::create_column(_a), LQPExpression::create_column(_b))),
+  EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_binary_operator(
+  ExpressionType::Addition, LQPExpression::create_column(_a), LQPExpression::create_column(_b))),
             std::nullopt);
 
   // There is SUM(a+b)
-  EXPECT_EQ(_aggregate_node->get_column_reference_by_expression(LQPExpression::create_aggregate_function(
+  EXPECT_EQ(_aggregate_node->get_column_by_expression(LQPExpression::create_aggregate_function(
                 AggregateFunction::Sum,
                 {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_a),
                                                        LQPExpression::create_column(_b))})),
             LQPColumnReference(_aggregate_node, ColumnID{2}));
 
   // But there is no SUM(b+c)
-  EXPECT_EQ(_aggregate_node->find_column_reference_by_expression(LQPExpression::create_aggregate_function(
-                AggregateFunction::Sum,
-                {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_b),
-                                                       LQPExpression::create_column(_c))})),
+  EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_aggregate_function(
+  AggregateFunction::Sum,
+  {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_b),
+                                         LQPExpression::create_column(_c))})),
             std::nullopt);
 
   // TODO(mp): This expression is currently not found because the alias is missing.
   // This has to be fixed once expressions do not have an alias anymore.
-  EXPECT_EQ(_aggregate_node->find_column_reference_by_expression(LQPExpression::create_aggregate_function(
-                AggregateFunction::Sum,
-                {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_a),
-                                                       LQPExpression::create_column(_c))})),
+  EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_aggregate_function(
+  AggregateFunction::Sum,
+  {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_a),
+                                         LQPExpression::create_column(_c))})),
             std::nullopt);
 }
 

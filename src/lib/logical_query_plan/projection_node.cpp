@@ -125,7 +125,7 @@ void ProjectionNode::_update_output() const {
 
       if (!expression->alias()) {
         const auto input_column_id =
-            left_child()->get_output_column_id_by_column_reference(expression->column_reference());
+        left_child()->get_output_column_id(expression->column_reference());
         const auto& column_name = left_child()->output_column_names()[input_column_id];
         _output_column_names->emplace_back(column_name);
       }

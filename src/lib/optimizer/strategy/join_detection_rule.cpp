@@ -29,7 +29,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
        */
       auto join_condition = _find_predicate_for_cross_join(cross_join_node);
       if (join_condition) {
-        JoinColumnReferences join_column_ids(join_condition->left_column_reference,
+        LQPColumnReferencePair join_column_ids(join_condition->left_column_reference,
                                              join_condition->right_column_reference);
 
         auto predicate_node = join_condition->predicate_node;
@@ -105,18 +105,18 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
       auto predicate_right_column_reference = boost::get<LQPColumnReference>(predicate_node->value());
 
       const auto left_in_left =
-          cross_join->left_child()->find_output_column_id_by_column_reference(predicate_left_column_reference);
+      cross_join->left_child()->find_output_column_id(predicate_left_column_reference);
       const auto right_in_right =
-          cross_join->right_child()->find_output_column_id_by_column_reference(predicate_right_column_reference);
+      cross_join->right_child()->find_output_column_id(predicate_right_column_reference);
 
       if (left_in_left && right_in_right) {
         return JoinCondition{predicate_node, predicate_left_column_reference, predicate_right_column_reference};
       }
 
       const auto left_in_right =
-          cross_join->right_child()->find_output_column_id_by_column_reference(predicate_left_column_reference);
+      cross_join->right_child()->find_output_column_id(predicate_left_column_reference);
       const auto right_in_left =
-          cross_join->left_child()->find_output_column_id_by_column_reference(predicate_right_column_reference);
+      cross_join->left_child()->find_output_column_id(predicate_right_column_reference);
 
       if (right_in_left && left_in_right) {
         return JoinCondition{predicate_node, predicate_right_column_reference, predicate_left_column_reference};

@@ -44,7 +44,7 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
 
       auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
       QualifiedColumnName qualified_column_name{name, table_name};
-      auto column_reference = input_node->get_column_reference(qualified_column_name);
+      auto column_reference = input_node->get_column(qualified_column_name);
       node = LQPExpression::create_column(column_reference, alias);
       break;
     }
@@ -148,7 +148,7 @@ LQPColumnReference HSQLExprTranslator::to_column_reference(const hsql::Expr& hsq
                                                            const std::shared_ptr<AbstractLQPNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
   const auto qualified_column_name = to_qualified_column_name(hsql_expr);
-  const auto column_reference = input_node->find_column_reference(qualified_column_name);
+  const auto column_reference = input_node->find_column(qualified_column_name);
 
   Assert(column_reference, "Couldn't resolve named column reference '" + qualified_column_name.as_string() + "'");
 

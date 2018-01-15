@@ -26,16 +26,16 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                        const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                       const JoinColumnIDs& column_ids, const ScanType scan_type);
+                       const ColumnIDPair& column_ids, const ScanType scan_type);
 
   JoinMode mode() const;
-  const JoinColumnIDs& column_ids() const;
+  const ColumnIDPair& column_ids() const;
   ScanType scan_type() const;
   const std::string description() const override;
 
  protected:
   const JoinMode _mode;
-  const JoinColumnIDs _column_ids;
+  const ColumnIDPair _column_ids;
   const ScanType _scan_type;
 
   // Some operators need an internal implementation class, mostly in cases where

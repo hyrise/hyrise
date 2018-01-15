@@ -37,10 +37,10 @@ class AggregateNode : public AbstractLQPNode {
 
   // @{
   /**
-   * AggregateNode::find_column_reference_by_expression() looks for the @param expression in the columns this
+   * AggregateNode::find_column_by_expression() looks for the @param expression in the columns this
    * node outputs, checking by semantic and NOT by Expression object's address. If it can find it, it will be returned,
    * otherwise std::nullopt is returned.
-   * AggregateNode::get_column_reference_by_expression() is more strict and will fail, if the
+   * AggregateNode::get_column_by_expression() is more strict and will fail, if the
    * @param expression cannot be found
    *
    * Since we're using a TableScan added AFTER the actual aggregate to implement HAVING, in a query like
@@ -50,9 +50,9 @@ class AggregateNode : public AbstractLQPNode {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<LQPColumnReference> find_column_reference_by_expression(
-      const std::shared_ptr<LQPExpression>& expression) const;
-  LQPColumnReference get_column_reference_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  std::optional<LQPColumnReference> find_column_by_expression(
+  const std::shared_ptr<LQPExpression> &expression) const;
+  LQPColumnReference get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
   // @}
 
   std::string get_verbose_column_name(ColumnID column_id) const override;

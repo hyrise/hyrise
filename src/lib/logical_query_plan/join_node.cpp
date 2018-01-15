@@ -21,7 +21,7 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const JoinColumnReferences& join_column_references,
+JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
                    const ScanType scan_type)
     : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
@@ -39,7 +39,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
   } else {
     Assert(left_child(), "Can't clone without child");
 
-    const auto join_column_references = JoinColumnReferences{
+    const auto join_column_references = LQPColumnReferencePair{
         adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
         adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
     };
@@ -88,16 +88,16 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
            "Only cross joins and joins with join column ids supported for generating join statistics");
     Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
 
-    JoinColumnIDs join_colum_ids{
-        left_child->get_output_column_id_by_column_reference(_join_column_references->first),
-        right_child->get_output_column_id_by_column_reference(_join_column_references->second)};
+    ColumnIDPair join_colum_ids{
+    left_child->get_output_column_id(_join_column_references->first),
+        right_child->get_output_column_id(_join_column_references->second)};
 
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
                                                                              join_colum_ids, *_scan_type);
   }
 }
 
-const std::optional<JoinColumnReferences>& JoinNode::join_column_references() const { return _join_column_references; }
+const std::optional<LQPColumnReferencePair>& JoinNode::join_column_references() const { return _join_column_references; }
 
 const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 

@@ -30,7 +30,7 @@ PQPExpression::PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expressio
   _value_placeholder = lqp_expression->_value_placeholder;
 
   if (lqp_expression->type() == ExpressionType::Column) {
-    _column_id = node->get_output_column_id_by_column_reference(lqp_expression->column_reference());
+    _column_id = node->get_output_column_id(lqp_expression->column_reference());
   }
 
   for (auto& aggregate_function_argument : lqp_expression->_aggregate_function_arguments) {

@@ -140,15 +140,15 @@ const std::vector<LQPColumnReference>& AggregateNode::output_column_references()
   return *_output_column_references;
 }
 
-LQPColumnReference AggregateNode::get_column_reference_by_expression(
+LQPColumnReference AggregateNode::get_column_by_expression(
     const std::shared_ptr<LQPExpression>& expression) const {
-  const auto column_id = find_column_reference_by_expression(expression);
+  const auto column_id = find_column_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
-std::optional<LQPColumnReference> AggregateNode::find_column_reference_by_expression(
-    const std::shared_ptr<LQPExpression>& expression) const {
+std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
+const std::shared_ptr<LQPExpression> &expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
@@ -209,7 +209,7 @@ void AggregateNode::_update_output() const {
   for (const auto& groupby_column_reference : _groupby_column_references) {
     _output_column_references->emplace_back(groupby_column_reference);
 
-    const auto input_column_id = left_child()->get_output_column_id_by_column_reference(groupby_column_reference);
+    const auto input_column_id = left_child()->get_output_column_id(groupby_column_reference);
     _output_column_names->emplace_back(left_child()->output_column_names()[input_column_id]);
   }
 

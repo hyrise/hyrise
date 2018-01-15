@@ -53,14 +53,14 @@ TEST_F(ProjectionNodeTest, Description) {
 }
 
 TEST_F(ProjectionNodeTest, ColumnReferenceByNamedColumnReference) {
-  EXPECT_EQ(_projection_node->get_column_reference({"c", std::nullopt}), _c);
-  EXPECT_EQ(_projection_node->get_column_reference({"c", "t_a"}), _c);
-  EXPECT_EQ(_projection_node->get_column_reference({"a", std::nullopt}), _a);
-  EXPECT_EQ(_projection_node->get_column_reference({"a", "t_a"}), _a);
-  EXPECT_EQ(_projection_node->get_column_reference({"alias_for_b", std::nullopt}), _b);
-  EXPECT_EQ(_projection_node->find_column_reference({"alias_for_b", "t_a"}), std::nullopt);
-  EXPECT_EQ(_projection_node->get_column_reference({"some_addition", std::nullopt}), _some_addition);
-  EXPECT_EQ(_projection_node->find_column_reference({"some_addition", "t_a"}), std::nullopt);
+  EXPECT_EQ(_projection_node->get_column({"c", std::nullopt}), _c);
+  EXPECT_EQ(_projection_node->get_column({"c", "t_a"}), _c);
+  EXPECT_EQ(_projection_node->get_column({"a", std::nullopt}), _a);
+  EXPECT_EQ(_projection_node->get_column({"a", "t_a"}), _a);
+  EXPECT_EQ(_projection_node->get_column({"alias_for_b", std::nullopt}), _b);
+  EXPECT_EQ(_projection_node->find_column({"alias_for_b", "t_a"}), std::nullopt);
+  EXPECT_EQ(_projection_node->get_column({"some_addition", std::nullopt}), _some_addition);
+  EXPECT_EQ(_projection_node->find_column({"some_addition", "t_a"}), std::nullopt);
 }
 
 TEST_F(ProjectionNodeTest, ColumnReferenceByOutputColumnID) {

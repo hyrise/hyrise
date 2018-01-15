@@ -168,13 +168,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return The ColumnReference of the qualified_column_name if it can be resolved in this subtree,
    *         std::nullopt otherwise.
    */
-  std::optional<LQPColumnReference> find_column_reference(const QualifiedColumnName& qualified_column_name) const;
+  std::optional<LQPColumnReference> find_column(const QualifiedColumnName &qualified_column_name) const;
 
   /**
    * Convenience method for (*find_column_reference_by_qualified_column_name()), DebugAssert()s that the
    * qualified_column_name could be resolved
    */
-  LQPColumnReference get_column_reference(const QualifiedColumnName& qualified_column_name) const;
+  LQPColumnReference get_column(const QualifiedColumnName &qualified_column_name) const;
 
   /**
    * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
@@ -186,12 +186,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   /**
    * @return The leftmost output ColumnID that stems from column_reference, or std::nullopt if none does
    */
-  std::optional<ColumnID> find_output_column_id_by_column_reference(const LQPColumnReference& column_reference) const;
+  std::optional<ColumnID> find_output_column_id(const LQPColumnReference &column_reference) const;
 
   /**
-   * Convenience for *find_output_column_id_by_column_reference(), DebugAssert()s that the column_reference could be resolved
+   * Convenience for *find_output_column_id(), DebugAssert()s that the column_reference could be resolved
    */
-  ColumnID get_output_column_id_by_column_reference(const LQPColumnReference& column_reference) const;
+  ColumnID get_output_column_id(const LQPColumnReference &column_reference) const;
 
   /**
    * Makes this nodes parents point to this node's left child

@@ -34,7 +34,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
     const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
     const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
-  Assert(original_lqp->output_column_count() == copied_lqp->output_column_count(), "lqp_copy must be a copy of this");
+  Assert(original_lqp->output_column_count() == copied_lqp->output_column_count(), "copied_lqp must be a deep copy of original_lqp");
 
   /**
    * Map a ColumnReference to the same ColumnReference in a different LQP, by
@@ -42,7 +42,7 @@ LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
    * (2) Returning the ColumnReference at that ColumnID in the copied node
    */
 
-  const auto output_column_id = original_lqp->get_output_column_id_by_column_reference(column_reference);
+  const auto output_column_id = original_lqp->get_output_column_id(column_reference);
   return copied_lqp->output_column_references()[output_column_id];
 }
 
@@ -197,7 +197,7 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
    */
 
   if (!_output_column_references) {
-    Assert(!left_child() || !right_child(), "Nodes that have two children must override this method");
+    Assert(!right_child(), "Nodes that have two children must override this method");
     if (left_child()) {
       _output_column_references = left_child()->output_column_references();
     } else {
@@ -211,10 +211,10 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
   return *_output_column_references;
 }
 
-std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
-    const QualifiedColumnName& qualified_column_name) const {
+std::optional<LQPColumnReference> AbstractLQPNode::find_column(
+const QualifiedColumnName &qualified_column_name) const {
   /**
-   * If this node carries an alias, that is different from that of the NamedColumnReference, we can't resolve the column
+   * If this node carries an alias that is different from that of the NamedColumnReference, we can't resolve the column
    * in this node. E.g. in `SELECT t1.a FROM t1 AS something_else;` "t1.a" can't be resolved since it carries an alias.
    */
   const auto qualified_column_name_without_local_table_name = _resolve_local_table_name(qualified_column_name);
@@ -240,9 +240,9 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
   const auto resolve_qualified_column_name = [&](
       const auto& node, const auto& qualified_column_name) -> std::optional<LQPColumnReference> {
     if (node) {
-      const auto column_reference = node->find_column_reference(qualified_column_name);
+      const auto column_reference = node->find_column(qualified_column_name);
       if (column_reference) {
-        if (find_output_column_id_by_column_reference(*column_reference)) {
+        if (find_output_column_id(*column_reference)) {
           return column_reference;
         }
       }
@@ -265,8 +265,8 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column_reference(
   return column_reference_from_right;
 }
 
-LQPColumnReference AbstractLQPNode::get_column_reference(const QualifiedColumnName& qualified_column_name) const {
-  const auto colum_origin = find_column_reference(qualified_column_name);
+LQPColumnReference AbstractLQPNode::get_column(const QualifiedColumnName &qualified_column_name) const {
+  const auto colum_origin = find_column(qualified_column_name);
   DebugAssert(colum_origin, "Couldn't resolve column origin of " + qualified_column_name.as_string());
   return *colum_origin;
 }
@@ -302,8 +302,8 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
   return table_name_origin_in_left_child;
 }
 
-std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_reference(
-    const LQPColumnReference& column_reference) const {
+std::optional<ColumnID> AbstractLQPNode::find_output_column_id(
+const LQPColumnReference &column_reference) const {
   const auto& output_column_references = this->output_column_references();
   const auto iter = std::find(output_column_references.begin(), output_column_references.end(), column_reference);
 
@@ -314,8 +314,8 @@ std::optional<ColumnID> AbstractLQPNode::find_output_column_id_by_column_referen
   return static_cast<ColumnID>(std::distance(output_column_references.begin(), iter));
 }
 
-ColumnID AbstractLQPNode::get_output_column_id_by_column_reference(const LQPColumnReference& column_reference) const {
-  const auto column_id = find_output_column_id_by_column_reference(column_reference);
+ColumnID AbstractLQPNode::get_output_column_id(const LQPColumnReference &column_reference) const {
+  const auto column_id = find_output_column_id(column_reference);
   Assert(column_id, "Couldn't resolve LQPColumnReference");
   return *column_id;
 }
