@@ -409,8 +409,8 @@ TYPED_TEST(JoinFullTest, JoinOnDictAndReferenceColumn) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_dict, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::NotEquals,
-      JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_neq.tbl", 1);
+      this->_table_wrapper_a_dict, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::NotEquals, JoinMode::Inner,
+      "src/test/tables/joinoperators/int_inner_join_neq.tbl", 1);
 }
 
 }  // namespace opossum

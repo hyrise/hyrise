@@ -770,8 +770,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
         for (auto origin_node_column_id = ColumnID{0}; origin_node_column_id < origin_node->output_column_count();
              ++origin_node_column_id) {
           const auto column_reference = LQPColumnReference{origin_node, origin_node_column_id};
-          const auto input_node_column_id =
-          input_node->find_output_column_id({origin_node, origin_node_column_id});
+          const auto input_node_column_id = input_node->find_output_column_id({origin_node, origin_node_column_id});
           if (input_node_column_id) {
             column_references.emplace_back(column_reference);
           }

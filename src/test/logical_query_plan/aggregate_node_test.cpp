@@ -64,8 +64,7 @@ TEST_F(AggregateNodeTest, ColumnReferenceByNamedColumnReference) {
   /**
    * Find Aggregates
    */
-  EXPECT_EQ(_aggregate_node->get_column({"some_sum", std::nullopt}),
-            LQPColumnReference(_aggregate_node, ColumnID{3}));
+  EXPECT_EQ(_aggregate_node->get_column({"some_sum", std::nullopt}), LQPColumnReference(_aggregate_node, ColumnID{3}));
   EXPECT_EQ(_aggregate_node->find_column({"some_sum", {"t_a"}}), std::nullopt);
 }
 
@@ -84,7 +83,7 @@ TEST_F(AggregateNodeTest, ExpressionToColumnID) {
 
   // "a+b" is not allowed
   EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_binary_operator(
-  ExpressionType::Addition, LQPExpression::create_column(_a), LQPExpression::create_column(_b))),
+                ExpressionType::Addition, LQPExpression::create_column(_a), LQPExpression::create_column(_b))),
             std::nullopt);
 
   // There is SUM(a+b)
@@ -96,17 +95,17 @@ TEST_F(AggregateNodeTest, ExpressionToColumnID) {
 
   // But there is no SUM(b+c)
   EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_aggregate_function(
-  AggregateFunction::Sum,
-  {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_b),
-                                         LQPExpression::create_column(_c))})),
+                AggregateFunction::Sum,
+                {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_b),
+                                                       LQPExpression::create_column(_c))})),
             std::nullopt);
 
   // TODO(mp): This expression is currently not found because the alias is missing.
   // This has to be fixed once expressions do not have an alias anymore.
   EXPECT_EQ(_aggregate_node->find_column_by_expression(LQPExpression::create_aggregate_function(
-  AggregateFunction::Sum,
-  {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_a),
-                                         LQPExpression::create_column(_c))})),
+                AggregateFunction::Sum,
+                {LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_a),
+                                                       LQPExpression::create_column(_c))})),
             std::nullopt);
 }
 

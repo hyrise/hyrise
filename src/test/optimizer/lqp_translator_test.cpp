@@ -303,7 +303,7 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
 
   auto join_node = std::make_shared<JoinNode>(
       JoinMode::Inner, LQPColumnReferencePair(LQPColumnReference(stored_table_node_left, ColumnID{0}),
-                                            LQPColumnReference(stored_table_node_right, ColumnID{0})),
+                                              LQPColumnReference(stored_table_node_right, ColumnID{0})),
       ScanType::Equals);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);

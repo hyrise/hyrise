@@ -397,8 +397,7 @@ TEST_F(LogicalQueryPlanTest, ColumnIDByColumnReference) {
   EXPECT_EQ(aggregate_node->get_output_column_id(column_reference_b), ColumnID{0});
   EXPECT_EQ(aggregate_node->get_output_column_id(column_reference_c), ColumnID{1});
   EXPECT_EQ(aggregate_node->find_output_column_id(column_reference_a), std::nullopt);
-  EXPECT_EQ(mock_node_a->find_output_column_id(LQPColumnReference{mock_node_b, ColumnID{0}}),
-            std::nullopt);
+  EXPECT_EQ(mock_node_a->find_output_column_id(LQPColumnReference{mock_node_b, ColumnID{0}}), std::nullopt);
 }
 
 }  // namespace opossum

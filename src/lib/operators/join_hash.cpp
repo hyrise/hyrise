@@ -87,8 +87,7 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const ColumnIDPair& column_ids, const ScanType scan_type,
-               const bool inputs_swapped)
+               const JoinMode mode, const ColumnIDPair& column_ids, const ScanType scan_type, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),

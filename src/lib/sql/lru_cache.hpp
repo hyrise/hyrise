@@ -74,8 +74,6 @@ class LRUCache : public AbstractCache<Key, Value> {
     last--;
 
     _map.erase(last->first);
-
-    //std::cout << _map.size() << std::endl;
     _list.pop_back();
   }
 };

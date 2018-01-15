@@ -83,12 +83,11 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     // Doing just `value = boost::get<LQPColumnReference>(value)` triggers a compiler warning in GCC release builds
     // about the assigned value being uninitialized. There seems to be no reason for this and this way seems to be
     // fine... :(
-    value = static_cast<ColumnID::base_type>(
-    get_output_column_id(boost::get<LQPColumnReference>(value)));
+    value = static_cast<ColumnID::base_type>(get_output_column_id(boost::get<LQPColumnReference>(value)));
   }
 
-  return left_child->get_statistics()->predicate_statistics(
-  get_output_column_id(_column_references), _scan_type, value, _value2);
+  return left_child->get_statistics()->predicate_statistics(get_output_column_id(_column_references), _scan_type, value,
+                                                            _value2);
 }
 
 }  // namespace opossum
