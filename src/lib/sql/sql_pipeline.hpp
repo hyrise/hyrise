@@ -23,7 +23,7 @@ namespace opossum {
  * If N statements are present, it creates N SQLPipelineStatements.
  *
  * The advantage of using this over a self created vector of SQLPipelineStatements is that some sanity checks are
- * performed here, e.g. TransactionContexts and dependant statements (CREATE VIEW X followed by SELECT * FROM X)
+ * performed here, e.g. TransactionContexts and dependent statements (CREATE VIEW X followed by SELECT * FROM X)
  *
  * The SQLPipeline holds all results and only hands them out as const references. If the SQLPipeline goes out of scope
  * while the results are still needed, the result references are invalid (except maybe the result table).
