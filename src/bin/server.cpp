@@ -9,10 +9,11 @@
 #include "server/hyrise_server.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "utils/load_table.hpp"
 
 int main(int argc, char* argv[]) {
   try {
-    auto port = 5432;
+    uint16_t port = 5432;
 
     if (argc >= 2) {
       port = static_cast<uint16_t>(std::atoi(argv[1]));
@@ -21,6 +22,9 @@ int main(int argc, char* argv[]) {
     // Generate some data for testing
     auto table = tpcc::TpccTableGenerator::generate_tpcc_table("ITEM");
     opossum::StorageManager::get().add_table("ITEM", table);
+
+    auto table2 = opossum::load_table("src/test/tables/int.tbl", 100);
+    opossum::StorageManager::get().add_table("foo", table2);
 
     // Install a multi threaded scheduler for testing
     opossum::CurrentScheduler::set(

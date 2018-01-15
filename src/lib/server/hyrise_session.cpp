@@ -160,7 +160,7 @@ void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) 
 
 void HyriseSession::query_executed() {
   const std::vector<std::shared_ptr<ServerTask>> tasks = {
-      std::make_shared<SendQueryResponseTask>(_self, _sql_pipeline->get_result_table())};
+      std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 

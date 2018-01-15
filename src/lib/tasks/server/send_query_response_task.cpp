@@ -1,15 +1,14 @@
 #include "send_query_response_task.hpp"
 
+#include "SQLParserResult.h"
+
 namespace opossum {
 
 void SendQueryResponseTask::_send_row_description() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
 
-  // Int16 Specifies the number of fields in a row (can be zero).
   if (!_result_table) {
     // There is no result table, e.g. after an INSERT command
-    PostgresWireHandler::write_value(output_packet, htons(0u));
-    _session->async_send_packet(output_packet);
     return;
   }
 
@@ -80,6 +79,10 @@ void SendQueryResponseTask::_send_row_description() {
 }
 
 void SendQueryResponseTask::_send_row_data() {
+  if (!_result_table) {
+    // There is no result table, e.g. after an INSERT command so the client doesn't expect any data
+    return;
+  }
   /*
     DataRow (B)
     Byte1('D')
@@ -135,11 +138,45 @@ void SendQueryResponseTask::_send_row_data() {
 }
 
 void SendQueryResponseTask::_send_command_complete() {
+  if (!_result_table) {
+    return;
+  }
+
+  std::string completed_msg;
+  const auto* statement = _sql_pipeline.get_parsed_sql().getStatements().front();
+  switch (_statement_type) {
+    case hsql::StatementType::kStmtSelect: {
+      completed_msg = "SELECT " + std::to_string(_row_count);
+      break;
+    }
+    case hsql::StatementType::kStmtInsert: {
+      // 0 is ignored OID and 1 inserted row
+      completed_msg = "INSERT 0 1";
+      break;
+    }
+    case hsql::StatementType::kStmtUpdate: {
+      // We do not return how many rows are affected
+      completed_msg = "UPDATE 0";
+      break;
+    }
+    case hsql::StatementType::kStmtDelete: {
+      // We do not return how many rows are affected
+      completed_msg = "DELETE 0";
+      break;
+    }
+    case hsql::StatementType::kStmtCreate: {
+      // 0 rows retrieved (Postgres requires a CREATE TABLE statement to return SELECT)
+      completed_msg = "SELECT 0";
+      break;
+    }
+    default: {
+      return _session->pipeline_error("Unknown statement type. Server doesn't know how to complete query.");
+    }
+
+  }
+
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
-
-  const auto completed = "SELECT " + std::to_string(_row_count);
-  PostgresWireHandler::write_string(output_packet, completed);
-
+  PostgresWireHandler::write_string(output_packet, completed_msg);
   _session->async_send_packet(output_packet);
 }
 
