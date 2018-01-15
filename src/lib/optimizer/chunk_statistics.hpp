@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -33,7 +34,9 @@ class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
  public:
   ChunkStatistics(std::vector<std::shared_ptr<BaseChunkColumnStatistics>> stats) : _statistics(stats) {}
 
-  const std::vector<std::shared_ptr<BaseChunkColumnStatistics>>& statistics() { return _statistics; }
+  const std::vector<std::shared_ptr<BaseChunkColumnStatistics>>& statistics() const { return _statistics; }
+
+  bool can_prune(const ScanType scan_type, const ColumnID column_id, const AllTypeVariant& value) const;
 
  protected:
   std::vector<std::shared_ptr<BaseChunkColumnStatistics>> _statistics;

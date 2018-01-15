@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
@@ -20,6 +21,7 @@ Optimizer Optimizer::create_default_optimizer() {
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
+  main_batch.add_rule(std::make_shared<ChunkPruningRule>());
   optimizer.add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);

@@ -32,6 +32,9 @@ class StoredTableNode : public AbstractLQPNode {
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  std::vector<ChunkID>& excluded_chunks();
+  const std::vector<ChunkID>& excluded_chunks() const;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_child,
@@ -42,6 +45,7 @@ class StoredTableNode : public AbstractLQPNode {
 
  private:
   const std::string _table_name;
+  std::vector<ChunkID> _excluded_chunks;
 
   std::vector<std::string> _output_column_names;
 };

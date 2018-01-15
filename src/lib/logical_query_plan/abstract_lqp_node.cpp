@@ -135,6 +135,13 @@ void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<Abstrac
   _child_changed();
 }
 
+uint8_t AbstractLQPNode::child_count() const {
+  return _children[0] ? (_children[1] ? 2 : 1)
+                      : (_children[1] ? 1 : 0);
+}
+
+bool AbstractLQPNode::is_leaf() const { return child_count() == 0; }
+
 LQPNodeType AbstractLQPNode::type() const { return _type; }
 
 bool AbstractLQPNode::subtree_is_read_only() const {

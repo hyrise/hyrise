@@ -144,6 +144,8 @@ set(
     operators/validate.hpp
     optimizer/base_column_statistics.cpp
     optimizer/base_column_statistics.hpp
+    optimizer/chunk_statistics.cpp
+    optimizer/chunk_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
     abstract_expression.cpp
@@ -154,6 +156,8 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/chunk_pruning_rule.cpp
+    optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
