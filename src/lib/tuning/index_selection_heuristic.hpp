@@ -7,6 +7,20 @@
 
 namespace opossum {
 
+/**
+ * Data class containing information on
+ * *what* data is read by a query (table + column),
+ * *how often* that data is accessed (query frequency / # of occurrences),
+ * *how much* of the data is retrieved (query selectivity).
+ */
+class AccessRecord {
+public:
+    std::string table_name;
+    ColumnID column_id;
+    size_t number_of_usages;
+    float selectivity;
+};
+
 // ToDo(group01): extract into own file, add proper constructor and accessor methods
 class IndexProposal {
  public:
@@ -21,6 +35,11 @@ class IndexProposal {
   // 2. Absolutely based on some well(?)-defined bounds, e.g. if the creation costs <100ms,
   //    then it has a desirability of at least 50%.
   float desirablility;
+
+  // Estimated amount of work that can be saved with this index
+  // (sum of inverted selectivites multiplied with query occurrence)
+  // Note that this is a *relative* measure, not an absolute measure of work (like touched elements)!
+  float saved_work;
 
   // Detailed benefit / cost values
   // How often this table+column was accessed
@@ -64,6 +83,7 @@ class IndexSelectionHeuristic {
   // Calculate the overall desirablity of each proposal.
   void _calculate_desirability();
 
+  std::vector<AccessRecord> _access_recods;
   std::vector<IndexProposal> _index_proposals;
 };
 

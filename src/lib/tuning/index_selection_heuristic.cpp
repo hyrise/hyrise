@@ -1,16 +1,21 @@
 #include <algorithm>
+#include <iostream>
 
 #include "index_selection_heuristic.hpp"
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
+#include "storage/storage_manager.hpp"
+#include "optimizer/column_statistics.hpp"
+#include "optimizer/table_statistics.hpp"
 
 namespace opossum {
 
 IndexSelectionHeuristic::IndexSelectionHeuristic() {}
 
 const std::vector<IndexProposal>& IndexSelectionHeuristic::recommend_changes(const SystemStatistics& statistics) {
+  _access_recods.clear();
   _index_proposals.clear();
 
   // Investigate query cache
@@ -41,8 +46,24 @@ void IndexSelectionHeuristic::_inspect_operator(const std::shared_ptr<const Abst
       if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(table_scan->input_left())) {
         const auto& table_name = get_table->table_name();
         ColumnID column_id = table_scan->left_column_id();
-        _index_proposals.emplace_back(IndexProposal{table_name, column_id, 0.0f, static_cast<int>(query_frequency), 0});
+        _index_proposals.emplace_back(IndexProposal{table_name, column_id, 0.0f, 0.0f, static_cast<int>(query_frequency), 0});
         std::cout << "TableScan on table " << table_name << " and column " << column_id << "\n";
+
+        auto table = StorageManager::get().get_table(table_name);
+        auto table_statistics = table->table_statistics();
+        //auto column_statistics = table->table_statistics()->column_statistics().at(column_id);
+        auto compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
+        auto predicate_statistics = table_statistics->predicate_statistics(column_id, table_scan->scan_type(), table_scan->right_parameter());
+        auto selectivity = table_statistics->row_count() > 0 ? predicate_statistics->row_count() / table_statistics->row_count() : 1.0f;
+        std::cout << table_name << "." << table->column_name(column_id);
+        std::cout << " " << *table_statistics << "\n";
+        std::cout << "predicate statistics: ";
+        std::cout << " " << *predicate_statistics << "\n";
+        std::cout << "-> selectivity: " << predicate_statistics->row_count() / (table_statistics->row_count() + 1) << "\n";
+
+        _access_recods.emplace_back(AccessRecord{table_name, column_id, query_frequency, selectivity});
+        _index_proposals.emplace_back(IndexProposal{table_name, column_id, 0.0f, 0.0f, static_cast<int>(query_frequency), 0});
+
       }
     //}
   } else {
@@ -69,6 +90,14 @@ void IndexSelectionHeuristic::_aggregate_usages() {
         --candidate_index;
       }
     }
+  }
+
+  for (const auto & access_record : _access_recods) {
+      for (auto & index_proposal : _index_proposals) {
+          if (index_proposal.table_name == access_record.table_name && index_proposal.column_id == access_record.column_id) {
+              index_proposal.saved_work += (1.0 / access_record.selectivity) * access_record.number_of_usages;
+          }
+      }
   }
 }
 
