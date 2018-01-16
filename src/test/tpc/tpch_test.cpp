@@ -49,7 +49,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto query = tpch_queries[query_idx];
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
-  // Disable MVCC
+  // Don't use MVCC
   SQLPipeline sql_pipeline{query, false};
   const auto& result_table = sql_pipeline.get_result_table();
 
