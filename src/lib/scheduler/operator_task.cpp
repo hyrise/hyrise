@@ -77,7 +77,6 @@ void OperatorTask::_on_execute() {
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
         Fail("Trying to execute operators for a transaction that is already committed");
-        break;
     }
   }
 

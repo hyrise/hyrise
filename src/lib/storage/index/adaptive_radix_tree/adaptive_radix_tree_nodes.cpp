@@ -95,7 +95,6 @@ BaseIndex::Iterator ARTNode4::end() const {
     }
   }
   Fail("Empty _children array in ARTNode4 should never happen");
-  return {};
 }
 
 /**
@@ -286,7 +285,6 @@ BaseIndex::Iterator ARTNode48::begin() const {
     }
   }
   Fail("Empty _index_to_child array in ARTNode48 should never happen");
-  return {};
 }
 
 BaseIndex::Iterator ARTNode48::end() const {
@@ -296,7 +294,6 @@ BaseIndex::Iterator ARTNode48::end() const {
     }
   }
   Fail("Empty _index_to_child array in ARTNode48 should never happen");
-  return {};
 }
 
 /**
@@ -373,7 +370,6 @@ BaseIndex::Iterator ARTNode256::begin() const {
     }
   }
   Fail("Empty _children array in ARTNode256 should never happen");
-  return {};
 }
 
 BaseIndex::Iterator ARTNode256::end() const {
@@ -383,7 +379,6 @@ BaseIndex::Iterator ARTNode256::end() const {
     }
   }
   Fail("Empty _children array in ARTNode256 should never happen");
-  return {};
 }
 
 Leaf::Leaf(BaseIndex::Iterator& lower, BaseIndex::Iterator& upper) : _begin(lower), _end(upper) {}

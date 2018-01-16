@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -47,8 +48,8 @@ class JoinDetectionRule : public AbstractRule {
  private:
   struct JoinCondition {
     std::shared_ptr<PredicateNode> predicate_node;
-    ColumnID left_column_id;
-    ColumnID right_column_id;
+    LQPColumnReference left_column_reference;
+    LQPColumnReference right_column_reference;
   };
 
   std::optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);
@@ -59,7 +60,8 @@ class JoinDetectionRule : public AbstractRule {
    *
    * left must be in range of [0, left_num_cols) and right in range [left_num_cols, left_num_cols + right_num_cols)
    */
-  bool _is_join_condition(ColumnID left, ColumnID right, size_t left_num_cols, size_t right_num_cols) const;
+  bool _is_join_condition(LQPColumnReference left, LQPColumnReference right, size_t left_num_cols,
+                          size_t right_num_cols) const;
 };
 
 }  // namespace opossum

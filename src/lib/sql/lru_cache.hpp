@@ -31,11 +31,7 @@ class LRUCache : public AbstractCache<Key, Value> {
 
     // Delete the last one, if capacity is exceeded.
     if (_map.size() > this->_capacity) {
-      auto last = _list.end();
-      last--;
-
-      _map.erase(last->first);
-      _list.pop_back();
+      _evict();
     }
   }
 
@@ -59,8 +55,10 @@ class LRUCache : public AbstractCache<Key, Value> {
     _map.clear();
   }
 
-  void clear_and_resize(size_t capacity) {
-    clear();
+  void resize(size_t capacity) {
+    while (_map.size() > capacity) {
+      _evict();
+    }
     this->_capacity = capacity;
   }
 
@@ -70,6 +68,14 @@ class LRUCache : public AbstractCache<Key, Value> {
 
   // Map to point towards element in the list.
   std::unordered_map<Key, typename std::list<KeyValuePair>::iterator> _map;
+
+  void _evict() {
+    auto last = _list.end();
+    last--;
+
+    _map.erase(last->first);
+    _list.pop_back();
+  }
 };
 
 }  // namespace opossum

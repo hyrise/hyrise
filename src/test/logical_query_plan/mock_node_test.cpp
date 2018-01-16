@@ -46,14 +46,4 @@ TEST_F(MockNodeTest, ColumnNamesWithAlias) {
   }
 }
 
-TEST_F(MockNodeTest, NoMappingForInputColumns) {
-  auto column_ids = _mock_node->output_column_ids_to_input_column_ids();
-
-  EXPECT_EQ(column_ids.size(), _mock_node->output_column_count());
-
-  for (auto column_id : column_ids) {
-    EXPECT_EQ(column_id, INVALID_COLUMN_ID);
-  }
-}
-
 }  // namespace opossum

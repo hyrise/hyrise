@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/algorithm/string.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
 #include <string>
@@ -46,6 +47,9 @@ class AbstractVisualizer {
   using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
                                       // Vertex info Edge info    Graph info
                                       VizVertexInfo, VizEdgeInfo, VizGraphInfo>;
+
+  // No label in a node should be wider than this many characters. If it is longer, line breaks should be added.
+  static const uint8_t MAX_LABEL_WIDTH = 50;
 
  public:
   AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
@@ -112,6 +116,7 @@ class AbstractVisualizer {
       return;
     }
 
+    vertex_info.label = _wrap_label(vertex_info.label);
     boost::add_vertex(vertex_info, _graph);
   }
 
@@ -143,6 +148,31 @@ class AbstractVisualizer {
     // Use this to add a property that is read from each vertex/edge (depending on the value). This will result in:
     // <node_id> [..., property_name=value, ...];
     _properties.property(property_name, boost::get(value, _graph));
+  }
+
+  std::string _wrap_label(const std::string& label) {
+    if (label.length() <= MAX_LABEL_WIDTH) return label;
+
+    // Split by word so we don't break a line in the middle of a word
+    std::vector<std::string> label_words;
+    boost::split(label_words, label, boost::is_any_of(" "));
+
+    std::stringstream wrapped_label;
+    auto current_line_length = 0;
+
+    for (const auto& word : label_words) {
+      auto word_length = word.length() + 1;  // include whitespace
+
+      if (current_line_length + word_length > MAX_LABEL_WIDTH) {
+        wrapped_label << '\n';
+        current_line_length = 0u;
+      }
+
+      wrapped_label << word << ' ';
+      current_line_length += word_length;
+    }
+
+    return wrapped_label.str();
   }
 
   Graph _graph;
