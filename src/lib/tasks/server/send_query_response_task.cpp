@@ -164,10 +164,7 @@ void SendQueryResponseTask::_send_command_complete() {
       completed_msg = "SELECT 0";
       break;
     }
-    default: {
-      return _session->pipeline_error("Unknown statement type. Server doesn't know how to complete query.");
-    }
-
+    default: { return _session->pipeline_error("Unknown statement type. Server doesn't know how to complete query."); }
   }
 
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
@@ -175,10 +172,17 @@ void SendQueryResponseTask::_send_command_complete() {
   _session->async_send_packet(output_packet);
 }
 
+void SendQueryResponseTask::_send_execution_info() {
+  _session->pipeline_info(
+      "Compilation time (µs): " + std::to_string(_sql_pipeline.compile_time_microseconds().count()) +
+      "\nExecution time (µs): " + std::to_string(_sql_pipeline.execution_time_microseconds().count()));
+}
+
 void SendQueryResponseTask::_on_execute() {
   _send_row_description();
   _send_row_data();
   _send_command_complete();
+  _send_execution_info();
   _session->query_response_sent();
 }
 

@@ -145,16 +145,26 @@ void HyriseSession::accept_query() {
 
 void HyriseSession::send_error(const std::string& message) {
   OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
-  
+
   // An error response has to include at least one identified field
-  
+
   // Send the error message
   PostgresWireHandler::write_value(output_packet, 'M');
   PostgresWireHandler::write_string(output_packet, message);
-  
+
   // Terminate the error response
   PostgresWireHandler::write_value(output_packet, '\0');
-  
+  async_send_packet(output_packet);
+}
+
+void HyriseSession::pipeline_info(const std::string& notice) {
+  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
+
+  PostgresWireHandler::write_value(output_packet, 'M');
+  PostgresWireHandler::write_string(output_packet, notice);
+
+  // Terminate the notice response
+  PostgresWireHandler::write_value(output_packet, '\0');
   async_send_packet(output_packet);
 }
 

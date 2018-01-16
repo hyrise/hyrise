@@ -24,5 +24,4 @@ void HyriseServer::start_session(boost::system::error_code error) {
   accept_next_connection();
 }
 
-
 }  // namespace opossum

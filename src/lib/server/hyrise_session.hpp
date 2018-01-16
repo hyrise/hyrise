@@ -40,6 +40,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void query_response_sent();
 
   void pipeline_error(const std::string& error_msg);
+  void pipeline_info(const std::string& notice);
 
  protected:
   void async_receive_header(const size_t size = HEADER_LENGTH);
