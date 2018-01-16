@@ -150,7 +150,7 @@ void HyriseSession::send_error(const std::string& message) {
   
   // Send the error message
   PostgresWireHandler::write_value(output_packet, 'M');
-  PostgresWireHandler::write_string(output_packet, message, true);
+  PostgresWireHandler::write_string(output_packet, message);
   
   // Terminate the error response
   PostgresWireHandler::write_value(output_packet, '\0');
