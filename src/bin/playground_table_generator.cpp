@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "utils/assert.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
@@ -33,8 +34,8 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
 
     add_column<int>(customer_table, "ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
 
-    auto firstNames = read_vector_from_file("../firstNames.txt");
-    auto lastNames = read_vector_from_file("../lastNames.txt");
+    auto firstNames = read_vector_from_file("firstNames.txt");
+    auto lastNames = read_vector_from_file("lastNames.txt");
 
     add_column<std::string>(customer_table, "NAME", cardinalities, [&](std::vector<size_t> indices) {
       // return _random_gen.generate_string(5, 10, 'a', 26) + " " + _random_gen.generate_string(5, 10, 'a', 26);
@@ -60,6 +61,7 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
      std::string line;
      auto output = std::make_shared<std::vector<std::string>>();
      std::ifstream inputfile(filename);
+     opossum::Assert(inputfile, "Cannot open file " + filename);
 
      while(std::getline(inputfile, line)){
          output->push_back(line);
@@ -76,7 +78,7 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
 int main() {
   std::cout << "Playground group 01 table generator" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  auto generator = PlaygroundTableGenerator{10'000, 10'000'000};
+  auto generator = PlaygroundTableGenerator{1'000'000, 10'000'000};
   auto tables = generator.generate_all_tables();
 
   for (auto& pair : tables) {

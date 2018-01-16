@@ -7,7 +7,7 @@ namespace opossum {
 
 SystemStatistics::SystemStatistics(const SQLQueryCache<SQLQueryPlan>& cache) : _recent_queries{}, _cache(cache) {}
 
-const std::vector<SQLQueryPlan>& SystemStatistics::recent_queries() const {
+const std::vector<SystemStatistics::SQLQueryCacheEntry>& SystemStatistics::recent_queries() const {
   // TODO(group01) lazily initialize this and update only if there were changes
   _recent_queries.clear();
 
@@ -26,7 +26,8 @@ const std::vector<SQLQueryPlan>& SystemStatistics::recent_queries() const {
 
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const GDFSCache<std::string, SQLQueryPlan>::GDFSCacheEntry& query_plan = *cache_iterator;
-    _recent_queries.push_back(query_plan.value);
+    std::cout << "Query '" << query_plan.key << "' frequency: " << query_plan.frequency << " priority: " << query_plan.priority << "\n";
+    _recent_queries.push_back({query_plan.key, query_plan.value, query_plan.frequency});
   }
 
   return _recent_queries;
