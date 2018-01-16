@@ -58,12 +58,10 @@ class OperatorsJoinIndexTest : public BaseTest {
                         const std::shared_ptr<const AbstractOperator> right,
                         const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const JoinMode mode,
                         std::shared_ptr<Table> expected_result, size_t chunk_size) {
-
     // build and execute join
     auto join = std::make_shared<JoinIndex>(left, right, mode, column_ids, scan_type);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
-
 
     auto result = join->get_output();
 
@@ -83,18 +81,17 @@ typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKe
 TYPED_TEST_CASE(OperatorsJoinIndexTest, DerivedIndices);
 
 TYPED_TEST(OperatorsJoinIndexTest, SimpleJoin) {
-    auto result_table = std::make_shared<Table>();
-    result_table->add_column("a", DataType::Int);
-    result_table->add_column("b", DataType::Int);
-    result_table->add_column("a", DataType::Int);
-    result_table->add_column("b", DataType::Int);
-    for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i+100});
-    DictionaryCompression::compress_table(*result_table);
+  auto result_table = std::make_shared<Table>();
+  result_table->add_column("a", DataType::Int);
+  result_table->add_column("b", DataType::Int);
+  result_table->add_column("a", DataType::Int);
+  result_table->add_column("b", DataType::Int);
+  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
+  DictionaryCompression::compress_table(*result_table);
 
-    this->test_join_output(
-        this->_table_wrapper_left, this->_table_wrapper_right, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-        ScanType::OpEquals, JoinMode::Inner, result_table, 1);
+  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
+                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner,
+                         result_table, 1);
 }
-
 
 }  // namespace opossum
