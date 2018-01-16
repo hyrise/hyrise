@@ -14,8 +14,7 @@ namespace opossum {
 class JoinIndex : public AbstractJoinOperator {
  public:
   JoinIndex(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
-            const ColumnIndexType index_type);
+            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type);
 
   const std::string name() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
@@ -40,7 +39,6 @@ class JoinIndex : public AbstractJoinOperator {
   std::shared_ptr<const Table> _right_in_table;
   ColumnID _left_column_id;
   ColumnID _right_column_id;
-  ColumnIndexType _index_type;
 
   bool _is_outer_join;
   std::shared_ptr<PosList> _pos_list_left;

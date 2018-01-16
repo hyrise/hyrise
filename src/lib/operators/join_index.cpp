@@ -27,15 +27,14 @@ namespace opossum {
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                     const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
-                     const ColumnIndexType index_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type), _index_type{index_type} {}
+                     const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
 std::shared_ptr<AbstractOperator> JoinIndex::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinIndex>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                     _scan_type, _index_type);
+                                     _scan_type);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
@@ -86,7 +85,12 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
 
     // new inner loop
     const auto& r_chunk = _right_in_table->get_chunk(chunk_id_right);
-    const auto index = r_chunk.get_index(_index_type, std::vector<ColumnID>{_left_column_id});
+    const auto indices = r_chunk.get_indices(std::vector<ColumnID>{_right_column_id});
+
+    Assert(indices.size() >= 1, "No index found for the right column");
+
+    const auto index = indices.front();
+
     Assert(index != nullptr, "Index of specified type not found for column (vector).");
 
     auto var = AllTypeVariant(left_value.value());
