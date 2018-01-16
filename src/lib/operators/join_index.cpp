@@ -8,11 +8,11 @@
 #include <utility>
 #include <vector>
 
-#include "resolve_type.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/index/base_index.hpp"
-#include "type_comparison.hpp"
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
+#include "storage/index/base_index.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
+#include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -26,22 +26,19 @@ namespace opossum {
  */
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
-                               const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                               const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
-                               const ColumnIndexType index_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type),
-_index_type{index_type}
-{}
+                     const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                     const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
+                     const ColumnIndexType index_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type), _index_type{index_type} {}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
 std::shared_ptr<AbstractOperator> JoinIndex::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinIndex>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                          _scan_type, _index_type);
+                                     _scan_type, _index_type);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
-
   _create_table_structure();
 
   _perform_join();
@@ -79,9 +76,8 @@ void JoinIndex::_create_table_structure() {
 // inner join loop that joins two columns via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                       RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                       const ChunkID chunk_id_right, std::vector<bool>& left_matches) {
-
+                                  RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                                  const ChunkID chunk_id_right, std::vector<bool>& left_matches) {
   const auto to_row_id = [chunk_id_right](ChunkOffset chunk_offset) { return RowID{chunk_id_right, chunk_offset}; };
   // outer loop, we keep this
   for (; left_it != left_end; ++left_it) {
@@ -118,7 +114,8 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
         _pos_list_right->reserve(_pos_list_right->size() + std::distance(range_begin, range_end));
 
         std::transform(range_begin, range_end, std::back_inserter(*_pos_list_right), to_row_id);
-        std::fill_n(std::back_inserter(*_pos_list_left), std::distance(range_begin, range_end), RowID{chunk_id_left, left_value.chunk_offset()});
+        std::fill_n(std::back_inserter(*_pos_list_left), std::distance(range_begin, range_end),
+                    RowID{chunk_id_left, left_value.chunk_offset()});
 
         // set range for second half to all values greater than the search value
         range_begin = index->upper_bound(comp_values);
@@ -153,26 +150,27 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
     _pos_list_right->reserve(_pos_list_right->size() + std::distance(range_begin, range_end));
 
     std::transform(range_begin, range_end, std::back_inserter(*_pos_list_right), to_row_id);
-    std::fill_n(std::back_inserter(*_pos_list_left), std::distance(range_begin, range_end), RowID{chunk_id_left, left_value.chunk_offset()});
+    std::fill_n(std::back_inserter(*_pos_list_left), std::distance(range_begin, range_end),
+                RowID{chunk_id_left, left_value.chunk_offset()});
 
-//    // inner loop, we change this
-//    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-//      const auto right_value = *right_it;
-//      if (right_value.is_null()) continue;
+    //    // inner loop, we change this
+    //    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
+    //      const auto right_value = *right_it;
+    //      if (right_value.is_null()) continue;
 
-//      if (func(left_value.value(), right_value.value())) {
-//        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-//        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
+    //      if (func(left_value.value(), right_value.value())) {
+    //        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
+    //        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
-//        if (_is_outer_join) {
-//          left_matches[left_value.chunk_offset()] = true;
-//        }
+    //        if (_is_outer_join) {
+    //          left_matches[left_value.chunk_offset()] = true;
+    //        }
 
-//        if (_mode == JoinMode::Outer) {
-//          _right_matches.insert(RowID{chunk_id_right, right_value.chunk_offset()});
-//        }
-//      }
-//    }
+    //        if (_mode == JoinMode::Outer) {
+    //          _right_matches.insert(RowID{chunk_id_right, right_value.chunk_offset()});
+    //        }
+    //      }
+    //    }
   }
 }
 
@@ -247,7 +245,6 @@ void JoinIndex::_perform_join() {
       });
     }
 
-
     if (_is_outer_join) {
       // add unmatched rows on the left for Left and Full Outer joins
       for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
@@ -296,7 +293,7 @@ void JoinIndex::_perform_join() {
 }
 
 void JoinIndex::_write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                                          std::shared_ptr<PosList> pos_list) {
+                                     std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
