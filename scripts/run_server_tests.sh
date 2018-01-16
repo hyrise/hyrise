@@ -2,6 +2,17 @@
 
 # This script requires psql to be pre-installed
 
+if [ -z "$1" ]
+  then
+    echo "No build directory supplied"
+    exit 1
+fi
+
+./$1/hyriseServer &
+SERVER_PID="$!"
+
+sleep 5
+
 SUCCEEDED=0
 FAILED=0
 
@@ -31,6 +42,7 @@ RUN_TEST "SIMPLE QUERY" "SELECT * FROM ITEM LIMIT 2"
 # ...
 
 # stop server
+kill $SERVER_PID
 
 # print results
 echo "Finished running server tests"
