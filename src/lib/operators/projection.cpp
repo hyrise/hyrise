@@ -122,7 +122,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
-        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(), only_column_expressions);
+        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
+                       only_column_expressions);
       });
     }
 
