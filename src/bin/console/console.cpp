@@ -238,7 +238,8 @@ int Console::_eval_sql(const std::string& sql) {
     _sql_pipeline->get_result_table();
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr) {
+    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
+        _sql_pipeline->num_statements() > 1) {
       out("All previous statements have been committed.\n");
     }
     return ReturnCode::Error;
