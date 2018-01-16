@@ -23,7 +23,7 @@ void ChunkEncoder::encode_chunk(Chunk& chunk, const std::vector<DataType>& data_
   for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
-    if (spec.encoding_type == EncodingType::Invalid) continue;
+    if (spec.encoding_type == EncodingType::Unencoded) continue;
 
     const auto data_type = data_types[column_id];
     const auto base_column = chunk.get_column(column_id);

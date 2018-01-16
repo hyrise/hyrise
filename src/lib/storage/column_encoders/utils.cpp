@@ -13,7 +13,7 @@
 namespace opossum {
 
 std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
-  Assert(encoding_type != EncodingType::Invalid, "Encoding type must be valid.");
+  Assert(encoding_type != EncodingType::Unencoded, "Encoding type must be valid.");
 
   auto encoder = std::unique_ptr<BaseColumnEncoder>{};
 
