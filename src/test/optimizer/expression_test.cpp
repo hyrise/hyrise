@@ -6,7 +6,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "optimizer/expression.hpp"
+#include "abstract_expression.hpp"
+#include "operators/pqp_expression.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -17,35 +18,35 @@ class ExpressionTest : public BaseTest {
 };
 
 TEST_F(ExpressionTest, ExpressionToStringColumn) {
-  const auto expr = Expression::create_column(ColumnID{1});
+  const auto expr = PQPExpression::create_column(ColumnID{1});
   EXPECT_EQ(expr->to_string(_column_names), "b");
 }
 
 TEST_F(ExpressionTest, ExpressionToStringSimpleArithmetics) {
-  auto expr = Expression::create_binary_operator(ExpressionType::Subtraction, Expression::create_column(ColumnID{0}),
-                                                 Expression::create_literal(4));
+  auto expr = PQPExpression::create_binary_operator(
+      ExpressionType::Subtraction, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_literal(4));
   EXPECT_EQ(expr->to_string(_column_names), "a - 4");
 }
 
 TEST_F(ExpressionTest, ExpressionToStringNestedArithmetics) {
-  auto expr = Expression::create_binary_operator(
+  auto expr = PQPExpression::create_binary_operator(
       ExpressionType::Multiplication,
-      Expression::create_binary_operator(ExpressionType::Subtraction, Expression::create_column(ColumnID{2}),
-                                         Expression::create_literal(4)),
-      Expression::create_binary_operator(ExpressionType::Multiplication, Expression::create_column(ColumnID{3}),
-                                         Expression::create_literal("c")));
+      PQPExpression::create_binary_operator(ExpressionType::Subtraction, PQPExpression::create_column(ColumnID{2}),
+                                            PQPExpression::create_literal(4)),
+      PQPExpression::create_binary_operator(ExpressionType::Multiplication, PQPExpression::create_column(ColumnID{3}),
+                                            PQPExpression::create_literal("c")));
   EXPECT_EQ(expr->to_string(_column_names), "(c - 4) * (d * \"c\")");
 }
 
 TEST_F(ExpressionTest, ExpressionToStringNestedLogical) {
-  auto expr = Expression::create_unary_operator(
+  auto expr = PQPExpression::create_unary_operator(
       ExpressionType::Not,
-      Expression::create_binary_operator(
-          ExpressionType::And,
-          Expression::create_binary_operator(ExpressionType::GreaterThanEquals, Expression::create_column(ColumnID{2}),
-                                             Expression::create_literal(4)),
-          Expression::create_binary_operator(ExpressionType::Or, Expression::create_column(ColumnID{3}),
-                                             Expression::create_literal(true))));
+      PQPExpression::create_binary_operator(
+          ExpressionType::And, PQPExpression::create_binary_operator(ExpressionType::GreaterThanEquals,
+                                                                     PQPExpression::create_column(ColumnID{2}),
+                                                                     PQPExpression::create_literal(4)),
+          PQPExpression::create_binary_operator(ExpressionType::Or, PQPExpression::create_column(ColumnID{3}),
+                                                PQPExpression::create_literal(true))));
   EXPECT_EQ(expr->to_string(_column_names), "NOT ((c >= 4) AND (d OR 1))");
 }
 

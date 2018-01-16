@@ -48,7 +48,7 @@ template <typename T>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                   const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, const bool materialize_null_left,
+                   const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
