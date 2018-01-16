@@ -48,7 +48,6 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
     return chunk->add_column(bypassed_column);
   }
-  // optimiere nur wenn alles Expr. Columns sind
 
   std::shared_ptr<BaseColumn> column;
 
