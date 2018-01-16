@@ -118,27 +118,27 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto scoped_lock = _target_table->acquire_append_mutex();
 
     start_chunk_id = _target_table->chunk_count() - 1;
-    auto& last_chunk = _target_table->get_chunk(start_chunk_id);
-    start_index = last_chunk.size();
+    auto last_chunk = _target_table->get_chunk(start_chunk_id);
+    start_index = last_chunk->size();
 
     // If last chunk is compressed, add a new uncompressed chunk
-    if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk.get_column(ColumnID{0})) != nullptr) {
+    if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
       _target_table->create_new_chunk();
       total_chunks_inserted++;
     }
 
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
-      auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
-      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk.size(), remaining_rows);
+      auto current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
+      auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
       // Resize MVCC vectors.
-      current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
+      current_chunk->grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
-      auto old_size = current_chunk.size();
-      for (ColumnID column_id{0}; column_id < current_chunk.column_count(); ++column_id) {
-        typed_column_processors[column_id]->resize_vector(current_chunk.get_mutable_column(column_id),
+      auto old_size = current_chunk->size();
+      for (ColumnID column_id{0}; column_id < current_chunk->column_count(); ++column_id) {
+        typed_column_processors[column_id]->resize_vector(current_chunk->get_mutable_column(column_id),
                                                           old_size + rows_to_insert_this_loop);
       }
 
@@ -160,29 +160,29 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
        target_chunk_id++) {
-    auto& target_chunk = _target_table->get_chunk(target_chunk_id);
+    auto target_chunk = _target_table->get_chunk(target_chunk_id);
 
     const auto current_num_rows_to_insert =
-        std::min(target_chunk.size() - start_index, total_rows_to_insert - input_offset);
+        std::min(target_chunk->size() - start_index, total_rows_to_insert - input_offset);
 
     auto target_start_index = start_index;
     auto still_to_insert = current_num_rows_to_insert;
 
     // while target chunk is not full
-    while (target_start_index != target_chunk.size()) {
-      const auto& source_chunk = _input_table_left()->get_chunk(source_chunk_id);
-      auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, still_to_insert);
-      for (ColumnID column_id{0}; column_id < target_chunk.column_count(); ++column_id) {
-        const auto& source_column = source_chunk.get_column(column_id);
+    while (target_start_index != target_chunk->size()) {
+      const auto source_chunk = _input_table_left()->get_chunk(source_chunk_id);
+      auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
+      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
+        const auto& source_column = source_chunk->get_column(column_id);
         typed_column_processors[column_id]->copy_data(source_column, source_chunk_start_index,
-                                                      target_chunk.get_mutable_column(column_id), target_start_index,
+                                                      target_chunk->get_mutable_column(column_id), target_start_index,
                                                       num_to_insert);
       }
       still_to_insert -= num_to_insert;
       target_start_index += num_to_insert;
       source_chunk_start_index += num_to_insert;
 
-      bool source_chunk_depleted = source_chunk_start_index == source_chunk.size();
+      bool source_chunk_depleted = source_chunk_start_index == source_chunk->size();
       if (source_chunk_depleted) {
         source_chunk_id++;
         source_chunk_start_index = 0u;
@@ -195,7 +195,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // the transaction IDs are set here and not during the resize, because
       // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
-      target_chunk.mvcc_columns()->tids[i] = context->transaction_id();
+      target_chunk->mvcc_columns()->tids[i] = context->transaction_id();
       _inserted_rows.emplace_back(RowID{target_chunk_id, i});
     }
 
@@ -208,9 +208,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
 void Insert::_on_commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
-    auto& chunk = _target_table->get_chunk(row_id.chunk_id);
+    auto chunk = _target_table->get_chunk(row_id.chunk_id);
 
-    auto mvcc_columns = chunk.mvcc_columns();
+    auto mvcc_columns = chunk->mvcc_columns();
     mvcc_columns->begin_cids[row_id.chunk_offset] = cid;
     mvcc_columns->tids[row_id.chunk_offset] = 0u;
   }
@@ -218,14 +218,14 @@ void Insert::_on_commit_records(const CommitID cid) {
 
 void Insert::_on_rollback_records() {
   for (auto row_id : _inserted_rows) {
-    auto& chunk = _target_table->get_chunk(row_id.chunk_id);
+    auto chunk = _target_table->get_chunk(row_id.chunk_id);
     // We set the begin and end cids to 0 (effectively making it invisible for everyone) so that the ChunkCompression
     // does not think that this row is still incomplete. We need to make sure that the end is written before the begin.
-    chunk.mvcc_columns()->end_cids[row_id.chunk_offset] = 0u;
+    chunk->mvcc_columns()->end_cids[row_id.chunk_offset] = 0u;
     std::atomic_thread_fence(std::memory_order_release);
-    chunk.mvcc_columns()->begin_cids[row_id.chunk_offset] = 0u;
+    chunk->mvcc_columns()->begin_cids[row_id.chunk_offset] = 0u;
 
-    chunk.mvcc_columns()->tids[row_id.chunk_offset] = 0u;
+    chunk->mvcc_columns()->tids[row_id.chunk_offset] = 0u;
   }
 }
 

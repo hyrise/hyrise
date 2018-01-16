@@ -115,13 +115,13 @@ class AbstractBenchmarkTableGenerator {
           auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
 
           if (is_first_column) {
-            opossum::Chunk chunk(opossum::ChunkUseMvcc::Yes);
-            chunk.add_column(value_column);
+            auto chunk = std::make_shared<opossum::Chunk>(opossum::ChunkUseMvcc::Yes);
+            chunk->add_column(value_column);
             table->emplace_chunk(std::move(chunk));
           } else {
             opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-            auto& chunk = table->get_chunk(chunk_id);
-            chunk.add_column(value_column);
+            auto chunk = table->get_chunk(chunk_id);
+            chunk->add_column(value_column);
           }
 
           // reset column
@@ -138,13 +138,13 @@ class AbstractBenchmarkTableGenerator {
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
-        opossum::Chunk chunk(opossum::ChunkUseMvcc::Yes);
-        chunk.add_column(value_column);
+        auto chunk = std::make_shared<opossum::Chunk>(opossum::ChunkUseMvcc::Yes);
+        chunk->add_column(value_column);
         table->emplace_chunk(std::move(chunk));
       } else {
         opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-        auto& chunk = table->get_chunk(chunk_id);
-        chunk.add_column(value_column);
+        auto chunk = table->get_chunk(chunk_id);
+        chunk->add_column(value_column);
       }
     }
   }

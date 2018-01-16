@@ -31,12 +31,12 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   out_table->add_column_definition("is_nullable", DataType::Int);
 
   const auto table = StorageManager::get().get_table(_table_name);
-  Chunk chunk;
+  auto chunk = std::make_shared<Chunk>();
 
   const auto& column_names = table->column_names();
   const auto vc_names = std::make_shared<ValueColumn<std::string>>(
       tbb::concurrent_vector<std::string>(column_names.begin(), column_names.end()));
-  chunk.add_column(vc_names);
+  chunk->add_column(vc_names);
 
   const auto& column_types = table->column_types();
 
@@ -46,12 +46,12 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   }
 
   const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(data_types));
-  chunk.add_column(vc_types);
+  chunk->add_column(vc_types);
 
   const auto& column_nullables = table->column_nullables();
   const auto vc_nullables = std::make_shared<ValueColumn<int32_t>>(
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
-  chunk.add_column(vc_nullables);
+  chunk->add_column(vc_nullables);
 
   out_table->emplace_chunk(std::move(chunk));
 

@@ -37,6 +37,7 @@ SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS su
 
 -- LIMIT
 SELECT * FROM mixed LIMIT 77;
+SELECT b FROM mixed LIMIT 10;
 
 -- PRODUCT
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".a;
@@ -48,6 +49,7 @@ SELECT * FROM mixed AS "left" LEFT JOIN mixed_null AS "right" ON "left".b = "rig
 SELECT * FROM mixed AS "left" INNER JOIN mixed_null AS "right" ON "left".b = "right".b;
 SELECT * FROM mixed NATURAL JOIN int_int_int;
 SELECT * FROM mixed NATURAL JOIN (SELECT int_c, id FROM int_int_int) AS T2;
+SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables

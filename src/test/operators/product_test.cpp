@@ -39,7 +39,7 @@ TEST_F(OperatorsProductTest, ValueColumns) {
 
 TEST_F(OperatorsProductTest, ReferenceAndValueColumns) {
   auto table_scan =
-      std::make_shared<opossum::TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
+      std::make_shared<opossum::TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::GreaterThanEquals, 1234);
   table_scan->execute();
 
   auto product = std::make_shared<Product>(table_scan, _table_wrapper_b);

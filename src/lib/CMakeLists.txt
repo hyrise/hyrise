@@ -25,6 +25,8 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
+    logical_query_plan/lqp_column_reference.cpp
+    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -41,6 +43,8 @@ set(
     logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
+    logical_query_plan/lqp_expression.cpp
+    logical_query_plan/lqp_expression.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/mock_node.cpp
@@ -142,8 +146,10 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/expression.cpp
-    optimizer/expression.hpp
+    abstract_expression.cpp
+    abstract_expression.hpp
+    operators/pqp_expression.cpp
+    operators/pqp_expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -190,10 +196,12 @@ set(
     sql/lru_cache.hpp
     sql/sql_planner.cpp
     sql/sql_planner.hpp
-    sql/sql_expression_translator.cpp
-    sql/sql_expression_translator.hpp
+    sql/hsql_expr_translator.cpp
+    sql/hsql_expr_translator.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
+    sql/sql_pipeline_statement.cpp
+    sql/sql_pipeline_statement.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp

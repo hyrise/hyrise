@@ -22,6 +22,22 @@ class TableScan : public AbstractReadOnlyOperator {
 
   ~TableScan();
 
+  /**
+   * @brief If set, the specified chunks will not be scanned.
+   *
+   * There are different implementations of table scans.
+   * This is the standard linear scan; another one is
+   * the index scan, which scans a column using an index.
+   * Depending on the situation, it is advantageous to use
+   * the index scan for some chunks and the standard scan for
+   * others. However one has to ensure that all chunks including
+   * newly added are scanned including those that were added
+   * since the optimizer had distributed the chunks between
+   * operators. This is why this scan accepts a list of
+   * excluded chunks and all others a list of included chunks.
+   */
+  void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
+
   ColumnID left_column_id() const;
   ScanType scan_type() const;
   const AllParameterVariant& right_parameter() const;
@@ -41,6 +57,8 @@ class TableScan : public AbstractReadOnlyOperator {
   const ColumnID _left_column_id;
   const ScanType _scan_type;
   const AllParameterVariant _right_parameter;
+
+  std::vector<ChunkID> _excluded_chunk_ids;
 
   std::shared_ptr<const Table> _in_table;
   std::unique_ptr<BaseTableScanImpl> _impl;

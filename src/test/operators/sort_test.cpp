@@ -57,7 +57,7 @@ TEST_F(OperatorsSortTest, AscendingSortOFilteredColumn) {
   auto input = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 1));
   input->execute();
 
-  auto scan = std::make_shared<TableScan>(input, ColumnID{0}, ScanType::OpNotEquals, 123);
+  auto scan = std::make_shared<TableScan>(input, ColumnID{0}, ScanType::NotEquals, 123);
   scan->execute();
 
   auto sort = std::make_shared<Sort>(scan, ColumnID{0}, OrderByMode::Ascending, 2u);
@@ -208,7 +208,7 @@ TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
   table_wrapper1->execute();
   table_wrapper2->execute();
 
-  auto ts2 = std::make_shared<TableScan>(table_wrapper2, ColumnID{0}, ScanType::OpGreaterThan, 12);
+  auto ts2 = std::make_shared<TableScan>(table_wrapper2, ColumnID{0}, ScanType::GreaterThan, 12);
   ts2->execute();
 
   auto union_all = std::make_shared<UnionAll>(table_wrapper1, ts2);

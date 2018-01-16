@@ -45,10 +45,10 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
 
   constexpr auto chunk_count = 4u;
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto& chunk = table_dict->get_chunk(chunk_id);
+    auto chunk = table_dict->get_chunk(chunk_id);
 
-    for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
-      auto column = chunk.get_column(column_id);
+    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+      auto column = chunk->get_column(column_id);
 
       auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
       ASSERT_NE(dict_column, nullptr);
@@ -70,9 +70,9 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   auto dictionary_sizes = std::array<std::vector<size_t>, chunk_count>{{{3u, 3u}, {2u, 3u}}};
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto& chunk = table_dict->get_chunk(chunk_id);
-    for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
-      auto column = chunk.get_column(column_id);
+    auto chunk = table_dict->get_chunk(chunk_id);
+    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+      auto column = chunk->get_column(column_id);
 
       auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
       ASSERT_NE(dict_column, nullptr);
@@ -101,7 +101,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
 
   for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
     auto dict_column =
-        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i).get_column(ColumnID{0}));
+        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i)->get_column(ColumnID{0}));
     ASSERT_NE(dict_column, nullptr);
   }
 

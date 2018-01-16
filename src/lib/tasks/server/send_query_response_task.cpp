@@ -107,7 +107,7 @@ void SendQueryResponseTask::_send_row_data() {
   for (ChunkID chunk_id{0}; chunk_id < _result_table->chunk_count(); ++chunk_id) {
     const auto& chunk = _result_table->get_chunk(chunk_id);
 
-    for (ChunkOffset chunk_offset{0}; chunk_offset < chunk.size(); ++chunk_offset) {
+    for (ChunkOffset chunk_offset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       // New packet for each row
       auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::DataRow);
 
@@ -115,20 +115,15 @@ void SendQueryResponseTask::_send_row_data() {
       PostgresWireHandler::write_value(output_packet, htons(num_columns));
 
       for (ColumnID column_id{0}; column_id < num_columns; ++column_id) {
-        std::string value_string_buffer;
+        const auto& column = chunk->get_column(column_id);
 
-        const auto& column = chunk.get_column(column_id);
-        column->write_string_representation(value_string_buffer, chunk_offset);
-
-        const auto value_size = value_string_buffer.length() - sizeof(uint32_t);
-        // Remove unnecessary size at end of string
-        value_string_buffer.resize(value_size);
+        const auto value_string = type_cast<std::string>((*column)[chunk_offset]);
 
         // Size of string representation of value, NOT of value type's size
-        PostgresWireHandler::write_value(output_packet, htonl(value_size));
+        PostgresWireHandler::write_value(output_packet, htonl(value_string.length()));
 
         // Text mode means that all values are sent as non-terminated strings
-        PostgresWireHandler::write_string(output_packet, value_string_buffer, false);
+        PostgresWireHandler::write_string(output_packet, value_string, false);
       }
 
       ++_row_count;
@@ -143,7 +138,7 @@ void SendQueryResponseTask::_send_command_complete() {
   }
 
   std::string completed_msg;
-  const auto* statement = _sql_pipeline.get_parsed_sql().getStatements().front();
+  const auto* statement = _sql_pipeline.get_parsed_sql_statements().front()->getStatements().front();
   switch (statement->type()) {
     case hsql::StatementType::kStmtSelect: {
       completed_msg = "SELECT " + std::to_string(_row_count);

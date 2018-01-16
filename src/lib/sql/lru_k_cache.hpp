@@ -77,9 +77,7 @@ class LRUKCache : public AbstractCache<Key, Value> {
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
     if (_queue.size() >= this->_capacity) {
-      auto top = _queue.top();
-      _map.erase(top.key);
-      _queue.pop();
+      _evict();
     }
 
     // Insert new item in cache.
@@ -108,8 +106,11 @@ class LRUKCache : public AbstractCache<Key, Value> {
     _queue.clear();
   }
 
-  void clear_and_resize(size_t capacity) {
-    clear();
+  void resize(size_t capacity) {
+    while (_queue.size() > capacity) {
+      _evict();
+    }
+
     this->_capacity = capacity;
   }
 
@@ -124,6 +125,12 @@ class LRUKCache : public AbstractCache<Key, Value> {
 
   // Running counter to keep track of the reference history.
   size_t _access_counter;
+
+  void _evict() {
+    auto top = _queue.top();
+    _map.erase(top.key);
+    _queue.pop();
+  }
 };
 
 }  // namespace opossum

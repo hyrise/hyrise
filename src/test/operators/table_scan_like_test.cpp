@@ -46,37 +46,37 @@ class OperatorsTableScanLikeTest : public BaseTest {
 };
 
 /*
-    Tests for operator ScanType::OpLike
+    Tests for operator ScanType::Like
     The **%** sign is used to define wildcards (missing letters) both before and after the search pattern.
     We expect the operator to be run on a string column using a string value with wildcard.
 */
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNonStringColumn) {
-  auto scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::OpLike, "%test");
+  auto scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::Like, "%test");
   EXPECT_THROW(scan->execute(), std::exception);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNonStringValue) {
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, 1234);
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, 1234);
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 1u);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeEmptyString) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeEmptyStringOnDict) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::Like, "%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeCaseInsensitivity) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "dAmpF%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "dAmpF%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
@@ -84,132 +84,132 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeCaseInsensitivity) {
 TEST_F(OperatorsTableScanLikeTest, ScanLikeUnderscoreWildcard) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "d_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "d_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-// ScanType::OpLike - Starting
+// ScanType::Like - Starting
 TEST_F(OperatorsTableScanLikeTest, ScanLike_Starting) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "Dampf%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "Dampf%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeEmptyStringDict) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::Like, "%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeStartingOnDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "Dampf%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::Like, "Dampf%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeStartingOnReferencedDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
-  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::OpGreaterThan, 0);
+  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::GreaterThan, 0);
   scan1->execute();
-  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::OpLike, "Dampf%");
+  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::Like, "Dampf%");
   scan2->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan2->get_output(), expected_result);
 }
-// ScanType::OpLike - Ending
+// ScanType::Like - Ending
 TEST_F(OperatorsTableScanLikeTest, ScanLikeEnding) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "%gesellschaft");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "%gesellschaft");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeEndingOnDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%gesellschaft");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::Like, "%gesellschaft");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeEndingOnReferencedDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
-  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::OpGreaterThan, 0);
+  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::GreaterThan, 0);
   scan1->execute();
-  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::OpLike, "%gesellschaft");
+  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::Like, "%gesellschaft");
   scan2->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan2->get_output(), expected_result);
 }
 
-// ScanType::OpLike - Containing Wildcard
+// ScanType::Like - Containing Wildcard
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContainingWildcard) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing_wildcard.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "Schiff%schaft");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "Schiff%schaft");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-// ScanType::OpLike - Containing
+// ScanType::Like - Containing
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContaining) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "%schifffahrtsgesellschaft%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "%schifffahrtsgesellschaft%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContainingOnDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%schifffahrtsgesellschaft%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::Like, "%schifffahrtsgesellschaft%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContainingOnReferencedDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
-  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::OpGreaterThan, 0);
+  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::GreaterThan, 0);
   scan1->execute();
-  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::OpLike, "%schifffahrtsgesellschaft%");
+  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::Like, "%schifffahrtsgesellschaft%");
   scan2->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan2->get_output(), expected_result);
 }
-// ScanType::OpLike - Not Found
+// ScanType::Like - Not Found
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNotFound) {
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpLike, "%not_there%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::Like, "%not_there%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNotFoundOnDictColumn) {
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%not_there%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::Like, "%not_there%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNotFoundOnReferencedDictColumn) {
-  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::OpGreaterThan, 0);
+  auto scan1 = std::make_shared<TableScan>(_gt_string_dict, ColumnID{0}, ScanType::GreaterThan, 0);
   scan1->execute();
-  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::OpLike, "%not_there%");
+  auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, ScanType::Like, "%not_there%");
   scan2->execute();
   EXPECT_EQ(scan2->get_output()->row_count(), 0u);
 }
-// ScanType::OpNotLike
+// ScanType::NotLike
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeEmptyString) {
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpNotLike, "%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::NotLike, "%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeEmptyStringOnDict) {
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpNotLike, "%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::NotLike, "%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeAllRows) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpNotLike, "%foo%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::NotLike, "%foo%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeAllRowsOnDict) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpNotLike, "%foo%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::NotLike, "%foo%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
@@ -217,14 +217,14 @@ TEST_F(OperatorsTableScanLikeTest, ScanNotLikeAllRowsOnDict) {
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeUnderscoreWildcard) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_not_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::OpNotLike, "d_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, ScanType::NotLike, "d_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeUnderscoreWildcardOnDict) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_not_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpNotLike, "d_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::NotLike, "d_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }

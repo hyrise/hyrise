@@ -5,6 +5,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -36,6 +37,8 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID 
       _right_parameter{right_parameter} {}
 
 TableScan::~TableScan() = default;
+
+void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
 ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
@@ -75,10 +78,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   std::mutex output_mutex;
 
+  const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
+
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_in_table->chunk_count());
+  jobs.reserve(_in_table->chunk_count() - excluded_chunk_set.size());
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+    if (excluded_chunk_set.count(chunk_id)) continue;
+
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
@@ -87,7 +94,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
-      Chunk chunk_out(chunk_guard->get_allocator(), chunk_guard->access_counter());
+      auto chunk_out = std::make_shared<Chunk>(chunk_guard->get_allocator(), chunk_guard->access_counter());
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
@@ -100,12 +107,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (_in_table->get_type() == TableType::References) {
-        const auto& chunk_in = _in_table->get_chunk(chunk_id);
+        const auto chunk_in = _in_table->get_chunk(chunk_id);
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
-          auto column_in = chunk_in.get_column(column_id);
+          auto column_in = chunk_in->get_column(column_id);
 
           auto ref_column_in = std::dynamic_pointer_cast<const ReferenceColumn>(column_in);
           DebugAssert(ref_column_in != nullptr, "All columns should be of type ReferenceColumn.");
@@ -128,17 +135,17 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           }
 
           auto ref_column_out = std::make_shared<ReferenceColumn>(table_out, column_id_out, filtered_pos_list);
-          chunk_out.add_column(ref_column_out);
+          chunk_out->add_column(ref_column_out);
         }
       } else {
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
           auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-          chunk_out.add_column(ref_column_out);
+          chunk_out->add_column(ref_column_out);
         }
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      if (chunk_out.size() > 0 || _output_table->get_chunk(ChunkID{0}).size() == 0) {
+      if (chunk_out->size() > 0 || _output_table->get_chunk(ChunkID{0})->size() == 0) {
         _output_table->emplace_chunk(std::move(chunk_out));
       }
     });
@@ -157,7 +164,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
 
-  if (_scan_type == ScanType::OpLike || _scan_type == ScanType::OpNotLike) {
+  if (_scan_type == ScanType::Like || _scan_type == ScanType::NotLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
@@ -174,7 +181,7 @@ void TableScan::_init_scan() {
     return;
   }
 
-  if (_scan_type == ScanType::OpIsNull || _scan_type == ScanType::OpIsNotNull) {
+  if (_scan_type == ScanType::IsNull || _scan_type == ScanType::IsNotNull) {
     _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
     return;
   }
