@@ -84,6 +84,7 @@ set(
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp
     sql/sql_parse_tree_cache_test.cpp
+    sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
