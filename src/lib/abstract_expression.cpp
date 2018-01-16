@@ -167,6 +167,11 @@ bool AbstractExpression<DerivedExpression>::is_null_literal() const {
 }
 
 template <typename DerivedExpression>
+bool AbstractExpression<DerivedExpression>::is_subselect() const {
+  return _type == ExpressionType::Select;
+}
+
+template <typename DerivedExpression>
 bool AbstractExpression<DerivedExpression>::is_operand() const {
   return _type == ExpressionType::Literal || _type == ExpressionType::Column;
 }
@@ -230,6 +235,12 @@ ValuePlaceholder AbstractExpression<DerivedExpression>::value_placeholder() cons
   DebugAssert(_value_placeholder != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
   return *_value_placeholder;
+}
+
+template <typename DerivedExpression>
+std::shared_ptr<AbstractLQPNode> AbstractExpression<DerivedExpression>::subselect_node() {
+  DebugAssert(_subselect_node != std::nullopt, "LPQNode does not contain a subselect node.");
+  return *_subselect_node;
 }
 
 template <typename DerivedExpression>
@@ -391,6 +402,14 @@ std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::create
     const std::optional<std::string>& table_name) {
   auto expression = std::make_shared<DerivedExpression>(ExpressionType::Star);
   expression->_table_name = table_name;
+  return expression;
+}
+
+template <typename DerivedExpression>
+std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::create_subselect(
+        std::shared_ptr<AbstractLQPNode> root_node) {
+  auto expression = std::make_shared<DerivedExpression>(ExpressionType::Select);
+  expression->_subselect_node = root_node;
   return expression;
 }
 

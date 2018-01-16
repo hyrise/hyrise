@@ -949,6 +949,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
   }
 
+  if (value_ref_hsql_expr->select) {
+      const auto column_references = input_node->output_column_references();
+      auto column_expressions = LQPExpression::create_columns(column_references);
+
+      auto subselect_node = const_cast<SQLTranslator*>(this)->_translate_select(*value_ref_hsql_expr->select);
+      auto subselect_expression = LQPExpression::create_subselect(subselect_node);
+      column_expressions.push_back(subselect_expression);
+
+      auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
+      projection_node->set_left_child(input_node);
+
+      return projection_node;
+  }
+
   AllParameterVariant value;
   if (scan_type == ScanType::IsNull || scan_type == ScanType::IsNotNull) {
     value = NULL_VALUE;

@@ -77,6 +77,8 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
 
   static std::shared_ptr<DerivedExpression> create_select_star(const std::optional<std::string>& table_name = {});
 
+  static std::shared_ptr<DerivedExpression> create_subselect(std::shared_ptr<AbstractLQPNode> root_node = nullptr);
+
   // @}
 
   // @{
@@ -124,6 +126,9 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
 
   // Returns true if the expression is a NULL literal.
   bool is_null_literal() const;
+
+  // Returns true if the expression is a subselect.
+  bool is_subselect() const;
   // @}
 
   // @{
@@ -134,6 +139,7 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
   const AllTypeVariant value() const;
   const std::vector<std::shared_ptr<DerivedExpression>>& aggregate_function_arguments() const;
   ValuePlaceholder value_placeholder() const;
+  std::shared_ptr<AbstractLQPNode> subselect_node();
   // @}
 
   /**
@@ -182,6 +188,8 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
   std::optional<std::string> _alias;
 
   std::optional<ValuePlaceholder> _value_placeholder;
+
+  std::optional<std::shared_ptr<AbstractLQPNode>> _subselect_node;
 
   // @{
   // Members for the tree structure

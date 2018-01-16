@@ -92,6 +92,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       name = _input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       name = column_expression->to_string(_input_table_left()->column_names());
+    } else if (column_expression->is_subselect()) {
+      // TODO: add come kind of identifier for each subselect
+      name = "subselect";
     } else {
       Fail("Expression type is not supported.");
     }

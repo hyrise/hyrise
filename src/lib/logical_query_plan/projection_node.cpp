@@ -136,6 +136,10 @@ void ProjectionNode::_update_output() const {
         _output_column_names->emplace_back(expression->to_string(left_child()->output_column_names()));
       }
 
+    } else if (expression->type() == ExpressionType::Select) {
+      auto node = expression->subselect_node();
+      // TODO: error handling
+      _output_column_references->emplace_back(LQPColumnReference(node, ColumnID(0)));
     } else {
       Fail("Only column references, arithmetic expressions, and literals supported for now.");
     }
