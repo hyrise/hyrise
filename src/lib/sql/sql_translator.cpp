@@ -957,8 +957,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
   } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {
-    auto column_expressions = Expression::create_columns(current_node->get_output_column_ids());
-    column_expressions.push_back(SQLExpressionTranslator::translate_expression(*value_ref_hsql_expr, current_node));
+    auto column_expressions = LQPExpression::create_columns(current_node->output_column_references());
+    column_expressions.push_back(HSQLExprTranslator::to_lqp_expression(*value_ref_hsql_expr, current_node));
 
     auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
     projection_node->set_left_child(current_node);
