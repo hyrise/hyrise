@@ -22,6 +22,8 @@ class Partition {
   void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
               const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables);
 
+  std::shared_ptr<Chunk> last_chunk();
+
   Partition(Partition&&) = default;
   Partition& operator=(Partition&&) = default;
 

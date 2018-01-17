@@ -8,4 +8,9 @@ void PartitionSchema::add_new_chunk(std::shared_ptr<Chunk> chunk, PartitionID pa
   _partitions[partition_id]->add_new_chunk(chunk);
 }
 
+std::shared_ptr<Partition> PartitionSchema::get_partition(PartitionID partition_id) {
+  DebugAssert(partition_id < _partitions.size(), "Partition ID exceeds number of partitions");
+  return _partitions[partition_id];
+}
+
 }  // namespace opossum

@@ -16,7 +16,7 @@ class RangePartitionSchema : public PartitionSchema {
   RangePartitionSchema(RangePartitionSchema&&) = default;
   RangePartitionSchema& operator=(RangePartitionSchema&&) = default;
 
-  const PartitionID get_matching_partition_for(AllTypeVariant value) const override;
+  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
 
  protected:
   ColumnID _column_id;

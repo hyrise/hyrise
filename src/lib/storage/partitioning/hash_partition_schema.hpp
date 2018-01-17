@@ -17,7 +17,7 @@ class HashPartitionSchema : public PartitionSchema {
   HashPartitionSchema(HashPartitionSchema&&) = default;
   HashPartitionSchema& operator=(HashPartitionSchema&&) = default;
 
-  const PartitionID get_matching_partition_for(AllTypeVariant value) const override;
+  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
 
  protected:
   ColumnID _column_id;

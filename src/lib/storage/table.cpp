@@ -70,13 +70,19 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
   add_column_definition(name, data_type, nullable);
 
   for (auto chunk : _chunks) {
-    chunk->add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
+  auto partition_id = _partition_schema->get_matching_partition_for(values);
+  auto partition = _partition_schema->get_partition(partition_id);
+  auto last_chunk = partition->last_chunk();
+  if(last_chunk->size() >= max_chunk_size()) {
+    create_new_chunk(partition_id);
+  }
   _partition_schema->append(values, _max_chunk_size, _column_types, _column_nullable);
 }
 
@@ -84,15 +90,15 @@ void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count +=
 
 void Table::create_new_chunk(PartitionID partition_id) {
     // Create chunk with mvcc columns
-  auto newChunk = std::make_shared<Chunk>({ChunkUseMvcc::Yes});
+  auto new_chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
     const auto& type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
-    newChunk->add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
+    new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
-  _chunks.push_back(newChunk);
+  _chunks.push_back(new_chunk);
 
   _partition_schema->add_new_chunk(new_chunk, partition_id);
 }
@@ -147,22 +153,22 @@ const std::vector<bool>& Table::column_nullables() const { return _column_nullab
 
 Chunk& Table::get_modifiable_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return _chunks[chunk_id].get();
+  return *(_chunks[chunk_id]);
 }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return _chunks[chunk_id].get();
+  return *(_chunks[chunk_id]);
 }
 
-ProxyChunk Table::get_modifiable_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) {
+ProxyChunk Table::get_modifiable_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id].get());
+  return ProxyChunk(*(_chunks[chunk_id]));
 }
 
-const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id, PartitionID partition_id) const {
+const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(_chunks[chunk_id].get());
+  return ProxyChunk(*(_chunks[chunk_id]));
 }
 
 void Table::emplace_chunk(Chunk chunk) {
@@ -216,7 +222,7 @@ TableType Table::get_type() const {
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                      const size_t number_of_partitions) {
   _partition_schema = std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions);
-  create_initial_chunks(PartitionID{number_of_partitions});
+  create_initial_chunks(static_cast<PartitionID>(number_of_partitions));
 }
 
 void Table::create_null_partitioning() {
@@ -226,12 +232,12 @@ void Table::create_null_partitioning() {
 
 void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
   _partition_schema = std::make_shared<RangePartitionSchema>(column_id, bounds);
-  reate_initial_chunks(PartitionID{bounds.size()+1});
+  create_initial_chunks(static_cast<PartitionID>(bounds.size()+1));
 }
 
 void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
   _partition_schema = std::make_shared<RoundRobinPartitionSchema>(number_of_partitions);
-  create_initial_chunks(PartitionID{number_of_partitions});
+  create_initial_chunks(static_cast<PartitionID>(number_of_partitions));
 }
 
 void Table::create_initial_chunks(PartitionID number_of_partitions) {

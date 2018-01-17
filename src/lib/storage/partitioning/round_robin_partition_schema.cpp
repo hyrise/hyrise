@@ -19,13 +19,14 @@ void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values, const
   if (_next_partition >= static_cast<PartitionID>(_partitions.size())) {
     _next_partition = 0;
   } else {
-    _next_partition += 1;
+    _next_partition = static_cast<PartitionID>(static_cast<uint16_t>(_next_partition) + (uint16_t) 1);
   }
 }
 
-const PartitionID RoundRobinPartitionSchema::get_matching_partition_for(AllTypeVariant value) const {
+PartitionID RoundRobinPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
+  _next_partition = static_cast<PartitionID>(static_cast<uint16_t>(_next_partition) + (uint16_t) 1);
   return _next_partition;
-};
+}
 
 
 }  // namespace opossum
