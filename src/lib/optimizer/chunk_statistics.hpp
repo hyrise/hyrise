@@ -31,10 +31,21 @@ class ChunkColumnStatistics : public BaseChunkColumnStatistics {
 
   bool can_prune(const AllTypeVariant& value, const ScanType scan_type) const override {
     T t_value = type_cast<T>(value);
+    // Operators work as follows: value_from_table <operator> t_value
+    // e.g. OpGreaterThan: value_from_table > t_value
+    // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
     switch (scan_type) {
       case ScanType::OpGreaterThan:
+        return t_value >= _max;
+      case ScanType::OpGreaterThanEquals:
         return t_value > _max;
-      default: throw std::logic_error("not implemented");
+      case ScanType::OpLessThan:
+        return t_value <= _min;
+      case ScanType::OpLessThanEquals:
+        return t_value < _min;
+      case ScanType::OpEquals:
+        return t_value < _min || t_value > _max;
+      default: return false;
     }
   }
 
