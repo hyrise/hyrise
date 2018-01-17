@@ -41,8 +41,7 @@ class TableStatisticsTest : public BaseTest {
 
     std::shared_ptr<TableScan> table_scan;
     if (scan_type == ScanType::Between) {
-      auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, column_id, ScanType::GreaterThanEquals, value);
+      auto first_table_scan = std::make_shared<TableScan>(table_wrapper, column_id, ScanType::GreaterThanEquals, value);
       first_table_scan->execute();
 
       table_scan = std::make_shared<TableScan>(first_table_scan, column_id, ScanType::LessThanEquals, *value2);

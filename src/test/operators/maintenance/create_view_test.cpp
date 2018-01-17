@@ -24,13 +24,15 @@ class CreateViewTest : public BaseTest {
 };
 
 TEST_F(CreateViewTest, OperatorName) {
-  auto cv = std::make_shared<CreateView>("view_name", std::make_shared<MockNode>());
+  auto cv = std::make_shared<CreateView>(
+      "view_name", std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}}));
 
   EXPECT_EQ(cv->name(), "CreateView");
 }
 
 TEST_F(CreateViewTest, CannotBeRecreated) {
-  auto cv = std::make_shared<CreateView>("view_name", std::make_shared<MockNode>());
+  auto cv = std::make_shared<CreateView>(
+      "view_name", std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}}));
 
   EXPECT_ANY_THROW(cv->recreate({}));
 }
