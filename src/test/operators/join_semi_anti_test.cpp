@@ -56,8 +56,8 @@ TEST_F(JoinSemiAntiTest, SemiJoinRefColumns) {
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             ScanType::Equals, JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1);
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}}, ScanType::Equals,
+                             JoinMode::Semi, "src/test/tables/joinoperators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
@@ -77,8 +77,8 @@ TEST_F(JoinSemiAntiTest, AntiJoinRefColumns) {
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
-                             ScanType::Equals, JoinMode::Anti, "src/test/tables/joinoperators/anti_result.tbl", 1);
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}}, ScanType::Equals,
+                             JoinMode::Anti, "src/test/tables/joinoperators/anti_result.tbl", 1);
 }
 
 }  // namespace opossum

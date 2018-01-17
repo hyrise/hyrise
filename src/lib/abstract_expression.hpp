@@ -6,13 +6,18 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
 
 /**
+ * CRTP class forming the base class for LQPExpression and PQPExpression. CRTP so pointers to children have the
+ * correct type et al. PQPExpressions use ColumnIDs to refer to Columns, LQPExpressions use LQPColumnReferences.
+ *
  * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
  * and especially its optimizer.
  *
@@ -23,7 +28,8 @@ class AbstractLQPNode;
  * For now we decided to have a single Expression without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.
  */
-class Expression : public std::enable_shared_from_this<Expression>, private Noncopyable {
+template <typename DerivedExpression>
+class AbstractExpression : public std::enable_shared_from_this<DerivedExpression>, private Noncopyable {
  public:
   /*
    * This constructor is meant for internal use only and therefore should be private.
@@ -42,55 +48,46 @@ class Expression : public std::enable_shared_from_this<Expression>, private Nonc
    *
    * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
-  explicit Expression(ExpressionType type);
+  explicit AbstractExpression(ExpressionType type);
 
   // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
-  std::shared_ptr<Expression> deep_copy() const;
+  std::shared_ptr<DerivedExpression> deep_copy() const;
 
   // @{
   /**
    * Factory Methods to create Expressions of specific type
    */
-  static std::shared_ptr<Expression> create_column(const ColumnID column_id,
-                                                   const std::optional<std::string>& alias = std::nullopt);
-
-  static std::vector<std::shared_ptr<Expression>> create_columns(
-      const std::vector<ColumnID>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
-
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
-  static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
-                                                    const std::optional<std::string>& alias = std::nullopt);
-
-  static std::shared_ptr<Expression> create_value_placeholder(ValuePlaceholder value_placeholder);
-
-  static std::shared_ptr<Expression> create_aggregate_function(
-      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
-      const std::optional<std::string>& alias = std::nullopt);
-
-  static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
-                                                            const std::shared_ptr<Expression>& left,
-                                                            const std::shared_ptr<Expression>& right,
-                                                            const std::optional<std::string>& alias = std::nullopt);
-
-  static std::shared_ptr<Expression> create_unary_operator(ExpressionType type,
-                                                           const std::shared_ptr<Expression>& input,
+  static std::shared_ptr<DerivedExpression> create_literal(const AllTypeVariant& value,
                                                            const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<Expression> create_select_star(const std::optional<std::string>& table_name = {});
+  static std::shared_ptr<DerivedExpression> create_value_placeholder(ValuePlaceholder value_placeholder);
+
+  static std::shared_ptr<DerivedExpression> create_aggregate_function(
+      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpression>>& function_arguments,
+      const std::optional<std::string>& alias = std::nullopt);
+
+  static std::shared_ptr<DerivedExpression> create_binary_operator(
+      ExpressionType type, const std::shared_ptr<DerivedExpression>& left,
+      const std::shared_ptr<DerivedExpression>& right, const std::optional<std::string>& alias = std::nullopt);
+
+  static std::shared_ptr<DerivedExpression> create_unary_operator(
+      ExpressionType type, const std::shared_ptr<DerivedExpression>& input,
+      const std::optional<std::string>& alias = std::nullopt);
+
+  static std::shared_ptr<DerivedExpression> create_select_star(const std::optional<std::string>& table_name = {});
+
   // @}
 
   // @{
   /**
-   * Helper methods for Expression Trees, set_left_child() and set_right_child() will set parent
+   * Helper methods for Expression Trees
    */
-  const std::weak_ptr<Expression> parent() const;
-  void clear_parent();
+  const std::shared_ptr<DerivedExpression> left_child() const;
+  void set_left_child(const std::shared_ptr<DerivedExpression>& left);
 
-  const std::shared_ptr<Expression> left_child() const;
-  void set_left_child(const std::shared_ptr<Expression>& left);
-
-  const std::shared_ptr<Expression> right_child() const;
-  void set_right_child(const std::shared_ptr<Expression>& right);
+  const std::shared_ptr<DerivedExpression> right_child() const;
+  void set_right_child(const std::shared_ptr<DerivedExpression>& right);
   // @}
 
   ExpressionType type() const;
@@ -133,10 +130,9 @@ class Expression : public std::enable_shared_from_this<Expression>, private Nonc
   /**
    * Getters. Only call them if you are sure the type() has such a member
    */
-  const ColumnID column_id() const;
   AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
-  const std::vector<std::shared_ptr<Expression>>& expression_list() const;
+  const std::vector<std::shared_ptr<DerivedExpression>>& aggregate_function_arguments() const;
   ValuePlaceholder value_placeholder() const;
   // @}
 
@@ -146,7 +142,8 @@ class Expression : public std::enable_shared_from_this<Expression>, private Nonc
   const std::optional<std::string>& table_name() const;
   const std::optional<std::string>& alias() const;
 
-  void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
+  void set_aggregate_function_arguments(
+      const std::vector<std::shared_ptr<DerivedExpression>>& aggregate_function_arguments);
 
   void set_alias(const std::string& alias);
 
@@ -155,11 +152,15 @@ class Expression : public std::enable_shared_from_this<Expression>, private Nonc
    * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
    * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
-  std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
+  virtual std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
+                                bool is_root = true) const;
 
-  bool operator==(const Expression& other) const;
+ protected:
+  // Not to be used directly, derived classes should implement it in the public scope and use this internally
+  bool operator==(const AbstractExpression& other) const;
 
- private:
+  virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpression>& copy) const = 0;
+
   // the type of the expression
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal
@@ -175,24 +176,21 @@ class Expression : public std::enable_shared_from_this<Expression>, private Nonc
    * Expression hierarchy.
    * E.g. for CASE one could argue that the THEN case becomes the left child, whereas ELSE becomes the right child.
    */
-  std::vector<std::shared_ptr<Expression>> _expression_list;
+  std::vector<std::shared_ptr<DerivedExpression>> _aggregate_function_arguments;
 
   std::optional<std::string> _table_name;
-
-  // a column that might be referenced
-  std::optional<ColumnID> _column_id;
-
-  // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
   std::optional<std::string> _alias;
 
   std::optional<ValuePlaceholder> _value_placeholder;
 
   // @{
   // Members for the tree structure
-  std::weak_ptr<Expression> _parent;
-  std::shared_ptr<Expression> _left_child;
-  std::shared_ptr<Expression> _right_child;
+  std::shared_ptr<DerivedExpression> _left_child;
+  std::shared_ptr<DerivedExpression> _right_child;
   // @}
+
+  friend class LQPExpression;
+  friend class PQPExpression;  // For creating OperatorExpressions from LQPExpressions
 };
 
 }  // namespace opossum

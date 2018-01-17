@@ -193,8 +193,10 @@ class TpchBenchmark final {
 
       for (const auto query_id : mutable_query_ids) {
         const auto query_benchmark_begin = std::chrono::steady_clock::now();
+
         // Execute the query, we don't care about the results
         SQLPipeline{opossum::tpch_queries[query_id]}.get_result_table();
+
         const auto query_benchmark_end = std::chrono::steady_clock::now();
 
         auto& query_benchmark_result = _query_results_by_query_id.at(query_id);
