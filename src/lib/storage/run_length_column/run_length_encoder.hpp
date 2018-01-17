@@ -4,7 +4,7 @@
 #include <string>
 #include <type_traits>
 
-#include "base_column_encoder.hpp"
+#include "storage/base_column_encoder.hpp"
 
 #include "storage/encoded_columns/run_length_column.hpp"
 #include "storage/iterables/value_column_iterable.hpp"

@@ -8,7 +8,7 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "storage/column_encoders/utils.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "storage/encoded_columns/base_encoded_column.hpp"
 #include "utils/assert.hpp"
 

@@ -6,7 +6,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/column_encoders/utils.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "storage/encoded_columns/column_encoding_type.hpp"
 #include "storage/encoded_columns/encoded_columns.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"

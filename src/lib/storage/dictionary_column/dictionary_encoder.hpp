@@ -4,20 +4,27 @@
 #include <limits>
 #include <memory>
 
-#include "base_column_encoder.hpp"
+#include "storage/base_column_encoder.hpp"
 
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/fitted_attribute_vector.hpp"
+#include "storage/encoded_columns/dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+#include "storage/zero_suppression/utils.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
 namespace opossum {
 
-class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEncoder> {
+/**
+ * @brief Encodes a column using dictionary encoding and compresses its attribute vector using zero suppression.
+ *
+ * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
+ * using fixed-size byte-aligned encoding.
+ */
+class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::DeprecatedDictionary>;
-  static constexpr auto _uses_zero_suppression = false;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _uses_zero_suppression = true;
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
@@ -49,8 +56,10 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-    // We need to increment the dictionary size here because of possible null values.
-    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size(), alloc);
+    auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
+    attribute_vector.reserve(values.size());
+
+    const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -61,26 +70,32 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
        */
       auto value_it = values.cbegin();
       auto null_value_it = null_values.cbegin();
-      auto index = 0u;
-      for (; value_it != values.cend(); ++value_it, ++null_value_it, ++index) {
+      for (; value_it != values.cend(); ++value_it, ++null_value_it) {
         if (*null_value_it) {
-          attribute_vector->set(index, NULL_VALUE_ID);
+          attribute_vector.push_back(null_value_id);
           continue;
         }
 
-        auto value_id = _get_value_id(dictionary, *value_it);
-        attribute_vector->set(index, value_id);
+        const auto value_id = _get_value_id(dictionary, *value_it);
+        attribute_vector.push_back(value_id);
       }
     } else {
       auto value_it = values.cbegin();
-      auto index = 0u;
-      for (; value_it != values.cend(); ++value_it, ++index) {
-        auto value_id = _get_value_id(dictionary, *value_it);
-        attribute_vector->set(index, value_id);
+      for (; value_it != values.cend(); ++value_it) {
+        const auto value_id = _get_value_id(dictionary, *value_it);
+        attribute_vector.push_back(value_id);
       }
     }
 
-    return std::allocate_shared<DeprecatedDictionaryColumn<T>>(alloc, std::move(dictionary), attribute_vector);
+    // We need to increment the dictionary size here because of possible null values.
+    const auto max_value = dictionary.size() + 1u;
+
+    auto encoded_attribute_vector = encode_by_zs_type(zs_type(), attribute_vector, alloc, {max_value});
+
+    auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
+    auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
+    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                     ValueID{null_value_id});
   }
 
  private:
@@ -88,17 +103,6 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
   static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
-  }
-
-  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(
-      size_t unique_values_count, size_t size, const PolymorphicAllocator<size_t>& alloc) {
-    if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint8_t>>(size, alloc);
-    } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint16_t>>(size, alloc);
-    } else {
-      return std::make_shared<FittedAttributeVector<uint32_t>>(size, alloc);
-    }
   }
 };
 

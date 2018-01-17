@@ -211,13 +211,12 @@ set(
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
-    storage/column_encoders/base_column_encoder.hpp
-    storage/column_encoders/deprecated_dictionary_encoder.hpp
-    storage/column_encoders/dictionary_encoder.hpp
-    storage/column_encoders/encoders.hpp
-    storage/column_encoders/run_length_encoder.hpp
-    storage/column_encoders/utils.cpp
-    storage/column_encoders/utils.hpp
+    storage/base_column_encoder.hpp
+    storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
+    storage/dictionary_column/dictionary_encoder.hpp
+    storage/run_length_column/run_length_encoder.hpp
+    storage/column_encoding_utils.cpp
+    storage/column_encoding_utils.hpp
     storage/encoded_columns/base_dictionary_column.cpp
     storage/encoded_columns/base_dictionary_column.hpp
     storage/encoded_columns/base_encoded_column.cpp
