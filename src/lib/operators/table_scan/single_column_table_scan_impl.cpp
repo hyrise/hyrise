@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "storage/base_deprecated_dictionary_column.hpp"
-#include "storage/encoded_columns/base_dictionary_column.hpp"
-#include "storage/encoded_columns/utils.hpp"
+#include "storage/base_dictionary_column.hpp"
+#include "storage/resolve_encoded_column_type.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"

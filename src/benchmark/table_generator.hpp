@@ -3,7 +3,7 @@
 #include <memory>
 #include <optional>
 
-#include "storage/encoded_columns/column_encoding_type.hpp"
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 
 namespace opossum {

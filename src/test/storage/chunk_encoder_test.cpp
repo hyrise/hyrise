@@ -10,8 +10,8 @@
 #include "storage/base_value_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/encoded_columns/base_encoded_column.hpp"
-#include "storage/encoded_columns/encoded_columns.hpp"
+#include "storage/base_encoded_column.hpp"
+#include "storage/encoded_columns.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

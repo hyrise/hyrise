@@ -3,7 +3,7 @@
 #include <limits>
 #include <memory>
 
-#include "storage/encoded_columns/base_encoded_column.hpp"
+#include "storage/base_encoded_column.hpp"
 
 namespace opossum {
 

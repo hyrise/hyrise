@@ -10,7 +10,7 @@
 
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_compression.hpp"
-#include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/deprecated_dictionary_column_iterable.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"

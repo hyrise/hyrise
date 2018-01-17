@@ -217,17 +217,17 @@ set(
     storage/run_length_column/run_length_encoder.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
-    storage/encoded_columns/base_dictionary_column.cpp
-    storage/encoded_columns/base_dictionary_column.hpp
-    storage/encoded_columns/base_encoded_column.cpp
-    storage/encoded_columns/base_encoded_column.hpp
-    storage/encoded_columns/column_encoding_type.hpp
-    storage/encoded_columns/dictionary_column.cpp
-    storage/encoded_columns/dictionary_column.hpp
-    storage/encoded_columns/encoded_columns.hpp
-    storage/encoded_columns/run_length_column.cpp
-    storage/encoded_columns/run_length_column.hpp
-    storage/encoded_columns/utils.hpp
+    storage/base_dictionary_column.cpp
+    storage/base_dictionary_column.hpp
+    storage/base_encoded_column.cpp
+    storage/base_encoded_column.hpp
+    storage/encoding_type.hpp
+    storage/dictionary_column.cpp
+    storage/dictionary_column.hpp
+    storage/encoded_columns.hpp
+    storage/run_length_column.cpp
+    storage/run_length_column.hpp
+    storage/resolve_encoded_column_type.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "column_encoding_type.hpp"
-
+#include "storage/encoding_type.hpp"
 #include "storage/base_column.hpp"
 
 namespace opossum {

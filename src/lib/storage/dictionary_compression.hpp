@@ -6,7 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-#include "storage/encoded_columns/column_encoding_type.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace opossum {
 

@@ -4,11 +4,11 @@
 #include <boost/hana/pair.hpp>
 
 // Include your encoded column file here!
-#include "dictionary_column.hpp"
-#include "run_length_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/run_length_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 
-#include "column_encoding_type.hpp"
+#include "storage/encoding_type.hpp"
 
 #include "utils/enum_constant.hpp"
 

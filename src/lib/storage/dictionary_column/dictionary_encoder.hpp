@@ -6,7 +6,7 @@
 
 #include "storage/base_column_encoder.hpp"
 
-#include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/zero_suppression/base_zero_suppression_vector.hpp"
 #include "storage/zero_suppression/utils.hpp"

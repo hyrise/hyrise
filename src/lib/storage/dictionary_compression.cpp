@@ -9,8 +9,8 @@
 #include "types.hpp"
 
 #include "storage/column_encoding_utils.hpp"
-#include "storage/encoded_columns/base_encoded_column.hpp"
-#include "storage/encoded_columns/column_encoding_type.hpp"
+#include "storage/base_encoded_column.hpp"
+#include "storage/encoding_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

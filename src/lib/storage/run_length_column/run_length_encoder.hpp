@@ -6,7 +6,7 @@
 
 #include "storage/base_column_encoder.hpp"
 
-#include "storage/encoded_columns/run_length_column.hpp"
+#include "storage/run_length_column.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"

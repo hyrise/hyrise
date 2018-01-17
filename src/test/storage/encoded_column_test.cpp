@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "storage/column_encoding_utils.hpp"
-#include "storage/encoded_columns/column_encoding_type.hpp"
-#include "storage/encoded_columns/encoded_columns.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/encoded_columns.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/value_column.hpp"
 

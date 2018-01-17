@@ -5,7 +5,7 @@
 
 #include <memory>
 
-#include "encoded_columns.hpp"
+#include "storage/encoded_columns.hpp"
 
 namespace opossum {
 
