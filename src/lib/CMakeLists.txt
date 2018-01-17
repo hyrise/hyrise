@@ -247,21 +247,21 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/iterables/deprecated_attribute_vector_iterable.hpp
-    storage/iterables/base_iterators.hpp
-    storage/iterables/chunk_offset_mapping.cpp
-    storage/iterables/chunk_offset_mapping.hpp
-    storage/iterables/column_value.hpp
-    storage/iterables/constant_value_iterable.hpp
-    storage/iterables/create_iterable_from_column.hpp
-    storage/iterables/deprecated_dictionary_column_iterable.hpp
-    storage/iterables/iterables.hpp
-    storage/iterables/attribute_vector_iterable.hpp
-    storage/iterables/dictionary_column_iterable.hpp
-    storage/iterables/null_value_vector_iterable.hpp
-    storage/iterables/reference_column_iterable.hpp
-    storage/iterables/value_column_iterable.hpp
-    storage/iterables/run_length_column_iterable.hpp
+    storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
+    storage/base_column_iterators.hpp
+    storage/chunk_offset_mapping.cpp
+    storage/chunk_offset_mapping.hpp
+    storage/column_value.hpp
+    storage/constant_value_iterable.hpp
+    storage/create_iterable_from_column.hpp
+    storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
+    storage/column_iterables.hpp
+    storage/dictionary_column/attribute_vector_iterable.hpp
+    storage/dictionary_column/dictionary_column_iterable.hpp
+    storage/value_column/null_value_vector_iterable.hpp
+    storage/reference_column/reference_column_iterable.hpp
+    storage/value_column/value_column_iterable.hpp
+    storage/run_length_column/run_length_column_iterable.hpp
     storage/zero_suppression/base_zero_suppression_decoder.hpp
     storage/zero_suppression/base_zero_suppression_encoder.hpp
     storage/zero_suppression/base_zero_suppression_vector.hpp

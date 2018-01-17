@@ -3,7 +3,7 @@
 #include <iterator>
 #include <utility>
 
-#include "iterables.hpp"
+#include "storage/column_iterables.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -12,7 +12,7 @@ namespace opossum {
  * This is an iterable for the null value vector of a value column.
  * It is used for example in the IS NULL implementation of the table scan.
  */
-class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable> {
+class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVectorIterable> {
  public:
   explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
@@ -25,8 +25,8 @@ class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = IndexedIterator{_null_values, mapped_chunk_offsets.cbegin()};
-    auto end = IndexedIterator{_null_values, mapped_chunk_offsets.cend()};
+    auto begin = PointAccessIterator{_null_values, mapped_chunk_offsets.cbegin()};
+    auto end = PointAccessIterator{_null_values, mapped_chunk_offsets.cend()};
     functor(begin, end);
   }
 
@@ -34,7 +34,7 @@ class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable
   const pmr_concurrent_vector<bool>& _null_values;
 
  private:
-  class Iterator : public BaseIterator<Iterator, ColumnNullValue> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnNullValue> {
    public:
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
@@ -58,13 +58,13 @@ class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable
     NullValueIterator _null_value_it;
   };
 
-  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, ColumnNullValue> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnNullValue> {
    public:
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
-    explicit IndexedIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, ColumnNullValue>{chunk_offsets_it}, _null_values{null_values} {}
+    explicit PointAccessIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnNullValue>{chunk_offsets_it}, _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

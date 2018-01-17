@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include "chunk_offset_mapping.hpp"
-#include "column_value.hpp"
+#include "storage/chunk_offset_mapping.hpp"
+#include "storage/column_value.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -23,7 +23,7 @@ namespace opossum {
  *
  * Example Usage
  *
- * class Iterator : public BaseIterator<Iterator, Value> {
+ * class Iterator : public BaseColumnIterator<Iterator, Value> {
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *
@@ -33,7 +33,7 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
+using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
 
 /**
  * @brief base class of all referenced iterators used by iterables
@@ -46,10 +46,10 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
  *
  * Example Usage
  *
- * class Iterator : public BaseIndexedIterator<Iterator, Value> {
+ * class Iterator : public BasePointAccessColumnIterator<Iterator, Value> {
  *  public:
  *   Iterator(const ChunkOffsetIterator& chunk_offset_it)
- *       : BaseIndexedIterator<Iterator, Value>{chunk_offset_it} {}
+ *       : BasePointAccessColumnIterator<Iterator, Value>{chunk_offset_it} {}
  *
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
@@ -59,9 +59,9 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
  * };
  */
 template <typename Derived, typename Value>
-class BaseIndexedIterator : public BaseIterator<Derived, Value> {
+class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> {
  public:
-  explicit BaseIndexedIterator(const ChunkOffsetsIterator& chunk_offsets_it) : _chunk_offsets_it{chunk_offsets_it} {}
+  explicit BasePointAccessColumnIterator(const ChunkOffsetsIterator& chunk_offsets_it) : _chunk_offsets_it{chunk_offsets_it} {}
 
  protected:
   const ChunkOffsetMapping& chunk_offsets() const { return *_chunk_offsets_it; }
@@ -70,7 +70,7 @@ class BaseIndexedIterator : public BaseIterator<Derived, Value> {
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_chunk_offsets_it; }
-  bool equal(const BaseIndexedIterator& other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
+  bool equal(const BasePointAccessColumnIterator& other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
 
  protected:
   ChunkOffsetsIterator _chunk_offsets_it;

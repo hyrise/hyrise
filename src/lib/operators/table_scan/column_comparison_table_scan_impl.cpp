@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include "storage/chunk.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"

@@ -4,12 +4,12 @@
 #include <utility>
 #include <vector>
 
-#include "iterables.hpp"
+#include "storage/column_iterables.hpp"
 #include "storage/base_attribute_vector.hpp"
 
 namespace opossum {
 
-class DeprecatedAttributeVectorIterable : public IndexableIterable<DeprecatedAttributeVectorIterable> {
+class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<DeprecatedAttributeVectorIterable> {
  public:
   explicit DeprecatedAttributeVectorIterable(const BaseAttributeVector& attribute_vector)
       : _attribute_vector{attribute_vector} {}
@@ -23,8 +23,8 @@ class DeprecatedAttributeVectorIterable : public IndexableIterable<DeprecatedAtt
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
-    auto begin = IndexedIterator{_attribute_vector, mapped_chunk_offsets.cbegin()};
-    auto end = IndexedIterator{_attribute_vector, mapped_chunk_offsets.cend()};
+    auto begin = PointAccessIterator{_attribute_vector, mapped_chunk_offsets.cbegin()};
+    auto end = PointAccessIterator{_attribute_vector, mapped_chunk_offsets.cend()};
     f(begin, end);
   }
 
@@ -32,7 +32,7 @@ class DeprecatedAttributeVectorIterable : public IndexableIterable<DeprecatedAtt
   const BaseAttributeVector& _attribute_vector;
 
  private:
-  class Iterator : public BaseIterator<Iterator, NullableColumnValue<ValueID>> {
+  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<ValueID>> {
    public:
     explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
         : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
@@ -55,10 +55,10 @@ class DeprecatedAttributeVectorIterable : public IndexableIterable<DeprecatedAtt
     ChunkOffset _chunk_offset;
   };
 
-  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<ValueID>> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<ValueID>> {
    public:
-    explicit IndexedIterator(const BaseAttributeVector& attribute_vector, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
+    explicit PointAccessIterator(const BaseAttributeVector& attribute_vector, const ChunkOffsetsIterator& chunk_offsets_it)
+        : BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
           _attribute_vector{attribute_vector} {}
 
    private:

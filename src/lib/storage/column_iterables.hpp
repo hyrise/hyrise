@@ -1,13 +1,13 @@
 #pragma once
 
-#include "base_iterators.hpp"
+#include "storage/base_column_iterators.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 /**
- * @brief base class of all iterables
+ * @brief base class of all column iterables
  *
  * Implements the method with_iterators, which accepts a generic lambda
  * (or similar) that expects a begin and end iterator to the underlying
@@ -56,7 +56,7 @@ namespace opossum {
  *
  */
 template <typename Derived>
-class Iterable {
+class ColumnIterable {
  public:
   /**
    * @param f is a generic lambda accepting two iterators as parameters
@@ -83,9 +83,9 @@ class Iterable {
 };
 
 /**
- * @brief base class of all indexable iterables
+ * @brief base class of all point-accessible column iterables
  *
- * Extends the interface of Iterable by two variants of
+ * Extends the interface of ColumnIterable by two variants of
  * with_iterators and for_each. These methods accept in addition
  * to the generic lambda mapped chunk offsets (i.e. a ChunkOffsetList).
  * In most cases, this list will be generated from a pos_list of a
@@ -94,9 +94,9 @@ class Iterable {
  * were included in the pos_list; everything else is skipped.
  */
 template <typename Derived>
-class IndexableIterable : public Iterable<Derived> {
+class PointAccessibleColumnIterable : public ColumnIterable<Derived> {
  public:
-  using Iterable<Derived>::with_iterators;  // needed because of “name hiding”
+  using ColumnIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
   void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
@@ -107,7 +107,7 @@ class IndexableIterable : public Iterable<Derived> {
     }
   }
 
-  using Iterable<Derived>::for_each;  // needed because of “name hiding”
+  using ColumnIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
   void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) {

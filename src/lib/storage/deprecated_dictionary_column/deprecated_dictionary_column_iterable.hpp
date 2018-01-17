@@ -3,14 +3,14 @@
 #include <utility>
 #include <vector>
 
-#include "iterables.hpp"
+#include "storage/column_iterables.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 
 namespace opossum {
 
 template <typename T>
-class DeprecatedDictionaryColumnIterable : public IndexableIterable<DeprecatedDictionaryColumnIterable<T>> {
+class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<DeprecatedDictionaryColumnIterable<T>> {
  public:
   explicit DeprecatedDictionaryColumnIterable(const DeprecatedDictionaryColumn<T>& column) : _column{column} {}
 
@@ -23,8 +23,8 @@ class DeprecatedDictionaryColumnIterable : public IndexableIterable<DeprecatedDi
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cbegin()};
-    auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cend()};
+    auto begin = PointAccessIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cbegin()};
+    auto end = PointAccessIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cend()};
     functor(begin, end);
   }
 
@@ -32,7 +32,7 @@ class DeprecatedDictionaryColumnIterable : public IndexableIterable<DeprecatedDi
   const DeprecatedDictionaryColumn<T>& _column;
 
  private:
-  class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<T>> {
    public:
     using Dictionary = pmr_vector<T>;
 
@@ -62,14 +62,14 @@ class DeprecatedDictionaryColumnIterable : public IndexableIterable<DeprecatedDi
     ChunkOffset _chunk_offset;
   };
 
-  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>> {
    public:
     using Dictionary = pmr_vector<T>;
 
    public:
-    explicit IndexedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
+    explicit PointAccessIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
                              const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
+        : BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
           _attribute_vector{attribute_vector} {}
 

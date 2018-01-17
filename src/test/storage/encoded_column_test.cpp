@@ -9,7 +9,7 @@
 #include "storage/column_encoding_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/encoded_columns.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "storage/value_column.hpp"
 
 #include "types.hpp"

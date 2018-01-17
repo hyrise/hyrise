@@ -1,10 +1,10 @@
 #pragma once
 
-#include "deprecated_dictionary_column_iterable.hpp"
-#include "dictionary_column_iterable.hpp"
-#include "reference_column_iterable.hpp"
-#include "run_length_column_iterable.hpp"
-#include "value_column_iterable.hpp"
+#include "deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp"
+#include "dictionary_column/dictionary_column_iterable.hpp"
+#include "reference_column/reference_column_iterable.hpp"
+#include "run_length_column/run_length_column_iterable.hpp"
+#include "storage/value_column/value_column_iterable.hpp"
 
 namespace opossum {
 

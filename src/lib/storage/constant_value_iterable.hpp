@@ -1,13 +1,13 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "iterables.hpp"
+#include "storage/column_iterables.hpp"
 #include "type_cast.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ConstantValueIterable : public Iterable<ConstantValueIterable<T>> {
+class ConstantValueIterable : public ColumnIterable<ConstantValueIterable<T>> {
  public:
   explicit ConstantValueIterable(const T& value) : _value{value} {}
   explicit ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
@@ -22,7 +22,7 @@ class ConstantValueIterable : public Iterable<ConstantValueIterable<T>> {
   const T _value;
 
  private:
-  class Iterator : public BaseIterator<Iterator, ColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnValue<T>> {
    public:
     explicit Iterator(const T& value) : _value{value} {}
 

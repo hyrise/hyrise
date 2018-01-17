@@ -12,7 +12,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "type_comparison.hpp"

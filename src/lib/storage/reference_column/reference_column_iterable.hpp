@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
-#include "iterables.hpp"
+#include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
+class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>> {
  public:
   explicit ReferenceColumnIterable(const ReferenceColumn& column) : _column{column} {}
 
@@ -32,7 +32,7 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
   const ReferenceColumn& _column;
 
  private:
-  class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
 

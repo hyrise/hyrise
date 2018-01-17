@@ -2,14 +2,14 @@
 
 #include <algorithm>
 
-#include "iterables.hpp"
+#include "storage/column_iterables.hpp"
 
 #include "storage/run_length_column.hpp"
 
 namespace opossum {
 
 template <typename T>
-class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable<T>> {
+class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthColumnIterable<T>> {
  public:
   explicit RunLengthColumnIterable(const RunLengthColumn<T>& column) : _column{column} {}
 
@@ -24,10 +24,10 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = IndexedIterator{_column.null_value(), *_column.values(), *_column.end_positions(),
+    auto begin = PointAccessIterator{_column.null_value(), *_column.values(), *_column.end_positions(),
                                  mapped_chunk_offsets.cbegin()};
     auto end =
-        IndexedIterator{_column.null_value(), *_column.values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
+        PointAccessIterator{_column.null_value(), *_column.values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
 
     functor(begin, end);
   }
@@ -36,7 +36,7 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
   const RunLengthColumn<T>& _column;
 
  private:
-  class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<T>> {
    public:
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
@@ -78,11 +78,11 @@ class RunLengthColumnIterable : public IndexableIterable<RunLengthColumnIterable
     ChunkOffset _current_position;
   };
 
-  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>> {
    public:
-    explicit IndexedIterator(const T null_value, const pmr_vector<T>& values,
+    explicit PointAccessIterator(const T null_value, const pmr_vector<T>& values,
                              const pmr_vector<ChunkOffset>& end_positions, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
+        : BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _null_value{null_value},
           _values{values},
           _end_positions{end_positions},
