@@ -94,6 +94,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       name = column_expression->to_string(_input_table_left()->column_names());
     } else if (column_expression->is_subselect()) {
       // TODO: add come kind of identifier for each subselect
+      // TODO: execute operator, so that we can access result table
       name = "subselect";
     } else {
       Fail("Expression type is not supported.");

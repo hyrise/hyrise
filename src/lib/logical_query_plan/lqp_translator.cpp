@@ -416,6 +416,7 @@ std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expression
   pqp_expressions.reserve(lqp_expressions.size());
 
   for (const auto& lqp_expression : lqp_expressions) {
+    // TODO: check nodes for subselect -> translate recursively
     pqp_expressions.emplace_back(std::make_shared<PQPExpression>(lqp_expression, node->left_child()));
   }
 
