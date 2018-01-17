@@ -26,5 +26,4 @@ class RuleBatch final {
   const RuleBatchExecutionPolicy _execution_policy;
   std::vector<std::shared_ptr<AbstractRule>> _rules;
 };
-
-}
+}  // namespace opossum

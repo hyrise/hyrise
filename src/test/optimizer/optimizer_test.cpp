@@ -1,19 +1,17 @@
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/mock_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
-#include "logical_query_plan/mock_node.hpp"
 
 namespace opossum {
 
-class OptimizerTest: public ::testing::Test {};
+class OptimizerTest : public ::testing::Test {};
 
 struct MockRule : public AbstractRule {
-  explicit MockRule(size_t num_iterations): num_iterations(num_iterations) {}
+  explicit MockRule(size_t num_iterations) : num_iterations(num_iterations) {}
 
-  std::string name() const override {
-    return "MockNode";
-  }
+  std::string name() const override { return "MockNode"; }
 
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) override {
     num_iterations = num_iterations > 0 ? num_iterations - 1 : 0;

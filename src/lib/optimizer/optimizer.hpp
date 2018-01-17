@@ -17,7 +17,7 @@ class Optimizer final {
  public:
   static const Optimizer& get();
 
-  static Optimizer createDefaultOptimizer();
+  static Optimizer create_default_optimizer();
 
   explicit Optimizer(const uint32_t max_num_iterations);
 

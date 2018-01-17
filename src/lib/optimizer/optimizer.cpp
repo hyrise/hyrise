@@ -9,11 +9,11 @@
 namespace opossum {
 
 const Optimizer& Optimizer::get() {
-  static Optimizer optimizer{createDefaultOptimizer()};
+  static Optimizer optimizer{create_default_optimizer()};
   return optimizer;
 }
 
-Optimizer Optimizer::createDefaultOptimizer() {
+Optimizer Optimizer::create_default_optimizer() {
   Optimizer optimizer{10};
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
@@ -26,13 +26,9 @@ Optimizer Optimizer::createDefaultOptimizer() {
   return optimizer;
 }
 
-Optimizer::Optimizer(const uint32_t max_num_iterations):
-  _max_num_iterations(max_num_iterations)
-{}
+Optimizer::Optimizer(const uint32_t max_num_iterations) : _max_num_iterations(max_num_iterations) {}
 
-void Optimizer::add_rule_batch(RuleBatch rule_batch) {
-  _rule_batches.emplace_back(std::move(rule_batch));
-}
+void Optimizer::add_rule_batch(RuleBatch rule_batch) { _rule_batches.emplace_back(std::move(rule_batch)); }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
