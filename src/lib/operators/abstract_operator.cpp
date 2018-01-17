@@ -131,8 +131,8 @@ void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
                                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
                                    size_t& id_counter) const {
   /**
-   * NOTE: Code taken from AbstractLQPNode::_print_impl() - would know how we could cleanly make it reusable, so C/P it
-   * is
+   * NOTE: Code taken from AbstractLQPNode::_print_impl() - wouldn't know how we could cleanly make it reusable, so
+   * C/P it is
    */
 
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
