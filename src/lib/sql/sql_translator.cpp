@@ -950,6 +950,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   }
 
   auto current_node = input_node;
+  auto has_nested_expression = false;
 
   AllParameterVariant value;
   if (scan_type == ScanType::IsNull || scan_type == ScanType::IsNotNull) {
@@ -957,12 +958,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
   } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {
+    // If there is a nested expression (e.g. 1233 + 1) instead of a column reference or literal, we need to add a Projection node which handles this before adding the PredicateNode.
     auto column_expressions = LQPExpression::create_columns(current_node->output_column_references());
     column_expressions.push_back(HSQLExprTranslator::to_lqp_expression(*value_ref_hsql_expr, current_node));
 
     auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
     projection_node->set_left_child(current_node);
     current_node = projection_node;
+    has_nested_expression = true;
 
     DebugAssert(column_expressions.size() <= std::numeric_limits<uint16_t>::max(), "Number of column expressions cannot exceed maximum value of ColumnID.");
     value = ColumnID{static_cast<uint16_t>(column_expressions.size()-1)};
@@ -980,7 +983,19 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
   predicate_node->set_left_child(current_node);
 
-  return predicate_node;
+  current_node = predicate_node;
+
+  // The ProjectionNode we added previously (if we have a nested expression) added a column expression for that expression, which we need to remove here.
+  if (has_nested_expression) {
+    auto column_expressions = LQPExpression::create_columns(current_node->output_column_references());
+    column_expressions.pop_back();
+
+    auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
+    projection_node->set_left_child(current_node);
+    current_node = projection_node;
+  }
+
+  return current_node;
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
