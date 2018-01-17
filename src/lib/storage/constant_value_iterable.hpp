@@ -22,7 +22,7 @@ class ConstantValueIterable : public ColumnIterable<ConstantValueIterable<T>> {
   const T _value;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, ColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, NonNullColumnIteratorValue<T>> {
    public:
     explicit Iterator(const T& value) : _value{value} {}
 
@@ -31,7 +31,7 @@ class ConstantValueIterable : public ColumnIterable<ConstantValueIterable<T>> {
 
     void increment() {}
     bool equal(const Iterator& other) const { return _value == other._value; }
-    ColumnValue<T> dereference() const { return ColumnValue<T>{_value, 0u}; }
+    NonNullColumnIteratorValue<T> dereference() const { return NonNullColumnIteratorValue<T>{_value, 0u}; }
 
    private:
     const T _value;

@@ -34,7 +34,7 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
   const pmr_concurrent_vector<bool>& _null_values;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, ColumnNullValue> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorNullValue> {
    public:
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
@@ -48,8 +48,8 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     void increment() { ++_null_value_it; }
     bool equal(const Iterator& other) const { return _null_value_it == other._null_value_it; }
 
-    ColumnNullValue dereference() const {
-      return ColumnNullValue{*_null_value_it,
+    ColumnIteratorNullValue dereference() const {
+      return ColumnIteratorNullValue{*_null_value_it,
                              static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
@@ -58,24 +58,24 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     NullValueIterator _null_value_it;
   };
 
-  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnNullValue> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue> {
    public:
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnNullValue>{chunk_offsets_it}, _null_values{null_values} {}
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{chunk_offsets_it}, _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    ColumnNullValue dereference() const {
+    ColumnIteratorNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnNullValue{true, chunk_offsets.into_referencing};
+        return ColumnIteratorNullValue{true, chunk_offsets.into_referencing};
 
-      return ColumnNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
+      return ColumnIteratorNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
     }
 
    private:

@@ -46,7 +46,7 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
     IteratorLookup() = default;
     explicit IteratorLookup(ValueID null_value_id) : _null_value_id{null_value_id} {}
 
-    NullableColumnValue<ValueID> operator()(const boost::tuple<uint32_t, ChunkOffset>& tuple) const {
+    ColumnIteratorValue<ValueID> operator()(const boost::tuple<uint32_t, ChunkOffset>& tuple) const {
       ValueID value_id{};
       ChunkOffset chunk_offset{};
       boost::tie(value_id, chunk_offset) = tuple;
@@ -73,12 +73,12 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
   }
 
   template <typename ZsDecoderType>
-  class IndexedIteratorLookup {
+  class PointAccessIteratorLookup {
    public:
-    IndexedIteratorLookup(ValueID null_value_id, ZsDecoderType& ns_decoder)
+    PointAccessIteratorLookup(ValueID null_value_id, ZsDecoderType& ns_decoder)
         : _null_value_id{null_value_id}, _ns_decoder{ns_decoder} {}
 
-    NullableColumnValue<ValueID> operator()(const ChunkOffsetMapping& chunk_offsets) const {
+    ColumnIteratorValue<ValueID> operator()(const ChunkOffsetMapping& chunk_offsets) const {
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
         return {ValueID{}, true, chunk_offsets.into_referencing};
 
@@ -95,12 +95,12 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
   };
 
   template <typename ZsDecoderType>
-  using PointAccessIterator = boost::transform_iterator<IndexedIteratorLookup<ZsDecoderType>, ChunkOffsetsIterator>;
+  using PointAccessIterator = boost::transform_iterator<PointAccessIteratorLookup<ZsDecoderType>, ChunkOffsetsIterator>;
 
   template <typename ZsDecoderType>
   PointAccessIterator<ZsDecoderType> create_indexed_iterator(ChunkOffsetsIterator chunk_offsets_it,
                                                          ZsDecoderType& decoder) const {
-    const auto lookup = IndexedIteratorLookup<ZsDecoderType>{_null_value_id, decoder};
+    const auto lookup = PointAccessIteratorLookup<ZsDecoderType>{_null_value_id, decoder};
     return PointAccessIterator<ZsDecoderType>{chunk_offsets_it, lookup};
   }
 };

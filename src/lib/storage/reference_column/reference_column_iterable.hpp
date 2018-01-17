@@ -32,7 +32,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
   const ReferenceColumn& _column;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
 
@@ -49,8 +49,8 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     bool equal(const Iterator& other) const { return _pos_list_it == other._pos_list_it; }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
-    NullableColumnValue<T> dereference() const {
-      if (*_pos_list_it == NULL_ROW_ID) return NullableColumnValue<T>{T{}, true, 0u};
+    ColumnIteratorValue<T> dereference() const {
+      if (*_pos_list_it == NULL_ROW_ID) return ColumnIteratorValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
@@ -93,11 +93,11 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       if (column.is_nullable()) {
         auto is_null = column.null_values()[chunk_offset];
         const auto& value = is_null ? T{} : column.values()[chunk_offset];
-        return NullableColumnValue<T>{value, is_null, chunk_offset_into_ref_column};
+        return ColumnIteratorValue<T>{value, is_null, chunk_offset_into_ref_column};
       }
 
       const auto& value = column.values()[chunk_offset];
-      return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
+      return ColumnIteratorValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
     auto _value_from_dictionary_column(const DeprecatedDictionaryColumn<T>& column,
@@ -108,13 +108,13 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       auto value_id = attribute_vector->get(chunk_offset);
 
       if (value_id == NULL_VALUE_ID) {
-        return NullableColumnValue<T>{T{}, true, chunk_offset_into_ref_column};
+        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_column};
       }
 
       auto dictionary = column.dictionary();
       const auto& value = (*dictionary)[value_id];
 
-      return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
+      return ColumnIteratorValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
     auto _value_from_any_column(const BaseColumn& column, const ChunkOffset& chunk_offset) const {
@@ -124,10 +124,10 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (variant_is_null(variant_value)) {
-        return NullableColumnValue<T>{T{}, true, chunk_offset_into_ref_column};
+        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_column};
       }
 
-      return NullableColumnValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_column};
+      return ColumnIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_column};
     }
 
    private:

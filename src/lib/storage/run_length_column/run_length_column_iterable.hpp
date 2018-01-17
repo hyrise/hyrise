@@ -36,7 +36,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
   const RunLengthColumn<T>& _column;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
@@ -63,12 +63,12 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
     bool equal(const Iterator& other) const { return _current_position == other._current_position; }
 
-    NullableColumnValue<T> dereference() const {
+    ColumnIteratorValue<T> dereference() const {
       if (*_value_it == _null_value) {
-        return NullableColumnValue{T{}, true, _current_position};
+        return ColumnIteratorValue{T{}, true, _current_position};
       }
 
-      return NullableColumnValue<T>{*_value_it, false, _current_position};
+      return ColumnIteratorValue<T>{*_value_it, false, _current_position};
     }
 
    private:
@@ -78,11 +78,11 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
     ChunkOffset _current_position;
   };
 
-  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>> {
    public:
     explicit PointAccessIterator(const T null_value, const pmr_vector<T>& values,
                              const pmr_vector<ChunkOffset>& end_positions, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>>{chunk_offsets_it},
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
           _null_value{null_value},
           _values{values},
           _end_positions{end_positions},
@@ -92,11 +92,11 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    NullableColumnValue<T> dereference() const {
+    ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
+        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       const auto current_chunk_offset = chunk_offsets.into_referenced;
       const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) { return offset < current; };
@@ -118,7 +118,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
 
-      return NullableColumnValue<T>{value, is_null, chunk_offsets.into_referencing};
+      return ColumnIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
     }
 
    private:

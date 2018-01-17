@@ -7,7 +7,7 @@
 #include "base_table_scan_impl.hpp"
 
 #include "storage/column_visitable.hpp"
-#include "storage/chunk_offset_mapping.hpp"
+#include "storage/column_iterables/chunk_offset_mapping.hpp"
 
 #include "types.hpp"
 

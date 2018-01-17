@@ -33,7 +33,7 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
   const DeprecatedDictionaryColumn<T>& _column;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<T>> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using Dictionary = pmr_vector<T>;
 
@@ -48,13 +48,13 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
     void increment() { ++_chunk_offset; }
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
-    NullableColumnValue<T> dereference() const {
+    ColumnIteratorValue<T> dereference() const {
       const auto value_id = _attribute_vector.get(_chunk_offset);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      if (is_null) return NullableColumnValue<T>{T{}, true, _chunk_offset};
+      if (is_null) return ColumnIteratorValue<T>{T{}, true, _chunk_offset};
 
-      return NullableColumnValue<T>{_dictionary[value_id], false, _chunk_offset};
+      return ColumnIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
     }
 
    private:
@@ -63,32 +63,32 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
     ChunkOffset _chunk_offset;
   };
 
-  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>> {
    public:
     using Dictionary = pmr_vector<T>;
 
    public:
     explicit PointAccessIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
                              const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<T>>{chunk_offsets_it},
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
           _attribute_vector{attribute_vector} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    NullableColumnValue<T> dereference() const {
+    ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
+        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       const auto value_id = _attribute_vector.get(chunk_offsets.into_referenced);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      if (is_null) return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
+      if (is_null) return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      return NullableColumnValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
+      return ColumnIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
     }
 
    private:

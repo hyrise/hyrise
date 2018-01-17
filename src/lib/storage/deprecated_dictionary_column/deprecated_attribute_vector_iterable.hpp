@@ -33,7 +33,7 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
   const BaseAttributeVector& _attribute_vector;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, NullableColumnValue<ValueID>> {
+  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<ValueID>> {
    public:
     explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
         : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
@@ -44,11 +44,11 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
     void increment() { ++_chunk_offset; }
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
-    NullableColumnValue<ValueID> dereference() const {
+    ColumnIteratorValue<ValueID> dereference() const {
       const auto value_id = _attribute_vector.get(_chunk_offset);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      return NullableColumnValue<ValueID>{value_id, is_null, _chunk_offset};
+      return ColumnIteratorValue<ValueID>{value_id, is_null, _chunk_offset};
     }
 
    private:
@@ -56,25 +56,25 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
     ChunkOffset _chunk_offset;
   };
 
-  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<ValueID>> {
+  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>> {
    public:
     explicit PointAccessIterator(const BaseAttributeVector& attribute_vector, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>>{chunk_offsets_it},
           _attribute_vector{attribute_vector} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    NullableColumnValue<ValueID> dereference() const {
+    ColumnIteratorValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return NullableColumnValue<ValueID>{NULL_VALUE_ID, true, chunk_offsets.into_referencing};
+        return ColumnIteratorValue<ValueID>{NULL_VALUE_ID, true, chunk_offsets.into_referencing};
 
       const auto value_id = _attribute_vector.get(chunk_offsets.into_referenced);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      return NullableColumnValue<ValueID>{value_id, is_null, chunk_offsets.into_referencing};
+      return ColumnIteratorValue<ValueID>{value_id, is_null, chunk_offsets.into_referencing};
     }
 
    private:

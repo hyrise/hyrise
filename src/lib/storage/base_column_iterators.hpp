@@ -4,14 +4,19 @@
 #include <utility>
 #include <vector>
 
-#include "storage/chunk_offset_mapping.hpp"
-#include "storage/column_value.hpp"
+#include "storage/column_iterables/chunk_offset_mapping.hpp"
+#include "storage/column_iterables/column_iterator_values.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 /**
  * @brief base class of all iterators used by iterables
+ *
+ * Instantiations of this template are part of the column iterable
+ * interface (see column_iterables.hpp) and are implemented
+ * in sub-classes of ColumnIterable (see e.g. value_column_iterable.hpp)
+ *
  *
  * Why is boost::iterator_core_access a friend class?
  *
@@ -36,7 +41,7 @@ template <typename Derived, typename Value>
 using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
 
 /**
- * @brief base class of all referenced iterators used by iterables
+ * @brief base class of all point-access iterators used by iterables
  *
  * This iterator should be used whenever a reference column is “dereferenced”,
  * i.e., its underlying value or dictionary column is iterated over.

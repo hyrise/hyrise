@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "storage/base_column_iterators.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

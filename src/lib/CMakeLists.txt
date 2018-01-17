@@ -249,9 +249,9 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
     storage/base_column_iterators.hpp
-    storage/chunk_offset_mapping.cpp
-    storage/chunk_offset_mapping.hpp
-    storage/column_value.hpp
+    storage/column_iterables/chunk_offset_mapping.cpp
+    storage/column_iterables/chunk_offset_mapping.hpp
+    storage/column_iterables/column_iterator_values.hpp
     storage/constant_value_iterable.hpp
     storage/create_iterable_from_column.hpp
     storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp

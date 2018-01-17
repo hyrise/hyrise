@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/chunk_offset_mapping.hpp"
+#include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
