@@ -48,12 +48,12 @@ struct Pack128Bit {
       in_reg = _mm_and_si128(_mm_loadu_si128(in++), mask);
       out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, next_offset));
 
-      _mm_storeu_si128(out, out_reg);
+      _mm_store_si128(out, out_reg);
       ++out;
 
       out_reg = _mm_srli_epi32(in_reg, num_first_bits);
     } else {
-      _mm_storeu_si128(out, out_reg);
+      _mm_store_si128(out, out_reg);
       ++out;
 
       out_reg = _mm_setzero_si128();
@@ -93,7 +93,7 @@ struct Unpack128Bit {
     // Check if integers have been split across the 128-bit block boundary
     if (next_offset < _32_bit) {
       out_reg = _mm_srli_epi32(in_reg, next_offset);
-      in_reg = _mm_loadu_si128(in++);
+      in_reg = _mm_load_si128(in++);
 
       out_reg = _mm_or_si128(out_reg, _mm_and_si128(_mm_slli_epi32(in_reg, num_first_bits), mask));
       _mm_storeu_si128(out++, out_reg);
@@ -102,7 +102,7 @@ struct Unpack128Bit {
 
       // Only load another 128-bit block if it’s not the last recursion
       if (remaining_recursions > last_recursion) {
-        in_reg = _mm_loadu_si128(in++);
+        in_reg = _mm_load_si128(in++);
       }
     }
 
@@ -129,14 +129,14 @@ void SimdBp128Packing::write_meta_info(const uint8_t* _in, uint128_t* _out) {
   auto out = reinterpret_cast<__m128i*>(_out);
 
   const auto meta_block_info_rgtr = _mm_loadu_si128(in);
-  _mm_storeu_si128(out, meta_block_info_rgtr);
+  _mm_store_si128(out, meta_block_info_rgtr);
 }
 
 void SimdBp128Packing::read_meta_info(const uint128_t* _in, uint8_t* _out) {
   const auto in = reinterpret_cast<const __m128i*>(_in);
   auto out = reinterpret_cast<__m128i*>(_out);
 
-  auto meta_info_block_rgtr = _mm_loadu_si128(in);
+  auto meta_info_block_rgtr = _mm_load_si128(in);
   _mm_storeu_si128(out, meta_info_block_rgtr);
 }
 
@@ -296,7 +296,7 @@ void SimdBp128Packing::unpack_block(const uint128_t* _in, uint32_t* _out, const 
   auto in = reinterpret_cast<const __m128i*>(_in);
   auto out = reinterpret_cast<__m128i*>(_out);
 
-  auto in_reg = _mm_loadu_si128(in++);
+  auto in_reg = _mm_load_si128(in++);
   auto out_reg = _mm_setzero_si128();
   const auto mask = _mm_set1_epi32((1ul << bit_size) - 1);
 
