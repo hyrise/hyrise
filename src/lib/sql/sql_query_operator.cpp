@@ -10,6 +10,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "sql/hsql_expr_translator.hpp"
 #include "sql_query_plan.hpp"
 #include "sql_translator.hpp"
 
@@ -139,7 +140,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
   std::vector<AllParameterVariant> arguments;
   if (execute_stmt.parameters != nullptr) {
     for (const hsql::Expr* expr : *execute_stmt.parameters) {
-      arguments.push_back(SQLTranslator::translate_hsql_operand(*expr));
+      arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
     }
   }
 

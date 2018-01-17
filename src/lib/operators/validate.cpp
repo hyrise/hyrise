@@ -40,7 +40,6 @@ std::shared_ptr<AbstractOperator> Validate::recreate(const std::vector<AllParame
 
 std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");
-  return {};
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {

@@ -151,7 +151,6 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
     default:
       // This case happens if the read column type is not a valid BinaryColumnType.
       Fail("Cannot import column: invalid column type");
-      return {};
   }
 }
 
@@ -166,7 +165,6 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
       return std::make_shared<FittedAttributeVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
-      return {};
   }
 }
 

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
 
@@ -19,6 +20,18 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const C
 
 const std::string Projection::name() const { return "Projection"; }
 
+const std::string Projection::description() const {
+  std::stringstream desc;
+  desc << "[Projection] ";
+  for (size_t expression_idx = 0; expression_idx < _column_expressions.size(); ++expression_idx) {
+    desc << _column_expressions[expression_idx]->description();
+    if (expression_idx + 1 < _column_expressions.size()) {
+      desc << ", ";
+    }
+  }
+  return desc.str();
+}
+
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
@@ -27,10 +40,10 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 
 template <typename T>
 void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
-                                const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
-                                std::shared_ptr<const Table> input_table_left) {
+                                const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
+                                std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
-  if (expression->type() == ExpressionType::Column) {
+  if (reuse_column_from_input) {
     // we have to use get_mutable_column here because we cannot add a const column to the chunk
     auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
     return chunk->add_column(bypassed_column);
@@ -68,6 +81,7 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   auto output = std::make_shared<Table>();
+  auto reuse_column_from_input = true;
 
   // Prepare terms and output table for each column to project
   for (const auto& column_expression : _column_expressions) {
@@ -81,6 +95,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       name = column_expression->to_string(_input_table_left()->column_names());
     } else {
       Fail("Expression type is not supported.");
+    }
+
+    if (column_expression->type() != ExpressionType::Column) {
+      reuse_column_from_input = false;
     }
 
     const auto type = _get_type_of_expression(column_expression, _input_table_left());
@@ -103,7 +121,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
-        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left());
+        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
+                       reuse_column_from_input);
       });
     }
 
@@ -113,7 +132,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   return output;
 }
 
-DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& expression,
+DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                              const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
@@ -143,7 +162,8 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& 
 
 template <typename T>
 const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
-    const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id) {
+    const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
+    const ChunkID chunk_id) {
   /**
    * Handle Literal
    * This is only used if the Literal represents a constant column, e.g. in 'SELECT 5 FROM table_a'.
@@ -244,7 +264,6 @@ std::function<T(const T&, const T&)> Projection::_get_base_operator_function(Exp
 
     default:
       Fail("Unknown arithmetic operator");
-      return {};
   }
 }
 

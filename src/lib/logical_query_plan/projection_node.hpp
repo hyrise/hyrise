@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class Expression;
+class LQPExpression;
 struct ColumnID;
 
 /**
@@ -18,27 +18,25 @@ struct ColumnID;
  */
 class ProjectionNode : public AbstractLQPNode {
  public:
-  explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
+  explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
 
-  const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
+  const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
 
   std::string description() const override;
-  const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
+
+  const std::vector<LQPColumnReference>& output_column_references() const override;
   const std::vector<std::string>& output_column_names() const override;
-
-  std::optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference& named_column_reference) const override;
-
-  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
   void _on_child_changed() override;
 
  private:
-  std::vector<std::shared_ptr<Expression>> _column_expressions;
+  std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 
