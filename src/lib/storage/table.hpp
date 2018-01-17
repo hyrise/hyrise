@@ -117,18 +117,16 @@ class Table : private Noncopyable {
 
     Assert(column_id < column_count(), "column_id invalid");
 
-    // size_t row_counter = 0u;
-    // for (auto& chunk : _chunks) {
-    //   size_t current_size = chunk.size();
-    //   row_counter += current_size;
-    //   if (row_counter > row_number) {
-    //     return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
-    //   }
-    // }
-    // Fail("Row does not exist.");
-    // return {};
-
-    return get<T>(_partition_schema->get_value(column_id, row_number));
+    size_t row_counter = 0u;
+    for (auto chunk : _chunks) {
+      size_t current_size = chunk->size();
+      row_counter += current_size;
+      if (row_counter > row_number) {
+        return get<T>((*chunk->get_column(column_id))[row_number + current_size - row_counter]);
+      }
+    }
+    Fail("Row does not exist.");
+    return {};
   }
 
   std::unique_lock<std::mutex> acquire_append_mutex();
@@ -147,6 +145,7 @@ class Table : private Noncopyable {
   // partitioning
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                 const size_t number_of_partitions);
+  void create_null_partitioning();
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
   void create_round_robin_partitioning(const size_t number_of_partitions);
 
@@ -158,7 +157,7 @@ class Table : private Noncopyable {
 
  protected:
   const uint32_t _max_chunk_size;
-  std::vector<Chunk> _chunks;
+  std::vector<std::shared_ptr<Chunk>> _chunks;
 
   // Stores the number of invalid (deleted) rows.
   // This is currently not an atomic due to performance considerations.
@@ -176,5 +175,7 @@ class Table : private Noncopyable {
   std::unique_ptr<std::mutex> _append_mutex;
 
   std::shared_ptr<PartitionSchema> _partition_schema;
+
+  void create_initial_chunks(PartitionID number_of_partitions);
 };
 }  // namespace opossum
