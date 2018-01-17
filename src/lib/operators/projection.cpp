@@ -20,7 +20,7 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const C
 
 const std::string Projection::name() const { return "Projection"; }
 
-const std::string Projection::description() const {
+const std::string Projection::description(DescriptionMode description_mode) const {
   std::stringstream desc;
   desc << "[Projection] ";
   for (size_t expression_idx = 0; expression_idx < _column_expressions.size(); ++expression_idx) {
