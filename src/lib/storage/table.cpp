@@ -78,8 +78,7 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   auto partition_id = _partition_schema->get_matching_partition_for(values);
-  auto partition = _partition_schema->get_partition(partition_id);
-  auto last_chunk = partition->last_chunk();
+  auto last_chunk = _partition_schema->last_chunk(partition_id);
   if(last_chunk->size() >= max_chunk_size()) {
     create_new_chunk(partition_id);
   }

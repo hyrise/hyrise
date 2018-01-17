@@ -13,4 +13,9 @@ std::shared_ptr<Partition> PartitionSchema::get_partition(PartitionID partition_
   return _partitions[partition_id];
 }
 
+std::shared_ptr<Chunk> PartitionSchema::last_chunk(PartitionID partition_id) {
+  DebugAssert(partition_id < _partitions.size(), "Partition ID exceeds number of partitions");
+  return _partitions[partition_id]->last_chunk();
+}
+
 }  // namespace opossum
