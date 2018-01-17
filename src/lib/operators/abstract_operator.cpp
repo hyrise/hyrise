@@ -128,8 +128,8 @@ void AbstractOperator::print(std::ostream& stream) const {
 void AbstractOperator::_on_cleanup() {}
 
 void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
-                 std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
-                 size_t& id_counter) const {
+                                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
+                                   size_t& id_counter) const {
   /**
    * NOTE: Code taken from AbstractLQPNode::_print_impl() - would know how we could cleanly make it reusable, so C/P it
    * is
@@ -166,7 +166,8 @@ void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
   // If the operator was already executed, print some info about data and performance
   const auto output = get_output();
   if (output) {
-    out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << _performance_data.walltime_ns << "ns)";
+    out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+        << _performance_data.walltime_ns << "ns)";
   }
 
   out << std::endl;

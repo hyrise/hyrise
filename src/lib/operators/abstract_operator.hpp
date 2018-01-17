@@ -92,8 +92,7 @@ class AbstractOperator : private Noncopyable {
   virtual void _on_cleanup();
 
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
-                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
-                   size_t& id_counter) const;
+                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;

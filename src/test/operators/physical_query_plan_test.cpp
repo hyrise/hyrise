@@ -2,17 +2,15 @@
 
 #include "gtest/gtest.h"
 
-#include "storage/storage_manager.hpp"
-#include "utils/load_table.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
-class PhysicalQueryPlanTest : public ::testing::Test {
-
-};
+class PhysicalQueryPlanTest : public ::testing::Test {};
 
 TEST_F(PhysicalQueryPlanTest, Print) {
   StorageManager::get().add_table("int_int_int_100", load_table("src/test/tables/sqlite/int_int_int_100.tbl", 20));
@@ -32,5 +30,4 @@ TEST_F(PhysicalQueryPlanTest, Print) {
     \_Recurring Operator --> [2]
 )");
 }
-
-}
+}  // namespace opossum
