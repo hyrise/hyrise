@@ -5,12 +5,12 @@
 #include <memory>
 
 #include "storage/base_column_encoder.hpp"
-
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/fitted_attribute_vector.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
+
+#include "fitted_attribute_vector.hpp"
 
 namespace opossum {
 

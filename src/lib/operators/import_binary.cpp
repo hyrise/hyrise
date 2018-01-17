@@ -15,7 +15,7 @@
 #include "import_export/binary.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/fitted_attribute_vector.hpp"
+#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 

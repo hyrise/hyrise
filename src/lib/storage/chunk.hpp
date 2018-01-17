@@ -12,10 +12,10 @@
 #include <string>
 #include <vector>
 
-#include "copyable_atomic.hpp"
 #include "index/column_index_type.hpp"
-#include "scoped_locking_ptr.hpp"
 
+#include "utils/copyable_atomic.hpp"
+#include "utils/scoped_locking_ptr.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
 

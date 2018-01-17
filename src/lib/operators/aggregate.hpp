@@ -12,7 +12,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_attribute_vector.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"

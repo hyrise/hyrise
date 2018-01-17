@@ -4,8 +4,9 @@
 #include <vector>
 
 #include "storage/column_iterables.hpp"
-#include "storage/base_attribute_vector.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
+
+#include "base_attribute_vector.hpp"
 
 namespace opossum {
 

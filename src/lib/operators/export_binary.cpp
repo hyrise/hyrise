@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/fitted_attribute_vector.hpp"
+#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"

@@ -196,7 +196,7 @@ set(
     sql/sql_result_operator.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_attribute_vector.hpp
+    storage/deprecated_dictionary_column/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/base_deprecated_dictionary_column.hpp
     storage/base_value_column.hpp
@@ -205,12 +205,12 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/column_visitable.hpp
-    storage/copyable_atomic.hpp
+    utils/copyable_atomic.hpp
     storage/deprecated_dictionary_column.cpp
     storage/deprecated_dictionary_column.hpp
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
-    storage/fitted_attribute_vector.hpp
+    storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
     storage/base_column_encoder.hpp
     storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
     storage/dictionary_column/dictionary_encoder.hpp
@@ -294,7 +294,7 @@ set(
     storage/proxy_chunk.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
-    storage/scoped_locking_ptr.hpp
+    utils/scoped_locking_ptr.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table.cpp

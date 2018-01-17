@@ -8,7 +8,7 @@
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "json.hpp"
-#include "storage/base_attribute_vector.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 
