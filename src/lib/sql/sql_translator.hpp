@@ -65,7 +65,6 @@ class SQLTranslator final : public Noncopyable {
 
   static AllParameterVariant translate_hsql_operand(
       const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node = std::nullopt);
-  static int64_t resolve_expr_operator(const hsql::Expr& expr);
 
  protected:
   std::shared_ptr<AbstractLQPNode> _translate_select(const hsql::SelectStatement& select);

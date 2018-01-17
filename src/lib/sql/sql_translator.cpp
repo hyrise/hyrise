@@ -486,58 +486,11 @@ AllParameterVariant SQLTranslator::translate_hsql_operand(
       return NULL_VALUE;
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
-    case hsql::kExprOperator:
-      return AllTypeVariant(resolve_expr_operator(expr));
     case hsql::kExprColumnRef:
       Assert(input_node, "Cannot generate ColumnID without input_node");
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
       Fail("Could not translate expression: type not supported.");
-      return {};
-  }
-}
-
-int64_t SQLTranslator::resolve_expr_operator(const hsql::Expr& expr) {
-  const auto expr0 = expr.expr;
-  const auto expr1 = expr.expr2;
-
-  auto result0 = int64_t{};
-
-  if (expr0->type == hsql::kExprOperator) {
-    result0 = resolve_expr_operator(*expr0);
-  } else if (expr0->type == hsql::kExprLiteralInt) {
-    result0 = expr0->ival;
-  } else {
-    Fail("Could not translate expression: operands must be integers.");
-    return {};
-  }
-
-  auto result1 = int64_t{};
-
-  if (expr1->type == hsql::kExprOperator) {
-    result1 = resolve_expr_operator(*expr1);
-  } else if (expr1->type == hsql::kExprLiteralInt) {
-    result1 = expr1->ival;
-  } else {
-    Fail("Could not translate expression: operands must be integers.");
-    return {};
-  }
-
-  switch (expr.opType) {
-    case hsql::kOpPlus:
-      return result0 + result1;
-    case hsql::kOpMinus:
-      return result0 - result1;
-    case hsql::kOpAsterisk:
-      return result0 * result1;
-    case hsql::kOpSlash:
-      return result0 / result1;
-    case hsql::kOpPercentage:
-      return result0 % result1;
-    case hsql::kOpCaret:
-      return result0 ^ result1;
-    default:
-      Fail("Could not translate expression: operator type not supported.");
       return {};
   }
 }
@@ -978,11 +931,23 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
   }
 
+  auto current_node = input_node;
+
   AllParameterVariant value;
   if (scan_type == ScanType::IsNull || scan_type == ScanType::IsNotNull) {
     value = NULL_VALUE;
   } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
+  } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {
+    auto column_expressions = Expression::create_columns(current_node->get_output_column_ids());
+    column_expressions.push_back(SQLExpressionTranslator::translate_expression(*value_ref_hsql_expr, current_node));
+
+    auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
+    projection_node->set_left_child(current_node);
+    current_node = projection_node;
+
+    DebugAssert(column_expressions.size() <= std::numeric_limits<uint16_t>::max(), "Number of column expressions cannot exceed maximum value of ColumnID.");
+    value = ColumnID{static_cast<uint16_t>(column_expressions.size()-1)};
   } else {
     value = translate_hsql_operand(*value_ref_hsql_expr);
   }
@@ -995,7 +960,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   const auto column_id = resolve_column(*column_ref_hsql_expr);
 
   auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
-  predicate_node->set_left_child(input_node);
+  predicate_node->set_left_child(current_node);
 
   return predicate_node;
 }
