@@ -36,11 +36,12 @@ class ChunkEncoder {
    *
    * Encodes a chunk using the passed encoding specifications.
    * Reduces also the fragmentation of the chunk’s MVCC columns.
-   * All columns of the chunk need to be of type ValueColumn<T>
+   * All columns of the chunk need to be of type ValueColumn<T>,
+   * i.e., recompression is not yet supported.
    *
    * Note: In some cases, it might be benificial to
    *       leave certain columns of a chunk unencoded.
-   *       Use EncodingType::Invalid in this case.
+   *       Use EncodingType::Unencoded in this case.
    */
   static void encode_chunk(Chunk& chunk, const std::vector<DataType>& data_types,
                            const ChunkEncodingSpec& encoding_spec);

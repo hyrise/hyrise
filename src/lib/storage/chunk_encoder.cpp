@@ -23,13 +23,13 @@ void ChunkEncoder::encode_chunk(Chunk& chunk, const std::vector<DataType>& data_
   for (ColumnID column_id{0}; column_id < chunk.column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
-    if (spec.encoding_type == EncodingType::Invalid) continue;
+    if (spec.encoding_type == EncodingType::Unencoded) continue;
 
     const auto data_type = data_types[column_id];
     const auto base_column = chunk.get_column(column_id);
     const auto value_column = std::dynamic_pointer_cast<const BaseValueColumn>(base_column);
 
-    Assert(value_column != nullptr, "One of the columns in the passed chunk is not a value column.");
+    Assert(value_column != nullptr, "All columns of the chunk need to be of type ValueColumn<T>");
 
     auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.zs_type);
     chunk.replace_column(column_id, encoded_column);

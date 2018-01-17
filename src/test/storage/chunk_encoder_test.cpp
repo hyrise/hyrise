@@ -41,7 +41,7 @@ class ChunkEncoderTest : public BaseTest {
       const auto column = chunk.get_column(column_id);
       const auto column_spec = spec.at(column_id);
 
-      if (column_spec.encoding_type == EncodingType::Invalid) {
+      if (column_spec.encoding_type == EncodingType::Unencoded) {
         const auto value_column = std::dynamic_pointer_cast<const BaseValueColumn>(column);
         EXPECT_NE(value_column, nullptr);
       } else {
@@ -70,7 +70,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
 
 TEST_F(ChunkEncoderTest, LeaveOneColumnUnencoded) {
   const auto chunk_encoding_spec =
-      ChunkEncodingSpec{{EncodingType::Invalid}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
+      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto data_types = _table->column_types();
   auto& chunk = _table->get_chunk(ChunkID{0u});
@@ -82,7 +82,7 @@ TEST_F(ChunkEncoderTest, LeaveOneColumnUnencoded) {
 
 TEST_F(ChunkEncoderTest, EncodeWholeTable) {
   const auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{
-      {{EncodingType::Invalid}, {EncodingType::RunLength}, {EncodingType::Dictionary}},
+      {{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}},
       {{EncodingType::RunLength}, {EncodingType::RunLength}, {EncodingType::Dictionary}},
       {{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}}};
 
@@ -99,7 +99,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   const auto chunk_ids = std::vector<ChunkID>{ChunkID{0u}, ChunkID{2u}};
 
   const auto chunk_encoding_specs = std::map<ChunkID, ChunkEncodingSpec>{
-      {ChunkID{0u}, {{EncodingType::Invalid}, {EncodingType::RunLength}, {EncodingType::Invalid}}},
+      {ChunkID{0u}, {{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Unencoded}}},
       {ChunkID{2u}, {{EncodingType::Dictionary}, {EncodingType::Dictionary}, {EncodingType::RunLength}}}};
 
   ChunkEncoder::encode_chunks(*_table, chunk_ids, chunk_encoding_specs);
@@ -111,7 +111,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   }
 
   const auto unencoded_chunk_spec =
-      ChunkEncodingSpec{{EncodingType::Invalid}, {EncodingType::Invalid}, {EncodingType::Invalid}};
+      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}};
 
   verify_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
 }
