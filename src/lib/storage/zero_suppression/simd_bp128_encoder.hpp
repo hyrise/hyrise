@@ -12,13 +12,14 @@ namespace opossum {
 
 class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
  public:
-  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
-                                                    const PolymorphicAllocator<size_t>& alloc) final;
+  std::unique_ptr<BaseZeroSuppressionVector> encode(const PolymorphicAllocator<size_t>& alloc,
+                                                    const pmr_vector<uint32_t>& vector,
+                                                    const ZsVectorMetaInfo& meta_info = {}) final;
 
  private:
   using Packing = SimdBp128Packing;
 
-  void init(size_t size);
+  void init(size_t size, const PolymorphicAllocator<size_t>& alloc);
   void append(uint32_t value);
   void finish();
 
@@ -31,7 +32,7 @@ class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
   void pack_blocks(const uint8_t num_blocks, const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed);
 
  private:
-  pmr_vector<uint128_t> _data;
+  std::unique_ptr<pmr_vector<uint128_t>> _data;
   size_t _data_index;
 
   std::array<uint32_t, Packing::meta_block_size> _pending_meta_block;

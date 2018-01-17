@@ -4,7 +4,7 @@
 #include <limits>
 #include <memory>
 
-#include "base_column_encoder.hpp"
+#include "storage/base_column_encoder.hpp"
 
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/fitted_attribute_vector.hpp"
@@ -17,13 +17,16 @@ namespace opossum {
 class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::DeprecatedDictionary>;
+  static constexpr auto _uses_zero_suppression = false;
 
   template <typename T>
-  std::shared_ptr<BaseColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()};
+    const auto alloc = values.get_allocator();
+
+    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -47,7 +50,7 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
     dictionary.shrink_to_fit();
 
     // We need to increment the dictionary size here because of possible null values.
-    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size());
+    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size(), alloc);
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -77,7 +80,7 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
       }
     }
 
-    return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), attribute_vector);
+    return std::allocate_shared<DeprecatedDictionaryColumn<T>>(alloc, std::move(dictionary), attribute_vector);
   }
 
  private:
@@ -87,13 +90,14 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
 
-  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
+  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(
+      size_t unique_values_count, size_t size, const PolymorphicAllocator<size_t>& alloc) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint8_t>>(size);
+      return std::make_shared<FittedAttributeVector<uint8_t>>(size, alloc);
     } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint16_t>>(size);
+      return std::make_shared<FittedAttributeVector<uint16_t>>(size, alloc);
     } else {
-      return std::make_shared<FittedAttributeVector<uint32_t>>(size);
+      return std::make_shared<FittedAttributeVector<uint32_t>>(size, alloc);
     }
   }
 };

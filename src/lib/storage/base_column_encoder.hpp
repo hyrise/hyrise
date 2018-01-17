@@ -3,9 +3,12 @@
 #include <boost/hana/type.hpp>
 
 #include <memory>
+#include <type_traits>
 
 #include "storage/base_value_column.hpp"
-#include "storage/encoded_columns/column_encoding_type.hpp"
+#include "storage/base_encoded_column.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/zero_suppression/zs_type.hpp"
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
@@ -33,7 +36,17 @@ class BaseColumnEncoder {
    *
    * @return encoded column if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) = 0;
+  virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
+                                                    const std::shared_ptr<const BaseValueColumn>& column) = 0;
+
+  /**
+   * @defgroup Interface for selecting the used zero suppression type
+   * @{
+   */
+
+  virtual bool uses_zero_suppression() const = 0;
+  virtual void set_zs_type(ZsType zs_type) = 0;
+  /**@}*/
 };
 
 template <typename Derived>
@@ -50,8 +63,9 @@ class ColumnEncoder : public BaseColumnEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseColumn> encode(DataType data_type, const std::shared_ptr<BaseValueColumn>& column) final {
-    auto encoded_column = std::shared_ptr<BaseColumn>{};
+  std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
+                                            const std::shared_ptr<const BaseValueColumn>& column) final {
+    auto encoded_column = std::shared_ptr<BaseEncodedColumn>{};
     resolve_data_type(data_type, [&](auto type_obj) {
       const auto data_type_supported = this->supports(type_obj);
       // clang-format off
@@ -68,6 +82,14 @@ class ColumnEncoder : public BaseColumnEncoder {
     });
 
     return encoded_column;
+  }
+
+  bool uses_zero_suppression() const final { return Derived::_uses_zero_suppression; };
+
+  void set_zs_type(ZsType zs_type) final {
+    Assert(uses_zero_suppression(), "Zero suppression type can only be set if supported by encoder.");
+
+    _zs_type = zs_type;
   }
   /**@}*/
 
@@ -97,13 +119,19 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Compiles only for supported data types.
    */
   template <typename ColumnDataType>
-  std::shared_ptr<BaseColumn> encode(hana::basic_type<ColumnDataType> data_type,
-                                     const std::shared_ptr<BaseValueColumn>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> encode(hana::basic_type<ColumnDataType> data_type,
+                                            const std::shared_ptr<const BaseValueColumn>& value_column) {
     static_assert(decltype(supports(data_type))::value);
 
-    return _self()._on_encode(std::static_pointer_cast<ValueColumn<ColumnDataType>>(value_column));
+    return _self()._on_encode(std::static_pointer_cast<const ValueColumn<ColumnDataType>>(value_column));
   }
   /**@}*/
+
+ protected:
+  ZsType zs_type() const { return _zs_type; }
+
+ private:
+  ZsType _zs_type = ZsType::FixedSizeByteAligned;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }

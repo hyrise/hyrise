@@ -6,7 +6,7 @@
 
 #include "storage/chunk.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/chunk_offset_mapping.hpp"
 #include "storage/iterables/deprecated_attribute_vector_iterable.hpp"

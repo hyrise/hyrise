@@ -56,7 +56,7 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
 
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
     auto encoder = SimdBp128Encoder{};
-    auto encoded_vector = encoder.encode(vector, vector.get_allocator());
+    auto encoded_vector = encoder.encode(vector.get_allocator(), vector);
     EXPECT_EQ(encoded_vector->size(), vector.size());
 
     return encoded_vector;

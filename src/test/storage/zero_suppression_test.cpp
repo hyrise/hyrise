@@ -9,10 +9,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/zero_suppression/decoders.hpp"
 #include "storage/zero_suppression/encoders.hpp"
+#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
 #include "storage/zero_suppression/utils.hpp"
 #include "storage/zero_suppression/vectors.hpp"
+#include "storage/zero_suppression/zs_type.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -36,23 +37,17 @@ namespace {
 namespace hana = boost::hana;
 
 using ZsTypes =
-    ::testing::Types<enum_constant<ZsType, ZsType::SimdBp128>, enum_constant<ZsType, ZsType::FixedSize4ByteAligned>,
-                     enum_constant<ZsType, ZsType::FixedSize2ByteAligned>,
-                     enum_constant<ZsType, ZsType::FixedSize1ByteAligned>>;
+    ::testing::Types<enum_constant<ZsType, ZsType::SimdBp128>, enum_constant<ZsType, ZsType::FixedSizeByteAligned>>;
 
 constexpr auto range_for_zs_type =
     hana::make_map(hana::make_pair(enum_c<ZsType, ZsType::SimdBp128>, hana::make_pair(1'024, 34'624)),
-                   hana::make_pair(enum_c<ZsType, ZsType::FixedSize4ByteAligned>, hana::make_pair(1'024, 34'624)),
-                   hana::make_pair(enum_c<ZsType, ZsType::FixedSize2ByteAligned>, hana::make_pair(1'024, 34'624)),
-                   hana::make_pair(enum_c<ZsType, ZsType::FixedSize1ByteAligned>, hana::make_pair(0, 255)));
+                   hana::make_pair(enum_c<ZsType, ZsType::FixedSizeByteAligned>, hana::make_pair(1'024, 34'624)));
 
 template <typename ZsTypeT>
 class ZeroSuppressionTest : public BaseTest {
  protected:
-  static constexpr auto vector_t = hana::at_key(zs_vector_for_type, ZsTypeT{});
   static constexpr auto encoder_t = hana::at_key(zs_encoder_for_type, ZsTypeT{});
 
-  using VectorType = typename decltype(vector_t)::type;
   using EncoderType = typename decltype(encoder_t)::type;
 
  protected:
@@ -77,12 +72,23 @@ class ZeroSuppressionTest : public BaseTest {
 
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
     auto encoder = EncoderType{};
-    auto encoded_vector = encoder.encode(vector, vector.get_allocator());
+    auto encoded_vector = encoder.encode(vector.get_allocator(), vector, {max()});
     EXPECT_EQ(encoded_vector->size(), vector.size());
 
     return encoded_vector;
   }
 };
+
+template <typename ZeroSuppressionVectorT>
+void compare_using_iterator(const ZeroSuppressionVectorT& encoded_sequence,
+                            const pmr_vector<uint32_t>& expected_values) {
+  auto expected_it = expected_values.cbegin();
+  auto encoded_seq_it = encoded_sequence.cbegin();
+  const auto encoded_seq_end = encoded_sequence.cend();
+  for (; encoded_seq_it != encoded_seq_end; expected_it++, encoded_seq_it++) {
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
+  }
+}
 
 TYPED_TEST_CASE(ZeroSuppressionTest, ZsTypes);
 
@@ -90,15 +96,8 @@ TYPED_TEST(ZeroSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  auto encoded_sequence = dynamic_cast<typename TestFixture::VectorType*>(encoded_sequence_base.get());
-  EXPECT_NE(encoded_sequence, nullptr);
-
-  auto seq_it = sequence.cbegin();
-  auto encoded_seq_it = encoded_sequence->cbegin();
-  const auto encoded_seq_end = encoded_sequence->cend();
-  for (; encoded_seq_it != encoded_seq_end; seq_it++, encoded_seq_it++) {
-    EXPECT_EQ(*seq_it, *encoded_seq_it);
-  }
+  resolve_zs_vector_type(*encoded_sequence_base,
+                         [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
 TYPED_TEST(ZeroSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
@@ -119,15 +118,8 @@ TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingIterators) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  auto encoded_sequence = dynamic_cast<typename TestFixture::VectorType*>(encoded_sequence_base.get());
-  EXPECT_NE(encoded_sequence, nullptr);
-
-  auto seq_it = sequence.cbegin();
-  const auto seq_end = sequence.cend();
-  auto encoded_seq_it = encoded_sequence->cbegin();
-  for (; seq_it != seq_end; seq_it++, encoded_seq_it++) {
-    EXPECT_EQ(*seq_it, *encoded_seq_it);
-  }
+  resolve_zs_vector_type(*encoded_sequence_base,
+                         [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
 TYPED_TEST(ZeroSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {

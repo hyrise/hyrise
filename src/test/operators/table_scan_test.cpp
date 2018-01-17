@@ -14,7 +14,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
-#include "storage/encoded_columns/column_encoding_type.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

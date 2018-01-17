@@ -19,9 +19,7 @@ namespace opossum {
  * Note: Add your encoder class here!
  */
 constexpr auto zs_encoder_for_type = hana::make_map(
-    hana::make_pair(enum_c<ZsType, ZsType::FixedSize4ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint32_t>>),
-    hana::make_pair(enum_c<ZsType, ZsType::FixedSize2ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint16_t>>),
-    hana::make_pair(enum_c<ZsType, ZsType::FixedSize1ByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder<uint8_t>>),
+    hana::make_pair(enum_c<ZsType, ZsType::FixedSizeByteAligned>, hana::type_c<FixedSizeByteAlignedEncoder>),
     hana::make_pair(enum_c<ZsType, ZsType::SimdBp128>, hana::type_c<SimdBp128Encoder>));
 
 }  // namespace opossum

@@ -1,13 +1,15 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "all_type_variant.hpp"
-#include "storage/encoded_columns/column_encoding_type.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/zero_suppression/zs_type.hpp"
 
 namespace opossum {
 
-class BaseColumn;
+class BaseEncodedColumn;
 class BaseColumnEncoder;
 class BaseValueColumn;
 
@@ -21,7 +23,8 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type);
  *
  * @return encoded column if data type is supported else throws exception
  */
-std::shared_ptr<BaseColumn> encode_column(EncodingType encoding_type, DataType data_type,
-                                          std::shared_ptr<BaseValueColumn> column);
+std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
+                                                 std::shared_ptr<const BaseValueColumn> column,
+                                                 std::optional<ZsType> zero_suppression_type = {});
 
 }  // namespace opossum

@@ -202,6 +202,8 @@ set(
     storage/base_value_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
+    storage/chunk_encoder.cpp
+    storage/chunk_encoder.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
     storage/deprecated_dictionary_column.cpp
@@ -209,24 +211,23 @@ set(
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
-    storage/column_encoders/base_column_encoder.hpp
-    storage/column_encoders/deprecated_dictionary_encoder.hpp
-    storage/column_encoders/dictionary_encoder.hpp
-    storage/column_encoders/encoders.hpp
-    storage/column_encoders/run_length_encoder.hpp
-    storage/column_encoders/utils.cpp
-    storage/column_encoders/utils.hpp
-    storage/encoded_columns/base_dictionary_column.cpp
-    storage/encoded_columns/base_dictionary_column.hpp
-    storage/encoded_columns/base_encoded_column.cpp
-    storage/encoded_columns/base_encoded_column.hpp
-    storage/encoded_columns/column_encoding_type.hpp
-    storage/encoded_columns/dictionary_column.cpp
-    storage/encoded_columns/dictionary_column.hpp
-    storage/encoded_columns/encoded_columns.hpp
-    storage/encoded_columns/run_length_column.cpp
-    storage/encoded_columns/run_length_column.hpp
-    storage/encoded_columns/utils.hpp
+    storage/base_column_encoder.hpp
+    storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
+    storage/dictionary_column/dictionary_encoder.hpp
+    storage/run_length_column/run_length_encoder.hpp
+    storage/column_encoding_utils.cpp
+    storage/column_encoding_utils.hpp
+    storage/base_dictionary_column.cpp
+    storage/base_dictionary_column.hpp
+    storage/base_encoded_column.cpp
+    storage/base_encoded_column.hpp
+    storage/encoding_type.hpp
+    storage/dictionary_column.cpp
+    storage/dictionary_column.hpp
+    storage/encoded_columns.hpp
+    storage/run_length_column.cpp
+    storage/run_length_column.hpp
+    storage/resolve_encoded_column_type.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -264,16 +265,13 @@ set(
     storage/zero_suppression/base_zero_suppression_decoder.hpp
     storage/zero_suppression/base_zero_suppression_encoder.hpp
     storage/zero_suppression/base_zero_suppression_vector.hpp
+    storage/zero_suppression/encoders.hpp
     storage/zero_suppression/fixed_size_byte_aligned_decoder.hpp
+    storage/zero_suppression/fixed_size_byte_aligned_encoder.cpp
     storage/zero_suppression/fixed_size_byte_aligned_encoder.hpp
     storage/zero_suppression/fixed_size_byte_aligned_vector.hpp
-    storage/zero_suppression/decoders.hpp
-    storage/zero_suppression/encoders.hpp
-    storage/zero_suppression/zs_type.hpp
-    storage/zero_suppression/utils.cpp
-    storage/zero_suppression/utils.hpp
-    storage/zero_suppression/vectors.hpp
     storage/zero_suppression/oversized_types.hpp
+    storage/zero_suppression/resolve_zs_vector_type.hpp
     storage/zero_suppression/simd_bp128_decoder.cpp
     storage/zero_suppression/simd_bp128_decoder.hpp
     storage/zero_suppression/simd_bp128_encoder.cpp
@@ -284,6 +282,12 @@ set(
     storage/zero_suppression/simd_bp128_packing.hpp
     storage/zero_suppression/simd_bp128_vector.cpp
     storage/zero_suppression/simd_bp128_vector.hpp
+    storage/zero_suppression/utils.cpp
+    storage/zero_suppression/utils.hpp
+    storage/zero_suppression/vectors.hpp
+    storage/zero_suppression/zs_type.hpp
+    storage/zero_suppression/zs_vector_meta_info.hpp
+    storage/zero_suppression/zs_vector_type.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp

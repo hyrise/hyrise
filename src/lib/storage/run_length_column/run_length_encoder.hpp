@@ -4,9 +4,9 @@
 #include <string>
 #include <type_traits>
 
-#include "base_column_encoder.hpp"
+#include "storage/base_column_encoder.hpp"
 
-#include "storage/encoded_columns/run_length_column.hpp"
+#include "storage/run_length_column.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -17,9 +17,10 @@ namespace opossum {
 class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::RunLength>;
+  static constexpr auto _uses_zero_suppression = false;
 
   template <typename T>
-  std::shared_ptr<BaseColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     auto null_value = get_null_value<T>();
 
     const auto alloc = value_column->values().get_allocator();
@@ -50,6 +51,9 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
         ++current_index;
       }
     });
+
+    values.shrink_to_fit();
+    end_positions.shrink_to_fit();
 
     auto values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(values));
     auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(end_positions));

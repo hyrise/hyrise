@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "base_zero_suppression_decoder.hpp"
-#include "zs_type.hpp"
+#include "zs_vector_type.hpp"
 
 #include "types.hpp"
 
@@ -30,7 +30,7 @@ class BaseZeroSuppressionVector : private Noncopyable {
    */
   virtual size_t data_size() const = 0;
 
-  virtual ZsType type() const = 0;
+  virtual ZsVectorType type() const = 0;
 
   virtual pmr_vector<uint32_t> decode() const = 0;
 
@@ -61,7 +61,7 @@ class ZeroSuppressionVector : public BaseZeroSuppressionVector {
   size_t size() const final { return _self()._on_size(); }
   size_t data_size() const final { return _self()._on_data_size(); }
 
-  ZsType type() const final { return get_zs_type<Derived>(); }
+  ZsVectorType type() const final { return get_zs_vector_type<Derived>(); }
 
   pmr_vector<uint32_t> decode() const final {
     auto decoded_vector = pmr_vector<uint32_t>{};
@@ -80,7 +80,8 @@ class ZeroSuppressionVector : public BaseZeroSuppressionVector {
     return _self()._on_create_base_decoder();
   }
 
-  std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(
+      const PolymorphicAllocator<size_t>& alloc) const final {
     return _self()._on_copy_using_allocator(alloc);
   }
 

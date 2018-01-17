@@ -4,10 +4,11 @@
 #include <limits>
 #include <memory>
 
-#include "base_column_encoder.hpp"
+#include "storage/base_column_encoder.hpp"
 
-#include "storage/encoded_columns/dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
 #include "storage/zero_suppression/utils.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -23,13 +24,16 @@ namespace opossum {
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _uses_zero_suppression = true;
 
   template <typename T>
-  std::shared_ptr<BaseColumn> _on_encode(const std::shared_ptr<ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()};
+    const auto alloc = values.get_allocator();
+
+    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -84,13 +88,14 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     }
 
     // We need to increment the dictionary size here because of possible null values.
-    const auto zs_type = get_fixed_size_byte_aligned_encoding(dictionary.size() + 1u);
+    const auto max_value = dictionary.size() + 1u;
 
-    auto encoded_attribute_vector = encode_by_zs_type(zs_type, attribute_vector, attribute_vector.get_allocator());
+    auto encoded_attribute_vector = encode_by_zs_type(zs_type(), attribute_vector, alloc, {max_value});
 
-    auto dictionary_sptr = std::make_shared<pmr_vector<T>>(std::move(dictionary));
+    auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
-    return std::make_shared<DictionaryColumn<T>>(dictionary_sptr, attribute_vector_sptr, ValueID{null_value_id});
+    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                     ValueID{null_value_id});
   }
 
  private:
@@ -98,16 +103,6 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
-  }
-
-  ZsType get_fixed_size_byte_aligned_encoding(size_t unique_values_count) {
-    if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return ZsType::FixedSize1ByteAligned;
-    } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return ZsType::FixedSize2ByteAligned;
-    } else {
-      return ZsType::FixedSize4ByteAligned;
-    }
   }
 };
 

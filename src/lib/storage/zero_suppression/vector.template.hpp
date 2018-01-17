@@ -2,7 +2,7 @@
  * Zero Suppression Vector Template
  *
  * - Copy this file for a new zero suppression vector
- * - Add new vector vectors.hpp and zs_type.hpp
+ * - Add new vector vectors.hpp and zs_vector_type.hpp
  */
 #pragma once
 
@@ -26,7 +26,7 @@ class ZsVectorTemplate : public ZeroSuppressionVector<ZsVectorTemplate> {
   auto _on_create_base_decoder() const { return std::unique_ptr<BaseZeroSuppressionDecoder>{_on_create_decoder()}; }
 
   // TODO(you): Decoder must inherit from BaseZeroSuppressionDecoder
-  auto _on_create_decoder() const { return std::make_unique<ZsVectorTemplate>(_data); }
+  auto _on_create_decoder() const { return std::make_unique<ZsVectorDecoderTemplate>(_data); }
 
   // TODO(you): Return a constant forward iterator returning uint32_t
   auto _on_cbegin() const { return _data.cbegin(); }

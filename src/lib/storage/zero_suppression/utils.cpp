@@ -12,7 +12,7 @@ namespace opossum {
 namespace {
 
 std::unique_ptr<BaseZeroSuppressionEncoder> create_encoder_by_zs_type(ZsType type) {
-  Assert(type != ZsType::Invalid, "ZsType must be valid.");
+  Assert(type != ZsType::Invalid, "ZsVectorType must be valid.");
 
   auto encoder = std::unique_ptr<BaseZeroSuppressionEncoder>{};
 
@@ -35,9 +35,10 @@ std::unique_ptr<BaseZeroSuppressionEncoder> create_encoder_by_zs_type(ZsType typ
 }  // namespace
 
 std::unique_ptr<BaseZeroSuppressionVector> encode_by_zs_type(ZsType type, const pmr_vector<uint32_t>& vector,
-                                                             const PolymorphicAllocator<size_t>& alloc) {
+                                                             const PolymorphicAllocator<size_t>& alloc,
+                                                             const ZsVectorMetaInfo& meta_info) {
   auto encoder = create_encoder_by_zs_type(type);
-  return encoder->encode(vector, alloc);
+  return encoder->encode(alloc, vector, meta_info);
 }
 
 }  // namespace opossum

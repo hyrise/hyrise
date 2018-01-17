@@ -6,10 +6,8 @@
 
 #include "iterables.hpp"
 
-#include "storage/encoded_columns/dictionary_column.hpp"
-#include "storage/zero_suppression/decoders.hpp"
-#include "storage/zero_suppression/utils.hpp"
-#include "storage/zero_suppression/vectors.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
 
 namespace opossum {
 

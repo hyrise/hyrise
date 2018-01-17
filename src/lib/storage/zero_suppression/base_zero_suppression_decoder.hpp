@@ -8,8 +8,6 @@ namespace opossum {
 
 /**
  * @brief Base class of all zero suppression decoders
- *
- * Subclasses must be added in decoders.hpp
  */
 class BaseZeroSuppressionDecoder {
  public:

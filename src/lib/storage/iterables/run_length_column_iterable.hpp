@@ -4,7 +4,7 @@
 
 #include "iterables.hpp"
 
-#include "storage/encoded_columns/run_length_column.hpp"
+#include "storage/run_length_column.hpp"
 
 namespace opossum {
 
