@@ -99,24 +99,24 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     NullValueIterator _null_value_it;
   };
 
-  class NonNullPointAccessIterator : public BasePointAccessColumnIterator<NonNullPointAccessIterator, NonNullColumnIteratorValue<T>> {
+  class NonNullPointAccessIterator : public BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>> {
    public:
     using ValueVector = pmr_concurrent_vector<T>;
 
    public:
     explicit NonNullPointAccessIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<NonNullPointAccessIterator, NonNullColumnIteratorValue<T>>{chunk_offsets_it}, _values{values} {}
+        : BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it}, _values{values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    NonNullColumnIteratorValue<T> dereference() const {
+    ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return NonNullColumnIteratorValue<T>{T{}, chunk_offsets.into_referencing};
+        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      return NonNullColumnIteratorValue<T>{_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
+      return ColumnIteratorValue<T>{_values[chunk_offsets.into_referenced], false, chunk_offsets.into_referencing};
     }
 
    private:
