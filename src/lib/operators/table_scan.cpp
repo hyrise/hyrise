@@ -55,7 +55,7 @@ const std::string TableScan::description(DescriptionMode description_mode) const
 
   std::string predicate_string = to_string(_right_parameter);
 
-  const auto separator = description_mode == DescriptionMode::MultiLine ?  "\\n" : " ";
+  const auto separator = description_mode == DescriptionMode::MultiLine ?  "\n" : " ";
   return name() + separator + "(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
 }
 

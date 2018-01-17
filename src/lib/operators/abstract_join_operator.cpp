@@ -29,9 +29,9 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
   if (_input_table_left()) column_name_left = _input_table_left()->column_name(_column_ids.first);
   if (_input_table_right()) column_name_right = _input_table_right()->column_name(_column_ids.second);
 
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\\n(" : " ";
+  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
-  return name() + separator + join_mode_to_string.at(_mode) + " Join where " + column_name_left + " " +
+  return name() + separator + "(" + join_mode_to_string.at(_mode) + " Join where " + column_name_left + " " +
          scan_type_to_string.left.at(_scan_type) + " " + column_name_right + ")";
 }
 

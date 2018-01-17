@@ -161,10 +161,15 @@ void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
   id_counter++;
   id_by_operator.emplace(this, this_node_id);
 
-  /**
-   *
-   */
-  out << "[" << this_node_id << "] " << description() << " in " << _performance_data.walltime_ns << "ns" << std::endl;
+  out << "[" << this_node_id << "] " << description();
+
+  // If the operator was already executed, print some info about data and performance
+  const auto output = get_output();
+  if (output) {
+    out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << _performance_data.walltime_ns << "ns)";
+  }
+
+  out << std::endl;
 
   levels.emplace_back(input_right() != nullptr);
 

@@ -25,10 +25,10 @@ TEST_F(PhysicalQueryPlanTest, Print) {
   std::stringstream stream;
   union_positions->print(stream);
 
-  EXPECT_EQ(stream.str(), R"([0] UnionPositions in 0ns
- \_[1] TableScan (Col #0 > 20) in 0ns
- |  \_[2] GetTable (int_int_int_100) in 0ns
- \_[3] TableScan (Col #1 > 30) in 0ns
+  EXPECT_EQ(stream.str(), R"([0] UnionPositions
+ \_[1] TableScan (Col #0 > 20)
+ |  \_[2] GetTable (int_int_int_100)
+ \_[3] TableScan (Col #1 > 30)
     \_Recurring Operator --> [2]
 )");
 }
