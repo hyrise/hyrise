@@ -33,7 +33,7 @@ const std::vector<ColumnID>& Aggregate::groupby_column_ids() const { return _gro
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 
-const std::string Aggregate::description() const {
+const std::string Aggregate::description(DescriptionMode description_mode) const {
   std::stringstream desc;
   desc << "[Aggregate] GroupBy ColumnIDs: ";
   for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
