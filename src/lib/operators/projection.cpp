@@ -41,9 +41,9 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 template <typename T>
 void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
                                 const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
-                                std::shared_ptr<const Table> input_table_left) {
+                                std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
-  if (expression->type() == ExpressionType::Column) {
+  if (reuse_column_from_input) {
     // we have to use get_mutable_column here because we cannot add a const column to the chunk
     auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
     return chunk->add_column(bypassed_column);
@@ -81,6 +81,7 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   auto output = std::make_shared<Table>();
+  auto reuse_column_from_input = true;
 
   // Prepare terms and output table for each column to project
   for (const auto& column_expression : _column_expressions) {
@@ -94,6 +95,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       name = column_expression->to_string(_input_table_left()->column_names());
     } else {
       Fail("Expression type is not supported.");
+    }
+
+    if (column_expression->type() != ExpressionType::Column) {
+      reuse_column_from_input = false;
     }
 
     const auto type = _get_type_of_expression(column_expression, _input_table_left());
@@ -116,7 +121,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
-        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left());
+        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
+                       reuse_column_from_input);
       });
     }
 
