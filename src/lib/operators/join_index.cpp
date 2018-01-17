@@ -89,6 +89,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
 
     Assert(indices.size() >= 1, "No index found for the right column");
 
+    // We assume the first index to be good. Evaluating index performance is not task of the join.
     const auto index = indices.front();
 
     Assert(index != nullptr, "Index of specified type not found for column (vector).");
