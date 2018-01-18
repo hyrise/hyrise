@@ -2,12 +2,12 @@
 
 #include "all_type_variant.hpp"
 #include "hash_function.hpp"
-#include "storage/partitioning/partition_schema.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class HashPartitionSchema : public PartitionSchema {
+class HashPartitionSchema : public AbstractPartitionSchema {
  public:
   HashPartitionSchema(ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);
 

@@ -264,6 +264,6 @@ ChunkID Table::get_chunk_id(const Chunk& chunk) const {
   }
 }
 
-const std::shared_ptr<PartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
+const std::shared_ptr<AbstractPartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
 
 }  // namespace opossum

@@ -2,12 +2,12 @@
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
-#include "storage/partitioning/partition_schema.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "storage/proxy_chunk.hpp"
 
 namespace opossum {
 
-class NullPartitionSchema : public PartitionSchema {
+class NullPartitionSchema : public AbstractPartitionSchema {
  public:
   NullPartitionSchema();
 

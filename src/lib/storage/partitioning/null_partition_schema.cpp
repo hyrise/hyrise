@@ -7,7 +7,7 @@ NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_
 std::string NullPartitionSchema::name() const { return "NullPartition"; }
 
 void NullPartitionSchema::append(std::vector<AllTypeVariant> values) {
-  PartitionSchema::append(values, PartitionID{0});
+  AbstractPartitionSchema::append(values, PartitionID{0});
 }
 
 }  // namespace opossum

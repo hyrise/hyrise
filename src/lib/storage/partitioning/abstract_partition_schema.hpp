@@ -8,13 +8,13 @@
 
 namespace opossum {
 
-class PartitionSchema {
+class AbstractPartitionSchema {
  public:
-  PartitionSchema() = default;
-  virtual ~PartitionSchema() = default;
+  AbstractPartitionSchema() = default;
+  virtual ~AbstractPartitionSchema() = default;
 
-  PartitionSchema(PartitionSchema&&) = default;
-  PartitionSchema& operator=(PartitionSchema&&) = default;
+  AbstractPartitionSchema(AbstractPartitionSchema&&) = default;
+  AbstractPartitionSchema& operator=(AbstractPartitionSchema&&) = default;
 
   virtual std::string name() const = 0;
   uint16_t partition_count() const;

@@ -282,8 +282,8 @@ set(
     hash_function.cpp
     storage/partitioning/partition.cpp
     storage/partitioning/partition.hpp
-    storage/partitioning/partition_schema.cpp
-    storage/partitioning/partition_schema.hpp
+    storage/partitioning/abstract_partition_schema.cpp
+    storage/partitioning/abstract_partition_schema.hpp
     storage/partitioning/hash_partition_schema.cpp
     storage/partitioning/hash_partition_schema.hpp
     storage/partitioning/range_partition_schema.cpp

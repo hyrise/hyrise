@@ -1,12 +1,12 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "storage/partitioning/partition_schema.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class RoundRobinPartitionSchema : public PartitionSchema {
+class RoundRobinPartitionSchema : public AbstractPartitionSchema {
  public:
   explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 

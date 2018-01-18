@@ -1,12 +1,12 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "storage/partitioning/partition_schema.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class RangePartitionSchema : public PartitionSchema {
+class RangePartitionSchema : public AbstractPartitionSchema {
  public:
   RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
 

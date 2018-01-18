@@ -14,7 +14,7 @@ HashPartitionSchema::HashPartitionSchema(ColumnID column_id, HashFunction hash_f
 std::string HashPartitionSchema::name() const { return "HashPartition"; }
 
 void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
-  PartitionSchema::append(values, get_matching_partition_for(values));
+  AbstractPartitionSchema::append(values, get_matching_partition_for(values));
 }
 
 PartitionID HashPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {

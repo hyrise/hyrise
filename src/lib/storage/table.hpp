@@ -10,7 +10,7 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
-#include "storage/partitioning/partition_schema.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -150,7 +150,7 @@ class Table : private Noncopyable {
   void create_round_robin_partitioning(const size_t number_of_partitions);
 
   bool is_partitioned() const;
-  const std::shared_ptr<PartitionSchema> get_partition_schema() const;
+  const std::shared_ptr<AbstractPartitionSchema> get_partition_schema() const;
 
   void remove_partitioning();
   uint16_t partition_count() const;
@@ -175,7 +175,7 @@ class Table : private Noncopyable {
 
   std::unique_ptr<std::mutex> _append_mutex;
 
-  std::shared_ptr<PartitionSchema> _partition_schema;
+  std::shared_ptr<AbstractPartitionSchema> _partition_schema;
 
   void create_initial_chunks(PartitionID number_of_partitions);
 };

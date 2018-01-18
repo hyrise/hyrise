@@ -14,7 +14,7 @@ RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTy
 std::string RangePartitionSchema::name() const { return "RangePartition"; }
 
 void RangePartitionSchema::append(std::vector<AllTypeVariant> values) {
-  PartitionSchema::append(values, get_matching_partition_for(values));
+  AbstractPartitionSchema::append(values, get_matching_partition_for(values));
 }
 
 PartitionID RangePartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
