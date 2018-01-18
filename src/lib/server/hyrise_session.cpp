@@ -10,9 +10,11 @@
 #include "sql/sql_pipeline.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
+#include "tasks/server/load_server_file_task.hpp"
 #include "tasks/server/send_query_response_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -171,18 +173,24 @@ void HyriseSession::pipeline_info(const std::string& notice) {
 void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) {
   _sql_pipeline = std::move(sql_pipeline);
 
-  const std::vector<std::shared_ptr<ServerTask>> tasks = {
+  const std::vector<std::shared_ptr<ExecuteServerQueryTask>> tasks = {
       std::make_shared<ExecuteServerQueryTask>(_self, *_sql_pipeline)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::query_executed() {
-  const std::vector<std::shared_ptr<ServerTask>> tasks = {
+  const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
       std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::query_response_sent() { send_ready_for_query(); }
+
+void HyriseSession::load_table_file(const std::string& file_name, const std::string& table_name) {
+  const std::vector<std::shared_ptr<LoadServerFileTask>> tasks = {
+      std::make_shared<LoadServerFileTask>(_self, file_name, table_name)};
+  CurrentScheduler::schedule_tasks(tasks);
+}
 
 void HyriseSession::pipeline_error(const std::string& error_msg) {
   send_error(error_msg);

@@ -1,5 +1,7 @@
 #include "create_pipeline_task.hpp"
 
+#include <boost/algorithm/string.hpp>
+
 #include "sql/sql_pipeline.hpp"
 
 namespace opossum {
@@ -9,10 +11,35 @@ void CreatePipelineTask::_on_execute() {
   try {
     sql_pipeline = std::make_unique<SQLPipeline>(_sql);
   } catch (const std::exception& exception) {
+    // Try LOAD file_name table_name
+    if (_is_load_table()) {
+      return _session->load_table_file(_file_name, _table_name);
+    }
+
     return _session->pipeline_error(exception.what());
   }
 
   _session->pipeline_created(std::move(sql_pipeline));
+}
+
+bool CreatePipelineTask::_is_load_table() {
+  std::vector<std::string> words;
+  boost::split(words, _sql, boost::is_any_of(" "));
+
+  // We expect exactly LOAD file_name table_name
+  if (words.size() != 3) return false;
+  if (words[0] != "LOAD" && words[0] != "load") return false;
+
+  _file_name = std::move(words[1]);
+  _table_name = std::move(words[2]);
+
+  // Last character is always a \0-byte
+  _table_name.resize(_table_name.length() - 1);
+
+  // Remove semicolon if it is the last character
+  if (_table_name.back() == ';') _table_name.resize(_table_name.length() - 1);
+
+  return true;
 }
 
 }  // namespace opossum

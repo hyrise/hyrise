@@ -283,6 +283,8 @@ set(
     tasks/server/create_pipeline_task.hpp
     tasks/server/execute_server_query_task.cpp
     tasks/server/execute_server_query_task.hpp
+    tasks/server/load_server_file_task.cpp
+    tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

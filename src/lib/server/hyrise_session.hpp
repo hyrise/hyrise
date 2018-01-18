@@ -38,13 +38,14 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline);
   void query_executed();
   void query_response_sent();
+  void load_table_file(const std::string& file_name, const std::string& table_name);
 
   void pipeline_error(const std::string& error_msg);
   void pipeline_info(const std::string& notice);
 
  protected:
-  void async_receive_header(const size_t size = HEADER_LENGTH);
-  void async_receive_content(const size_t size);
+  void async_receive_header(size_t size = HEADER_LENGTH);
+  void async_receive_content(size_t size);
   void async_receive_packet(size_t size, bool is_header);
 
   void send_ssl_denied();
