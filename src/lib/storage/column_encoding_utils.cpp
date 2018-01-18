@@ -1,15 +1,12 @@
 #include "column_encoding_utils.hpp"
 
-#include <boost/hana/fold.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/value.hpp>
-
 #include <memory>
+#include <map>
 
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp"
 #include "storage/dictionary_column/dictionary_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
+
 #include "storage/base_value_column.hpp"
 #include "utils/enum_constant.hpp"
 #include "utils/assert.hpp"
@@ -20,34 +17,24 @@ namespace {
 
 /**
  * @brief Mapping of encoding types to encoders
+ *
+ * Add your column encoder here!
  */
-constexpr auto encoder_for_type =
-    hana::make_tuple(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>,
-                                     hana::type_c<DeprecatedDictionaryEncoder>),
-                     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, hana::type_c<DictionaryEncoder>),
-                     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, hana::type_c<RunLengthEncoder>));
+static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
+    {EncodingType::DeprecatedDictionary, std::make_shared<DeprecatedDictionaryEncoder>()},
+    {EncodingType::Dictionary, std::make_shared<DeprecatedDictionaryEncoder>()},
+    {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()}};
 
 }  // namespace
 
 std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
   Assert(encoding_type != EncodingType::Unencoded, "Encoding type must be valid.");
 
-  auto encoder = std::unique_ptr<BaseColumnEncoder>{};
+  auto it = encoder_for_type.find(encoding_type);
+  Assert(it != encoder_for_type.cend(), "All encoding types must be in encoder_for_type.");
 
-  hana::fold(encoder_for_type, false, [&](auto match_found, auto pair) {
-    const auto encoding_type_c = hana::first(pair);
-    const auto encoder_t = hana::second(pair);
-
-    if (!match_found && hana::value(encoding_type_c) == encoding_type) {
-      using EncoderType = typename decltype(encoder_t)::type;
-      encoder = std::make_unique<EncoderType>();
-      return true;
-    }
-
-    return match_found;
-  });
-
-  return encoder;
+  auto&& encoder = it->second;
+  return encoder->clone();
 }
 
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,

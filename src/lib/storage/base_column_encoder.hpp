@@ -39,6 +39,8 @@ class BaseColumnEncoder {
   virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
                                                     const std::shared_ptr<const BaseValueColumn>& column) = 0;
 
+  virtual std::unique_ptr<BaseColumnEncoder> clone() const = 0;
+
   /**
    * @defgroup Interface for selecting the used zero suppression type
    * @{
@@ -83,6 +85,8 @@ class ColumnEncoder : public BaseColumnEncoder {
 
     return encoded_column;
   }
+
+  std::unique_ptr<BaseColumnEncoder> clone() const final { return std::make_unique<Derived>(_self()); }
 
   bool uses_zero_suppression() const final { return Derived::_uses_zero_suppression; };
 
