@@ -17,6 +17,8 @@ namespace opossum {
  * interface (see column_iterables.hpp) and are implemented
  * in sub-classes of ColumnIterable (see e.g. value_column_iterable.hpp)
  *
+ * Value must be a sub-class of AbstractColumnIteratorValue<T>.
+ *
  *
  * Why is boost::iterator_core_access a friend class?
  *
@@ -59,7 +61,7 @@ using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *
- *   // don’t forget to check if index_into_referenced() == INVALID_CHUNK_OFFSET (i.e. NULL)
+ *   // don’t forget to check if chunk_offsets().index_into_referenced == INVALID_CHUNK_OFFSET (i.e. NULL)
  *   Value dereference() const { return Value{}; }
  * };
  */
@@ -77,7 +79,7 @@ class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> 
   void increment() { ++_chunk_offsets_it; }
   bool equal(const BasePointAccessColumnIterator& other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
 
- protected:
+ private:
   ChunkOffsetsIterator _chunk_offsets_it;
 };
 

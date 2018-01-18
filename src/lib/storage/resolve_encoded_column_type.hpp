@@ -2,14 +2,35 @@
 
 #include <boost/hana/fold.hpp>
 #include <boost/hana/value.hpp>
+#include <boost/hana/map.hpp>
+#include <boost/hana/pair.hpp>
 
 #include <memory>
 
-#include "storage/encoded_columns.hpp"
+// Include your encoded column file here!
+#include "storage/dictionary_column.hpp"
+#include "storage/run_length_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+
+#include "storage/encoding_type.hpp"
+
+#include "utils/enum_constant.hpp"
+#include "utils/template_type.hpp"
 
 namespace opossum {
 
 namespace hana = boost::hana;
+
+/**
+ * @brief Mapping of encoding types to columns
+ *
+ * Note: Add your encoded column class here!
+ */
+constexpr auto encoded_column_for_type =
+    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>,
+                                   template_c<DeprecatedDictionaryColumn>),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>));
 
 /**
  * @brief Resolves the type of an encoded column.
@@ -18,9 +39,9 @@ namespace hana = boost::hana;
  */
 template <typename ColumnDataType, typename Functor>
 void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor& functor) {
-  hana::fold(encoded_column_info_for_type, false, [&](auto match_found, auto pair) {
+  hana::fold(encoded_column_for_type, false, [&](auto match_found, auto pair) {
     const auto encoding_type_c = hana::first(pair);
-    const auto encoded_column_info_t = hana::second(pair);
+    const auto column_template_t = hana::second(pair);
 
     constexpr auto encoding_type = hana::value(encoding_type_c);
 
@@ -30,9 +51,9 @@ void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor&
       // clang-format off
       // Compile only for supported data types
       if constexpr(decltype(data_type_supported)::value) {
-        using EncodedColumnInfoType = typename decltype(encoded_column_info_t)::type;
-        using EncodedColumnType = typename EncodedColumnInfoType::template ColumnTemplate<ColumnDataType>;
-        functor(static_cast<const EncodedColumnType&>(column));
+        using ColumnTemplateType = typename decltype(column_template_t)::type;
+        using ColumnType = typename ColumnTemplateType::template _template<ColumnDataType>;
+        functor(static_cast<const ColumnType&>(column));
       }
       // clang-format on
 

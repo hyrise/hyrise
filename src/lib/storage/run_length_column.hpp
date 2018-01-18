@@ -53,9 +53,4 @@ class RunLengthColumn : public BaseEncodedColumn {
   const T _null_value;
 };
 
-struct RunLengthColumnInfo {
-  template <typename T>
-  using ColumnTemplate = RunLengthColumn<T>;
-};
-
 }  // namespace opossum

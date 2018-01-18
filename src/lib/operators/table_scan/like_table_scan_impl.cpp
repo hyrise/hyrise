@@ -15,7 +15,7 @@
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/dictionary_column/attribute_vector_iterable.hpp"
-#include "storage/constant_value_iterable.hpp"
+#include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
 #include "storage/value_column/value_column_iterable.hpp"

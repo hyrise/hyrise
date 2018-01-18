@@ -224,7 +224,6 @@ set(
     storage/encoding_type.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column.hpp
-    storage/encoded_columns.hpp
     storage/run_length_column.cpp
     storage/run_length_column.hpp
     storage/resolve_encoded_column_type.hpp
@@ -248,11 +247,11 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
-    storage/base_column_iterators.hpp
+    storage/column_iterables/base_column_iterators.hpp
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
-    storage/constant_value_iterable.hpp
+    storage/column_iterables/constant_value_iterable.hpp
     storage/create_iterable_from_column.hpp
     storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
     storage/column_iterables.hpp
@@ -327,6 +326,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/template_type.hpp
 )
 
 set(

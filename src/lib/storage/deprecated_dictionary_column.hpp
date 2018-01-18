@@ -82,9 +82,4 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };
 
-struct DeprecatedDictionaryColumnInfo {
-  template <typename T>
-  using ColumnTemplate = DeprecatedDictionaryColumn<T>;
-};
-
 }  // namespace opossum

@@ -8,7 +8,7 @@
 
 #include "storage/column_encoding_utils.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/encoded_columns.hpp"
+#include "storage/resolve_encoded_column_type.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/value_column.hpp"
 
@@ -27,12 +27,12 @@ template <typename EncodingTypeT>
 class EncodedColumnTest : public BaseTest {
  protected:
   static constexpr auto encoding_type_t = EncodingTypeT{};
-  static constexpr auto column_info_t = hana::at_key(encoded_column_info_for_type, encoding_type_t);
+  static constexpr auto column_template_t = hana::at_key(encoded_column_for_type, encoding_type_t);
 
-  using ColumnInfoType = typename decltype(column_info_t)::type;
+  using ColumnTemplateType = typename decltype(column_template_t)::type;
 
   template <typename T>
-  using EncodedColumnType = typename ColumnInfoType::template ColumnTemplate<T>;
+  using EncodedColumnType = typename ColumnTemplateType::template _template<T>;
 
  protected:
   static constexpr auto row_count = 200u;

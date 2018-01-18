@@ -11,7 +11,7 @@
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/constant_value_iterable.hpp"
+#include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
 #include "storage/reference_column/reference_column_iterable.hpp"

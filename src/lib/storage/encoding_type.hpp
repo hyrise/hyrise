@@ -29,7 +29,7 @@ constexpr auto all_data_types = data_types;
  * @brief Maps each encoding type to its supported data types
  *
  * This map ensures that column and encoder templates are only
- * instantiated supported types and not for all data types.
+ * instantiated for supported types and not for all data types.
  */
 constexpr auto supported_data_types_for_type =
     hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, detail::all_data_types),

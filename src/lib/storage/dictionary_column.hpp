@@ -63,9 +63,4 @@ class DictionaryColumn : public BaseDictionaryColumn {
   const ValueID _null_value_id;
 };
 
-struct DictionaryColumnInfo {
-  template <typename T>
-  using ColumnTemplate = DictionaryColumn<T>;
-};
-
 }  // namespace opossum
