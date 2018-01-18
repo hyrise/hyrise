@@ -333,7 +333,7 @@ int main(int argc, char* argv[]) {
   opossum::out() << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
   /**
-   * Initialise the Scheduler, if the Benchmark was requested to run multithreaded
+   * Initialise the Scheduler if the Benchmark was requested to run multithreaded
    */
   if (enable_scheduler) {
     const auto topology = opossum::Topology::create_numa_topology();
