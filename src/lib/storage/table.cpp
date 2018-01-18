@@ -52,8 +52,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 }
 
 Table::Table(const uint32_t max_chunk_size)
-    : _max_chunk_size(max_chunk_size),
-      _append_mutex(std::make_unique<std::mutex>()) {
+    : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
   create_null_partitioning();
 }
@@ -72,14 +71,13 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
   for (auto chunk : _chunks) {
     chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
-
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   auto partition_id = _partition_schema->get_matching_partition_for(values);
   auto last_chunk = _partition_schema->last_chunk(partition_id);
-  if(last_chunk->size() >= max_chunk_size()) {
+  if (last_chunk->size() >= max_chunk_size()) {
     create_new_chunk(partition_id);
   }
   _partition_schema->append(values, partition_id);
@@ -88,7 +86,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk(PartitionID partition_id) {
-    // Create chunk with mvcc columns
+  // Create chunk with mvcc columns
   auto new_chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
@@ -231,7 +229,7 @@ void Table::create_null_partitioning() {
 
 void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
   _partition_schema = std::make_shared<RangePartitionSchema>(column_id, bounds);
-  create_initial_chunks(static_cast<PartitionID>(bounds.size()+1));
+  create_initial_chunks(static_cast<PartitionID>(bounds.size() + 1));
 }
 
 void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
@@ -240,7 +238,7 @@ void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
 }
 
 void Table::create_initial_chunks(PartitionID number_of_partitions) {
-  for(auto partition_id = PartitionID{0}; partition_id < number_of_partitions; ++partition_id) {
+  for (auto partition_id = PartitionID{0}; partition_id < number_of_partitions; ++partition_id) {
     create_new_chunk(partition_id);
   }
 }
