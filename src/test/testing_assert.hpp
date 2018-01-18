@@ -56,9 +56,6 @@ void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
                    const std::shared_ptr<const AbstractLQPNode>& child);
 
-bool subtree_types_are_equal(const std::shared_ptr<AbstractLQPNode>& got,
-                             const std::shared_ptr<AbstractLQPNode>& expected);
-
 template <typename Functor>
 bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
   if (node == nullptr) return false;
