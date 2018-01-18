@@ -14,10 +14,9 @@ namespace opossum {
 
 IndexEvaluator::IndexEvaluator() {}
 
-const std::vector<IndexProposal>& IndexEvaluator::recommend_changes(const SystemStatistics& statistics) {
+std::vector<IndexProposal> IndexEvaluator::evaluate_indices(const SystemStatistics& statistics) {
   _access_recods.clear();
   _index_evaluations.clear();
-  _index_proposals.clear();
 
   // Investigate query cache
   const auto& recent_queries = statistics.recent_queries();
@@ -32,12 +31,7 @@ const std::vector<IndexProposal>& IndexEvaluator::recommend_changes(const System
 
   _estimate_cost();
 
-  _calculate_desirability();
-
-  // Sort by desirability, highest value first
-  std::sort(_index_proposals.begin(), _index_proposals.end(), std::greater<IndexProposal>());
-
-  return _index_proposals;
+  return _calculate_desirability();
 }
 
 void IndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency) {
@@ -104,7 +98,7 @@ void IndexEvaluator::_estimate_cost() {
   }
 }
 
-void IndexEvaluator::_calculate_desirability() {
+std::vector<IndexProposal> IndexEvaluator::_calculate_desirability() {
   // Map absolute usage + cost values to relative values (across all index proposals)
   // ToDo(group01: if we plan to continue with this approach, extract a calculateRelativeValues(accessor) method
   //               to deduplicate code.
@@ -124,6 +118,7 @@ void IndexEvaluator::_calculate_desirability() {
     max_cost += 1.0f;
   }
 
+  std::vector<IndexProposal> proposals;
   for (auto& evaluation : _index_evaluations) {
     float relative_num_usages = static_cast<float>(evaluation.number_of_usages) / max_num_usages;
 
@@ -133,7 +128,9 @@ void IndexEvaluator::_calculate_desirability() {
     // ToDo(group01): better "mixdown" logic
     // Since higher cost is bad, invert that value
     float desirability = 0.5f * relative_num_usages + 0.5f * (1.0f - relative_cost);
-    _index_proposals.emplace_back(evaluation.table_name, evaluation.column_id, desirability);
+    proposals.emplace_back(evaluation.table_name, evaluation.column_id);
+    proposals.back().desirablility = desirability;
   }
+  return proposals;
 }
 }  // namespace opossum

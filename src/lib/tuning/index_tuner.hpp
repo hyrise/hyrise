@@ -4,6 +4,7 @@
 #include <string>
 
 #include "tuning/index_evaluator.hpp"
+#include "tuning/index_selector.hpp"
 #include "tuning/system_statistics.hpp"
 
 namespace opossum {
@@ -22,11 +23,13 @@ class IndexTuner {
 
  protected:
   // Creates an index on all chunks of the specified table/column
-  void _create_index(const std::string& table_name, const ColumnID& column_id);
+  void _create_index(const std::string& table_name, ColumnID column_id);
+  void _delete_index(const std::string& table_name, ColumnID column_id);
 
  protected:
   std::shared_ptr<SystemStatistics> _statistics;
-  std::unique_ptr<IndexEvaluator> _heuristic;
+  std::unique_ptr<IndexEvaluator> _evaluator;
+  std::unique_ptr<IndexSelector> _selector;
 };
 
 }  // namespace opossum

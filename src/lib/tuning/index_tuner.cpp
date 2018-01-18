@@ -9,22 +9,28 @@
 namespace opossum {
 
 IndexTuner::IndexTuner(std::shared_ptr<SystemStatistics> statistics)
-    : _statistics{statistics}, _heuristic{std::make_unique<IndexEvaluator>()} {}
+    : _statistics{statistics},
+      _evaluator{std::make_unique<IndexEvaluator>()},
+      _selector{std::make_unique<IndexSelector>()} {}
 
 void IndexTuner::execute() {
-  const auto& proposals = _heuristic->recommend_changes(*_statistics);
+  const auto& operations = _selector->select_indices(_evaluator->evaluate_indices(*_statistics), 0.0f);
 
   std::cout << "Recommended changes: \n";
 
-  for (const auto& proposal : proposals) {
-    const auto& column_name = StorageManager::get().get_table(proposal.table_name)->column_name(proposal.column_id);
-    std::cout << "  Create index on table " << proposal.table_name << ", column " << column_name;
-    std::cout << " (desirablity " << proposal.desirablility * 100 << "%)\n";
-    _create_index(proposal.table_name, proposal.column_id);
+  for (const auto& operation : operations) {
+    const auto& column_name = StorageManager::get().get_table(operation.table_name)->column_name(operation.column_id);
+    if (operation.create) {
+      std::cout << "  Create index on table " << operation.table_name << ", column " << column_name << "\n";
+      _create_index(operation.table_name, operation.column_id);
+    } else {
+      std::cout << "  Delete index on table " << operation.table_name << ", column " << column_name << "\n";
+      _delete_index(operation.table_name, operation.column_id);
+    }
   }
 }
 
-void IndexTuner::_create_index(const std::string& table_name, const ColumnID& column_id) {
+void IndexTuner::_create_index(const std::string& table_name, ColumnID column_id) {
   auto table = StorageManager::get().get_table(table_name);
   auto chunk_count = table->chunk_count();
 
@@ -35,9 +41,12 @@ void IndexTuner::_create_index(const std::string& table_name, const ColumnID& co
     auto chunk = table->get_chunk(chunk_id);
     // ToDo(group01): Who decides what type of index is created? Is it static config or
     //                is it decided dynamically during runtime?
-    chunk->create_index<AdaptiveRadixTreeIndex>(column_ids);
-    // chunk->create_index<GroupKeyIndex>(column_ids);
+    chunk->create_index<GroupKeyIndex>(column_ids);
   }
+}
+
+void IndexTuner::_delete_index(const std::string& table_name, ColumnID column_id) {
+  //ToDo(group01): Currently there seems to be no way to remove an index from a chunk
 }
 
 }  // namespace opossum

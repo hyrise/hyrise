@@ -24,8 +24,8 @@ class AccessRecord {
 // ToDo(group01): extract into own file, add proper constructor and accessor methods
 class IndexProposal {
  public:
-  IndexProposal(const std::string& table_name, ColumnID column_id, float desirability)
-      : table_name{table_name}, column_id{column_id}, desirablility{desirability} {}
+  IndexProposal(const std::string& table_name, ColumnID column_id)
+      : table_name{table_name}, column_id{column_id}, desirablility{0.0f}, memory_cost{0.0f} {}
 
   /**
    * The column the this index would be created on
@@ -41,6 +41,11 @@ class IndexProposal {
    * by the same IndexEvaluator
    */
   float desirablility;
+
+  /**
+   * An estimate of the index memory footprint in MiB
+   */
+  float memory_cost;
 
   /**
    * Operators to allow comparison based on desirability
@@ -96,7 +101,7 @@ class IndexEvaluator {
   // Runs the heuristic to analyze the SystemStatistics object and returns
   // recommended changes to be made to the live system. The changes are sorted
   // by desirability, most-desirable ones first.
-  const std::vector<IndexProposal>& recommend_changes(const SystemStatistics& statistics);
+  std::vector<IndexProposal> evaluate_indices(const SystemStatistics& statistics);
 
  protected:
   // Looks for table scans and extracts index proposals
@@ -108,11 +113,10 @@ class IndexEvaluator {
   void _estimate_cost();
 
   // Calculate the overall desirablity of each proposal.
-  void _calculate_desirability();
+  std::vector<IndexProposal> _calculate_desirability();
 
   std::vector<AccessRecord> _access_recods;
   std::vector<IndexEvaluation> _index_evaluations;
-  std::vector<IndexProposal> _index_proposals;
 };
 
 }  // namespace opossum
