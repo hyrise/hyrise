@@ -282,7 +282,6 @@ set(
     storage/zero_suppression/simd_bp128/simd_bp128_vector.hpp
     storage/zero_suppression/utils.cpp
     storage/zero_suppression/utils.hpp
-    storage/zero_suppression/vectors.hpp
     storage/zero_suppression/zs_type.hpp
     storage/zero_suppression/zs_vector_meta_info.hpp
     storage/zero_suppression/zs_vector_type.hpp

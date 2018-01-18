@@ -12,9 +12,15 @@
 namespace opossum {
 
 /**
- * @brief Base class of all null suppression vectors
+ * @brief Base class of all zero suppression vectors
  *
- * Use the ns_vector.template.hpp to add new implementations!
+ * Every zero suppression scheme consists of four parts:
+ * - the encoder, which encapsulates the encoding algorithm (base class: BaseZeroSuppressionEncoder)
+ * - the vector, which is returned by the encoder and contains the encoded data (base class: BaseZeroSuppressionVector)
+ * - the iterator, for sequentially decoding the vector (base class: BaseZeroSuppressionIterator)
+ * - the decoder, which implements point access into the vector (base class: BaseZeroSuppressionDecoder)
+ *
+ * The iterators and decoders are created via virtual and non-virtual methods of the vector interface.
  */
 class BaseZeroSuppressionVector : private Noncopyable {
  public:
@@ -49,6 +55,8 @@ using BaseZeroSuppressionIterator = boost::iterator_facade<Derived, uint32_t, bo
 
 /**
  * @brief Implements the non-virtual interface of all vectors
+ *
+ * Sub-classes must implement all method starting with `_on_`.
  */
 template <typename Derived>
 class ZeroSuppressionVector : public BaseZeroSuppressionVector {

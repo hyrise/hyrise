@@ -14,7 +14,7 @@ class BaseZeroSuppressionVector;
 /**
  * @brief Base class of all zero suppression encoders
  *
- * Subclasses must be added in encoders.hpp
+ * Sub-classes must be added in encoders.hpp
  */
 class BaseZeroSuppressionEncoder {
  public:

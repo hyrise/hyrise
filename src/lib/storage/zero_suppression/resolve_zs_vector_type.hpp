@@ -3,7 +3,10 @@
 #include <boost/hana/fold.hpp>
 #include <boost/hana/value.hpp>
 
-#include "vectors.hpp"
+// Include your zero suppression vector file here!
+#include "fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "simd_bp128/simd_bp128_vector.hpp"
+
 #include "zs_vector_type.hpp"
 
 namespace opossum {
