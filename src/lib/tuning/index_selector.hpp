@@ -13,8 +13,7 @@ namespace opossum {
  */
 class IndexSelector : public AbstractIndexSelector {
  public:
-  std::vector<IndexOperation> select_indices(std::vector<IndexEvaluation> proposals,
-                                                     float memory_budget) override;
+  std::vector<IndexOperation> select_indices(std::vector<IndexEvaluation> evaluations, float memory_budget) override;
 
  protected:
   std::vector<IndexOperation> _operations;
