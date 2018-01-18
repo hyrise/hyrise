@@ -15,8 +15,8 @@
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
+#include "utils/unique_random_name.hpp"
 
 namespace opossum {
 
@@ -51,7 +51,7 @@ class OperatorsExportBinaryTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = "/tmp/output.bin";
+  const std::string filename = "/tmp/" + unique_random_name();
 };
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
