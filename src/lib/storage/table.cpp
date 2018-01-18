@@ -238,11 +238,32 @@ void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
 }
 
 void Table::create_initial_chunks(PartitionID number_of_partitions) {
+  if (_chunks.size() > 1 || _chunks.back()->column_count() != 0 || _chunks.back()->size() != 0) {
+    // the initial chunk was not used yet
+    throw std::runtime_error("Unable to create partitioning on used table");
+  }
+  _chunks.clear();
   for (auto partition_id = PartitionID{0}; partition_id < number_of_partitions; ++partition_id) {
     create_new_chunk(partition_id);
   }
 }
 
 bool Table::is_partitioned() const { return _partition_schema->is_partitioned(); }
+
+uint16_t Table::partition_count() const { return _partition_schema->partition_count(); }
+
+ChunkID Table::get_chunk_id(const Chunk& chunk) const {
+  ptrdiff_t pos =
+      std::distance(_chunks.begin(),
+                    std::find_if(_chunks.begin(), _chunks.end(),
+                                 [&chunk](const std::shared_ptr<Chunk> each) -> bool { return each.get() == &chunk; }));
+  if (pos >= static_cast<ptrdiff_t>(_chunks.size())) {
+    return static_cast<ChunkID>(_chunks.size());
+  } else {
+    return static_cast<ChunkID>(pos);
+  }
+}
+
+const std::shared_ptr<PartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
 
 }  // namespace opossum

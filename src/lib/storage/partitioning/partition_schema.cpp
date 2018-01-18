@@ -2,6 +2,8 @@
 
 namespace opossum {
 
+uint16_t PartitionSchema::partition_count() const { return _partitions.size(); }
+
 void PartitionSchema::add_new_chunk(std::shared_ptr<Chunk> chunk, PartitionID partition_id) {
   DebugAssert(partition_id < _partitions.size(), "Partition ID exceeds number of partitions");
   _partitions[partition_id]->add_new_chunk(chunk);

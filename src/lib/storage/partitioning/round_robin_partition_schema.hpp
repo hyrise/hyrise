@@ -10,6 +10,8 @@ class RoundRobinPartitionSchema : public PartitionSchema {
  public:
   explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 
+  std::string name() const override;
+
   void append(std::vector<AllTypeVariant> values) override;
 
   RoundRobinPartitionSchema(RoundRobinPartitionSchema&&) = default;
@@ -20,6 +22,8 @@ class RoundRobinPartitionSchema : public PartitionSchema {
  protected:
   int _number_of_partitions;
   PartitionID _next_partition;
+
+  void _go_to_next_partition();
 };
 
 }  // namespace opossum

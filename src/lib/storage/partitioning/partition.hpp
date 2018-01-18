@@ -21,6 +21,7 @@ class Partition {
   void add_new_chunk(std::shared_ptr<Chunk> chunk);
   void append(std::vector<AllTypeVariant> values);
 
+  std::vector<std::shared_ptr<Chunk>> get_chunks() const;
   std::shared_ptr<Chunk> last_chunk();
 
   Partition(Partition&&) = default;

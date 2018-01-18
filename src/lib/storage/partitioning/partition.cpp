@@ -12,6 +12,8 @@ void Partition::add_new_chunk(std::shared_ptr<Chunk> chunk) { _chunks.emplace_ba
 
 void Partition::append(std::vector<AllTypeVariant> values) { _chunks.back()->append(values); }
 
+std::vector<std::shared_ptr<Chunk>> Partition::get_chunks() const { return _chunks; }
+
 std::shared_ptr<Chunk> Partition::last_chunk() { return _chunks.back(); }
 
 }  // namespace opossum

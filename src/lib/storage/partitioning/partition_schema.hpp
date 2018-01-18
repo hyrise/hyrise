@@ -16,6 +16,9 @@ class PartitionSchema {
   PartitionSchema(PartitionSchema&&) = default;
   PartitionSchema& operator=(PartitionSchema&&) = default;
 
+  virtual std::string name() const = 0;
+  uint16_t partition_count() const;
+
   virtual void append(std::vector<AllTypeVariant> values) = 0;
   void append(std::vector<AllTypeVariant> values, PartitionID partition_id);
 

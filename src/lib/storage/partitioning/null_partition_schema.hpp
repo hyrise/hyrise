@@ -11,6 +11,8 @@ class NullPartitionSchema : public PartitionSchema {
  public:
   NullPartitionSchema();
 
+  std::string name() const override;
+
   void append(std::vector<AllTypeVariant> values) override;
 
   // Return false, since NullPartitioningSchema is only a list of chunks.

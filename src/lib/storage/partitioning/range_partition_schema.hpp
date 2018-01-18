@@ -10,6 +10,8 @@ class RangePartitionSchema : public PartitionSchema {
  public:
   RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
 
+  std::string name() const override;
+
   void append(std::vector<AllTypeVariant> values) override;
 
   RangePartitionSchema(RangePartitionSchema&&) = default;

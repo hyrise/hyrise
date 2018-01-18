@@ -150,10 +150,11 @@ class Table : private Noncopyable {
   void create_round_robin_partitioning(const size_t number_of_partitions);
 
   bool is_partitioned() const;
+  const std::shared_ptr<PartitionSchema> get_partition_schema() const;
 
   void remove_partitioning();
-  std::vector<ChunkID> get_partition(PartitionID partition_id);
-  std::vector<PartitionID> get_partition_ids();
+  uint16_t partition_count() const;
+  ChunkID get_chunk_id(const Chunk& chunk) const;
 
  protected:
   const uint32_t _max_chunk_size;

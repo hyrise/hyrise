@@ -11,6 +11,8 @@ class HashPartitionSchema : public PartitionSchema {
  public:
   HashPartitionSchema(ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);
 
+  std::string name() const override;
+
   void append(std::vector<AllTypeVariant> values) override;
 
   HashPartitionSchema(HashPartitionSchema&&) = default;
