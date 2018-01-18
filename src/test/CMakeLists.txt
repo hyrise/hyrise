@@ -70,6 +70,7 @@ set(
     optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/optimizer_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
