@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <ostream>
 #include <utility>
 #include <vector>
 
@@ -16,6 +17,8 @@ struct TopologyCpu final {
 
 struct TopologyNode final {
   explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
+
+  void print(std::ostream& stream = std::cout) const;
 
   std::vector<TopologyCpu> cpus;
 };
@@ -39,6 +42,8 @@ class Topology final {
   const std::vector<TopologyNode>& nodes();
 
   size_t num_cpus() const;
+
+  void print(std::ostream& stream = std::cout) const;
 
  private:
   std::vector<TopologyNode> _nodes;
