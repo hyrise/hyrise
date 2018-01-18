@@ -5,8 +5,7 @@
 
 namespace opossum {
 
-const std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexProposal> proposals,
-                                                                float memory_budget) {
+std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvaluation> proposals, float memory_budget) {
   std::sort(proposals.begin(), proposals.end());
   std::reverse(proposals.begin(), proposals.end());
 

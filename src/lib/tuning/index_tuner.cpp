@@ -5,6 +5,8 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
+#include "tuning/index_evaluator.hpp"
+#include "tuning/index_selector.hpp"
 
 namespace opossum {
 
@@ -46,7 +48,7 @@ void IndexTuner::_create_index(const std::string& table_name, ColumnID column_id
 }
 
 void IndexTuner::_delete_index(const std::string& table_name, ColumnID column_id) {
-  //ToDo(group01): Currently there seems to be no way to remove an index from a chunk
+  // ToDo(group01): Currently there seems to be no way to remove an index from a chunk
 }
 
 }  // namespace opossum

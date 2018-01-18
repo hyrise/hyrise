@@ -14,7 +14,7 @@ namespace opossum {
 
 IndexEvaluator::IndexEvaluator() {}
 
-std::vector<IndexProposal> IndexEvaluator::evaluate_indices(const SystemStatistics& statistics) {
+std::vector<IndexEvaluation> IndexEvaluator::evaluate_indices(const SystemStatistics& statistics) {
   _access_recods.clear();
   _index_evaluations.clear();
 
@@ -98,19 +98,19 @@ void IndexEvaluator::_estimate_cost() {
   }
 }
 
-std::vector<IndexProposal> IndexEvaluator::_calculate_desirability() {
+std::vector<IndexEvaluation> IndexEvaluator::_calculate_desirability() {
   // Map absolute usage + cost values to relative values (across all index proposals)
   // ToDo(group01: if we plan to continue with this approach, extract a calculateRelativeValues(accessor) method
   //               to deduplicate code.
 
-  auto max_num_usages_element =
-      std::max_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluation::compare_number_of_usages);
+  auto max_num_usages_element = std::max_element(_index_evaluations.begin(), _index_evaluations.end(),
+                                                 IndexEvaluatorData::compare_number_of_usages);
   auto max_num_usages = static_cast<float>(max_num_usages_element->number_of_usages);
 
   auto max_cost_element =
-      std::max_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluation::compare_cost);
+      std::max_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluatorData::compare_cost);
   auto min_cost_element =
-      std::min_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluation::compare_cost);
+      std::min_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluatorData::compare_cost);
   auto max_cost = static_cast<float>(max_cost_element->cost);
   auto min_cost = static_cast<float>(min_cost_element->cost);
   // If there is only one cost value, add one to prevent a division by zero error
@@ -118,7 +118,7 @@ std::vector<IndexProposal> IndexEvaluator::_calculate_desirability() {
     max_cost += 1.0f;
   }
 
-  std::vector<IndexProposal> proposals;
+  std::vector<IndexEvaluation> proposals;
   for (auto& evaluation : _index_evaluations) {
     float relative_num_usages = static_cast<float>(evaluation.number_of_usages) / max_num_usages;
 
