@@ -9,9 +9,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/zero_suppression/simd_bp128_decoder.hpp"
-#include "storage/zero_suppression/simd_bp128_encoder.hpp"
-#include "storage/zero_suppression/simd_bp128_vector.hpp"
+#include "storage/zero_suppression/simd_bp128/simd_bp128_decoder.hpp"
+#include "storage/zero_suppression/simd_bp128/simd_bp128_encoder.hpp"
+#include "storage/zero_suppression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/zero_suppression/utils.hpp"
 
 #include "types.hpp"

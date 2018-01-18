@@ -1,35 +1,35 @@
 #include "utils.hpp"
 
 #include <memory>
-#include <vector>
-
-#include "encoders.hpp"
+#include <map>
 
 #include "utils/assert.hpp"
+
+// Include your zero suppression encoder file here!
+#include "fixed_size_byte_aligned/fixed_size_byte_aligned_encoder.hpp"
+#include "simd_bp128/simd_bp128_encoder.hpp"
 
 namespace opossum {
 
 namespace {
 
+/**
+ * @brief Mapping of zero suppression types to encoders
+ *
+ * Add your zero suppression encoder here!
+ */
+static const auto zs_encoder_for_type = std::map<ZsType, std::shared_ptr<BaseZeroSuppressionEncoder>>{
+  {ZsType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedEncoder>()},
+  {ZsType::SimdBp128, std::make_shared<SimdBp128Encoder>()}};
+
 std::unique_ptr<BaseZeroSuppressionEncoder> create_encoder_by_zs_type(ZsType type) {
-  Assert(type != ZsType::Invalid, "ZsVectorType must be valid.");
+  Assert(type != ZsType::Invalid, "ZsType must be valid.");
 
-  auto encoder = std::unique_ptr<BaseZeroSuppressionEncoder>{};
+  auto it = zs_encoder_for_type.find(type);
+  Assert(it != zs_encoder_for_type.cend(), "All zero suppression types must be in zs_encoder_for_type.");
 
-  hana::fold(zs_encoder_for_type, false, [&](auto match_found, auto pair) {
-    const auto vector_type_c = hana::first(pair);
-    const auto encoder_t = hana::second(pair);
-
-    if (!match_found && (hana::value(vector_type_c) == type)) {
-      using ZsEncoderType = typename decltype(encoder_t)::type;
-      encoder = std::make_unique<ZsEncoderType>();
-      return true;
-    }
-
-    return match_found;
-  });
-
-  return encoder;
+  const auto& encoder = it->second;
+  return encoder->create_new();
 }
 
 }  // namespace

@@ -8,6 +8,10 @@ std::unique_ptr<BaseZeroSuppressionVector> FixedSizeByteAlignedEncoder::encode(
   return _encode_using_max_value(alloc, vector, max_value);
 }
 
+std::unique_ptr<BaseZeroSuppressionEncoder> FixedSizeByteAlignedEncoder::create_new() const {
+  return std::make_unique<FixedSizeByteAlignedEncoder>();
+}
+
 uint32_t FixedSizeByteAlignedEncoder::_get_max_value(const pmr_vector<uint32_t>& vector) const {
   const auto it = std::max_element(vector.cbegin(), vector.cend());
   return *it;

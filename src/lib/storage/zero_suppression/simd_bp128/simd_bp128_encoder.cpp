@@ -21,6 +21,10 @@ std::unique_ptr<BaseZeroSuppressionVector> SimdBp128Encoder::encode(const Polymo
   return std::make_unique<SimdBp128Vector>(std::move(*_data), _size);
 }
 
+std::unique_ptr<BaseZeroSuppressionEncoder> SimdBp128Encoder::create_new() const {
+  return std::make_unique<SimdBp128Encoder>();
+}
+
 void SimdBp128Encoder::init(size_t size, const PolymorphicAllocator<size_t>& alloc) {
   constexpr auto max_bit_size = 32u;
 

@@ -22,18 +22,18 @@ namespace {
  */
 static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
     {EncodingType::DeprecatedDictionary, std::make_shared<DeprecatedDictionaryEncoder>()},
-    {EncodingType::Dictionary, std::make_shared<DeprecatedDictionaryEncoder>()},
+    {EncodingType::Dictionary, std::make_shared<DictionaryEncoder>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()}};
 
 }  // namespace
 
 std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
-  Assert(encoding_type != EncodingType::Unencoded, "Encoding type must be valid.");
+  Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded`.");
 
   auto it = encoder_for_type.find(encoding_type);
   Assert(it != encoder_for_type.cend(), "All encoding types must be in encoder_for_type.");
 
-  auto&& encoder = it->second;
+  const auto& encoder = it->second;
   return encoder->clone();
 }
 

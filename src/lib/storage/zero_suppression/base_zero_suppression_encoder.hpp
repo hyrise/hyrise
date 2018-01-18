@@ -23,6 +23,8 @@ class BaseZeroSuppressionEncoder {
   virtual std::unique_ptr<BaseZeroSuppressionVector> encode(const PolymorphicAllocator<size_t>& alloc,
                                                             const pmr_vector<uint32_t>& vector,
                                                             const ZsVectorMetaInfo& meta_info = {}) = 0;
+
+  virtual std::unique_ptr<BaseZeroSuppressionEncoder> create_new() const = 0;
 };
 
 }  // namespace opossum

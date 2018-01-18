@@ -17,6 +17,8 @@ class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
                                                     const pmr_vector<uint32_t>& vector,
                                                     const ZsVectorMetaInfo& meta_info = {}) final;
 
+  std::unique_ptr<BaseZeroSuppressionEncoder> create_new() const final;
+
  private:
   using Packing = SimdBp128Packing;
 
