@@ -8,6 +8,8 @@ Partition::Partition(PartitionID partition_id) : _partition_id(partition_id) {}
 
 const PartitionID Partition::get_partition_id() { return _partition_id; }
 
+void Partition::clear() { _chunks.clear(); }
+
 void Partition::add_new_chunk(std::shared_ptr<Chunk> chunk) { _chunks.emplace_back(chunk); }
 
 void Partition::append(std::vector<AllTypeVariant> values) { _chunks.back()->append(values); }

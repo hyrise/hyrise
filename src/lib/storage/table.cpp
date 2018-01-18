@@ -90,13 +90,12 @@ void Table::create_new_chunk(PartitionID partition_id) {
   auto new_chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
-    const auto& type = _column_types[column_id];
+    const auto type = _column_types[column_id];
     auto nullable = _column_nullable[column_id];
 
     new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
   _chunks.push_back(new_chunk);
-
   _partition_schema->add_new_chunk(new_chunk, partition_id);
 }
 
@@ -168,15 +167,19 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(*(_chunks[chunk_id]));
 }
 
-void Table::emplace_chunk(Chunk chunk) {
+void Table::emplace_chunk(Chunk chunk, PartitionID partition_id) {
   if (_chunks.size() == 1 && (_chunks.back()->column_count() == 0 || _chunks.back()->size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
+    _partition_schema->clear();
   }
+  DebugAssert(chunk.column_count() > 0, "Trying to add chunk without columns.");
   DebugAssert(chunk.column_count() == column_count(),
               std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");
-  _chunks.emplace_back(std::make_shared<Chunk>(std::move(chunk)));
+  auto new_chunk = std::make_shared<Chunk>(std::move(chunk));
+  _chunks.emplace_back(new_chunk);
+  _partition_schema->add_new_chunk(new_chunk, partition_id);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

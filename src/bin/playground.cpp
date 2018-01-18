@@ -1,5 +1,6 @@
 #include <iostream>
 #include "operators/print.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 
@@ -14,9 +15,18 @@ int main() {
   table->append({"Germany", 82521653});
 
   auto table_wrapper = std::make_shared<opossum::TableWrapper>(table);
-  auto print_operator = std::make_shared<opossum::Print>(table_wrapper, std::cout);
-
   table_wrapper->execute();
+
+  auto print_partitioned_operator = std::make_shared<opossum::Print>(table_wrapper, std::cout);
+  std::cout << "### Partitioned table" << std::endl;
+  print_partitioned_operator->execute();
+  std::cout << std::endl << std::endl;
+
+  auto sort_operator = std::make_shared<opossum::Sort>(table_wrapper, opossum::ColumnID{0});
+  sort_operator->execute();
+
+  auto print_operator = std::make_shared<opossum::Print>(sort_operator, std::cout);
+  std::cout << "### Sorted table" << std::endl;
   print_operator->execute();
 
   return 0;

@@ -18,6 +18,7 @@ class Partition {
 
   const PartitionID get_partition_id();
 
+  void clear();
   void add_new_chunk(std::shared_ptr<Chunk> chunk);
   void append(std::vector<AllTypeVariant> values);
 

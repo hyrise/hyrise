@@ -19,6 +19,7 @@ class AbstractPartitionSchema {
   virtual std::string name() const = 0;
   uint16_t partition_count() const;
 
+  void clear();
   virtual void append(std::vector<AllTypeVariant> values) = 0;
   void append(std::vector<AllTypeVariant> values, PartitionID partition_id);
 
