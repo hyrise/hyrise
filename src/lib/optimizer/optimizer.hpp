@@ -11,7 +11,12 @@ class AbstractRule;
 class AbstractLQPNode;
 
 /**
- * Applies (currently: all) optimization rules to an LQP.
+ * Applies optimization rules to an LQP. Rules are organized in RuleBatches which can be added to the Optimizer using
+ * add_rule_batch(). On each invocation of optimize(), these Batches are applied in the same order as they were added
+ * to the Optimizer.
+ *
+ * By default, you can use Optimizer::get() to retrieve the global default Optimizer, but it is also possible to create
+ * and configure a custom Optimizer.
  */
 class Optimizer final {
  public:
