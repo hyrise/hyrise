@@ -14,12 +14,12 @@ namespace opossum {
  */
 class SystemStatistics {
  public:
-    class SQLQueryCacheEntry {
-    public:
-        std::string query;
-        SQLQueryPlan query_plan;
-        size_t access_frequency;
-    };
+  class SQLQueryCacheEntry {
+   public:
+    std::string query;
+    SQLQueryPlan query_plan;
+    size_t access_frequency;
+  };
 
   // TODO(group01) retrieve query cache from system-wide singleton as soon as that exists
   explicit SystemStatistics(const SQLQueryCache<SQLQueryPlan>& cache);

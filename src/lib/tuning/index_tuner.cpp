@@ -9,7 +9,7 @@
 namespace opossum {
 
 IndexTuner::IndexTuner(std::shared_ptr<SystemStatistics> statistics)
-    : _statistics{statistics}, _heuristic{std::make_unique<IndexSelectionHeuristic>()} {}
+    : _statistics{statistics}, _heuristic{std::make_unique<IndexEvaluator>()} {}
 
 void IndexTuner::execute() {
   const auto& proposals = _heuristic->recommend_changes(*_statistics);
@@ -19,7 +19,7 @@ void IndexTuner::execute() {
   for (const auto& proposal : proposals) {
     const auto& column_name = StorageManager::get().get_table(proposal.table_name)->column_name(proposal.column_id);
     std::cout << "  Create index on table " << proposal.table_name << ", column " << column_name;
-    std::cout << " (desirablity " << proposal.desirablility * 100 << "%, estimated saved work: " << proposal.saved_work << ")\n";
+    std::cout << " (desirablity " << proposal.desirablility * 100 << "%)\n";
     _create_index(proposal.table_name, proposal.column_id);
   }
 }
@@ -36,7 +36,7 @@ void IndexTuner::_create_index(const std::string& table_name, const ColumnID& co
     // ToDo(group01): Who decides what type of index is created? Is it static config or
     //                is it decided dynamically during runtime?
     chunk->create_index<AdaptiveRadixTreeIndex>(column_ids);
-      //chunk->create_index<GroupKeyIndex>(column_ids);
+    // chunk->create_index<GroupKeyIndex>(column_ids);
   }
 }
 

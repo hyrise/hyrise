@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "tuning/index_selection_heuristic.hpp"
+#include "tuning/index_evaluator.hpp"
 #include "tuning/system_statistics.hpp"
 
 namespace opossum {
@@ -26,7 +26,7 @@ class IndexTuner {
 
  protected:
   std::shared_ptr<SystemStatistics> _statistics;
-  std::unique_ptr<IndexSelectionHeuristic> _heuristic;
+  std::unique_ptr<IndexEvaluator> _heuristic;
 };
 
 }  // namespace opossum

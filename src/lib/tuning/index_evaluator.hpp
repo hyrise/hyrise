@@ -14,27 +14,58 @@ namespace opossum {
  * *how much* of the data is retrieved (query selectivity).
  */
 class AccessRecord {
-public:
-    std::string table_name;
-    ColumnID column_id;
-    size_t number_of_usages;
-    float selectivity;
+ public:
+  std::string table_name;
+  ColumnID column_id;
+  size_t number_of_usages;
+  float selectivity;
 };
 
 // ToDo(group01): extract into own file, add proper constructor and accessor methods
 class IndexProposal {
  public:
-  // The index is defined by table_name + column_id
+  IndexProposal(const std::string& table_name, ColumnID column_id, float desirability)
+      : table_name{table_name}, column_id{column_id}, desirablility{desirability} {}
+
+  /**
+   * The column the this index would be created on
+   */
   std::string table_name;
   ColumnID column_id;
-  // A percentage (0.0 - 1.0) that defines how desirable (cost VS benefit ratio) a creation of this index is.
-  // ToDo(group01): discuss how this is to be interpreted. this could be done
-  // 1. Relatively across all returned proposals (there will always be a proposal with 100% and one with 0% desirab.)
-  //    --> calculate desirability value by comparing absolute values across calculated IndexProposals
-  //    (current-ish implementation)
-  // 2. Absolutely based on some well(?)-defined bounds, e.g. if the creation costs <100ms,
-  //    then it has a desirability of at least 50%.
+
+  /**
+   * An IndexEvaluator specific, signed value that indicates
+   * how this index will affect the overall system performance
+   *
+   * desirability values are relative and only comparable if estimated
+   * by the same IndexEvaluator
+   */
   float desirablility;
+
+  /**
+   * Operators to allow comparison based on desirability
+   */
+  bool operator<(const IndexProposal& other) const { return (desirablility < other.desirablility); }
+  bool operator>(const IndexProposal& other) const { return (desirablility > other.desirablility); }
+};
+
+/**
+ * An IndexEvaluation is an IndexEvaluators internal representation of a candidate index.
+ *
+ * Once multiple IndexEvaluators exist, they will use specific IndexEvaluations.
+ * In a final evaluation step IndexProposals are created by calculating the desirability metric
+ * from the data collected in an IndexEvaluation.
+ */
+class IndexEvaluation {
+ public:
+  IndexEvaluation(const std::string& table_name, ColumnID column_id)
+      : table_name{table_name}, column_id{column_id}, saved_work{0.0f}, number_of_usages{0}, cost{0} {}
+
+  /**
+   * The column the index would be created on
+   */
+  std::string table_name;
+  ColumnID column_id;
 
   // Estimated amount of work that can be saved with this index
   // (sum of inverted selectivites multiplied with query occurrence)
@@ -47,24 +78,20 @@ class IndexProposal {
   // Value representing the estimated cost of an index creation operation
   int cost;
 
-  // Greater/Less than operators to allow comparison based on desirability
-  bool operator<(const IndexProposal& other) const { return (desirablility < other.desirablility); }
-  bool operator>(const IndexProposal& other) const { return (desirablility > other.desirablility); }
-
-  static bool compare_number_of_usages(const IndexProposal& a, const IndexProposal& b) {
+  static bool compare_number_of_usages(const IndexEvaluation& a, const IndexEvaluation& b) {
     return (a.number_of_usages < b.number_of_usages);
   }
-  static bool compare_cost(const IndexProposal& a, const IndexProposal& b) { return (a.cost < b.cost); }
+  static bool compare_cost(const IndexEvaluation& a, const IndexEvaluation& b) { return (a.cost < b.cost); }
 };
 
 /**
- * The IndexSelectionHeuristic takes information about the current system
+ * The IndexEvaluator takes information about the current system
  * (e.g. query plan cache, table statistics) and proposes indices to be created
  * or removed.
  */
-class IndexSelectionHeuristic {
+class IndexEvaluator {
  public:
-  IndexSelectionHeuristic();
+  IndexEvaluator();
 
   // Runs the heuristic to analyze the SystemStatistics object and returns
   // recommended changes to be made to the live system. The changes are sorted
@@ -75,7 +102,7 @@ class IndexSelectionHeuristic {
   // Looks for table scans and extracts index proposals
   void _inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
   // Sums up multiple index proposals to one
-  void _aggregate_usages();
+  void _aggregate_access_records();
 
   // Estimates the cost of each index proposal
   void _estimate_cost();
@@ -84,6 +111,7 @@ class IndexSelectionHeuristic {
   void _calculate_desirability();
 
   std::vector<AccessRecord> _access_recods;
+  std::vector<IndexEvaluation> _index_evaluations;
   std::vector<IndexProposal> _index_proposals;
 };
 

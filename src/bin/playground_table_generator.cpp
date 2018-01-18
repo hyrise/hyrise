@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
-#include "utils/assert.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 #include "tpcc/tpcc_random_generator.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -34,21 +34,22 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
 
     add_column<int>(customer_table, "ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
 
-    auto firstNames = read_vector_from_file("firstNames.txt");
-    auto lastNames = read_vector_from_file("lastNames.txt");
+    auto first_names = read_vector_from_file("firstNames.txt");
+    auto last_names = read_vector_from_file("lastNames.txt");
 
     add_column<std::string>(customer_table, "NAME", cardinalities, [&](std::vector<size_t> indices) {
       // return _random_gen.generate_string(5, 10, 'a', 26) + " " + _random_gen.generate_string(5, 10, 'a', 26);
-      auto firstName = (*firstNames)[_random_gen.random_number(0, firstNames->size())];
-      auto lastName = (*lastNames)[_random_gen.random_number(0, lastNames->size())];
-      return firstName + " " + lastName;
+      auto first_name = (*first_names)[_random_gen.random_number(0, first_names->size())];
+      auto last_name = (*last_names)[_random_gen.random_number(0, last_names->size())];
+      return first_name + " " + last_name;
     });
     add_column<int>(customer_table, "BALANCE", cardinalities,
                     [&](std::vector<size_t>) { return _random_gen.random_number(-_row_count, _row_count); });
     add_column<float>(customer_table, "INTEREST", cardinalities,
                       [&](std::vector<size_t>) { return _random_gen.random_number(0, 1000) / 1000.f; });
-    add_column<int>(customer_table, "LEVEL", cardinalities,
-                    [&](std::vector<size_t>) { return std::max(1, std::min(5, static_cast<int>(std::round(level_dist(e2))))); });
+    add_column<int>(customer_table, "LEVEL", cardinalities, [&](std::vector<size_t>) {
+      return std::max(1, std::min(5, static_cast<int>(std::round(level_dist(e2)))));
+    });
 
     opossum::DictionaryCompression::compress_table(*customer_table);
 
@@ -57,18 +58,18 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
     return tables;
   }
 
- std::shared_ptr<std::vector<std::string>> read_vector_from_file(std::string filename) {
-     std::string line;
-     auto output = std::make_shared<std::vector<std::string>>();
-     std::ifstream inputfile(filename);
-     opossum::Assert(inputfile, "Cannot open file " + filename);
+  std::shared_ptr<std::vector<std::string>> read_vector_from_file(std::string filename) {
+    std::string line;
+    auto output = std::make_shared<std::vector<std::string>>();
+    std::ifstream inputfile(filename);
+    opossum::Assert(inputfile, "Cannot open file " + filename);
 
-     while(std::getline(inputfile, line)){
-         output->push_back(line);
-     }
+    while (std::getline(inputfile, line)) {
+      output->push_back(line);
+    }
 
-     return output;
- }
+    return output;
+  }
 
  private:
   size_t _row_count;

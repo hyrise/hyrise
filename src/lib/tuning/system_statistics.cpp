@@ -26,7 +26,8 @@ const std::vector<SystemStatistics::SQLQueryCacheEntry>& SystemStatistics::recen
 
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const GDFSCache<std::string, SQLQueryPlan>::GDFSCacheEntry& query_plan = *cache_iterator;
-    std::cout << "Query '" << query_plan.key << "' frequency: " << query_plan.frequency << " priority: " << query_plan.priority << "\n";
+    std::cout << "Query '" << query_plan.key << "' frequency: " << query_plan.frequency
+              << " priority: " << query_plan.priority << "\n";
     _recent_queries.push_back({query_plan.key, query_plan.value, query_plan.frequency});
   }
 
