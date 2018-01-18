@@ -288,8 +288,6 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-    utils/unique_random_name.cpp
-    utils/unique_random_name.hpp
 )
 
 set(

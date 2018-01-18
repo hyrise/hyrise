@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../base_test.hpp"
+#include "../testing_utils.hpp"
 #include "gtest/gtest.h"
 
 #include "import_export/binary.hpp"
@@ -16,7 +17,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/unique_random_name.hpp"
 
 namespace opossum {
 
