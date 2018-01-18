@@ -5,7 +5,8 @@
 #include <numeric>
 #include <utility>
 
-#include "base_zero_suppression_decoder.hpp"
+#include "storage/zero_suppression/base_zero_suppression_decoder.hpp"
+
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
 

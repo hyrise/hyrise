@@ -54,6 +54,31 @@ template <typename Derived>
 class ZeroSuppressionVector : public BaseZeroSuppressionVector {
  public:
   /**
+   * @defgroup Non-virtual interface
+   * @{
+   */
+
+  /**
+   * @brief Returns a vector specific decoder
+   * @return a unique_ptr of subclass of BaseZeroSuppressionDecoder
+   */
+  auto create_decoder() const { return _self()._on_create_decoder(); }
+
+  /**
+   * @brief Returns an iterator to the beginning
+   * @return a constant forward iterator returning uint32_t
+   */
+  auto cbegin() const { return _self()._on_cbegin(); }
+
+  /**
+   * @brief Returns an iterator to the end
+   * @return a constant forward iterator returning uint32_t
+   */
+  auto cend() const { return _self()._on_cend(); }
+  /**@}*/
+
+ public:
+  /**
    * @defgroup Virtual interface implementation
    * @{
    */
@@ -85,31 +110,6 @@ class ZeroSuppressionVector : public BaseZeroSuppressionVector {
     return _self()._on_copy_using_allocator(alloc);
   }
 
-  /**@}*/
-
- public:
-  /**
-   * @defgroup Non-virtual interface
-   * @{
-   */
-
-  /**
-   * @brief Returns a vector specific decoder
-   * @return a unique_ptr of subclass of BaseZeroSuppressionDecoder
-   */
-  auto create_decoder() const { return _self()._on_create_decoder(); }
-
-  /**
-   * @brief Returns an iterator to the beginning
-   * @return a constant forward iterator returning uint32_t
-   */
-  auto cbegin() const { return _self()._on_cbegin(); }
-
-  /**
-   * @brief Returns an iterator to the end
-   * @return a constant forward iterator returning uint32_t
-   */
-  auto cend() const { return _self()._on_cend(); }
   /**@}*/
 
  private:

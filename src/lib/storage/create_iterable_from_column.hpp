@@ -14,6 +14,9 @@ namespace opossum {
  * These methods cannot be part of the columns’ interfaces because
  * reference column are not templated and thus don’t know their type.
  *
+ * All iterables implement the same interface using static polymorphism
+ * (i.e. the CRTP pattern, see column_iterables.hpp).
+ *
  * @{
  */
 

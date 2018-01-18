@@ -3,7 +3,8 @@
 #include <array>
 #include <memory>
 
-#include "base_zero_suppression_vector.hpp"
+#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
 

@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <limits>
 
-#include "base_zero_suppression_encoder.hpp"
+#include "storage/zero_suppression/base_zero_suppression_encoder.hpp"
+
 #include "fixed_size_byte_aligned_vector.hpp"
 
 #include "types.hpp"

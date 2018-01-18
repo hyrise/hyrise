@@ -4,7 +4,8 @@
 
 #include <memory>
 
-#include "base_zero_suppression_vector.hpp"
+#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+
 #include "fixed_size_byte_aligned_decoder.hpp"
 
 #include "types.hpp"
