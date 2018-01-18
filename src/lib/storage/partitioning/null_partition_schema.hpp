@@ -11,8 +11,7 @@ class NullPartitionSchema : public PartitionSchema {
  public:
   NullPartitionSchema();
 
-  void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
+  void append(std::vector<AllTypeVariant> values) override;
 
   // Return false, since NullPartitioningSchema is only a list of chunks.
   bool is_partitioned() const override { return false; }

@@ -82,7 +82,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
   if(last_chunk->size() >= max_chunk_size()) {
     create_new_chunk(partition_id);
   }
-  _partition_schema->append(values, _max_chunk_size, _column_types, _column_nullable);
+  _partition_schema->append(values, partition_id);
 }
 
 void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }

@@ -10,8 +10,7 @@ class RoundRobinPartitionSchema : public PartitionSchema {
  public:
   explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 
-  void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
+  void append(std::vector<AllTypeVariant> values) override;
 
   RoundRobinPartitionSchema(RoundRobinPartitionSchema&&) = default;
   RoundRobinPartitionSchema& operator=(RoundRobinPartitionSchema&&) = default;

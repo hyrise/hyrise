@@ -12,9 +12,7 @@ void Partition::add_new_chunk(std::shared_ptr<Chunk> chunk) {
   _chunks.emplace_back(chunk);
 }
 
-void Partition::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-                       const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) {
-  DebugAssert(_chunks.back()->size() < max_chunk_size, "Chunk is full");
+void Partition::append(std::vector<AllTypeVariant> values) {
   _chunks.back()->append(values);
 }
 

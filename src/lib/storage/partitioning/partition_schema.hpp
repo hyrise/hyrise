@@ -16,8 +16,9 @@ class PartitionSchema {
   PartitionSchema(PartitionSchema&&) = default;
   PartitionSchema& operator=(PartitionSchema&&) = default;
   
-  virtual void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-                      const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) = 0;
+  virtual void append(std::vector<AllTypeVariant> values) = 0;
+  void append(std::vector<AllTypeVariant> values, PartitionID partition_id);
+
   virtual PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) = 0;
 
   virtual void add_new_chunk(std::shared_ptr<Chunk> chunk, PartitionID partition_id);

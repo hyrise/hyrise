@@ -11,11 +11,8 @@ HashPartitionSchema::HashPartitionSchema(ColumnID column_id, HashFunction hash_f
   }
 }
 
-void HashPartitionSchema::append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-                                 const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) {
-  PartitionID matching_partition = get_matching_partition_for(values);
-  std::shared_ptr<Partition> partition_to_append = _partitions.at(matching_partition);
-  partition_to_append->append(values, max_chunk_size, column_types, column_nullables);
+void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
+  PartitionSchema::append(values, get_matching_partition_for(values));
 }
 
 PartitionID HashPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {

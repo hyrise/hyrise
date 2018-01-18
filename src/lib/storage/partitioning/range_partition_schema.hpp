@@ -10,8 +10,7 @@ class RangePartitionSchema : public PartitionSchema {
  public:
   RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
 
-  void append(std::vector<AllTypeVariant> values, const uint32_t max_chunk_size,
-              const std::vector<DataType>& column_types, const std::vector<bool>& column_nullables) override;
+  void append(std::vector<AllTypeVariant> values) override;
 
   RangePartitionSchema(RangePartitionSchema&&) = default;
   RangePartitionSchema& operator=(RangePartitionSchema&&) = default;
