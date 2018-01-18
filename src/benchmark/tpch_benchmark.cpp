@@ -337,13 +337,13 @@ int main(int argc, char* argv[]) {
    */
   if (enable_scheduler) {
     const auto topology = opossum::Topology::create_numa_topology();
-    opossum::out() << "- Running in multi threaded mode, with the following Topology:" << std::endl;
+    opossum::out() << "- Running in multi-threaded mode, with the following Topology:" << std::endl;
     topology->print(opossum::out());
 
     const auto scheduler = std::make_shared<opossum::NodeQueueScheduler>(topology);
     opossum::CurrentScheduler::set(scheduler);
   } else {
-    opossum::out() << "- Running in single threaded mode" << std::endl;
+    opossum::out() << "- Running in single-threaded mode" << std::endl;
   }
 
   // Build list of query ids to be benchmarked and display it
