@@ -19,7 +19,9 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * @brief
+ * @brief Encodes values as either uint32_t, uint16_t, or uint8_t
+ *
+ * This is simplest zero suppression encoding. It matches the old FittedAttributeVector
  */
 template <typename UnsignedIntType>
 class FixedSizeByteAlignedVector : public ZeroSuppressionVector<FixedSizeByteAlignedVector<UnsignedIntType>> {

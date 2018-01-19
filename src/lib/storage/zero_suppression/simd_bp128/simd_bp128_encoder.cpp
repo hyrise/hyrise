@@ -35,6 +35,7 @@ void SimdBp128Encoder::init(size_t size, const PolymorphicAllocator<size_t>& all
   const auto num_meta_blocks = div_ceil(size, Packing::meta_block_size);
   const auto data_size = num_blocks + num_meta_blocks;
 
+  // Reserve enough memory as the worst case would require (size * 32 bit + meta info)
   _data = std::make_unique<pmr_vector<uint128_t>>(data_size, alloc);
   _data_index = 0u;
   _meta_block_index = 0u;

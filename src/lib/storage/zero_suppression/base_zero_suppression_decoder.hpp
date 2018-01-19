@@ -9,6 +9,8 @@ namespace opossum {
 /**
  * @brief Base class of all zero suppression decoders
  *
+ * Implements point-access into a zero suppression vector.
+ *
  * Note: Make sure that implementations of these methods
  *       are marked `final` so that the compiler can omit
  *       expensive virtual method calls!
