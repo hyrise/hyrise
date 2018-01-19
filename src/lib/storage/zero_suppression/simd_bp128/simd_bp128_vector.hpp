@@ -10,6 +10,15 @@
 
 namespace opossum {
 
+/**
+ * @brief Bit-packed vector with varying bit length
+ *
+ * Values are compressed in blocks of 128 integers. Each block has its own bit-length.
+ * Sixteen blocks combine to form a meta block of 2048 values. Bit-length information
+ * are stored per meta block in 128 bit (8 bit for each bit length).
+ *
+ * @see SimdBp128Packing for more information
+ */
 class SimdBp128Vector : public ZeroSuppressionVector<SimdBp128Vector> {
  public:
   using ConstIterator = SimdBp128Iterator;

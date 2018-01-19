@@ -48,6 +48,11 @@ constexpr auto zs_vector_for_type =
                                    hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
                    hana::make_pair(enum_c<ZsVectorType, ZsVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
 
+/**
+ * @brief Returns the ZsVectorType to a given zero suppression vector type
+ *
+ * Effectively a reverse lookup in zs_vector_for_type
+ */
 template <typename ZsVectorT>
 ZsVectorType get_zs_vector_type() {
   auto zs_type = ZsVectorType::Invalid;

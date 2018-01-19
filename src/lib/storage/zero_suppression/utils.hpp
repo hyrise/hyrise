@@ -11,6 +11,11 @@
 
 namespace opossum {
 
+/**
+ * @brief Encodes a vector of uint32_t using a given ZsType
+ *
+ * @param meta_info optional struct that provides the encoding algorithms with additional information
+ */
 std::unique_ptr<BaseZeroSuppressionVector> encode_by_zs_type(ZsType type, const pmr_vector<uint32_t>& vector,
                                                              const PolymorphicAllocator<size_t>& alloc,
                                                              const ZsVectorMetaInfo& meta_info = {});

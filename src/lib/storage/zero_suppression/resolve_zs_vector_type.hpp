@@ -11,6 +11,19 @@
 
 namespace opossum {
 
+/**
+ * @brief Resolves the type of a zero suppression vector
+ *
+ * @param func is a generic lambda or similar accepting a const reference to
+ *        specific implementation of a zero suppression vector (such as SimdBp128Vector).
+ *
+ *
+ * Example
+ *
+ *   resolve_zs_vector_type(base_vector, [&](const auto& vector) {
+ *     for (auto it = vector.cbegin(); it != vector.cend(); ++it) { ... }
+ *   });
+ */
 template <typename Functor>
 void resolve_zs_vector_type(const BaseZeroSuppressionVector& vector, const Functor& functor) {
   hana::fold(zs_vector_for_type, false, [&](auto match_found, auto pair) {

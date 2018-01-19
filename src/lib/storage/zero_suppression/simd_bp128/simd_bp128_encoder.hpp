@@ -11,6 +11,9 @@
 
 namespace opossum {
 
+/**
+ * @brief Encodes a vector using SIMD-BP128
+ */
 class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
  public:
   std::unique_ptr<BaseZeroSuppressionVector> encode(const PolymorphicAllocator<size_t>& alloc,
