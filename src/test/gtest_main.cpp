@@ -7,8 +7,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "base_test.hpp"
 #include <gtest/gtest.h>
+#include "base_test.hpp"
 
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -19,20 +19,20 @@ namespace filesystem = std::filesystem;
 namespace filesystem = std::experimental::filesystem;
 #endif
 
-void create_test_data_directory(std::optional<std::string> &prefix) {
-    opossum::TEST_DATA_PATH = "./" + *prefix + "/test_data/";
+void create_test_data_directory(std::optional<std::string>& prefix) {
+  opossum::TEST_DATA_PATH = "./" + *prefix + "/test_data/";
 
-    if (filesystem::exists(opossum::TEST_DATA_PATH)) {
-        filesystem::remove_all(opossum::TEST_DATA_PATH);
-    }
-    filesystem::create_directories(opossum::TEST_DATA_PATH);
+  if (filesystem::exists(opossum::TEST_DATA_PATH)) {
+    filesystem::remove_all(opossum::TEST_DATA_PATH);
+  }
+  filesystem::create_directories(opossum::TEST_DATA_PATH);
 }
 
-void remove_test_data_directory(std::optional<std::string> &prefix) {
-    if (prefix)
-        filesystem::remove_all("./" + *prefix);
-    else
-        filesystem::remove_all(opossum::TEST_DATA_PATH);
+void remove_test_data_directory(std::optional<std::string>& prefix) {
+  if (prefix)
+    filesystem::remove_all("./" + *prefix);
+  else
+    filesystem::remove_all(opossum::TEST_DATA_PATH);
 }
 
 int main(int argc, char** argv) {
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   if (argc > 1) {
     // If argv[1] is not a gtest command, we interpret it as directory name prefix for test data files
     if (std::string(argv[1]).find("--") == std::string::npos) {
-        test_data_prefix = argv[1];
+      test_data_prefix = argv[1];
     }
   }
   create_test_data_directory(test_data_prefix);
