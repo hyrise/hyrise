@@ -1,13 +1,6 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/resolve_type.hpp"
-#include "../lib/storage/base_column.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/partitioning/partition.hpp"
-#include "../lib/storage/value_column.hpp"
-#include "../lib/types.hpp"
-
 namespace opossum {
 
 class StorageRangePartitionSchemaTest : public BaseTest {
@@ -22,6 +15,7 @@ class StorageRangePartitionSchemaTest : public BaseTest {
 };
 
 TEST_F(StorageRangePartitionSchemaTest, CreateRangePartitioning) {
+  EXPECT_EQ(t0.row_count(), 0u);
   EXPECT_EQ(t0.chunk_count(), 3u);
 }
 
@@ -64,8 +58,6 @@ TEST_F(StorageRangePartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
   EXPECT_EQ(t0.get_chunk(ChunkID{0}).size(), 3u);
 }
 
-TEST_F(StorageRangePartitionSchemaTest, Name) {
-  EXPECT_EQ(t0.get_partition_schema()->name(), "RangePartition");
-}
+TEST_F(StorageRangePartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "RangePartition"); }
 
 }  // namespace opossum
