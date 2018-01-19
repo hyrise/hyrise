@@ -152,6 +152,10 @@ class Table : private Noncopyable {
   bool is_partitioned() const;
   const std::shared_ptr<AbstractPartitionSchema> get_partition_schema() const;
 
+#if IS_DEBUG
+  std::shared_ptr<AbstractPartitionSchema> get_modifiable_partition_schema();
+#endif
+
   void remove_partitioning();
   uint16_t partition_count() const;
   ChunkID get_chunk_id(const Chunk& chunk) const;

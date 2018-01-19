@@ -101,6 +101,7 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     storage/partitioning/partition_test.cpp
+    storage/partitioning/range_partition_schema_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
