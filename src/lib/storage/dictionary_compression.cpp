@@ -24,7 +24,6 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data
   return encode_column(encoding_type, data_type, value_column);
 }
 
-<<<<<<< HEAD
 void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
                                            const std::shared_ptr<Chunk>& chunk,
                                            EncodingType encoding_type) {

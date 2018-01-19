@@ -137,7 +137,7 @@ TEST_F(IterablesTest, DeprecatedDictionaryColumnIteratorWithIterators) {
 TEST_F(IterablesTest, DeprecatedDictionaryColumnReferencedIteratorWithIterators) {
   DictionaryCompression::compress_table(*table);
 
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<int>>(column);
@@ -155,7 +155,7 @@ TEST_F(IterablesTest, DeprecatedDictionaryColumnReferencedIteratorWithIterators)
 TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   DictionaryCompression::compress_table(*table, EncodingType::Dictionary);
 
-  auto& chunk = table->get_chunk(ChunkID{0u});
+  auto chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);

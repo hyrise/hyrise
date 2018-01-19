@@ -4,6 +4,7 @@
 #include <optional>
 #include <utility>
 #include <vector>
+#include <memory>
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -43,19 +44,20 @@ class ChunkEncoder {
    *       leave certain columns of a chunk unencoded.
    *       Use EncodingType::Unencoded in this case.
    */
-  static void encode_chunk(Chunk& chunk, const std::vector<DataType>& data_types,
+  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
                            const ChunkEncodingSpec& encoding_spec);
 
   /**
    * @brief Encodes the specified chunks of the passed table
    */
-  static void encode_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
+  static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                             const std::map<ChunkID, ChunkEncodingSpec>& encoding_specs);
 
   /**
    * @brief Encodes a complete table
    */
-  static void encode_all_chunks(Table& table, const std::vector<ChunkEncodingSpec>& encoding_specs);
+  static void encode_all_chunks(const std::shared_ptr<Table>& table,
+                                const std::vector<ChunkEncodingSpec>& encoding_specs);
 };
 
 }  // namespace opossum
