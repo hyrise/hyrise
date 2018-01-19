@@ -12,16 +12,21 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
-                             const std::optional<AllTypeVariant>& value2)
+PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const ScanType scan_type,
+                             const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2)
     : AbstractLQPNode(LQPNodeType::Predicate),
-      _column_id(column_id),
+      _column_reference(column_reference),
       _scan_type(scan_type),
       _value(value),
       _value2(value2) {}
 
-std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl() const {
-  return std::make_shared<PredicateNode>(_column_id, _scan_type, _value, _value2);
+std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+  DebugAssert(left_child(), "Can't copy without child");
+  return std::make_shared<PredicateNode>(
+      adapt_column_reference_to_different_lqp(_column_reference, left_child(), copied_left_child), _scan_type, _value,
+      _value2);
 }
 
 std::string PredicateNode::description() const {
@@ -35,7 +40,7 @@ std::string PredicateNode::description() const {
    * (2) right operand (only for BETWEEN)
    */
 
-  std::string left_operand_desc = get_verbose_column_name(_column_id);
+  std::string left_operand_desc = _column_reference.description();
   std::string middle_operand_desc;
 
   if (_value.type() == typeid(ColumnID)) {
@@ -60,7 +65,7 @@ std::string PredicateNode::description() const {
   return desc.str();
 }
 
-const ColumnID PredicateNode::column_id() const { return _column_id; }
+const LQPColumnReference& PredicateNode::column_reference() const { return _column_reference; }
 
 ScanType PredicateNode::scan_type() const { return _scan_type; }
 
@@ -71,7 +76,18 @@ const std::optional<AllTypeVariant>& PredicateNode::value2() const { return _val
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   DebugAssert(left_child && !right_child, "PredicateNode need left_child and no right_child");
-  return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
+
+  // If value references a Column, we have to resolve its ColumnID (same as for _column_reference below)
+  auto value = _value;
+  if (is_lqp_column_reference(value)) {
+    // Doing just `value = boost::get<LQPColumnReference>(value)` triggers a compiler warning in GCC release builds
+    // about the assigned value being uninitialized. There seems to be no reason for this and this way seems to be
+    // fine... :(
+    value = static_cast<ColumnID::base_type>(get_output_column_id(boost::get<LQPColumnReference>(value)));
+  }
+
+  return left_child->get_statistics()->predicate_statistics(get_output_column_id(_column_reference), _scan_type, value,
+                                                            _value2);
 }
 
 }  // namespace opossum

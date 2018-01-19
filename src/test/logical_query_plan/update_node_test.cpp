@@ -12,7 +12,7 @@ namespace opossum {
 class UpdateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::vector<std::shared_ptr<Expression>> update_expressions;
+    std::vector<std::shared_ptr<LQPExpression>> update_expressions;
     _update_node = std::make_shared<UpdateNode>("table_a", update_expressions);
   }
 

@@ -19,22 +19,52 @@
 
 namespace opossum {
 
-AggregateDefinition::AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                                         const std::optional<std::string>& alias)
-    : column_id(column_id), function(function), alias(alias) {}
-
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
+Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
+                     const std::vector<AggregateColumnDefinition>& aggregates,
                      const std::vector<ColumnID> groupby_column_ids)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_column_ids(groupby_column_ids) {
   Assert(!(aggregates.empty() && groupby_column_ids.empty()),
          "Neither aggregate nor groupby columns have been specified");
 }
 
-const std::vector<AggregateDefinition>& Aggregate::aggregates() const { return _aggregates; }
+const std::vector<AggregateColumnDefinition>& Aggregate::aggregates() const { return _aggregates; }
 
 const std::vector<ColumnID>& Aggregate::groupby_column_ids() const { return _groupby_column_ids; }
 
 const std::string Aggregate::name() const { return "Aggregate"; }
+
+const std::string Aggregate::description(DescriptionMode description_mode) const {
+  std::stringstream desc;
+  desc << "[Aggregate] GroupBy ColumnIDs: ";
+  for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
+    desc << _groupby_column_ids[groupby_column_idx];
+
+    if (groupby_column_idx + 1 < _groupby_column_ids.size()) {
+      desc << ", ";
+    }
+  }
+
+  desc << " Aggregates: ";
+  for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
+    const auto& aggregate = _aggregates[expression_idx];
+    desc << aggregate_function_to_string.left.at(aggregate.function);
+
+    if (aggregate.column) {
+      desc << "(Column #" << *aggregate.column << ")";
+    } else {
+      desc << "(*)";
+    }
+
+    if (aggregate.alias) {
+      desc << " AS " << *aggregate.alias;
+    }
+
+    if (expression_idx + 1 < _aggregates.size()) {
+      desc << ", ";
+    }
+  }
+  return desc.str();
+}
 
 std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Aggregate>(_input_left->recreate(args), _aggregates, _groupby_column_ids);
@@ -292,14 +322,15 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   auto input_table = _input_table_left();
+  _out_chunk = std::make_shared<Chunk>();
 
   // check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
-    if (aggregate.column_id == CountStarID) {
+    if (!aggregate.column) {
       if (aggregate.function != AggregateFunction::Count) {
         Fail("Aggregate: Asterisk is only valid with COUNT");
       }
-    } else if (input_table->column_type(aggregate.column_id) == DataType::String &&
+    } else if (input_table->column_type(*aggregate.column) == DataType::String &&
                (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
       Fail("Aggregate: Cannot calculate SUM or AVG on string column");
     }
@@ -318,13 +349,13 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, this]() {
-      const Chunk& chunk_in = input_table->get_chunk(chunk_id);
+      auto chunk_in = input_table->get_chunk(chunk_id);
 
-      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in.size());
+      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in->size());
 
       // Partition by group columns
       for (const auto column_id : _groupby_column_ids) {
-        auto base_column = chunk_in.get_column(column_id);
+        auto base_column = chunk_in->get_column(column_id);
         auto column_type = input_table->column_type(column_id);
 
         resolve_data_and_column_type(column_type, *base_column, [&](auto type, auto& typed_column) {
@@ -373,7 +404,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    const Chunk& chunk_in = input_table->get_chunk(chunk_id);
+    auto chunk_in = input_table->get_chunk(chunk_id);
 
     auto hash_keys = _keys_per_chunk[chunk_id];
 
@@ -418,7 +449,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (aggregate.column_id == CountStarID && aggregate.function == AggregateFunction::Count) {
+        if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
           // We know the template arguments, so we don't need a visitor
           if (!_contexts_per_column[column_index]) {
             _contexts_per_column[column_index] =
@@ -445,8 +476,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
           continue;
         }
 
-        auto base_column = chunk_in.get_column(aggregate.column_id);
-        auto data_type = input_table->column_type(aggregate.column_id);
+        auto base_column = chunk_in->get_column(*aggregate.column);
+        auto data_type = input_table->column_type(*aggregate.column);
 
         /*
         Invoke correct aggregator for each column
@@ -493,7 +524,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     _output->add_column_definition(column_name, column_type, true);
 
     _groupby_columns.emplace_back(make_shared_by_data_type<BaseColumn, ValueColumn>(column_type, true));
-    _out_chunk.add_column(_groupby_columns.back());
+    _out_chunk->add_column(_groupby_columns.back());
   }
 
   /**
@@ -519,10 +550,10 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   ColumnID column_index{0};
   for (const auto& aggregate : _aggregates) {
-    auto column_id = aggregate.column_id;
+    const auto column = aggregate.column;
 
     // Output column for COUNT(*). int is chosen arbitrarily.
-    const auto data_type = (column_id == CountStarID) ? DataType::Int : input_table->column_type(column_id);
+    const auto data_type = !column ? DataType::Int : input_table->column_type(*column);
 
     resolve_data_type(
         data_type, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
@@ -653,17 +684,17 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = _input_table_left()->column_type(aggregate.column_id);
+    aggregate_data_type = _input_table_left()->column_type(*aggregate.column);
   }
 
   // use the alias or generate the name, e.g. MAX(column_a)
   std::string output_column_name;
   if (aggregate.alias) {
     output_column_name = *aggregate.alias;
-  } else if (aggregate.column_id == CountStarID) {
+  } else if (!aggregate.column) {
     output_column_name = "COUNT(*)";
   } else {
-    const auto& column_name = _input_table_left()->column_name(aggregate.column_id);
+    const auto& column_name = _input_table_left()->column_name(*aggregate.column);
 
     if (aggregate.function == AggregateFunction::CountDistinct) {
       output_column_name = std::string("COUNT(DISTINCT ") + column_name + ")";
@@ -691,7 +722,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the column
   _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
-  _out_chunk.add_column(col);
+  _out_chunk->add_column(col);
 }
 
 }  // namespace opossum

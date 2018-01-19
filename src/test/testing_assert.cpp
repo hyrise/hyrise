@@ -38,19 +38,19 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   // set values
   unsigned row_offset = 0;
   for (auto chunk_id = opossum::ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    const opossum::Chunk& chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
-    if (chunk.size() == 0) continue;
+    if (chunk->size() == 0) continue;
 
     for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      const auto column = chunk.get_column(column_id);
+      const auto column = chunk->get_column(column_id);
 
-      for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset + 2][column_id] = (*column)[chunk_offset];
       }
     }
-    row_offset += chunk.size();
+    row_offset += chunk->size();
   }
 
   return matrix;
@@ -256,13 +256,14 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   return true;
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type, ColumnID left_column_id,
-                            ColumnID right_column_id) {
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type,
+                            const LQPColumnReference& left_column_reference,
+                            const LQPColumnReference& right_column_reference) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
   EXPECT_EQ(join_node->scan_type(), scan_type);
-  EXPECT_EQ(join_node->join_column_ids(), std::make_pair(left_column_id, right_column_id));
+  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
 }
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}

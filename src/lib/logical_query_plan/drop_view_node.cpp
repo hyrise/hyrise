@@ -12,7 +12,9 @@ namespace opossum {
 DropViewNode::DropViewNode(const std::string& view_name)
     : AbstractLQPNode(LQPNodeType::DropView), _view_name(view_name) {}
 
-std::shared_ptr<AbstractLQPNode> DropViewNode::_deep_copy_impl() const {
+std::shared_ptr<AbstractLQPNode> DropViewNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   return std::make_shared<DropViewNode>(_view_name);
 }
 

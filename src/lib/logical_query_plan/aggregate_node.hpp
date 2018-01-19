@@ -6,11 +6,14 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class Expression;
+// TODO(anybody) Use instead of LQPExpression once the AggregateNode doesn't need to contain expressions as function
+// args anymore and the SQLTranslator creates a ProjectionNode instead
+// using AggregateNodeColumnDefinition = AggregateColumnDefinitionTemplate<LQPColumnReference>;
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
@@ -21,25 +24,23 @@ class Expression;
  */
 class AggregateNode : public AbstractLQPNode {
  public:
-  explicit AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregates,
-                         const std::vector<ColumnID>& groupby_column_ids);
+  explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
+                         const std::vector<LQPColumnReference>& groupy_column_references);
 
-  const std::vector<std::shared_ptr<Expression>>& aggregate_expressions() const;
-  const std::vector<ColumnID>& groupby_column_ids() const;
+  const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
+  const std::vector<LQPColumnReference>& groupby_column_references() const;
 
   std::string description() const override;
-  const std::vector<std::string>& output_column_names() const override;
-  const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const override;
 
-  std::optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference& named_column_reference) const override;
+  const std::vector<std::string>& output_column_names() const override;
+  const std::vector<LQPColumnReference>& output_column_references() const override;
 
   // @{
   /**
-   * AggregateNode::find_column_id_for_expression() looks for the @param expression in the columns this
+   * AggregateNode::find_column_by_expression() looks for the @param expression in the columns this
    * node outputs, checking by semantic and NOT by Expression object's address. If it can find it, it will be returned,
    * otherwise std::nullopt is returned.
-   * AggregateNode::get_column_id_for_expression() is more strict and will fail, if the
+   * AggregateNode::get_column_by_expression() is more strict and will fail, if the
    * @param expression cannot be found
    *
    * Since we're using a TableScan added AFTER the actual aggregate to implement HAVING, in a query like
@@ -49,21 +50,21 @@ class AggregateNode : public AbstractLQPNode {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
-  ColumnID get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
+  std::optional<LQPColumnReference> find_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  LQPColumnReference get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
   // @}
-
-  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
   void _on_child_changed() override;
 
  private:
-  std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
-  std::vector<ColumnID> _groupby_column_ids;
+  std::vector<std::shared_ptr<LQPExpression>> _aggregate_expressions;
+  std::vector<LQPColumnReference> _groupby_column_references;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

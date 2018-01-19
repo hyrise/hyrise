@@ -44,8 +44,8 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
   DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  auto aggregate =
-      std::make_shared<Aggregate>(table_wrapper, std::vector<AggregateDefinition>{}, std::vector<ColumnID>{_column_id});
+  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<AggregateColumnDefinition>{},
+                                               std::vector<ColumnID>{_column_id});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
   _distinct_count = aggregate_table->row_count();
@@ -82,19 +82,19 @@ void ColumnStatistics<ColumnType>::_initialize_min_max() const {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  auto aggregate_args =
-      std::vector<AggregateDefinition>{{_column_id, AggregateFunction::Min}, {_column_id, AggregateFunction::Max}};
+  auto aggregate_args = std::vector<AggregateColumnDefinition>{{_column_id, AggregateFunction::Min},
+                                                               {_column_id, AggregateFunction::Max}};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<ColumnID>{});
   aggregate->execute();
 
   auto aggregate_table = aggregate->get_output();
 
   auto min_column = std::static_pointer_cast<const ValueColumn<ColumnType>>(
-      aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+      aggregate_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
   _min = min_column->values()[0];
 
   auto max_column = std::static_pointer_cast<const ValueColumn<ColumnType>>(
-      aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{1}));
+      aggregate_table->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
   _max = max_column->values()[0];
 }
 

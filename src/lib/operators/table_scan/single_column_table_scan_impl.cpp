@@ -179,7 +179,6 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
 
     default:
       Fail("Unsupported comparison type encountered");
-      return INVALID_VALUE_ID;
   }
 }
 
@@ -203,7 +202,6 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 

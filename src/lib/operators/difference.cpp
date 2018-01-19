@@ -37,11 +37,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all columns
   for (ChunkID chunk_id{0}; chunk_id < _input_table_right()->chunk_count(); chunk_id++) {
-    const Chunk& chunk = _input_table_right()->get_chunk(chunk_id);
+    auto chunk = _input_table_right()->get_chunk(chunk_id);
     // creating a temporary row representation with strings to be filled column wise
-    auto string_row_vector = std::vector<std::stringstream>(chunk.size());
+    auto string_row_vector = std::vector<std::stringstream>(chunk->size());
     for (ColumnID column_id{0}; column_id < _input_table_right()->column_count(); column_id++) {
-      const auto base_column = chunk.get_column(column_id);
+      const auto base_column = chunk->get_column(column_id);
 
       // filling the row vector with all values from this column
       auto row_string_buffer = std::stringstream{};
@@ -62,17 +62,17 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all columns
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); chunk_id++) {
-    const Chunk& in_chunk = _input_table_left()->get_chunk(chunk_id);
-    Chunk out_chunk;
+    const auto in_chunk = _input_table_left()->get_chunk(chunk_id);
+    auto out_chunk = std::make_shared<Chunk>();
 
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
 
     for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); column_id++) {
-      const auto base_column = in_chunk.get_column(column_id);
+      const auto base_column = in_chunk->get_column(column_id);
       // temporary variables needed to create the reference column
       const auto referenced_column = std::dynamic_pointer_cast<const ReferenceColumn>(
-          _input_table_left()->get_chunk(chunk_id).get_column(column_id));
+          _input_table_left()->get_chunk(chunk_id)->get_column(column_id));
       auto out_column_id = column_id;
       auto out_referenced_table = _input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
@@ -93,15 +93,15 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
       // creating a ReferenceColumn for the output
       auto out_reference_column = std::make_shared<ReferenceColumn>(out_referenced_table, out_column_id, pos_list_out);
-      out_chunk.add_column(out_reference_column);
+      out_chunk->add_column(out_reference_column);
     }
 
     // for all offsets check if the row can be added to the output
-    for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk.size(); chunk_offset++) {
+    for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk->size(); chunk_offset++) {
       // creating string representation off the row at chunk_offset
       auto row_string_buffer = std::stringstream{};
       for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); column_id++) {
-        const auto base_column = in_chunk.get_column(column_id);
+        const auto base_column = in_chunk->get_column(column_id);
 
         // Previously a virtual method of the BaseColumn interface was called here.
         // It was replaced with a call to the subscript operator as that is equally slow.
@@ -122,7 +122,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
         }
       }
     }
-    if (out_chunk.size() > 0) {
+    if (out_chunk->size() > 0) {
       output->emplace_chunk(std::move(out_chunk));
     }
   }

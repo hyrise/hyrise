@@ -38,10 +38,10 @@ class OperatorsValidateTest : public BaseTest {
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    auto& chunk = table.get_chunk(chunk_id);
-    auto mvcc_columns = chunk.mvcc_columns();
+    auto chunk = table.get_chunk(chunk_id);
+    auto mvcc_columns = chunk->mvcc_columns();
 
-    for (auto i = 0u; i < chunk.size(); ++i) {
+    for (auto i = 0u; i < chunk->size(); ++i) {
       mvcc_columns->begin_cids[i] = 0u;
       mvcc_columns->end_cids[i] = Chunk::MAX_COMMIT_ID;
     }
@@ -49,7 +49,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
 }
 
 void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, CommitID end_cid) {
-  table.get_chunk(row.chunk_id).mvcc_columns()->end_cids[row.chunk_offset] = end_cid;
+  table.get_chunk(row.chunk_id)->mvcc_columns()->end_cids[row.chunk_offset] = end_cid;
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {

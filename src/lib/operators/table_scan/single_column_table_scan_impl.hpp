@@ -87,7 +87,6 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
       default:
         Fail("Unsupported comparison type encountered");
-        return;
     }
   }
 
