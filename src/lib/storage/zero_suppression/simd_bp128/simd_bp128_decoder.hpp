@@ -19,7 +19,7 @@ class SimdBp128Vector;
 /**
  * @brief Implements point-access into a SIMD-BP128 compressed vector
  *
- * The decoders cache the last decoded block and meta-block.
+ * The decoder caches the last decoded block and meta-block.
  * Performs best if the values are accessed in a cache-coherent manner, i.e.,
  * sequentially without too many jumps backwards.
  */
@@ -90,6 +90,11 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
     return (*_cached_block)[_index_within_cached_block(index)];
   }
 
+  /**
+   * Starting from the cached meta info offset,
+   * jumps to the meta block with the relative
+   * index `meta_block_index`
+   */
   void _read_meta_info_from_offset(size_t meta_block_index) {
     auto meta_info_offset = _cached_meta_info_offset;
     for (auto i = 0u; i < meta_block_index; ++i) {
