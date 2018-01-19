@@ -176,4 +176,11 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logic_error); }
 
+TEST_F(StorageTableTest, IsPartitioned) {
+  Table t0 = Table(5);
+  EXPECT_FALSE(t0.is_partitioned());
+  t0.create_round_robin_partitioning(2u);
+  EXPECT_TRUE(t0.is_partitioned());
+}
+
 }  // namespace opossum
