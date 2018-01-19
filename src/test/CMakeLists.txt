@@ -101,6 +101,7 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     storage/partitioning/hash_function_test.cpp
+    storage/partitioning/hash_partition_schema_test.cpp
     storage/partitioning/null_partition_schema_test.cpp
     storage/partitioning/partition_test.cpp
     storage/partitioning/range_partition_schema_test.cpp
