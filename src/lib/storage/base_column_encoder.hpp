@@ -5,8 +5,8 @@
 #include <memory>
 #include <type_traits>
 
-#include "storage/base_value_column.hpp"
 #include "storage/base_encoded_column.hpp"
+#include "storage/base_value_column.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/zero_suppression/zs_type.hpp"
 

@@ -68,7 +68,8 @@ using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward
 template <typename Derived, typename Value>
 class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> {
  public:
-  explicit BasePointAccessColumnIterator(const ChunkOffsetsIterator& chunk_offsets_it) : _chunk_offsets_it{chunk_offsets_it} {}
+  explicit BasePointAccessColumnIterator(const ChunkOffsetsIterator& chunk_offsets_it)
+      : _chunk_offsets_it{chunk_offsets_it} {}
 
  protected:
   const ChunkOffsetMapping& chunk_offsets() const { return *_chunk_offsets_it; }
@@ -77,7 +78,9 @@ class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> 
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_chunk_offsets_it; }
-  bool equal(const BasePointAccessColumnIterator& other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
+  bool equal(const BasePointAccessColumnIterator& other) const {
+    return (_chunk_offsets_it == other._chunk_offsets_it);
+  }
 
  private:
   ChunkOffsetsIterator _chunk_offsets_it;

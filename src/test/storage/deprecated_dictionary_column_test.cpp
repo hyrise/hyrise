@@ -7,8 +7,8 @@
 
 #include "storage/base_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/dictionary_compression.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {

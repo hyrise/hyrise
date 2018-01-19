@@ -8,8 +8,8 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "storage/column_encoding_utils.hpp"
 #include "storage/base_encoded_column.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/assert.hpp"
 
@@ -25,8 +25,7 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data
 }
 
 void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
-                                           const std::shared_ptr<Chunk>& chunk,
-                                           EncodingType encoding_type) {
+                                           const std::shared_ptr<Chunk>& chunk, EncodingType encoding_type) {
   DebugAssert((column_types.size() == chunk->column_count()),
               "Number of column types does not match the chunk’s column count.");
 

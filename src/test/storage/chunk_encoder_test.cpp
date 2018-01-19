@@ -7,10 +7,10 @@
 #include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
+#include "storage/base_encoded_column.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/base_encoded_column.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

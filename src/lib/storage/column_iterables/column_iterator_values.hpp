@@ -60,7 +60,8 @@ class ColumnIteratorValue : public AbstractColumnIteratorValue<T> {
 template <typename T>
 class NonNullColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  public:
-  NonNullColumnIteratorValue(const T& value, const ChunkOffset& chunk_offset) : _value{value}, _chunk_offset{chunk_offset} {}
+  NonNullColumnIteratorValue(const T& value, const ChunkOffset& chunk_offset)
+      : _value{value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const final { return _value; }
   bool is_null() const final { return false; }

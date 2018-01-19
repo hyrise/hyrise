@@ -16,8 +16,7 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     if (_column.is_nullable()) {
-      auto begin =
-          Iterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
+      auto begin = Iterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
       auto end = Iterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
       functor(begin, end);
       return;
@@ -60,7 +59,8 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     bool equal(const NonNullIterator& other) const { return _value_it == other._value_it; }
 
     NonNullColumnIteratorValue<T> dereference() const {
-      return NonNullColumnIteratorValue<T>{*_value_it, static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
+      return NonNullColumnIteratorValue<T>{*_value_it,
+                                           static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
     }
 
    private:
@@ -75,7 +75,7 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
 
    public:
     explicit Iterator(const ValueIterator& begin_value_it, const ValueIterator& value_it,
-                              const NullValueIterator& null_value_it)
+                      const NullValueIterator& null_value_it)
         : _begin_value_it{begin_value_it}, _value_it(value_it), _null_value_it{null_value_it} {}
 
    private:
@@ -99,13 +99,15 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     NullValueIterator _null_value_it;
   };
 
-  class NonNullPointAccessIterator : public BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>> {
+  class NonNullPointAccessIterator
+      : public BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>> {
    public:
     using ValueVector = pmr_concurrent_vector<T>;
 
    public:
     explicit NonNullPointAccessIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it}, _values{values} {}
+        : BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
+          _values{values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -130,7 +132,7 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
 
    public:
     explicit PointAccessIterator(const ValueVector& values, const NullValueVector& null_values,
-                                     const ChunkOffsetsIterator& chunk_offsets_it)
+                                 const ChunkOffsetsIterator& chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
           _values{values},
           _null_values{null_values} {}

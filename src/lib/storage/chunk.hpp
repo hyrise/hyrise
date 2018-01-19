@@ -14,10 +14,10 @@
 
 #include "index/column_index_type.hpp"
 
-#include "utils/copyable_atomic.hpp"
-#include "utils/scoped_locking_ptr.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "utils/copyable_atomic.hpp"
+#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 

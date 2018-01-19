@@ -11,8 +11,8 @@
 
 #include "all_type_variant.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 

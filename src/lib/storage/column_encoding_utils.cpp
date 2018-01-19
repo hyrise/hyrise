@@ -1,15 +1,15 @@
 #include "column_encoding_utils.hpp"
 
-#include <memory>
 #include <map>
+#include <memory>
 
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp"
 #include "storage/dictionary_column/dictionary_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
 
 #include "storage/base_value_column.hpp"
-#include "utils/enum_constant.hpp"
 #include "utils/assert.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

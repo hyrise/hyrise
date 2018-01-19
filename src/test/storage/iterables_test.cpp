@@ -8,16 +8,16 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/dictionary_compression.hpp"
-#include "storage/dictionary_column.hpp"
 #include "storage/column_iterables/constant_value_iterable.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/reference_column/reference_column_iterable.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
+#include "storage/value_column/value_column_iterable.hpp"
 
 namespace opossum {
 

@@ -1,7 +1,7 @@
 #include "encode_by_zs_type.hpp"
 
-#include <memory>
 #include <map>
+#include <memory>
 
 #include "utils/assert.hpp"
 
@@ -19,8 +19,8 @@ namespace {
  * Add your zero suppression encoder here!
  */
 static const auto zs_encoder_for_type = std::map<ZsType, std::shared_ptr<BaseZeroSuppressionEncoder>>{
-  {ZsType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedEncoder>()},
-  {ZsType::SimdBp128, std::make_shared<SimdBp128Encoder>()}};
+    {ZsType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedEncoder>()},
+    {ZsType::SimdBp128, std::make_shared<SimdBp128Encoder>()}};
 
 std::unique_ptr<BaseZeroSuppressionEncoder> create_encoder_by_zs_type(ZsType type) {
   Assert(type != ZsType::Invalid, "ZsType must be valid.");

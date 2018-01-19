@@ -8,8 +8,8 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "storage/column_encoding_utils.hpp"
 #include "storage/base_encoded_column.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

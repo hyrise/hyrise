@@ -50,7 +50,7 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
 
     ColumnIteratorNullValue dereference() const {
       return ColumnIteratorNullValue{*_null_value_it,
-                             static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
+                                     static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
    private:
@@ -64,7 +64,8 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{chunk_offsets_it}, _null_values{null_values} {}
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{chunk_offsets_it},
+          _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

@@ -25,8 +25,8 @@ namespace hana = boost::hana;
  */
 template <typename UnsignedIntType>
 class FixedSizeByteAlignedVector : public ZeroSuppressionVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
- static_assert(hana::contains(hana::tuple_t<uint8_t, uint16_t, uint32_t>, hana::type_c<UnsignedIntType>),
-               "UnsignedIntType must be any of the three listed unsigned integer types.");
+  static_assert(hana::contains(hana::tuple_t<uint8_t, uint16_t, uint32_t>, hana::type_c<UnsignedIntType>),
+                "UnsignedIntType must be any of the three listed unsigned integer types.");
 
  public:
   explicit FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}

@@ -15,7 +15,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin = Iterator{_column.values()->cbegin(), _column.null_values()->cbegin(), _column.end_positions()->cbegin(), 0u};
+    auto begin =
+        Iterator{_column.values()->cbegin(), _column.null_values()->cbegin(), _column.end_positions()->cbegin(), 0u};
     auto end = Iterator{_column.values()->cend(), _column.null_values()->cend(), _column.end_positions()->cend(),
                         static_cast<ChunkOffset>(_column.size())};
 
@@ -24,10 +25,10 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin =
-        PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(), mapped_chunk_offsets.cbegin()};
-    auto end =
-        PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
+    auto begin = PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(),
+                                     mapped_chunk_offsets.cbegin()};
+    auto end = PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(),
+                                   mapped_chunk_offsets.cend()};
 
     functor(begin, end);
   }
@@ -43,8 +44,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
    public:
-    explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it, const EndPositionIterator& end_position_it,
-                      const ChunkOffset start_position)
+    explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
+                      const EndPositionIterator& end_position_it, const ChunkOffset start_position)
         : _value_it{value_it},
           _null_value_it{null_value_it},
           _end_position_it{end_position_it},

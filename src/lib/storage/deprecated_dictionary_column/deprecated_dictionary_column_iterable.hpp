@@ -69,7 +69,7 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
 
    public:
     explicit PointAccessIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
-                             const ChunkOffsetsIterator& chunk_offsets_it)
+                                 const ChunkOffsetsIterator& chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
           _attribute_vector{attribute_vector} {}

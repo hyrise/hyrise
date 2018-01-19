@@ -99,7 +99,7 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
 
   template <typename ZsDecoderType>
   PointAccessIterator<ZsDecoderType> create_indexed_iterator(ChunkOffsetsIterator chunk_offsets_it,
-                                                         ZsDecoderType& decoder) const {
+                                                             ZsDecoderType& decoder) const {
     const auto lookup = PointAccessIteratorLookup<ZsDecoderType>{_null_value_id, decoder};
     return PointAccessIterator<ZsDecoderType>{chunk_offsets_it, lookup};
   }

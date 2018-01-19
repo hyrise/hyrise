@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "column_visitable.hpp"
+#include "deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
