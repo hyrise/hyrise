@@ -15,18 +15,18 @@ namespace opossum {
 IndexEvaluator::IndexEvaluator() {}
 
 std::vector<IndexEvaluation> IndexEvaluator::evaluate_indices(const SystemStatistics& statistics) {
-  _access_recods.clear();
-  _index_evaluations.clear();
+  _indices.clear();
+
+  // ToDo(group01): _find_existing_indices();
 
   // Investigate query cache
   const auto& recent_queries = statistics.recent_queries();
-
+  _access_recods.clear();
   for (const auto& cache_entry : recent_queries) {
     for (const auto& tree_root : cache_entry.query_plan.tree_roots()) {
       _inspect_operator(tree_root, cache_entry.access_frequency);
     }
   }
-
   _aggregate_access_records();
 
   _estimate_cost();
@@ -73,64 +73,29 @@ void IndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOpera
 
 void IndexEvaluator::_aggregate_access_records() {
   for (const auto& access_record : _access_recods) {
-    // ToDo(group01): Use more efficient data structure to find existing evaluations
-    bool match = false;
-    for (auto& index_evaluation : _index_evaluations) {
-      if (index_evaluation.table_name == access_record.table_name &&
-          index_evaluation.column_id == access_record.column_id) {
-        index_evaluation.saved_work += (1.0 / access_record.selectivity) * access_record.number_of_usages;
-        match = true;
-        break;
-      }
-    }
-    if (!match) {
-      // create new evaluation as no existing one fits this record
-      _index_evaluations.emplace_back(access_record.table_name, access_record.column_id);
-      _index_evaluations.back().saved_work += (1.0 / access_record.selectivity) * access_record.number_of_usages;
-    }
+    float saved_work = (1.0 / access_record.selectivity) * access_record.number_of_usages;
+
+    IndexSpec index_spec = std::make_pair(access_record.table_name, access_record.column_id);
+    _indices[index_spec].saved_work += saved_work;
   }
 }
 
 void IndexEvaluator::_estimate_cost() {
   // ToDo(group01): useful logic, e.g. number of chunks to estimate table size
-  for (auto& evaluation : _index_evaluations) {
-    evaluation.cost = 1;
+  for (auto& index_data : _indices) {
+    index_data.second.memory_cost = 1;
   }
 }
 
 std::vector<IndexEvaluation> IndexEvaluator::_calculate_desirability() {
-  // Map absolute usage + cost values to relative values (across all index proposals)
-  // ToDo(group01: if we plan to continue with this approach, extract a calculateRelativeValues(accessor) method
-  //               to deduplicate code.
-
-  auto max_num_usages_element = std::max_element(_index_evaluations.begin(), _index_evaluations.end(),
-                                                 IndexEvaluatorData::compare_number_of_usages);
-  auto max_num_usages = static_cast<float>(max_num_usages_element->number_of_usages);
-
-  auto max_cost_element =
-      std::max_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluatorData::compare_cost);
-  auto min_cost_element =
-      std::min_element(_index_evaluations.begin(), _index_evaluations.end(), IndexEvaluatorData::compare_cost);
-  auto max_cost = static_cast<float>(max_cost_element->cost);
-  auto min_cost = static_cast<float>(min_cost_element->cost);
-  // If there is only one cost value, add one to prevent a division by zero error
-  if (max_cost == min_cost) {
-    max_cost += 1.0f;
+  // ToDo(group01): use IndexEvaluation instead of IndexEvaluatorData
+  //    unless we find more desirability components than only saved work
+  std::vector<IndexEvaluation> evaluations;
+  for (auto& index_data : _indices) {
+    evaluations.emplace_back(index_data.first.first, index_data.first.second);
+    evaluations.back().desirablility = index_data.second.saved_work;
+    evaluations.back().memory_cost = index_data.second.memory_cost;
   }
-
-  std::vector<IndexEvaluation> proposals;
-  for (auto& evaluation : _index_evaluations) {
-    float relative_num_usages = static_cast<float>(evaluation.number_of_usages) / max_num_usages;
-
-    // From the cost minimum to cost maximum range, calculate where this cost value sits relatively
-    float relative_cost = static_cast<float>(evaluation.cost - min_cost) / (max_cost - min_cost);
-
-    // ToDo(group01): better "mixdown" logic
-    // Since higher cost is bad, invert that value
-    float desirability = 0.5f * relative_num_usages + 0.5f * (1.0f - relative_cost);
-    proposals.emplace_back(evaluation.table_name, evaluation.column_id);
-    proposals.back().desirablility = desirability;
-  }
-  return proposals;
+  return evaluations;
 }
 }  // namespace opossum
