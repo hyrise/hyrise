@@ -51,7 +51,7 @@ class OperatorsExportBinaryTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = "/tmp/" + unique_random_name();
+  const std::string filename = TEST_DATA_PATH + unique_random_name();
 };
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
