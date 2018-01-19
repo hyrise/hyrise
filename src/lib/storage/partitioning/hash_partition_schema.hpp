@@ -1,7 +1,7 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "hash_function.hpp"
+#include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
 #include "types.hpp"
 

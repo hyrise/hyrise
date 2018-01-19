@@ -278,8 +278,8 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-    hash_function.hpp
-    hash_function.cpp
+    storage/partitioning/hash_function.hpp
+    storage/partitioning/hash_function.cpp
     storage/partitioning/partition.cpp
     storage/partitioning/partition.hpp
     storage/partitioning/abstract_partition_schema.cpp

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <hash_function.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -11,6 +10,7 @@
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
+#include "storage/partitioning/hash_function.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

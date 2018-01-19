@@ -7,7 +7,7 @@ namespace opossum {
 
 class HashFunction {
  public:
-  const HashValue calculate_hash(const AllTypeVariant value_to_hash) const;
+  const HashValue calculate_hash(const AllTypeVariant value) const;
 };
 
 }  // namespace opossum
