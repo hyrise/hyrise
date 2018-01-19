@@ -17,6 +17,7 @@ class StorageRoundRobinPartitionSchemaTest : public BaseTest {
 TEST_F(StorageRoundRobinPartitionSchemaTest, CreateRangePartitioning) {
   EXPECT_EQ(t0.row_count(), 0u);
   EXPECT_EQ(t0.chunk_count(), 2u);
+  EXPECT_TRUE(t0.is_partitioned());
 }
 
 TEST_F(StorageRoundRobinPartitionSchemaTest, AppendViaTable) {

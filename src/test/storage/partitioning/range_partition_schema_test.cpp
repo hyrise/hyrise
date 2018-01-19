@@ -17,6 +17,7 @@ class StorageRangePartitionSchemaTest : public BaseTest {
 TEST_F(StorageRangePartitionSchemaTest, CreateRangePartitioning) {
   EXPECT_EQ(t0.row_count(), 0u);
   EXPECT_EQ(t0.chunk_count(), 3u);
+  EXPECT_TRUE(t0.is_partitioned());
 }
 
 TEST_F(StorageRangePartitionSchemaTest, AppendViaTable) {

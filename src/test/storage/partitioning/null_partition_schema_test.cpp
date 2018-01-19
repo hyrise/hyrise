@@ -16,6 +16,7 @@ class StorageNullPartitionSchemaTest : public BaseTest {
 TEST_F(StorageNullPartitionSchemaTest, NullPartitioningIsDefault) {
   EXPECT_EQ(t0.row_count(), 0u);
   EXPECT_EQ(t0.chunk_count(), 1u);
+  EXPECT_FALSE(t0.is_partitioned());
 }
 
 TEST_F(StorageNullPartitionSchemaTest, AppendViaTable) {
