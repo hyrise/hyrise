@@ -15,7 +15,12 @@ namespace opossum {
 class BaseAttributeVector;
 class BaseColumn;
 
-// Dictionary is a specific column type that stores all its values in a vector
+/**
+ * @brief Old implementation of a dictionary-encoded column
+ *
+ * @deprecated The new implementation (DictionaryColumn) is faster and
+ *             supports more compression techniques for the attribute vector.
+ */
 template <typename T>
 class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
  public:

@@ -14,6 +14,8 @@ namespace opossum {
 /**
  * @brief Base class of all zero suppression vectors
  *
+ * A zero suppression vector is a compressed uint32_t vector.
+ *
  * Every zero suppression scheme consists of four parts:
  * - the encoder, which encapsulates the encoding algorithm (base class: BaseZeroSuppressionEncoder)
  * - the vector, which is returned by the encoder and contains the encoded data (base class: BaseZeroSuppressionVector)

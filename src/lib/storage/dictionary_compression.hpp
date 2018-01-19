@@ -14,6 +14,11 @@ class BaseColumn;
 class Chunk;
 class Table;
 
+/**
+ * @brief Compresses parts of or an entire table using one encoding type
+ *
+ * @deprecated Use ChunkEncoder interface instead!
+ */
 class DictionaryCompression {
  public:
   /**
