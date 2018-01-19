@@ -15,8 +15,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin = Iterator{_column.null_value(), _column.values()->cbegin(), _column.end_positions()->cbegin(), 0u};
-    auto end = Iterator{_column.null_value(), _column.values()->cend(), _column.end_positions()->cend(),
+    auto begin = Iterator{_column.values()->cbegin(), _column.null_values()->cbegin(), _column.end_positions()->cbegin(), 0u};
+    auto end = Iterator{_column.values()->cend(), _column.null_values()->cend(), _column.end_positions()->cend(),
                         static_cast<ChunkOffset>(_column.size())};
 
     functor(begin, end);
@@ -24,10 +24,10 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = PointAccessIterator{_column.null_value(), *_column.values(), *_column.end_positions(),
-                                 mapped_chunk_offsets.cbegin()};
+    auto begin =
+        PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(), mapped_chunk_offsets.cbegin()};
     auto end =
-        PointAccessIterator{_column.null_value(), *_column.values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
+        PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(), mapped_chunk_offsets.cend()};
 
     functor(begin, end);
   }
@@ -39,13 +39,14 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
   class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using ValueIterator = typename pmr_vector<T>::const_iterator;
+    using NullValueIterator = typename pmr_vector<bool>::const_iterator;
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
    public:
-    explicit Iterator(const T null_value, const ValueIterator& value_it, const EndPositionIterator& end_position_it,
+    explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it, const EndPositionIterator& end_position_it,
                       const ChunkOffset start_position)
-        : _null_value{null_value},
-          _value_it{value_it},
+        : _value_it{value_it},
+          _null_value_it{null_value_it},
           _end_position_it{end_position_it},
           _current_position{start_position} {}
 
@@ -57,6 +58,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
       if (_current_position > *_end_position_it) {
         ++_value_it;
+        ++_null_value_it;
         ++_end_position_it;
       }
     }
@@ -64,27 +66,24 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
     bool equal(const Iterator& other) const { return _current_position == other._current_position; }
 
     ColumnIteratorValue<T> dereference() const {
-      if (*_value_it == _null_value) {
-        return ColumnIteratorValue{T{}, true, _current_position};
-      }
-
-      return ColumnIteratorValue<T>{*_value_it, false, _current_position};
+      return ColumnIteratorValue<T>{*_value_it, *_null_value_it, _current_position};
     }
 
    private:
-    const T _null_value;
     ValueIterator _value_it;
+    NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
     ChunkOffset _current_position;
   };
 
   class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>> {
    public:
-    explicit PointAccessIterator(const T null_value, const pmr_vector<T>& values,
-                             const pmr_vector<ChunkOffset>& end_positions, const ChunkOffsetsIterator& chunk_offsets_it)
+    explicit PointAccessIterator(const pmr_vector<T>& values, const pmr_vector<bool>& null_values,
+                                 const pmr_vector<ChunkOffset>& end_positions,
+                                 const ChunkOffsetsIterator& chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
-          _null_value{null_value},
           _values{values},
+          _null_values{null_values},
           _end_positions{end_positions},
           _prev_chunk_offset{end_positions.back() + 1u},
           _prev_index{end_positions.size()} {}
@@ -113,7 +112,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
       const auto current_index = std::distance(_end_positions.cbegin(), end_position_it);
 
       const auto value = _values[current_index];
-      const auto is_null = (value == _null_value);
+      const auto is_null = _null_values[current_index];
 
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
@@ -122,8 +121,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
     }
 
    private:
-    const T _null_value;
     const pmr_vector<T>& _values;
+    const pmr_vector<bool>& _null_values;
     const pmr_vector<ChunkOffset>& _end_positions;
 
     mutable ChunkOffset _prev_chunk_offset;

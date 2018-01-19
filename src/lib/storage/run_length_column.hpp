@@ -17,13 +17,12 @@ template <typename T>
 class RunLengthColumn : public BaseEncodedColumn {
  public:
   explicit RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
-                           const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions, const T null_value);
+                           const std::shared_ptr<const pmr_vector<bool>>& null_values,
+                           const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions);
 
   std::shared_ptr<const pmr_vector<T>> values() const;
+  std::shared_ptr<const pmr_vector<bool>> null_values() const;
   std::shared_ptr<const pmr_vector<ChunkOffset>> end_positions() const;
-
-  // column specific null_value
-  const T null_value() const;
 
   /**
    * @defgroup BaseColumn interface
@@ -49,8 +48,8 @@ class RunLengthColumn : public BaseEncodedColumn {
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _values;
+  const std::shared_ptr<const pmr_vector<bool>> _null_values;
   const std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;
-  const T _null_value;
 };
 
 }  // namespace opossum

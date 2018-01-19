@@ -11,9 +11,9 @@ namespace opossum {
 
 template <typename T>
 RunLengthColumn<T>::RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
-                                    const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
-                                    const T null_value)
-    : _values{values}, _end_positions{end_positions}, _null_value{null_value} {}
+                                    const std::shared_ptr<const pmr_vector<bool>>& null_values,
+                                    const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
+    : _values{values}, _null_values{null_values}, _end_positions{end_positions} {}
 
 template <typename T>
 std::shared_ptr<const pmr_vector<T>> RunLengthColumn<T>::values() const {
@@ -21,13 +21,13 @@ std::shared_ptr<const pmr_vector<T>> RunLengthColumn<T>::values() const {
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthColumn<T>::end_positions() const {
-  return _end_positions;
+std::shared_ptr<const pmr_vector<bool>> RunLengthColumn<T>::null_values() const {
+  return _null_values;
 }
 
 template <typename T>
-const T RunLengthColumn<T>::null_value() const {
-  return _null_value;
+std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthColumn<T>::end_positions() const {
+  return _end_positions;
 }
 
 template <typename T>
@@ -38,8 +38,9 @@ const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offs
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
   const auto value = (*_values)[index];
+  const auto is_null = (*_null_values)[index];
 
-  if (value == _null_value) return NULL_VALUE;
+  if (is_null) return NULL_VALUE;
 
   return AllTypeVariant{value};
 }
@@ -53,11 +54,13 @@ size_t RunLengthColumn<T>::size() const {
 template <typename T>
 std::shared_ptr<BaseColumn> RunLengthColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_values = pmr_vector<T>{*_values, alloc};
+  auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
   auto new_end_positions = pmr_vector<ChunkOffset>{*_end_positions, alloc};
 
   auto new_values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_values));
+  auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
   auto new_end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(new_end_positions));
-  return std::allocate_shared<RunLengthColumn<T>>(alloc, new_values_ptr, new_end_positions_ptr, _null_value);
+  return std::allocate_shared<RunLengthColumn<T>>(alloc, new_values_ptr, new_null_values_ptr, new_end_positions_ptr);
 }
 
 template <typename T>

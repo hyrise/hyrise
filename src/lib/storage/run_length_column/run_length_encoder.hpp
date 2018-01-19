@@ -21,30 +21,34 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
-    auto null_value = get_null_value<T>();
-
     const auto alloc = value_column->values().get_allocator();
 
     auto values = pmr_vector<T>{alloc};
+    auto null_values = pmr_vector<bool>{alloc};
     auto end_positions = pmr_vector<ChunkOffset>{alloc};
 
     auto iterable = ValueColumnIterable<T>{*value_column};
 
     iterable.with_iterators([&](auto it, auto end) {
-      // Init current_value such that it does not equal the first entry
-      auto current_value = it->is_null() ? T{} : null_value;
+      // Init is_current_null such that it does not equal the first entry
+      auto current_value = T{};
+      auto is_current_null = !it->is_null();
       auto current_index = 0u;
 
       for (; it != end; ++it) {
         auto column_value = *it;
 
         const auto prev_value = current_value;
-        current_value = column_value.is_null() ? null_value : column_value.value();
+        const auto is_prev_null = is_current_null;
 
-        if (prev_value == current_value) {
+        current_value = column_value.value();
+        is_current_null = column_value.is_null();
+
+        if ((is_prev_null == is_current_null) && (is_prev_null || (prev_value == current_value))) {
           end_positions.back() = current_index;
         } else {
           values.push_back(current_value);
+          null_values.push_back(is_current_null);
           end_positions.push_back(current_index);
         }
 
@@ -53,30 +57,13 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
     });
 
     values.shrink_to_fit();
+    null_values.shrink_to_fit();
     end_positions.shrink_to_fit();
 
     auto values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(values));
+    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
     auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(end_positions));
-    return std::allocate_shared<RunLengthColumn<T>>(alloc, values_ptr, end_positions_ptr, null_value);
-  }
-
- private:
-  // Use quiet NaN as null value for floating point types
-  template <typename T>
-  std::enable_if_t<std::numeric_limits<T>::has_quiet_NaN, T> get_null_value() {
-    return std::numeric_limits<T>::quiet_NaN();
-  }
-
-  // Use bell signal as null value for strings
-  template <typename T>
-  std::enable_if_t<std::is_same_v<std::string, T>, T> get_null_value() {
-    return std::string{'\7'};
-  }
-
-  // Use maximum value as null value for integral types
-  template <typename T>
-  std::enable_if_t<std::is_integral_v<T>, T> get_null_value() {
-    return std::numeric_limits<T>::max();
+    return std::allocate_shared<RunLengthColumn<T>>(alloc, values_ptr, null_values_ptr, end_positions_ptr);
   }
 };
 
