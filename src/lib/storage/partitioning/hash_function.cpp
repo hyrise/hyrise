@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-const HashValue HashFunction::calculate_hash(const AllTypeVariant value) const {
+const HashValue HashFunction::operator()(const AllTypeVariant value) const {
   if (value.type() == typeid(int32_t)) {
     return HashValue{std::hash<int32_t>{}(type_cast<int32_t>(value))};
   }
@@ -25,7 +25,7 @@ const HashValue HashFunction::calculate_hash(const AllTypeVariant value) const {
     return HashValue{std::hash<std::string>{}(type_cast<std::string>(value))};
   }
 
-  return HashValue{0};
+  throw "Unknown type, can not hash";
 }
 
 }  // namespace opossum

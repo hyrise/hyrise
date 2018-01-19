@@ -20,7 +20,7 @@ void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
 PartitionID HashPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
   DebugAssert(values.size() > static_cast<size_t>(_column_id), "Can not determine partition, too few values given");
   auto value = values[_column_id];
-  const HashValue hash = _hash_function.calculate_hash(value);
+  const HashValue hash = _hash_function(value);
   PartitionID matching_partition = static_cast<PartitionID>(hash % _number_of_partitions);
   return matching_partition;
 }
