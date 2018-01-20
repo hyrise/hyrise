@@ -44,9 +44,9 @@ TEST_F(StorageRangePartitionSchemaTest, AppendDirectly) {
 
   EXPECT_EQ(t0.row_count(), 3u);
   EXPECT_EQ(t0.chunk_count(), 3u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{0}).size(), 2u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{1}).size(), 1u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{2}).size(), 0u);
+  EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 2u);
+  EXPECT_EQ(t0.get_chunk(ChunkID{1})->size(), 1u);
+  EXPECT_EQ(t0.get_chunk(ChunkID{2})->size(), 0u);
 }
 
 TEST_F(StorageRangePartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
@@ -56,7 +56,7 @@ TEST_F(StorageRangePartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
 
   EXPECT_EQ(t0.row_count(), 3u);
   EXPECT_EQ(t0.chunk_count(), 3u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{0}).size(), 3u);
+  EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 3u);
 }
 
 TEST_F(StorageRangePartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "RangePartition"); }

@@ -25,6 +25,8 @@ TableStatistics::TableStatistics(float row_count,
 
 float TableStatistics::row_count() const { return _row_count; }
 
+uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
+
 const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
 }
@@ -38,11 +40,11 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     return shared_from_this();
   }
 
-  if (scan_type == ScanType::OpLike || scan_type == ScanType::OpNotLike) {
+  if (scan_type == ScanType::Like || scan_type == ScanType::NotLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
     auto selectivity = DEFAULT_LIKE_SELECTIVITY;
-    if (scan_type == ScanType::OpNotLike) selectivity = 1.0 - selectivity;
+    if (scan_type == ScanType::NotLike) selectivity = 1.0 - selectivity;
     clone->_row_count = _row_count * selectivity;
     return clone;
   }
@@ -112,8 +114,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_statistics(
-    const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
-    const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type) {
+    const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
+    const ScanType scan_type) {
   DebugAssert(mode != JoinMode::Cross, "Use function generate_cross_join_statistics for cross joins.");
   DebugAssert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
@@ -248,6 +250,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
 
   return join_table_stats;
 }
+
+void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(const ColumnID column_id) {
   if (_column_statistics[column_id]) {

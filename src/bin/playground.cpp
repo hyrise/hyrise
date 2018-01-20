@@ -4,6 +4,10 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 
+#include "types.hpp"
+
+using namespace opossum;  // NOLINT
+
 int main() {
   auto table = std::make_shared<opossum::Table>(10);
   table->create_range_partitioning(opossum::ColumnID{1}, {100000000, 1000000000});

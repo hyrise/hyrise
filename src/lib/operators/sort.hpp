@@ -41,8 +41,6 @@ class Sort : public AbstractReadOnlyOperator {
   template <typename SortColumnType>
   class SortImpl;
   template <typename SortColumnType>
-  class SortImplMaterializeSortColumn;
-  template <typename SortColumnType>
   class SortImplMaterializeOutput;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;

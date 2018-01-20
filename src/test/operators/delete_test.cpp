@@ -14,6 +14,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -43,7 +44,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::OpGreaterThan, "456.7");
+  auto table_scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::GreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -52,12 +53,13 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(0u), transaction_context->transaction_id());
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->tids.at(0u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
 
   // Table has three rows initially.
-  EXPECT_EQ(_table->approx_valid_row_count(), 3u);
+  ASSERT_NE(_table->table_statistics(), nullptr);
+  EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 3u);
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
@@ -65,24 +67,24 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
-    EXPECT_EQ(_table->approx_valid_row_count(), 1u);
+    EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 1u);
   } else {
     transaction_context->rollback();
     expected_end_cid = Chunk::MAX_COMMIT_ID;
 
     // Delete rolled back, three rows left.
-    EXPECT_EQ(_table->approx_valid_row_count(), 3u);
+    EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 3u);
   }
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(1u), Chunk::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(2u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(1u), Chunk::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(2u), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(0u), expected_tid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(2u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->tids.at(0u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->tids.at(2u), expected_tid);
 }
 
 TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
@@ -93,16 +95,16 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpEquals, "123");
-  auto expected_result = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpNotEquals, "123");
-  auto table_scan2 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpLessThan, "1234");
+  auto table_scan1 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::Equals, "123");
+  auto expected_result = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::NotEquals, "123");
+  auto table_scan2 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
   table_scan2->execute();
 
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
-  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0}).column_count(), 2u);
+  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0})->column_count(), 2u);
 
   auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
   delete_op1->set_transaction_context(t1_context);

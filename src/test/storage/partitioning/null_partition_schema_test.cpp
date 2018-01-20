@@ -36,7 +36,7 @@ TEST_F(StorageNullPartitionSchemaTest, AppendDirectly) {
 
   EXPECT_EQ(t0.row_count(), 2u);
   EXPECT_EQ(t0.chunk_count(), 1u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{0}).size(), 2u);
+  EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 2u);
 }
 
 TEST_F(StorageNullPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
@@ -46,7 +46,7 @@ TEST_F(StorageNullPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
 
   EXPECT_EQ(t0.row_count(), 3u);
   EXPECT_EQ(t0.chunk_count(), 1u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{0}).size(), 3u);
+  EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 3u);
 }
 
 TEST_F(StorageNullPartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "NullPartition"); }

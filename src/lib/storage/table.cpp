@@ -68,7 +68,7 @@ void Table::add_column_definition(const std::string& name, DataType data_type, b
 void Table::add_column(const std::string& name, DataType data_type, bool nullable) {
   add_column_definition(name, data_type, nullable);
 
-  for (auto chunk : _chunks) {
+  for (auto& chunk : _chunks) {
     chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(data_type, nullable));
   }
 }
@@ -82,8 +82,6 @@ void Table::append(std::vector<AllTypeVariant> values) {
   }
   _partition_schema->append(values, partition_id);
 }
-
-void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk(PartitionID partition_id) {
   // Create chunk with mvcc columns
@@ -103,13 +101,11 @@ uint16_t Table::column_count() const { return _column_types.size(); }
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
-  for (const auto chunk : _chunks) {
+  for (const auto& chunk : _chunks) {
     ret += chunk->size();
   }
   return ret;
 }
-
-uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
@@ -121,7 +117,6 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
     }
   }
   Fail("Column " + column_name + " not found.");
-  return {};
 }
 
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
@@ -147,39 +142,38 @@ const std::vector<DataType>& Table::column_types() const { return _column_types;
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
-Chunk& Table::get_modifiable_chunk(ChunkID chunk_id) {
+std::shared_ptr<Chunk> Table::get_modifiable_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return *(_chunks[chunk_id]);
+  return _chunks[chunk_id];
 }
 
-const Chunk& Table::get_chunk(ChunkID chunk_id) const {
+std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return *(_chunks[chunk_id]);
+  return _chunks[chunk_id];
 }
 
 ProxyChunk Table::get_modifiable_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(*(_chunks[chunk_id]));
+  return ProxyChunk(_chunks[chunk_id]);
 }
 
 const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return ProxyChunk(*(_chunks[chunk_id]));
+  return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::emplace_chunk(Chunk chunk, PartitionID partition_id) {
+void Table::emplace_chunk(const std::shared_ptr<Chunk>& chunk, PartitionID partition_id) {
   if (_chunks.size() == 1 && (_chunks.back()->column_count() == 0 || _chunks.back()->size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
     _partition_schema->clear();
   }
-  DebugAssert(chunk.column_count() > 0, "Trying to add chunk without columns.");
-  DebugAssert(chunk.column_count() == column_count(),
-              std::string("adding chunk with ") + std::to_string(chunk.column_count()) + " columns to table with " +
+  DebugAssert(chunk->column_count() > 0, "Trying to add chunk without columns.");
+  DebugAssert(chunk->column_count() == column_count(),
+              std::string("adding chunk with ") + std::to_string(chunk->column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");
-  auto new_chunk = std::make_shared<Chunk>(std::move(chunk));
-  _chunks.emplace_back(new_chunk);
-  _partition_schema->add_new_chunk(new_chunk, partition_id);
+  _chunks.emplace_back(chunk);
+  _partition_schema->add_new_chunk(chunk, partition_id);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

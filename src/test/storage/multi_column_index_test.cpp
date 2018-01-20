@@ -194,16 +194,16 @@ TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
-  auto chunk = Chunk{};
-  chunk.add_column(this->dict_col_int);
-  chunk.add_column(this->dict_col_str);
+  auto chunk = std::make_shared<Chunk>();
+  chunk->add_column(this->dict_col_int);
+  chunk->add_column(this->dict_col_str);
 
-  chunk.create_index<TypeParam>({this->dict_col_int});
-  chunk.create_index<TypeParam>({this->dict_col_int, this->dict_col_str});
+  chunk->create_index<TypeParam>({this->dict_col_int});
+  chunk->create_index<TypeParam>({this->dict_col_int, this->dict_col_str});
 
-  auto indices_int = chunk.get_indices({this->dict_col_int});
-  auto indices_int_str = chunk.get_indices({this->dict_col_int, this->dict_col_str});
-  auto indices_str = chunk.get_indices({this->dict_col_str});
+  auto indices_int = chunk->get_indices({this->dict_col_int});
+  auto indices_int_str = chunk->get_indices({this->dict_col_int, this->dict_col_str});
+  auto indices_str = chunk->get_indices({this->dict_col_str});
 
   EXPECT_EQ(2u, indices_int.size());
   EXPECT_EQ(1u, indices_int_str.size());
