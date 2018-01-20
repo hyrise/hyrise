@@ -58,21 +58,21 @@ node {
 
       parallel clangDebugRun: {
         stage("clang-debug:test") {
-          sh "./clang-debug/hyriseTest"
+          sh "./clang-debug/hyriseTest clangDebugRun"
         }
       }, clangDebugRunShuffled: {
         stage("clang-debug:test-shuffle") {
-          sh "./clang-debug/hyriseTest --gtest_repeat=5 --gtest_shuffle"
+          sh "./clang-debug/hyriseTest clangDebugRunShuffled --gtest_repeat=5 --gtest_shuffle"
         }
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
         sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clangDebugSanitizers"
         }
       }, gccRelease: {
         stage("gcc-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./gcc-release/hyriseTest"
+          sh "./gcc-release/hyriseTest gccRelease"
         }
       }, systemTest: {
         stage("System Test") {
@@ -81,16 +81,16 @@ node {
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clangReleaseSanitizers"
         }
       }, clangReleaseSanitizersNoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clangReleaseSanitizersNoNuma"
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
+          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true gccDebugCoverage"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
           archive 'coverage.xml'
@@ -111,7 +111,7 @@ node {
         }
       }, memcheck: {
         stage("valgrind-memcheck") {
-          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
         }
       }
 

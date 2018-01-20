@@ -12,7 +12,7 @@ cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 make hyriseTest -j $((cores / 2))
 cd -
 
-./$1/hyriseTest
+./$1/hyriseTest $3
 rm -fr coverage; mkdir coverage
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
