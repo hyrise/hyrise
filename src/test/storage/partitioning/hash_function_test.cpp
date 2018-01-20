@@ -10,16 +10,16 @@ class HashFunctionTest : public BaseTest {
 
 TEST_F(HashFunctionTest, HashInt32) {
   HashFunction hf;
-  EXPECT_EQ(hf(42), hf(42));
-  EXPECT_EQ(hf(21), hf(21));
-  EXPECT_NE(hf(42), hf(21));
+  EXPECT_EQ(hf(INT32_C(42)), hf(INT32_C(42)));
+  EXPECT_EQ(hf(INT32_C(21)), hf(INT32_C(21)));
+  EXPECT_NE(hf(INT32_C(42)), hf(INT32_C(21)));
 }
 
 TEST_F(HashFunctionTest, HashInt64) {
   HashFunction hf;
-  EXPECT_EQ(hf(42l), hf(42l));
-  EXPECT_EQ(hf(21l), hf(21l));
-  EXPECT_NE(hf(42l), hf(21l));
+  EXPECT_EQ(hf(INT64_C(42)), hf(INT64_C(42)));
+  EXPECT_EQ(hf(INT64_C(21)), hf(INT64_C(21)));
+  EXPECT_NE(hf(INT64_C(42)), hf(INT64_C(21)));
 }
 
 TEST_F(HashFunctionTest, HashFloat) {
