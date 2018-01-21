@@ -19,16 +19,15 @@
 namespace opossum {
 
 /*
- * This is a Nested Loop Join implementation completely based on iterables.
- * It supports all current join and scan types, as well as NULL values.
- * Because this is a Nested Loop Join, the performance is going to be far inferior to JoinHash and JoinSortMerge,
- * so only use this for testing or benchmarking purposes.
+ * This is an index join implementation. It expects to find an index on the right column.
+ * It currently uses the index for the following join modes: inner, left, natural, self, semi, anti.
+ * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                      const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type), _fallback{false} {}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
@@ -78,104 +77,122 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
                                   RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                                   const ChunkID chunk_id_right, std::vector<bool>& left_matches) {
   const auto to_row_id = [chunk_id_right](ChunkOffset chunk_offset) { return RowID{chunk_id_right, chunk_offset}; };
-  // outer loop, we keep this
-  for (; left_it != left_end; ++left_it) {
-    const auto left_value = *left_it;
-    if (left_value.is_null()) continue;
 
-    // new inner loop
-    const auto& r_chunk = _right_in_table->get_chunk(chunk_id_right);
-    const auto indices = r_chunk.get_indices(std::vector<ColumnID>{_right_column_id});
+  // new inner loop
+  const auto& r_chunk = _right_in_table->get_chunk(chunk_id_right);
+  const auto indices = r_chunk.get_indices(std::vector<ColumnID>{_right_column_id});
 
-    Assert(indices.size() >= 1, "No index found for the right column");
+  Assert(indices.size() >= 1, "No index found for the right column");
 
-    // We assume the first index to be good. Evaluating index performance is not task of the join.
-    const auto index = indices.front();
+  // We assume the first index to be good. Evaluating index performance is not task of the join.
+  const auto index = indices.front();
 
-    Assert(index != nullptr, "Index of specified type not found for column (vector).");
+  if (index != nullptr && !_fallback) {
+    // We have a proper index and can use it, so we do an index join for this chunk combination
+    // outer loop, we keep this
+    for (; left_it != left_end; ++left_it) {
+      const auto left_value = *left_it;
+      if (left_value.is_null()) continue;
 
-    auto var = AllTypeVariant(left_value.value());
+      auto var = AllTypeVariant(left_value.value());
 
-    auto comp_values = std::vector<AllTypeVariant>();
+      auto comp_values = std::vector<AllTypeVariant>();
 
-    comp_values.push_back(var);
+      comp_values.push_back(var);
 
-    auto range_begin = BaseIndex::Iterator{};
-    auto range_end = BaseIndex::Iterator{};
+      auto range_begin = BaseIndex::Iterator{};
+      auto range_end = BaseIndex::Iterator{};
 
-    switch (_scan_type) {
-      case ScanType::OpEquals: {
-        range_begin = index->lower_bound(comp_values);
-        range_end = index->upper_bound(comp_values);
-        break;
+      switch (_scan_type) {
+        case ScanType::OpEquals: {
+          range_begin = index->lower_bound(comp_values);
+          range_end = index->upper_bound(comp_values);
+          break;
+        }
+        case ScanType::OpNotEquals: {
+          // first, get all values less than the search value
+          range_begin = index->cbegin();
+          range_end = index->cend();
+
+          append_matches(range_begin, range_end, left_value.chunk_offset(), left_matches, chunk_id_left, to_row_id);
+
+          // set range for second half to all values greater than the search value
+          range_begin = index->upper_bound(comp_values);
+          range_end = index->cend();
+          break;
+        }
+        case ScanType::OpLessThan: {
+          range_begin = index->cbegin();
+          range_end = index->lower_bound(comp_values);
+          break;
+        }
+        case ScanType::OpLessThanEquals: {
+          range_begin = index->cbegin();
+          range_end = index->upper_bound(comp_values);
+          break;
+        }
+        case ScanType::OpGreaterThan: {
+          range_begin = index->upper_bound(comp_values);
+          range_end = index->cend();
+          break;
+        }
+        case ScanType::OpGreaterThanEquals: {
+          range_begin = index->lower_bound(comp_values);
+          range_end = index->cend();
+          break;
+        }
+        default:
+          Fail("Unsupported comparison type encountered");
       }
-      case ScanType::OpNotEquals: {
-        // first, get all values less than the search value
-        range_begin = index->cbegin();
-        range_end = index->lower_bound(comp_values);
 
-        // TODO: this is copied from below, refactor to eliminate duplication
-        _pos_list_left->reserve(_pos_list_left->size() + std::distance(range_begin, range_end));
-        _pos_list_right->reserve(_pos_list_right->size() + std::distance(range_begin, range_end));
+      append_matches(range_begin, range_end, left_value.chunk_offset(), left_matches, chunk_id_left, to_row_id);
+    }
+  } else {
+    // No index or unsupported join type so we fall back on a nested loop join
+    for (; left_it != left_end; ++left_it) {
+      const auto left_value = *left_it;
+      if (left_value.is_null()) continue;
 
-        std::transform(range_begin, range_end, std::back_inserter(*_pos_list_right), to_row_id);
-        std::fill_n(std::back_inserter(*_pos_list_left), std::distance(range_begin, range_end),
-                    RowID{chunk_id_left, left_value.chunk_offset()});
+      for (auto right_it = right_begin; right_it != right_end; ++right_it) {
+        const auto right_value = *right_it;
+        if (right_value.is_null()) continue;
 
-        // set range for second half to all values greater than the search value
-        range_begin = index->upper_bound(comp_values);
-        range_end = index->cend();
-        break;
+        if (func(left_value.value(), right_value.value())) {
+          _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
+          _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
+
+          if (_is_outer_join) {
+            left_matches[left_value.chunk_offset()] = true;
+          }
+
+          if (_mode == JoinMode::Outer) {
+            _right_matches.insert(RowID{chunk_id_right, right_value.chunk_offset()});
+          }
+        }
       }
-      case ScanType::OpLessThan: {
-        range_begin = index->cbegin();
-        range_end = index->lower_bound(comp_values);
-        break;
-      }
-      case ScanType::OpLessThanEquals: {
-        range_begin = index->cbegin();
-        range_end = index->upper_bound(comp_values);
-        break;
-      }
-      case ScanType::OpGreaterThan: {
-        range_begin = index->upper_bound(comp_values);
-        range_end = index->cend();
-        break;
-      }
-      case ScanType::OpGreaterThanEquals: {
-        range_begin = index->lower_bound(comp_values);
-        range_end = index->cend();
-        break;
-      }
-      default:
-        Fail("Unsupported comparison type encountered");
+    }
+  }
+}
+
+void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
+                               const ChunkOffset chunk_offset, std::vector<bool>& left_matches, ChunkID chunk_id_left,
+                               std::function<RowID(ChunkOffset)> to_row_id) {
+  auto num_right_matches = std::distance(range_begin, range_end);
+
+  if (num_right_matches > 0) {
+    // Remember the matches for outer joins
+    if (_is_outer_join) {
+      left_matches[chunk_offset] = true;
     }
 
-    _pos_list_left->reserve(_pos_list_left->size() + std::distance(range_begin, range_end));
-    _pos_list_right->reserve(_pos_list_right->size() + std::distance(range_begin, range_end));
+    // Only when there is a match we try to reserve new memory and insert matches
+    _pos_list_left->reserve(_pos_list_left->size() + num_right_matches);
+    _pos_list_right->reserve(_pos_list_right->size() + num_right_matches);
+
+    // we replicate the left value for each right value
+    std::fill_n(std::back_inserter(*_pos_list_left), num_right_matches, RowID{chunk_id_left, chunk_offset});
 
     std::transform(range_begin, range_end, std::back_inserter(*_pos_list_right), to_row_id);
-    std::fill_n(std::back_inserter(*_pos_list_left), std::distance(range_begin, range_end),
-                RowID{chunk_id_left, left_value.chunk_offset()});
-
-    //    // inner loop, we change this
-    //    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-    //      const auto right_value = *right_it;
-    //      if (right_value.is_null()) continue;
-
-    //      if (func(left_value.value(), right_value.value())) {
-    //        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-    //        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
-
-    //        if (_is_outer_join) {
-    //          left_matches[left_value.chunk_offset()] = true;
-    //        }
-
-    //        if (_mode == JoinMode::Outer) {
-    //          _right_matches.insert(RowID{chunk_id_right, right_value.chunk_offset()});
-    //        }
-    //      }
-    //    }
   }
 }
 
@@ -186,8 +203,12 @@ void JoinIndex::_perform_join() {
   auto left_column_id = _left_column_id;
   auto right_column_id = _right_column_id;
 
+  if (_mode == JoinMode::Right || _mode == JoinMode::Outer || _mode == JoinMode::Cross) {
+    // these joins can not be handled using index join, we therefore fall back on a nested loop join
+    _fallback = true;
+  }
+
   if (_mode == JoinMode::Right) {
-    // TODO: we assume the index to be the left so swapping either needs to go or we need to remember we swapped the index
     // for Right Outer we swap the tables so we have the outer on the "left"
     left_table = _right_in_table;
     right_table = _left_in_table;

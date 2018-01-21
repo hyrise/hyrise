@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
+#include "storage/index/base_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -29,6 +30,10 @@ class JoinIndex : public AbstractJoinOperator {
                          RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                          const ChunkID chunk_id_right, std::vector<bool>& left_matches);
 
+  void append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
+                      const ChunkOffset chunk_offset, std::vector<bool>& left_matches, ChunkID chunk_id_left,
+                      std::function<RowID(ChunkOffset)> to_row_id);
+
   void _create_table_structure();
 
   void _write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
@@ -43,6 +48,7 @@ class JoinIndex : public AbstractJoinOperator {
   bool _is_outer_join;
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;
+  bool _fallback;
 
   // for Full Outer, remember the matches on the right side
   std::set<RowID> _right_matches;
