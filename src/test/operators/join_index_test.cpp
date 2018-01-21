@@ -24,7 +24,6 @@ class OperatorsJoinIndexTest : public BaseTest {
   void SetUp() override {
     _index_type = get_index_type_of<DerivedIndex>();
 
-    // TODO: make this multiple tables so join makes sense
     auto left_table = std::make_shared<Table>(5);
     left_table->add_column("a", DataType::Int);
     left_table->add_column("b", DataType::Int);
