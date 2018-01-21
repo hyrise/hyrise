@@ -15,6 +15,8 @@
 
 #include "types.hpp"
 
+#include <boost/math/distributions/skew_normal.hpp>
+
 namespace opossum {
 
 std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, const bool compress) {
@@ -68,5 +70,73 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, 
   }
 
   return table;
+}
+
+std::shared_ptr<Table> TableGenerator::generate_skewed_table(const ChunkID chunk_size, const bool compress) {
+  // TODO move to header
+  const size_t _skew_num_columns = 10;
+  const size_t _skew_num_rows = 5 * 1000;
+  const double _skew_location = 0;
+  const double _skew_scale = 1;
+  const double _skew_shape = 0;
+  // END TODO
+  std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
+  std::vector<tbb::concurrent_vector<int>> value_vectors;
+  auto vector_size = chunk_size > 0 ? chunk_size : _skew_num_columns;
+
+  /*
+   * Create tables
+   */
+  for (size_t i = 0; i < _skew_num_rows; i++) {
+    auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
+    table->add_column_definition(column_name, DataType::Int);
+    value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
+  }
+
+  /*
+   * Create chunks
+   */
+  auto chunk = Chunk();
+  std::random_device rd;
+  std::default_random_engine noise_generator;
+  std::uniform_real_distribution<double> uniform_dist(0, 1.0);
+  for (size_t i = 0; i < _skew_num_rows; i++) {
+    /*
+     * Add vectors to chunk when full, and add chunk to table.
+     * Reset vectors and chunk.
+     */
+    if (i % vector_size == 0 && i > 0) {
+      for (size_t j = 0; j < _skew_num_rows; j++) {
+        chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+        value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
+      }
+      table->emplace_chunk(std::move(chunk));
+      chunk = Chunk();
+    }
+    /*
+     * Set random value for every column.
+     */
+    noise_generator.seed(rd());
+    auto probability = uniform_dist(noise_generator);
+    auto skew_dist = boost::math::skew_normal_distribution<double>(_skew_location, _skew_scale, _skew_shape);
+    for (size_t j = 0; j < _num_columns; j++) {
+      value_vectors[j][i % vector_size] = boost::math::quantile(skew_dist, probability);
+    }
+  }
+  /*
+   * Add remaining values to table, if any.
+   */
+  if (value_vectors[0].size() > 0) {
+    for (size_t j = 0; j < _num_columns; j++) {
+      chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+    }
+    table->emplace_chunk(std::move(chunk));
+  }
+
+  if (compress) {
+    DictionaryCompression::compress_table(*table);
+  }
+
+  return table
 }
 }  // namespace opossum
