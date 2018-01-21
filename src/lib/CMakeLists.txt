@@ -93,6 +93,8 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
+    operators/join_mpsm.cpp
+    operators/join_mpsm.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge.cpp
