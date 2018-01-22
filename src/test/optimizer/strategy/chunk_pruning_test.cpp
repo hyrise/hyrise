@@ -42,21 +42,18 @@ class ChunkPruningTest : public StrategyBaseTest {
 TEST_F(ChunkPruningTest, SimplePruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 200);
-  predicate_node_0->set_left_child(stored_table_node);
+  auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 200);
+  predicate_node->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 400);
-  predicate_node_1->set_left_child(predicate_node_0);
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
-
-  EXPECT_EQ(pruned, predicate_node_1);
+  EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = { ChunkID(1) };
   std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
   EXPECT_EQ(excluded, expected);
 }
 
-// TEST_F(ChunkPruningTest, MoreComplexReorderingTest) {
+// TEST_F(ChunkPruningTest, TwoOperatorPruningTest) {
 //   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 //
 //   auto statistics_mock = std::make_shared<TableStatisticsMock>();
@@ -65,7 +62,7 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
 //   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 10);
 //   predicate_node_0->set_left_child(stored_table_node);
 //
-//   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+//   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpLessThanEquals, 50);
 //   predicate_node_1->set_left_child(predicate_node_0);
 //
 //   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 90);
