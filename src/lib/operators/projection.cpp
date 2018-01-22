@@ -114,11 +114,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // fill the new table
     auto chunk_out = std::make_shared<Chunk>();
 
-    // if there is mvcc information, we have to link it
-    if (_input_table_left()->get_chunk(chunk_id)->has_mvcc_columns()) {
-      chunk_out->use_mvcc_columns_from(_input_table_left()->get_chunk(chunk_id));
-    }
-
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
         _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
