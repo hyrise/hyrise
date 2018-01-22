@@ -57,7 +57,7 @@ class OperatorsExportCsvTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = TEST_DATA_PATH + unique_random_name();
+  const std::string filename = test_data_path + unique_random_name();
   const std::string meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
 };
 

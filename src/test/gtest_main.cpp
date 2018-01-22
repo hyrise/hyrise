@@ -18,21 +18,21 @@ namespace filesystem = std::experimental::filesystem;
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   if (prefix)
-    opossum::TEST_DATA_PATH = "./" + *prefix + "/test_data/";
+    opossum::test_data_path = "./" + *prefix + "/test_data/";
   else
-    opossum::TEST_DATA_PATH = "./test_data/";
+    opossum::test_data_path = "./test_data/";
 
-  if (filesystem::exists(opossum::TEST_DATA_PATH)) {
-    filesystem::remove_all(opossum::TEST_DATA_PATH);
+  if (filesystem::exists(opossum::test_data_path)) {
+    filesystem::remove_all(opossum::test_data_path);
   }
-  filesystem::create_directories(opossum::TEST_DATA_PATH);
+  filesystem::create_directories(opossum::test_data_path);
 }
 
 void remove_test_data_directory(std::optional<std::string>& prefix) {
   if (prefix)
     filesystem::remove_all("./" + *prefix);
   else
-    filesystem::remove_all(opossum::TEST_DATA_PATH);
+    filesystem::remove_all(opossum::test_data_path);
 }
 
 int main(int argc, char** argv) {
