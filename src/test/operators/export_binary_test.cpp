@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "../base_test.hpp"
-#include "../testing_utils.hpp"
 #include "gtest/gtest.h"
 
 #include "import_export/binary.hpp"
@@ -51,7 +50,7 @@ class OperatorsExportBinaryTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = test_data_path + unique_random_name();
+  const std::string filename = test_data_path + "export_test.bin";
 };
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {

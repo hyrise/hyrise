@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "../base_test.hpp"
-#include "../testing_utils.hpp"
 #include "gtest/gtest.h"
 
 #include "import_export/csv_meta.hpp"
@@ -57,7 +56,7 @@ class OperatorsExportCsvTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = test_data_path + unique_random_name();
+  const std::string filename = test_data_path + "export_test.csv";
   const std::string meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
 };
 
