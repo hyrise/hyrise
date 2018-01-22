@@ -1,12 +1,8 @@
 #if __has_include(<filesystem>)
 #include <filesystem>
-#else
-#include <experimental/filesystem>
-#endif
-
-#if __has_include(<filesystem>)
 namespace filesystem = std::filesystem;
 #else
+#include <experimental/filesystem>
 namespace filesystem = std::experimental::filesystem;
 #endif
 
