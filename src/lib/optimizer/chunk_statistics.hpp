@@ -35,15 +35,15 @@ class ChunkColumnStatistics : public BaseChunkColumnStatistics {
     // e.g. OpGreaterThan: value_from_table > t_value
     // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
     switch (scan_type) {
-      case ScanType::OpGreaterThan:
+      case ScanType::GreaterThan:
         return t_value >= _max;
-      case ScanType::OpGreaterThanEquals:
+      case ScanType::GreaterThanEquals:
         return t_value > _max;
-      case ScanType::OpLessThan:
+      case ScanType::LessThan:
         return t_value <= _min;
-      case ScanType::OpLessThanEquals:
+      case ScanType::LessThanEquals:
         return t_value < _min;
-      case ScanType::OpEquals:
+      case ScanType::Equals:
         return t_value < _min || t_value > _max;
       default: return false;
     }

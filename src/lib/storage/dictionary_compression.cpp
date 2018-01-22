@@ -142,7 +142,7 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
   }
 
   auto stats = std::make_shared<ChunkStatistics>(column_stats);
-  chunk.set_statistics(stats);
+  chunk->set_statistics(stats);
 
   return stats;
 }

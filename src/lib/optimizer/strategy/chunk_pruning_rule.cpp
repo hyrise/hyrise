@@ -51,7 +51,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     auto table = StorageManager::get().get_table(stored_table->table_name());
     std::vector<std::shared_ptr<ChunkStatistics>> statistics;
     for (ChunkID chunk_id = ChunkID(0); chunk_id < table->chunk_count(); ++chunk_id) {
-      statistics.push_back(table->get_chunk(chunk_id).statistics());
+      statistics.push_back(table->get_chunk(chunk_id)->statistics());
     }
     std::set<ChunkID> excluded_chunks;
     for (auto & predicate : predicate_nodes) {
@@ -83,7 +83,7 @@ ChunkPruningRule::_calculate_exclude_list(const std::vector<std::shared_ptr<Chun
   std::set<ChunkID> result;
   for (uint32_t i = 0; i < stats.size(); ++i) {
     DebugAssert(is_variant(predicate->value()), "we need an AllTypeVariant");
-    if (stats[i]->can_prune(predicate->column_id(), boost::get<AllTypeVariant>(predicate->value()), predicate->scan_type())) {
+    if (stats[i]->can_prune(predicate->column_reference().original_column_id(), boost::get<AllTypeVariant>(predicate->value()), predicate->scan_type())) {
       result.insert(ChunkID(i));
     }
   }
