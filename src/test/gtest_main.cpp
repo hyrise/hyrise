@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   std::optional<std::string> test_data_prefix;
   if (argc > 1) {
-    // If argv[1] is set after gtest extracted its commands, we interpret it as directory name prefix for test data files
+    // If argv[1] is set after gtest extracted its commands, we interpret it as directory name prefix for test data
     test_data_prefix = argv[1];
   }
   create_test_data_directory(test_data_prefix);
