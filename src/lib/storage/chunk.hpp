@@ -198,6 +198,8 @@ class Chunk : private Noncopyable {
     return create_index<Index>(columns);
   }
 
+  void remove_index(std::shared_ptr<BaseIndex> index);
+
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
