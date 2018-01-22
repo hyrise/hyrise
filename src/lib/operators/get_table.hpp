@@ -3,8 +3,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <experimental/optional>
 
 #include "abstract_read_only_operator.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -18,6 +20,8 @@ class GetTable : public AbstractReadOnlyOperator {
 
   const std::string& table_name() const;
 
+  void set_excluded_chunks(const std::vector<ChunkID>& excluded_chunks);
+
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
@@ -25,5 +29,6 @@ class GetTable : public AbstractReadOnlyOperator {
 
   // name of the table to retrieve
   const std::string _name;
+  std::optional<std::vector<ChunkID>> _excluded_chunks;
 };
 }  // namespace opossum

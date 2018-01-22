@@ -13,12 +13,14 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/dictionary_compression.hpp"
+#include "operators/get_table.hpp"
 
 #include "utils/assert.hpp"
 
@@ -117,6 +119,30 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest) {
     std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
     EXPECT_EQ(excluded, expected);
   }
+}
+
+TEST_F(ChunkPruningTest, GetTablePruningTest) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::GreaterThan, 200);
+  predicate_node->set_left_child(stored_table_node);
+
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = { ChunkID{1} };
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  EXPECT_EQ(excluded, expected);
+
+  LQPTranslator translator;
+  auto get_table_operator = std::dynamic_pointer_cast<GetTable>(translator.translate_node(stored_table_node));
+  EXPECT_TRUE(get_table_operator);
+
+  get_table_operator->execute();
+  auto result_table = get_table_operator->get_output();
+
+  EXPECT_EQ(result_table->chunk_count(), ChunkID{1});
+  EXPECT_EQ(result_table->get_value<int>(ColumnID{0}, 0), 12345);
 }
 
 // TEST_F(ChunkPruningTest, TwoReorderings) {
