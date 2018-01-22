@@ -83,7 +83,7 @@ ChunkPruningRule::_calculate_exclude_list(const std::vector<std::shared_ptr<Chun
   std::set<ChunkID> result;
   for (uint32_t i = 0; i < stats.size(); ++i) {
     DebugAssert(is_variant(predicate->value()), "we need an AllTypeVariant");
-    if (stats[i]->can_prune(predicate->scan_type(), predicate->column_id(), boost::get<AllTypeVariant>(predicate->value()))) {
+    if (stats[i]->can_prune(predicate->column_id(), boost::get<AllTypeVariant>(predicate->value()), predicate->scan_type())) {
       result.insert(ChunkID(i));
     }
   }

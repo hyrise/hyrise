@@ -60,7 +60,7 @@ class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
 
   const std::vector<std::shared_ptr<BaseChunkColumnStatistics>>& statistics() const { return _statistics; }
 
-  bool can_prune(const ScanType scan_type, const ColumnID column_id, const AllTypeVariant& value) const;
+  bool can_prune(const ColumnID column_id, const AllTypeVariant& value, const ScanType scan_type) const;
 
  protected:
   std::vector<std::shared_ptr<BaseChunkColumnStatistics>> _statistics;
