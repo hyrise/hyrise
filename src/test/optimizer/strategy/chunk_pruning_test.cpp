@@ -91,6 +91,35 @@ TEST_F(ChunkPruningTest, IntersectionPruningTest) {
   EXPECT_EQ(excluded, expected);
 }
 
+TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest) {
+  {
+    auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+    auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 12345);
+    predicate_node->set_left_child(stored_table_node);
+
+    auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+    EXPECT_EQ(pruned, predicate_node);
+    std::vector<ChunkID> expected = { ChunkID{0}, ChunkID{1} };
+    std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+    EXPECT_EQ(excluded, expected);
+  }
+  {
+    auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+    auto predicate_node = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, 458.7);
+    predicate_node->set_left_child(stored_table_node);
+
+    auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+    EXPECT_EQ(pruned, predicate_node);
+    std::vector<ChunkID> expected = { ChunkID{0} };
+    std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+    EXPECT_EQ(excluded, expected);
+  }
+}
+
 // TEST_F(ChunkPruningTest, TwoReorderings) {
 //   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 //
