@@ -11,26 +11,23 @@
 namespace opossum {
 
 // TODO: We can override this to add own setup logic
-// class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
-//  public:
-//   void SetUp(::benchmark::State& state) override {
-//     BenchmarkBasicFixture::SetUp(state);
-//     _column_type = state.range(1);
+class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
+ public:
+  void SetUp(::benchmark::State& state) override {
+    _chunk_size = static_cast<ChunkID>(state.range(0));
 
-//     _table_ref =
-//         std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, ScanType::OpGreaterThanEquals, 0);  // all
-//     _table_ref->execute();
+    auto table_generator = std::make_shared<TableGenerator>();
 
-//     _tables.emplace_back(_table_wrapper_a);  // 0
-//     _tables.emplace_back(_table_wrapper_b);  // 1
-//     _tables.emplace_back(_table_ref);        // 2
-//   }
+    auto table_generator2 = std::make_shared<TableGenerator>();
 
-//  protected:
-//   std::shared_ptr<TableScan> _table_ref;
-//   std::vector<std::shared_ptr<AbstractOperator>> _tables;
-//   int _column_type;
-// };
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_skewed_table(_chunk_size));
+    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->generate_skewed_table(_chunk_size));
+    _table_dict_wrapper = std::make_shared<TableWrapper>(table_generator->generate_skewed_table(_chunk_size, true));
+    _table_wrapper_a->execute();
+    _table_wrapper_b->execute();
+    _table_dict_wrapper->execute();
+  }
+};
 
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_JoinMPSM)(benchmark::State& state) {
   clear_cache();

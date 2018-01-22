@@ -72,14 +72,23 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, 
   return table;
 }
 
-std::shared_ptr<Table> TableGenerator::generate_skewed_table(const ChunkID chunk_size, const bool compress) {
-  // TODO move to header
+// Idea: Provide an interface where we can define
+// 1. How many columns we want
+// 2. How many rows we want
+// 3. Which columns have skew (none skew columns are sampled from std::uniform_int_distribution)
+// 4. The level of skew (location, scale, shape)
+// 5. How many different values per column
+// TODO Maybe do it with a struct that encapsulates all required information?
+std::shared_ptr<Table> TableGenerator::generate_skewed_table(
+    const ChunkID chunk_size, const bool compress) {
+
   const size_t _skew_num_columns = 10;
   const size_t _skew_num_rows = 5 * 1000;
+  const int _max_different_values = 1000;
   const double _skew_location = 0;
   const double _skew_scale = 1;
   const double _skew_shape = 0;
-  // END TODO
+
   std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = chunk_size > 0 ? chunk_size : _skew_num_columns;
@@ -120,7 +129,8 @@ std::shared_ptr<Table> TableGenerator::generate_skewed_table(const ChunkID chunk
     auto probability = uniform_dist(noise_generator);
     auto skew_dist = boost::math::skew_normal_distribution<double>(_skew_location, _skew_scale, _skew_shape);
     for (size_t j = 0; j < _num_columns; j++) {
-      value_vectors[j][i % vector_size] = boost::math::quantile(skew_dist, probability);
+      auto value = std::round(boost::math::quantile(skew_dist, probability) * _max_different_values)
+      value_vectors[j][i % vector_size] = value;
     }
   }
   /*
