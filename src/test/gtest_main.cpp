@@ -36,7 +36,8 @@ void remove_test_data_directory(std::optional<std::string>& prefix) {
 }
 
 int main(int argc, char** argv) {
-  opossum::Assert(filesystem::exists("src/test/tables"),
+  opossum::Assert(
+      filesystem::exists("src/test/tables"),
       "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
 
   opossum::PerformanceWarningDisabler pwd;
