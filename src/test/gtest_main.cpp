@@ -4,9 +4,6 @@
 #include <experimental/filesystem>
 #endif
 
-#include <sys/stat.h>
-#include <sys/types.h>
-
 #include <gtest/gtest.h>
 #include "base_test.hpp"
 
@@ -20,7 +17,10 @@ namespace filesystem = std::experimental::filesystem;
 #endif
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
-  opossum::TEST_DATA_PATH = "./" + *prefix + "/test_data/";
+  if (prefix)
+    opossum::TEST_DATA_PATH = "./" + *prefix + "/test_data/";
+  else
+    opossum::TEST_DATA_PATH = "./test_data/";
 
   if (filesystem::exists(opossum::TEST_DATA_PATH)) {
     filesystem::remove_all(opossum::TEST_DATA_PATH);
@@ -36,9 +36,7 @@ void remove_test_data_directory(std::optional<std::string>& prefix) {
 }
 
 int main(int argc, char** argv) {
-  struct stat info;
-  opossum::Assert(
-      stat("src/test/tables", &info) == 0,
+  opossum::Assert(filesystem::exists("src/test/tables"),
       "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
 
   std::optional<std::string> test_data_prefix;

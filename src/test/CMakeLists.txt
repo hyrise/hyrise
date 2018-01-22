@@ -134,6 +134,7 @@ set(
     LIBRARIES
     gtest
     sqlite3
+    ${FILESYSTEM_LIBRARY}
 )
 
 # Build special sanitizer version of googletest
@@ -143,9 +144,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-target_link_libraries(hyriseTest hyrise ${LIBRARIES} ${FILESYSTEM_LIBRARY})
+target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} ${FILESYSTEM_LIBRARY})
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 add_dependencies(hyriseSystemTest tpccTableGenerator)
