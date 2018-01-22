@@ -147,5 +147,5 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES} ${FILESYSTEM_LIBRARY})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} ${FILESYSTEM_LIBRARY})
 add_dependencies(hyriseSystemTest tpccTableGenerator)
