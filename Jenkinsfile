@@ -91,7 +91,7 @@ node {
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true gccDebugCoverage"
+          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --build_directory=gcc-debug-coverage --generate_badge=true --test_data_folder=gcc-debug-coverage"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
           archive 'coverage.xml'
