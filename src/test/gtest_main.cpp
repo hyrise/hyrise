@@ -39,17 +39,15 @@ int main(int argc, char** argv) {
   opossum::Assert(filesystem::exists("src/test/tables"),
       "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
 
-  std::optional<std::string> test_data_prefix;
-  if (argc > 1) {
-    // If argv[1] is not a gtest command, we interpret it as directory name prefix for test data files
-    if (std::string(argv[1]).find("--") == std::string::npos) {
-      test_data_prefix = argv[1];
-    }
-  }
-  create_test_data_directory(test_data_prefix);
-
   opossum::PerformanceWarningDisabler pwd;
   ::testing::InitGoogleTest(&argc, argv);
+
+  std::optional<std::string> test_data_prefix;
+  if (argc > 1) {
+    // If argv[1] is set after gtest extracted its commands, we interpret it as directory name prefix for test data files
+    test_data_prefix = argv[1];
+  }
+  create_test_data_directory(test_data_prefix);
 
   int ret = RUN_ALL_TESTS();
 
