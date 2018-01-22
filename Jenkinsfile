@@ -62,6 +62,7 @@ node {
         }
       }, clangDebugRunShuffled: {
         stage("clang-debug:test-shuffle") {
+          sh "mkdir ./clang-debug/run-shuffled"
           sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
         }
       }, clangDebugSanitizers: {
@@ -76,7 +77,7 @@ node {
         }
       }, systemTest: {
         stage("System Test") {
-            sh "./scripts/run_system_test.sh clang-release/run-system-test"
+            sh "./scripts/run_system_test.sh clang-release"
         }
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
@@ -111,7 +112,7 @@ node {
         }
       }, memcheck: {
         stage("valgrind-memcheck") {
-          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release/run-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
         }
       }
 
