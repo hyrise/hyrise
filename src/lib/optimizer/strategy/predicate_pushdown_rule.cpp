@@ -4,6 +4,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 
 namespace opossum {
 
@@ -44,6 +45,17 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 
         return true;
       }
+      // push always down if other node is a sort node
+    } else if (child->type() == LQPNodeType::Sort) {
+      const auto sort_node = std::dynamic_pointer_cast<SortNode>(child);
+
+      node->remove_from_tree();
+      const auto prev_left_child = sort_node->left_child();
+
+      sort_node->set_left_child(node);
+      node->set_left_child(prev_left_child);
+
+      return true;
     }
   }
 

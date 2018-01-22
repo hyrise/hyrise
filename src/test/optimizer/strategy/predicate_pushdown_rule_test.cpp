@@ -67,7 +67,6 @@ TEST_F(PredicatePushdownRuleTest, SimpleOneSideJoinPushdownTest) {
   EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
 }
 
-
 TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_a), PredicateCondition::Equals);
   join_node->set_left_child(_table_a);
@@ -81,6 +80,20 @@ TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
   EXPECT_EQ(reordered, predicate_node_0);
   EXPECT_EQ(reordered->left_child(), join_node);
   EXPECT_EQ(reordered->left_child()->right_child(), _table_b);
+  EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
+}
+
+TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{_a_a, OrderByMode::Ascending}});
+  sort_node->set_left_child(_table_a);
+
+  auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _a_b);
+  predicate_node->set_left_child(sort_node);
+
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(reordered, sort_node);
+  EXPECT_EQ(reordered->left_child(), predicate_node);
   EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
 }
 
