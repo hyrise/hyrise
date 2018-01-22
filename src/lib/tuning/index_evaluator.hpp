@@ -33,7 +33,7 @@ class AccessRecord {
  */
 class IndexEvaluatorData {
  public:
-  IndexEvaluatorData() : saved_work{0.0f}, memory_cost{0.0f} {}
+  IndexEvaluatorData() : saved_work{0.0f}, memory_cost{0.0f}, exists{false} {}
 
   // Estimated amount of work that can be saved with this index
   // (sum of inverted selectivites multiplied with query occurrence)
@@ -42,6 +42,9 @@ class IndexEvaluatorData {
 
   // Estimated amount of memory consumed by the index
   float memory_cost;
+
+  // Does this index already exist?
+  bool exists;
 };
 
 /**
@@ -63,6 +66,9 @@ class IndexEvaluator : public AbstractIndexEvaluator {
 
   // Estimates the cost of each index proposal
   void _estimate_cost();
+
+  // Find existing indices to assess their usefulness
+  void _find_existing_indices();
 
   // Calculate the overall desirablity of each proposal.
   std::vector<IndexEvaluation> _calculate_desirability();

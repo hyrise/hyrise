@@ -79,7 +79,7 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
 int main() {
   std::cout << "Playground group 01 table generator" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  auto generator = PlaygroundTableGenerator{1'000'000, 10'000'000};
+  auto generator = PlaygroundTableGenerator{100'000, 1'000'000};
   auto tables = generator.generate_all_tables();
 
   for (auto& pair : tables) {

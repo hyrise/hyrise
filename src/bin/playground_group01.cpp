@@ -73,6 +73,9 @@ int main() {
               << second_execution_times[query_index] << "\n";
   }
 
+  std::cout << "Execute IndexTuner AGAIN (sanity check)...\n";
+  tuner.execute();
+
   return 0;
 }
 

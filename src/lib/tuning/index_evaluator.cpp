@@ -3,6 +3,7 @@
 
 #include "index_evaluator.hpp"
 
+#include "types.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
@@ -17,7 +18,7 @@ IndexEvaluator::IndexEvaluator() {}
 std::vector<IndexEvaluation> IndexEvaluator::evaluate_indices(const SystemStatistics& statistics) {
   _indices.clear();
 
-  // ToDo(group01): _find_existing_indices();
+  _find_existing_indices();
 
   // Investigate query cache
   const auto& recent_queries = statistics.recent_queries();
@@ -87,6 +88,31 @@ void IndexEvaluator::_estimate_cost() {
   }
 }
 
+/**
+ * This iterates over all tables, gets the first chunk each and checks whether
+ * there are indices for each column.
+ * This means that this method only checks for single-column indices.
+ * It is assumed that an index for a column is present either in all chunks or none.
+ */
+void IndexEvaluator::_find_existing_indices()
+{
+    for (const auto & table_name : StorageManager::get().table_names()) {
+        const auto & table = StorageManager::get().get_table(table_name);
+        const auto & first_chunk = table->get_chunk(ChunkID{0});
+
+        for (const auto & column_name : table->column_names()) {
+            const auto & column_id = table->column_id_by_name(column_name);
+            auto column_ids = std::vector<ColumnID>();
+            column_ids.emplace_back(column_id);
+            if (first_chunk->get_indices(column_ids).size() > 0) {
+                auto index_spec = IndexSpec{table_name, column_id};
+                _indices[index_spec].exists = true;
+                std::cout << "Found index on " << table_name << "." << column_name << "\n";
+            }
+        }
+    }
+}
+
 std::vector<IndexEvaluation> IndexEvaluator::_calculate_desirability() {
   // ToDo(group01): use IndexEvaluation instead of IndexEvaluatorData
   //    unless we find more desirability components than only saved work
@@ -95,6 +121,7 @@ std::vector<IndexEvaluation> IndexEvaluator::_calculate_desirability() {
     evaluations.emplace_back(index_data.first.first, index_data.first.second);
     evaluations.back().desirablility = index_data.second.saved_work;
     evaluations.back().memory_cost = index_data.second.memory_cost;
+    evaluations.back().exists = index_data.second.exists;
   }
   return evaluations;
 }
