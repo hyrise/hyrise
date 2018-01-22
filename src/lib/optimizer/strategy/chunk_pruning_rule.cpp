@@ -31,7 +31,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
       current_node = current_node->left_child();
       // Once a node has multiple parents, we're not talking about a Predicate chain anymore
-      if (current_node->parents().size() > 1) {
+      if (current_node->type() == LQPNodeType::Predicate && current_node->parents().size() > 1) {
         _apply_to_children(node);
         return false;
       }
@@ -58,12 +58,6 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       auto new_exlusions = _calculate_exclude_list(statistics, predicate);
       excluded_chunks.insert(new_exlusions.begin(), new_exlusions.end());
     }
-
-    std::cout << "excluded_chunks: ";
-    for (auto id : excluded_chunks) {
-      std::cout << id;
-    }
-    std::cout << std::endl;
 
     if (!stored_table->excluded_chunks().empty()) {
       std::vector<ChunkID> intersection;
