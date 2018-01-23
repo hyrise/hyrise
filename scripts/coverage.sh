@@ -13,9 +13,7 @@ while [ $# -gt 0 ]; do
       test_data_folder="${1#*=}"
       ;;
     *)
-      printf "***************************\n"
-      printf "* Error: Invalid argument.*\n"
-      printf "***************************\n"
+      printf "Error: Invalid argument."
       exit 1
   esac
   shift
@@ -23,7 +21,7 @@ done
 
 if [ -z "$build_directory" ]
   then
-    echo "No build directory supplied"
+    echo "Error: No build directory supplied - use --build_directory=..."
     exit 1
 fi
 
