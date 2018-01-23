@@ -305,13 +305,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         // add up the output offsets for chunks before this one
         for (ChunkID i{0}; i < chunk_id; ++i) {
+          const auto& histogram = *histograms[i];
           for (size_t j = 0; j < num_partitions; ++j) {
-            output_offsets[j] += histograms[i]->operator[](j);
+            output_offsets[j] += histogram[j];
           }
         }
         for (auto i = chunk_id; i < offsets.size(); ++i) {
+          const auto& histogram = *histograms[i];
           for (size_t j = 1; j < num_partitions; ++j) {
-            output_offsets[j] += histograms[i]->operator[](j - 1);
+            output_offsets[j] += histogram[j - 1];
           }
         }
 
