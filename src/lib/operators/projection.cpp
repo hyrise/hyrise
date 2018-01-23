@@ -7,6 +7,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <logical_query_plan/lqp_translator.hpp>
+#include <sql/sql_query_plan.hpp>
+#include <scheduler/current_scheduler.hpp>
 
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
@@ -95,7 +98,18 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else if (column_expression->is_subselect()) {
       // TODO: add come kind of identifier for each subselect
       // TODO: execute operator, so that we can access result table
+
       name = "subselect";
+
+      // execute the subquery
+      auto subquery_node = column_expression->subselect_node();
+      auto subquery_operator = LQPTranslator{}.translate_node(subquery_node);
+      SQLQueryPlan query_plan;
+      query_plan.add_tree_by_root(subquery_operator);
+      std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
+      CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+      auto result_table = tasks.back()->get_operator()->get_output();
+      // TODO: Use the result table as input
     } else {
       Fail("Expression type is not supported.");
     }
