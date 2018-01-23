@@ -14,11 +14,11 @@ namespace filesystem = std::experimental::filesystem;
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   opossum::Assert(!filesystem::exists(opossum::test_data_path),
-    "Cannot create directory for test data: " + opossum::test_data_path +" - it already exists.");
+    "Cannot create directory for test data: \"" + opossum::test_data_path +"\" already exists.");
 
   if (prefix) {
     opossum::Assert(filesystem::exists("./" + *prefix),
-      "Cannot create directory for test data because " + *prefix + " does not exist");
+      "Cannot create directory for test data because \"" + *prefix + "\" does not exist");
   }
 
   filesystem::create_directory(opossum::test_data_path);
