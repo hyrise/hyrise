@@ -203,15 +203,8 @@ TableType Table::get_type() const {
   }
 }
 
-std::vector<std::vector<ColumnID>> get_indexes() const {
+std::vector<std::vector<ColumnID>> Table::get_columns_of_indexes() const {
   return _indexes;
-}
-
-template <typename Index>
-void create_index(const std::vector<ColumnID>& column_ids) {
-  for (auto& chunk : _chunks) {
-    chunk->create_index(column_ids);
-  }
 }
 
 }  // namespace opossum

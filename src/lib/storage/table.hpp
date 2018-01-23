@@ -135,10 +135,16 @@ class Table : private Noncopyable {
   TableType get_type() const;
 
   // Todo(JK): what if indexes are deleted during operation
-  std::vector<std::vector<ColumnID>> get_indexes() const;
+  std::vector<std::vector<ColumnID>> get_columns_of_indexes() const;
 
   template <typename Index>
-  void create_index(const std::vector<ColumnID>& column_ids);
+  void create_index(const std::vector<ColumnID>& column_ids) {
+    for (auto& chunk : _chunks) {
+      chunk->create_index<Index>(column_ids);
+    }
+
+    _indexes.emplace_back(column_ids);
+  }
 
  protected:
   const uint32_t _max_chunk_size;

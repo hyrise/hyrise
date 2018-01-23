@@ -14,6 +14,9 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
@@ -50,6 +53,8 @@ class IndexScanRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
+    DictionaryCompression::compress_table(*StorageManager::get().get_table("a"));
+
     _rule = std::make_shared<IndexScanRule>();
   }
 
@@ -69,6 +74,115 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto table = StorageManager::get().get_table("a");
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  stored_table_node->set_statistics(statistics_mock);
+
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto table = StorageManager::get().get_table("a");
+  table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  stored_table_node->set_statistics(statistics_mock);
+
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  stored_table_node->set_statistics(statistics_mock);
+
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, ColumnID{1});
+  predicate_node_0->set_left_child(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto table = StorageManager::get().get_table("a");
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>(80'000);
+  table->set_table_statistics(statistics_mock);
+
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto table = StorageManager::get().get_table("a");
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
+  table->set_table_statistics(statistics_mock);
+
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::IndexScan);
+}
+
+TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto table = StorageManager::get().get_table("a");
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
+  table->set_table_statistics(statistics_mock);
+
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  auto predicate_node_1 =
+      std::make_shared<PredicateNode>(LQPColumnReference{predicate_node_0, ColumnID{1}}, ScanType::LessThan, 15);
+  predicate_node_1->set_left_child(predicate_node_0);
+
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
+  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::IndexScan);
+  EXPECT_EQ(predicate_node_1->scan_typee(), ScanTypee::TableScan);
 }
 
 }  // namespace opossum
