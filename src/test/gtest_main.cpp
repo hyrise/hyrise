@@ -25,7 +25,9 @@ void create_test_data_directory(std::optional<std::string>& prefix) {
 }
 
 void remove_test_data_directory() {
-  filesystem::remove_all(opossum::test_data_path);
+  if (filesystem::exists(opossum::test_data_path)) {
+    filesystem::remove_all(opossum::test_data_path);
+  }
 }
 
 int main(int argc, char** argv) {
@@ -45,6 +47,7 @@ int main(int argc, char** argv) {
   } else {
     opossum::test_data_path = "./.hyrise_test_data/";
   }
+  remove_test_data_directory();
   create_test_data_directory(prefix);
 
   int ret = RUN_ALL_TESTS();
