@@ -36,20 +36,20 @@ class OperatorsJoinIndexTest : public BaseTest {
     for (int i = 0; i <= 24; i += 2) right_table->append({i, 100 + i});
     DictionaryCompression::compress_table(*right_table);
 
-    _chunk_ids = std::vector<ChunkID>(left_table->chunk_count());
+    _chunk_ids = std::vector<ChunkID>(right_table->chunk_count());
     std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0u});
 
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
-      auto& chunk = left_table->get_chunk(chunk_id);
-      chunk.template create_index<DerivedIndex>(_column_ids);
+      auto& chunk = right_table->get_chunk(chunk_id);
+      chunk.create_index<DerivedIndex>(_column_ids);
     }
 
     _table_wrapper_left = std::make_shared<TableWrapper>(left_table);
     _table_wrapper_left->execute();
 
-    _table_wrapper_right = std::make_shared<TableWrapper>(left_table);
+    _table_wrapper_right = std::make_shared<TableWrapper>(right_table);
     _table_wrapper_right->execute();
   }
 
