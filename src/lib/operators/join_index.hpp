@@ -11,7 +11,14 @@
 #include "types.hpp"
 
 namespace opossum {
-
+/**
+   * This operator joins two tables using one column of each table.
+   * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
+   * finding the right values utilizing the index.
+   *
+   * Note: An index needs to be present on the right table in order to execute an index join.
+   * Note: Cross joins are not supported. Use the product operator instead.
+**/
 class JoinIndex : public AbstractJoinOperator {
  public:
   JoinIndex(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
@@ -36,8 +43,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                            std::shared_ptr<PosList> pos_list);
+  void _write_output_chunk(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
+                           std::shared_ptr<PosList> pos_list);
 
   std::shared_ptr<Table> _output_table;
   std::shared_ptr<const Table> _left_in_table;

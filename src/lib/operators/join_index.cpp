@@ -71,34 +71,29 @@ void JoinIndex::_create_table_structure() {
   }
 }
 
-// inner join loop that joins two columns via their iterators
+// join loop that joins two chunks of two columns via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                                   RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                                   const ChunkID chunk_id_right, std::vector<bool>& left_matches) {
+  // Helper lambda for transforming chunk offsets for the right table to row ids for the right table
   const auto to_row_id = [chunk_id_right](ChunkOffset chunk_offset) { return RowID{chunk_id_right, chunk_offset}; };
 
-  // new inner loop
   const auto& r_chunk = _right_in_table->get_chunk(chunk_id_right);
   const auto indices = r_chunk.get_indices(std::vector<ColumnID>{_right_column_id});
 
-  Assert(indices.size() >= 1, "No index found for the right column");
+  // We have a proper index and can use it, so we do an index join for this chunk combination
+  if (!indices.empty() && !_fallback) {
+    // We assume the first index to be efficient for our join
+    // as we do not want to spend time on evaluating the best index inside of this join loop
+    const auto index = indices.front();
 
-  // We assume the first index to be good. Evaluating index performance is not task of the join.
-  const auto index = indices.front();
-
-  if (index != nullptr && !_fallback) {
-    // We have a proper index and can use it, so we do an index join for this chunk combination
-    // outer loop, we keep this
     for (; left_it != left_end; ++left_it) {
       const auto left_value = *left_it;
       if (left_value.is_null()) continue;
 
-      auto var = AllTypeVariant(left_value.value());
-
-      auto comp_values = std::vector<AllTypeVariant>();
-
-      comp_values.push_back(var);
+      // The index interface takes a vector of ATVs, so we need to wrap our value
+      auto comp_values = std::vector<AllTypeVariant>{AllTypeVariant(left_value.value())};
 
       auto range_begin = BaseIndex::Iterator{};
       auto range_end = BaseIndex::Iterator{};
@@ -112,7 +107,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
         case ScanType::OpNotEquals: {
           // first, get all values less than the search value
           range_begin = index->cbegin();
-          range_end = index->cend();
+          range_end = index->lower_bound(comp_values);
 
           append_matches(range_begin, range_end, left_value.chunk_offset(), left_matches, chunk_id_left, to_row_id);
 
@@ -203,10 +198,10 @@ void JoinIndex::_perform_join() {
   auto left_column_id = _left_column_id;
   auto right_column_id = _right_column_id;
 
-  if (_mode == JoinMode::Right || _mode == JoinMode::Outer || _mode == JoinMode::Cross) {
-    // these joins can not be handled using index join, we therefore fall back on a nested loop join
-    _fallback = true;
-  }
+  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
+
+  // these joins can not be handled using index join, we therefore fall back on a nested loop join
+  _fallback = (_mode == JoinMode::Right || _mode == JoinMode::Outer || _mode == JoinMode::Cross);
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
@@ -223,24 +218,22 @@ void JoinIndex::_perform_join() {
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
-  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
-
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
+    auto chunk_column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
 
     // for Outer joins, remember matches on the left side
     std::vector<bool> left_matches;
 
     if (_is_outer_join) {
-      left_matches.resize(column_left->size());
+      left_matches.resize(chunk_column_left->size());
     }
 
     // Scan all chunks for right input
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-      resolve_data_and_column_type(left_data_type, *column_left, [&](auto left_type, auto& typed_left_column) {
+      resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
@@ -308,18 +301,18 @@ void JoinIndex::_perform_join() {
   auto output_chunk = Chunk();
 
   if (_mode == JoinMode::Right) {
-    _write_output_chunks(output_chunk, right_table, _pos_list_right);
-    _write_output_chunks(output_chunk, left_table, _pos_list_left);
+    _write_output_chunk(output_chunk, right_table, _pos_list_right);
+    _write_output_chunk(output_chunk, left_table, _pos_list_left);
   } else {
-    _write_output_chunks(output_chunk, left_table, _pos_list_left);
-    _write_output_chunks(output_chunk, right_table, _pos_list_right);
+    _write_output_chunk(output_chunk, left_table, _pos_list_left);
+    _write_output_chunk(output_chunk, right_table, _pos_list_right);
   }
 
   _output_table->emplace_chunk(std::move(output_chunk));
 }
 
-void JoinIndex::_write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                                     std::shared_ptr<PosList> pos_list) {
+void JoinIndex::_write_output_chunk(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
+                                    std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
