@@ -14,7 +14,6 @@
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -57,7 +56,7 @@ class OperatorsExportCsvTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = "/tmp/export_test.csv";
+  const std::string filename = test_data_path + "export_test.csv";
   const std::string meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
 };
 

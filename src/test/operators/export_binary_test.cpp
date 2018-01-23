@@ -15,7 +15,6 @@
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -51,7 +50,7 @@ class OperatorsExportBinaryTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = "/tmp/output.bin";
+  const std::string filename = test_data_path + "export_test.bin";
 };
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
