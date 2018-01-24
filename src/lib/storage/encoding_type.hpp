@@ -18,23 +18,18 @@ namespace hana = boost::hana;
 
 enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary, RunLength };
 
-namespace detail {
-
-// Use all_data_types if the encoding supports all data types.
-constexpr auto all_data_types = data_types;
-
-}  // namespace detail
-
 /**
  * @brief Maps each encoding type to its supported data types
  *
  * This map ensures that column and encoder templates are only
  * instantiated for supported types and not for all data types.
+ *
+ * Use data_types if the encoding supports all data types.
  */
 constexpr auto supported_data_types_for_type =
-    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, detail::all_data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, detail::all_data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, detail::all_data_types));
+    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, data_types),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types));
 
 //  Example for an encoding that doesn’t support all data types:
 //  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)
