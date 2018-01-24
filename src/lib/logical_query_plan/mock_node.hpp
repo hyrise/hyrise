@@ -28,6 +28,8 @@ class MockNode : public AbstractLQPNode {
 
   const std::vector<std::string>& output_column_names() const override;
 
+  const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
+
   std::string description() const override;
   std::string get_verbose_column_name(ColumnID column_id) const override;
 

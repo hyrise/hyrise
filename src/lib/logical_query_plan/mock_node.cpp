@@ -45,6 +45,10 @@ std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl(
 
 const std::vector<std::string>& MockNode::output_column_names() const { return _output_column_names; }
 
+const boost::variant<MockNode::ColumnDefinitions, std::shared_ptr<TableStatistics>>& MockNode::constructor_arguments() const {
+  return _constructor_arguments;
+}
+
 std::string MockNode::get_verbose_column_name(ColumnID column_id) const {
   // Aliasing a MockNode doesn't really make sense, but let's stay covered
   if (_table_alias) {

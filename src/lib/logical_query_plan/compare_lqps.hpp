@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace opossum {
 
@@ -25,6 +26,8 @@ class UpdateNode;
 class ValidateNode;
 class MockNode;
 class UnionNode;
+class LQPColumnReference;
+class LQPExpression;
 
 class SemanticLQPCompare final {
  public:
@@ -59,6 +62,16 @@ class SemanticLQPCompare final {
   bool _are_semantically_equal(const std::shared_ptr<const UnionNode>& lhs, const std::shared_ptr<const UnionNode>& rhs);
   bool _are_semantically_equal(const std::shared_ptr<const ValidateNode>& lhs, const std::shared_ptr<const ValidateNode>& rhs);
   bool _are_semantically_equal(const std::shared_ptr<const MockNode>& lhs, const std::shared_ptr<const MockNode>& rhs);
+
+  bool _compare_expressions(const std::shared_ptr<const AbstractLQPNode>&lqp_left, const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
+                            const std::shared_ptr<const AbstractLQPNode>&lqp_right, const std::vector<std::shared_ptr<LQPExpression>>& expressions_right) const;
+  bool _compare_expressions(const std::shared_ptr<const AbstractLQPNode>&lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
+                            const std::shared_ptr<const AbstractLQPNode>&lqp_right, const std::shared_ptr<const LQPExpression>& expression_right) const;
+
+  bool _compare_column_references(const std::shared_ptr<const AbstractLQPNode>&lqp_left, const std::vector<LQPColumnReference>& column_references_left,
+                            const std::shared_ptr<const AbstractLQPNode>&lqp_right, const std::vector<LQPColumnReference>& column_references_right) const;
+  bool _compare_column_references(const std::shared_ptr<const AbstractLQPNode>&lqp_left, const LQPColumnReference& column_reference_left,
+                                  const std::shared_ptr<const AbstractLQPNode>&lqp_right, const LQPColumnReference& column_reference_right) const;
 };
 
 bool lqp_node_semantic_compare(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs);
