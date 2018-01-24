@@ -235,9 +235,9 @@ void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
 }
 
 void Table::create_initial_chunks(PartitionID number_of_partitions) {
-  if (_chunks.size() > 1 || _chunks.back()->column_count() != 0 || _chunks.back()->size() != 0) {
+  if (row_count() > 0) {
     // the initial chunk was not used yet
-    throw std::runtime_error("Unable to create partitioning on used table");
+    throw std::runtime_error("Unable to create partitioning on non-empty table");
   }
   _chunks.clear();
   for (auto partition_id = PartitionID{0}; partition_id < number_of_partitions; ++partition_id) {
