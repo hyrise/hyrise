@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "join_sort_merge/radix_cluster_sort.hpp"
+#include "join_mpsm/radix_cluster_sort_numa.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -618,6 +618,18 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     return new_pos_list;
   }
 
+  void _shuffle_lhs_clusters(){
+      // move everything in cluster n to NUMA Node N
+      // resort
+      // TODO (florian): eliminate double sorting (although we probably have an adaptive sort so we should not suffer too much, else implement a merge sort here?)
+      _sorted_left_table
+
+  }
+
+  void _sort_clusters(){
+
+  }
+
  public:
   /**
   * Executes the SortMergeJoin operator.
@@ -636,6 +648,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
+
+    _shuffle_lhs_clusters();
+
+    _sort_clusters();
 
     _perform_join();
 
