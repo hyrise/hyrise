@@ -88,7 +88,6 @@ using Hash = uint32_t;
 template <typename L, typename R, class Enable = void>
 struct JoinHashTraits {
   typedef L hash_type;
-  static constexpr bool is_invalid = false;
   static constexpr bool needs_lexical_cast = false;
 };
 
@@ -96,7 +95,6 @@ struct JoinHashTraits {
 template <typename L, typename R>
 struct JoinHashTraits<L, R, typename std::enable_if_t<std::is_same<L, R>::value, void>> {
   typedef L hash_type;
-  static constexpr bool is_invalid = false;
   static constexpr bool needs_lexical_cast = false;
 };
 
@@ -107,7 +105,6 @@ struct JoinHashTraits<
     typename std::enable_if_t<
         std::is_floating_point<L>::value && std::is_floating_point<R>::value && sizeof(L) < sizeof(R), void>> {
   typedef R hash_type;
-  static constexpr bool is_invalid = false;
   static constexpr bool needs_lexical_cast = false;
 };
 
@@ -118,7 +115,6 @@ struct JoinHashTraits<
     typename std::enable_if_t<
         std::numeric_limits<L>::is_integer && std::numeric_limits<R>::is_integer && sizeof(L) < sizeof(R), void>> {
   typedef R hash_type;
-  static constexpr bool is_invalid = false;
   static constexpr bool needs_lexical_cast = false;
 };
 
@@ -129,7 +125,6 @@ struct JoinHashTraits<L, R,
                                                                                std::is_same<L, std::string>::value),
                                                 void>> {
   typedef std::string hash_type;
-  static constexpr bool is_invalid = false;
   static constexpr bool needs_lexical_cast = true;
 };
 
