@@ -138,7 +138,7 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
    * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
    */
 
-  auto left_iterable = create_attribute_vector_iterable(left_column);
+  auto left_iterable = _create_attribute_vector_iterable(left_column);
 
   if (_right_value_matches_all(left_column, search_value_id)) {
     left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {

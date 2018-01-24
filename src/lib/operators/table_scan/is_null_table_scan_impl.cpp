@@ -48,7 +48,7 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionar
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  auto left_column_iterable = create_attribute_vector_iterable(left_column);
+  auto left_column_iterable = _create_attribute_vector_iterable(left_column);
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
@@ -59,7 +59,7 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& l
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  auto left_column_iterable = create_attribute_vector_iterable(left_column);
+  auto left_column_iterable = _create_attribute_vector_iterable(left_column);
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });

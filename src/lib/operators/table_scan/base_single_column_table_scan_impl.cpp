@@ -56,12 +56,12 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColum
   }
 }
 
-AttributeVectorIterable BaseSingleColumnTableScanImpl::create_attribute_vector_iterable(
+AttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribute_vector_iterable(
     const BaseDictionaryColumn& column) {
   return AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()};
 }
 
-DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::create_attribute_vector_iterable(
+DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribute_vector_iterable(
     const BaseDeprecatedDictionaryColumn& column) {
   return DeprecatedAttributeVectorIterable{*column.attribute_vector()};
 }

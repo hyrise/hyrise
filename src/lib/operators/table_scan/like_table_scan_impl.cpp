@@ -95,7 +95,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = create_attribute_vector_iterable(left_column);
+  auto attribute_vector_iterable = _create_attribute_vector_iterable(left_column);
 
   // Regex matches all
   if (match_count == dictionary_matches.size()) {
