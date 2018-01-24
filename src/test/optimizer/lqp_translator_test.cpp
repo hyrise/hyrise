@@ -20,6 +20,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -103,6 +104,27 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op->scan_type(), ScanType::GreaterThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  auto predicate_node =
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), ScanType::Equals, 42);
+  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_scan_typee(ScanTypee::IndexScan);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto index_scan_op = std::dynamic_pointer_cast<IndexScan>(op);
+  ASSERT_TRUE(index_scan_op);
+  // EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  // EXPECT_EQ(table_scan_op->scan_type(), ScanType::Equals);
+  // EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {

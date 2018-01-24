@@ -20,9 +20,9 @@ class JobTask;
  */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
-  IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
-            std::vector<ColumnID> left_column_ids, const ScanType scan_type, std::vector<AllTypeVariant> right_values,
-            std::vector<AllTypeVariant> right_values2 = {});
+  IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
+            std::vector<ColumnID> left_column_ids, const ScanType scan_type, const std::vector<AllTypeVariant> right_values,
+            const std::vector<AllTypeVariant> right_values2 = {});
 
   const std::string name() const final;
 
