@@ -36,7 +36,6 @@ struct MaterializedChunk {
   size_t numa_node_id;
 };
 
-
 template <typename T>
 using MaterializedChunkList = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
 
@@ -87,10 +86,18 @@ class ColumnMaterializer {
     // This introduces runtime overhead that is not amortized for non-NUMA systems, so maybe this should be a compile time switch.
     MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id).get_allocator()};
 
+    size_t numa_node_id = 0; // default NUMA Node, everything is on the same node for non numa systems
+
+    // Find out whether we actually are on a NUMA System, if so, remember the numa node
+    auto numa_res = dynamic_cast<NUMAMemoryResource>(alloc.resource());
+    if(numa_res != nullptr){
+        numa_node_id = numa_res->get_node_id();
+    }
+
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, alloc] {
       auto column = input->get_chunk(chunk_id).get_column(column_id);
       resolve_column_type<T>(*column, [&](auto& typed_column) {
-        (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
+        (*output)[chunk_id] = MaterializedChunk(_materialize_column(typed_column, chunk_id, null_rows_output, alloc), numa_node_id);
       });
     });
   }
@@ -118,6 +125,8 @@ class ColumnMaterializer {
       }
     });
 
+    // TODO(florian): think about whether this sorting makes sense for the NUMA case
+    // probably this is a good presorting for the merge in the radix phase
     if (_sort) {
       std::sort(output.begin(), output.end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });

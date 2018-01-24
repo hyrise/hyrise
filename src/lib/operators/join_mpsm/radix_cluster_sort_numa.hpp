@@ -16,8 +16,8 @@ namespace opossum {
 */
 template <typename T>
 struct RadixClusterOutput {
-  std::vector<std::unique_ptr<MaterializedColumn<T>>> clusters_left;
-  std::vector<std::unique_ptr<MaterializedColumnList<T>>> clusters_right;
+  std::unique_ptr<MaterializedChunkList<T>>> clusters_left;
+  std::unique_ptr<MaterializedChunkList<T>>> clusters_right;
   std::unique_ptr<PosList> null_rows_left;
   std::unique_ptr<PosList> null_rows_right;
 };
@@ -173,7 +173,7 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  std::unique_ptr<MaterializedColumnList<T>> _cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks,
+  std::unique_ptr<MaterializedColumnList<T>> _cluster_public(std::unique_ptr<MaterializedColumnList<T>>& input_chunks,
                                                       std::function<size_t(const T&)> clusterer) {
 
     auto output_table = std::make_unique<MaterializedColumnList<T>>(_cluster_count);
@@ -243,9 +243,9 @@ class RadixClusterSort {
   * - hand select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::unique_ptr<MaterializedColumnList<T>> _radix_cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
+  std::unique_ptr<MaterializedColumnList<T>> _radix_cluster_numa_public(std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster_public(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
   /**
@@ -347,8 +347,8 @@ class RadixClusterSort {
       output.clusters_left = _concatenate_chunks(materialized_left_columns);
       output.clusters_right = _concatenate_chunks(materialized_right_columns);
     } else if (_equi_case) {
-      output.clusters_left = _radix_cluster(materialized_left_columns);
-      output.clusters_right = _radix_cluster(materialized_right_columns);
+      output.clusters_left = _radix_cluster_numa_private(materialized_left_columns);
+      output.clusters_right = _radix_cluster_numa_public(materialized_right_columns);
     } else {
       auto result = _range_cluster(materialized_left_columns, materialized_right_columns);
       output.clusters_left = std::move(result.first);
