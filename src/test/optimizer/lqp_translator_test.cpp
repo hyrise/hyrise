@@ -146,9 +146,55 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   ASSERT_TRUE(index_scan_op);
   EXPECT_EQ(this->get_included_chunk_ids(index_scan_op), index_chunk_ids);
 
-  const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op->input_right());
-  ASSERT_TRUE(table_scan);
-  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan), index_chunk_ids);
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->scan_type(), ScanType::Equals);
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+
+  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
+  auto predicate_node =
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), ScanType::Between, AllParameterVariant(42), AllTypeVariant(1337));
+  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_scan_typee(ScanTypee::IndexScan);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  ASSERT_TRUE(union_op);
+
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
+  ASSERT_TRUE(index_scan_op);
+  EXPECT_EQ(this->get_included_chunk_ids(index_scan_op), index_chunk_ids);
+
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->scan_type(), ScanType::LessThanEquals);
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(1337));
+
+  const auto table_scan_op2 = std::dynamic_pointer_cast<const TableScan>(table_scan_op->input_left());
+  ASSERT_TRUE(table_scan_op2);
+  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
+  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op2->scan_type(), ScanType::GreaterThanEquals);
+  EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {
