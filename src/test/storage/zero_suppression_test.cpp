@@ -51,7 +51,7 @@ class ZeroSuppressionTest : public BaseTest, public ::testing::WithParamInterfac
   std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
     const auto zs_type = GetParam();
 
-    auto encoded_vector = encode_by_zs_type(zs_type, vector, {}, {max()});
+    auto encoded_vector = encode_by_zs_type(vector, zs_type, {}, {max()});
     EXPECT_EQ(encoded_vector->size(), vector.size());
 
     return encoded_vector;

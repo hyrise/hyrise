@@ -33,7 +33,7 @@ std::unique_ptr<BaseZeroSuppressionEncoder> create_encoder_by_zs_type(ZsType typ
 
 }  // namespace
 
-std::unique_ptr<BaseZeroSuppressionVector> encode_by_zs_type(ZsType type, const pmr_vector<uint32_t>& vector,
+std::unique_ptr<BaseZeroSuppressionVector> encode_by_zs_type(const pmr_vector<uint32_t>& vector, ZsType type,
                                                              const PolymorphicAllocator<size_t>& alloc,
                                                              const ZsVectorMetaInfo& meta_info) {
   auto encoder = create_encoder_by_zs_type(type);
