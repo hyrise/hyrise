@@ -12,6 +12,11 @@ class BaseZeroSuppressionVector;
 
 /**
  * @brief Column implementing run-length encoding
+ *
+ * Instead of storing run lengths, this implementation
+ * stores the end positions of each run. The resulting
+ * sorted list can be traversed via binary search, which
+ * makes randomly accessing elements much faster.
  */
 template <typename T>
 class RunLengthColumn : public BaseEncodedColumn {

@@ -27,15 +27,19 @@ void SimdBp128Decoder::_read_meta_info(size_t meta_info_offset) {
 
 void SimdBp128Decoder::_unpack_block(uint8_t block_index) {
   static const auto meta_info_data_size = 1u;  // One 128 bit block
+
+  // Calculate data offset relative to the current _cached_meta_info_offset
   const auto relative_data_offset =
       meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.begin() + block_index, 0u);
+
+  // Absolute data offset within encoded vector
   const auto data_offset = _cached_meta_info_offset + relative_data_offset;
 
-  const auto in = _data->data() + data_offset;
-  auto out = _cached_block->data();
+  const auto encoded_data_in = _data->data() + data_offset;
+  auto unencoded_data_out = _cached_block->data();
   const auto bit_size = _cached_meta_info[block_index];
 
-  Packing::unpack_block(in, out, bit_size);
+  Packing::unpack_block(encoded_data_in, unencoded_data_out, bit_size);
 
   _cached_block_first_index = _cached_meta_block_first_index + block_index * Packing::block_size;
 }

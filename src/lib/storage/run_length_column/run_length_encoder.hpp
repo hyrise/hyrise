@@ -38,13 +38,13 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
       for (; it != end; ++it) {
         auto column_value = *it;
 
-        const auto prev_value = current_value;
-        const auto is_prev_null = is_current_null;
+        const auto previous_value = current_value;
+        const auto is_previous_null = is_current_null;
 
         current_value = column_value.value();
         is_current_null = column_value.is_null();
 
-        if ((is_prev_null == is_current_null) && (is_prev_null || (prev_value == current_value))) {
+        if ((is_previous_null == is_current_null) && (is_previous_null || (previous_value == current_value))) {
           end_positions.back() = current_index;
         } else {
           values.push_back(current_value);

@@ -4,7 +4,7 @@ namespace opossum {
 
 std::unique_ptr<BaseZeroSuppressionVector> FixedSizeByteAlignedEncoder::encode(
     const PolymorphicAllocator<size_t>& alloc, const pmr_vector<uint32_t>& vector, const ZsVectorMetaInfo& meta_info) {
-  const auto max_value = meta_info.max_value ? *meta_info.max_value : _get_max_value(vector);
+  const auto max_value = meta_info.max_value ? *meta_info.max_value : _find_max_value(vector);
   return _encode_using_max_value(alloc, vector, max_value);
 }
 
@@ -12,7 +12,7 @@ std::unique_ptr<BaseZeroSuppressionEncoder> FixedSizeByteAlignedEncoder::create_
   return std::make_unique<FixedSizeByteAlignedEncoder>();
 }
 
-uint32_t FixedSizeByteAlignedEncoder::_get_max_value(const pmr_vector<uint32_t>& vector) const {
+uint32_t FixedSizeByteAlignedEncoder::_find_max_value(const pmr_vector<uint32_t>& vector) const {
   const auto it = std::max_element(vector.cbegin(), vector.cend());
   return *it;
 }

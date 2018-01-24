@@ -102,6 +102,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
       const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) { return offset < current; };
 
       auto end_position_it = _end_positions.cend();
+
       if (current_chunk_offset < _prev_chunk_offset) {
         end_position_it =
             std::lower_bound(_end_positions.cbegin(), _end_positions.cbegin() + _prev_index, current_chunk_offset);

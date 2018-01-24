@@ -5,7 +5,6 @@
 
 #include "utils/assert.hpp"
 
-// Include your zero suppression encoder file here!
 #include "fixed_size_byte_aligned/fixed_size_byte_aligned_encoder.hpp"
 #include "simd_bp128/simd_bp128_encoder.hpp"
 

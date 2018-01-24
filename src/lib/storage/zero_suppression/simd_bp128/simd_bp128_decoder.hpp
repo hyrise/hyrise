@@ -114,18 +114,34 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
     _cached_meta_block_first_index = 0u;
   }
 
+  /**
+   * @brief reads meta info at a given absolute position
+   *
+   * @param meta_info_offset an absolute position within the encoded vector
+   */
   void _read_meta_info(size_t meta_info_offset);
+
+  /**
+   * @brief unpacks a block in the current meta block
+   *
+   * @param block_index relative block index within the current meta block
+   */
   void _unpack_block(uint8_t block_index);
 
  private:
   const pmr_vector<uint128_t>* _data;
   const size_t _size;
 
+  // Cached meta info’s offset into the encoded vector
   size_t _cached_meta_info_offset;
-  size_t _cached_meta_block_first_index;
-  std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info;
 
+  // Index of the first element within the cached meta block
+  size_t _cached_meta_block_first_index;
+
+  // Index of the first element within the cached block
   size_t _cached_block_first_index;
+
+  std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info;
   const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
 };
 
