@@ -17,8 +17,8 @@ SimdBp128Decoder::SimdBp128Decoder(const SimdBp128Decoder& other)
       _size{other._size},
       _cached_meta_info_offset{other._cached_meta_info_offset},
       _cached_meta_block_first_index{other._cached_meta_block_first_index},
-      _cached_meta_info{other._cached_meta_info},
       _cached_block_first_index{other._cached_block_first_index},
+      _cached_meta_info{other._cached_meta_info},
       _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
 
 void SimdBp128Decoder::_read_meta_info(size_t meta_info_offset) {

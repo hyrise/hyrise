@@ -44,14 +44,22 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
     }
 
     if (_is_index_after_cached_meta_block(i)) {
-      const auto relative_index = _index_within_cached_meta_block(i);
+      const auto relative_index = _index_relative_to_cached_meta_block(i);
       const auto relative_meta_block_index = relative_index / Packing::meta_block_size;
 
       _read_meta_info_from_offset(relative_meta_block_index);
       return _get_within_cached_meta_block(i);
     }
 
-    _reset_cached_meta_block();
+    _clear_meta_block_cache();
+
+    /**
+     * The decoder wasn’t able to use its caches.
+     * We need to load the first meta info and
+     * sequentially run through the encoded data
+     * up to the meta block in which the requested element is located.
+     */
+
     _read_meta_info(_cached_meta_info_offset);
     const auto meta_block_index = i / Packing::meta_block_size;
     _read_meta_info_from_offset(meta_block_index);
@@ -75,7 +83,7 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
     return begin <= index && index < end;
   }
 
-  size_t _index_within_cached_meta_block(size_t index) { return index - _cached_meta_block_first_index; }
+  size_t _index_relative_to_cached_meta_block(size_t index) { return index - _cached_meta_block_first_index; }
 
   bool _is_index_after_cached_meta_block(size_t index) {
     return (_cached_meta_block_first_index + Packing::meta_block_size) <= index;
@@ -84,7 +92,7 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
   uint32_t _get_within_cached_block(size_t index) { return (*_cached_block)[_index_within_cached_block(index)]; }
 
   uint32_t _get_within_cached_meta_block(size_t index) {
-    const auto block_index = _index_within_cached_meta_block(index) / Packing::block_size;
+    const auto block_index = _index_relative_to_cached_meta_block(index) / Packing::block_size;
     _unpack_block(block_index);
 
     return (*_cached_block)[_index_within_cached_block(index)];
@@ -109,7 +117,7 @@ class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
     _cached_meta_block_first_index += meta_block_index * Packing::meta_block_size;
   }
 
-  void _reset_cached_meta_block() {
+  void _clear_meta_block_cache() {
     _cached_meta_info_offset = 0u;
     _cached_meta_block_first_index = 0u;
   }

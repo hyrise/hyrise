@@ -20,15 +20,15 @@ class FixedSizeByteAlignedEncoder : public BaseZeroSuppressionEncoder {
   std::unique_ptr<BaseZeroSuppressionEncoder> create_new() const final;
 
  private:
-  static uint32_t _find_max_value(const pmr_vector<uint32_t>& vector) const;
+  static uint32_t _find_max_value(const pmr_vector<uint32_t>& vector);
 
   static std::unique_ptr<BaseZeroSuppressionVector> _encode_using_max_value(const PolymorphicAllocator<size_t>& alloc,
                                                                             const pmr_vector<uint32_t>& vector,
-                                                                            const uint32_t max_value) const;
+                                                                            const uint32_t max_value);
 
   template <typename UnsignedIntType>
   static std::unique_ptr<BaseZeroSuppressionVector> _encode_using_uint_type(const PolymorphicAllocator<size_t>& alloc,
-                                                                            const pmr_vector<uint32_t>& vector) const;
+                                                                            const pmr_vector<uint32_t>& vector);
 };
 
 }  // namespace opossum

@@ -17,9 +17,9 @@ std::unique_ptr<SimdBp128Decoder> SimdBp128Vector::_on_create_decoder() const {
   return std::make_unique<SimdBp128Decoder>(*this);
 }
 
-auto SimdBp128Vector::_on_cbegin() const -> ConstIterator { return ConstIterator{&_data, _size, 0u}; }
+SimdBp128Iterator SimdBp128Vector::_on_cbegin() const { return SimdBp128Iterator{&_data, _size, 0u}; }
 
-auto SimdBp128Vector::_on_cend() const -> ConstIterator { return ConstIterator{nullptr, _size, _size}; }
+SimdBp128Iterator SimdBp128Vector::_on_cend() const { return SimdBp128Iterator{nullptr, _size, _size}; }
 
 std::shared_ptr<BaseZeroSuppressionVector> SimdBp128Vector::_on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
