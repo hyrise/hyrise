@@ -46,6 +46,12 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
                                              "src/test/tables/joinoperators/int_left_join.tbl", 1);
 }
 
+TYPED_TEST(JoinEquiTest, IntFloatJoin) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_o,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::Equals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_float_inner.tbl", 1);
+}
+
 TYPED_TEST(JoinEquiTest, LeftJoinOnString) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
                                              ColumnIDPair(ColumnID{1}, ColumnID{0}), ScanType::Equals, JoinMode::Left,

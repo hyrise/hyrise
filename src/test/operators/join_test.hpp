@@ -43,6 +43,7 @@ class JoinTest : public BaseTest {
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
     _table_wrapper_n = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
+    _table_wrapper_o = std::make_shared<TableWrapper>(load_table("src/test/tables/float_zero_precision.tbl", 1));
 
     // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
@@ -80,6 +81,7 @@ class JoinTest : public BaseTest {
     _table_wrapper_l->execute();
     _table_wrapper_m->execute();
     _table_wrapper_n->execute();
+    _table_wrapper_o->execute();
     _table_wrapper_a_dict->execute();
     _table_wrapper_b_dict->execute();
     _table_wrapper_c_dict->execute();
@@ -107,7 +109,7 @@ class JoinTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
-      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_a_dict,
+      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_o, _table_wrapper_a_dict,
       _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict, _table_wrapper_n_dict;
 };
 
