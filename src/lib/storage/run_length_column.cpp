@@ -37,11 +37,10 @@ const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offs
   const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
-  const auto value = (*_values)[index];
   const auto is_null = (*_null_values)[index];
-
   if (is_null) return NULL_VALUE;
 
+  const auto value = (*_values)[index];
   return AllTypeVariant{value};
 }
 
