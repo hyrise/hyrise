@@ -19,6 +19,10 @@ void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values) {
 }
 
 PartitionID RoundRobinPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
+  return get_next_partition();
+}
+
+PartitionID RoundRobinPartitionSchema::get_next_partition() {
   _go_to_next_partition();
   return _next_partition;
 }

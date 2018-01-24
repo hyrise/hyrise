@@ -18,6 +18,7 @@ class RoundRobinPartitionSchema : public AbstractPartitionSchema {
   RoundRobinPartitionSchema& operator=(RoundRobinPartitionSchema&&) = default;
 
   PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
+  PartitionID get_next_partition();
 
  protected:
   int _number_of_partitions;
