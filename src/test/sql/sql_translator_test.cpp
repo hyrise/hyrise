@@ -533,10 +533,10 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
    * [Projection] table_b.a, SUM(table_c.a), table_a.b, table_a.b
    *  |_[Aggregate] SUM(table_c.a) GROUP BY [table_a.b, table_a.a, table_b.a, table_b.b]
    *     |_[Cross Join]
-   *        |_[Cross Join]
-   *         |  |_[StoredTable] Name: 'table_b'
-   *         |  |_[StoredTable] Name: 'table_c'
-   *         |_[StoredTable] Name: 'table_a'
+   *      | |_[Cross Join]                     (left_child)
+   *      |   |_[StoredTable] Name: 'table_a'
+   *      |   |_[StoredTable] Name: 'table_b'
+   *      |_[StoredTable] Name: 'table_c'      (right_child)
    */
 
   const auto result = compile_query(query);
@@ -544,15 +544,15 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_NE(result->left_child(), nullptr);                                             // Aggregate
   ASSERT_NE(result->left_child()->left_child(), nullptr);                               // CrossJoin
   ASSERT_NE(result->left_child()->left_child()->left_child(), nullptr);                 // CrossJoin
-  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr);   // table_b
-  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr);  // table_c
-  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr);                // table_a
+  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr);   // table_a
+  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr);  // table_b
+  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr);                // table_c
 
   ASSERT_EQ(result->left_child()->type(), LQPNodeType::Aggregate);
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result->left_child());
-  const auto table_a_node = result->left_child()->left_child()->right_child();
-  const auto table_b_node = result->left_child()->left_child()->left_child()->left_child();
-  const auto table_c_node = result->left_child()->left_child()->left_child()->right_child();
+  const auto table_a_node = result->left_child()->left_child()->left_child()->left_child();
+  const auto table_b_node = result->left_child()->left_child()->left_child()->right_child();
+  const auto table_c_node = result->left_child()->left_child()->right_child();
 
   /**
    * Assert the Projection
