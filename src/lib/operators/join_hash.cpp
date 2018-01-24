@@ -1,8 +1,10 @@
 #include "join_hash.hpp"
 
+#include <boost/lexical_cast.hpp>
 #include <memory>
 #include <numeric>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -82,6 +84,55 @@ void JoinHash::_on_cleanup() { _impl.reset(); }
 // currently using 32bit Murmur
 using Hash = uint32_t;
 
+// JoinHashTraits. Use left type for hashing by default
+template <typename L, typename R, class Enable = void>
+struct JoinHashTraits {
+  typedef L hash_type;
+  static constexpr bool is_invalid = false;
+  static constexpr bool needs_lexical_cast = false;
+};
+
+// Same types
+template <typename L, typename R>
+struct JoinHashTraits<L, R, typename std::enable_if_t<std::is_same<L, R>::value, void>> {
+  typedef L hash_type;
+  static constexpr bool is_invalid = false;
+  static constexpr bool needs_lexical_cast = false;
+};
+
+// If both are floating types, use the larger type to hash
+template <typename L, typename R>
+struct JoinHashTraits<
+    L, R,
+    typename std::enable_if_t<
+        std::is_floating_point<L>::value && std::is_floating_point<R>::value && sizeof(L) < sizeof(R), void>> {
+  typedef R hash_type;
+  static constexpr bool is_invalid = false;
+  static constexpr bool needs_lexical_cast = false;
+};
+
+// If both are integer types, use the larger type to hash
+template <typename L, typename R>
+struct JoinHashTraits<
+    L, R,
+    typename std::enable_if_t<
+        std::numeric_limits<L>::is_integer && std::numeric_limits<R>::is_integer && sizeof(L) < sizeof(R), void>> {
+  typedef R hash_type;
+  static constexpr bool is_invalid = false;
+  static constexpr bool needs_lexical_cast = false;
+};
+
+// Joining strings with numbers is not supported at the moment
+template <typename L, typename R>
+struct JoinHashTraits<L, R,
+                      typename std::enable_if_t<!std::is_same<L, R>::value && (std::is_same<R, std::string>::value ||
+                                                                               std::is_same<L, std::string>::value),
+                                                void>> {
+  typedef std::string hash_type;
+  static constexpr bool is_invalid = false;
+  static constexpr bool needs_lexical_cast = true;
+};
+
 // We need to use the impl pattern because the join operator depends on the type of the columns
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
@@ -109,6 +160,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   const unsigned int _partitioning_seed = 13;
   const size_t _radix_bits = 9;
+
+  // Determine correct type for hashing
+  using HashType = typename JoinHashTraits<LeftType, RightType>::hash_type;
 
   /*
   This is how elements of the input relations are saved after materialization.
@@ -214,8 +268,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           ChunkOffset offset = 0;
           for (auto&& elem : materialized_chunk) {
             if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
-              output[row_id] =
-                  PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
+              unsigned int hashed_value;
+
+              if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast) {
+                hashed_value = murmur2<HashType>(boost::lexical_cast<HashType>(elem.second), seed);
+              } else {
+                hashed_value = murmur2<HashType>(elem.second, seed);
+              }
+
+              output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, hashed_value, elem.second};
 
               const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
               histogram[radix]++;
@@ -230,7 +291,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           for (auto&& elem : materialized_chunk) {
             if (elem.first.chunk_offset == INVALID_CHUNK_OFFSET) continue;
 
-            output[row_id] = PartitionedElement<T>{elem.first, murmur2<T>(elem.second, seed), elem.second};
+            unsigned int hashed_value;
+
+            if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast) {
+              hashed_value = murmur2<HashType>(boost::lexical_cast<HashType>(elem.second), seed);
+            } else {
+              hashed_value = murmur2<HashType>(elem.second, seed);
+            }
+
+            output[row_id] = PartitionedElement<T>{elem.first, hashed_value, elem.second};
 
             const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
             histogram[radix]++;
@@ -351,7 +420,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
   */
   void _build(const RadixContainer<LeftType>& radix_container,
-              std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables) {
+              std::vector<std::shared_ptr<HashTable<HashType>>>& hashtables) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -368,12 +437,17 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           return;
         }
 
-        auto hashtable = std::make_shared<HashTable<LeftType>>(partition_size);
+        auto hashtable = std::make_shared<HashTable<HashType>>(partition_size);
 
         for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end;
              ++partition_offset) {
           auto& element = partition_left[partition_offset];
-          hashtable->put(element.value, element.row_id);
+
+          if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast) {
+            hashtable->put(boost::lexical_cast<HashType>(element.value), element.row_id);
+          } else {
+            hashtable->put(element.value, element.row_id);
+          }
         }
 
         hashtables[current_partition_id] = hashtable;
@@ -390,7 +464,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   number of hash tables that need to be looked into to just 1.
   */
   void _probe(const RadixContainer<RightType>& radix_container,
-              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables, std::vector<PosList>& pos_list_left,
+              const std::vector<std::shared_ptr<HashTable<HashType>>>& hashtables, std::vector<PosList>& pos_list_left,
               std::vector<PosList>& pos_list_right) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -476,7 +550,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   void _probe_semi_anti(const RadixContainer<RightType>& radix_container,
-                        const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables,
+                        const std::vector<std::shared_ptr<HashTable<HashType>>>& hashtables,
                         std::vector<PosList>& pos_lists) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -625,7 +699,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right, keep_nulls);
 
     // Build phase
-    std::vector<std::shared_ptr<HashTable<LeftType>>> hashtables;
+    std::vector<std::shared_ptr<HashTable<HashType>>> hashtables;
     hashtables.resize(radix_left.partition_offsets.size() - 1);
     /*
     NUMA notes:
