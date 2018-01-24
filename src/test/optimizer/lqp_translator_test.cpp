@@ -30,6 +30,8 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/union_positions.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -41,6 +43,16 @@ class LQPTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
     StorageManager::get().add_table("table_alias_name",
                                     load_table("src/test/tables/table_alias_name.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("table_int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
+    DictionaryCompression::compress_table(*StorageManager::get().get_table("table_int_float_chunked"));
+  }
+
+  const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
+    return index_scan->_included_chunk_ids;
+  }
+
+  const std::vector<ChunkID> get_excluded_chunk_ids(const std::shared_ptr<const TableScan>& table_scan) {
+    return table_scan->_excluded_chunk_ids;
   }
 };
 
@@ -110,7 +122,14 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+
+  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
   auto predicate_node =
       std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), ScanType::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
@@ -120,11 +139,16 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Check PQP
    */
-  const auto index_scan_op = std::dynamic_pointer_cast<IndexScan>(op);
+  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  ASSERT_TRUE(union_op);
+
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  // EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
-  // EXPECT_EQ(table_scan_op->scan_type(), ScanType::Equals);
-  // EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+  EXPECT_EQ(this->get_included_chunk_ids(index_scan_op), index_chunk_ids);
+
+  const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  ASSERT_TRUE(table_scan);
+  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan), index_chunk_ids);
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {

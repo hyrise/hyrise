@@ -41,6 +41,7 @@
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
 #include "sort_node.hpp"
+#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -101,7 +102,29 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
       const auto value_variant = boost::get<AllTypeVariant>(value);
       std::vector<ColumnID> column_ids = {column_id};
       std::vector<AllTypeVariant> values = {value_variant};
-      return std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids, predicate_node->scan_type(), values);
+
+
+      // Currently, we will only use IndexScans, if the predicate node directly follows a StoredTableNode
+      if (auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(predicate_node->left_child())) {
+        const auto table_name = stored_table_node->table_name();
+        const auto table = StorageManager::get().get_table(table_name);
+        std::vector<ChunkID> indexed_chunks;
+        for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto chunk = table->get_chunk(chunk_id);
+          if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
+            indexed_chunks.emplace_back(chunk_id);
+          }
+        }
+
+        auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids, predicate_node->scan_type(), values);
+        auto table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate_node->scan_type(), value);
+
+        index_scan->set_included_chunk_ids(indexed_chunks);
+        table_scan->set_excluded_chunk_ids(indexed_chunks);
+
+        return std::make_shared<UnionPositions>(index_scan, table_scan);
+
+      }
     }
   }
 
