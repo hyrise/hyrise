@@ -107,6 +107,30 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
+TEST_F(OperatorsExportCsvTest, MultipleChunksPartitioned) {
+  table->create_range_partitioning(ColumnID{2}, {4.0f});
+  table->append({1, "Hallo", 3.5f});
+  table->append({2, "Welt!", 3.5f});
+  table->append({3, "Gute", -4.0f});
+  table->append({4, "Nacht", 7.5f});
+  table->append({5, "Guten", 8.33f});
+  table->append({6, "Tag", 3.5f});
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
+  EXPECT_TRUE(compare_file(filename,
+                           "1,\"Hallo\",3.5\n"
+                           "2,\"Welt!\",3.5\n"
+                           "4,\"Nacht\",7.5\n"
+                           "5,\"Guten\",8.33\n"
+                           "3,\"Gute\",-4\n"
+                           "6,\"Tag\",3.5\n"));
+}
+
 TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});

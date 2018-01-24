@@ -153,6 +153,27 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
 }
+TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnPartitioned) {
+  auto table = std::make_shared<opossum::Table>(2);
+  table->create_range_partitioning(ColumnID{3}, {2.5f, 4.0f});
+  table->add_column("a", DataType::String);
+  table->add_column("b", DataType::Int);
+  table->add_column("c", DataType::Long);
+  table->add_column("d", DataType::Float);
+  table->add_column("e", DataType::Double);
+  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnPartitioned.bin", filename));
+}
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   auto table = std::make_shared<opossum::Table>(2);
   table->add_column("a", DataType::String);
