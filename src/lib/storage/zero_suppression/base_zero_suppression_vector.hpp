@@ -40,8 +40,6 @@ class BaseZeroSuppressionVector : private Noncopyable {
 
   virtual ZsVectorType type() const = 0;
 
-  virtual pmr_vector<uint32_t> decode() const = 0;
-
   virtual std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const = 0;
 
   virtual std::shared_ptr<BaseZeroSuppressionVector> copy_using_allocator(
@@ -97,19 +95,6 @@ class ZeroSuppressionVector : public BaseZeroSuppressionVector {
   size_t data_size() const final { return _self()._on_data_size(); }
 
   ZsVectorType type() const final { return get_zs_vector_type<Derived>(); }
-
-  pmr_vector<uint32_t> decode() const final {
-    auto decoded_vector = pmr_vector<uint32_t>{};
-    decoded_vector.reserve(size());
-
-    auto it = cbegin();
-    const auto end = cend();
-    for (; it != end; ++it) {
-      decoded_vector.push_back(*it);
-    }
-
-    return decoded_vector;
-  }
 
   std::unique_ptr<BaseZeroSuppressionDecoder> create_base_decoder() const final {
     return _self()._on_create_base_decoder();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/blank.hpp>
+
 #include <cstddef>
 
 #include "types.hpp"
@@ -79,17 +81,17 @@ class NonNullColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  *
  * @see NullValueVectorIterable
  */
-class ColumnIteratorNullValue : public AbstractColumnIteratorValue<std::nullptr_t> {
+class ColumnIteratorNullValue : public AbstractColumnIteratorValue<boost::blank> {
  public:
   ColumnIteratorNullValue(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
-  const std::nullptr_t& value() const final { return _nullptr; }
+  const boost::blank& value() const final { return _blank; }
   bool is_null() const final { return _null_value; }
   const ChunkOffset& chunk_offset() const final { return _chunk_offset; }
 
  private:
-  static constexpr auto _nullptr = nullptr;
+  static constexpr auto _blank = boost::blank{};
   const bool _null_value;
   const ChunkOffset _chunk_offset;
 };

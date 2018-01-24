@@ -13,7 +13,7 @@
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/reference_column/reference_column_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -119,7 +119,7 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, DeprecatedDictionaryColumnIteratorWithIterators) {
-  DictionaryCompression::compress_table(*table);
+  DeprecatedDictionaryCompression::compress_table(*table);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
@@ -135,7 +135,7 @@ TEST_F(IterablesTest, DeprecatedDictionaryColumnIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, DeprecatedDictionaryColumnReferencedIteratorWithIterators) {
-  DictionaryCompression::compress_table(*table);
+  DeprecatedDictionaryCompression::compress_table(*table);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
@@ -153,7 +153,7 @@ TEST_F(IterablesTest, DeprecatedDictionaryColumnReferencedIteratorWithIterators)
 }
 
 TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
-  DictionaryCompression::compress_table(*table, EncodingType::Dictionary);
+  DeprecatedDictionaryCompression::compress_table(*table, EncodingType::Dictionary);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
@@ -169,7 +169,7 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
-  DictionaryCompression::compress_table(*table, EncodingType::Dictionary);
+  DeprecatedDictionaryCompression::compress_table(*table, EncodingType::Dictionary);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 

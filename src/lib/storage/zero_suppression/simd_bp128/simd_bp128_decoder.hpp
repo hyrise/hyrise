@@ -20,7 +20,7 @@ class SimdBp128Vector;
  * @brief Implements point-access into a SIMD-BP128 compressed vector
  *
  * The decoder caches the last decoded block and meta-block.
- * Performs best if the values are accessed in a cache-coherent manner, i.e.,
+ * Performs best if the values are accessed in a cache-sensitive manner, i.e.,
  * sequentially without too many jumps backwards.
  */
 class SimdBp128Decoder : public BaseZeroSuppressionDecoder {

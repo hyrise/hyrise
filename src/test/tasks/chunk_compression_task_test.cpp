@@ -10,7 +10,7 @@
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
 #include "storage/base_deprecated_dictionary_column.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_compression_task.hpp"
 

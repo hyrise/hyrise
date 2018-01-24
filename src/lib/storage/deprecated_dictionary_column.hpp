@@ -29,7 +29,7 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
  public:
   /**
    * Creates a Dictionary column from a given dictionary and attribute vector.
-   * See dictionary_compression.cpp for more.
+   * See deprecated_dictionary_compression.cpp for more.
    */
   explicit DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector);

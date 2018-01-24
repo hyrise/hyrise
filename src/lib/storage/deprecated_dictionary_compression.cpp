@@ -1,4 +1,4 @@
-#include "dictionary_compression.hpp"
+#include "deprecated_dictionary_compression.hpp"
 
 #include <memory>
 #include <vector>
@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data_type,
+std::shared_ptr<BaseColumn> DeprecatedDictionaryCompression::compress_column(DataType data_type,
                                                                    const std::shared_ptr<BaseColumn>& column,
                                                                    EncodingType encoding_type) {
   auto value_column = std::dynamic_pointer_cast<BaseValueColumn>(column);
@@ -24,7 +24,7 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(DataType data
   return encode_column(encoding_type, data_type, value_column);
 }
 
-void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
+void DeprecatedDictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
                                            const std::shared_ptr<Chunk>& chunk, EncodingType encoding_type) {
   DebugAssert((column_types.size() == chunk->column_count()),
               "Number of column types does not match the chunk’s column count.");
@@ -40,7 +40,7 @@ void DictionaryCompression::compress_chunk(const std::vector<DataType>& column_t
   }
 }
 
-void DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
+void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
                                             EncodingType encoding_type) {
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
@@ -49,7 +49,7 @@ void DictionaryCompression::compress_chunks(Table& table, const std::vector<Chun
   }
 }
 
-void DictionaryCompression::compress_table(Table& table, EncodingType encoding_type) {
+void DeprecatedDictionaryCompression::compress_table(Table& table, EncodingType encoding_type) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
     compress_chunk(table.column_types(), chunk, encoding_type);

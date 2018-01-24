@@ -13,10 +13,17 @@ class BaseZeroSuppressionVector;
 /**
  * @brief Column implementing run-length encoding
  *
+ * Run-length encoding takes advantage of long sequences
+ * of the same value, called runs. Each run is represented
+ * by the value and the number of occurences.
+ *
  * Instead of storing run lengths, this implementation
  * stores the end positions of each run. The resulting
  * sorted list can be traversed via binary search, which
  * makes randomly accessing elements much faster.
+ *
+ * As in value columns, null values are represented as an
+ * additional boolean vector.
  */
 template <typename T>
 class RunLengthColumn : public BaseEncodedColumn {

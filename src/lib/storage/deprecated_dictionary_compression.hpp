@@ -19,7 +19,7 @@ class Table;
  *
  * @deprecated Use ChunkEncoder interface instead!
  */
-class DictionaryCompression {
+class DeprecatedDictionaryCompression {
  public:
   /**
    * @brief Compresses a column

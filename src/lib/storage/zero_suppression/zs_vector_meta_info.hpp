@@ -11,7 +11,7 @@ namespace opossum {
  * Some encoders can utilize additional information
  * about the vector which is to be encoded.
  */
-struct ZsVectorMetaInfo {
+struct ZsVectorMetaInfo final {
   std::optional<uint32_t> max_value = std::nullopt;
 };
 

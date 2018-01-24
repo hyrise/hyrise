@@ -103,18 +103,4 @@ TEST_P(SimdBp128Test, DecodeSequenceUsingDecoder) {
   }
 }
 
-TEST_P(SimdBp128Test, DecodeSequenceUsingDecodeMethod) {
-  const auto sequence = generate_sequence(4'200);
-  const auto encoded_sequence = encode(sequence);
-
-  auto decoded_sequence = encoded_sequence->decode();
-
-  auto seq_it = sequence.cbegin();
-  const auto seq_end = sequence.cend();
-  auto decoded_seq_it = decoded_sequence.cbegin();
-  for (; seq_it != seq_end; seq_it++, decoded_seq_it++) {
-    EXPECT_EQ(*seq_it, *decoded_seq_it);
-  }
-}
-
 }  // namespace opossum
