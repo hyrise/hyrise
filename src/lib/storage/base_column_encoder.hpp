@@ -32,12 +32,12 @@ class BaseColumnEncoder {
   virtual bool supports(DataType data_type) const = 0;
 
   /**
-   * @brief Encodes a value column with the given data type.
+   * @brief Encodes a value column that has the given data type.
    *
    * @return encoded column if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
-                                                    const std::shared_ptr<const BaseValueColumn>& column) = 0;
+  virtual std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& column,
+                                                    DataType data_type) = 0;
 
   virtual std::unique_ptr<BaseColumnEncoder> create_new() const = 0;
 
@@ -65,8 +65,8 @@ class ColumnEncoder : public BaseColumnEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
-                                            const std::shared_ptr<const BaseValueColumn>& column) final {
+  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& column,
+                                            DataType data_type) final {
     auto encoded_column = std::shared_ptr<BaseEncodedColumn>{};
     resolve_data_type(data_type, [&](auto type_obj) {
       const auto data_type_supported = this->supports(type_obj);
@@ -76,7 +76,7 @@ class ColumnEncoder : public BaseColumnEncoder {
          * The templated method encode() where the actual encoding happens
          * is only instantiated for data types supported by the encoding type.
          */
-        encoded_column = this->encode(type_obj, column);
+        encoded_column = this->encode(column, type_obj);
       } else {
         Fail("Passed data type not supported by encoding.");
       }
@@ -123,8 +123,8 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Compiles only for supported data types.
    */
   template <typename ColumnDataType>
-  std::shared_ptr<BaseEncodedColumn> encode(hana::basic_type<ColumnDataType> data_type,
-                                            const std::shared_ptr<const BaseValueColumn>& base_value_column) {
+  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& base_value_column,
+                                            hana::basic_type<ColumnDataType> data_type) {
     static_assert(decltype(supports(data_type))::value);
 
     const auto value_column = std::dynamic_pointer_cast<const ValueColumn<ColumnDataType>>(base_value_column);

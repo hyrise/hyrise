@@ -46,7 +46,7 @@ std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, Dat
     encoder->set_zs_type(zero_suppression_type.value());
   }
 
-  return encoder->encode(data_type, column);
+  return encoder->encode(column, data_type);
 }
 
 }  // namespace opossum
