@@ -37,7 +37,7 @@ std::unique_ptr<BaseZeroSuppressionVector> encode_by_zs_type(const pmr_vector<ui
                                                              const PolymorphicAllocator<size_t>& alloc,
                                                              const ZsVectorMetaInfo& meta_info) {
   auto encoder = create_encoder_by_zs_type(type);
-  return encoder->encode(alloc, vector, meta_info);
+  return encoder->encode(vector, alloc, meta_info);
 }
 
 }  // namespace opossum

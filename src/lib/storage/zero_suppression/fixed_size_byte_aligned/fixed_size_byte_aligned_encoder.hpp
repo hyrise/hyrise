@@ -13,8 +13,8 @@ namespace opossum {
 
 class FixedSizeByteAlignedEncoder : public BaseZeroSuppressionEncoder {
  public:
-  std::unique_ptr<BaseZeroSuppressionVector> encode(const PolymorphicAllocator<size_t>& alloc,
-                                                    const pmr_vector<uint32_t>& vector,
+  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
+                                                    const PolymorphicAllocator<size_t>& alloc,
                                                     const ZsVectorMetaInfo& meta_info = {}) final;
 
   std::unique_ptr<BaseZeroSuppressionEncoder> create_new() const final;

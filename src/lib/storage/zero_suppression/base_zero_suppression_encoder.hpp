@@ -20,8 +20,8 @@ class BaseZeroSuppressionEncoder {
  public:
   virtual ~BaseZeroSuppressionEncoder() = default;
 
-  virtual std::unique_ptr<BaseZeroSuppressionVector> encode(const PolymorphicAllocator<size_t>& alloc,
-                                                            const pmr_vector<uint32_t>& vector,
+  virtual std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
+                                                            const PolymorphicAllocator<size_t>& alloc,
                                                             const ZsVectorMetaInfo& meta_info = {}) = 0;
 
   virtual std::unique_ptr<BaseZeroSuppressionEncoder> create_new() const = 0;
