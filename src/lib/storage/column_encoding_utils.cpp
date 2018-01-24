@@ -34,7 +34,7 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
   Assert(it != encoder_for_type.cend(), "All encoding types must be in encoder_for_type.");
 
   const auto& encoder = it->second;
-  return encoder->clone();
+  return encoder->create_new();
 }
 
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,

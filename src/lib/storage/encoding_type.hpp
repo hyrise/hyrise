@@ -37,7 +37,7 @@ constexpr auto supported_data_types_for_type =
                    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, detail::all_data_types));
 
 //  Example for an encoding that doesn’t support all data types:
-//  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::make_tuple(hana::type_t<int32_t, int64_t>))
+//  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)
 
 /**
  * @return an integral constant implicitly convertible to bool

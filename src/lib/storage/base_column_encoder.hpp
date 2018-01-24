@@ -39,7 +39,7 @@ class BaseColumnEncoder {
   virtual std::shared_ptr<BaseEncodedColumn> encode(DataType data_type,
                                                     const std::shared_ptr<const BaseValueColumn>& column) = 0;
 
-  virtual std::unique_ptr<BaseColumnEncoder> clone() const = 0;
+  virtual std::unique_ptr<BaseColumnEncoder> create_new() const = 0;
 
   /**
    * @defgroup Interface for selecting the used zero suppression type
@@ -59,7 +59,7 @@ class ColumnEncoder : public BaseColumnEncoder {
    * @{
    */
   bool supports(DataType data_type) const final {
-    auto result = bool{};
+    bool result{};
     resolve_data_type(data_type, [&](auto type_obj) { result = this->supports(type_obj); });
     return result;
   }
@@ -86,7 +86,7 @@ class ColumnEncoder : public BaseColumnEncoder {
     return encoded_column;
   }
 
-  std::unique_ptr<BaseColumnEncoder> clone() const final { return std::make_unique<Derived>(_self()); }
+  std::unique_ptr<BaseColumnEncoder> create_new() const final { return std::make_unique<Derived>(); }
 
   bool uses_zero_suppression() const final { return Derived::_uses_zero_suppression; };
 
@@ -124,10 +124,13 @@ class ColumnEncoder : public BaseColumnEncoder {
    */
   template <typename ColumnDataType>
   std::shared_ptr<BaseEncodedColumn> encode(hana::basic_type<ColumnDataType> data_type,
-                                            const std::shared_ptr<const BaseValueColumn>& value_column) {
+                                            const std::shared_ptr<const BaseValueColumn>& base_value_column) {
     static_assert(decltype(supports(data_type))::value);
 
-    return _self()._on_encode(std::static_pointer_cast<const ValueColumn<ColumnDataType>>(value_column));
+    const auto value_column = std::dynamic_pointer_cast<const ValueColumn<ColumnDataType>>(base_value_column);
+    Assert(value_column != nullptr, "Value column must have passed data type.");
+
+    return _self()._on_encode(value_column);
   }
   /**@}*/
 

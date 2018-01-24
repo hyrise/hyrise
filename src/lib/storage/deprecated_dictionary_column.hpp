@@ -20,6 +20,9 @@ class BaseColumn;
  *
  * @deprecated The new implementation (DictionaryColumn) is faster and
  *             supports more compression techniques for the attribute vector.
+ *             Currently, the import and export operators are not yet updated
+ *             to support the new dictionary column implementation. Once this
+ *             is done, it will be removed.
  */
 template <typename T>
 class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {

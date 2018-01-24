@@ -9,7 +9,7 @@ namespace opossum {
 class BaseZeroSuppressionVector;
 
 /**
- * @brief Base class of DictionaryColumn<T> exposing type independent interface
+ * @brief Base class of DictionaryColumn<T> exposing type-independent interface
  */
 class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
