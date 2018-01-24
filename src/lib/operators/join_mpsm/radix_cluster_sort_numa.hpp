@@ -173,10 +173,11 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  std::unique_ptr<MaterializedColumnList<T>> _cluster_public(std::unique_ptr<MaterializedColumnList<T>>& input_chunks,
-                                                      std::function<size_t(const T&)> clusterer) {
+  std::unique_ptr<MaterializedNUMAPartition<Y>> _cluster_public(std::unique_ptr<MaterializedNUMAPartition<T>>& input_chunks,
+                                                      std::function<size_t(const T&)> clusterer,
+                                                      NodeID node_id) {
 
-    auto output_table = std::make_unique<MaterializedColumnList<T>>(_cluster_count);
+    auto output_table = std::make_unique<MaterializedNUMAPartition<T>>(node_id, _cluster_count);
     TableInformation table_information(input_chunks->size(), _cluster_count);
 
     // Count for every chunk the number of entries for each cluster in parallel
@@ -194,7 +195,7 @@ class RadixClusterSort {
       });
 
       histogram_jobs.push_back(job);
-      job->schedule();
+      job->schedule(node_id, SchedulePriority::Unstealable);
     }
 
     CurrentScheduler::wait_for_tasks(histogram_jobs);
@@ -210,7 +211,7 @@ class RadixClusterSort {
     // Reserve the appropriate output space for the clusters
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
       auto cluster_size = table_information.cluster_histogram[cluster_id];
-      (*output_table)[cluster_id] = std::make_shared<MaterializedColumn<T>>(cluster_size);
+      (*output_table)._chunk_columns[cluster_id] = std::make_shared<MaterializedColumn<T>>(cluster_size);
     }
 
     // Move each entry into its appropriate cluster in parallel
@@ -233,6 +234,8 @@ class RadixClusterSort {
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
 
+    // TODO: sort each cluster on its own
+
     return output_table;
   }
 
@@ -243,9 +246,11 @@ class RadixClusterSort {
   * - hand select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::unique_ptr<MaterializedColumnList<T>> _radix_cluster_numa_public(std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa_public(std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
+    // TODO: do this for all NUMA partitions
+    //      make them all run on their respective nodes using jobs so we can assume to be on a node from here on
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster_public(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster_public(input_chunks[0], [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
   /**
@@ -340,6 +345,8 @@ class RadixClusterSort {
     auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
     auto materialized_left_columns = std::move(materialization_left.first);
     auto materialized_right_columns = std::move(materialization_right.first);
+
+
     output.null_rows_left = std::move(materialization_left.second);
     output.null_rows_right = std::move(materialization_right.second);
 
