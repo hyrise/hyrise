@@ -132,7 +132,8 @@ class TpchBenchmark final {
         _scale_factor(scale_factor),
         _max_num_query_runs(max_num_query_runs),
         _max_duration(max_duration),
-        _output_file_path(output_file_path), _enable_mvcc(enable_mvcc),
+        _output_file_path(output_file_path),
+        _enable_mvcc(enable_mvcc),
         _query_results_by_query_id() {}
 
   void run() {

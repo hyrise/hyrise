@@ -13,6 +13,11 @@ class StorageNullPartitionSchemaTest : public BaseTest {
   Table t0{2};
 };
 
+/*
+ * In this test we make sure that NullPartitionSchema is the default PartitionSchema.
+ * The behavior tested is the same as in the Table tests.
+ */
+
 TEST_F(StorageNullPartitionSchemaTest, NullPartitioningIsDefault) {
   EXPECT_EQ(t0.row_count(), 0u);
   EXPECT_EQ(t0.chunk_count(), 1u);
@@ -44,6 +49,7 @@ TEST_F(StorageNullPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
   t0.get_modifiable_partition_schema()->append({2, "Bar"});
   t0.get_modifiable_partition_schema()->append({3, "Baz"});
 
+  // No new chunk is created since this is done by Table which is not involved here.
   EXPECT_EQ(t0.row_count(), 3u);
   EXPECT_EQ(t0.chunk_count(), 1u);
   EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 3u);

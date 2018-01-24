@@ -9,15 +9,15 @@ class StorageHashFunctionTest : public BaseTest {
 };
 
 /*
-We want to make sure
- 1. that hashing the same value *always* produces the same result
- 2. that hashing different values *probably* produces different results
-
-About 2 we can not be absolutely certains due to hash collisions. 
-There are no hash collisions for the used values, though.
-
-We tests this for all data types AllTypeVariant can hold.
-*/
+ * We want to make sure
+ *  1. that hashing the same value *always* produces the same result
+ *  2. that hashing different values *probably* produces different results
+ * 
+ * About 2 we can not be absolutely certains due to hash collisions. 
+ * There are no hash collisions for the used values, though.
+ * 
+ * We tests this for all data types AllTypeVariant can hold.
+ */
 
 TEST_F(StorageHashFunctionTest, HashInt32) {
   HashFunction hf;

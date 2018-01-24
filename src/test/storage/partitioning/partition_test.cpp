@@ -42,6 +42,8 @@ TEST_F(StoragePartitionTest, Append) {
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
 
+  // Chunks have to be pre-configured when adding them to a Partition.
+  // This is usually done by Table. Here we have to do this manually.
   c0->add_column(vc_int);
   c0->add_column(vc_str);
 

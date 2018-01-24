@@ -6,11 +6,12 @@ namespace opossum {
 
 class hash_value_visitor : public boost::static_visitor<HashValue> {
  public:
-  
   HashValue operator()(NullValue) { return HashValue{0}; }
 
   template <typename T>
-  HashValue operator()(T value) { return HashValue{std::hash<T>{}(value)}; }
+  HashValue operator()(T value) {
+    return HashValue{std::hash<T>{}(value)};
+  }
 };
 
 const HashValue HashFunction::operator()(const AllTypeVariant value) const {

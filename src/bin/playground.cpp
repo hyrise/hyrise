@@ -1,29 +1,28 @@
 #include <iostream>
 
-#include "concurrency/transaction_manager.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/insert.hpp"
 #include "operators/print.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "sql/sql_pipeline.hpp"
 
 #include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
 std::string random_string(int length) {
-    static std::string charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-    std::string result;
-    result.resize(length);
+  static std::string charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+  std::string result;
+  result.resize(length);
 
-    for (int i = 0; i < length; i++)
-        result[i] = charset[rand() % charset.length()];
+  for (int i = 0; i < length; i++) result[i] = charset[rand() % charset.length()];
 
-    return result;
+  return result;
 }
 
 void insert_benchmark() {
@@ -68,7 +67,8 @@ void insert_benchmark() {
   const auto time_start_partitioned = std::chrono::steady_clock::now();
   op_insert_partitioned->execute();
   const auto time_end_partitioned = std::chrono::steady_clock::now();
-  const auto duration_partitioned = std::chrono::duration_cast<std::chrono::microseconds>(time_end_partitioned - time_start_partitioned).count();
+  const auto duration_partitioned =
+      std::chrono::duration_cast<std::chrono::microseconds>(time_end_partitioned - time_start_partitioned).count();
   context_partitioned->commit();
 
   // benchmark for unpartitioned table
@@ -78,9 +78,10 @@ void insert_benchmark() {
   const auto time_start_unpartitioned = std::chrono::steady_clock::now();
   op_insert_unpartitioned->execute();
   const auto time_end_unpartitioned = std::chrono::steady_clock::now();
-  const auto duration_unpartitioned = std::chrono::duration_cast<std::chrono::microseconds>(time_end_unpartitioned - time_start_unpartitioned).count();
+  const auto duration_unpartitioned =
+      std::chrono::duration_cast<std::chrono::microseconds>(time_end_unpartitioned - time_start_unpartitioned).count();
   context_unpartitioned->commit();
-  
+
   // print times
   std::cout << "=== Insert Benchmark Results" << std::endl;
   std::cout << "Partitioned:   " << duration_partitioned << " us" << std::endl;
@@ -96,7 +97,7 @@ void select_benchmark() {
   op_import_partitioned->execute();
   auto op_import_unpartitioned = std::make_shared<ImportCsv>(path_to_csv, "ImportedUnartitionedTable");
   op_import_unpartitioned->execute();
-  
+
   // TODO(anyone): add operator for partitioning table
   // apply partitioning on one table
   // auto partition_schema = std::make_shared<RangePartitionSchema>(ColumnID{2}, {200, 300, 500});
@@ -104,18 +105,22 @@ void select_benchmark() {
   // op_partition_table->execute();
 
   // benchmark for partitioned table
-  SQLPipeline sql_partitioned{"SELECT * FROM ImportedPartitionedTable WHERE x > 310 AND x < 450", transaction_manager.new_transaction_context()};
+  SQLPipeline sql_partitioned{"SELECT * FROM ImportedPartitionedTable WHERE x > 310 AND x < 450",
+                              transaction_manager.new_transaction_context()};
   const auto time_start_partitioned = std::chrono::steady_clock::now();
   sql_partitioned.get_result_table();
   const auto time_end_partitioned = std::chrono::steady_clock::now();
-  const auto duration_partitioned = std::chrono::duration_cast<std::chrono::microseconds>(time_end_partitioned - time_start_partitioned).count();
+  const auto duration_partitioned =
+      std::chrono::duration_cast<std::chrono::microseconds>(time_end_partitioned - time_start_partitioned).count();
 
   // benchmark for unpartitioned table
-  SQLPipeline sql_unpartitioned{"SELECT * FROM ImportedUnpartitionedTable WHERE x > 310 AND x < 450", transaction_manager.new_transaction_context()};
+  SQLPipeline sql_unpartitioned{"SELECT * FROM ImportedUnpartitionedTable WHERE x > 310 AND x < 450",
+                                transaction_manager.new_transaction_context()};
   const auto time_start_unpartitioned = std::chrono::steady_clock::now();
   sql_unpartitioned.get_result_table();
   const auto time_end_unpartitioned = std::chrono::steady_clock::now();
-  const auto duration_unpartitioned = std::chrono::duration_cast<std::chrono::microseconds>(time_end_unpartitioned - time_start_unpartitioned).count();
+  const auto duration_unpartitioned =
+      std::chrono::duration_cast<std::chrono::microseconds>(time_end_unpartitioned - time_start_unpartitioned).count();
 
   // print times
   std::cout << "=== Select Benchmark Results" << std::endl;
