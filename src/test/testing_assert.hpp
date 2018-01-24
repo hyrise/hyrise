@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/compare_lqps.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/operator_task.hpp"
@@ -126,3 +127,5 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
+
+#define EXPECT_LQP_SEMANTICALLY_EQ(lhs, rhs) EXPECT_TRUE(SemanticLQPCompare(lhs, rhs)());

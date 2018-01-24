@@ -239,7 +239,7 @@ bool SemanticLQPCompare:: _compare_column_references(const std::shared_ptr<const
   const auto mutable_lqp_left = std::const_pointer_cast<AbstractLQPNode>(lqp_left);
   const auto mutable_lqp_right = std::const_pointer_cast<AbstractLQPNode>(lqp_right);
 
-  return AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_right, mutable_lqp_left, mutable_lqp_right) == column_reference_right;
+  return AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_left, mutable_lqp_left, mutable_lqp_right) == column_reference_right;
 }
 
 bool lqp_node_types_equal(const std::shared_ptr<const AbstractLQPNode>& lhs,
