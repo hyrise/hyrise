@@ -97,13 +97,13 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _b_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(cross_join_node);
 
   // Apply rule
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
   // Verification of the new JOIN
-  ASSERT_INNER_JOIN_NODE(output, ScanType::Equals, _a_a, _b_a);
+  ASSERT_INNER_JOIN_NODE(output, PredicateCondition::Equals, _a_a, _b_a);
 
   ASSERT_NE(output->left_child(), nullptr);
   ASSERT_NE(output->right_child(), nullptr);
@@ -141,7 +141,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _b_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(cross_join_node);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
@@ -153,7 +153,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   EXPECT_EQ(output->type(), LQPNodeType::Projection);
 
   // Verification of the new JOIN
-  ASSERT_INNER_JOIN_NODE(output->left_child(), ScanType::Equals, _a_a, _b_a);
+  ASSERT_INNER_JOIN_NODE(output->left_child(), PredicateCondition::Equals, _a_a, _b_a);
 
   EXPECT_EQ(output->left_child()->left_child()->type(), LQPNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->right_child()->type(), LQPNodeType::StoredTable);
@@ -214,7 +214,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _a_b);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _a_b);
   predicate_node->set_left_child(cross_join_node);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
@@ -248,11 +248,12 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    * isn't manipulated.
    */
 
-  const auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_b), ScanType::Equals);
+  const auto join_node =
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_b), PredicateCondition::Equals);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _b_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(join_node);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
@@ -263,7 +264,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
 
   EXPECT_EQ(output->type(), LQPNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), LQPNodeType::Predicate);
-  ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), ScanType::Equals, _a_b, _b_b);
+  ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), PredicateCondition::Equals, _a_b, _b_b);
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), LQPNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), LQPNodeType::StoredTable);
 }
@@ -305,7 +306,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   join_node2->set_left_child(join_node1);
   join_node2->set_right_child(_table_node_c);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _b_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(join_node2);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
@@ -321,7 +322,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   EXPECT_EQ(first_join_node->join_mode(), JoinMode::Cross);
 
   // Verification of the new JOIN
-  ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), ScanType::Equals, _a_a, _b_a);
+  ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), PredicateCondition::Equals, _a_a, _b_a);
 
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), LQPNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), LQPNodeType::StoredTable);
@@ -351,7 +352,7 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
    */
   const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
   const auto join_node2 = std::make_shared<JoinNode>(JoinMode::Cross);
-  const auto predicate_node = std::make_shared<PredicateNode>(_b_a, ScanType::Equals, _c_b);
+  const auto predicate_node = std::make_shared<PredicateNode>(_b_a, PredicateCondition::Equals, _c_b);
 
   predicate_node->set_left_child(join_node1);
   join_node1->set_left_child(_table_node_a);
@@ -363,7 +364,7 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
 
   EXPECT_EQ(output, join_node1);
   EXPECT_EQ(output->left_child(), _table_node_a);
-  ASSERT_INNER_JOIN_NODE(output->right_child(), ScanType::Equals, _b_a, _c_b);
+  ASSERT_INNER_JOIN_NODE(output->right_child(), PredicateCondition::Equals, _b_a, _c_b);
   EXPECT_EQ(output->right_child()->left_child(), _table_node_b);
   EXPECT_EQ(output->right_child()->right_child(), _table_node_c);
 }
@@ -405,7 +406,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   join_node2->set_left_child(join_node1);
   join_node2->set_right_child(_table_node_c);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_c_a, ScanType::Equals, _a_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_c_a, PredicateCondition::Equals, _a_a);
   predicate_node->set_left_child(join_node2);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
@@ -417,7 +418,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   EXPECT_EQ(output->type(), LQPNodeType::Projection);
 
   // Verification of the new JOIN
-  ASSERT_INNER_JOIN_NODE(output->left_child(), ScanType::Equals, _a_a, _c_a);
+  ASSERT_INNER_JOIN_NODE(output->left_child(), PredicateCondition::Equals, _a_a, _c_a);
 
   EXPECT_EQ(output->left_child()->left_child()->type(), LQPNodeType::Join);
   const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
@@ -455,7 +456,7 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(join_node);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _b_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(projection_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -495,7 +496,7 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(join_node);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, ScanType::Equals, _b_a);
+  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(projection_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
