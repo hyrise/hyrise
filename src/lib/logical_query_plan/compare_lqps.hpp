@@ -33,6 +33,8 @@ class SemanticLQPCompare final {
  public:
   SemanticLQPCompare(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs);
 
+  const std::vector<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>& differing_subtrees() const;
+
   bool operator()();
 
  private:
@@ -40,6 +42,8 @@ class SemanticLQPCompare final {
   std::shared_ptr<const AbstractLQPNode> _rhs;
 
   std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>> _node_mapping;
+
+  std::vector<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>> _differing_subtrees;
 
   bool _structural_traverse(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs);
   bool _semantical_traverse(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs);

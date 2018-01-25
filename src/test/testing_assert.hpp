@@ -128,4 +128,17 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
 
-#define EXPECT_LQP_SEMANTICALLY_EQ(lhs, rhs) EXPECT_TRUE(SemanticLQPCompare(lhs, rhs)());
+#define EXPECT_LQP_SEMANTICALLY_EQ(lhs, rhs) {  \
+  SemanticLQPCompare cmp(lhs, rhs); \
+  if (!cmp()) { \
+    std::cout << "Differing subtrees: " << cmp.differing_subtrees().size() << std::endl;\
+    for (const auto& pair : cmp.differing_subtrees()) {\
+      pair.first->print();\
+      std::cout << std::endl;\
+      pair.second->print();\
+      std::cout << std::endl;\
+    }\
+    GTEST_FAIL(); \
+  }\
+} \
+

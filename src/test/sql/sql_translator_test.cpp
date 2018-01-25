@@ -49,15 +49,13 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   const auto result_node = compile_query(query);
 
-  ASSERT_EQ(result_node->type(), LQPNodeType::Projection);
-  ASSERT_TRUE(result_node->left_child());
-  ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::StoredTable);
-  EXPECT_FALSE(result_node->right_child());
-  EXPECT_FALSE(result_node->left_child()->left_child());
-  ASSERT_EQ(result_node->output_column_references().size(), 2u);
+  auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
+  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
+  auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
+  projection_node->set_left_child(stored_table_node);
 
-  EXPECT_EQ(result_node->output_column_references()[0], LQPColumnReference(result_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(result_node->output_column_references()[1], LQPColumnReference(result_node->left_child(), ColumnID{1}));
+  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
 
 /*

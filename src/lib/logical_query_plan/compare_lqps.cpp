@@ -27,6 +27,10 @@ SemanticLQPCompare::SemanticLQPCompare(const std::shared_ptr<const AbstractLQPNo
 
 }
 
+const std::vector<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>& SemanticLQPCompare::differing_subtrees() const {
+  return _differing_subtrees;
+}
+
 bool SemanticLQPCompare::operator()() {
   if (!_structural_traverse(_lhs, _rhs)) {
     return false;
@@ -51,7 +55,8 @@ bool SemanticLQPCompare::_structural_traverse(const std::shared_ptr<const Abstra
 }
 
 bool SemanticLQPCompare::_semantical_traverse(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  if (!lhs) return false; // Implies !rhs
+  if (!lhs && !rhs) return true;
+  if (!lhs || !rhs) return false;
 
   auto semantically_equal = false;
 
@@ -77,14 +82,18 @@ bool SemanticLQPCompare::_semantical_traverse(const std::shared_ptr<const Abstra
     case LQPNodeType::Mock: semantically_equal = _are_semantically_equal(std::dynamic_pointer_cast<const MockNode>(lhs), std::dynamic_pointer_cast<const MockNode>(rhs)); break;
   }
 
-  if (!semantically_equal) return false;
+  if (!semantically_equal) {
+    _differing_subtrees.emplace_back(lhs, rhs);
+    return false;
+  }
 
   if (!_semantical_traverse(lhs->left_child(), rhs->left_child())) return false;
   return _semantical_traverse(lhs->right_child(), rhs->right_child());
 }
 
 bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const AggregateNode>& lhs, const std::shared_ptr<const AggregateNode>& rhs) {
-  return _compare_expressions(lhs, lhs->aggregate_expressions(), rhs, rhs->aggregate_expressions()) && _compare_column_references(lhs, lhs->groupby_column_references(), rhs, rhs->groupby_column_references());
+  return _compare_expressions(lhs->left_child(), lhs->aggregate_expressions(), rhs->left_child(), rhs->aggregate_expressions()) &&
+         _compare_column_references(lhs->left_child(), lhs->groupby_column_references(), rhs->left_child(), rhs->groupby_column_references());
 }
 
 bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const CreateViewNode>& lhs, const std::shared_ptr<const CreateViewNode>& rhs) {
@@ -126,16 +135,16 @@ bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const Pre
   if (lhs->scan_type() != rhs->scan_type()) return false;
   if (is_lqp_column_reference(lhs->value()) != is_lqp_column_reference(rhs->value())) return false;
   if (is_lqp_column_reference(lhs->value())) {
-    if (_compare_column_references(lhs, boost::get<LQPColumnReference>(lhs->value()), rhs, boost::get<LQPColumnReference>(rhs->value()))) return false;
+    if (!_compare_column_references(lhs, boost::get<LQPColumnReference>(lhs->value()), rhs, boost::get<LQPColumnReference>(rhs->value()))) return false;
   } else {
     if (lhs->value() != rhs->value()) return false;
   }
 
-  return lhs->value2() != rhs->value2();
+  return lhs->value2()  == rhs->value2();
 }
 
 bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const ProjectionNode>& lhs, const std::shared_ptr<const ProjectionNode>& rhs) {
-  return _compare_expressions(lhs, lhs->column_expressions(), rhs, rhs->column_expressions());
+  return _compare_expressions(lhs->left_child(), lhs->column_expressions(), rhs->left_child(), rhs->column_expressions());
 }
 
 bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const LogicalPlanRootNode>& lhs, const std::shared_ptr<const LogicalPlanRootNode>& rhs) {
@@ -155,7 +164,7 @@ bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const Sor
 
   for (size_t definition_idx = 0; definition_idx < rhs->order_by_definitions().size(); ++definition_idx) {
     if (lhs->order_by_definitions()[definition_idx].order_by_mode != rhs->order_by_definitions()[definition_idx].order_by_mode) return false;
-    if (_compare_column_references(lhs, lhs->order_by_definitions()[definition_idx].column_reference, rhs, rhs->order_by_definitions()[definition_idx].column_reference)) return false;
+    if (!_compare_column_references(lhs, lhs->order_by_definitions()[definition_idx].column_reference, rhs, rhs->order_by_definitions()[definition_idx].column_reference)) return false;
   }
 
   return true;
@@ -178,6 +187,7 @@ bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const Val
 }
 
 bool SemanticLQPCompare::_are_semantically_equal(const std::shared_ptr<const MockNode>& lhs, const std::shared_ptr<const MockNode>& rhs) {
+  Assert (lhs->constructor_arguments().type() != typeid(std::shared_ptr<TableStatistics>), "Comparison of statistics not implemented, because this is painful");
   return lhs->constructor_arguments() == rhs->constructor_arguments();
 //  if (lhs->constructor_arguments().which() != rhs->constructor_arguments().which()) return false;
 //
@@ -203,7 +213,8 @@ bool SemanticLQPCompare::_compare_expressions(const std::shared_ptr<const Abstra
 
 bool SemanticLQPCompare::_compare_expressions(const std::shared_ptr<const AbstractLQPNode>&lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
                           const std::shared_ptr<const AbstractLQPNode>&lqp_right, const std::shared_ptr<const LQPExpression>& expression_right) const {
-  if (static_cast<bool>(expression_left) != static_cast<bool>(expression_right)) return false;
+  if (!expression_left && !expression_right) return true;
+  if (!expression_left || !expression_right) return false;
   if (*expression_left == *expression_right) return true;
   if (expression_left->type() != expression_right->type()) return false;
   if (expression_left->aggregate_function_arguments().size() != expression_right->aggregate_function_arguments().size()) return false;
@@ -238,8 +249,9 @@ bool SemanticLQPCompare:: _compare_column_references(const std::shared_ptr<const
   // We just need a temporary ColumnReference which won't be used to manipulate nodes, promised.
   const auto mutable_lqp_left = std::const_pointer_cast<AbstractLQPNode>(lqp_left);
   const auto mutable_lqp_right = std::const_pointer_cast<AbstractLQPNode>(lqp_right);
+  const auto column_reference_right_adapted_to_left = AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_left, mutable_lqp_left, mutable_lqp_right);
 
-  return AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_left, mutable_lqp_left, mutable_lqp_right) == column_reference_right;
+  return column_reference_right_adapted_to_left == column_reference_right;
 }
 
 bool lqp_node_types_equal(const std::shared_ptr<const AbstractLQPNode>& lhs,
