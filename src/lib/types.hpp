@@ -164,7 +164,7 @@ class ValuePlaceholder {
 };
 
 // TODO(anyone): integrate and replace with ExpressionType
-enum class ScanType {
+enum class PredicateCondition {
   Equals,
   NotEquals,
   LessThan,
