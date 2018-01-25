@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "abstract_lqp_node.hpp"
+#include "predicate_node.hpp"
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
 
@@ -29,6 +30,7 @@ class LQPTranslator final : private Noncopyable {
   // SQL operators
   std::shared_ptr<AbstractOperator> _translate_stored_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_predicate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_predicate_node_to_index_scan(const std::shared_ptr<PredicateNode>& node, const AllParameterVariant& value, const ColumnID column_id, const std::shared_ptr<AbstractOperator> input_operator) const;
   std::shared_ptr<AbstractOperator> _translate_projection_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_sort_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_join_node(const std::shared_ptr<AbstractLQPNode>& node) const;

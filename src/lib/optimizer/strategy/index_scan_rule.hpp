@@ -18,9 +18,12 @@ class PredicateNode;
  * ScanType of the PredicateNode is set to IndexScan.
  *
  * Note:
- * For now this rule is only applicable to single-column indexes and single-column predicates (i.e. WHERE a < b) is
- * not supported. In addition, chains of IndexScans are not possible since an IndexScan's child must be a GetTable.
+ * For now this rule is only applicable to single-column indexes and multi-column predicates (i.e. WHERE a < b) are
+ * not supported. We also assume that if chunks have an index, all of them are of the same type, we do not mix GroupKey
+ * and ART indexes. In addition, chains of IndexScans are not possible since an IndexScan's child must be a GetTable.
+ * Currently, only GroupKeyIndexes are supported.
  */
+
 class IndexScanRule : public AbstractRule {
  public:
   std::string name() const override;

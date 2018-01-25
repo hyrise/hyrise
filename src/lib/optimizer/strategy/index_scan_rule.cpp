@@ -52,10 +52,11 @@ bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& index
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
   if (!_is_single_column_index(indexed_columns)) return false;
 
-  // Currently, we do not support two column predicates
+  // Currently, we do not support two-column predicates
   if (is_column_id(predicate_node->value())) return false;
 
-  ColumnID column_id = predicate_node->column_reference().original_column_id();
+  const auto column_id = predicate_node->get_output_column_id(predicate_node->column_reference());
+  // ColumnID column_id = predicate_node->column_reference().original_column_id();
   if (indexed_columns[0] != column_id) return false;
 
   const auto row_count_table = predicate_node->left_child()->derive_statistics_from(nullptr, nullptr)->row_count();
