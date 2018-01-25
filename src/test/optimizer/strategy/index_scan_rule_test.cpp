@@ -32,7 +32,7 @@ class TableStatisticsMock : public TableStatistics {
 
   explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>()) { _row_count = row_count; }
 
-  std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
+  std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const PredicateCondition predicate_condition,
                                                         const AllParameterVariant& value,
                                                         const std::optional<AllTypeVariant>& value2) override {
     if (column_id == ColumnID{0}) {
@@ -68,7 +68,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
@@ -86,7 +86,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, ScanType::GreaterThan, 10);
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
@@ -104,7 +104,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
@@ -119,7 +119,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          ScanType::GreaterThan, ColumnID{1});
+                                                          PredicateCondition::GreaterThan, ColumnID{1});
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
@@ -137,7 +137,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
@@ -155,7 +155,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
@@ -173,11 +173,11 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, 10);
+      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   auto predicate_node_1 =
-      std::make_shared<PredicateNode>(LQPColumnReference{predicate_node_0, ColumnID{1}}, ScanType::LessThan, 15);
+      std::make_shared<PredicateNode>(LQPColumnReference{predicate_node_0, ColumnID{1}}, PredicateCondition::LessThan, 15);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
