@@ -75,18 +75,15 @@ void JoinIndex::_create_table_structure() {
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                                   RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                  const ChunkID chunk_id_right, std::vector<bool>& left_matches) {
+                                  const ChunkID chunk_id_right, std::vector<bool>& left_matches,
+                                  std::shared_ptr<BaseIndex> index) {
   // Helper lambda for transforming chunk offsets for the right table to row ids for the right table
   const auto to_row_id = [chunk_id_right](ChunkOffset chunk_offset) { return RowID{chunk_id_right, chunk_offset}; };
 
-  const auto& r_chunk = _right_in_table->get_chunk(chunk_id_right);
-  const auto indices = r_chunk.get_indices(std::vector<ColumnID>{_right_column_id});
-
   // We have a proper index and can use it, so we do an index join for this chunk combination
-  if (!indices.empty() && !_fallback) {
+  if(index != nullptr) {
     // We assume the first index to be efficient for our join
     // as we do not want to spend time on evaluating the best index inside of this join loop
-    const auto index = indices.front();
 
     for (; left_it != left_end; ++left_it) {
       const auto left_value = *left_it;
@@ -143,7 +140,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
       append_matches(range_begin, range_end, left_value.chunk_offset(), left_matches, chunk_id_left, to_row_id);
     }
   } else {
-    // No index or unsupported join type so we fall back on a nested loop join
+    // No index so we fall back on a nested loop join
     for (; left_it != left_end; ++left_it) {
       const auto left_value = *left_it;
       if (left_value.is_null()) continue;
@@ -201,10 +198,12 @@ void JoinIndex::_perform_join() {
   _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   // these joins can not be handled using index join, we therefore fall back on a nested loop join
+  // TODO(florian): build logging that these are not supported, after another sanity check
   _fallback = (_mode == JoinMode::Right || _mode == JoinMode::Outer || _mode == JoinMode::Cross);
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
+    // TODO(florian): remove this, it is not good for the scheduler, we can simply reject right outer
     left_table = _right_in_table;
     right_table = _left_in_table;
 
@@ -218,20 +217,28 @@ void JoinIndex::_perform_join() {
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
-  // Scan all chunks from left input
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto chunk_column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
+  // Scan all chunks for right input
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+    auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
 
-    // for Outer joins, remember matches on the left side
-    std::vector<bool> left_matches;
+    const auto indices = right_table->get_chunk(chunk_id_right).get_indices(std::vector<ColumnID>{_right_column_id});
 
-    if (_is_outer_join) {
-      left_matches.resize(chunk_column_left->size());
+    std::shared_ptr<BaseIndex> index = nullptr;
+
+    if(indices.size() > 0){
+        index = indices.front();
     }
 
-    // Scan all chunks for right input
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+    // Scan all chunks from left input
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
+      auto chunk_column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
+
+      // for Outer joins, remember matches on the left side
+      std::vector<bool> left_matches;
+
+      if (_is_outer_join) {
+        left_matches.resize(chunk_column_left->size());
+      }
 
       resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
@@ -254,7 +261,7 @@ void JoinIndex::_perform_join() {
               iterable_right.with_iterators([&](auto right_it, auto right_end) {
                 with_comparator(_scan_type, [&](auto comparator) {
                   this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                          chunk_id_right, left_matches);
+                                          chunk_id_right, left_matches, index);
                 });
               });
             });
@@ -262,17 +269,19 @@ void JoinIndex::_perform_join() {
           // clang-format on
         });
       });
-    }
 
-    if (_is_outer_join) {
-      // add unmatched rows on the left for Left and Full Outer joins
-      for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
-        if (!left_matches[chunk_offset]) {
-          _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-          _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+      if (_is_outer_join) {
+        // add unmatched rows on the left for Left and Full Outer joins
+        for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
+          if (!left_matches[chunk_offset]) {
+            _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+            _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          }
         }
       }
     }
+
+
   }
 
   // For Full Outer we need to add all unmatched rows for the right side.

@@ -35,7 +35,7 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   void _join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                          RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                         const ChunkID chunk_id_right, std::vector<bool>& left_matches);
+                         const ChunkID chunk_id_right, std::vector<bool>& left_matches,  std::shared_ptr<BaseIndex> index);
 
   void append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                       const ChunkOffset chunk_offset, std::vector<bool>& left_matches, ChunkID chunk_id_left,
