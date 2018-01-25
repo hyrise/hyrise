@@ -32,7 +32,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       auto columns_of_indexes = table->get_columns_of_indexes();
       for (auto& indexed_columns : columns_of_indexes) {
         if (_is_index_scan_applicable(indexed_columns, predicate_node)) {
-          predicate_node->set_scan_typee(ScanTypee::IndexScan);
+          predicate_node->set_scan_type(ScanType::IndexScan);
         }
       }
     }

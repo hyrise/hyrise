@@ -73,9 +73,9 @@ const AllParameterVariant& PredicateNode::value() const { return _value; }
 
 const std::optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
-ScanTypee PredicateNode::scan_typee() const { return _scan_typee; }
+ScanType PredicateNode::scan_type() const { return _scan_type; }
 
-void PredicateNode::set_scan_typee(ScanTypee scan_typee) { _scan_typee = scan_typee; }
+void PredicateNode::set_scan_type(ScanType scan_type) { _scan_type = scan_type; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {

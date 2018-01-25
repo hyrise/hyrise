@@ -14,7 +14,7 @@ namespace opossum {
 
 class TableStatistics;
 
-enum class ScanTypee { TableScan, IndexScan };
+enum class ScanType { TableScan, IndexScan };
 
 /**
  * This node type represents a filter.
@@ -35,8 +35,8 @@ class PredicateNode : public AbstractLQPNode {
   const AllParameterVariant& value() const;
   const std::optional<AllTypeVariant>& value2() const;
 
-  ScanTypee scan_typee() const;
-  void set_scan_typee(ScanTypee scan_typee);
+  ScanType scan_type() const;
+  void set_scan_type(ScanType scan_type);
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,
@@ -53,7 +53,7 @@ class PredicateNode : public AbstractLQPNode {
   const AllParameterVariant _value;
   const std::optional<AllTypeVariant> _value2;
 
-  ScanTypee _scan_typee = ScanTypee::TableScan;
+  ScanType _scan_type = ScanType::TableScan;
 };
 
 }  // namespace opossum

@@ -71,9 +71,9 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
       std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
@@ -89,9 +89,9 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
       std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
@@ -107,9 +107,9 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
       std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
@@ -122,9 +122,9 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
                                                           PredicateCondition::GreaterThan, ColumnID{1});
   predicate_node_0->set_left_child(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
@@ -140,9 +140,9 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
       std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
@@ -158,9 +158,9 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
       std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::IndexScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
@@ -181,8 +181,8 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
-  EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::IndexScan);
-  EXPECT_EQ(predicate_node_1->scan_typee(), ScanTypee::TableScan);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::IndexScan);
+  EXPECT_EQ(predicate_node_1->scan_type(), ScanType::TableScan);
 }
 
 }  // namespace opossum

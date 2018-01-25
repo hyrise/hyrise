@@ -97,7 +97,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     value = predicate_node->get_output_column_id(boost::get<const LQPColumnReference>(value));
   }
 
-  if (predicate_node->scan_typee() == ScanTypee::IndexScan) {
+  if (predicate_node->scan_type() == ScanType::IndexScan) {
     if (is_variant(value)) {
       const auto value_variant = boost::get<AllTypeVariant>(value);
       std::vector<ColumnID> column_ids = {column_id};

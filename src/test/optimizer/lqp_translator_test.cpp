@@ -133,7 +133,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   auto predicate_node =
       std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
-  predicate_node->set_scan_typee(ScanTypee::IndexScan);
+  predicate_node->set_scan_type(ScanType::IndexScan);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -170,7 +170,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
       std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Between,
                                       AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
-  predicate_node->set_scan_typee(ScanTypee::IndexScan);
+  predicate_node->set_scan_type(ScanType::IndexScan);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
