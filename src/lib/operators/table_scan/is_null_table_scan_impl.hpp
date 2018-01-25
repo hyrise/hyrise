@@ -29,6 +29,8 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
   void handle_column(const BaseEncodedColumn& base_column,
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
 
+  using BaseSingleColumnTableScanImpl::handle_column;
+
  private:
   /**
    * @defgroup Methods used for handling value columns
