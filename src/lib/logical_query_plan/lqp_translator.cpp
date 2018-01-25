@@ -145,7 +145,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
    * `X >= a` and one for `X <= b`
    */
   if (predicate_node->predicate_condition() == PredicateCondition::Between) {
-    DebugAssert(static_cast<bool>(predicate_node->value2()), "Scan type BETWEEN requires a second value");
+    DebugAssert(static_cast<bool>(predicate_node->value2()), "Predicate condition BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate scans");
 
     auto table_scan_gt =

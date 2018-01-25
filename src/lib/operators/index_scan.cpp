@@ -78,8 +78,8 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
 }
 
 void IndexScan::_validate_input() {
-  Assert(_predicate_condition != PredicateCondition::Like, "Scan type not supported by index scan.");
-  Assert(_predicate_condition != PredicateCondition::NotLike, "Scan type not supported by index scan.");
+  Assert(_predicate_condition != PredicateCondition::Like, "Predicate condition not supported by index scan.");
+  Assert(_predicate_condition != PredicateCondition::NotLike, "Predicate condition not supported by index scan.");
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
