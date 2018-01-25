@@ -19,7 +19,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, 
                                          const ScanType& scan_type)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type, false} {}
 
-void IsNullTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
+void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -43,7 +43,7 @@ void IsNullTableScanImpl::handle_value_column(const BaseValueColumn& base_column
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& left_column,
+void IsNullTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& left_column,
                                                    std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -54,7 +54,7 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionar
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& left_column,
+void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
                                                    std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -65,7 +65,7 @@ void IsNullTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& l
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                                 std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;

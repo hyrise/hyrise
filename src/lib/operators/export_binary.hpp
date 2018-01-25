@@ -105,7 +105,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_value_column(const BaseValueColumn& base_column,
+  void handle_column(const BaseValueColumn& base_column,
                            std::shared_ptr<ColumnVisitableContext> base_context) final;
 
   /**
@@ -127,7 +127,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_reference_column(const ReferenceColumn& ref_column,
+  void handle_column(const ReferenceColumn& ref_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
   /**
    * Dictionary Columns are dumped with the following layout:
@@ -151,13 +151,13 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
+  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
+  void handle_column(const BaseDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_encoded_column(const BaseEncodedColumn& base_column,
+  void handle_column(const BaseEncodedColumn& base_column,
                              std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:

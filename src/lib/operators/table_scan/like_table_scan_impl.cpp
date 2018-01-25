@@ -33,7 +33,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
   _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
 }
 
-void LikeTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
+void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                             std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -52,19 +52,19 @@ void LikeTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
   });
 }
 
-void LikeTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
+void LikeTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   const auto& left_column = static_cast<const DeprecatedDictionaryColumn<std::string>&>(base_column);
   _handle_dictionary_column(left_column, base_context);
 }
 
-void LikeTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
+void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
   _handle_dictionary_column(left_column, base_context);
 }
 
-void LikeTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;

@@ -37,7 +37,7 @@ PosList SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   return BaseSingleColumnTableScanImpl::scan_chunk(chunk_id);
 }
 
-void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_column,
+void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                                     std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -64,17 +64,17 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
   });
 }
 
-void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDeprecatedDictionaryColumn& base_column,
+void SingleColumnTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   _handle_dictionary_column(base_column, base_context);
 }
 
-void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryColumn& base_column,
+void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   _handle_dictionary_column(base_column, base_context);
 }
 
-void SingleColumnTableScanImpl::handle_encoded_column(const BaseEncodedColumn& base_column,
+void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                                       std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;

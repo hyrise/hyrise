@@ -20,19 +20,19 @@ class ColumnVisitableContext {};
 class ColumnVisitable {
  public:
   virtual ~ColumnVisitable() = default;
-  virtual void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
-  virtual void handle_dictionary_column(const BaseDeprecatedDictionaryColumn& column,
+  virtual void handle_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) = 0;
+  virtual void handle_column(const BaseDeprecatedDictionaryColumn& column,
                                         std::shared_ptr<ColumnVisitableContext> context) = 0;
-  virtual void handle_dictionary_column(const BaseDictionaryColumn& column,
+  virtual void handle_column(const BaseDictionaryColumn& column,
                                         std::shared_ptr<ColumnVisitableContext> context) = 0;
-  virtual void handle_reference_column(const ReferenceColumn& column,
+  virtual void handle_column(const ReferenceColumn& column,
                                        std::shared_ptr<ColumnVisitableContext> context) = 0;
 
   /**
    * This method is going to be called for all encoded column classes
    * that do not overload visit() themselves.
    */
-  virtual void handle_encoded_column(const BaseEncodedColumn& column,
+  virtual void handle_column(const BaseEncodedColumn& column,
                                      std::shared_ptr<ColumnVisitableContext> context) = 0;
 };
 
