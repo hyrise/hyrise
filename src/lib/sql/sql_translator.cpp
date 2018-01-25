@@ -41,12 +41,12 @@
 namespace opossum {
 
 PredicateCondition translate_operator_type_to_predicate_condition(const hsql::OperatorType operator_type) {
-  static const std::unordered_map<const hsql::OperatorType, const PredicateCondition> operator_to_predicate_condition = {
-      {hsql::kOpEquals, PredicateCondition::Equals},       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
-      {hsql::kOpGreater, PredicateCondition::GreaterThan}, {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
-      {hsql::kOpLess, PredicateCondition::LessThan},       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
-      {hsql::kOpBetween, PredicateCondition::Between},     {hsql::kOpLike, PredicateCondition::Like},
-      {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull}};
+  static const std::unordered_map<const hsql::OperatorType, const PredicateCondition> operator_to_predicate_condition =
+      {{hsql::kOpEquals, PredicateCondition::Equals},       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
+       {hsql::kOpGreater, PredicateCondition::GreaterThan}, {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
+       {hsql::kOpLess, PredicateCondition::LessThan},       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
+       {hsql::kOpBetween, PredicateCondition::Between},     {hsql::kOpLike, PredicateCondition::Like},
+       {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull}};
 
   auto it = operator_to_predicate_condition.find(operator_type);
   DebugAssert(it != operator_to_predicate_condition.end(), "Filter expression clause operator is not yet supported.");
@@ -66,11 +66,12 @@ PredicateCondition get_predicate_condition_for_reverse_order(const PredicateCond
    *     SELECT * FROM t WHERE 1 = a
    *  -> SELECT * FROM t WHERE a = 1
    */
-  static const std::unordered_map<const PredicateCondition, const PredicateCondition> predicate_condition_for_reverse_order = {
-      {PredicateCondition::GreaterThan, PredicateCondition::LessThan},
-      {PredicateCondition::LessThan, PredicateCondition::GreaterThan},
-      {PredicateCondition::GreaterThanEquals, PredicateCondition::LessThanEquals},
-      {PredicateCondition::LessThanEquals, PredicateCondition::GreaterThanEquals}};
+  static const std::unordered_map<const PredicateCondition, const PredicateCondition>
+      predicate_condition_for_reverse_order = {
+          {PredicateCondition::GreaterThan, PredicateCondition::LessThan},
+          {PredicateCondition::LessThan, PredicateCondition::GreaterThan},
+          {PredicateCondition::GreaterThanEquals, PredicateCondition::LessThanEquals},
+          {PredicateCondition::LessThanEquals, PredicateCondition::GreaterThanEquals}};
 
   auto it = predicate_condition_for_reverse_order.find(predicate_condition);
   if (it != predicate_condition_for_reverse_order.end()) {
@@ -395,7 +396,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   for (const auto& join_column_name : join_column_names) {
     auto left_column_reference = left_node->get_column({join_column_name});
     auto right_column_reference = right_node->get_column({join_column_name});
-    auto predicate = std::make_shared<PredicateNode>(left_column_reference, PredicateCondition::Equals, right_column_reference);
+    auto predicate =
+        std::make_shared<PredicateNode>(left_column_reference, PredicateCondition::Equals, right_column_reference);
     predicate->set_left_child(return_node);
     return_node = predicate;
   }
@@ -931,7 +933,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
 
     Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
-  } else if (predicate_condition != PredicateCondition::IsNull && predicate_condition != PredicateCondition::IsNotNull) {
+  } else if (predicate_condition != PredicateCondition::IsNull &&
+             predicate_condition != PredicateCondition::IsNotNull) {
     /**
      * For logical operators (>, >=, <, ...), thanks to the strict interface of PredicateNode/TableScan, we have to
      * determine whether the left (expr.expr) or the right (expr.expr2) expr refers to the Column/AggregateFunction

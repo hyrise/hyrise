@@ -42,8 +42,9 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan || op == PredicateCondition::GreaterThan ||
-                  op == PredicateCondition::LessThanEquals || op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
+  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
+                  op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
+                  op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
               "Unsupported scan type");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
               "Outer joins are not implemented for not-equals joins.");
@@ -368,8 +369,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the smallest value in a sorted materialized table.
   **/
   T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-    DebugAssert(_op != PredicateCondition::Equals, "Complete table order is required for _table_min_value which is only " +
-                                             "available in the non-equi case");
+    DebugAssert(
+        _op != PredicateCondition::Equals,
+        "Complete table order is required for _table_min_value which is only " + "available in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
     for (auto partition : *sorted_table) {

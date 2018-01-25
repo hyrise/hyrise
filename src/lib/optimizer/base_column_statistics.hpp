@@ -69,7 +69,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and two new column statistics.
    */
   virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const PredicateCondition predicate_condition, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const PredicateCondition predicate_condition,
+      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   /**

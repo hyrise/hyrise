@@ -134,7 +134,8 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleColumns) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 12345);
+  auto table_scan_a_op =
+      std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 12345);
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{1}, PredicateCondition::LessThan, 400.0);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 

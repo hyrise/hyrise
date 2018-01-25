@@ -63,8 +63,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -297,8 +297,9 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   predicate_node_left->set_left_child(stored_table_node_left);
 
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
-  auto predicate_node_right = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_right, ColumnID{1}),
-                                                              PredicateCondition::GreaterThan, AllParameterVariant(30.0));
+  auto predicate_node_right =
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_right, ColumnID{1}),
+                                      PredicateCondition::GreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
   auto join_node = std::make_shared<JoinNode>(

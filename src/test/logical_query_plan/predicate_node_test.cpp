@@ -21,7 +21,8 @@ class PredicateNodeTest : public BaseTest {
 };
 
 TEST_F(PredicateNodeTest, Descriptions) {
-  auto predicate_a = std::make_shared<PredicateNode>(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5);
+  auto predicate_a =
+      std::make_shared<PredicateNode>(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5);
   predicate_a->set_left_child(_table_node);
   EXPECT_EQ(predicate_a->description(), "[Predicate] table_a.i = 5");
 
@@ -30,8 +31,8 @@ TEST_F(PredicateNodeTest, Descriptions) {
   predicate_b->set_left_child(_table_node);
   EXPECT_EQ(predicate_b->description(), "[Predicate] table_a.f != 2.5");
 
-  auto predicate_c =
-      std::make_shared<PredicateNode>(LQPColumnReference{_table_node, ColumnID{2}}, PredicateCondition::Between, 2.5, 10.0);
+  auto predicate_c = std::make_shared<PredicateNode>(LQPColumnReference{_table_node, ColumnID{2}},
+                                                     PredicateCondition::Between, 2.5, 10.0);
   predicate_c->set_left_child(_table_node);
   EXPECT_EQ(predicate_c->description(), "[Predicate] table_a.d BETWEEN 2.5 AND 10");
 

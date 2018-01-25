@@ -150,13 +150,15 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeContainingWildcard) {
 // PredicateCondition::Like - Containing
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContaining) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "%schifffahrtsgesellschaft%");
+  auto scan =
+      std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "%schifffahrtsgesellschaft%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContainingOnDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, PredicateCondition::Like, "%schifffahrtsgesellschaft%");
+  auto scan =
+      std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, PredicateCondition::Like, "%schifffahrtsgesellschaft%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }

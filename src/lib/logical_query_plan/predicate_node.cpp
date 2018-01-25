@@ -25,8 +25,8 @@ std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   DebugAssert(left_child(), "Can't copy without child");
   return std::make_shared<PredicateNode>(
-      adapt_column_reference_to_different_lqp(_column_reference, left_child(), copied_left_child), _predicate_condition, _value,
-      _value2);
+      adapt_column_reference_to_different_lqp(_column_reference, left_child(), copied_left_child), _predicate_condition,
+      _value, _value2);
 }
 
 std::string PredicateNode::description() const {
@@ -86,8 +86,8 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     value = static_cast<ColumnID::base_type>(get_output_column_id(boost::get<LQPColumnReference>(value)));
   }
 
-  return left_child->get_statistics()->predicate_statistics(get_output_column_id(_column_reference), _predicate_condition, value,
-                                                            _value2);
+  return left_child->get_statistics()->predicate_statistics(get_output_column_id(_column_reference),
+                                                            _predicate_condition, value, _value2);
 }
 
 }  // namespace opossum

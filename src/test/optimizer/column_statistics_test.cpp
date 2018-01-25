@@ -40,7 +40,8 @@ class ColumnStatisticsTest : public BaseTest {
                                          const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto& value : values) {
-      auto result_container = column_statistic->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant(value));
+      auto result_container =
+          column_statistic->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant(value));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
@@ -56,7 +57,8 @@ class ColumnStatisticsTest : public BaseTest {
       for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
         auto result_container = column_statistics[column_1]->estimate_selectivity_for_two_column_predicate(
             predicate_condition, column_statistics[column_2]);
-        auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, predicate_condition, ColumnID{column_2});
+        auto table_scan =
+            std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, predicate_condition, ColumnID{column_2});
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,
@@ -68,7 +70,8 @@ class ColumnStatisticsTest : public BaseTest {
   // For BETWEEN
   template <typename T>
   void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
-                                         const PredicateCondition predicate_condition, const std::vector<std::pair<T, T>>& values,
+                                         const PredicateCondition predicate_condition,
+                                         const std::vector<std::pair<T, T>>& values,
                                          const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto& value_pair : values) {
@@ -84,8 +87,8 @@ class ColumnStatisticsTest : public BaseTest {
       const std::vector<T>& values2, const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto& value2 : values2) {
-      auto result_container =
-          column_statistic->estimate_selectivity_for_predicate(predicate_condition, ValuePlaceholder(0), AllTypeVariant(value2));
+      auto result_container = column_statistic->estimate_selectivity_for_predicate(
+          predicate_condition, ValuePlaceholder(0), AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
@@ -133,7 +136,8 @@ TEST_F(ColumnStatisticsTest, LessThanTest) {
 
   std::vector<float> selectivities_float{0.f, 0.f, 0.4f, 1.f, 1.f};
   predict_selectivities_and_compare(_column_statistics_float, predicate_condition, _float_values, selectivities_float);
-  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values, selectivities_float);
+  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values,
+                                    selectivities_float);
 }
 
 TEST_F(ColumnStatisticsTest, LessEqualThanTest) {
@@ -144,7 +148,8 @@ TEST_F(ColumnStatisticsTest, LessEqualThanTest) {
 
   std::vector<float> selectivities_float{0.f, 0.f, 0.4f, 1.f, 1.f};
   predict_selectivities_and_compare(_column_statistics_float, predicate_condition, _float_values, selectivities_float);
-  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values, selectivities_float);
+  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values,
+                                    selectivities_float);
 }
 
 TEST_F(ColumnStatisticsTest, GreaterThanTest) {
@@ -155,7 +160,8 @@ TEST_F(ColumnStatisticsTest, GreaterThanTest) {
 
   std::vector<float> selectivities_float{1.f, 1.f, 0.6f, 0.f, 0.f};
   predict_selectivities_and_compare(_column_statistics_float, predicate_condition, _float_values, selectivities_float);
-  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values, selectivities_float);
+  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values,
+                                    selectivities_float);
 }
 
 TEST_F(ColumnStatisticsTest, GreaterEqualThanTest) {
@@ -166,7 +172,8 @@ TEST_F(ColumnStatisticsTest, GreaterEqualThanTest) {
 
   std::vector<float> selectivities_float{1.f, 1.f, 0.6f, 0.f, 0.f};
   predict_selectivities_and_compare(_column_statistics_float, predicate_condition, _float_values, selectivities_float);
-  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values, selectivities_float);
+  predict_selectivities_and_compare(_column_statistics_double, predicate_condition, _double_values,
+                                    selectivities_float);
 }
 
 TEST_F(ColumnStatisticsTest, BetweenTest) {
@@ -259,8 +266,8 @@ TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
   std::vector<float> selectivities_float{0.f, 0.f, 2.f / 15.f, 1.f / 3.f, 1.f / 3.f};
   predict_selectivities_for_stored_procedures_and_compare(_column_statistics_float, predicate_condition, _float_values,
                                                           selectivities_float);
-  predict_selectivities_for_stored_procedures_and_compare(_column_statistics_double, predicate_condition, _double_values,
-                                                          selectivities_float);
+  predict_selectivities_for_stored_procedures_and_compare(_column_statistics_double, predicate_condition,
+                                                          _double_values, selectivities_float);
 }
 
 TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
@@ -316,10 +323,12 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
 
 TEST_F(ColumnStatisticsTest, TwoColumnsRealDataTest) {
   // test selectivity calculations for all scan types and all column combinations of int_equal_distribution.tbl
-  std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::LessThan, PredicateCondition::LessThanEquals,
-                                   PredicateCondition::GreaterThan};
+  std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
+                                                       PredicateCondition::LessThan, PredicateCondition::LessThanEquals,
+                                                       PredicateCondition::GreaterThan};
   for (auto predicate_condition : predicate_conditions) {
-    predict_selectivities_and_compare(_table_uniform_distribution, _column_statistics_uniform_columns, predicate_condition);
+    predict_selectivities_and_compare(_table_uniform_distribution, _column_statistics_uniform_columns,
+                                      predicate_condition);
   }
 }
 
@@ -362,10 +371,11 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
   predicate_condition = PredicateCondition::Between;
-  result = _column_statistics_int->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant(2), AllTypeVariant(4));
+  result = _column_statistics_int->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant(2),
+                                                                      AllTypeVariant(4));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
-  result =
-      _column_statistics_float->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant(4.f), AllTypeVariant(6.f));
+  result = _column_statistics_float->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant(4.f),
+                                                                        AllTypeVariant(6.f));
   EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
   result = _column_statistics_string->estimate_selectivity_for_predicate(predicate_condition, AllTypeVariant("c"),
                                                                          AllTypeVariant("d"));

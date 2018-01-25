@@ -507,7 +507,8 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict, ColumnID{0}, PredicateCondition::LessThan, "100");
+  auto filtered =
+      std::make_shared<TableScan>(_table_wrapper_1_1_dict, ColumnID{0}, PredicateCondition::LessThan, "100");
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

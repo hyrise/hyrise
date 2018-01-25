@@ -33,7 +33,8 @@ class TableStatisticsTest : public BaseTest {
    * Predict output size of one TableScan with statistics and compare with actual output size of an actual TableScan.
    */
   TableWithStatistics check_statistic_with_table_scan(const TableWithStatistics& table_with_statistics,
-                                                      const ColumnID column_id, const PredicateCondition predicate_condition,
+                                                      const ColumnID column_id,
+                                                      const PredicateCondition predicate_condition,
                                                       const AllParameterVariant value,
                                                       const std::optional<AllTypeVariant> value2 = std::nullopt) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
@@ -41,10 +42,12 @@ class TableStatisticsTest : public BaseTest {
 
     std::shared_ptr<TableScan> table_scan;
     if (predicate_condition == PredicateCondition::Between) {
-      auto first_table_scan = std::make_shared<TableScan>(table_wrapper, column_id, PredicateCondition::GreaterThanEquals, value);
+      auto first_table_scan =
+          std::make_shared<TableScan>(table_wrapper, column_id, PredicateCondition::GreaterThanEquals, value);
       first_table_scan->execute();
 
-      table_scan = std::make_shared<TableScan>(first_table_scan, column_id, PredicateCondition::LessThanEquals, *value2);
+      table_scan =
+          std::make_shared<TableScan>(first_table_scan, column_id, PredicateCondition::LessThanEquals, *value2);
     } else {
       table_scan = std::make_shared<TableScan>(table_wrapper, column_id, predicate_condition, value);
     }
@@ -71,7 +74,8 @@ class TableStatisticsTest : public BaseTest {
   void check_column_with_values(const TableWithStatistics& table_with_statistics, const ColumnID column_id,
                                 const PredicateCondition predicate_condition, const std::vector<T>& values) {
     for (const auto& value : values) {
-      check_statistic_with_table_scan(table_with_statistics, column_id, predicate_condition, AllParameterVariant(value));
+      check_statistic_with_table_scan(table_with_statistics, column_id, predicate_condition,
+                                      AllParameterVariant(value));
     }
   }
 
@@ -81,7 +85,8 @@ class TableStatisticsTest : public BaseTest {
    */
   template <typename T>
   void check_column_with_values(const TableWithStatistics& table_with_statistics, const ColumnID column_id,
-                                const PredicateCondition predicate_condition, const std::vector<std::pair<T, T>>& values) {
+                                const PredicateCondition predicate_condition,
+                                const std::vector<std::pair<T, T>>& values) {
     for (const auto& value_pair : values) {
       check_statistic_with_table_scan(table_with_statistics, column_id, predicate_condition,
                                       AllParameterVariant(value_pair.first), AllTypeVariant(value_pair.second));
@@ -200,7 +205,8 @@ TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
 
   container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{0}, PredicateCondition::LessThan,
                                               AllParameterVariant(4));
-  container = check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::GreaterThan, AllParameterVariant(2));
+  container =
+      check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::GreaterThan, AllParameterVariant(2));
   check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::Equals, AllParameterVariant(3));
 }
 

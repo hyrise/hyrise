@@ -103,9 +103,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate scans");
 
-    auto table_scan_gt = std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
+    auto table_scan_gt =
+        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
 
-    return std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals, *table_scan_node->value2());
+    return std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
+                                       *table_scan_node->value2());
   }
 
   return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->predicate_condition(), value);

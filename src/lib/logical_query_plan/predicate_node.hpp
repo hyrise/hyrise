@@ -23,8 +23,8 @@ class TableStatistics;
  */
 class PredicateNode : public AbstractLQPNode {
  public:
-  PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition, const AllParameterVariant& value,
-                const std::optional<AllTypeVariant>& value2 = std::nullopt);
+  PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
+                const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 

@@ -14,7 +14,8 @@
 namespace opossum {
 
 BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
-                                                             const ColumnID left_column_id, const PredicateCondition predicate_condition,
+                                                             const ColumnID left_column_id,
+                                                             const PredicateCondition predicate_condition,
                                                              const bool skip_null_row_ids)
     : BaseTableScanImpl{in_table, left_column_id, predicate_condition}, _skip_null_row_ids{skip_null_row_ids} {}
 

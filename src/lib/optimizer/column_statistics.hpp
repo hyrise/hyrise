@@ -48,7 +48,8 @@ class ColumnStatistics : public BaseColumnStatistics {
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const PredicateCondition predicate_condition, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const PredicateCondition predicate_condition,
+      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   /**

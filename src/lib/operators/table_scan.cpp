@@ -56,8 +56,8 @@ const std::string TableScan::description(DescriptionMode description_mode) const
   std::string predicate_string = to_string(_right_parameter);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  return name() + separator + "(" + column_name + " " + predicate_condition_to_string.left.at(_predicate_condition) + " " +
-         predicate_string + ")";
+  return name() + separator + "(" + column_name + " " + predicate_condition_to_string.left.at(_predicate_condition) +
+         " " + predicate_string + ")";
 }
 
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
@@ -65,10 +65,12 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
     if (index < args.size()) {
-      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition, args[index]);
+      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition,
+                                         args[index]);
     }
   }
-  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition, _right_parameter);
+  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition,
+                                     _right_parameter);
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
@@ -195,7 +197,8 @@ void TableScan::_init_scan() {
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
-    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_column_id);
+    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _predicate_condition,
+                                                            right_column_id);
   }
 }
 

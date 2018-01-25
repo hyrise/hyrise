@@ -21,8 +21,8 @@ class JobTask;
 class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
-            std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition, std::vector<AllTypeVariant> right_values,
-            std::vector<AllTypeVariant> right_values2 = {});
+            std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
+            std::vector<AllTypeVariant> right_values, std::vector<AllTypeVariant> right_values2 = {});
 
   const std::string name() const final;
 

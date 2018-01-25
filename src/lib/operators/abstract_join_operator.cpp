@@ -11,7 +11,10 @@ namespace opossum {
 AbstractJoinOperator::AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                                            const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                                            const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractReadOnlyOperator(left, right), _mode(mode), _column_ids(column_ids), _predicate_condition(predicate_condition) {
+    : AbstractReadOnlyOperator(left, right),
+      _mode(mode),
+      _column_ids(column_ids),
+      _predicate_condition(predicate_condition) {
   DebugAssert(mode != JoinMode::Cross && mode != JoinMode::Natural,
               "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
 }

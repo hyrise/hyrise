@@ -177,7 +177,8 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_n
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const PredicateCondition predicate_condition, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2) {
+    const PredicateCondition predicate_condition, const AllTypeVariant& value,
+    const std::optional<AllTypeVariant>& value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
   switch (predicate_condition) {
@@ -231,7 +232,8 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
  */
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
-    const PredicateCondition predicate_condition, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2) {
+    const PredicateCondition predicate_condition, const AllTypeVariant& value,
+    const std::optional<AllTypeVariant>& value2) {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, _this_without_null_values()};
@@ -252,7 +254,8 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const PredicateCondition predicate_condition, const ValuePlaceholder& value, const std::optional<AllTypeVariant>& value2) {
+    const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+    const std::optional<AllTypeVariant>& value2) {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, _this_without_null_values()};
@@ -307,7 +310,8 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 
 template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
-    const PredicateCondition predicate_condition, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const PredicateCondition predicate_condition,
+    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
     const std::optional<AllTypeVariant>& value2) {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
@@ -509,7 +513,8 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
  */
 template <>
 TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_two_column_predicate(
-    const PredicateCondition predicate_condition, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const PredicateCondition predicate_condition,
+    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
     const std::optional<AllTypeVariant>& value2) {
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);

@@ -60,8 +60,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     const ColumnID value_column_id = boost::get<ColumnID>(value);
     auto old_right_column_stats = _get_or_generate_column_statistics(value_column_id);
 
-    auto two_column_statistics_container =
-        old_column_statistics->estimate_selectivity_for_two_column_predicate(predicate_condition, old_right_column_stats, value2);
+    auto two_column_statistics_container = old_column_statistics->estimate_selectivity_for_two_column_predicate(
+        predicate_condition, old_right_column_stats, value2);
 
     clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
     column_statistics_container = two_column_statistics_container;
@@ -190,7 +190,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
   auto& left_col_stats = _column_statistics[column_ids.first];
   auto& right_col_stats = right_table_stats->_column_statistics[column_ids.second];
 
-  auto stats_container = left_col_stats->estimate_selectivity_for_two_column_predicate(predicate_condition, right_col_stats);
+  auto stats_container =
+      left_col_stats->estimate_selectivity_for_two_column_predicate(predicate_condition, right_col_stats);
 
   // apply predicate selectivity to cross join
   join_table_stats->_row_count *= stats_container.selectivity;

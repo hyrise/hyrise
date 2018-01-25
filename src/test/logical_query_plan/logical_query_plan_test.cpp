@@ -39,7 +39,8 @@ class LogicalQueryPlanTest : public BaseTest {
     _predicate_node_a = std::make_shared<PredicateNode>(_t_a_a, PredicateCondition::Equals, 42);
     _predicate_node_b = std::make_shared<PredicateNode>(_t_a_b, PredicateCondition::Equals, 1337);
     _projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({_t_a_a, _t_a_b}));
-    _join_node = std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{_t_a_a, _t_b_a}, PredicateCondition::Equals);
+    _join_node =
+        std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{_t_a_a, _t_b_a}, PredicateCondition::Equals);
 
     /**
      * Init complex graph.
@@ -60,7 +61,8 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[7] = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
     _nodes[0] = std::make_shared<JoinNode>(JoinMode::Cross);
     _nodes[1] = std::make_shared<JoinNode>(JoinMode::Cross);
-    _nodes[2] = std::make_shared<PredicateNode>(LQPColumnReference{_nodes[6], ColumnID{0}}, PredicateCondition::Equals, 42);
+    _nodes[2] =
+        std::make_shared<PredicateNode>(LQPColumnReference{_nodes[6], ColumnID{0}}, PredicateCondition::Equals, 42);
     _nodes[3] = std::make_shared<JoinNode>(JoinMode::Cross);
     _nodes[4] = std::make_shared<JoinNode>(JoinMode::Cross);
     _nodes[5] = std::make_shared<JoinNode>(JoinMode::Cross);

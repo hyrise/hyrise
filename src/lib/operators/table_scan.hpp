@@ -17,8 +17,8 @@ class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id, const PredicateCondition predicate_condition,
-            const AllParameterVariant right_parameter);
+  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
+            const PredicateCondition predicate_condition, const AllParameterVariant right_parameter);
 
   ~TableScan();
 
