@@ -15,8 +15,8 @@
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
@@ -118,8 +118,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}}, ScanType::GreaterThan, ColumnID{1});
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
+                                                          ScanType::GreaterThan, ColumnID{1});
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_typee(), ScanTypee::TableScan);

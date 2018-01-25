@@ -101,10 +101,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     if (is_variant(value)) {
       const auto value_variant = boost::get<AllTypeVariant>(value);
       std::vector<ColumnID> column_ids = {column_id};
-      std::vector<AllTypeVariant> right_values  = {value_variant};
+      std::vector<AllTypeVariant> right_values = {value_variant};
       std::vector<AllTypeVariant> right_values2 = {};
       if (predicate_node->value2()) right_values2.emplace_back(*predicate_node->value2());
-
 
       // Currently, we will only use IndexScans, if the predicate node directly follows a StoredTableNode
       if (auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(predicate_node->left_child())) {
@@ -118,15 +117,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
           }
         }
 
-        auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids, predicate_node->scan_type(), right_values, right_values2);
+        auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids,
+                                                      predicate_node->scan_type(), right_values, right_values2);
 
         std::shared_ptr<TableScan> table_scan;
         if (predicate_node->scan_type() == ScanType::Between) {
-          auto table_scan_gt = std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
+          auto table_scan_gt =
+              std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
           table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
 
-          table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals, *predicate_node->value2());
-        } else{
+          table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals,
+                                                   *predicate_node->value2());
+        } else {
           table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate_node->scan_type(), value);
         }
 
@@ -134,7 +136,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
         table_scan->set_excluded_chunk_ids(indexed_chunks);
 
         return std::make_shared<UnionPositions>(index_scan, table_scan);
-
       }
     }
   }

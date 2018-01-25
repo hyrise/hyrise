@@ -16,7 +16,7 @@ class BaseTableScanImpl;
 class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
- friend class LQPTranslatorTest;
+  friend class LQPTranslatorTest;
 
  public:
   TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id, const ScanType scan_type,

@@ -22,7 +22,7 @@ std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
 bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() == LQPNodeType::Predicate) {
-  auto child = node->left_child();
+    auto child = node->left_child();
 
     if (child->type() == LQPNodeType::StoredTable) {
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
@@ -30,20 +30,19 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       auto table = StorageManager::get().get_table(stored_table_node->table_name());
 
       auto columns_of_indexes = table->get_columns_of_indexes();
-      for (auto& indexed_columns: columns_of_indexes) {
+      for (auto& indexed_columns : columns_of_indexes) {
         if (_is_index_scan_applicable(indexed_columns, predicate_node)) {
           predicate_node->set_scan_typee(ScanTypee::IndexScan);
         }
       }
     }
-  }// else {
-  return _apply_to_children(node);
-  // }
+  }
 
-  // return true;
+  return _apply_to_children(node);
 }
 
-bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& indexed_columns, const std::shared_ptr<PredicateNode>& predicate_node) const {
+bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& indexed_columns,
+                                              const std::shared_ptr<PredicateNode>& predicate_node) const {
   if (!_is_single_column_index(indexed_columns)) return false;
 
   // Currently, we do not support two column predicates
@@ -64,40 +63,5 @@ bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& index
 inline bool IndexScanRule::_is_single_column_index(const std::vector<ColumnID>& indexed_columns) const {
   return indexed_columns.size() == 1;
 }
-// bool IndexScanRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
-//   // Store original child and parent
-//   auto child = predicates.back()->left_child();
-//   const auto parents = predicates.front()->parents();
-//   const auto child_sides = predicates.front()->get_child_sides();
-
-//   const auto sort_predicate = [&](auto& left, auto& right) {
-//     return left->derive_statistics_from(child)->row_count() > right->derive_statistics_from(child)->row_count();
-//   };
-
-//   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
-//     return false;
-//   }
-
-//   // Untie predicates from LQP, so we can freely retie them
-//   for (auto& predicate : predicates) {
-//     predicate->remove_from_tree();
-//   }
-
-//   // Sort in descending order
-//   std::sort(predicates.begin(), predicates.end(), sort_predicate);
-
-//   // Ensure that nodes are chained correctly
-//   predicates.back()->set_left_child(child);
-
-//   for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-//     parents[parent_idx]->set_child(child_sides[parent_idx], predicates.front());
-//   }
-
-//   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
-//     predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);
-//   }
-
-//   return true;
-// }
 
 }  // namespace opossum
