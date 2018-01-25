@@ -16,8 +16,8 @@
 namespace opossum {
 
 std::shared_ptr<BaseColumn> DeprecatedDictionaryCompression::compress_column(DataType data_type,
-                                                                   const std::shared_ptr<BaseColumn>& column,
-                                                                   EncodingType encoding_type) {
+                                                                             const std::shared_ptr<BaseColumn>& column,
+                                                                             EncodingType encoding_type) {
   auto value_column = std::dynamic_pointer_cast<BaseValueColumn>(column);
   DebugAssert(value_column != nullptr, "Column must be uncompressed, i.e. a ValueColumn.");
 
@@ -25,7 +25,7 @@ std::shared_ptr<BaseColumn> DeprecatedDictionaryCompression::compress_column(Dat
 }
 
 void DeprecatedDictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
-                                           const std::shared_ptr<Chunk>& chunk, EncodingType encoding_type) {
+                                                     const std::shared_ptr<Chunk>& chunk, EncodingType encoding_type) {
   DebugAssert((column_types.size() == chunk->column_count()),
               "Number of column types does not match the chunk’s column count.");
 
@@ -41,7 +41,7 @@ void DeprecatedDictionaryCompression::compress_chunk(const std::vector<DataType>
 }
 
 void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
-                                            EncodingType encoding_type) {
+                                                      EncodingType encoding_type) {
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 

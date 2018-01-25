@@ -31,8 +31,7 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
 
   PosList scan_chunk(ChunkID chunk_id) override;
 
-  void handle_column(const ReferenceColumn& left_column,
-                               std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const ReferenceColumn& left_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  protected:
   /**

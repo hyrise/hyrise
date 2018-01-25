@@ -105,8 +105,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) final;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final;
 
   /**
    * Reference Columns are dumped with the following layout, which is similar to value columns:
@@ -127,8 +126,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const ReferenceColumn& ref_column,
-                               std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
   /**
    * Dictionary Columns are dumped with the following layout:
    *
@@ -152,13 +150,13 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column,
-                             std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   // Chooses the right FittedAttributeVector depending on the attribute_vector_width and exports it.

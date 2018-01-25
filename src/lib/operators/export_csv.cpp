@@ -92,8 +92,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
 template <typename T>
 class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
-  void handle_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
     const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
@@ -107,15 +106,14 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     }
   }
 
-  void handle_column(const ReferenceColumn& ref_column,
-                               std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
 
     context->csv_writer.write(ref_column[context->current_row]);
   }
 
   void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) final {
+                     std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
     const auto& column = static_cast<const DeprecatedDictionaryColumn<T>&>(base_column);
 
@@ -123,12 +121,11 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
   }
 
   void handle_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) final {
+                     std::shared_ptr<ColumnVisitableContext> base_context) final {
     Fail("CSV export not implemented yet for new version of dictionary column.");
   }
 
-  void handle_column(const BaseEncodedColumn& base_column,
-                             std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     Fail("CSV export not implemented yet for encoded columns.");
   }
 };

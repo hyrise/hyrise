@@ -34,7 +34,7 @@ PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
 }
 
 void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_column,
-                                                            std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const ChunkID chunk_id = context->_chunk_id;
   auto& matches_out = context->_matches_out;

@@ -5,8 +5,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/dictionary_column.hpp"
 #include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
