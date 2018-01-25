@@ -5,9 +5,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/zero_suppression/encode_by_zs_type.hpp"
 #include "storage/zero_suppression/resolve_zs_vector_type.hpp"
-#include "storage/zero_suppression/zs_type.hpp"
+#include "storage/zero_suppression/zero_suppression.hpp"
 
 #include "types.hpp"
 

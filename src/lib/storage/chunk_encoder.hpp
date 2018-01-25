@@ -10,7 +10,7 @@
 #include "types.hpp"
 
 #include "storage/encoding_type.hpp"
-#include "storage/zero_suppression/zs_type.hpp"
+#include "storage/zero_suppression/zero_suppression.hpp"
 
 namespace opossum {
 

@@ -285,8 +285,8 @@ set(
     storage/zero_suppression/base_zero_suppression_decoder.hpp
     storage/zero_suppression/base_zero_suppression_encoder.hpp
     storage/zero_suppression/base_zero_suppression_vector.hpp
-    storage/zero_suppression/encode_by_zs_type.cpp
-    storage/zero_suppression/encode_by_zs_type.hpp
+    storage/zero_suppression/zero_suppression.cpp
+    storage/zero_suppression/zero_suppression.hpp
     storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_decoder.hpp
     storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_encoder.cpp
     storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_encoder.hpp
@@ -303,8 +303,6 @@ set(
     storage/zero_suppression/simd_bp128/simd_bp128_packing.hpp
     storage/zero_suppression/simd_bp128/simd_bp128_vector.cpp
     storage/zero_suppression/simd_bp128/simd_bp128_vector.hpp
-    storage/zero_suppression/zs_type.hpp
-    storage/zero_suppression/zs_vector_meta_info.hpp
     storage/zero_suppression/zs_vector_type.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp

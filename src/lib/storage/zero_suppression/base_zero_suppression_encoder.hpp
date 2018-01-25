@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "zs_vector_meta_info.hpp"
+#include "zero_suppression.hpp"
 
 #include "types.hpp"
 

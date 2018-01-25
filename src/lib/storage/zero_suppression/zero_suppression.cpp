@@ -1,4 +1,4 @@
-#include "encode_by_zs_type.hpp"
+#include "zero_suppression.hpp"
 
 #include <map>
 #include <memory>

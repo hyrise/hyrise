@@ -5,7 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/zero_suppression/zs_type.hpp"
+#include "storage/zero_suppression/zero_suppression.hpp"
 
 namespace opossum {
 

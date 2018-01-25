@@ -2,14 +2,30 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 #include "base_zero_suppression_vector.hpp"
-#include "zs_type.hpp"
-#include "zs_vector_meta_info.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
+
+/**
+ * @brief Implemented zero suppression schemes
+ *
+ * Zero suppression is also known as null suppression
+ */
+enum class ZsType : uint8_t { Invalid, FixedSizeByteAligned, SimdBp128 };
+
+/**
+ * @brief Meta information about an unencoded vector
+ *
+ * Some encoders can utilize additional information
+ * about the vector which is to be encoded.
+ */
+struct ZsVectorMetaInfo final {
+  std::optional<uint32_t> max_value = std::nullopt;
+};
 
 /**
  * @brief Encodes a vector of uint32_t using a given ZsType

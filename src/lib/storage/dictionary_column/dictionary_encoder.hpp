@@ -9,7 +9,7 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/zero_suppression/base_zero_suppression_vector.hpp"
-#include "storage/zero_suppression/encode_by_zs_type.hpp"
+#include "storage/zero_suppression/zero_suppression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
