@@ -24,16 +24,16 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const ScanType scan_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
-  DebugAssert(scan_type == ScanType::Equals, "Operator not supported by Hash Join.");
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {
+  DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
 std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                    _scan_type);
+                                    _predicate_condition);
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
@@ -73,7 +73,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }
 
@@ -87,12 +87,12 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const ColumnIDPair& column_ids, const ScanType scan_type, const bool inputs_swapped)
+               const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
-        _scan_type(scan_type),
+        _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _output_table(std::make_shared<Table>()) {}
 
@@ -102,7 +102,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
-  const ScanType _scan_type;
+  const PredicateCondition _predicate_condition;
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;

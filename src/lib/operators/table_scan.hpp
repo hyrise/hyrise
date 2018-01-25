@@ -17,7 +17,7 @@ class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id, const ScanType scan_type,
+  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id, const PredicateCondition predicate_condition,
             const AllParameterVariant right_parameter);
 
   ~TableScan();
@@ -39,7 +39,7 @@ class TableScan : public AbstractReadOnlyOperator {
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
   ColumnID left_column_id() const;
-  ScanType scan_type() const;
+  PredicateCondition predicate_condition() const;
   const AllParameterVariant& right_parameter() const;
 
   const std::string name() const override;
@@ -55,7 +55,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
  private:
   const ColumnID _left_column_id;
-  const ScanType _scan_type;
+  const PredicateCondition _predicate_condition;
   const AllParameterVariant _right_parameter;
 
   std::vector<ChunkID> _excluded_chunk_ids;
