@@ -13,16 +13,13 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * This optimizer rule finds chains of adjacent PredicateNodes and sorts them based on the expected cardinality.
- * By that predicates with a low selectivity are executed first to (hopefully) reduce the size of intermediate results.
+ * This optimizer rule finds PredicateNodes whose children are StoredTableNodes. These PredicateNodes are candidates
+ * for being executed by IndexScans. If the expected selectivity of the predicate falls below a certain threshold the
+ * ScanType of the PredicateNode is set to IndexScan.
  *
  * Note:
- * For now this rule only finds adjacent PredicateNodes, meaning that if there is another node, e.g. a ProjectionNode,
- * between two
- * chains of PredicateNodes we won't order all of them, but only each chain separately.
- * A potential optimization would be to ignore certain intermediate nodes, such as ProjectionNode or SortNode, but
- * respect
- * others, such as JoinNode or UnionNode.
+ * For now this rule is only applicable to single-column indexes and single-column predicates (i.e. WHERE a < b) is
+ * not supported. In addition, chains of IndexScans are not possible since an IndexScan's child must be a GetTable.
  */
 class IndexScanRule : public AbstractRule {
  public:

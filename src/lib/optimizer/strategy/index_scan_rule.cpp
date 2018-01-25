@@ -18,19 +18,26 @@
 
 namespace opossum {
 
+// Kind of arbitrarily chosen, but the following paper suggests something similar
+// Access Path Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?
+constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
+
+// From GroupKeyPaper
+constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
+
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
 bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() == LQPNodeType::Predicate) {
-    auto child = node->left_child();
+    const auto& child = node->left_child();
 
     if (child->type() == LQPNodeType::StoredTable) {
-      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-      auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
-      auto table = StorageManager::get().get_table(stored_table_node->table_name());
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+      const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
+      const auto table = StorageManager::get().get_table(stored_table_node->table_name());
 
-      auto columns_of_indexes = table->get_columns_of_indexes();
-      for (auto& indexed_columns : columns_of_indexes) {
+      const auto columns_of_indexes = table->get_columns_of_indexes();
+      for (const auto& indexed_columns : columns_of_indexes) {
         if (_is_index_scan_applicable(indexed_columns, predicate_node)) {
           predicate_node->set_scan_type(ScanType::IndexScan);
         }
@@ -51,11 +58,13 @@ bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& index
   ColumnID column_id = predicate_node->column_reference().original_column_id();
   if (indexed_columns[0] != column_id) return false;
 
-  auto row_count_table = predicate_node->left_child()->derive_statistics_from(nullptr, nullptr)->row_count();
-  auto row_count_predicate = predicate_node->derive_statistics_from(predicate_node->left_child())->row_count();
-  float selectivity = row_count_predicate / row_count_table;
+  const auto row_count_table = predicate_node->left_child()->derive_statistics_from(nullptr, nullptr)->row_count();
+  if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  if (selectivity > 0.01f) return false;
+  const auto row_count_predicate = predicate_node->derive_statistics_from(predicate_node->left_child())->row_count();
+  const float selectivity = row_count_predicate / row_count_table;
+
+  if (selectivity > INDEX_SCAN_SELECTIVITY_THRESHOLD) return false;
 
   return true;
 }
