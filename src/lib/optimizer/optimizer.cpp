@@ -18,19 +18,13 @@ Optimizer Optimizer::create_default_optimizer() {
   Optimizer optimizer{10};
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
-
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
-
   optimizer.add_rule_batch(main_batch);
 
-
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
-
   final_batch.add_rule(std::make_shared<IndexScanRule>());
-
   optimizer.add_rule_batch(final_batch);
-
 
   return optimizer;
 }
