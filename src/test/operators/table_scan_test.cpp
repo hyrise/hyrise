@@ -234,7 +234,7 @@ TEST_P(OperatorsTableScanTest, DoubleScan) {
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanTest, EmptyResultScan) {
+TEST_P(OperatorsTableScanTest, EmptyResultScan) {
   auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 90000);
   scan_1->execute();
 
@@ -449,7 +449,7 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
+TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
   auto scan_1 =
       std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 12345);
   scan_1->execute();
@@ -480,7 +480,7 @@ TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
 }
 
-TEST_F(OperatorsTableScanTest, OperatorName) {
+TEST_P(OperatorsTableScanTest, OperatorName) {
   auto scan_1 =
       std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
 
@@ -587,7 +587,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, NullSemantics) {
+TEST_P(OperatorsTableScanTest, NullSemantics) {
   const auto predicate_conditions = std::vector<PredicateCondition>(
       {PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::LessThan,
        PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals});
