@@ -144,11 +144,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(this->get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
@@ -181,24 +181,25 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(this->get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(1337));
 
   const auto table_scan_op2 = std::dynamic_pointer_cast<const TableScan>(table_scan_op->input_left());
   ASSERT_TRUE(table_scan_op2);
-  EXPECT_EQ(this->get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
+  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
   EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
+  if (!IS_DEBUG) return;
   /**
    * Build LQP and translate to PQP
    */

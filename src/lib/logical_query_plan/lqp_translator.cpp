@@ -97,8 +97,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     value = predicate_node->get_output_column_id(boost::get<const LQPColumnReference>(value));
   }
 
-  if (predicate_node->scan_type() == ScanType::IndexScan)
+  if (predicate_node->scan_type() == ScanType::IndexScan) {
     return _translate_predicate_node_to_index_scan(predicate_node, value, column_id, input_operator);
+  }
 
   /**
    * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
@@ -124,47 +125,53 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
       is_variant(value),
       "We do not support IndexScan on two-column predicates. Fail! The optimizer should have dealt with the problem.");
 
+  // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
+  // Our IndexScan implementation does not work on reference columns yet.
+  DebugAssert(predicate_node->left_child()->type() == LQPNodeType::StoredTable,
+              "IndexScan must follow a StoredTableNode.");
+
   const auto value_variant = boost::get<AllTypeVariant>(value);
+
+  // This is necessary because we currently support single column indexes only
   const std::vector<ColumnID> column_ids = {column_id};
   const std::vector<AllTypeVariant> right_values = {value_variant};
   std::vector<AllTypeVariant> right_values2 = {};
   if (predicate_node->value2()) right_values2.emplace_back(*predicate_node->value2());
 
-  // Currently, we will only use IndexScans, if the predicate node directly follows a StoredTableNode
-  if (auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(predicate_node->left_child())) {
-    const auto table_name = stored_table_node->table_name();
-    const auto table = StorageManager::get().get_table(table_name);
-    std::vector<ChunkID> indexed_chunks;
+  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(predicate_node->left_child());
+  const auto table_name = stored_table_node->table_name();
+  const auto table = StorageManager::get().get_table(table_name);
+  std::vector<ChunkID> indexed_chunks;
 
-    for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
-      if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
-        indexed_chunks.emplace_back(chunk_id);
-      }
+  for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
+      indexed_chunks.emplace_back(chunk_id);
     }
-
-    auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids,
-                                                  predicate_node->predicate_condition(), right_values, right_values2);
-
-    std::shared_ptr<TableScan> table_scan;
-    if (predicate_node->predicate_condition() == PredicateCondition::Between) {
-      auto table_scan_gt =
-          std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
-      table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
-
-      table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
-                                               *predicate_node->value2());
-    } else {
-      table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate_node->predicate_condition(), value);
-    }
-
-    index_scan->set_included_chunk_ids(indexed_chunks);
-    table_scan->set_excluded_chunk_ids(indexed_chunks);
-
-    return std::make_shared<UnionPositions>(index_scan, table_scan);
-  } else {
-    Fail("IndexScan must follow a StoredTableNode. Fail! The optimizer should have dealt with the problem.");
   }
+
+  // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
+  // TableScan(s).
+  auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids,
+                                                predicate_node->predicate_condition(), right_values, right_values2);
+
+  // See explanation for BETWEEN handling in _translate_predicate_node above.
+  std::shared_ptr<TableScan> table_scan;
+  if (predicate_node->predicate_condition() == PredicateCondition::Between) {
+    auto table_scan_gt =
+        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
+    table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
+
+    table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
+                                             *predicate_node->value2());
+  } else {
+    table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate_node->predicate_condition(), value);
+  }
+
+  index_scan->set_included_chunk_ids(indexed_chunks);
+  table_scan->set_excluded_chunk_ids(indexed_chunks);
+
+  return std::make_shared<UnionPositions>(index_scan, table_scan);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
