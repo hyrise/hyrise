@@ -198,6 +198,30 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
 }
 
+TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNonApplicable) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+
+  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
+  auto predicate_node =
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
+  predicate_node->set_left_child(stored_table_node);
+  auto predicate_node2 =
+      std::make_shared<PredicateNode>(LQPColumnReference(predicate_node, ColumnID{0}), PredicateCondition::LessThanEquals, 42);
+  predicate_node2->set_left_child(predicate_node);
+
+  // The optimizer should not set this ScanType in this situation
+  predicate_node2->set_scan_type(ScanType::IndexScan);
+  EXPECT_THROW(LQPTranslator{}.translate_node(predicate_node2), std::logic_error);
+}
+
 TEST_F(LQPTranslatorTest, ProjectionNode) {
   /**
    * Build LQP and translate to PQP

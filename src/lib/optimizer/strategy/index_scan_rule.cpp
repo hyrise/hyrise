@@ -22,7 +22,7 @@ namespace opossum {
 // Access Path Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?
 constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 
-// From GroupKeyPaper
+// From GroupKey paper
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }

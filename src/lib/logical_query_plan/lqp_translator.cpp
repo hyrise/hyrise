@@ -97,7 +97,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     value = predicate_node->get_output_column_id(boost::get<const LQPColumnReference>(value));
   }
 
-
   if (predicate_node->scan_type() == ScanType::IndexScan) return _translate_predicate_node_to_index_scan(predicate_node, value, column_id, input_operator);
 
   /**
@@ -131,6 +130,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     const auto table_name = stored_table_node->table_name();
     const auto table = StorageManager::get().get_table(table_name);
     std::vector<ChunkID> indexed_chunks;
+
     for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
