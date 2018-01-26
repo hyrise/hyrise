@@ -17,7 +17,7 @@ namespace opossum {
 class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::DeprecatedDictionary>;
-  static constexpr auto _uses_zero_suppression = false;
+  static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {

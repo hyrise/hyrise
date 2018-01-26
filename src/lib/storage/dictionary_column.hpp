@@ -13,7 +13,7 @@ class BaseCompressedVector;
 /**
  * @brief Column implementing dictionary encoding
  *
- * Uses zero suppression encodings for its attribute vector.
+ * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
 class DictionaryColumn : public BaseDictionaryColumn {

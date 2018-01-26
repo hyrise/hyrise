@@ -16,7 +16,7 @@
 namespace opossum {
 
 /**
- * @brief Encodes a column using dictionary encoding and compresses its attribute vector using zero suppression.
+ * @brief Encodes a column using dictionary encoding and compresses its attribute vector using vector compression.
  *
  * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
  * using fixed-size byte-aligned encoding.
@@ -24,7 +24,7 @@ namespace opossum {
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
-  static constexpr auto _uses_zero_suppression = true;
+  static constexpr auto _uses_vector_compression = true;
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
@@ -90,7 +90,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
-    auto encoded_attribute_vector = encode_by_zs_type(attribute_vector, zs_type(), alloc, {max_value});
+    auto encoded_attribute_vector = compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<BaseCompressedVector>(std::move(encoded_attribute_vector));

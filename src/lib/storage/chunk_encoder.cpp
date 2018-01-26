@@ -31,7 +31,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
     Assert(value_column != nullptr, "All columns of the chunk need to be of type ValueColumn<T>");
 
-    auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.zs_type);
+    auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.vector_compression_type);
     chunk->replace_column(column_id, encoded_column);
   }
 

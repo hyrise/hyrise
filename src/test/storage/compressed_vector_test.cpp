@@ -48,9 +48,9 @@ class CompressedVectorTest : public BaseTest, public ::testing::WithParamInterfa
   }
 
   std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
-    const auto zs_type = GetParam();
+    const auto compression_type = GetParam();
 
-    auto encoded_vector = encode_by_zs_type(vector, zs_type, {}, {max()});
+    auto encoded_vector = compress_vector(vector, compression_type, {}, {max()});
     EXPECT_EQ(encoded_vector->size(), vector.size());
 
     return encoded_vector;
@@ -72,7 +72,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(ZsTypes, CompressedVectorTest, ::testing::Values(VectorCompressionType::SimdBp128,
+INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, CompressedVectorTest, ::testing::Values(VectorCompressionType::SimdBp128,
                                                                          VectorCompressionType::FixedSizeByteAligned),
                         formatter);
 

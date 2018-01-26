@@ -17,15 +17,15 @@ namespace {
  *
  * Add your vector compressor here!
  */
-static const auto zs_encoder_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
+static const auto vector_compressor_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
     {VectorCompressionType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedCompressor>()},
     {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()}};
 
-std::unique_ptr<BaseVectorCompressor> create_encoder_by_zs_type(VectorCompressionType type) {
+std::unique_ptr<BaseVectorCompressor> create_encoder_by_type(VectorCompressionType type) {
   Assert(type != VectorCompressionType::Invalid, "VectorCompressionType must be valid.");
 
-  auto it = zs_encoder_for_type.find(type);
-  Assert(it != zs_encoder_for_type.cend(), "All zero suppression types must be in zs_encoder_for_type.");
+  auto it = vector_compressor_for_type.find(type);
+  Assert(it != vector_compressor_for_type.cend(), "All vector compression types must be in vector_compressor_for_type.");
 
   const auto& encoder = it->second;
   return encoder->create_new();
@@ -33,10 +33,10 @@ std::unique_ptr<BaseVectorCompressor> create_encoder_by_zs_type(VectorCompressio
 
 }  // namespace
 
-std::unique_ptr<BaseCompressedVector> encode_by_zs_type(const pmr_vector<uint32_t>& vector, VectorCompressionType type,
+std::unique_ptr<BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector, VectorCompressionType type,
                                                         const PolymorphicAllocator<size_t>& alloc,
                                                         const UncompressedVectorInfo& meta_info) {
-  auto encoder = create_encoder_by_zs_type(type);
+  auto encoder = create_encoder_by_type(type);
   return encoder->encode(vector, alloc, meta_info);
 }
 

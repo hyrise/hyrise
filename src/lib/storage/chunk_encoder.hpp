@@ -19,7 +19,7 @@ class Table;
 
 struct ColumnEncodingSpec {
   EncodingType encoding_type;
-  std::optional<VectorCompressionType> zs_type = {};
+  std::optional<VectorCompressionType> vector_compression_type = {};
 };
 
 using ChunkEncodingSpec = std::vector<ColumnEncodingSpec>;

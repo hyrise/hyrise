@@ -42,12 +42,12 @@ class BaseColumnEncoder {
   virtual std::unique_ptr<BaseColumnEncoder> create_new() const = 0;
 
   /**
-   * @defgroup Interface for selecting the used zero suppression type
+   * @defgroup Interface for selecting the used vector compression type
    * @{
    */
 
-  virtual bool uses_zero_suppression() const = 0;
-  virtual void set_zs_type(VectorCompressionType zs_type) = 0;
+  virtual bool uses_vector_compression() const = 0;
+  virtual void set_vector_compression(VectorCompressionType type) = 0;
   /**@}*/
 };
 
@@ -88,12 +88,12 @@ class ColumnEncoder : public BaseColumnEncoder {
 
   std::unique_ptr<BaseColumnEncoder> create_new() const final { return std::make_unique<Derived>(); }
 
-  bool uses_zero_suppression() const final { return Derived::_uses_zero_suppression; };
+  bool uses_vector_compression() const final { return Derived::_uses_vector_compression; };
 
-  void set_zs_type(VectorCompressionType zs_type) final {
-    Assert(uses_zero_suppression(), "Zero suppression type can only be set if supported by encoder.");
+  void set_vector_compression(VectorCompressionType type) final {
+    Assert(uses_vector_compression(), "Vector compression type can only be set if supported by encoder.");
 
-    _zs_type = zs_type;
+    _vector_compression_type = type;
   }
   /**@}*/
 
@@ -135,10 +135,10 @@ class ColumnEncoder : public BaseColumnEncoder {
   /**@}*/
 
  protected:
-  VectorCompressionType zs_type() const { return _zs_type; }
+  VectorCompressionType vector_compression_type() const { return _vector_compression_type; }
 
  private:
-  VectorCompressionType _zs_type = VectorCompressionType::FixedSizeByteAligned;
+  VectorCompressionType _vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }
