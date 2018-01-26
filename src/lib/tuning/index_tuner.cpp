@@ -64,6 +64,9 @@ void IndexTuner::_execute_operations(const std::vector<IndexOperation>& operatio
       break;
     }
   }
+
+  // ToDo(group01): Flush query plans from caches that are affected by these index changes
+  // ToDo(group01): Maybe even re-build those query plans if we still have time left
 }
 
 void IndexTuner::_create_index(const std::string& table_name, ColumnID column_id) {
