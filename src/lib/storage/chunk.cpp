@@ -142,7 +142,7 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
 
 void Chunk::remove_index(std::shared_ptr<BaseIndex> index) {
   auto it = std::find(_indices.cbegin(), _indices.cend(), index);
-  if (it == _indices.cend()) Fail("Trying to remove a non-existing index");
+  DebugAssert(it != _indices.cend(), "Trying to remove a non-existing index");
   _indices.erase(it);
 }
 
