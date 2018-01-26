@@ -10,7 +10,7 @@
 #include "types.hpp"
 
 #include "storage/encoding_type.hpp"
-#include "storage/zero_suppression/zero_suppression.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 
@@ -19,7 +19,7 @@ class Table;
 
 struct ColumnEncodingSpec {
   EncodingType encoding_type;
-  std::optional<ZsType> zs_type = {};
+  std::optional<VectorCompressionType> zs_type = {};
 };
 
 using ChunkEncodingSpec = std::vector<ColumnEncodingSpec>;

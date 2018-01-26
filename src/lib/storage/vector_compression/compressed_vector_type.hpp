@@ -15,16 +15,16 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * @brief Vector types implementing zero suppression
+ * @brief Class types of compressed vectors
  *
- * This enum is not identical to ZsType. It differs
- * because ZsType::FixedSizeByteAligned can yield three
+ * This enum is not identical to VectorCompressionType. It differs
+ * because VectorCompressionType::FixedSizeByteAligned can yield three
  * different vector types (one, two, or four bytes)
  * depending on the range of the values in the vector.
  */
-enum class ZsVectorType : uint8_t {
+enum class CompressedVectorType : uint8_t {
   Invalid,
-  FixedSize4ByteAligned,  // “uncompressed”
+  FixedSize4ByteAligned,  // uncompressed
   FixedSize2ByteAligned,
   FixedSize1ByteAligned,
   SimdBp128
@@ -39,25 +39,25 @@ class SimdBp128Vector;
  *
  * Note: Add your vector class here!
  */
-constexpr auto zs_vector_for_type =
-    hana::make_map(hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize4ByteAligned>,
+constexpr auto compressed_vector_for_type =
+    hana::make_map(hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize4ByteAligned>,
                                    hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-                   hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize2ByteAligned>,
+                   hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize2ByteAligned>,
                                    hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-                   hana::make_pair(enum_c<ZsVectorType, ZsVectorType::FixedSize1ByteAligned>,
+                   hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize1ByteAligned>,
                                    hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
-                   hana::make_pair(enum_c<ZsVectorType, ZsVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
+                   hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
 
 /**
- * @brief Returns the ZsVectorType to a given zero suppression vector type
+ * @brief Returns the CompressedVectorType to a given zero suppression vector type
  *
- * Effectively a reverse lookup in zs_vector_for_type
+ * Effectively a reverse lookup in compressed_vector_for_type
  */
 template <typename ZsVectorT>
-ZsVectorType get_zs_vector_type() {
-  auto zs_type = ZsVectorType::Invalid;
+CompressedVectorType get_compressed_vector_type() {
+  auto zs_type = CompressedVectorType::Invalid;
 
-  hana::fold(zs_vector_for_type, false, [&](auto match_found, auto pair) {
+  hana::fold(compressed_vector_for_type, false, [&](auto match_found, auto pair) {
     if (!match_found && (hana::second(pair) == hana::type_c<ZsVectorT>)) {
       zs_type = hana::value(hana::first(pair));
       return true;

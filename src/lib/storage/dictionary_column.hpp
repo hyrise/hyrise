@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class BaseZeroSuppressionVector;
+class BaseCompressedVector;
 
 /**
  * @brief Column implementing dictionary encoding
@@ -19,7 +19,7 @@ template <typename T>
 class DictionaryColumn : public BaseDictionaryColumn {
  public:
   explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<const BaseZeroSuppressionVector>& attribute_vector,
+                            const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                             const ValueID null_value_id);
 
   // returns an underlying dictionary
@@ -48,7 +48,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   size_t unique_values_count() const final;
 
-  std::shared_ptr<const BaseZeroSuppressionVector> attribute_vector() const final;
+  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
 
   const ValueID null_value_id() const final;
 
@@ -56,7 +56,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::shared_ptr<const BaseZeroSuppressionVector> _attribute_vector;
+  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
 };
 

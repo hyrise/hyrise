@@ -5,8 +5,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
-#include "storage/zero_suppression/zero_suppression.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 #include "types.hpp"
 
@@ -26,7 +26,7 @@ namespace {
 
 }  // namespace
 
-class ZeroSuppressionTest : public BaseTest, public ::testing::WithParamInterface<ZsType> {
+class CompressedVectorTest : public BaseTest, public ::testing::WithParamInterface<VectorCompressionType> {
  protected:
   void SetUp() override {}
 
@@ -47,7 +47,7 @@ class ZeroSuppressionTest : public BaseTest, public ::testing::WithParamInterfac
     return sequence;
   }
 
-  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
+  std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
     const auto zs_type = GetParam();
 
     auto encoded_vector = encode_by_zs_type(vector, zs_type, {}, {max()});
@@ -68,23 +68,22 @@ class ZeroSuppressionTest : public BaseTest, public ::testing::WithParamInterfac
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<ZsType> info) {
+auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-// As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
-INSTANTIATE_TEST_CASE_P(ZsTypes, ZeroSuppressionTest,
-                        ::testing::Values(ZsType::SimdBp128, ZsType::FixedSizeByteAligned), formatter);
+INSTANTIATE_TEST_CASE_P(ZsTypes, CompressedVectorTest,
+                        ::testing::Values(VectorCompressionType::SimdBp128, VectorCompressionType::FixedSizeByteAligned), formatter);
 
-TEST_P(ZeroSuppressionTest, DecodeIncreasingSequenceUsingIterators) {
+TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  resolve_zs_vector_type(*encoded_sequence_base,
+  resolve_compressed_vector_type(*encoded_sequence_base,
                          [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
-TEST_P(ZeroSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
+TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingDecoder) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence = this->encode(sequence);
 
@@ -98,15 +97,15 @@ TEST_P(ZeroSuppressionTest, DecodeIncreasingSequenceUsingDecoder) {
   }
 }
 
-TEST_P(ZeroSuppressionTest, DecodeSequenceOfZerosUsingIterators) {
+TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingIterators) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence_base = this->encode(sequence);
 
-  resolve_zs_vector_type(*encoded_sequence_base,
+  resolve_compressed_vector_type(*encoded_sequence_base,
                          [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
-TEST_P(ZeroSuppressionTest, DecodeSequenceOfZerosUsingDecoder) {
+TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecoder) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence = this->encode(sequence);
 

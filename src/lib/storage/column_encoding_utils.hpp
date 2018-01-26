@@ -5,7 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/zero_suppression/zero_suppression.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 
@@ -25,6 +25,6 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type);
  */
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
                                                  std::shared_ptr<const BaseValueColumn> column,
-                                                 std::optional<ZsType> zero_suppression_type = {});
+                                                 std::optional<VectorCompressionType> zero_suppression_type = {});
 
 }  // namespace opossum

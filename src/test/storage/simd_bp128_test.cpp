@@ -9,10 +9,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/zero_suppression/simd_bp128/simd_bp128_decoder.hpp"
-#include "storage/zero_suppression/simd_bp128/simd_bp128_encoder.hpp"
-#include "storage/zero_suppression/simd_bp128/simd_bp128_vector.hpp"
-#include "storage/zero_suppression/zero_suppression.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -54,8 +54,8 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
     return sequence;
   }
 
-  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector) {
-    auto encoder = SimdBp128Encoder{};
+  std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
+    auto encoder = SimdBp128Compressor{};
     auto encoded_vector = encoder.encode(vector, vector.get_allocator());
     EXPECT_EQ(encoded_vector->size(), vector.size());
 

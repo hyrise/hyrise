@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class BaseZeroSuppressionVector;
+class BaseCompressedVector;
 
 /**
  * @brief Column implementing run-length encoding

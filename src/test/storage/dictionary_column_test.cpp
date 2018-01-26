@@ -8,7 +8,7 @@
 #include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
-#include "storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 namespace opossum {
 

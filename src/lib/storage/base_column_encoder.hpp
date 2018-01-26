@@ -8,7 +8,7 @@
 #include "storage/base_encoded_column.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/zero_suppression/zero_suppression.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
@@ -47,7 +47,7 @@ class BaseColumnEncoder {
    */
 
   virtual bool uses_zero_suppression() const = 0;
-  virtual void set_zs_type(ZsType zs_type) = 0;
+  virtual void set_zs_type(VectorCompressionType zs_type) = 0;
   /**@}*/
 };
 
@@ -90,7 +90,7 @@ class ColumnEncoder : public BaseColumnEncoder {
 
   bool uses_zero_suppression() const final { return Derived::_uses_zero_suppression; };
 
-  void set_zs_type(ZsType zs_type) final {
+  void set_zs_type(VectorCompressionType zs_type) final {
     Assert(uses_zero_suppression(), "Zero suppression type can only be set if supported by encoder.");
 
     _zs_type = zs_type;
@@ -135,10 +135,10 @@ class ColumnEncoder : public BaseColumnEncoder {
   /**@}*/
 
  protected:
-  ZsType zs_type() const { return _zs_type; }
+  VectorCompressionType zs_type() const { return _zs_type; }
 
  private:
-  ZsType _zs_type = ZsType::FixedSizeByteAligned;
+  VectorCompressionType _zs_type = VectorCompressionType::FixedSizeByteAligned;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }

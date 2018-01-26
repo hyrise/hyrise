@@ -5,7 +5,7 @@
 
 #include "storage/column_visitable.hpp"
 #include "storage/value_column.hpp"
-#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -14,7 +14,7 @@ namespace opossum {
 
 template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                                      const std::shared_ptr<const BaseZeroSuppressionVector>& attribute_vector,
+                                      const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
     : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
@@ -80,7 +80,7 @@ size_t DictionaryColumn<T>::unique_values_count() const {
 }
 
 template <typename T>
-std::shared_ptr<const BaseZeroSuppressionVector> DictionaryColumn<T>::attribute_vector() const {
+std::shared_ptr<const BaseCompressedVector> DictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 

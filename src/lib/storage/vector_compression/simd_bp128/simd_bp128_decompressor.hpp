@@ -5,7 +5,7 @@
 #include <numeric>
 #include <utility>
 
-#include "storage/zero_suppression/base_zero_suppression_decoder.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
 
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
@@ -19,20 +19,20 @@ class SimdBp128Vector;
 /**
  * @brief Implements point-access into a SIMD-BP128 compressed vector
  *
- * The decoder caches the last decoded block and meta-block.
+ * The decompressor caches the last decoded block and meta-block.
  * Performs best if the values are accessed in a cache-sensitive manner, i.e.,
  * sequentially without too many jumps backwards.
  */
-class SimdBp128Decoder : public BaseZeroSuppressionDecoder {
+class SimdBp128Decompressor : public BaseVectorDecompressor {
  public:
   using Packing = SimdBp128Packing;
 
  public:
-  explicit SimdBp128Decoder(const SimdBp128Vector& vector);
-  SimdBp128Decoder(const SimdBp128Decoder& other);
+  explicit SimdBp128Decompressor(const SimdBp128Vector& vector);
+  SimdBp128Decompressor(const SimdBp128Decompressor& other);
 
-  SimdBp128Decoder(SimdBp128Decoder&& other) = default;
-  ~SimdBp128Decoder() = default;
+  SimdBp128Decompressor(SimdBp128Decompressor&& other) = default;
+  ~SimdBp128Decompressor() = default;
 
   uint32_t get(size_t i) final {
     if (_is_index_within_cached_block(i)) {

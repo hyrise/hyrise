@@ -3,18 +3,18 @@
 #include <utility>
 
 #include "storage/column_iterables.hpp"
-#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
 class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVectorIterable> {
  public:
-  explicit AttributeVectorIterable(const BaseZeroSuppressionVector& attribute_vector, const ValueID null_value_id)
+  explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_zs_vector_type(_attribute_vector, [&](const auto& vector) {
+    resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
       auto begin = Iterator<ZsIteratorType>{_null_value_id, vector.cbegin(), vector.cbegin()};
@@ -25,7 +25,7 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    resolve_zs_vector_type(_attribute_vector, [&](const auto& vector) {
+    resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
@@ -36,7 +36,7 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
   }
 
  private:
-  const BaseZeroSuppressionVector& _attribute_vector;
+  const BaseCompressedVector& _attribute_vector;
   const ValueID _null_value_id;
 
  private:

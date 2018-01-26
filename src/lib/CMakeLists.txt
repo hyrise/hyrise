@@ -282,28 +282,28 @@ set(
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp
     storage/value_column/value_column_iterable.hpp
-    storage/zero_suppression/base_zero_suppression_decoder.hpp
-    storage/zero_suppression/base_zero_suppression_encoder.hpp
-    storage/zero_suppression/base_zero_suppression_vector.hpp
-    storage/zero_suppression/zero_suppression.cpp
-    storage/zero_suppression/zero_suppression.hpp
-    storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_decoder.hpp
-    storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_encoder.cpp
-    storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_encoder.hpp
-    storage/zero_suppression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
-    storage/zero_suppression/resolve_zs_vector_type.hpp
-    storage/zero_suppression/simd_bp128/oversized_types.hpp
-    storage/zero_suppression/simd_bp128/simd_bp128_decoder.cpp
-    storage/zero_suppression/simd_bp128/simd_bp128_decoder.hpp
-    storage/zero_suppression/simd_bp128/simd_bp128_encoder.cpp
-    storage/zero_suppression/simd_bp128/simd_bp128_encoder.hpp
-    storage/zero_suppression/simd_bp128/simd_bp128_iterator.cpp
-    storage/zero_suppression/simd_bp128/simd_bp128_iterator.hpp
-    storage/zero_suppression/simd_bp128/simd_bp128_packing.cpp
-    storage/zero_suppression/simd_bp128/simd_bp128_packing.hpp
-    storage/zero_suppression/simd_bp128/simd_bp128_vector.cpp
-    storage/zero_suppression/simd_bp128/simd_bp128_vector.hpp
-    storage/zero_suppression/zs_vector_type.hpp
+    storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/base_vector_compressor.hpp
+    storage/vector_compression/base_compressed_vector.hpp
+    storage/vector_compression/vector_compression.cpp
+    storage/vector_compression/vector_compression.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/resolve_compressed_vector_type.hpp
+    storage/vector_compression/simd_bp128/oversized_types.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
+    storage/vector_compression/compressed_vector_type.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
     tasks/chunk_metrics_collection_task.cpp

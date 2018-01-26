@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class BaseZeroSuppressionVector;
+class BaseCompressedVector;
 
 /**
  * @brief Base class of DictionaryColumn<T> exposing type-independent interface
@@ -38,7 +38,7 @@ class BaseDictionaryColumn : public BaseEncodedColumn {
    */
   virtual size_t unique_values_count() const = 0;
 
-  virtual std::shared_ptr<const BaseZeroSuppressionVector> attribute_vector() const = 0;
+  virtual std::shared_ptr<const BaseCompressedVector> attribute_vector() const = 0;
 
   /**
    * @brief Returns encoding specific null value ID

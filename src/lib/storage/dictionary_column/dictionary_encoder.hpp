@@ -8,8 +8,8 @@
 
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
-#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
-#include "storage/zero_suppression/zero_suppression.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -93,7 +93,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     auto encoded_attribute_vector = encode_by_zs_type(attribute_vector, zs_type(), alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
-    auto attribute_vector_sptr = std::shared_ptr<BaseZeroSuppressionVector>(std::move(encoded_attribute_vector));
+    auto attribute_vector_sptr = std::shared_ptr<BaseCompressedVector>(std::move(encoded_attribute_vector));
     return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                      ValueID{null_value_id});
   }

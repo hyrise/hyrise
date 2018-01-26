@@ -5,7 +5,7 @@
 #include "storage/column_iterables.hpp"
 
 #include "storage/dictionary_column.hpp"
-#include "storage/zero_suppression/resolve_zs_vector_type.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
@@ -16,7 +16,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_zs_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+    resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
       auto begin =
@@ -29,7 +29,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    resolve_zs_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+    resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 

@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "storage/zero_suppression/base_zero_suppression_encoder.hpp"
+#include "storage/vector_compression/base_vector_compressor.hpp"
 
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
@@ -12,15 +12,15 @@
 namespace opossum {
 
 /**
- * @brief Encodes a vector using SIMD-BP128
+ * @brief Compresses a vector using SIMD-BP128
  */
-class SimdBp128Encoder : public BaseZeroSuppressionEncoder {
+class SimdBp128Compressor : public BaseVectorCompressor {
  public:
-  std::unique_ptr<BaseZeroSuppressionVector> encode(const pmr_vector<uint32_t>& vector,
+  std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector,
                                                     const PolymorphicAllocator<size_t>& alloc,
-                                                    const ZsVectorMetaInfo& meta_info = {}) final;
+                                                    const UncompressedVectorInfo& meta_info = {}) final;
 
-  std::unique_ptr<BaseZeroSuppressionEncoder> create_new() const final;
+  std::unique_ptr<BaseVectorCompressor> create_new() const final;
 
  private:
   using Packing = SimdBp128Packing;

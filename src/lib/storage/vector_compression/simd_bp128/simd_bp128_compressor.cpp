@@ -1,4 +1,4 @@
-#include "simd_bp128_encoder.hpp"
+#include "simd_bp128_compressor.hpp"
 
 #include <emmintrin.h>
 
@@ -11,9 +11,9 @@
 
 namespace opossum {
 
-std::unique_ptr<BaseZeroSuppressionVector> SimdBp128Encoder::encode(const pmr_vector<uint32_t>& vector,
+std::unique_ptr<BaseCompressedVector> SimdBp128Compressor::encode(const pmr_vector<uint32_t>& vector,
                                                                     const PolymorphicAllocator<size_t>& alloc,
-                                                                    const ZsVectorMetaInfo& meta_info) {
+                                                                    const UncompressedVectorInfo& meta_info) {
   init(vector.size(), alloc);
   for (auto value : vector) append(value);
   finish();
@@ -21,11 +21,11 @@ std::unique_ptr<BaseZeroSuppressionVector> SimdBp128Encoder::encode(const pmr_ve
   return std::make_unique<SimdBp128Vector>(std::move(*_data), _size);
 }
 
-std::unique_ptr<BaseZeroSuppressionEncoder> SimdBp128Encoder::create_new() const {
-  return std::make_unique<SimdBp128Encoder>();
+std::unique_ptr<BaseVectorCompressor> SimdBp128Compressor::create_new() const {
+  return std::make_unique<SimdBp128Compressor>();
 }
 
-void SimdBp128Encoder::init(size_t size, const PolymorphicAllocator<size_t>& alloc) {
+void SimdBp128Compressor::init(size_t size, const PolymorphicAllocator<size_t>& alloc) {
   constexpr auto max_bit_size = 32u;
 
   // Ceiling of integer devision
@@ -42,7 +42,7 @@ void SimdBp128Encoder::init(size_t size, const PolymorphicAllocator<size_t>& all
   _size = size;
 }
 
-void SimdBp128Encoder::append(uint32_t value) {
+void SimdBp128Compressor::append(uint32_t value) {
   _pending_meta_block[_meta_block_index++] = value;
 
   if (meta_block_complete()) {
@@ -50,7 +50,7 @@ void SimdBp128Encoder::append(uint32_t value) {
   }
 }
 
-void SimdBp128Encoder::finish() {
+void SimdBp128Compressor::finish() {
   if (_meta_block_index > 0u) {
     pack_incomplete_meta_block();
   }
@@ -60,9 +60,9 @@ void SimdBp128Encoder::finish() {
   _data->shrink_to_fit();
 }
 
-bool SimdBp128Encoder::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
+bool SimdBp128Compressor::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
 
-void SimdBp128Encoder::pack_meta_block() {
+void SimdBp128Compressor::pack_meta_block() {
   const auto bits_needed = bits_needed_per_block();
   write_meta_info(bits_needed);
   pack_blocks(Packing::blocks_in_meta_block, bits_needed);
@@ -70,7 +70,7 @@ void SimdBp128Encoder::pack_meta_block() {
   _meta_block_index = 0u;
 }
 
-void SimdBp128Encoder::pack_incomplete_meta_block() {
+void SimdBp128Compressor::pack_incomplete_meta_block() {
   // Fill remaining elements with zero
   std::fill(_pending_meta_block.begin() + _meta_block_index, _pending_meta_block.end(), 0u);
 
@@ -83,7 +83,7 @@ void SimdBp128Encoder::pack_incomplete_meta_block() {
   pack_blocks(num_blocks_left, bits_needed);
 }
 
-auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Packing::blocks_in_meta_block> {
+auto SimdBp128Compressor::bits_needed_per_block() -> std::array<uint8_t, Packing::blocks_in_meta_block> {
   std::array<uint8_t, Packing::blocks_in_meta_block> bits_needed{};
 
   for (auto block_index = 0u; block_index < Packing::blocks_in_meta_block; ++block_index) {
@@ -102,12 +102,12 @@ auto SimdBp128Encoder::bits_needed_per_block() -> std::array<uint8_t, Packing::b
   return bits_needed;
 }
 
-void SimdBp128Encoder::write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
+void SimdBp128Compressor::write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   Packing::write_meta_info(bits_needed.data(), _data->data() + _data_index);
   ++_data_index;
 }
 
-void SimdBp128Encoder::pack_blocks(const uint8_t num_blocks,
+void SimdBp128Compressor::pack_blocks(const uint8_t num_blocks,
                                    const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   DebugAssert(num_blocks <= 16u, "num_blocks must be smaller than 16.");
 

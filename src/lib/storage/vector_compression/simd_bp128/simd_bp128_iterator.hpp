@@ -3,7 +3,7 @@
 #include <array>
 #include <memory>
 
-#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 
 #include "oversized_types.hpp"
 #include "simd_bp128_packing.hpp"
@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-class SimdBp128Iterator : public BaseZeroSuppressionIterator<SimdBp128Iterator> {
+class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator> {
  public:
   using Packing = SimdBp128Packing;
 

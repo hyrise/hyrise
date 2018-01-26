@@ -8,9 +8,9 @@
 
 #include <memory>
 
-#include "storage/zero_suppression/base_zero_suppression_vector.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 
-#include "fixed_size_byte_aligned_decoder.hpp"
+#include "fixed_size_byte_aligned_decompressor.hpp"
 
 #include "types.hpp"
 
@@ -21,10 +21,10 @@ namespace hana = boost::hana;
 /**
  * @brief Encodes values as either uint32_t, uint16_t, or uint8_t
  *
- * This is simplest zero suppression encoding. It matches the old FittedAttributeVector
+ * This is simplest vector compression scheme. It matches the old FittedAttributeVector
  */
 template <typename UnsignedIntType>
-class FixedSizeByteAlignedVector : public ZeroSuppressionVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
+class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedVector<UnsignedIntType>> {
   static_assert(hana::contains(hana::tuple_t<uint8_t, uint16_t, uint32_t>, hana::type_c<UnsignedIntType>),
                 "UnsignedIntType must be any of the three listed unsigned integer types.");
 
@@ -35,15 +35,15 @@ class FixedSizeByteAlignedVector : public ZeroSuppressionVector<FixedSizeByteAli
   size_t _on_size() const { return _data.size(); }
   size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
-  auto _on_create_base_decoder() const { return std::unique_ptr<BaseZeroSuppressionDecoder>{_on_create_decoder()}; }
+  auto _on_create_base_decoder() const { return std::unique_ptr<BaseVectorDecompressor>{_on_create_decoder()}; }
 
-  auto _on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecoder<UnsignedIntType>>(_data); }
+  auto _on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
 
   auto _on_cbegin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
 
   auto _on_cend() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
 
-  std::shared_ptr<BaseZeroSuppressionVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::shared_ptr<BaseCompressedVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::allocate_shared<FixedSizeByteAlignedVector<UnsignedIntType>>(alloc, std::move(data_copy));
   }
