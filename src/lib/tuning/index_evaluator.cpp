@@ -3,13 +3,13 @@
 
 #include "index_evaluator.hpp"
 
-#include "types.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -95,23 +95,22 @@ void IndexEvaluator::_estimate_cost() {
  * find multi-column indices suitable for that single column).
  * It is assumed that an index for a column is present either in all chunks or none.
  */
-void IndexEvaluator::_find_existing_indices()
-{
-    for (const auto & table_name : StorageManager::get().table_names()) {
-        const auto & table = StorageManager::get().get_table(table_name);
-        const auto & first_chunk = table->get_chunk(ChunkID{0});
+void IndexEvaluator::_find_existing_indices() {
+  for (const auto& table_name : StorageManager::get().table_names()) {
+    const auto& table = StorageManager::get().get_table(table_name);
+    const auto& first_chunk = table->get_chunk(ChunkID{0});
 
-        for (const auto & column_name : table->column_names()) {
-            const auto & column_id = table->column_id_by_name(column_name);
-            auto column_ids = std::vector<ColumnID>();
-            column_ids.emplace_back(column_id);
-            if (first_chunk->get_indices(column_ids).size() > 0) {
-                auto index_spec = IndexSpec{table_name, column_id};
-                _indices[index_spec].exists = true;
-                std::cout << "Found index on " << table_name << "." << column_name << "\n";
-            }
-        }
+    for (const auto& column_name : table->column_names()) {
+      const auto& column_id = table->column_id_by_name(column_name);
+      auto column_ids = std::vector<ColumnID>();
+      column_ids.emplace_back(column_id);
+      if (first_chunk->get_indices(column_ids).size() > 0) {
+        auto index_spec = IndexSpec{table_name, column_id};
+        _indices[index_spec].exists = true;
+        std::cout << "Found index on " << table_name << "." << column_name << "\n";
+      }
     }
+  }
 }
 
 std::vector<IndexEvaluation> IndexEvaluator::_calculate_desirability() {

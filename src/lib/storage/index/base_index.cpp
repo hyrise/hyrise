@@ -36,7 +36,7 @@ BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
 
-float BaseIndex::memory_consumption() const {return _memory_consumption();}
+float BaseIndex::memory_consumption() const { return _memory_consumption(); }
 
 ColumnIndexType BaseIndex::type() const { return _type; }
 
