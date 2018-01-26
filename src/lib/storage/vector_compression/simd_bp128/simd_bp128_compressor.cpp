@@ -12,8 +12,8 @@
 namespace opossum {
 
 std::unique_ptr<BaseCompressedVector> SimdBp128Compressor::encode(const pmr_vector<uint32_t>& vector,
-                                                                    const PolymorphicAllocator<size_t>& alloc,
-                                                                    const UncompressedVectorInfo& meta_info) {
+                                                                  const PolymorphicAllocator<size_t>& alloc,
+                                                                  const UncompressedVectorInfo& meta_info) {
   init(vector.size(), alloc);
   for (auto value : vector) append(value);
   finish();
@@ -108,7 +108,7 @@ void SimdBp128Compressor::write_meta_info(const std::array<uint8_t, Packing::blo
 }
 
 void SimdBp128Compressor::pack_blocks(const uint8_t num_blocks,
-                                   const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
+                                      const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   DebugAssert(num_blocks <= 16u, "num_blocks must be smaller than 16.");
 
   auto in = _pending_meta_block.data();

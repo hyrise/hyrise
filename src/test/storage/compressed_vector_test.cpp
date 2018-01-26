@@ -72,15 +72,16 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(ZsTypes, CompressedVectorTest,
-                        ::testing::Values(VectorCompressionType::SimdBp128, VectorCompressionType::FixedSizeByteAligned), formatter);
+INSTANTIATE_TEST_CASE_P(ZsTypes, CompressedVectorTest, ::testing::Values(VectorCompressionType::SimdBp128,
+                                                                         VectorCompressionType::FixedSizeByteAligned),
+                        formatter);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence_base = this->encode(sequence);
 
   resolve_compressed_vector_type(*encoded_sequence_base,
-                         [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
+                                 [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingDecoder) {
@@ -102,7 +103,7 @@ TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingIterators) {
   const auto encoded_sequence_base = this->encode(sequence);
 
   resolve_compressed_vector_type(*encoded_sequence_base,
-                         [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
+                                 [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
 TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecoder) {

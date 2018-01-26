@@ -34,8 +34,8 @@ std::unique_ptr<BaseVectorCompressor> create_encoder_by_zs_type(VectorCompressio
 }  // namespace
 
 std::unique_ptr<BaseCompressedVector> encode_by_zs_type(const pmr_vector<uint32_t>& vector, VectorCompressionType type,
-                                                             const PolymorphicAllocator<size_t>& alloc,
-                                                             const UncompressedVectorInfo& meta_info) {
+                                                        const PolymorphicAllocator<size_t>& alloc,
+                                                        const UncompressedVectorInfo& meta_info) {
   auto encoder = create_encoder_by_zs_type(type);
   return encoder->encode(vector, alloc, meta_info);
 }

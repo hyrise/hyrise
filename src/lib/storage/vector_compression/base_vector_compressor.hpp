@@ -21,8 +21,8 @@ class BaseVectorCompressor {
   virtual ~BaseVectorCompressor() = default;
 
   virtual std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector,
-                                                            const PolymorphicAllocator<size_t>& alloc,
-                                                            const UncompressedVectorInfo& meta_info = {}) = 0;
+                                                       const PolymorphicAllocator<size_t>& alloc,
+                                                       const UncompressedVectorInfo& meta_info = {}) = 0;
 
   virtual std::unique_ptr<BaseVectorCompressor> create_new() const = 0;
 };

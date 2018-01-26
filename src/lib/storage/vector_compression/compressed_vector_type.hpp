@@ -39,14 +39,14 @@ class SimdBp128Vector;
  *
  * Note: Add your vector class here!
  */
-constexpr auto compressed_vector_for_type =
-    hana::make_map(hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize4ByteAligned>,
-                                   hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
-                   hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize2ByteAligned>,
-                                   hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
-                   hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize1ByteAligned>,
-                                   hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
-                   hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
+constexpr auto compressed_vector_for_type = hana::make_map(
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize4ByteAligned>,
+                    hana::type_c<FixedSizeByteAlignedVector<uint32_t>>),
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize2ByteAligned>,
+                    hana::type_c<FixedSizeByteAlignedVector<uint16_t>>),
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedSize1ByteAligned>,
+                    hana::type_c<FixedSizeByteAlignedVector<uint8_t>>),
+    hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::SimdBp128>, hana::type_c<SimdBp128Vector>));
 
 /**
  * @brief Returns the CompressedVectorType to a given zero suppression vector type
