@@ -86,7 +86,8 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   } else {
     Assert(_join_column_references,
            "Only cross joins and joins with join column ids supported for generating join statistics");
-    Assert(_predicate_condition, "Only cross joins and joins with predicate condition supported for generating join statistics");
+    Assert(_predicate_condition,
+           "Only cross joins and joins with predicate condition supported for generating join statistics");
 
     ColumnIDPair join_colum_ids{left_child->get_output_column_id(_join_column_references->first),
                                 right_child->get_output_column_id(_join_column_references->second)};

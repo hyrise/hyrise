@@ -130,8 +130,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   predicate_node->set_scan_type(ScanType::IndexScan);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -210,11 +210,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
-  auto predicate_node2 =
-      std::make_shared<PredicateNode>(LQPColumnReference(predicate_node, ColumnID{0}), PredicateCondition::LessThanEquals, 42);
+  auto predicate_node2 = std::make_shared<PredicateNode>(LQPColumnReference(predicate_node, ColumnID{0}),
+                                                         PredicateCondition::LessThanEquals, 42);
   predicate_node2->set_left_child(predicate_node);
 
   // The optimizer should not set this ScanType in this situation

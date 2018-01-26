@@ -322,7 +322,8 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
 }
 
 TEST_F(ColumnStatisticsTest, TwoColumnsRealDataTest) {
-  // test selectivity calculations for all predicate conditions and all column combinations of int_equal_distribution.tbl
+  // test selectivity calculations for all predicate conditions and all column combinations of
+  // int_equal_distribution.tbl
   std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
                                                        PredicateCondition::LessThan, PredicateCondition::LessThanEquals,
                                                        PredicateCondition::GreaterThan};

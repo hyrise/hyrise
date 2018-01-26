@@ -450,14 +450,14 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
-  // Currently the distinct count, min and max calculation is incorrect if predicate condition is OpLessThan or OpGreaterThan and
-  // right column min = left column min or right column max = left column max.
+  // Currently the distinct count, min and max calculation is incorrect if predicate condition is OpLessThan or
+  // OpGreaterThan and right column min = left column min or right column max = left column max.
   //
   // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.
   //
   // Both new left and right column statistics will have the same min and max values of 1 and 3.
-  // However, for predicate condition OpLessThan, the left column max is actually 2 as there is no possibility for 3 < 3.
-  // Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
+  // However, for predicate condition OpLessThan, the left column max is actually 2 as there is no possibility
+  // for 3 < 3. Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
   // The same also applies for predicate condition OpGreaterThan vice versa.
   // The smaller range between min and max values of a column will also lead to a smaller distinct count.
   //

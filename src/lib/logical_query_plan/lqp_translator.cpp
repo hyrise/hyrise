@@ -97,7 +97,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     value = predicate_node->get_output_column_id(boost::get<const LQPColumnReference>(value));
   }
 
-  if (predicate_node->scan_type() == ScanType::IndexScan) return _translate_predicate_node_to_index_scan(predicate_node, value, column_id, input_operator);
+  if (predicate_node->scan_type() == ScanType::IndexScan)
+    return _translate_predicate_node_to_index_scan(predicate_node, value, column_id, input_operator);
 
   /**
    * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
@@ -116,8 +117,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   return std::make_shared<TableScan>(input_operator, column_id, predicate_node->predicate_condition(), value);
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(const std::shared_ptr<PredicateNode>& predicate_node, const AllParameterVariant& value, const ColumnID column_id, const std::shared_ptr<AbstractOperator> input_operator) const {
-  DebugAssert(is_variant(value), "We do not support IndexScan on two-column predicates. Fail! The optimizer should have dealt with the problem.");
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
+    const std::shared_ptr<PredicateNode>& predicate_node, const AllParameterVariant& value, const ColumnID column_id,
+    const std::shared_ptr<AbstractOperator> input_operator) const {
+  DebugAssert(
+      is_variant(value),
+      "We do not support IndexScan on two-column predicates. Fail! The optimizer should have dealt with the problem.");
 
   const auto value_variant = boost::get<AllTypeVariant>(value);
   const std::vector<ColumnID> column_ids = {column_id};
