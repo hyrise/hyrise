@@ -48,7 +48,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const AllTypeVariant& value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   /**
@@ -58,18 +58,19 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const ValuePlaceholder& value,
+      const PredicateCondition predicate_condition, const ValuePlaceholder& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   /**
    * Estimate selectivity for predicate on columns.
    * In comparison to predicates with constants, value is another column.
    * For predicate "col_left < col_right", selectivity is calculated in column statistics of col_left with parameters
-   * scan_type = "<" and right_base_column_statistics = col_right statistics.
+   * predicate_condition = "<" and right_base_column_statistics = col_right statistics.
    * @return Selectivity and two new column statistics.
    */
   virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const PredicateCondition predicate_condition,
+      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   /**

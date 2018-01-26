@@ -32,7 +32,7 @@ const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::colum
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
-                                                                       const ScanType scan_type,
+                                                                       const PredicateCondition predicate_condition,
                                                                        const AllParameterVariant& value,
                                                                        const std::optional<AllTypeVariant>& value2) {
   auto _row_count = row_count();
@@ -40,11 +40,11 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     return shared_from_this();
   }
 
-  if (scan_type == ScanType::Like || scan_type == ScanType::NotLike) {
+  if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
     auto selectivity = DEFAULT_LIKE_SELECTIVITY;
-    if (scan_type == ScanType::NotLike) selectivity = 1.0 - selectivity;
+    if (predicate_condition == PredicateCondition::NotLike) selectivity = 1.0 - selectivity;
     clone->_row_count = _row_count * selectivity;
     return clone;
   }
@@ -60,8 +60,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     const ColumnID value_column_id = boost::get<ColumnID>(value);
     auto old_right_column_stats = _get_or_generate_column_statistics(value_column_id);
 
-    auto two_column_statistics_container =
-        old_column_statistics->estimate_selectivity_for_two_column_predicate(scan_type, old_right_column_stats, value2);
+    auto two_column_statistics_container = old_column_statistics->estimate_selectivity_for_two_column_predicate(
+        predicate_condition, old_right_column_stats, value2);
 
     clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
     column_statistics_container = two_column_statistics_container;
@@ -70,7 +70,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     auto casted_value = get<AllTypeVariant>(value);
 
     column_statistics_container =
-        old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);
+        old_column_statistics->estimate_selectivity_for_predicate(predicate_condition, casted_value, value2);
 
   } else {
     DebugAssert(value.type() == typeid(ValuePlaceholder),
@@ -78,7 +78,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     auto casted_value = boost::get<ValuePlaceholder>(value);
 
     column_statistics_container =
-        old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);
+        old_column_statistics->estimate_selectivity_for_predicate(predicate_condition, casted_value, value2);
   }
 
   clone->_column_statistics[column_id] = column_statistics_container.column_statistics;
@@ -115,7 +115,7 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics
 
 std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_statistics(
     const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
-    const ScanType scan_type) {
+    const PredicateCondition predicate_condition) {
   DebugAssert(mode != JoinMode::Cross, "Use function generate_cross_join_statistics for cross joins.");
   DebugAssert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
@@ -190,7 +190,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
   auto& left_col_stats = _column_statistics[column_ids.first];
   auto& right_col_stats = right_table_stats->_column_statistics[column_ids.second];
 
-  auto stats_container = left_col_stats->estimate_selectivity_for_two_column_predicate(scan_type, right_col_stats);
+  auto stats_container =
+      left_col_stats->estimate_selectivity_for_two_column_predicate(predicate_condition, right_col_stats);
 
   // apply predicate selectivity to cross join
   join_table_stats->_row_count *= stats_container.selectivity;

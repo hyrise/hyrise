@@ -132,9 +132,7 @@ void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<Abstrac
     current_child->_add_parent_pointer(shared_from_this());
   }
 
-  for (auto& parent : parents()) {
-    parent->_child_changed();
-  }
+  _child_changed();
 }
 
 LQPNodeType AbstractLQPNode::type() const { return _type; }

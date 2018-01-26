@@ -375,10 +375,13 @@ const char* const tpch_query_8 =
  *  3. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
  */
+// TODO(anyone): change order of:
+// FROM supplier, lineitem, partsupp, orders, nation, "part"   back to original
+// FROM "part", supplier, lineitem, partsupp, orders, nation   as soon as join ordering is fixed
 const char* const tpch_query_9 =
     R"(SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, o_orderdate as o_year,
       l_extendedprice * (1.0 - l_discount) - ps_supplycost * l_quantity as amount
-      FROM "part", supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey
+      FROM supplier, lineitem, partsupp, orders, nation, "part" WHERE s_suppkey = l_suppkey
       AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey
       AND s_nationkey = n_nationkey AND p_name like '%green%') as profit
       GROUP BY nation, o_year ORDER BY nation, o_year DESC;)";
