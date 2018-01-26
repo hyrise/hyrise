@@ -91,7 +91,8 @@ void IndexEvaluator::_estimate_cost() {
 /**
  * This iterates over all tables, gets the first chunk each and checks whether
  * there are indices for each column.
- * This means that this method only checks for single-column indices.
+ * This means that this method only checks for single-column indices (but will also
+ * find multi-column indices suitable for that single column).
  * It is assumed that an index for a column is present either in all chunks or none.
  */
 void IndexEvaluator::_find_existing_indices()
@@ -118,10 +119,11 @@ std::vector<IndexEvaluation> IndexEvaluator::_calculate_desirability() {
   //    unless we find more desirability components than only saved work
   std::vector<IndexEvaluation> evaluations;
   for (auto& index_data : _indices) {
-    evaluations.emplace_back(index_data.first.first, index_data.first.second);
-    evaluations.back().desirablility = index_data.second.saved_work;
-    evaluations.back().memory_cost = index_data.second.memory_cost;
-    evaluations.back().exists = index_data.second.exists;
+    auto evaluation = IndexEvaluation{index_data.first.first, index_data.first.second};
+    evaluation.desirablility = index_data.second.saved_work;
+    evaluation.memory_cost = index_data.second.memory_cost;
+    evaluation.exists = index_data.second.exists;
+    evaluations.emplace_back(evaluation);
   }
   return evaluations;
 }
