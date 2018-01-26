@@ -22,11 +22,11 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-                   const ScanType scan_type)
+                   const PredicateCondition predicate_condition)
     : AbstractLQPNode(LQPNodeType::Join),
       _join_mode(join_mode),
       _join_column_references(join_column_references),
-      _scan_type(scan_type) {
+      _predicate_condition(predicate_condition) {
   DebugAssert(join_mode != JoinMode::Cross && join_mode != JoinMode::Natural,
               "Specified JoinMode must specify neither column ids nor scan type.");
 }
@@ -43,7 +43,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
         adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
         adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
     };
-    return std::make_shared<JoinNode>(_join_mode, join_column_references, *_scan_type);
+    return std::make_shared<JoinNode>(_join_mode, join_column_references, *_predicate_condition);
   }
 }
 
@@ -54,9 +54,9 @@ std::string JoinNode::description() const {
 
   desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
 
-  if (_join_column_references && _scan_type) {
+  if (_join_column_references && _predicate_condition) {
     desc << " " << _join_column_references->first.description();
-    desc << " " << scan_type_to_string.left.at(*_scan_type);
+    desc << " " << predicate_condition_to_string.left.at(*_predicate_condition);
     desc << " " << _join_column_references->second.description();
   }
 
@@ -86,13 +86,13 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   } else {
     Assert(_join_column_references,
            "Only cross joins and joins with join column ids supported for generating join statistics");
-    Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
+    Assert(_predicate_condition, "Only cross joins and joins with scan type supported for generating join statistics");
 
     ColumnIDPair join_colum_ids{left_child->get_output_column_id(_join_column_references->first),
                                 right_child->get_output_column_id(_join_column_references->second)};
 
     return left_child->get_statistics()->generate_predicated_join_statistics(right_child->get_statistics(), _join_mode,
-                                                                             join_colum_ids, *_scan_type);
+                                                                             join_colum_ids, *_predicate_condition);
   }
 }
 
@@ -100,7 +100,7 @@ const std::optional<LQPColumnReferencePair>& JoinNode::join_column_references() 
   return _join_column_references;
 }
 
-const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
+const std::optional<PredicateCondition>& JoinNode::predicate_condition() const { return _predicate_condition; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 

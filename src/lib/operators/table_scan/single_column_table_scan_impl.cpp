@@ -15,9 +15,10 @@
 namespace opossum {
 
 SingleColumnTableScanImpl::SingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
-                                                     const ColumnID left_column_id, const ScanType& scan_type,
+                                                     const ColumnID left_column_id,
+                                                     const PredicateCondition& predicate_condition,
                                                      const AllTypeVariant& right_value)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type}, _right_value{right_value} {}
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition}, _right_value{right_value} {}
 
 PosList SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   // early outs for specific NULL semantics
@@ -53,7 +54,7 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-        with_comparator(_scan_type, [&](auto comparator) {
+        with_comparator(_predicate_condition, [&](auto comparator) {
           _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
@@ -120,7 +121,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
-      this->_with_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
+      this->_with_operator_for_dict_column_scan(_predicate_condition, [&](auto comparator) {
         this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
       });
     });
@@ -128,15 +129,15 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
 }
 
 ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) {
-  switch (_scan_type) {
-    case ScanType::Equals:
-    case ScanType::NotEquals:
-    case ScanType::LessThan:
-    case ScanType::GreaterThanEquals:
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::GreaterThanEquals:
       return column.lower_bound(_right_value);
 
-    case ScanType::LessThanEquals:
-    case ScanType::GreaterThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
       return column.upper_bound(_right_value);
 
     default:
@@ -146,19 +147,19 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
 
 bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn& column,
                                                          const ValueID search_value_id) {
-  switch (_scan_type) {
-    case ScanType::Equals:
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals:
       return search_value_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
-    case ScanType::NotEquals:
+    case PredicateCondition::NotEquals:
       return search_value_id == column.upper_bound(_right_value);
 
-    case ScanType::LessThan:
-    case ScanType::LessThanEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
       return search_value_id == INVALID_VALUE_ID;
 
-    case ScanType::GreaterThanEquals:
-    case ScanType::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+    case PredicateCondition::GreaterThan:
       return search_value_id == ValueID{0u};
 
     default:
@@ -168,19 +169,19 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
 
 bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn& column,
                                                           const ValueID search_value_id) {
-  switch (_scan_type) {
-    case ScanType::Equals:
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals:
       return search_value_id == column.upper_bound(_right_value);
 
-    case ScanType::NotEquals:
+    case PredicateCondition::NotEquals:
       return search_value_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
-    case ScanType::LessThan:
-    case ScanType::LessThanEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
       return search_value_id == ValueID{0u};
 
-    case ScanType::GreaterThan:
-    case ScanType::GreaterThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
       return search_value_id == INVALID_VALUE_ID;
 
     default:

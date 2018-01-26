@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-extern const boost::bimap<ScanType, std::string> scan_type_to_string;
+extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
 extern const std::unordered_map<ExpressionType, std::string> expression_type_to_string;
 extern const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string;
 extern const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_expression_type;
