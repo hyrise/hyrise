@@ -93,7 +93,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
 
       left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
         right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-          with_comparator(_scan_type, [&](auto comparator) {
+          with_comparator(_predicate_condition, [&](auto comparator) {
             _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
           });
         });
@@ -165,7 +165,8 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
   });
 }
 
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) const {
+template <typename BaseDictionaryColumnType>
+ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumnType& column) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
@@ -184,7 +185,7 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
 
 template <typename BaseDictionaryColumnType>
 bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumnType& column,
-                                                         const ValueID search_value_id) {
+                                                         const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
       return search_value_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
@@ -207,7 +208,7 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
 
 template <typename BaseDictionaryColumnType>
 bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumnType& column,
-                                                          const ValueID search_value_id) {
+                                                          const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
       return search_value_id == column.upper_bound(_right_value);
