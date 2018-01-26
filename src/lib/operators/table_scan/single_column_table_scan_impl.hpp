@@ -27,7 +27,7 @@ class BaseDictionaryColumn;
 class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
   SingleColumnTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                            const ScanType& scan_type, const AllTypeVariant& right_value);
+                            const PredicateCondition& predicate_condition, const AllTypeVariant& right_value);
 
   PosList scan_chunk(ChunkID) override;
 
@@ -66,23 +66,23 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   bool _right_value_matches_none(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
 
   template <typename Functor>
-  void _with_operator_for_dict_column_scan(const ScanType scan_type, const Functor& func) const {
-    switch (scan_type) {
-      case ScanType::Equals:
+  void _with_operator_for_dict_column_scan(const PredicateCondition predicate_condition, const Functor& func) const {
+    switch (predicate_condition) {
+      case PredicateCondition::Equals:
         func(std::equal_to<void>{});
         return;
 
-      case ScanType::NotEquals:
+      case PredicateCondition::NotEquals:
         func(std::not_equal_to<void>{});
         return;
 
-      case ScanType::LessThan:
-      case ScanType::LessThanEquals:
+      case PredicateCondition::LessThan:
+      case PredicateCondition::LessThanEquals:
         func(std::less<void>{});
         return;
 
-      case ScanType::GreaterThan:
-      case ScanType::GreaterThanEquals:
+      case PredicateCondition::GreaterThan:
+      case PredicateCondition::GreaterThanEquals:
         func(std::greater_equal<void>{});
         return;
 

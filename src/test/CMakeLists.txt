@@ -137,6 +137,7 @@ set(
     LIBRARIES
     gtest
     sqlite3
+    ${FILESYSTEM_LIBRARY}
 )
 
 # Build special sanitizer version of googletest

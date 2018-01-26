@@ -172,12 +172,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   void scan_for_null_values(const std::shared_ptr<AbstractOperator> in,
-                            const std::map<ScanType, std::vector<AllTypeVariant>>& tests) {
+                            const std::map<PredicateCondition, std::vector<AllTypeVariant>>& tests) {
     for (const auto& test : tests) {
-      const auto scan_type = test.first;
+      const auto predicate_condition = test.first;
       const auto& expected = test.second;
 
-      auto scan = std::make_shared<opossum::TableScan>(in, ColumnID{1} /* "b" */, scan_type, NULL_VALUE);
+      auto scan = std::make_shared<opossum::TableScan>(in, ColumnID{1} /* "b" */, predicate_condition, NULL_VALUE);
       scan->execute();
 
       const auto expected_result = std::vector<AllTypeVariant>{{12, 123}};
@@ -225,17 +225,17 @@ INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsTableScanTest,
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
 
-  auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, ScanType::GreaterThanEquals, 1234);
+  auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
 
-  auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, ScanType::LessThan, 457.9);
+  auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, PredicateCondition::LessThan, 457.9);
   scan_2->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, EmptyResultScan) {
-  auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, ScanType::GreaterThan, 90000);
+TEST_F(OperatorsTableScanTest, EmptyResultScan) {
+  auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 90000);
   scan_1->execute();
 
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
@@ -245,7 +245,7 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
 TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, ScanType::GreaterThanEquals, 1234);
+  auto scan = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -254,21 +254,21 @@ TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
 TEST_P(OperatorsTableScanTest, ScanOnDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = {104};
-  tests[ScanType::NotEquals] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::LessThan] = {100, 102};
-  tests[ScanType::LessThanEquals] = {100, 102, 104};
-  tests[ScanType::GreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::GreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::Between] = {};  // Will throw
-  tests[ScanType::IsNull] = {};
-  tests[ScanType::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = {104};
+  tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::LessThan] = {100, 102};
+  tests[PredicateCondition::LessThanEquals] = {100, 102, 104};
+  tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::GreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::Between] = {};  // Will throw
+  tests[PredicateCondition::IsNull] = {};
+  tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 4);
 
-    if (test.first == ScanType::Between) {
+    if (test.first == PredicateCondition::Between) {
       EXPECT_THROW(scan->execute(), std::logic_error);
       continue;
     }
@@ -282,24 +282,24 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumn) {
 TEST_P(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = {104};
-  tests[ScanType::NotEquals] = {100, 102, 106};
-  tests[ScanType::LessThan] = {100, 102};
-  tests[ScanType::LessThanEquals] = {100, 102, 104};
-  tests[ScanType::GreaterThan] = {106};
-  tests[ScanType::GreaterThanEquals] = {104, 106};
-  tests[ScanType::Between] = {};  // Will throw
-  tests[ScanType::IsNull] = {};
-  tests[ScanType::IsNotNull] = {100, 102, 104, 106};
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = {104};
+  tests[PredicateCondition::NotEquals] = {100, 102, 106};
+  tests[PredicateCondition::LessThan] = {100, 102};
+  tests[PredicateCondition::LessThanEquals] = {100, 102, 104};
+  tests[PredicateCondition::GreaterThan] = {106};
+  tests[PredicateCondition::GreaterThanEquals] = {104, 106};
+  tests[PredicateCondition::Between] = {};  // Will throw
+  tests[PredicateCondition::IsNull] = {};
+  tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106};
 
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{1}, ScanType::LessThan, 108);
+    auto scan1 = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{1}, PredicateCondition::LessThan, 108);
     scan1->execute();
 
     auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4);
 
-    if (test.first == ScanType::Between) {
+    if (test.first == PredicateCondition::Between) {
       EXPECT_THROW(scan2->execute(), std::logic_error);
       continue;
     }
@@ -314,7 +314,7 @@ TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered.tbl", 2);
 
   auto table_wrapper = get_table_op_part_dict();
-  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::LessThan, 10);
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 10);
   scan_1->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_1->get_output(), expected_result);
@@ -324,7 +324,7 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
 
   auto table_wrapper = get_table_op_filtered();
-  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::LessThan, 10);
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 10);
   scan_1->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_1->get_output(), expected_result);
@@ -334,13 +334,13 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValu
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = no_rows;
-  tests[ScanType::NotEquals] = all_rows;
-  tests[ScanType::LessThan] = all_rows;
-  tests[ScanType::LessThanEquals] = all_rows;
-  tests[ScanType::GreaterThan] = no_rows;
-  tests[ScanType::GreaterThanEquals] = no_rows;
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = no_rows;
+  tests[PredicateCondition::NotEquals] = all_rows;
+  tests[PredicateCondition::LessThan] = all_rows;
+  tests[PredicateCondition::LessThanEquals] = all_rows;
+  tests[PredicateCondition::GreaterThan] = no_rows;
+  tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 30);
@@ -354,13 +354,13 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) 
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = no_rows;
-  tests[ScanType::NotEquals] = all_rows;
-  tests[ScanType::LessThan] = no_rows;
-  tests[ScanType::LessThanEquals] = no_rows;
-  tests[ScanType::GreaterThan] = all_rows;
-  tests[ScanType::GreaterThanEquals] = all_rows;
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = no_rows;
+  tests[PredicateCondition::NotEquals] = all_rows;
+  tests[PredicateCondition::LessThan] = no_rows;
+  tests[PredicateCondition::LessThanEquals] = no_rows;
+  tests[PredicateCondition::GreaterThan] = all_rows;
+  tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0} /* "a" */, test.first, -10);
@@ -376,8 +376,8 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan =
-      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::GreaterThan, ColumnID{1} /* "b" */);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, PredicateCondition::GreaterThan,
+                                          ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -390,8 +390,8 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  auto scan =
-      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::GreaterThan, ColumnID{1} /* "b" */);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, PredicateCondition::GreaterThan,
+                                          ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -405,8 +405,8 @@ TEST_P(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues)
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan =
-      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::GreaterThan, ColumnID{1} /* "b" */);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, PredicateCondition::GreaterThan,
+                                          ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -420,8 +420,8 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithN
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  auto scan =
-      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::GreaterThan, ColumnID{1} /* "b" */);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, PredicateCondition::GreaterThan,
+                                          ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -431,15 +431,15 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithN
 TEST_P(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   // scanning for a value that is around the dictionary's bounds
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = {100};
-  tests[ScanType::LessThan] = {};
-  tests[ScanType::LessThanEquals] = {100};
-  tests[ScanType::GreaterThan] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::GreaterThanEquals] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::NotEquals] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::IsNull] = {};
-  tests[ScanType::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = {100};
+  tests[PredicateCondition::LessThan] = {};
+  tests[PredicateCondition::LessThanEquals] = {100};
+  tests[PredicateCondition::GreaterThan] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::GreaterThanEquals] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::NotEquals] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::IsNull] = {};
+  tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 0);
@@ -449,13 +449,14 @@ TEST_P(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
-  auto scan_1 = std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, ScanType::GreaterThan, 12345);
+TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
+  auto scan_1 =
+      std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 12345);
   scan_1->execute();
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(0));
 
   // scan_1 produced an empty result
-  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, ColumnID{1}, ScanType::Equals, 456.7);
+  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, ColumnID{1}, PredicateCondition::Equals, 456.7);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
@@ -464,21 +465,24 @@ TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
 TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
   // 2**8 + 1 values require a data type of 16bit.
   const auto table_wrapper_dict_16 = get_table_op_with_n_dict_entries((1 << 8) + 1);
-  auto scan_1 = std::make_shared<opossum::TableScan>(table_wrapper_dict_16, ColumnID{0}, ScanType::GreaterThan, 200);
+  auto scan_1 =
+      std::make_shared<opossum::TableScan>(table_wrapper_dict_16, ColumnID{0}, PredicateCondition::GreaterThan, 200);
   scan_1->execute();
 
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(57));
 
   // 2**16 + 1 values require a data type of 32bit.
   const auto table_wrapper_dict_32 = get_table_op_with_n_dict_entries((1 << 16) + 1);
-  auto scan_2 = std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::GreaterThan, 65500);
+  auto scan_2 =
+      std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, PredicateCondition::GreaterThan, 65500);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
 }
 
-TEST_P(OperatorsTableScanTest, OperatorName) {
-  auto scan_1 = std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, ScanType::GreaterThanEquals, 1234);
+TEST_F(OperatorsTableScanTest, OperatorName) {
+  auto scan_1 =
+      std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
 
   EXPECT_EQ(scan_1->name(), "TableScan");
 }
@@ -487,8 +491,9 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4));
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::IsNull, {12, 123}}, {ScanType::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {12, 123}},
+      {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -500,8 +505,9 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::IsNull, {12, 123}}, {ScanType::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {12, 123}},
+      {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -512,8 +518,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::IsNull, {}},
-                                                                     {ScanType::IsNotNull, {12345, 123, 1234}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {}}, {PredicateCondition::IsNotNull, {12345, 123, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -524,8 +530,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNu
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::IsNull, {}},
-                                                                     {ScanType::IsNotNull, {12345, 123, 1234}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {}}, {PredicateCondition::IsNotNull, {12345, 123, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -536,8 +542,9 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::IsNull, {12, 123}}, {ScanType::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {12, 123}},
+      {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -549,8 +556,9 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-      {ScanType::IsNull, {12, 123}}, {ScanType::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {12, 123}},
+      {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -561,8 +569,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::IsNull, {123, 1234}},
-                                                                     {ScanType::IsNotNull, {12345, NULL_VALUE}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {123, 1234}}, {PredicateCondition::IsNotNull, {12345, NULL_VALUE}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -573,19 +581,19 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::IsNull, {123, 1234}},
-                                                                     {ScanType::IsNotNull, {12345, NULL_VALUE}}};
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+      {PredicateCondition::IsNull, {123, 1234}}, {PredicateCondition::IsNotNull, {12345, NULL_VALUE}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, NullSemantics) {
-  const auto scan_types =
-      std::vector<ScanType>({ScanType::Equals, ScanType::NotEquals, ScanType::LessThan, ScanType::LessThanEquals,
-                             ScanType::GreaterThan, ScanType::GreaterThanEquals});
+TEST_F(OperatorsTableScanTest, NullSemantics) {
+  const auto predicate_conditions = std::vector<PredicateCondition>(
+      {PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::LessThan,
+       PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals});
 
-  for (auto scan_type : scan_types) {
-    auto scan = std::make_shared<TableScan>(get_table_op_null(), ColumnID{0}, scan_type, NULL_VALUE);
+  for (auto predicate_condition : predicate_conditions) {
+    auto scan = std::make_shared<TableScan>(get_table_op_null(), ColumnID{0}, predicate_condition, NULL_VALUE);
     scan->execute();
 
     EXPECT_EQ(scan->get_output()->row_count(), 0u);
@@ -599,8 +607,8 @@ TEST_P(OperatorsTableScanTest, NullSemantics) {
 TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   const auto expected = std::vector<AllTypeVariant>{110, 112, 114, 116, 118, 120, 122, 124};
 
-  auto scan =
-      std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0}, ScanType::GreaterThanEquals, 0);
+  auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0},
+                                                   PredicateCondition::GreaterThanEquals, 0);
   scan->set_excluded_chunk_ids({ChunkID{0u}});
   scan->execute();
 

@@ -16,8 +16,8 @@
 namespace opossum {
 
 IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                         const ScanType& scan_type)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type, false} {}
+                                         const PredicateCondition& predicate_condition)
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition, false} {}
 
 void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                         std::shared_ptr<ColumnVisitableContext> base_context) {
@@ -85,11 +85,11 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 }
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
-  switch (_scan_type) {
-    case ScanType::IsNull:
+  switch (_predicate_condition) {
+    case PredicateCondition::IsNull:
       return false;
 
-    case ScanType::IsNotNull:
+    case PredicateCondition::IsNotNull:
       return !column.is_nullable();
 
     default:
@@ -98,11 +98,11 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
 }
 
 bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
-  switch (_scan_type) {
-    case ScanType::IsNull:
+  switch (_predicate_condition) {
+    case PredicateCondition::IsNull:
       return !column.is_nullable();
 
-    case ScanType::IsNotNull:
+    case PredicateCondition::IsNotNull:
       return false;
 
     default:

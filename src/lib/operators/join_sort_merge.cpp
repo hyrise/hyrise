@@ -36,22 +36,23 @@ namespace opossum {
 **/
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
                              const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                             const ColumnIDPair& column_ids, const ScanType op)
+                             const ColumnIDPair& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(left, right, mode, column_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == ScanType::Equals || op == ScanType::LessThan || op == ScanType::GreaterThan ||
-                  op == ScanType::LessThanEquals || op == ScanType::GreaterThanEquals || op == ScanType::NotEquals,
+  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
+                  op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
+                  op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
               "Unsupported scan type");
-  DebugAssert(op != ScanType::NotEquals || mode == JoinMode::Inner,
+  DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
               "Outer joins are not implemented for not-equals joins.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinSortMerge>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                         _scan_type);
+                                         _predicate_condition);
 }
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
@@ -62,7 +63,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _column_ids.first, _column_ids.second, _scan_type, _mode);
+      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -78,7 +79,7 @@ template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
-                       const ScanType op, JoinMode mode)
+                       const PredicateCondition op, JoinMode mode)
       : _sort_merge_join{sort_merge_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
@@ -103,7 +104,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
 
-  const ScanType _op;
+  const PredicateCondition _op;
   const JoinMode _mode;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
@@ -189,7 +190,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
     size_t cluster_number = left_run.start.cluster;
     switch (_op) {
-      case ScanType::Equals:
+      case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run);
         } else if (compare_result == CompareResult::Less) {
@@ -202,7 +203,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           }
         }
         break;
-      case ScanType::NotEquals:
+      case PredicateCondition::NotEquals:
         if (compare_result == CompareResult::Greater) {
           _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         } else if (compare_result == CompareResult::Equal) {
@@ -212,32 +213,32 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
-      case ScanType::GreaterThan:
+      case PredicateCondition::GreaterThan:
         if (compare_result == CompareResult::Greater) {
           _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         } else if (compare_result == CompareResult::Equal) {
           _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
         }
         break;
-      case ScanType::GreaterThanEquals:
+      case PredicateCondition::GreaterThanEquals:
         if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
           _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         }
         break;
-      case ScanType::LessThan:
+      case PredicateCondition::LessThan:
         if (compare_result == CompareResult::Less) {
           _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         } else if (compare_result == CompareResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         }
         break;
-      case ScanType::LessThanEquals:
+      case PredicateCondition::LessThanEquals:
         if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
       default:
-        throw std::logic_error("Unknown ScanType");
+        throw std::logic_error("Unknown PredicateCondition");
     }
   }
 
@@ -368,8 +369,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the smallest value in a sorted materialized table.
   **/
   T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-    DebugAssert(_op != ScanType::Equals, "Complete table order is required for _table_min_value which is only " +
-                                             "available in the non-equi case");
+    DebugAssert(
+        _op != PredicateCondition::Equals,
+        "Complete table order is required for _table_min_value which is only " + "available in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
     for (auto partition : *sorted_table) {
@@ -385,7 +387,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the largest value in a sorted materialized table.
   **/
   T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-    DebugAssert(_op != ScanType::Equals,
+    DebugAssert(_op != PredicateCondition::Equals,
                 "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
@@ -450,28 +452,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto& left_max_value = _table_max_value(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-    if (_op == ScanType::LessThan) {
+    if (_op == PredicateCondition::LessThan) {
       // Look for the first right value that is bigger than the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
       if (result.has_value()) {
         _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
       }
-    } else if (_op == ScanType::LessThanEquals) {
+    } else if (_op == PredicateCondition::LessThanEquals) {
       // Look for the first right value that is bigger or equal to the smallest left value.
       auto result =
           _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
       if (result.has_value()) {
         _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
       }
-    } else if (_op == ScanType::GreaterThan) {
+    } else if (_op == PredicateCondition::GreaterThan) {
       // Look for the first right value that is smaller than the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value < left_max_value; });
       if (result.has_value()) {
         _emit_left_null_combinations(0, (*result).to(end_of_right_table));
       }
-    } else if (_op == ScanType::GreaterThanEquals) {
+    } else if (_op == PredicateCondition::GreaterThanEquals) {
       // Look for the first right value that is smaller or equal to the biggest left value.
       auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
                                                         [&](const T& value) { return value <= left_max_value; });
@@ -491,28 +493,28 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto& right_max_value = _table_max_value(_sorted_right_table);
     auto end_of_left_table = _end_of_table(_sorted_left_table);
 
-    if (_op == ScanType::LessThan) {
+    if (_op == PredicateCondition::LessThan) {
       // Look for the last left value that is smaller than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value < right_max_value; });
       if (result.has_value()) {
         _emit_right_null_combinations(0, (*result).to(end_of_left_table));
       }
-    } else if (_op == ScanType::LessThanEquals) {
+    } else if (_op == PredicateCondition::LessThanEquals) {
       // Look for the last left value that is smaller or equal than the biggest right value.
       auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
                                                         [&](const T& value) { return value <= right_max_value; });
       if (result.has_value()) {
         _emit_right_null_combinations(0, (*result).to(end_of_left_table));
       }
-    } else if (_op == ScanType::GreaterThan) {
+    } else if (_op == PredicateCondition::GreaterThan) {
       // Look for the first left value that is bigger than the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
       if (result.has_value()) {
         _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
       }
-    } else if (_op == ScanType::GreaterThanEquals) {
+    } else if (_op == PredicateCondition::GreaterThanEquals) {
       // Look for the first left value that is bigger or equal to the smallest right value.
       auto result =
           _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
@@ -538,10 +540,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::Equals) {
+    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
       _left_outer_non_equi_join();
     }
-    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::Equals) {
+    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != PredicateCondition::Equals) {
       _right_outer_non_equi_join();
     }
   }
@@ -632,7 +634,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(), _sort_merge_join._column_ids,
-        _op == ScanType::Equals, include_null_left, include_null_right, _cluster_count);
+        _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);

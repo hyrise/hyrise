@@ -47,7 +47,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
 // @}
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type,
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
                             const LQPColumnReference& left_column_reference,
                             const LQPColumnReference& right_column_reference);
 
