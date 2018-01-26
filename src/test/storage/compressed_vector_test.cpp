@@ -72,8 +72,9 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, CompressedVectorTest, ::testing::Values(VectorCompressionType::SimdBp128,
-                                                                         VectorCompressionType::FixedSizeByteAligned),
+INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, CompressedVectorTest,
+                        ::testing::Values(VectorCompressionType::SimdBp128,
+                                          VectorCompressionType::FixedSizeByteAligned),
                         formatter);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {

@@ -25,7 +25,8 @@ std::unique_ptr<BaseVectorCompressor> create_encoder_by_type(VectorCompressionTy
   Assert(type != VectorCompressionType::Invalid, "VectorCompressionType must be valid.");
 
   auto it = vector_compressor_for_type.find(type);
-  Assert(it != vector_compressor_for_type.cend(), "All vector compression types must be in vector_compressor_for_type.");
+  Assert(it != vector_compressor_for_type.cend(),
+         "All vector compression types must be in vector_compressor_for_type.");
 
   const auto& encoder = it->second;
   return encoder->create_new();
@@ -34,8 +35,8 @@ std::unique_ptr<BaseVectorCompressor> create_encoder_by_type(VectorCompressionTy
 }  // namespace
 
 std::unique_ptr<BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector, VectorCompressionType type,
-                                                        const PolymorphicAllocator<size_t>& alloc,
-                                                        const UncompressedVectorInfo& meta_info) {
+                                                      const PolymorphicAllocator<size_t>& alloc,
+                                                      const UncompressedVectorInfo& meta_info) {
   auto encoder = create_encoder_by_type(type);
   return encoder->encode(vector, alloc, meta_info);
 }
