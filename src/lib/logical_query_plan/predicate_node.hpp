@@ -14,7 +14,7 @@ namespace opossum {
 
 class TableStatistics;
 
-enum class ScanType { TableScan, IndexScan };
+enum class ScanType : uint8_t { TableScan, IndexScan };
 
 /**
  * This node type represents a filter.

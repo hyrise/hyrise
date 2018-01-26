@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
+#include "storage/index/index_info.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -30,9 +31,9 @@ class IndexScanRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  protected:
-  bool _is_index_scan_applicable(const std::vector<ColumnID>& indexed_columns,
+  bool _is_index_scan_applicable(const IndexInfo& indx_info,
                                  const std::shared_ptr<PredicateNode>& predicate_node) const;
-  inline bool _is_single_column_index(const std::vector<ColumnID>& indexed_columns) const;
+  inline bool _is_single_column_index(const IndexInfo& indexed_columns) const;
 };
 
 }  // namespace opossum

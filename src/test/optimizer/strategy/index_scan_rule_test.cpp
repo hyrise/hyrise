@@ -15,6 +15,7 @@
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/dictionary_column.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
@@ -135,6 +136,24 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>(80'000);
+  table->set_table_statistics(statistics_mock);
+
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
+                                                          PredicateCondition::GreaterThan, 10);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+
+  auto table = StorageManager::get().get_table("a");
+  table->create_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
+
+  auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},

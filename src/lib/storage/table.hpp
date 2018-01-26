@@ -9,6 +9,7 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
+#include "storage/index/index_info.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -134,15 +135,17 @@ class Table : private Noncopyable {
    */
   TableType get_type() const;
 
-  std::vector<std::vector<ColumnID>> get_column_ids_of_indexes() const;
+  std::vector<IndexInfo> get_indexes() const;
 
   template <typename Index>
-  void create_index(const std::vector<ColumnID>& column_ids) {
+  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
+    ColumnIndexType index_type = get_index_type_of<Index>();
+
     for (auto& chunk : _chunks) {
       chunk->create_index<Index>(column_ids);
     }
-
-    _indexes.emplace_back(column_ids);
+    IndexInfo i = {column_ids, name, index_type};
+    _indexes.emplace_back(i);
   }
 
  protected:
@@ -159,6 +162,6 @@ class Table : private Noncopyable {
 
   std::unique_ptr<std::mutex> _append_mutex;
 
-  std::vector<std::vector<ColumnID>> _indexes;
+  std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum
