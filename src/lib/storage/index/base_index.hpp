@@ -106,6 +106,13 @@ class BaseIndex : private Noncopyable {
    */
   Iterator cend() const;
 
+  /**
+   * Returns the memory consumption of this Index in MiB
+   *
+   * If it can not be determined, numeric_limits<float>::quiet_NaN() should be returned.
+   */
+  float memory_consumption() const;
+
   ColumnIndexType type() const;
 
  protected:
@@ -118,6 +125,7 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
+  virtual float _memory_consumption() const = 0;
 
  private:
   const ColumnIndexType _type;

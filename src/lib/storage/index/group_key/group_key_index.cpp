@@ -62,6 +62,14 @@ GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const { return _index_postings.
 
 GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _index_postings.cend(); }
 
+float GroupKeyIndex::_memory_consumption() const
+{
+  float bytes = sizeof(_index_column);
+  bytes += sizeof(std::size_t) * _index_offsets.size();
+  bytes += sizeof(ChunkOffset) * _index_postings.size();
+  return bytes / 1024.0f / 1024.0f;
+}
+
 /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector

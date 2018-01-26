@@ -87,6 +87,11 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
+float CompositeGroupKeyIndex::_memory_consumption() const
+{
+  return std::numeric_limits<float>::quiet_NaN();
+}
+
 BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
   return _get_position_iterator_for_key(composite_key);

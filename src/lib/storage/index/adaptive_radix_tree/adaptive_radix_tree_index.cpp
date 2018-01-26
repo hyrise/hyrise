@@ -57,6 +57,11 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
+float AdaptiveRadixTreeIndex::_memory_consumption() const
+{
+  return std::numeric_limits<float>::quiet_NaN();
+}
+
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   DebugAssert(!(values.empty()), "Index on empty column is not defined");
