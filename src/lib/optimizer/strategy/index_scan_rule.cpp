@@ -36,9 +36,9 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
       const auto table = StorageManager::get().get_table(stored_table_node->table_name());
 
-      const auto columns_of_indexes = table->get_columns_of_indexes();
-      for (const auto& indexed_columns : columns_of_indexes) {
-        if (_is_index_scan_applicable(indexed_columns, predicate_node)) {
+      const auto column_ids_of_indexes = table->get_column_ids_of_indexes();
+      for (const auto& indexed_column_ids : column_ids_of_indexes) {
+        if (_is_index_scan_applicable(indexed_column_ids, predicate_node)) {
           predicate_node->set_scan_type(ScanType::IndexScan);
         }
       }
@@ -48,16 +48,15 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   return _apply_to_children(node);
 }
 
-bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& indexed_columns,
+bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& indexed_column_ids,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_is_single_column_index(indexed_columns)) return false;
+  if (!_is_single_column_index(indexed_column_ids)) return false;
 
   // Currently, we do not support two-column predicates
   if (is_column_id(predicate_node->value())) return false;
 
   const auto column_id = predicate_node->get_output_column_id(predicate_node->column_reference());
-  // ColumnID column_id = predicate_node->column_reference().original_column_id();
-  if (indexed_columns[0] != column_id) return false;
+  if (indexed_column_ids[0] != column_id) return false;
 
   const auto row_count_table = predicate_node->left_child()->derive_statistics_from(nullptr, nullptr)->row_count();
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
@@ -70,8 +69,8 @@ bool IndexScanRule::_is_index_scan_applicable(const std::vector<ColumnID>& index
   return true;
 }
 
-inline bool IndexScanRule::_is_single_column_index(const std::vector<ColumnID>& indexed_columns) const {
-  return indexed_columns.size() == 1;
+inline bool IndexScanRule::_is_single_column_index(const std::vector<ColumnID>& indexed_column_ids) const {
+  return indexed_column_ids.size() == 1;
 }
 
 }  // namespace opossum

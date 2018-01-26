@@ -158,7 +158,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
     return std::make_shared<UnionPositions>(index_scan, table_scan);
   } else {
-    // Todo(JK): test
     Fail("IndexScan must follow a StoredTableNode. Fail! The optimizer should have dealt with the problem.");
   }
 }

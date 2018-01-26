@@ -203,6 +203,6 @@ TableType Table::get_type() const {
   }
 }
 
-std::vector<std::vector<ColumnID>> Table::get_columns_of_indexes() const { return _indexes; }
+std::vector<std::vector<ColumnID>> Table::get_column_ids_of_indexes() const { return _indexes; }
 
 }  // namespace opossum

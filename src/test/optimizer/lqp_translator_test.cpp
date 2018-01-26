@@ -198,7 +198,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
 }
 
-TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNonApplicable) {
+TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   /**
    * Build LQP and translate to PQP
    */
