@@ -75,7 +75,7 @@ class OperatorsJoinIndexTest : public BaseTest {
   ColumnIndexType _index_type;
 };
 
-typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* add further indices */>
+typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex>
     DerivedIndices;
 TYPED_TEST_CASE(OperatorsJoinIndexTest, DerivedIndices);
 
