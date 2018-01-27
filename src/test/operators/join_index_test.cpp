@@ -15,6 +15,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
@@ -25,15 +26,15 @@ class OperatorsJoinIndexTest : public BaseTest {
     _index_type = get_index_type_of<DerivedIndex>();
 
     auto left_table = std::make_shared<Table>(5);
-    left_table->add_column("a", DataType::Int);
-    left_table->add_column("b", DataType::Int);
-    for (int i = 0; i <= 24; i += 2) left_table->append({i, 100 + i});
+    left_table->add_column("left.a", DataType::Int);
+    left_table->add_column("left.b", DataType::Int);
+    for (int i = 0; i <= 4; i += 1) left_table->append({i, 100 + i});
     DictionaryCompression::compress_table(*left_table);
 
     auto right_table = std::make_shared<Table>(5);
-    right_table->add_column("a", DataType::Int);
-    right_table->add_column("b", DataType::Int);
-    for (int i = 0; i <= 24; i += 2) right_table->append({i, 100 + i});
+    right_table->add_column("right.a", DataType::Int);
+    right_table->add_column("right.b", DataType::Int);
+    for (int i = 0; i <= 8; i += 2) right_table->append({i, 100 + i});
     DictionaryCompression::compress_table(*right_table);
 
     _chunk_ids = std::vector<ChunkID>(right_table->chunk_count());
@@ -77,19 +78,66 @@ class OperatorsJoinIndexTest : public BaseTest {
 
 typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex>
     DerivedIndices;
+
 TYPED_TEST_CASE(OperatorsJoinIndexTest, DerivedIndices);
 
-TYPED_TEST(OperatorsJoinIndexTest, SimpleJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, SimpleInnerJoin) {
   auto result_table = std::make_shared<Table>();
-  result_table->add_column("a", DataType::Int);
-  result_table->add_column("b", DataType::Int);
-  result_table->add_column("a", DataType::Int);
-  result_table->add_column("b", DataType::Int);
-  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
+  result_table->add_column("left.a", DataType::Int);
+  result_table->add_column("left.b", DataType::Int);
+  result_table->add_column("right.a", DataType::Int);
+  result_table->add_column("right.b", DataType::Int);
+  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
   DictionaryCompression::compress_table(*result_table);
 
   this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner,
+                         result_table, 1);
+}
+
+TYPED_TEST(OperatorsJoinIndexTest, SimpleLeftJoin) {
+  auto result_table = std::make_shared<Table>();
+  result_table->add_column("left.a", DataType::Int);
+  result_table->add_column("left.b", DataType::Int);
+  result_table->add_column("right.a", DataType::Int, true);
+  result_table->add_column("right.b", DataType::Int, true);
+  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 1; i <= 4; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
+  DictionaryCompression::compress_table(*result_table);
+
+  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
+                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Left,
+                         result_table, 1);
+}
+
+TYPED_TEST(OperatorsJoinIndexTest, SimpleRightJoin) {
+  auto result_table = std::make_shared<Table>();
+  result_table->add_column("left.a", DataType::Int, true);
+  result_table->add_column("left.b", DataType::Int, true);
+  result_table->add_column("right.a", DataType::Int);
+  result_table->add_column("right.b", DataType::Int);
+  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 6; i <= 8; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
+  DictionaryCompression::compress_table(*result_table);
+
+  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
+                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Right,
+                         result_table, 1);
+}
+
+TYPED_TEST(OperatorsJoinIndexTest, SimpleOuterJoin) {
+  auto result_table = std::make_shared<Table>();
+  result_table->add_column("left.a", DataType::Int, true);
+  result_table->add_column("left.b", DataType::Int, true);
+  result_table->add_column("right.a", DataType::Int, true);
+  result_table->add_column("right.b", DataType::Int, true);
+  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 6; i <= 8; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
+  for (int i = 1; i <= 4; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
+  DictionaryCompression::compress_table(*result_table);
+
+  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
+                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Outer,
                          result_table, 1);
 }
 
