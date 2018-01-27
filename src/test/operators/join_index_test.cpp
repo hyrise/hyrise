@@ -7,6 +7,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "all_type_variant.hpp"
 #include "operators/join_index.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
@@ -15,7 +16,6 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-#include "all_type_variant.hpp"
 
 namespace opossum {
 
@@ -76,8 +76,7 @@ class OperatorsJoinIndexTest : public BaseTest {
   ColumnIndexType _index_type;
 };
 
-typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex>
-    DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex> DerivedIndices;
 
 TYPED_TEST_CASE(OperatorsJoinIndexTest, DerivedIndices);
 

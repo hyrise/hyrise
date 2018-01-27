@@ -159,7 +159,8 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
 
           if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
             DebugAssert(chunk_id_right < _right_in_table->chunk_count(), "invalid chunk_id in join_index");
-            DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right).size(), "invalid chunk_offset in join_index");
+            DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right).size(),
+                        "invalid chunk_offset in join_index");
             _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
           }
         }
@@ -213,7 +214,6 @@ void JoinIndex::_perform_join() {
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
-
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
     // initialize the data structures for left matches
@@ -273,15 +273,11 @@ void JoinIndex::_perform_join() {
           // clang-format on
         });
       });
-
-
     }
   }
 
-
-
-    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-          for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
       // add unmatched rows on the left for Left and Full Outer joins
       for (ChunkOffset chunk_offset{0}; chunk_offset < _left_matches[chunk_id_left].size(); ++chunk_offset) {
         if (!_left_matches[chunk_id_left][chunk_offset]) {
@@ -310,7 +306,6 @@ void JoinIndex::_perform_join() {
 
   _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
   _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
-
 
   _output_table->emplace_chunk(std::move(output_chunk));
 }
