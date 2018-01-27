@@ -58,10 +58,12 @@ class JoinIndex : public AbstractJoinOperator {
   std::shared_ptr<PosList> _pos_list_right;
   bool _fallback;
 
-  // for Full Outer, remember the matches on the right side
+  // for outer joins
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets
   // This is fast since we iterate over the right chunks major, thus we should hit cache most of the time
   std::vector<std::vector<bool>> _right_matches;
+  // We won't hit cache quite so often here but at least we will get the left matches in order
+  std::vector<std::vector<bool>> _left_matches;
 };
 
 }  // namespace opossum

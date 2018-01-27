@@ -27,7 +27,9 @@ namespace opossum {
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                      const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type), _fallback{false} {}
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type), _fallback{false} {
+  DebugAssert(mode != JoinMode::Cross, "Cross Join ist not supported by index join.");
+}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
@@ -156,6 +158,8 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           }
 
           if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+            DebugAssert(chunk_id_right < _right_in_table->chunk_count(), "invalid chunk_id in join_index");
+            DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right).size(), "invalid chunk_offset in join_index");
             _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
           }
         }
@@ -199,6 +203,7 @@ void JoinIndex::_perform_join() {
   _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   _right_matches.resize(_right_in_table->chunk_count());
+  _left_matches.resize(_left_in_table->chunk_count());
 
   // these joins can not be handled using index join, we therefore fall back on a nested loop join
   // TODO(florian): make clear that cross_join is not supported
@@ -208,6 +213,12 @@ void JoinIndex::_perform_join() {
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
+
+
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+    // initialize the data structures for left matches
+    _left_matches[chunk_id_left].resize(_left_in_table->get_chunk(chunk_id_left).size());
+  }
 
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
@@ -227,7 +238,7 @@ void JoinIndex::_perform_join() {
       auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left).get_column(_left_column_id);
 
       // for Outer joins, remember matches on the left side
-      std::vector<bool> left_matches;
+      auto& left_matches = _left_matches[chunk_id_left];
 
       if (_is_outer_join) {
         left_matches.resize(chunk_column_left->size());
@@ -263,7 +274,7 @@ void JoinIndex::_perform_join() {
         });
       });
 
-      if (_is_outer_join) {
+      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
         // add unmatched rows on the left for Left and Full Outer joins
         for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
           if (!left_matches[chunk_offset]) {
@@ -291,13 +302,9 @@ void JoinIndex::_perform_join() {
   // write output chunks
   auto output_chunk = Chunk();
 
-  if (_mode == JoinMode::Right) {
-    _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
-    _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
-  } else {
-    _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
-    _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
-  }
+  _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
+  _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
+
 
   _output_table->emplace_chunk(std::move(output_chunk));
 }
