@@ -28,13 +28,13 @@ class OperatorsJoinIndexTest : public BaseTest {
     auto left_table = std::make_shared<Table>(5);
     left_table->add_column("left.a", DataType::Int);
     left_table->add_column("left.b", DataType::Int);
-    for (int i = 0; i <= 4; i += 1) left_table->append({i, 100 + i});
+    for (int i = 0; i <= 24; i += 1) left_table->append({i, 100 + i});
     DictionaryCompression::compress_table(*left_table);
 
     auto right_table = std::make_shared<Table>(5);
     right_table->add_column("right.a", DataType::Int);
     right_table->add_column("right.b", DataType::Int);
-    for (int i = 0; i <= 8; i += 2) right_table->append({i, 100 + i});
+    for (int i = 0; i <= 48; i += 2) right_table->append({i, 100 + i});
     DictionaryCompression::compress_table(*right_table);
 
     _chunk_ids = std::vector<ChunkID>(right_table->chunk_count());
@@ -87,7 +87,7 @@ TYPED_TEST(OperatorsJoinIndexTest, SimpleInnerJoin) {
   result_table->add_column("left.b", DataType::Int);
   result_table->add_column("right.a", DataType::Int);
   result_table->add_column("right.b", DataType::Int);
-  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
   DictionaryCompression::compress_table(*result_table);
 
   this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
@@ -101,8 +101,8 @@ TYPED_TEST(OperatorsJoinIndexTest, SimpleLeftJoin) {
   result_table->add_column("left.b", DataType::Int);
   result_table->add_column("right.a", DataType::Int, true);
   result_table->add_column("right.b", DataType::Int, true);
-  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
-  for (int i = 1; i <= 4; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
+  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 1; i <= 24; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
   DictionaryCompression::compress_table(*result_table);
 
   this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
@@ -116,8 +116,8 @@ TYPED_TEST(OperatorsJoinIndexTest, SimpleRightJoin) {
   result_table->add_column("left.b", DataType::Int, true);
   result_table->add_column("right.a", DataType::Int);
   result_table->add_column("right.b", DataType::Int);
-  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
-  for (int i = 6; i <= 8; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
+  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 26; i <= 48; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
   DictionaryCompression::compress_table(*result_table);
 
   this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
@@ -131,9 +131,9 @@ TYPED_TEST(OperatorsJoinIndexTest, SimpleOuterJoin) {
   result_table->add_column("left.b", DataType::Int, true);
   result_table->add_column("right.a", DataType::Int, true);
   result_table->add_column("right.b", DataType::Int, true);
-  for (int i = 0; i <= 4; i += 2) result_table->append({i, i + 100, i, i + 100});
-  for (int i = 6; i <= 8; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
-  for (int i = 1; i <= 4; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
+  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
+  for (int i = 26; i <= 48; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
+  for (int i = 1; i <= 24; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
   DictionaryCompression::compress_table(*result_table);
 
   this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
