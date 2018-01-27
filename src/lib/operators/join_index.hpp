@@ -35,11 +35,12 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   void _join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                          RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                         const ChunkID chunk_id_right, std::vector<bool>& left_matches,  std::shared_ptr<BaseIndex> index);
+                         const ChunkID chunk_id_right, std::vector<bool>& left_matches,
+                         std::shared_ptr<BaseIndex> index);
 
   void append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
-                      const ChunkOffset chunk_offset, std::vector<bool>& left_matches, ChunkID chunk_id_left,
-                      std::function<RowID(ChunkOffset)> to_row_id);
+                      const ChunkOffset chunk_offset_left, std::vector<bool>& left_matches, ChunkID chunk_id_left,
+                      ChunkID chunk_id_right);
 
   void _create_table_structure();
 
@@ -58,7 +59,9 @@ class JoinIndex : public AbstractJoinOperator {
   bool _fallback;
 
   // for Full Outer, remember the matches on the right side
-  std::set<RowID> _right_matches;
+  // The outer vector enumerates chunks, the inner enumerates chunk_offsets
+  // This is fast since we iterate over the right chunks major, thus we should hit cache most of the time
+  std::vector<std::vector<bool>> _right_matches;
 };
 
 }  // namespace opossum
