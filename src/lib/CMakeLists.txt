@@ -271,6 +271,17 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tuning/abstract_index_evaluator.hpp
+    tuning/abstract_index_selector.hpp
+    tuning/index_evaluator.cpp
+    tuning/index_evaluation.hpp
+    tuning/index_operation.hpp
+    tuning/index_selector.cpp
+    tuning/index_selector.hpp
+    tuning/index_tuner.cpp
+    tuning/index_tuner.hpp
+    tuning/system_statistics.cpp
+    tuning/system_statistics.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
