@@ -47,12 +47,11 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
                                 const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
                                 std::shared_ptr<const Table> input_table_left) {
   // check whether term is a just a simple column and bypass this column
-  // TODO: how to fix mismatch between reference and value columns within a table?
-//  if (expression->type() == ExpressionType::Column) {
-//    // we have to use get_mutable_column here because we cannot add a const column to the chunk
-//    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
-//    return chunk->add_column(bypassed_column);
-//  }
+  if (expression->type() == ExpressionType::Column) {
+    // we have to use get_mutable_column here because we cannot add a const column to the chunk
+    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
+    return chunk->add_column(bypassed_column);
+  }
 
   std::shared_ptr<BaseColumn> column;
 
@@ -68,12 +67,18 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
   else if (expression->type() == ExpressionType::Select) {
     // TODO: IN as special case
     auto subselect_value = expression->table()->get_value<T>(ColumnID(0), 0);
-
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
-    auto null_values = pmr_concurrent_vector<bool>(row_count, false);
-    auto values = pmr_concurrent_vector<T>(row_count, subselect_value);
 
-    column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+    if (input_table_left->get_type() == TableType::Data) {
+      auto null_values = pmr_concurrent_vector<bool>(row_count, false);
+      auto values = pmr_concurrent_vector<T>(row_count, subselect_value);
+
+      column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+    }
+    else {
+      auto pos_list = std::make_shared<PosList>(row_count, RowID{ChunkID(0), ChunkOffset(0)});
+      column = std::make_shared<ReferenceColumn>(expression->table(), ColumnID(0), pos_list);
+    }
   }
   else {
     // fill a value column with the specified expression

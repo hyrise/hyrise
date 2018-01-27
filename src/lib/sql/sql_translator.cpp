@@ -958,20 +958,25 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
   if (value_ref_hsql_expr->select) {
       const auto column_references = input_node->output_column_references();
-      auto column_expressions = LQPExpression::create_columns(column_references);
+      const auto original_column_expressions = LQPExpression::create_columns(column_references);
 
       auto subselect_node = const_cast<SQLTranslator*>(this)->_translate_select(*value_ref_hsql_expr->select);
       auto subselect_expression = LQPExpression::create_subselect(subselect_node);
+
+      auto column_expressions = original_column_expressions;
       column_expressions.push_back(subselect_expression);
 
-      auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
-      projection_node->set_left_child(input_node);
+      auto expand_projection_node = std::make_shared<ProjectionNode>(column_expressions);
+      expand_projection_node->set_left_child(input_node);
 
       auto subselect_column_id = ColumnID(column_expressions.size() - 1);
       auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, subselect_column_id, std::nullopt);
-      predicate_node->set_left_child(projection_node);
+      predicate_node->set_left_child(expand_projection_node);
 
-      return predicate_node;
+      auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
+      reduce_projection_node->set_left_child(predicate_node);
+
+      return reduce_projection_node;
   }
 
   AllParameterVariant value;
