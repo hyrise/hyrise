@@ -14,7 +14,7 @@ class GetTable : public AbstractReadOnlyOperator {
   explicit GetTable(const std::string& name);
 
   const std::string name() const override;
-  const std::string description() const override;
+  const std::string description(DescriptionMode description_mode) const override;
 
   const std::string& table_name() const;
 

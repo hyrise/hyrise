@@ -24,14 +24,15 @@ class ProjectionNode : public AbstractLQPNode {
 
   std::string description() const override;
 
-  const std::vector<LQPColumnOrigin>& output_column_origins() const override;
+  const std::vector<LQPColumnReference>& output_column_references() const override;
   const std::vector<std::string>& output_column_names() const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
-                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
   void _on_child_changed() override;
 
  private:

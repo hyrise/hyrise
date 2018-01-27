@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lqp_column_origin.hpp"
+#include "lqp_column_reference.hpp"
 #include "lqp_expression.hpp"
 #include "types.hpp"
 
@@ -41,7 +41,7 @@ enum class LQPNodeType {
 
 enum class LQPChildSide { Left, Right };
 
-struct NamedColumnReference {
+struct QualifiedColumnName {
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
 
@@ -74,14 +74,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   // Creates a deep copy
   virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
-
-  /**
-   * @param lqp_copy must be a deep copy of this
-   * @param column_origin must be a ColumnOrigin this node outputs
-   * @return the ColumnOrigin equivalent to column_origin within the lqp_copy subtree
-   */
-  LQPColumnOrigin deep_copy_column_origin(const LQPColumnOrigin& column_origin,
-                                          const std::shared_ptr<AbstractLQPNode>& lqp_copy) const;
 
   // @{
   /**
@@ -157,9 +149,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual const std::vector<std::string>& output_column_names() const;
 
   /**
-   * @returns the ColumnOrigins of the columns this node outputs
+   * @returns the ColumnReferences of the columns this node outputs
    */
-  virtual const std::vector<LQPColumnOrigin>& output_column_origins() const;
+  virtual const std::vector<LQPColumnReference>& output_column_references() const;
 
   /**
    * @return the number of Columns this node outputs. Same as output_column_names().size()
@@ -172,18 +164,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
 
   /**
-   * @param named_column_reference Must not be ambiguous in this subtree
-   * @return The ColumnOrigin of the named_column_reference if it can be resolved in this subtree,
+   * @param qualified_column_name Must not be ambiguous in this subtree
+   * @return The ColumnReference of the qualified_column_name if it can be resolved in this subtree,
    *         std::nullopt otherwise.
    */
-  std::optional<LQPColumnOrigin> find_column_origin_by_named_column_reference(
-      const NamedColumnReference& named_column_reference) const;
+  std::optional<LQPColumnReference> find_column(const QualifiedColumnName& qualified_column_name) const;
 
   /**
-   * Convenience method for (*find_column_origin_by_named_column_reference()), DebugAssert()s that the
-   * named_column_reference could be resolved
+   * Convenience method for (*find_column_reference_by_qualified_column_name()), DebugAssert()s that the
+   * qualified_column_name could be resolved
    */
-  LQPColumnOrigin get_column_origin_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
+  LQPColumnReference get_column(const QualifiedColumnName& qualified_column_name) const;
 
   /**
    * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
@@ -193,14 +184,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   // @}
 
   /**
-   * @return The leftmost output ColumnID that stems from column_origin, or std::nullopt if none does
+   * @return The leftmost output ColumnID that stems from column_reference, or std::nullopt if none does
    */
-  std::optional<ColumnID> find_output_column_id_by_column_origin(const LQPColumnOrigin& column_origin) const;
+  std::optional<ColumnID> find_output_column_id(const LQPColumnReference& column_reference) const;
 
   /**
-   * Convenience for *find_output_column_id_by_column_origin(), DebugAssert()s that the column_origin could be resolved
+   * Convenience for *find_output_column_id(), DebugAssert()s that the column_reference could be resolved
    */
-  ColumnID get_output_column_id_by_column_origin(const LQPColumnOrigin& column_origin) const;
+  ColumnID get_output_column_id(const LQPColumnReference& column_reference) const;
 
   /**
    * Makes this nodes parents point to this node's left child
@@ -249,15 +240,39 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::vector<std::string> get_verbose_column_names() const;
   // @}
 
+  /**
+   * @defgroup Utilities for deep_copy()
+   * @{
+   */
+  /**
+   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnReferences pointing
+   * to their equivalent in a deep_copy()ed LQP
+   */
+  static std::shared_ptr<LQPExpression> adapt_expression_to_different_lqp(
+      const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+
+  /**
+   * @param copied_lqp must be a deep copy of original_lqp
+   * @param column_reference must be a ColumnReference original_lqp node outputs
+   * @return the ColumnReference equivalent to column_reference within the copied_lqp subtree
+   */
+  static LQPColumnReference adapt_column_reference_to_different_lqp(
+      const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+  /**
+   * @}
+   */
+
  protected:
   /**
-   * Override and creat a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
-   * left_child and right_child are deep copies of the left and right child respectively, used for deep-copying
-   * ColumnOrigins
+   * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
+   * @param left_child and @param right_child are deep copies of the left and right child respectively, used for deep-copying
+   * ColumnReferences
    */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& left_child,
-      const std::shared_ptr<AbstractLQPNode>& right_child) const = 0;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const = 0;
 
   /**
    * In derived nodes, clear all data that depends on children and only set it lazily on request (see, e.g.
@@ -275,24 +290,16 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   std::optional<std::string> _table_alias;
 
-  // mutable, so it can be lazily initialized in output_column_origins() overrides
-  mutable std::optional<std::vector<LQPColumnOrigin>> _output_column_origins;
+  // mutable, so it can be lazily initialized in output_column_references() overrides
+  mutable std::optional<std::vector<LQPColumnReference>> _output_column_references;
 
   /**
-   * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
-   * only operate on the column name. If an alias for this subtree is set, but this reference does not match
-   * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
+   * If qualified_column_name.table_name is the alias set for this subtree, remove the table_name so that we
+   * only operate on the column name. If an alias for this subtree is set, but qualified_column_name.table_name does not
+   * match it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  virtual std::optional<NamedColumnReference> _resolve_local_column_prefix(
-      const NamedColumnReference& named_column_reference) const;
-
-  /**
-   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnOrigins pointing to
-   * their equivalent in a deep_copy()ed LQP
-   */
-  std::shared_ptr<LQPExpression> _adjust_expression_to_lqp(const std::shared_ptr<LQPExpression>& expression,
-                                                           const std::shared_ptr<AbstractLQPNode>& original_lqp,
-                                                           const std::shared_ptr<AbstractLQPNode>& copied_lqp) const;
+  virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
+      const QualifiedColumnName& qualified_column_name) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;

@@ -8,7 +8,7 @@
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_origin.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
@@ -23,13 +23,13 @@ class TableStatistics;
  */
 class PredicateNode : public AbstractLQPNode {
  public:
-  PredicateNode(const LQPColumnOrigin& column_origin, const ScanType scan_type, const AllParameterVariant& value,
-                const std::optional<AllTypeVariant>& value2 = std::nullopt);
+  PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
+                const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 
-  const LQPColumnOrigin& column_origin() const;
-  ScanType scan_type() const;
+  const LQPColumnReference& column_reference() const;
+  PredicateCondition predicate_condition() const;
   const AllParameterVariant& value() const;
   const std::optional<AllTypeVariant>& value2() const;
 
@@ -38,12 +38,13 @@ class PredicateNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
-                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
 
  private:
-  const LQPColumnOrigin _column_origin;
-  const ScanType _scan_type;
+  const LQPColumnReference _column_reference;
+  const PredicateCondition _predicate_condition;
   const AllParameterVariant _value;
   const std::optional<AllTypeVariant> _value2;
 };

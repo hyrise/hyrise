@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "lqp_column_origin.hpp"
+#include "lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -14,9 +14,9 @@ namespace opossum {
  * Order By items are defined by the column they operate on and their sort order.
  */
 struct OrderByDefinition {
-  OrderByDefinition(const LQPColumnOrigin& column_origin, const OrderByMode order_by_mode);
+  OrderByDefinition(const LQPColumnReference& column_reference, const OrderByMode order_by_mode);
 
-  LQPColumnOrigin column_origin;
+  LQPColumnReference column_reference;
   OrderByMode order_by_mode;
 };
 
@@ -34,8 +34,9 @@ class SortNode : public AbstractLQPNode {
   const OrderByDefinitions& order_by_definitions() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
-                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
 
  private:
   const OrderByDefinitions _order_by_definitions;

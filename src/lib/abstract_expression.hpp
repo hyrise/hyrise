@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "logical_query_plan/lqp_column_origin.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -15,7 +15,8 @@ namespace opossum {
 class AbstractLQPNode;
 
 /**
- * CRTP class forming the base class for LQPExpression and OperatorExpression
+ * CRTP class forming the base class for LQPExpression and PQPExpression. CRTP so pointers to children have the
+ * correct type et al. PQPExpressions use ColumnIDs to refer to Columns, LQPExpressions use LQPColumnReferences.
  *
  * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
  * and especially its optimizer.
@@ -27,8 +28,8 @@ class AbstractLQPNode;
  * For now we decided to have a single Expression without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.
  */
-template <typename DerivedExpressionType>
-class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType>, private Noncopyable {
+template <typename DerivedExpression>
+class AbstractExpression : public std::enable_shared_from_this<DerivedExpression>, private Noncopyable {
  public:
   /*
    * This constructor is meant for internal use only and therefore should be private.
@@ -47,35 +48,34 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
    *
    * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
-  explicit BaseExpression(ExpressionType type);
+  explicit AbstractExpression(ExpressionType type);
 
   // creates a DEEP copy of the other expression. Used for reusing LQPs, e.g., in views.
-  std::shared_ptr<DerivedExpressionType> deep_copy() const;
+  std::shared_ptr<DerivedExpression> deep_copy() const;
 
   // @{
   /**
    * Factory Methods to create Expressions of specific type
    */
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
-  static std::shared_ptr<DerivedExpressionType> create_literal(const AllTypeVariant& value,
-                                                               const std::optional<std::string>& alias = std::nullopt);
+  static std::shared_ptr<DerivedExpression> create_literal(const AllTypeVariant& value,
+                                                           const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<DerivedExpressionType> create_value_placeholder(ValuePlaceholder value_placeholder);
+  static std::shared_ptr<DerivedExpression> create_value_placeholder(ValuePlaceholder value_placeholder);
 
-  static std::shared_ptr<DerivedExpressionType> create_aggregate_function(
-      AggregateFunction aggregate_function,
-      const std::vector<std::shared_ptr<DerivedExpressionType>>& function_arguments,
+  static std::shared_ptr<DerivedExpression> create_aggregate_function(
+      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<DerivedExpression>>& function_arguments,
       const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<DerivedExpressionType> create_binary_operator(
-      ExpressionType type, const std::shared_ptr<DerivedExpressionType>& left,
-      const std::shared_ptr<DerivedExpressionType>& right, const std::optional<std::string>& alias = std::nullopt);
+  static std::shared_ptr<DerivedExpression> create_binary_operator(
+      ExpressionType type, const std::shared_ptr<DerivedExpression>& left,
+      const std::shared_ptr<DerivedExpression>& right, const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<DerivedExpressionType> create_unary_operator(
-      ExpressionType type, const std::shared_ptr<DerivedExpressionType>& input,
+  static std::shared_ptr<DerivedExpression> create_unary_operator(
+      ExpressionType type, const std::shared_ptr<DerivedExpression>& input,
       const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<DerivedExpressionType> create_select_star(const std::optional<std::string>& table_name = {});
+  static std::shared_ptr<DerivedExpression> create_select_star(const std::optional<std::string>& table_name = {});
 
   // @}
 
@@ -83,11 +83,11 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
   /**
    * Helper methods for Expression Trees
    */
-  const std::shared_ptr<DerivedExpressionType> left_child() const;
-  void set_left_child(const std::shared_ptr<DerivedExpressionType>& left);
+  const std::shared_ptr<DerivedExpression> left_child() const;
+  void set_left_child(const std::shared_ptr<DerivedExpression>& left);
 
-  const std::shared_ptr<DerivedExpressionType> right_child() const;
-  void set_right_child(const std::shared_ptr<DerivedExpressionType>& right);
+  const std::shared_ptr<DerivedExpression> right_child() const;
+  void set_right_child(const std::shared_ptr<DerivedExpression>& right);
   // @}
 
   ExpressionType type() const;
@@ -132,7 +132,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
    */
   AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
-  const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments() const;
+  const std::vector<std::shared_ptr<DerivedExpression>>& aggregate_function_arguments() const;
   ValuePlaceholder value_placeholder() const;
   // @}
 
@@ -143,7 +143,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
   const std::optional<std::string>& alias() const;
 
   void set_aggregate_function_arguments(
-      const std::vector<std::shared_ptr<DerivedExpressionType>>& aggregate_function_arguments);
+      const std::vector<std::shared_ptr<DerivedExpression>>& aggregate_function_arguments);
 
   void set_alias(const std::string& alias);
 
@@ -157,9 +157,9 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
 
  protected:
   // Not to be used directly, derived classes should implement it in the public scope and use this internally
-  bool operator==(const BaseExpression& other) const;
+  bool operator==(const AbstractExpression& other) const;
 
-  virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpressionType>& copy) const = 0;
+  virtual void _deep_copy_impl(const std::shared_ptr<DerivedExpression>& copy) const = 0;
 
   // the type of the expression
   const ExpressionType _type;
@@ -176,7 +176,7 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
    * Expression hierarchy.
    * E.g. for CASE one could argue that the THEN case becomes the left child, whereas ELSE becomes the right child.
    */
-  std::vector<std::shared_ptr<DerivedExpressionType>> _aggregate_function_arguments;
+  std::vector<std::shared_ptr<DerivedExpression>> _aggregate_function_arguments;
 
   std::optional<std::string> _table_name;
   std::optional<std::string> _alias;
@@ -185,12 +185,12 @@ class BaseExpression : public std::enable_shared_from_this<DerivedExpressionType
 
   // @{
   // Members for the tree structure
-  std::shared_ptr<DerivedExpressionType> _left_child;
-  std::shared_ptr<DerivedExpressionType> _right_child;
+  std::shared_ptr<DerivedExpression> _left_child;
+  std::shared_ptr<DerivedExpression> _right_child;
   // @}
 
   friend class LQPExpression;
-  friend class OperatorExpression;  // For creating OperatorExpressions from LQPExpressions
+  friend class PQPExpression;  // For creating OperatorExpressions from LQPExpressions
 };
 
 }  // namespace opossum

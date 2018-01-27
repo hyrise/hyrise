@@ -25,8 +25,8 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
-    logical_query_plan/lqp_column_origin.cpp
-    logical_query_plan/lqp_column_origin.hpp
+    logical_query_plan/lqp_column_reference.cpp
+    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -146,10 +146,10 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    base_expression.cpp
-    base_expression.hpp
-    operators/operator_expression.cpp
-    operators/operator_expression.hpp
+    abstract_expression.cpp
+    abstract_expression.hpp
+    operators/pqp_expression.cpp
+    operators/pqp_expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -158,6 +158,8 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/strategy/rule_batch.cpp
+    optimizer/strategy/rule_batch.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     planviz/abstract_visualizer.hpp
@@ -193,6 +195,8 @@ set(
     sql/hsql_expr_translator.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
+    sql/sql_pipeline_statement.cpp
+    sql/sql_pipeline_statement.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
@@ -267,18 +271,6 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
-    tuning/abstract_index_selector.hpp
-    tuning/abstract_index_evaluator.hpp
-    tuning/index_evaluation.hpp
-    tuning/index_evaluator.cpp
-    tuning/index_evaluator.hpp
-    tuning/index_operation.hpp
-    tuning/index_selector.cpp
-    tuning/index_selector.hpp
-    tuning/index_tuner.cpp
-    tuning/index_tuner.hpp
-    tuning/system_statistics.cpp
-    tuning/system_statistics.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

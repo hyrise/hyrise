@@ -15,12 +15,15 @@ UpdateNode::UpdateNode(const std::string& table_name,
     : AbstractLQPNode(LQPNodeType::Update), _table_name(table_name), _column_expressions(column_expressions) {}
 
 std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
-  std::transform(_column_expressions.begin(), _column_expressions.end(), column_expressions.begin(),
-                 [&](const auto& expression) {
-                   return _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child);
-                 });
+  column_expressions.reserve(_column_expressions.size());
+
+  for (const auto& expression : column_expressions) {
+    column_expressions.emplace_back(
+        adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
+  }
 
   return std::make_shared<UpdateNode>(_table_name, column_expressions);
 }

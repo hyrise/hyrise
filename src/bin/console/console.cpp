@@ -6,6 +6,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
+#include <sys/stat.h>
 #include <chrono>
 #include <csignal>
 #include <ctime>
@@ -29,7 +30,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -187,7 +188,7 @@ int Console::_eval(const std::string& input) {
 
   // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
   _multiline_input += input;
-  _multiline_input += ' ';
+  _multiline_input += '\n';
   return ReturnCode::Multiline;
 }
 
@@ -215,21 +216,32 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   return static_cast<int>(func(args));
 }
 
-int Console::_eval_sql(const std::string& sql) {
-  if (_explicitly_created_transaction_context != nullptr) {
-    _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
-  } else {
-    _sql_pipeline = std::make_unique<SQLPipeline>(sql);
+bool Console::_initialize_pipeline(const std::string& sql) {
+  try {
+    if (_explicitly_created_transaction_context != nullptr) {
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
+    } else {
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
+    }
+  } catch (const std::exception& exception) {
+    out(std::string(exception.what()) + '\n');
+    return false;
   }
+
+  return true;
+}
+
+int Console::_eval_sql(const std::string& sql) {
+  if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
   try {
     _sql_pipeline->get_result_table();
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
-      out("The transaction has been rolled back.\n");
+    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
+        _sql_pipeline->num_statements() > 1) {
+      out("All previous statements have been committed.\n");
     }
-    _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }
 
@@ -240,9 +252,9 @@ int Console::_eval_sql(const std::string& sql) {
   if (table) {
     out(table);
   }
+
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" + "PARSE: " +
-      std::to_string(_sql_pipeline->parse_time_microseconds().count()) + " µs, " + "COMPILE: " +
+  out(std::to_string(row_count) + " rows total (" + "COMPILE: " +
       std::to_string(_sql_pipeline->compile_time_microseconds().count()) + " µs, " + "EXECUTE: " +
       std::to_string(_sql_pipeline->execution_time_microseconds().count()) + " µs (wall time))\n");
 
@@ -313,25 +325,26 @@ int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 int Console::help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate [TABLENAME]         - Generate available TPC-C tables, or a specific table if TABLENAME is "
+  out("  generate [TABLENAME]             - Generate available TPC-C tables, or a specific table if TABLENAME is "
       "specified\n");
-  out("  load FILE TABLENAME          - Load table from disc specified by filepath FILE, store it with name "
+  out("  load FILE TABLENAME              - Load table from disc specified by filepath FILE, store it with name "
       "TABLENAME\n");
-  out("  script SCRIPTFILE            - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME              - Fully print the given table (including MVCC columns)\n");
-  out("  visualize [options] SQL      - Visualize a SQL query\n");
-  out("             noexec               - without executing the query\n");
-  out("             lqp                  - print the raw logical query plans\n");
-  out("             lqpopt               - print the optimized abstract syntax tree\n");
-  out("  begin                        - Manually create a new transaction (Auto-commit is active unless begin is "
+  out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                  - Fully print the given table (including MVCC columns)\n");
+  out("  visualize [options] (noexec) SQL - Visualize a SQL query\n");
+  out("                      <if set>        - does not execute the query (only supported with single statements)\n");
+  out("             lqp                      - print the raw logical query plans\n");
+  out("             lqpopt                   - print the optimized logical query plans\n");
+  out("            <not set>                 - print the physical query plan\n");
+  out("  begin                            - Manually create a new transaction (Auto-commit is active unless begin is "
       "called)\n");
-  out("  rollback                     - Roll back a manually created transaction\n");
-  out("  commit                       - Commit a manually created transaction\n");
-  out("  txinfo                       - Print information on the current transaction\n");
-  out("  quit                         - Exit the HYRISE Console\n");
-  out("  help                         - Show this message\n\n");
-  out("  setting [property] [value]   - Change a runtime setting\n\n");
-  out("           scheduler (on|off)  - Turn the scheduler on (default) or off\n\n");
+  out("  rollback                         - Roll back a manually created transaction\n");
+  out("  commit                           - Commit a manually created transaction\n");
+  out("  txinfo                           - Print information on the current transaction\n");
+  out("  quit                             - Exit the HYRISE Console\n");
+  out("  help                             - Show this message\n\n");
+  out("  setting [property] [value]       - Change a runtime setting\n\n");
+  out("           scheduler (on|off)      - Turn the scheduler on (default) or off\n\n");
   out("After TPC-C tables are generated, SQL queries can be executed.\n");
   out("Example:\n");
   out("SELECT * FROM DISTRICT\n");
@@ -436,68 +449,101 @@ int Console::print_table(const std::string& args) {
 }
 
 int Console::visualize(const std::string& input) {
-  auto first_word = input.substr(0, input.find_first_of(" \n"));
-  std::string mode, sql, graph_filename, img_filename;
-  if (first_word == "noexec" || first_word == "lqp" || first_word == "lqpopt") {
-    mode = first_word;
+  std::vector<std::string> input_words;
+  boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
+
+  const std::string noexec_string = "noexec";
+  const std::string lqp_string = "lqp";
+  const std::string lqpopt_string = "lqpopt";
+
+  std::string first_word, second_word;
+  if (!input_words.empty()) {
+    first_word = input_words[0];
   }
 
-  // Removes mode from sql string. If no mode is set, does nothing.
-  sql = input.substr(mode.size(), input.size());
+  if (input_words.size() > 1) {
+    second_word = input_words[1];
+  }
+
+  const bool no_execute = (first_word == noexec_string || second_word == noexec_string);
+
+  std::string mode;
+  if (first_word == lqp_string || first_word == lqpopt_string)
+    mode = first_word;
+  else if (second_word == lqp_string || second_word == lqpopt_string)
+    mode = second_word;
+
+  // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
+  const auto noexec_size = no_execute ? noexec_string.length() : 0u;
+  auto sql_begin_pos = mode.size() + noexec_size;
+
+  // If we have both words present, we need to remove additional whitespace
+  if (no_execute && !mode.empty()) sql_begin_pos++;
+
+  const auto sql = input.substr(sql_begin_pos, input.size());
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
   if (!sql.empty()) {
-    if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
-    } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
-    }
+    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
   }
 
-  if (mode == "lqp" || mode == "lqpopt") {
+  if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
+    out("We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
+    return ReturnCode::Error;
+  }
+
+  std::string graph_filename, img_filename;
+
+  // Visualize the Logical Query Plan
+  if (mode == lqp_string || mode == lqpopt_string) {
+    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+
     try {
-      auto lqp_roots = _sql_pipeline->get_unoptimized_logical_plans();
-
-      if (mode == "lqpopt") {
-        lqp_roots = _sql_pipeline->get_optimized_logical_plans();
-      }
-
-      graph_filename = "." + mode + ".dot";
-      img_filename = mode + ".png";
-
-      LQPVisualizer visualizer;
-      visualizer.visualize(lqp_roots, graph_filename, img_filename);
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-  } else {
-    // Compile the parse result
-    SQLQueryPlan plan;
-    try {
-      plan = _sql_pipeline->get_query_plan();
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-
-    if (mode != "noexec") {
-      try {
+      if (!no_execute) {
+        // Run the query and then collect the LQPs
         _sql_pipeline->get_result_table();
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-        if (_sql_pipeline->transaction_context() && _sql_pipeline->transaction_context()->aborted()) {
-          out("The transaction has been rolled back.\n");
-        }
-        _explicitly_created_transaction_context = nullptr;
-        return ReturnCode::Error;
       }
+
+      const auto& lqps = (mode == lqp_string) ? _sql_pipeline->get_unoptimized_logical_plans()
+                                              : _sql_pipeline->get_optimized_logical_plans();
+      for (const auto& lqp : lqps) {
+        lqp_roots.push_back(lqp);
+      }
+    } catch (const std::exception& exception) {
+      out(std::string(exception.what()) + "\n");
+      _handle_rollback();
+      return ReturnCode::Error;
+    }
+
+    graph_filename = "." + mode + ".dot";
+    img_filename = mode + ".png";
+    LQPVisualizer visualizer;
+    visualizer.visualize(lqp_roots, graph_filename, img_filename);
+
+  } else {
+    // Visualize the Physical Query Plan
+    SQLQueryPlan query_plan;
+
+    try {
+      if (!no_execute) {
+        _sql_pipeline->get_result_table();
+      }
+
+      // Create plan with all roots
+      const auto& plans = _sql_pipeline->get_query_plans();
+      for (const auto& plan : plans) {
+        query_plan.append_plan(*plan);
+      }
+    } catch (const std::exception& exception) {
+      out(std::string(exception.what()) + "\n");
+      _handle_rollback();
+      return ReturnCode::Error;
     }
 
     graph_filename = ".queryplan.dot";
     img_filename = "queryplan.png";
     SQLQueryPlanVisualizer visualizer;
-    visualizer.visualize(plan, graph_filename, img_filename);
+    visualizer.visualize(query_plan, graph_filename, img_filename);
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");
@@ -544,8 +590,17 @@ int Console::exec_script(const std::string& script_file) {
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
+  const auto is_regular_file = [](const std::string& path) {
+    struct stat path_stat;
+    stat(path.c_str(), &path_stat);
+    return S_ISREG(path_stat.st_mode);
+  };
+
   if (!script.good()) {
     out("Error: Script file '" + filepath + "' does not exist.\n");
+    return ReturnCode::Error;
+  } else if (!is_regular_file(filepath)) {
+    out("Error: '" + filepath + "' is not a regular file.\n");
     return ReturnCode::Error;
   }
 
@@ -709,6 +764,17 @@ char* Console::command_generator_tpcc(const char* text, int state) {
     }
   }
   return nullptr;
+}
+
+bool Console::_handle_rollback() {
+  auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+    out("The transaction has been rolled back.\n");
+    _explicitly_created_transaction_context = nullptr;
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace opossum

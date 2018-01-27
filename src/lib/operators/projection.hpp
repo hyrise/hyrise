@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-class OperatorExpression;
+class PQPExpression;
 
 /**
  * Operator to select a subset of the set of all columns found in the table
@@ -27,12 +27,12 @@ class OperatorExpression;
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<OperatorExpression>>;
+  using ColumnExpressions = std::vector<std::shared_ptr<PQPExpression>>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
   const std::string name() const override;
-  const std::string description() const override;
+  const std::string description(DescriptionMode description_mode) const override;
 
   const ColumnExpressions& column_expressions() const;
 
@@ -62,10 +62,10 @@ class Projection : public AbstractReadOnlyOperator {
 
   template <typename T>
   static void _create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
-                             const ChunkID chunk_id, const std::shared_ptr<OperatorExpression>& expression,
-                             std::shared_ptr<const Table> input_table_left);
+                             const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
+                             std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input);
 
-  static DataType _get_type_of_expression(const std::shared_ptr<OperatorExpression>& expression,
+  static DataType _get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                           const std::shared_ptr<const Table>& table);
 
   /**
@@ -74,7 +74,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
-      const std::shared_ptr<OperatorExpression>& expression, const std::shared_ptr<const Table> table,
+      const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
       const ChunkID chunk_id);
 
   /**

@@ -30,7 +30,8 @@ class JoinNodeTest : public BaseTest {
     _join_node->set_left_child(_mock_node_a);
     _join_node->set_right_child(_mock_node_b);
 
-    _inner_join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), ScanType::Equals);
+    _inner_join_node =
+        std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
     _inner_join_node->set_left_child(_mock_node_a);
     _inner_join_node->set_right_child(_mock_node_b);
   }
@@ -39,11 +40,11 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_b;
   std::shared_ptr<JoinNode> _inner_join_node;
   std::shared_ptr<JoinNode> _join_node;
-  LQPColumnOrigin _t_a_a;
-  LQPColumnOrigin _t_a_b;
-  LQPColumnOrigin _t_a_c;
-  LQPColumnOrigin _t_b_x;
-  LQPColumnOrigin _t_b_y;
+  LQPColumnReference _t_a_a;
+  LQPColumnReference _t_a_b;
+  LQPColumnReference _t_a_c;
+  LQPColumnReference _t_b_x;
+  LQPColumnReference _t_b_y;
 };
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Cross Join]"); }
@@ -58,26 +59,26 @@ TEST_F(JoinNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{4}), "t_b.y");
 }
 
-TEST_F(JoinNodeTest, ColumnOriginByNamedColumnReference) {
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"a", std::nullopt}), _t_a_a);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"a", "t_a"}), _t_a_a);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"b", std::nullopt}), _t_a_b);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"b", "t_a"}), _t_a_b);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"c", std::nullopt}), _t_a_c);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"c", "t_a"}), _t_a_c);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"x", std::nullopt}), _t_b_x);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"x", "t_b"}), _t_b_x);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"y", std::nullopt}), _t_b_y);
-  EXPECT_EQ(_join_node->get_column_origin_by_named_column_reference({"y", "t_b"}), _t_b_y);
+TEST_F(JoinNodeTest, ColumnReferenceByNamedColumnReference) {
+  EXPECT_EQ(_join_node->get_column({"a", std::nullopt}), _t_a_a);
+  EXPECT_EQ(_join_node->get_column({"a", "t_a"}), _t_a_a);
+  EXPECT_EQ(_join_node->get_column({"b", std::nullopt}), _t_a_b);
+  EXPECT_EQ(_join_node->get_column({"b", "t_a"}), _t_a_b);
+  EXPECT_EQ(_join_node->get_column({"c", std::nullopt}), _t_a_c);
+  EXPECT_EQ(_join_node->get_column({"c", "t_a"}), _t_a_c);
+  EXPECT_EQ(_join_node->get_column({"x", std::nullopt}), _t_b_x);
+  EXPECT_EQ(_join_node->get_column({"x", "t_b"}), _t_b_x);
+  EXPECT_EQ(_join_node->get_column({"y", std::nullopt}), _t_b_y);
+  EXPECT_EQ(_join_node->get_column({"y", "t_b"}), _t_b_y);
 }
 
-TEST_F(JoinNodeTest, OutputColumnOrigins) {
-  ASSERT_EQ(_join_node->output_column_origins().size(), 5u);
-  EXPECT_EQ(_join_node->output_column_origins().at(0), _t_a_a);
-  EXPECT_EQ(_join_node->output_column_origins().at(1), _t_a_b);
-  EXPECT_EQ(_join_node->output_column_origins().at(2), _t_a_c);
-  EXPECT_EQ(_join_node->output_column_origins().at(3), _t_b_x);
-  EXPECT_EQ(_join_node->output_column_origins().at(4), _t_b_y);
+TEST_F(JoinNodeTest, OutputColumnReferences) {
+  ASSERT_EQ(_join_node->output_column_references().size(), 5u);
+  EXPECT_EQ(_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_join_node->output_column_references().at(2), _t_a_c);
+  EXPECT_EQ(_join_node->output_column_references().at(3), _t_b_x);
+  EXPECT_EQ(_join_node->output_column_references().at(4), _t_b_y);
 }
 
 }  // namespace opossum

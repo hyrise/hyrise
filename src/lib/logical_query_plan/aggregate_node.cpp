@@ -14,40 +14,44 @@
 namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
-                             const std::vector<LQPColumnOrigin>& groupby_column_origins)
+                             const std::vector<LQPColumnReference>& groupby_column_references)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
-      _groupby_column_origins(groupby_column_origins) {
+      _groupby_column_references(groupby_column_references) {
   for ([[gnu::unused]] const auto& expression : aggregate_expressions) {
     DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
   }
 }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
-  Assert(this->left_child(), "Can't clone without child");
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+  Assert(left_child(), "Can't clone without child, need it to adapt column references");
 
   std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
     aggregate_expressions.emplace_back(
-        _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child));
+        adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
   }
 
-  std::vector<LQPColumnOrigin> groupby_column_origins(_groupby_column_origins.size());
-  std::transform(_groupby_column_origins.begin(), _groupby_column_origins.end(), groupby_column_origins.begin(),
-                 [&](const auto& column_origin) {
-                   return this->left_child()->deep_copy_column_origin(column_origin, left_child);
-                 });
+  std::vector<LQPColumnReference> groupby_column_references;
+  groupby_column_references.reserve(_groupby_column_references.size());
+  for (const auto& groupby_column_reference : _groupby_column_references) {
+    groupby_column_references.emplace_back(
+        adapt_column_reference_to_different_lqp(groupby_column_reference, left_child(), copied_left_child));
+  }
 
-  return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_origins);
+  return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_references);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
 }
 
-const std::vector<LQPColumnOrigin>& AggregateNode::groupby_column_origins() const { return _groupby_column_origins; }
+const std::vector<LQPColumnReference>& AggregateNode::groupby_column_references() const {
+  return _groupby_column_references;
+}
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -78,11 +82,11 @@ std::string AggregateNode::description() const {
     stream_aggregate(*aggregates_it);
   }
 
-  if (!_groupby_column_origins.empty()) {
+  if (!_groupby_column_references.empty()) {
     s << " GROUP BY [";
-    for (size_t group_by_idx = 0; group_by_idx < _groupby_column_origins.size(); ++group_by_idx) {
-      s << _groupby_column_origins[group_by_idx].description();
-      if (group_by_idx + 1 < _groupby_column_origins.size()) {
+    for (size_t group_by_idx = 0; group_by_idx < _groupby_column_references.size(); ++group_by_idx) {
+      s << _groupby_column_references[group_by_idx].description();
+      if (group_by_idx + 1 < _groupby_column_references.size()) {
         s << ", ";
       }
     }
@@ -95,11 +99,11 @@ std::string AggregateNode::description() const {
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_child(), "Need input to generate name");
 
-  if (column_id < _groupby_column_origins.size()) {
-    return _groupby_column_origins[column_id].description();
+  if (column_id < _groupby_column_references.size()) {
+    return _groupby_column_references[column_id].description();
   }
 
-  const auto aggregate_column_id = column_id - _groupby_column_origins.size();
+  const auto aggregate_column_id = column_id - _groupby_column_references.size();
   DebugAssert(aggregate_column_id < _aggregate_expressions.size(), "ColumnID out of range");
 
   const auto& aggregate_expression = _aggregate_expressions[aggregate_column_id];
@@ -129,21 +133,20 @@ const std::vector<std::string>& AggregateNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<LQPColumnOrigin>& AggregateNode::output_column_origins() const {
-  if (!_output_column_origins) {
+const std::vector<LQPColumnReference>& AggregateNode::output_column_references() const {
+  if (!_output_column_references) {
     _update_output();
   }
-  return *_output_column_origins;
+  return *_output_column_references;
 }
 
-LQPColumnOrigin AggregateNode::get_column_origin_for_expression(
-    const std::shared_ptr<LQPExpression>& expression) const {
-  const auto column_id = find_column_origin_for_expression(expression);
+LQPColumnReference AggregateNode::get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
+  const auto column_id = find_column_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
-std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_for_expression(
+std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
     const std::shared_ptr<LQPExpression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
@@ -153,14 +156,15 @@ std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_for_expression(
    *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
    */
   if (expression->type() == ExpressionType::Column) {
-    const auto iter = std::find_if(
-        _groupby_column_origins.begin(), _groupby_column_origins.end(),
-        [&](const auto& groupby_column_origin) { return expression->column_origin() == groupby_column_origin; });
+    const auto iter = std::find_if(_groupby_column_references.begin(), _groupby_column_references.end(),
+                                   [&](const auto& groupby_column_reference) {
+                                     return expression->column_reference() == groupby_column_reference;
+                                   });
 
-    if (iter != _groupby_column_origins.end()) {
-      const auto column_id = static_cast<ColumnID>(std::distance(_groupby_column_origins.begin(), iter));
+    if (iter != _groupby_column_references.end()) {
+      const auto column_id = static_cast<ColumnID>(std::distance(_groupby_column_references.begin(), iter));
       DebugAssert(column_id < output_column_count(), "ColumnID out of range");
-      return output_column_origins()[column_id];
+      return output_column_references()[column_id];
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter =
@@ -171,7 +175,7 @@ std::optional<LQPColumnOrigin> AggregateNode::find_column_origin_for_expression(
 
     if (iter != _aggregate_expressions.end()) {
       const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return LQPColumnOrigin{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_origins.size())};
+      return LQPColumnReference{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_references.size())};
     }
   }
 
@@ -185,15 +189,15 @@ void AggregateNode::_update_output() const {
    * allows easier manipulation in the optimizer.
    */
 
-  DebugAssert(!_output_column_origins, "No need to update, _update_output() shouldn't get called.");
+  DebugAssert(!_output_column_references, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(left_child(), "Can't set output without input");
 
   _output_column_names.emplace();
-  _output_column_names->reserve(_groupby_column_origins.size() + _aggregate_expressions.size());
+  _output_column_names->reserve(_groupby_column_references.size() + _aggregate_expressions.size());
 
-  _output_column_origins.emplace();
-  _output_column_origins->reserve(_groupby_column_origins.size() + _aggregate_expressions.size());
+  _output_column_references.emplace();
+  _output_column_references->reserve(_groupby_column_references.size() + _aggregate_expressions.size());
 
   /**
    * Set output column ids and names.
@@ -201,14 +205,14 @@ void AggregateNode::_update_output() const {
    * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
-  for (const auto& groupby_column_origin : _groupby_column_origins) {
-    _output_column_origins->emplace_back(groupby_column_origin);
+  for (const auto& groupby_column_reference : _groupby_column_references) {
+    _output_column_references->emplace_back(groupby_column_reference);
 
-    const auto input_column_id = left_child()->get_output_column_id_by_column_origin(groupby_column_origin);
+    const auto input_column_id = left_child()->get_output_column_id(groupby_column_reference);
     _output_column_names->emplace_back(left_child()->output_column_names()[input_column_id]);
   }
 
-  auto column_id = static_cast<ColumnID>(_groupby_column_origins.size());
+  auto column_id = static_cast<ColumnID>(_groupby_column_references.size());
   for (const auto& aggregate_expression : _aggregate_expressions) {
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression must be a function.");
 
@@ -227,7 +231,7 @@ void AggregateNode::_update_output() const {
     }
 
     _output_column_names->emplace_back(column_name);
-    _output_column_origins->emplace_back(shared_from_this(), column_id);
+    _output_column_references->emplace_back(shared_from_this(), column_id);
     column_id++;
   }
 }

@@ -3,7 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
+#include "boost/variant.hpp"
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
@@ -21,7 +21,6 @@ class MockNode : public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const std::optional<std::string>& alias = std::nullopt);
   explicit MockNode(const ColumnDefinitions& column_definitions,
                     const std::optional<std::string>& alias = std::nullopt);
   explicit MockNode(const std::shared_ptr<TableStatistics>& statistics,
@@ -33,14 +32,14 @@ class MockNode : public AbstractLQPNode {
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
-                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
 
  private:
   std::vector<std::string> _output_column_names;
 
   // Constructor args to keep around for deep_copy()
-  std::optional<ColumnDefinitions> _column_definitions;
-  std::optional<std::shared_ptr<TableStatistics>> _table_statistics;
+  boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;
 };
 }  // namespace opossum

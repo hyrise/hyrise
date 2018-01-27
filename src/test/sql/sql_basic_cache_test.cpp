@@ -232,4 +232,75 @@ TEST_F(SQLBasicCacheTest, RandomCacheTest) {
   ASSERT_EQ(53, cache.get(6));  // Hit.
 }
 
+template <typename T>
+class CacheTest : public BaseTest {};
+
+// here we define all Join types
+using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
+                                    RandomCache<int, int>>;
+TYPED_TEST_CASE(CacheTest, CacheTypes);
+
+TYPED_TEST(CacheTest, Size) {
+  TypeParam cache(3);
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+
+  ASSERT_EQ(2u, cache.size());
+}
+
+TYPED_TEST(CacheTest, Clear) {
+  TypeParam cache(3);
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+
+  ASSERT_TRUE(cache.has(1));
+  ASSERT_TRUE(cache.has(2));
+
+  cache.clear();
+
+  ASSERT_EQ(3u, cache.capacity());
+  ASSERT_EQ(0u, cache.size());
+  ASSERT_FALSE(cache.has(1));
+  ASSERT_FALSE(cache.has(2));
+}
+
+TYPED_TEST(CacheTest, ResizeGrow) {
+  TypeParam cache(3);
+
+  ASSERT_EQ(3u, cache.capacity());
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+
+  cache.resize(5);
+
+  ASSERT_EQ(5u, cache.capacity());
+  ASSERT_EQ(2u, cache.size());
+
+  ASSERT_TRUE(cache.has(1));
+  ASSERT_TRUE(cache.has(2));
+}
+
+TYPED_TEST(CacheTest, ResizeShrink) {
+  TypeParam cache(3);
+
+  ASSERT_EQ(3u, cache.capacity());
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+  cache.set(3, 6);
+
+  cache.resize(1);
+
+  ASSERT_EQ(1u, cache.capacity());
+  ASSERT_EQ(1u, cache.size());
+
+  ASSERT_FALSE(cache.has(1));
+  ASSERT_FALSE(cache.has(2));
+  ASSERT_TRUE(cache.has(3));
+  ASSERT_EQ(cache.get(3), 6);
+}
+
 }  // namespace opossum

@@ -20,9 +20,10 @@ class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterf
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 2));
 
     // Disable automatic caching.
-    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
-    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-    SQLQueryOperator::get_prepared_statement_cache().clear_and_resize(1024);
+    SQLQueryOperator::get_query_plan_cache().resize(0);
+    SQLQueryOperator::get_parse_tree_cache().resize(0);
+    SQLQueryOperator::get_prepared_statement_cache().clear();
+    SQLQueryOperator::get_prepared_statement_cache().resize(1024);
 
     std::string prepare_statements[] = {"PREPARE a1 FROM 'SELECT * FROM table_a WHERE a >= 1234';",
                                         "PREPARE a2 FROM 'SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9'",

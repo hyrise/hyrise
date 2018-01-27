@@ -22,7 +22,8 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   return std::make_shared<StoredTableNode>(_table_name);
 }
 
@@ -55,23 +56,23 @@ std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
 
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }
 
-std::optional<NamedColumnReference> StoredTableNode::_resolve_local_column_prefix(
-    const NamedColumnReference& named_column_reference) const {
-  if (!named_column_reference.table_name) {
-    return named_column_reference;
+std::optional<QualifiedColumnName> StoredTableNode::_resolve_local_table_name(
+    const QualifiedColumnName& qualified_column_name) const {
+  if (!qualified_column_name.table_name) {
+    return qualified_column_name;
   }
 
   if (_table_alias) {
-    if (*named_column_reference.table_name != *_table_alias) {
+    if (*qualified_column_name.table_name != *_table_alias) {
       return std::nullopt;
     }
   } else {
-    if (_table_name != *named_column_reference.table_name) {
+    if (_table_name != *qualified_column_name.table_name) {
       return std::nullopt;
     }
   }
 
-  auto reference_without_local_alias = named_column_reference;
+  auto reference_without_local_alias = qualified_column_name;
   reference_without_local_alias.table_name = std::nullopt;
   return reference_without_local_alias;
 }
