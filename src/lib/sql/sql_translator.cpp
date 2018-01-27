@@ -740,11 +740,21 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
   std::vector<std::shared_ptr<LQPExpression>> select_column_expressions;
 
   for (const auto* select_column_hsql_expr : select_list) {
-    const auto expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
+    std::shared_ptr<LQPExpression> expr;
+
+    // For subselects, recursively translate the term to an LQPNode and add its root to an LQPExpression
+    if (select_column_hsql_expr->select) {
+      auto subselect_node = _translate_select(*select_column_hsql_expr->select);
+      expr = LQPExpression::create_subselect(subselect_node);
+    }
+    else {
+      expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
+    }
 
     DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
-                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal,
-                "Only column references, star-selects, and arithmetic expressions supported for now.");
+                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal ||
+                    expr->type() == ExpressionType::Select,
+                "Only column references, star-selects, subselects and arithmetic expressions supported for now.");
 
     if (expr->type() == ExpressionType::Star) {
       // Resolve `SELECT *` or `SELECT prefix.*` to columns.
