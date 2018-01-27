@@ -77,7 +77,7 @@ TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_FALSE(predicate_node->right_child());
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
   // TODO(anybody): once this is implemented, the value side has to be checked.
 }
 
@@ -91,7 +91,7 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
   auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
   EXPECT_EQ(predicate_node->value(),
             AllParameterVariant(LQPColumnReference(predicate_node->left_child(), ColumnID{1})));
@@ -111,7 +111,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   EXPECT_EQ(predicate_node->type(), LQPNodeType::Predicate);
   EXPECT_FALSE(predicate_node->right_child());
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(predicate_node->value(), AllParameterVariant{std::string{"b"}});
 }
 
@@ -278,7 +278,7 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
   const auto table_a_node = result_node->left_child()->left_child();
   const auto table_b_node = result_node->left_child()->right_child();
 
-  EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(join_node->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
   EXPECT_EQ(join_node->join_column_references()->first, LQPColumnReference(table_a_node, ColumnID{0}));
   EXPECT_EQ(join_node->join_column_references()->second, LQPColumnReference(table_b_node, ColumnID{0}));
@@ -315,7 +315,7 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
   const auto table_a_node = join_node->left_child();
   const auto table_b_node = join_node->right_child();
 
-  EXPECT_EQ(join_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(join_node->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(join_node->join_mode(), mode);
   EXPECT_EQ(join_node->join_column_references()->first, LQPColumnReference(table_a_node, ColumnID{0}));
   EXPECT_EQ(join_node->join_column_references()->second, LQPColumnReference(table_b_node, ColumnID{0}));
@@ -378,7 +378,7 @@ TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
 
   EXPECT_FALSE(predicate_node->right_child());
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(table_a_node, ColumnID{0}));
-  EXPECT_EQ(predicate_node->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(predicate_node->value(), AllParameterVariant{LQPColumnReference(table_b_node, ColumnID{0})});
 }
 
@@ -394,7 +394,7 @@ TEST_F(SQLTranslatorTest, SelectCrossJoin) {
   EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
   EXPECT_EQ(result_node->left_child()->left_child()->type(), LQPNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child()->left_child());
-  EXPECT_FALSE(join_node->scan_type());
+  EXPECT_FALSE(join_node->predicate_condition());
   EXPECT_EQ(join_node->join_mode(), JoinMode::Cross);
 }
 
@@ -533,10 +533,10 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
    * [Projection] table_b.a, SUM(table_c.a), table_a.b, table_a.b
    *  |_[Aggregate] SUM(table_c.a) GROUP BY [table_a.b, table_a.a, table_b.a, table_b.b]
    *     |_[Cross Join]
-   *        |_[Cross Join]
-   *         |  |_[StoredTable] Name: 'table_b'
-   *         |  |_[StoredTable] Name: 'table_c'
-   *         |_[StoredTable] Name: 'table_a'
+   *      | |_[Cross Join]                     (left_child)
+   *      |   |_[StoredTable] Name: 'table_a'
+   *      |   |_[StoredTable] Name: 'table_b'
+   *      |_[StoredTable] Name: 'table_c'      (right_child)
    */
 
   const auto result = compile_query(query);
@@ -544,15 +544,15 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   ASSERT_NE(result->left_child(), nullptr);                                             // Aggregate
   ASSERT_NE(result->left_child()->left_child(), nullptr);                               // CrossJoin
   ASSERT_NE(result->left_child()->left_child()->left_child(), nullptr);                 // CrossJoin
-  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr);   // table_b
-  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr);  // table_c
-  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr);                // table_a
+  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr);   // table_a
+  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr);  // table_b
+  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr);                // table_c
 
   ASSERT_EQ(result->left_child()->type(), LQPNodeType::Aggregate);
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result->left_child());
-  const auto table_a_node = result->left_child()->left_child()->right_child();
-  const auto table_b_node = result->left_child()->left_child()->left_child()->left_child();
-  const auto table_c_node = result->left_child()->left_child()->left_child()->right_child();
+  const auto table_a_node = result->left_child()->left_child()->left_child()->left_child();
+  const auto table_b_node = result->left_child()->left_child()->left_child()->right_child();
+  const auto table_c_node = result->left_child()->left_child()->right_child();
 
   /**
    * Assert the Projection
@@ -603,7 +603,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
   const auto table_a_node = ts_node_1->left_child();
 
   EXPECT_EQ(ts_node_1->column_reference(), LQPColumnReference(table_a_node, ColumnID{0}));
-  EXPECT_EQ(ts_node_1->scan_type(), ScanType::Equals);
+  EXPECT_EQ(ts_node_1->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }
 

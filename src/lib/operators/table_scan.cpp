@@ -30,10 +30,10 @@
 namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
-                     const ScanType scan_type, const AllParameterVariant right_parameter)
+                     const PredicateCondition predicate_condition, const AllParameterVariant right_parameter)
     : AbstractReadOnlyOperator{in},
       _left_column_id{left_column_id},
-      _scan_type{scan_type},
+      _predicate_condition{predicate_condition},
       _right_parameter{right_parameter} {}
 
 TableScan::~TableScan() = default;
@@ -42,20 +42,22 @@ void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { 
 
 ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
-ScanType TableScan::scan_type() const { return _scan_type; }
+PredicateCondition TableScan::predicate_condition() const { return _predicate_condition; }
 
 const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
-const std::string TableScan::description() const {
+const std::string TableScan::description(DescriptionMode description_mode) const {
   std::string column_name = std::string("Col #") + std::to_string(_left_column_id);
 
   if (_input_table_left()) column_name = _input_table_left()->column_name(_left_column_id);
 
   std::string predicate_string = to_string(_right_parameter);
 
-  return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
+  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  return name() + separator + "(" + column_name + " " + predicate_condition_to_string.left.at(_predicate_condition) +
+         " " + predicate_string + ")";
 }
 
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
@@ -63,10 +65,12 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
     if (index < args.size()) {
-      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, args[index]);
+      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition,
+                                         args[index]);
     }
   }
-  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, _right_parameter);
+  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition,
+                                     _right_parameter);
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
@@ -164,7 +168,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
 
-  if (_scan_type == ScanType::Like || _scan_type == ScanType::NotLike) {
+  if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
@@ -176,24 +180,25 @@ void TableScan::_init_scan() {
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
-    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, _scan_type, right_wildcard);
+    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_wildcard);
 
     return;
   }
 
-  if (_scan_type == ScanType::IsNull || _scan_type == ScanType::IsNotNull) {
-    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
+  if (_predicate_condition == PredicateCondition::IsNull || _predicate_condition == PredicateCondition::IsNotNull) {
+    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _predicate_condition);
     return;
   }
 
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
+    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_value);
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
-    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _scan_type, right_column_id);
+    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _predicate_condition,
+                                                            right_column_id);
   }
 }
 

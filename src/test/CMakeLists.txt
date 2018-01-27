@@ -50,6 +50,7 @@ set(
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
+    operators/physical_query_plan_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/show_columns_test.cpp
@@ -69,6 +70,7 @@ set(
     optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/optimizer_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
@@ -84,6 +86,7 @@ set(
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp
     sql/sql_parse_tree_cache_test.cpp
+    sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
@@ -129,6 +132,7 @@ set(
     LIBRARIES
     gtest
     sqlite3
+    ${FILESYSTEM_LIBRARY}
 )
 
 # Build special sanitizer version of googletest

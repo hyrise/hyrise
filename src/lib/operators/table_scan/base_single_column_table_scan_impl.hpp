@@ -25,7 +25,7 @@ class ReferenceColumn;
 class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVisitable {
  public:
   BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                const ScanType scan_type, const bool skip_null_row_ids = true);
+                                const PredicateCondition predicate_condition, const bool skip_null_row_ids = true);
 
   PosList scan_chunk(ChunkID chunk_id) override;
 

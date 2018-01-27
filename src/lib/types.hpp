@@ -164,7 +164,7 @@ class ValuePlaceholder {
 };
 
 // TODO(anyone): integrate and replace with ExpressionType
-enum class ScanType {
+enum class PredicateCondition {
   Equals,
   NotEquals,
   LessThan,
@@ -234,6 +234,8 @@ enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
+
+enum class DescriptionMode { SingleLine, MultiLine };
 
 class Noncopyable {
  protected:

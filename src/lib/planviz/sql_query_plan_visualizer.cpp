@@ -46,7 +46,8 @@ void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const Abstrac
 
   if (const auto& output = from->get_output()) {
     // the input operator was executed, print the number of rows
-    info.label = std::to_string(output->row_count()) + " row(s)";
+    info.label = std::to_string(output->row_count()) + " row(s)/";
+    info.label += std::to_string(output->chunk_count()) + " chunk(s)";
     info.pen_width = std::fmax(1, std::ceil(std::log10(output->row_count()) / 2));
   }
 
@@ -55,11 +56,11 @@ void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const Abstrac
 
 void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>& op) {
   VizVertexInfo info = _default_vertex;
-  auto label = op->description();
+  auto label = op->description(DescriptionMode::MultiLine);
 
   if (op->get_output()) {
     auto wall_time = op->performance_data().walltime_ns;
-    label += "\\n" + std::to_string(wall_time) + " ns";
+    label += "\n\n" + std::to_string(wall_time) + " ns";
     info.pen_width = std::fmax(1, std::ceil(std::log10(wall_time) / 2));
   }
 

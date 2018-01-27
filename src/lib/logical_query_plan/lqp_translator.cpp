@@ -99,16 +99,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
    * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
    * `X >= a` and one for `X <= b`
    */
-  if (table_scan_node->scan_type() == ScanType::Between) {
+  if (table_scan_node->predicate_condition() == PredicateCondition::Between) {
     DebugAssert(static_cast<bool>(table_scan_node->value2()), "Scan type BETWEEN requires a second value");
     PerformanceWarning("TableScan executes BETWEEN as two separate scans");
 
-    auto table_scan_gt = std::make_shared<TableScan>(input_operator, column_id, ScanType::GreaterThanEquals, value);
+    auto table_scan_gt =
+        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
 
-    return std::make_shared<TableScan>(table_scan_gt, column_id, ScanType::LessThanEquals, *table_scan_node->value2());
+    return std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
+                                       *table_scan_node->value2());
   }
 
-  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->scan_type(), value);
+  return std::make_shared<TableScan>(input_operator, column_id, table_scan_node->predicate_condition(), value);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
@@ -159,19 +161,19 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   }
 
   DebugAssert(static_cast<bool>(join_node->join_column_references()), "Cannot translate Join without columns.");
-  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
+  DebugAssert(static_cast<bool>(join_node->predicate_condition()), "Cannot translate Join without PredicateCondition.");
 
   ColumnIDPair join_column_ids;
   join_column_ids.first = join_node->left_child()->get_output_column_id(join_node->join_column_references()->first);
   join_column_ids.second = join_node->right_child()->get_output_column_id(join_node->join_column_references()->second);
 
-  if (*join_node->scan_type() == ScanType::Equals && join_node->join_mode() != JoinMode::Outer) {
+  if (*join_node->predicate_condition() == PredicateCondition::Equals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
-                                      join_column_ids, *(join_node->scan_type()));
+                                      join_column_ids, *(join_node->predicate_condition()));
   }
 
   return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode(),
-                                         join_column_ids, *(join_node->scan_type()));
+                                         join_column_ids, *(join_node->predicate_condition()));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(

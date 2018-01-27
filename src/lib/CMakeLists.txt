@@ -158,6 +158,8 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/strategy/rule_batch.cpp
+    optimizer/strategy/rule_batch.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     planviz/abstract_visualizer.hpp
@@ -193,6 +195,8 @@ set(
     sql/hsql_expr_translator.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
+    sql/sql_pipeline_statement.cpp
+    sql/sql_pipeline_statement.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp

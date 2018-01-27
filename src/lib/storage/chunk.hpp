@@ -168,14 +168,6 @@ class Chunk : private Noncopyable {
    */
   void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
 
-  /**
-   * Reuses mvcc from another chunk.
-   * Copies the shared pointer of the mvcc columns
-   * so that they are effectively shared between the two
-   * chunks. This is used in the Projection class.
-   */
-  void use_mvcc_columns_from(const std::shared_ptr<const Chunk>& chunk);
-
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
   std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID> column_ids) const;

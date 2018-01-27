@@ -12,6 +12,17 @@
 
 namespace opossum {
 
+void TopologyNode::print(std::ostream& stream) const {
+  stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
+  for (size_t cpu_idx = 0; cpu_idx < cpus.size(); ++cpu_idx) {
+    stream << cpus[cpu_idx].cpu_id;
+    if (cpu_idx + 1 < cpus.size()) {
+      stream << ", ";
+    }
+  }
+  stream << "]";
+}
+
 std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
   auto max_num_threads = std::thread::hardware_concurrency();
 
@@ -91,5 +102,14 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
 const std::vector<TopologyNode>& Topology::nodes() { return _nodes; }
 
 size_t Topology::num_cpus() const { return _num_cpus; }
+
+void Topology::print(std::ostream& stream) const {
+  stream << "Number of CPUs: " << _num_cpus << std::endl;
+  for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
+    stream << "Node #" << node_idx << " - ";
+    _nodes[node_idx].print(stream);
+    stream << std::endl;
+  }
+}
 
 }  // namespace opossum

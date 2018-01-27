@@ -40,23 +40,23 @@
 
 namespace opossum {
 
-ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_type) {
-  static const std::unordered_map<const hsql::OperatorType, const ScanType> operator_to_scan_type = {
-      {hsql::kOpEquals, ScanType::Equals},       {hsql::kOpNotEquals, ScanType::NotEquals},
-      {hsql::kOpGreater, ScanType::GreaterThan}, {hsql::kOpGreaterEq, ScanType::GreaterThanEquals},
-      {hsql::kOpLess, ScanType::LessThan},       {hsql::kOpLessEq, ScanType::LessThanEquals},
-      {hsql::kOpBetween, ScanType::Between},     {hsql::kOpLike, ScanType::Like},
-      {hsql::kOpNotLike, ScanType::NotLike},     {hsql::kOpIsNull, ScanType::IsNull}};
+PredicateCondition translate_operator_type_to_predicate_condition(const hsql::OperatorType operator_type) {
+  static const std::unordered_map<const hsql::OperatorType, const PredicateCondition> operator_to_predicate_condition =
+      {{hsql::kOpEquals, PredicateCondition::Equals},       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
+       {hsql::kOpGreater, PredicateCondition::GreaterThan}, {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
+       {hsql::kOpLess, PredicateCondition::LessThan},       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
+       {hsql::kOpBetween, PredicateCondition::Between},     {hsql::kOpLike, PredicateCondition::Like},
+       {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull}};
 
-  auto it = operator_to_scan_type.find(operator_type);
-  DebugAssert(it != operator_to_scan_type.end(), "Filter expression clause operator is not yet supported.");
+  auto it = operator_to_predicate_condition.find(operator_type);
+  DebugAssert(it != operator_to_predicate_condition.end(), "Filter expression clause operator is not yet supported.");
   return it->second;
 }
 
-ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
+PredicateCondition get_predicate_condition_for_reverse_order(const PredicateCondition predicate_condition) {
   /**
    * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
-   * This function returns the respective ScanType.
+   * This function returns the respective PredicateCondition.
    *
    * Example:
    *     SELECT * FROM t WHERE 1 > a
@@ -66,18 +66,19 @@ ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
    *     SELECT * FROM t WHERE 1 = a
    *  -> SELECT * FROM t WHERE a = 1
    */
-  static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
-      {ScanType::GreaterThan, ScanType::LessThan},
-      {ScanType::LessThan, ScanType::GreaterThan},
-      {ScanType::GreaterThanEquals, ScanType::LessThanEquals},
-      {ScanType::LessThanEquals, ScanType::GreaterThanEquals}};
+  static const std::unordered_map<const PredicateCondition, const PredicateCondition>
+      predicate_condition_for_reverse_order = {
+          {PredicateCondition::GreaterThan, PredicateCondition::LessThan},
+          {PredicateCondition::LessThan, PredicateCondition::GreaterThan},
+          {PredicateCondition::GreaterThanEquals, PredicateCondition::LessThanEquals},
+          {PredicateCondition::LessThanEquals, PredicateCondition::GreaterThanEquals}};
 
-  auto it = scan_type_for_reverse_order.find(scan_type);
-  if (it != scan_type_for_reverse_order.end()) {
+  auto it = predicate_condition_for_reverse_order.find(predicate_condition);
+  if (it != predicate_condition_for_reverse_order.end()) {
     return it->second;
   }
 
-  return scan_type;
+  return predicate_condition;
 }
 
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
@@ -360,9 +361,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
                                                    : std::make_pair(*left_in_right_node, *right_in_left_node);
 
   // Joins currently only support one simple condition (i.e., not multiple conditions).
-  auto scan_type = translate_operator_type_to_scan_type(condition.opType);
+  auto predicate_condition = translate_operator_type_to_predicate_condition(condition.opType);
 
-  auto join_node = std::make_shared<JoinNode>(join_mode, column_references, scan_type);
+  auto join_node = std::make_shared<JoinNode>(join_mode, column_references, predicate_condition);
   join_node->set_left_child(left_node);
   join_node->set_right_child(right_node);
 
@@ -395,7 +396,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   for (const auto& join_column_name : join_column_names) {
     auto left_column_reference = left_node->get_column({join_column_name});
     auto right_column_reference = right_node->get_column({join_column_name});
-    auto predicate = std::make_shared<PredicateNode>(left_column_reference, ScanType::Equals, right_column_reference);
+    auto predicate =
+        std::make_shared<PredicateNode>(left_column_reference, PredicateCondition::Equals, right_column_reference);
     predicate->set_left_child(return_node);
     return_node = predicate;
   }
@@ -874,27 +876,27 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
 
   const auto* column_ref_hsql_expr = hsql_expr.expr;
-  ScanType scan_type;
+  PredicateCondition predicate_condition;
 
   if (predicate_negated) {
     Assert(hsql_expr.expr != nullptr, "NOT operator without further expressions");
-    scan_type = translate_operator_type_to_scan_type(hsql_expr.expr->opType);
+    predicate_condition = translate_operator_type_to_predicate_condition(hsql_expr.expr->opType);
 
     /**
      * It should be possible for any predicate to be negated with "NOT",
      * e.g., WHERE NOT a > 5. However, this is currently not supported.
      * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` scan type.
      */
-    Assert(scan_type == ScanType::IsNull, "Only IS NULL can be negated");
+    Assert(predicate_condition == PredicateCondition::IsNull, "Only IS NULL can be negated");
 
-    if (scan_type == ScanType::IsNull) {
-      scan_type = ScanType::IsNotNull;
+    if (predicate_condition == PredicateCondition::IsNull) {
+      predicate_condition = PredicateCondition::IsNotNull;
     }
 
     // change column reference to the correct expression
     column_ref_hsql_expr = hsql_expr.expr->expr;
   } else {
-    scan_type = translate_operator_type_to_scan_type(hsql_expr.opType);
+    predicate_condition = translate_operator_type_to_predicate_condition(hsql_expr.opType);
   }
 
   // Indicates whether to use expr.expr or expr.expr2 as the main column to reference
@@ -908,7 +910,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
   std::optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
-  if (scan_type == ScanType::Between) {
+  if (predicate_condition == PredicateCondition::Between) {
     /**
      * Translate expressions of the form `column_or_aggregate BETWEEN value AND value2`.
      * Both value and value2 can be any kind of literal, while value might also be a column or a placeholder.
@@ -931,7 +933,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
 
     Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
-  } else if (scan_type != ScanType::IsNull && scan_type != ScanType::IsNotNull) {
+  } else if (predicate_condition != PredicateCondition::IsNull &&
+             predicate_condition != PredicateCondition::IsNotNull) {
     /**
      * For logical operators (>, >=, <, ...), thanks to the strict interface of PredicateNode/TableScan, we have to
      * determine whether the left (expr.expr) or the right (expr.expr2) expr refers to the Column/AggregateFunction
@@ -942,7 +945,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     if (!refers_to_column(*hsql_expr.expr)) {
       Assert(refers_to_column(*hsql_expr.expr2), "One side of the expression has to refer to a column.");
       operands_switched = true;
-      scan_type = get_scan_type_for_reverse_order(scan_type);
+      predicate_condition = get_predicate_condition_for_reverse_order(predicate_condition);
     }
 
     value_ref_hsql_expr = operands_switched ? hsql_expr.expr : hsql_expr.expr2;
@@ -970,7 +973,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
       expand_projection_node->set_left_child(input_node);
 
       auto subselect_column_id = ColumnID(column_expressions.size() - 1);
-      auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, subselect_column_id, std::nullopt);
+      auto predicate_node = std::make_shared<PredicateNode>(column_id, predicate_condition, subselect_column_id, std::nullopt);
       predicate_node->set_left_child(expand_projection_node);
 
       auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
@@ -980,7 +983,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   }
 
   AllParameterVariant value;
-  if (scan_type == ScanType::IsNull || scan_type == ScanType::IsNotNull) {
+  if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
     value = NULL_VALUE;
   } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
@@ -988,7 +991,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }
 
-  auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
+  auto predicate_node = std::make_shared<PredicateNode>(column_id, predicate_condition, value, value2);
   predicate_node->set_left_child(input_node);
 
   return predicate_node;

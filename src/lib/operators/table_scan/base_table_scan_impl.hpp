@@ -15,8 +15,9 @@ class Table;
  */
 class BaseTableScanImpl {
  public:
-  BaseTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type)
-      : _in_table{in_table}, _left_column_id{left_column_id}, _scan_type{scan_type} {}
+  BaseTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                    const PredicateCondition predicate_condition)
+      : _in_table{in_table}, _left_column_id{left_column_id}, _predicate_condition{predicate_condition} {}
 
   virtual ~BaseTableScanImpl() = default;
 
@@ -62,7 +63,7 @@ class BaseTableScanImpl {
  protected:
   const std::shared_ptr<const Table> _in_table;
   const ColumnID _left_column_id;
-  const ScanType _scan_type;
+  const PredicateCondition _predicate_condition;
 };
 
 }  // namespace opossum
