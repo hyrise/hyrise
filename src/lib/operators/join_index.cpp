@@ -189,39 +189,22 @@ void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const Bas
 }
 
 void JoinIndex::_perform_join() {
-  auto left_table = _left_in_table;
-  auto right_table = _right_in_table;
-
-  auto left_column_id = _left_column_id;
-  auto right_column_id = _right_column_id;
-
   _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   // these joins can not be handled using index join, we therefore fall back on a nested loop join
-  // TODO(florian): build logging that these are not supported, after another sanity check
-  _fallback = (_mode == JoinMode::Right || _mode == JoinMode::Outer || _mode == JoinMode::Cross);
+  // TODO(florian): make clear that cross_join is not supported
 
-  if (_mode == JoinMode::Right) {
-    // for Right Outer we swap the tables so we have the outer on the "left"
-    // TODO(florian): remove this, it is not good for the scheduler, we can simply reject right outer
-    left_table = _right_in_table;
-    right_table = _left_in_table;
-
-    left_column_id = _right_column_id;
-    right_column_id = _left_column_id;
-  }
-
-  auto left_data_type = left_table->column_type(left_column_id);
-  auto right_data_type = right_table->column_type(right_column_id);
+  auto left_data_type = _left_in_table->column_type(_left_column_id);
+  auto right_data_type = _right_in_table->column_type(_right_column_id);
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
   // Scan all chunks for right input
-  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-    auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
+    auto column_right = _right_in_table->get_chunk(chunk_id_right).get_column(_right_column_id);
 
-    const auto indices = right_table->get_chunk(chunk_id_right).get_indices(std::vector<ColumnID>{_right_column_id});
+    const auto indices = _right_in_table->get_chunk(chunk_id_right).get_indices(std::vector<ColumnID>{_right_column_id});
 
     std::shared_ptr<BaseIndex> index = nullptr;
 
@@ -230,8 +213,8 @@ void JoinIndex::_perform_join() {
     }
 
     // Scan all chunks from left input
-    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-      auto chunk_column_left = left_table->get_chunk(chunk_id_left).get_column(left_column_id);
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+      auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left).get_column(_left_column_id);
 
       // for Outer joins, remember matches on the left side
       std::vector<bool> left_matches;
@@ -287,8 +270,8 @@ void JoinIndex::_perform_join() {
   // For Full Outer we need to add all unmatched rows for the right side.
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::Outer) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right).get_column(right_column_id);
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
+      auto column_right = _right_in_table->get_chunk(chunk_id_right).get_column(_right_column_id);
 
       resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;
@@ -310,11 +293,11 @@ void JoinIndex::_perform_join() {
   auto output_chunk = Chunk();
 
   if (_mode == JoinMode::Right) {
-    _write_output_chunk(output_chunk, right_table, _pos_list_right);
-    _write_output_chunk(output_chunk, left_table, _pos_list_left);
+    _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
+    _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
   } else {
-    _write_output_chunk(output_chunk, left_table, _pos_list_left);
-    _write_output_chunk(output_chunk, right_table, _pos_list_right);
+    _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
+    _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
   }
 
   _output_table->emplace_chunk(std::move(output_chunk));
