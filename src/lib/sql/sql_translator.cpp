@@ -949,6 +949,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
   }
 
+  /**
+   * the argument passed to resolve_column() here:
+   * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
+   * or "p_a" in `WHERE p_a > p_b`
+   */
+  const auto column_id = resolve_column(*column_ref_hsql_expr);
+
   if (value_ref_hsql_expr->select) {
       const auto column_references = input_node->output_column_references();
       auto column_expressions = LQPExpression::create_columns(column_references);
@@ -960,7 +967,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
       auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
       projection_node->set_left_child(input_node);
 
-      return projection_node;
+      auto subselect_column_id = ColumnID(column_expressions.size() - 1);
+      auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, subselect_column_id, std::nullopt);
+      predicate_node->set_left_child(projection_node);
+
+      return predicate_node;
   }
 
   AllParameterVariant value;
@@ -971,13 +982,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else {
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }
-
-  /**
-   * the argument passed to resolve_column() here:
-   * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
-   * or "p_a" in `WHERE p_a > p_b`
-   */
-  const auto column_id = resolve_column(*column_ref_hsql_expr);
 
   auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
   predicate_node->set_left_child(input_node);

@@ -20,6 +20,8 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
       const std::vector<LQPColumnReference>& column_references,
       const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
+  static std::shared_ptr<LQPExpression> create_subselect(std::shared_ptr<AbstractLQPNode> root_node = nullptr);
+
   // Necessary for the AbstractExpression<T>::create_*() methods
   using AbstractExpression<LQPExpression>::AbstractExpression;
 

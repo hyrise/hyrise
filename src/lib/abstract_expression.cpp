@@ -405,14 +405,6 @@ std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::create
   return expression;
 }
 
-template <typename DerivedExpression>
-std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::create_subselect(
-        std::shared_ptr<AbstractLQPNode> root_node) {
-  auto expression = std::make_shared<DerivedExpression>(ExpressionType::Select);
-  expression->_subselect_node = root_node;
-  return expression;
-}
-
 template class AbstractExpression<LQPExpression>;
 template class AbstractExpression<PQPExpression>;
 

@@ -77,8 +77,6 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
 
   static std::shared_ptr<DerivedExpression> create_select_star(const std::optional<std::string>& table_name = {});
 
-  static std::shared_ptr<DerivedExpression> create_subselect(std::shared_ptr<AbstractLQPNode> root_node = nullptr);
-
   // @}
 
   // @{

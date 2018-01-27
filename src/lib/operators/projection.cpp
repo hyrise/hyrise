@@ -15,6 +15,7 @@
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/dictionary_compression.hpp"
 
 namespace opossum {
 
@@ -46,11 +47,12 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
                                 const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
                                 std::shared_ptr<const Table> input_table_left) {
   // check whether term is a just a simple column and bypass this column
-  if (expression->type() == ExpressionType::Column) {
-    // we have to use get_mutable_column here because we cannot add a const column to the chunk
-    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
-    return chunk->add_column(bypassed_column);
-  }
+  // TODO: how to fix mismatch between reference and value columns within a table?
+//  if (expression->type() == ExpressionType::Column) {
+//    // we have to use get_mutable_column here because we cannot add a const column to the chunk
+//    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
+//    return chunk->add_column(bypassed_column);
+//  }
 
   std::shared_ptr<BaseColumn> column;
 
@@ -62,7 +64,18 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     auto values = pmr_concurrent_vector<T>(row_count, T{});
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
-  } else {
+  }
+  else if (expression->type() == ExpressionType::Select) {
+    // TODO: IN as special case
+    auto subselect_value = expression->table()->get_value<T>(ColumnID(0), 0);
+
+    auto row_count = input_table_left->get_chunk(chunk_id)->size();
+    auto null_values = pmr_concurrent_vector<bool>(row_count, false);
+    auto values = pmr_concurrent_vector<T>(row_count, subselect_value);
+
+    column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+  }
+  else {
     // fill a value column with the specified expression
     auto values = _evaluate_expression<T>(expression, input_table_left, chunk_id);
 
@@ -97,19 +110,17 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       name = column_expression->to_string(_input_table_left()->column_names());
     } else if (column_expression->is_subselect()) {
       // TODO: add come kind of identifier for each subselect
-      // TODO: execute operator, so that we can access result table
-
       name = "subselect";
 
-      // execute the subquery
-      auto subquery_node = column_expression->subselect_node();
-      auto subquery_operator = LQPTranslator{}.translate_node(subquery_node);
       SQLQueryPlan query_plan;
-      query_plan.add_tree_by_root(subquery_operator);
+      query_plan.add_tree_by_root(column_expression->subselect_operator());
+      query_plan.set_transaction_context(this->transaction_context());
       std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
       auto result_table = tasks.back()->get_operator()->get_output();
-      // TODO: Use the result table as input
+
+      // TODO: assert that only one column exists
+      column_expression->set_table(result_table);
     } else {
       Fail("Expression type is not supported.");
     }
@@ -151,6 +162,9 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
   }
   if (expression->type() == ExpressionType::Column) {
     return table->column_type(expression->column_id());
+  }
+  if (expression->type() == ExpressionType::Select) {
+    return expression->table()->column_type(ColumnID(0));
   }
 
   Assert(expression->is_arithmetic_operator(),
