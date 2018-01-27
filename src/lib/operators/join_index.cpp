@@ -274,13 +274,19 @@ void JoinIndex::_perform_join() {
         });
       });
 
-      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-        // add unmatched rows on the left for Left and Full Outer joins
-        for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
-          if (!left_matches[chunk_offset]) {
-            _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-            _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-          }
+
+    }
+  }
+
+
+
+    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+          for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+      // add unmatched rows on the left for Left and Full Outer joins
+      for (ChunkOffset chunk_offset{0}; chunk_offset < _left_matches[chunk_id_left].size(); ++chunk_offset) {
+        if (!_left_matches[chunk_id_left][chunk_offset]) {
+          _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+          _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
         }
       }
     }
