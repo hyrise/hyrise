@@ -17,20 +17,19 @@ class SystemStatistics {
   class SQLQueryCacheEntry {
    public:
     std::string query;
-    SQLQueryPlan query_plan;
+    std::shared_ptr<SQLQueryPlan> query_plan;
     size_t access_frequency;
   };
 
   // TODO(group01) retrieve query cache from system-wide singleton as soon as that exists
-  explicit SystemStatistics(const SQLQueryCache<SQLQueryPlan>& cache);
+  explicit SystemStatistics(const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& cache);
 
   // Retrieves recent query plans from the currently active query cache implementation
-  // TODO(group01) copying SQLQueryPlan instances is expensive, can we obtain shared_ptrs?
   const std::vector<SQLQueryCacheEntry>& recent_queries() const;
 
  protected:
   mutable std::vector<SQLQueryCacheEntry> _recent_queries;
-  const SQLQueryCache<SQLQueryPlan>& _cache;
+  const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& _cache;
 };
 
 }  // namespace opossum
