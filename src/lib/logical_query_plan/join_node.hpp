@@ -9,11 +9,11 @@
 #include "types.hpp"
 
 #include "abstract_lqp_node.hpp"
-#include "lqp_column_origin.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
-using JoinColumnOrigins = std::pair<LQPColumnOrigin, LQPColumnOrigin>;
+using LQPColumnReferencePair = std::pair<LQPColumnReference, LQPColumnReference>;
 
 /**
  * This node type is used to represent any type of Join, including cross products.
@@ -25,15 +25,16 @@ class JoinNode : public AbstractLQPNode {
   explicit JoinNode(const JoinMode join_mode);
 
   // Constructor for predicated Joins
-  JoinNode(const JoinMode join_mode, const JoinColumnOrigins& join_column_origins, const ScanType scan_type);
+  JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
+           const PredicateCondition predicate_condition);
 
-  const std::optional<JoinColumnOrigins>& join_column_origins() const;
-  const std::optional<ScanType>& scan_type() const;
+  const std::optional<LQPColumnReferencePair>& join_column_references() const;
+  const std::optional<PredicateCondition>& predicate_condition() const;
   JoinMode join_mode() const;
 
   std::string description() const override;
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<LQPColumnOrigin>& output_column_origins() const override;
+  const std::vector<LQPColumnReference>& output_column_references() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,
@@ -43,13 +44,14 @@ class JoinNode : public AbstractLQPNode {
 
  protected:
   void _on_child_changed() override;
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
-                                                   const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
 
  private:
   JoinMode _join_mode;
-  std::optional<JoinColumnOrigins> _join_column_origins;
-  std::optional<ScanType> _scan_type;
+  std::optional<LQPColumnReferencePair> _join_column_references;
+  std::optional<PredicateCondition> _predicate_condition;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

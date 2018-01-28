@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -116,7 +117,7 @@ using ColumnNameLength = uint8_t;  // The length of column names must fit in thi
 using AttributeVectorWidth = uint8_t;
 
 using PosList = pmr_vector<RowID>;
-using JoinColumnIDs = std::pair<ColumnID, ColumnID>;
+using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
@@ -163,7 +164,7 @@ class ValuePlaceholder {
 };
 
 // TODO(anyone): integrate and replace with ExpressionType
-enum class ScanType {
+enum class PredicateCondition {
   Equals,
   NotEquals,
   LessThan,
@@ -234,6 +235,8 @@ enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNu
 
 enum class TableType { References, Data };
 
+enum class DescriptionMode { SingleLine, MultiLine };
+
 class Noncopyable {
  protected:
   Noncopyable() = default;
@@ -242,22 +245,6 @@ class Noncopyable {
   ~Noncopyable() = default;
   Noncopyable(const Noncopyable&) = delete;
   const Noncopyable& operator=(const Noncopyable&) = delete;
-};
-
-/**
- * Aggregates are defined by the Column (ColumnID for Operators, ColumnOrigin in LQP) they operate on and the aggregate
- * function they use.
- * Optionally, an alias can be specified to use as the output name.
- */
-template <typename ColumnReferenceType>
-struct AggregateColumnDefinitionTemplate {
-  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
-                                    const std::optional<std::string>& alias = std::nullopt)
-      : column(column), function(function), alias(alias) {}
-
-  std::optional<ColumnReferenceType> column;
-  AggregateFunction function;
-  std::optional<std::string> alias;
 };
 
 }  // namespace opossum

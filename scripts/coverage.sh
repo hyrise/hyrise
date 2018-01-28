@@ -1,18 +1,36 @@
 #!/bin/bash
 set -e
 
-if [ -z "$1" ]
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --build_directory=*)
+      build_directory="${1#*=}"
+      ;;
+    --generate_badge=*)
+      generate_badge="${1#*=}"
+      ;;
+    --test_data_folder=*)
+      test_data_folder="${1#*=}"
+      ;;
+    *)
+      printf "Error: Invalid argument."
+      exit 1
+  esac
+  shift
+done
+
+if [ -z "$build_directory" ]
   then
-    echo "No build directory supplied"
+    echo "Error: No build directory supplied - use --build_directory=..."
     exit 1
 fi
 
-cd $1
+cd $build_directory
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 make hyriseTest -j $((cores / 2))
 cd -
 
-./$1/hyriseTest
+./$build_directory/hyriseTest $test_data_folder
 rm -fr coverage; mkdir coverage
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
@@ -21,7 +39,7 @@ gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k -g --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
-if [ ! -z "$2" ]
+if [ "true" == "$generate_badge" ]
 then
     # generate XML for pycobertura
     gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --xml > coverage.xml

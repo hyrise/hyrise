@@ -26,9 +26,9 @@ class UnionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<UnionNode> _union_node;
-  LQPColumnOrigin _a;
-  LQPColumnOrigin _b;
-  LQPColumnOrigin _c;
+  LQPColumnReference _a;
+  LQPColumnReference _b;
+  LQPColumnReference _c;
 };
 
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: UnionPositions"); }
@@ -37,19 +37,19 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
   EXPECT_THROW(_union_node->derive_statistics_from(_mock_node, _mock_node), std::exception);
 }
 
-TEST_F(UnionNodeTest, ColumnOriginByNamedColumnReference) {
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"a"}), _a);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"a", {"t_a"}}), _a);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"b"}), _b);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"b", {"t_a"}}), _b);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"c"}), _c);
-  EXPECT_EQ(_union_node->get_column_origin_by_named_column_reference({"c", {"t_a"}}), _c);
+TEST_F(UnionNodeTest, ColumnReferenceByNamedColumnReference) {
+  EXPECT_EQ(_union_node->get_column({"a"}), _a);
+  EXPECT_EQ(_union_node->get_column({"a", {"t_a"}}), _a);
+  EXPECT_EQ(_union_node->get_column({"b"}), _b);
+  EXPECT_EQ(_union_node->get_column({"b", {"t_a"}}), _b);
+  EXPECT_EQ(_union_node->get_column({"c"}), _c);
+  EXPECT_EQ(_union_node->get_column({"c", {"t_a"}}), _c);
 }
 
-TEST_F(UnionNodeTest, OutputColumnOrigins) {
-  EXPECT_EQ(_union_node->output_column_origins().at(0), _a);
-  EXPECT_EQ(_union_node->output_column_origins().at(1), _b);
-  EXPECT_EQ(_union_node->output_column_origins().at(2), _c);
+TEST_F(UnionNodeTest, OutputColumnReferences) {
+  EXPECT_EQ(_union_node->output_column_references().at(0), _a);
+  EXPECT_EQ(_union_node->output_column_references().at(1), _b);
+  EXPECT_EQ(_union_node->output_column_references().at(2), _c);
 }
 
 TEST_F(UnionNodeTest, MismatchingColumnNames) {

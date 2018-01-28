@@ -9,7 +9,7 @@
 
 #include "all_parameter_variant.hpp"
 
-#include "base_expression.hpp"
+#include "abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace opossum {
@@ -32,7 +32,7 @@ class LQPExpression;
  * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
  * Most of the lifting for this is done in the overrides of
- * AbstractLQPNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
+ * AbstractLQPNode::{get, find}_column_id_by_qualified_column_name() which Nodes that add, remove or rearrange columns
  * have to have an implementation of (Projection, Join, ...).
  * The handling of ColumnIdentifierName::table_name is also done in these overrides. StoredTableNode handles table
  * ALIASes and names (`SELECT t1.a, alias_t2.b FROM t1, t2 AS alias_t2`), ProjectionNode ALIASes for Expressions
@@ -107,7 +107,7 @@ class SQLTranslator final : public Noncopyable {
    */
   std::shared_ptr<AbstractLQPNode> _translate_predicate(
       const hsql::Expr& hsql_expr, bool allow_function_columns,
-      const std::function<LQPColumnOrigin(const hsql::Expr&)>& resolve_column,
+      const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);

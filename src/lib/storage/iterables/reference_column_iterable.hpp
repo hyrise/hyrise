@@ -79,7 +79,6 @@ class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
       }
 
       Fail("Referenced column is neither value nor dictionary column.");
-      return NullableColumnValue<T>{T{}, false, 0u};
     }
 
    private:

@@ -29,11 +29,12 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
        */
       auto join_condition = _find_predicate_for_cross_join(cross_join_node);
       if (join_condition) {
-        JoinColumnOrigins join_column_ids(join_condition->left_column_origin, join_condition->right_column_origin);
+        LQPColumnReferencePair join_column_ids(join_condition->left_column_reference,
+                                               join_condition->right_column_reference);
 
         auto predicate_node = join_condition->predicate_node;
         const auto new_join_node =
-            std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, predicate_node->scan_type());
+            std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, predicate_node->predicate_condition());
 
         /**
          * Place the conditional join where the cross join was and remove the predicate node
@@ -90,7 +91,7 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
     if (node->type() == LQPNodeType::Predicate) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-      if (!is_lqp_column_origin(predicate_node->value())) {
+      if (!is_lqp_column_reference(predicate_node->value())) {
         continue;
       }
 
@@ -100,25 +101,21 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
        * More precisely, we have to determine which columns of the cross joins input tables correspond to the columns
        * used in the predicate.
        */
-      auto predicate_left_column_origin = predicate_node->column_origin();
-      auto predicate_right_column_origin = boost::get<LQPColumnOrigin>(predicate_node->value());
+      auto predicate_left_column_reference = predicate_node->column_reference();
+      auto predicate_right_column_reference = boost::get<LQPColumnReference>(predicate_node->value());
 
-      const auto left_in_left =
-          cross_join->left_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);
-      const auto right_in_right =
-          cross_join->right_child()->find_output_column_id_by_column_origin(predicate_right_column_origin);
+      const auto left_in_left = cross_join->left_child()->find_output_column_id(predicate_left_column_reference);
+      const auto right_in_right = cross_join->right_child()->find_output_column_id(predicate_right_column_reference);
 
       if (left_in_left && right_in_right) {
-        return JoinCondition{predicate_node, predicate_left_column_origin, predicate_right_column_origin};
+        return JoinCondition{predicate_node, predicate_left_column_reference, predicate_right_column_reference};
       }
 
-      const auto left_in_right =
-          cross_join->right_child()->find_output_column_id_by_column_origin(predicate_left_column_origin);
-      const auto right_in_left =
-          cross_join->left_child()->find_output_column_id_by_column_origin(predicate_right_column_origin);
+      const auto left_in_right = cross_join->right_child()->find_output_column_id(predicate_left_column_reference);
+      const auto right_in_left = cross_join->left_child()->find_output_column_id(predicate_right_column_reference);
 
       if (right_in_left && left_in_right) {
-        return JoinCondition{predicate_node, predicate_right_column_origin, predicate_left_column_origin};
+        return JoinCondition{predicate_node, predicate_right_column_reference, predicate_left_column_reference};
       }
     }
   }

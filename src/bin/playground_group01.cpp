@@ -10,6 +10,7 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tuning/index_tuner.hpp"
 #include "tuning/system_statistics.hpp"
+#include "utils/assert.hpp"
 
 using std::chrono::high_resolution_clock;
 
@@ -28,13 +29,13 @@ const std::vector<std::string> test_queries{"SELECT BALANCE FROM CUSTOMER WHERE 
                                             "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'"};
 
 // Forward declarations
-std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
-                                                                 opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
+std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
+    const std::string& query, opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache);
 int _execute_query(const std::string& query, unsigned int execution_count,
-                   opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache);
+                   opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache);
 
 int main() {
-  opossum::SQLQueryCache<opossum::SQLQueryPlan> cache(1024);
+  opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>> cache(1024);
   auto statistics = std::make_shared<opossum::SystemStatistics>(cache);
   opossum::IndexTuner tuner(statistics);
 
@@ -80,17 +81,21 @@ int main() {
 }
 
 // Creates a Pipeline based on the supplied query and puts its query plan in the supplied cache
-std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query,
-                                                                 opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
+std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
+    const std::string& query, opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache) {
   auto pipeline = std::make_shared<opossum::SQLPipeline>(query);
 
-  cache.set(query, pipeline->get_query_plan());
+  auto query_plans = pipeline->get_query_plans();
+
+  // ToDo(group01): What is the semantics of multiple entries per query? Handle cases accordingly.
+  opossum::Assert(query_plans.size() == 1, "Expected only one query plan per pipeline");
+  cache.set(query, query_plans[0]);
   return pipeline;
 }
 
 // Executes a query repeatedly and measures the execution time
 int _execute_query(const std::string& query, unsigned int execution_count,
-                   opossum::SQLQueryCache<opossum::SQLQueryPlan>& cache) {
+                   opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache) {
   int accumulated_duration = 0;
 
   // Execute queries multiple times to get more stable timing results

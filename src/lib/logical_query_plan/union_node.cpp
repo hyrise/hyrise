@@ -12,8 +12,9 @@ namespace opossum {
 
 UnionNode::UnionNode(UnionMode union_mode) : AbstractLQPNode(LQPNodeType::Union), _union_mode(union_mode) {}
 
-std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(const std::shared_ptr<AbstractLQPNode>& left_child,
-                                                            const std::shared_ptr<AbstractLQPNode>& right_child) const {
+std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   return std::make_shared<UnionNode>(_union_mode);
 }
 
@@ -44,18 +45,17 @@ const std::vector<std::string>& UnionNode::output_column_names() const {
   return left_child()->output_column_names();
 }
 
-const std::vector<LQPColumnOrigin>& UnionNode::output_column_origins() const {
-  if (!_output_column_origins) {
-    DebugAssert(left_child()->output_column_origins() == right_child()->output_column_origins(),
+const std::vector<LQPColumnReference>& UnionNode::output_column_references() const {
+  if (!_output_column_references) {
+    DebugAssert(left_child()->output_column_references() == right_child()->output_column_references(),
                 "Input layouts differ.");
-    _output_column_origins = left_child()->output_column_origins();
+    _output_column_references = left_child()->output_column_references();
   }
-  return *_output_column_origins;
+  return *_output_column_references;
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
-  return nullptr;  // Return something
 }
 }  // namespace opossum

@@ -37,16 +37,18 @@ std::string ProjectionNode::description() const {
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
-  Assert(this->left_child() && left_child, "Can't deep copy without child to adjust ColumnOrigins");
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+  Assert(left_child() && copied_left_child, "Can't deep copy without child to adjust ColumnReferences");
 
-  std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
-  std::transform(_column_expressions.begin(), _column_expressions.end(), column_expressions.begin(),
-                 [&](const auto& expression) {
-                   return _adjust_expression_to_lqp(expression->deep_copy(), this->left_child(), left_child);
-                 });
+  std::vector<std::shared_ptr<LQPExpression>> column_expressions;
+  column_expressions.reserve(_column_expressions.size());
+  for (const auto& expression : _column_expressions) {
+    column_expressions.emplace_back(
+        adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
+  }
 
-  return std::make_shared<ProjectionNode>(std::move(column_expressions));
+  return std::make_shared<ProjectionNode>(column_expressions);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expressions() const {
@@ -59,12 +61,12 @@ void ProjectionNode::_on_child_changed() {
   _output_column_names.reset();
 }
 
-const std::vector<LQPColumnOrigin>& ProjectionNode::output_column_origins() const {
-  if (!_output_column_origins) {
+const std::vector<LQPColumnReference>& ProjectionNode::output_column_references() const {
+  if (!_output_column_references) {
     _update_output();
   }
 
-  return *_output_column_origins;
+  return *_output_column_references;
 }
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const {
@@ -105,8 +107,8 @@ void ProjectionNode::_update_output() const {
   _output_column_names.emplace();
   _output_column_names->reserve(_column_expressions.size());
 
-  _output_column_origins.emplace();
-  _output_column_origins->reserve(_column_expressions.size());
+  _output_column_references.emplace();
+  _output_column_references->reserve(_column_expressions.size());
 
   auto column_id = ColumnID{0};
   for (const auto& expression : _column_expressions) {
@@ -119,16 +121,16 @@ void ProjectionNode::_update_output() const {
     if (expression->type() == ExpressionType::Column) {
       DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-      _output_column_origins->emplace_back(expression->column_origin());
+      _output_column_references->emplace_back(expression->column_reference());
 
       if (!expression->alias()) {
-        const auto input_column_id = left_child()->get_output_column_id_by_column_origin(expression->column_origin());
+        const auto input_column_id = left_child()->get_output_column_id(expression->column_reference());
         const auto& column_name = left_child()->output_column_names()[input_column_id];
         _output_column_names->emplace_back(column_name);
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_origins->emplace_back(shared_from_this(), column_id);
+      _output_column_references->emplace_back(shared_from_this(), column_id);
 
       if (!expression->alias()) {
         _output_column_names->emplace_back(expression->to_string(left_child()->output_column_names()));

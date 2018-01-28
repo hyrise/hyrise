@@ -24,7 +24,7 @@ std::vector<IndexEvaluation> IndexEvaluator::evaluate_indices(const SystemStatis
   const auto& recent_queries = statistics.recent_queries();
   _access_recods.clear();
   for (const auto& cache_entry : recent_queries) {
-    for (const auto& tree_root : cache_entry.query_plan.tree_roots()) {
+    for (const auto& tree_root : cache_entry.query_plan->tree_roots()) {
       _inspect_operator(tree_root, cache_entry.access_frequency);
     }
   }
@@ -48,8 +48,8 @@ void IndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOpera
       auto table_statistics = table->table_statistics();
       // auto column_statistics = table->table_statistics()->column_statistics().at(column_id);
       auto compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
-      auto predicate_statistics =
-          table_statistics->predicate_statistics(column_id, table_scan->scan_type(), table_scan->right_parameter());
+      auto predicate_statistics = table_statistics->predicate_statistics(column_id, table_scan->predicate_condition(),
+                                                                         table_scan->right_parameter());
       auto selectivity =
           table_statistics->row_count() > 0 ? predicate_statistics->row_count() / table_statistics->row_count() : 1.0f;
       std::cout << table_name << "." << table->column_name(column_id);
