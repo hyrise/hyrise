@@ -15,10 +15,10 @@
     std::cout << std::put_time(std::localtime(&time), "%H:%M:%S"); \
   }
 
-#ifdef DEBUG
+#if IS_DEBUG
 #define LOG_DEBUG(msg) \
   __LOG_TIME;          \
-  std::cout << __LOG_TIME << " [DEBUG] " << msg << "\n"
+  std::cout << " [DEBUG] " << msg << "\n"
 #else
 #define LOG_DEBUG(msg)
 #endif
