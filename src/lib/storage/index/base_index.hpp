@@ -48,7 +48,8 @@ class BaseIndex : private Noncopyable {
    *
    * If no prediction is possible, std::numeric_limits<float>::quiet_NaN() shall be returned.
    */
-  static float predict_memory_consumption(ColumnIndexType type, ChunkOffset rowCount, ChunkOffset valueCount, uint32_t bytesPerValue);
+  static float predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+                                          uint32_t value_bytes);
 
   /**
    * Creates an index on all given columns. Since all indices are composite indices the order of

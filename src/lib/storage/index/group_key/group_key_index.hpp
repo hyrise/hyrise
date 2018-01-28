@@ -44,12 +44,11 @@ class GroupKeyIndex : public BaseIndex {
   friend class GroupKeyIndexTest;
 
  public:
-
   /**
    * Predicts the memory consumption in MiB of creating this index.
    * See BaseIndex::predict_memory_consumption()
    */
-  static float predict_memory_consumption(ChunkOffset rowCount, ChunkOffset valueCount, uint32_t bytesPerValue);
+  static float predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
 
   GroupKeyIndex() = delete;
 

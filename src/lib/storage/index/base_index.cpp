@@ -4,23 +4,23 @@
 #include <memory>
 #include <vector>
 
-#include <storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp>
-#include <storage/index/group_key/composite_group_key_index.hpp>
-#include <storage/index/group_key/group_key_index.hpp>
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
 
-float BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset rowCount, ChunkOffset valueCount, uint32_t bytesPerValue)
-{
-  switch(type) {
-  case ColumnIndexType::GroupKey:
-    return GroupKeyIndex::predict_memory_consumption(rowCount, valueCount, bytesPerValue);
-  case ColumnIndexType::CompositeGroupKey:
-    return CompositeGroupKeyIndex::predict_memory_consumption(rowCount, valueCount, bytesPerValue);
-  case ColumnIndexType::AdaptiveRadixTree:
-    return AdaptiveRadixTreeIndex::predict_memory_consumption(rowCount, valueCount, bytesPerValue);
-  default:
-    return std::numeric_limits<float>::quiet_NaN();
+float BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+                                            uint32_t value_bytes) {
+  switch (type) {
+    case ColumnIndexType::GroupKey:
+      return GroupKeyIndex::predict_memory_consumption(row_count, value_count, value_bytes);
+    case ColumnIndexType::CompositeGroupKey:
+      return CompositeGroupKeyIndex::predict_memory_consumption(row_count, value_count, value_bytes);
+    case ColumnIndexType::AdaptiveRadixTree:
+      return AdaptiveRadixTreeIndex::predict_memory_consumption(row_count, value_count, value_bytes);
+    default:
+      return std::numeric_limits<float>::quiet_NaN();
   }
 }
 

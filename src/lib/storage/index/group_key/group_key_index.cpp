@@ -5,9 +5,8 @@
 
 namespace opossum {
 
-float GroupKeyIndex::predict_memory_consumption(ChunkOffset rowCount, ChunkOffset valueCount, uint32_t bytesPerValue)
-{
-        return rowCount * sizeof(ChunkOffset) + valueCount * sizeof(std::size_t) / 1024.0f / 1024.0f;
+float GroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes) {
+  return row_count * sizeof(ChunkOffset) + value_count * sizeof(std::size_t) / 1024.0f / 1024.0f;
 }
 
 GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns)

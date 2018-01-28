@@ -14,7 +14,12 @@ namespace opossum {
 class IndexEvaluation {
  public:
   IndexEvaluation(const std::string& table_name, ColumnID column_id, bool exists = false)
-      : table_name{table_name}, column_id{column_id}, desirablility{0.0f}, exists{exists}, type{ColumnIndexType::Invalid}, memory_cost{0.0f} {}
+      : table_name{table_name},
+        column_id{column_id},
+        desirablility{0.0f},
+        exists{exists},
+        type{ColumnIndexType::Invalid},
+        memory_cost{0.0f} {}
 
   /**
    * The column the this index refers to

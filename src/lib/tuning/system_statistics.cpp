@@ -8,6 +8,8 @@ namespace opossum {
 SystemStatistics::SystemStatistics(const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& cache)
     : _recent_queries{}, _cache(cache) {}
 
+const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& SystemStatistics::cache() const { return _cache; }
+
 const std::vector<SystemStatistics::SQLQueryCacheEntry>& SystemStatistics::recent_queries() const {
   // TODO(group01) lazily initialize this and update only if there were changes
   _recent_queries.clear();
