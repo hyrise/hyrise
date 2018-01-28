@@ -280,11 +280,15 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
 
         std::vector<size_t> rows_to_copy;
+        unsigned int really_inserted = 0;
+        size_t last_touched_index_source_chunk = 0;
         if (source_chunk->column_count() >= 1) {
           // doing this for one column only is enough because the rows to copy are the same in all columns
-          for (size_t row = 0; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
-            if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID) {
+          for (size_t row = source_chunk_start_index; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
+            if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID && really_inserted < num_to_insert) {
               rows_to_copy.push_back(row);
+              really_inserted++;
+              last_touched_index_source_chunk = row;
             }
           }
           num_to_insert = std::min(num_to_insert, static_cast<uint32_t>(rows_to_copy.size()));
@@ -298,7 +302,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         }
         still_to_insert -= num_to_insert;
         target_start_index += num_to_insert;
-        source_chunk_start_index += num_to_insert;
+        source_chunk_start_index = last_touched_index_source_chunk + 1;
 
         bool source_chunk_depleted = source_chunk_start_index == source_chunk->size();
         if (source_chunk_depleted) {
