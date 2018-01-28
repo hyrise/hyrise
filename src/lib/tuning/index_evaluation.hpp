@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "storage/index/column_index_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -13,7 +14,7 @@ namespace opossum {
 class IndexEvaluation {
  public:
   IndexEvaluation(const std::string& table_name, ColumnID column_id, bool exists = false)
-      : table_name{table_name}, column_id{column_id}, desirablility{0.0f}, memory_cost{0.0f}, exists{exists} {}
+      : table_name{table_name}, column_id{column_id}, desirablility{0.0f}, exists{exists}, type{ColumnIndexType::Invalid}, memory_cost{0.0f} {}
 
   /**
    * The column the this index refers to
@@ -31,14 +32,23 @@ class IndexEvaluation {
   float desirablility;
 
   /**
-   * An estimate of the index memory footprint in MiB
-   */
-  float memory_cost;
-
-  /**
    * Does this Evaluation refer to an already created index or one that does not exist yet
    */
   bool exists;
+
+  /**
+   * exists == true: The type of the existing index
+   * exists == false: A proposal for an appropriate index type
+   */
+  ColumnIndexType type;
+
+  /**
+   * exists == true: Memory cost in MiB of the index as reported by the index implementation
+   * exists == false: Memory cost in MiB as predicted by the index implementation
+   *                    assuming an equal value distribution across chunks
+   * Measured in MiB
+   */
+  float memory_cost;
 
   /**
    * Operators to allow comparison based on desirability

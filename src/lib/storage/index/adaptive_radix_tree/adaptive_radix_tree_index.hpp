@@ -37,6 +37,13 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest_BinaryComparableFromChunkOffset_Test;
 
  public:
+
+  /**
+   * Predicts the memory consumption in MiB of creating this index.
+   * See BaseIndex::predict_memory_consumption()
+   */
+  static float predict_memory_consumption(ChunkOffset rowCount, ChunkOffset valueCount, uint32_t bytesPerValue);
+
   explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;

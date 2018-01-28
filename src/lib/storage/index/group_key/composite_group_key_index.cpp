@@ -17,6 +17,11 @@
 
 namespace opossum {
 
+float CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset rowCount, ChunkOffset valueCount, uint32_t bytesPerValue)
+{
+  return (rowCount + valueCount) * sizeof(ChunkOffset) + valueCount * bytesPerValue / 1024.0f / 1024.0f;
+}
+
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns)
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
