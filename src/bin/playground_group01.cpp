@@ -86,8 +86,9 @@ std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
   auto pipeline = std::make_shared<opossum::SQLPipeline>(query);
 
   auto query_plans = pipeline->get_query_plans();
-  opossum::Assert(query_plans.size() == 1, "Expected only one query plan per pipeline");
 
+  // ToDo(group01): What is the semantics of multiple entries per query? Handle cases accordingly.
+  opossum::Assert(query_plans.size() == 1, "Expected only one query plan per pipeline");
   cache.set(query, query_plans[0]);
   return pipeline;
 }
