@@ -402,7 +402,7 @@ int Console::load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      auto table = opossum::load_table(filepath, Chunk::MAX_SIZE);
+      auto table = opossum::load_table(filepath, 500000);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);
