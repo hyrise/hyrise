@@ -1,0 +1,49 @@
+{
+  "benchmarks": [
+    {
+      "allocated_memory": 184,
+      "encoding_spec": "Unencoded",
+      "iterations": 2,
+      "results": [
+        9,
+        9
+      ]
+    },
+    {
+      "allocated_memory": 4424,
+      "encoding_spec": "Run Length",
+      "iterations": 2,
+      "results": [
+        10,
+        10
+      ]
+    },
+    {
+      "allocated_memory": 2002176,
+      "encoding_spec": "Dictionary (Fixed-size byte-aligned)",
+      "iterations": 2,
+      "results": [
+        5,
+        4
+      ]
+    },
+    {
+      "allocated_memory": 1010432,
+      "encoding_spec": "Dictionary (SIMD-BP128)",
+      "iterations": 2,
+      "results": [
+        4,
+        4
+      ]
+    }
+  ],
+  "context": {
+    "build_type": "debug",
+    "date": "2018-01-26 20:34:01",
+    "distribution": "Uniform from 0 to 10.000",
+    "row_count": 1000000,
+    "run_count": 512,
+    "sorted": true,
+    "unique_count": 512
+  }
+}
