@@ -219,9 +219,9 @@ float IndexEvaluator::_predict_memory_cost(const IndexEvaluation& index_evaluati
   auto table = StorageManager::get().get_table(index_evaluation.table_name);
   auto table_statistics = table->table_statistics();
   auto predicate_statistics =
-      table_statistics->predicate_statistics(index_evaluation.column_id, PredicateCondition::IsNotNull, {});
+      table_statistics->predicate_statistics(index_evaluation.column_id, PredicateCondition::IsNotNull, 0);
   // ToDo(group01) find a better way to determine a columns value count! (obtain ColumnStatistics directly?)
-  auto value_count = predicate_statistics->column_statistics().at(0)->distinct_count();
+  auto value_count = predicate_statistics->column_statistics().at(index_evaluation.column_id)->distinct_count();
 
   // ToDo(group01) understand DataType and sample column for average byte counts
   // DataType column_type = table->column_type(index_evaluation.column_id);
