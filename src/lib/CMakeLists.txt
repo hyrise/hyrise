@@ -283,6 +283,8 @@ set(
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/memory_usage.cpp
+    utils/memory_usage.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp

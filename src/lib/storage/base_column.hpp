@@ -5,6 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "utils/memory_usage.hpp"
 
 namespace opossum {
 
@@ -37,5 +38,9 @@ class BaseColumn : private Noncopyable {
 
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
   virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+
+  // Estimate how much memory the Column is using. Might be inaccurate, especially if the column contains non-primitive
+  // data, such as strings who memory usage is implementation defined
+  virtual MemoryUsage estimate_memory_usage(MemoryUsageEstimationMode estimation_mode = MemoryUsageEstimationMode::Fast) const = 0;
 };
 }  // namespace opossum

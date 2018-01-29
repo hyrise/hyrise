@@ -148,6 +148,11 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
+   */
+  MemoryUsage estimate_memory_usage(MemoryUsageEstimationMode estimation_mode = MemoryUsageEstimationMode::Fast) const;
+
  protected:
   const uint32_t _max_chunk_size;
   std::vector<std::shared_ptr<Chunk>> _chunks;

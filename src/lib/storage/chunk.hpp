@@ -18,6 +18,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "utils/memory_usage.hpp"
 
 namespace opossum {
 
@@ -205,6 +206,11 @@ class Chunk : private Noncopyable {
   bool references_exactly_one_table() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
+
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
+   */
+  MemoryUsage estimate_memory_usage(MemoryUsageEstimationMode estimation_mode = MemoryUsageEstimationMode::Fast) const;
 
  private:
   std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;

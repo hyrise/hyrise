@@ -167,7 +167,11 @@ void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
   const auto output = get_output();
   if (output) {
     out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << output->column_count()
-        << " column(s)/" << _performance_data.walltime_ns << "ns)";
+        << " column(s)/";
+
+    output->estimate_memory_usage(MemoryUsageEstimationMode::MoreExact).print(out);
+    out << "/";
+    out << _performance_data.walltime_ns << "ns)";
   }
 
   out << std::endl;

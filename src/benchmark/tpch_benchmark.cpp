@@ -221,7 +221,11 @@ class TpchBenchmark final {
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
         // Execute the query, we don't care about the results
-        SQLPipeline{sql, _enable_mvcc}.get_result_table();
+        SQLPipeline pipeline{sql, _enable_mvcc};
+
+
+        pipeline.get_result_table();
+        pipeline.get_query_plans().at(0)->tree_roots().at(0)->print();
       }
 
       QueryBenchmarkResult result;
