@@ -13,7 +13,7 @@
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -37,7 +37,7 @@ class ReferenceColumnTest : public BaseTest {
     _test_table_dict->add_column("b", DataType::Int);
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
 
-    DeprecatedDictionaryCompression::compress_chunks(*_test_table_dict, {ChunkID{0}, ChunkID{1}});
+    ChunkEncoder::encode_chunks(_test_table_dict, {ChunkID{0}, ChunkID{1}});
 
     StorageManager::get().add_table("test_table_dict", _test_table_dict);
   }

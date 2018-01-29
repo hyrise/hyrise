@@ -18,8 +18,14 @@ class Chunk;
 class Table;
 
 struct ColumnEncodingSpec {
-  EncodingType encoding_type = EncodingType::DeprecatedDictionary;
-  std::optional<VectorCompressionType> vector_compression_type = {};
+  constexpr ColumnEncodingSpec() : encoding_type{EncodingType::DeprecatedDictionary} {}
+  constexpr ColumnEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr ColumnEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
+      : encoding_type{encoding_type_},
+        vector_compression_type{vector_compression_type_} {}
+
+  EncodingType encoding_type;
+  std::optional<VectorCompressionType> vector_compression_type;
 };
 
 using ChunkEncodingSpec = std::vector<ColumnEncodingSpec>;
