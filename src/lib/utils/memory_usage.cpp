@@ -10,6 +10,7 @@ void MemoryUsage::print(std::ostream& stream) const {
   const auto gigabytes = bytes / 1'000'000'000;
   const auto megabytes = (bytes / 1'000'000) % 1'000;
   const auto kilobytes = (bytes / 1'000) % 1'000;
+  const auto bytes = (this->bytes) % 1000;
 
   const auto previous_fill = stream.fill();
   if (gigabytes > 0) {
@@ -22,7 +23,7 @@ void MemoryUsage::print(std::ostream& stream) const {
     stream << "MB";
   } else if (kilobytes > 0) {
     stream << kilobytes << ".";
-    stream << std::setfill('0') << std::setw(3) << kilobytes;
+    stream << std::setfill('0') << std::setw(3) << bytes;
     stream << "KB";
   } else {
     stream << bytes << "B";
