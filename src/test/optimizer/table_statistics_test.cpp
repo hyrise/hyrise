@@ -80,7 +80,7 @@ class TableStatisticsTest : public BaseTest {
   }
 
   /**
-   * Predict output sizes of table scans with two values (scan type = OpBetween) and compare with actual output sizes.
+   * Predict output sizes of table scans with two values (predicate condition = OpBetween) and compare with actual output sizes.
    * Does not work with ValuePlaceholder of stored procedures.
    */
   template <typename T>

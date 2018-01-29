@@ -154,6 +154,8 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/index_scan_rule.cpp
+    optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -226,6 +228,7 @@ set(
     storage/index/base_index.cpp
     storage/index/base_index.hpp
     storage/index/column_index_type.hpp
+    storage/index/index_info.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
