@@ -146,9 +146,8 @@ template <typename T>
 MemoryUsage DictionaryColumn<T>::estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const {
   return MemoryUsage{sizeof(*this) +
                      _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
-  _attribute_vector->size() * _attribute_vector->width()};
+                     _attribute_vector->size() * _attribute_vector->width()};
 }
-
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 

@@ -4,9 +4,7 @@
 
 namespace opossum {
 
-MemoryUsage::MemoryUsage(const size_t bytes): bytes(bytes) {
-
-}
+MemoryUsage::MemoryUsage(const size_t bytes) : bytes(bytes) {}
 
 void MemoryUsage::print(std::ostream& stream) const {
   const auto gigabytes = bytes / 1'000'000'000;

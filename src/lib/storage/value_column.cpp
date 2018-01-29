@@ -165,7 +165,8 @@ MemoryUsage ValueColumn<std::string>::estimate_memory_usage(MemoryUsageEstimatio
   auto bytes = size_t{(_null_values ? _null_values->size() * sizeof(bool) : 0u) + sizeof(*this)};
 
   switch (estimation_mode) {
-    case MemoryUsageEstimationMode::Fast: return MemoryUsage{bytes + _values.size() * sizeof(std::string)};
+    case MemoryUsageEstimationMode::Fast:
+      return MemoryUsage{bytes + _values.size() * sizeof(std::string)};
     case MemoryUsageEstimationMode::MoreExact: {
       for (const auto& string : _values) {
         if (string.size() < sizeof(std::string)) {

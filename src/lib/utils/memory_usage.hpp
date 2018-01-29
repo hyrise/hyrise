@@ -6,7 +6,7 @@
 namespace opossum {
 
 class MemoryUsage final {
-public:
+ public:
   explicit MemoryUsage(const size_t bytes);
 
   void print(std::ostream& stream) const;

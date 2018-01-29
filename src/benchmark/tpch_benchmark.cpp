@@ -223,7 +223,6 @@ class TpchBenchmark final {
         // Execute the query, we don't care about the results
         SQLPipeline pipeline{sql, _enable_mvcc};
 
-
         pipeline.get_result_table();
         pipeline.get_query_plans().at(0)->tree_roots().at(0)->print();
       }
