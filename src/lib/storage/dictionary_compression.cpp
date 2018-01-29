@@ -142,6 +142,7 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
   }
 
   auto stats = std::make_shared<ChunkStatistics>(column_stats);
+  // std::cout << stats->to_string();
   chunk->set_statistics(stats);
 
   return stats;
@@ -165,7 +166,6 @@ std::vector<std::shared_ptr<ChunkStatistics>> DictionaryCompression::compress_ta
     auto chunk = table.get_chunk(chunk_id);
     chunk_stats.push_back(compress_chunk(table.column_types(), chunk));
   }
-
   return chunk_stats;
 }
 

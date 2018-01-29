@@ -12,7 +12,12 @@ namespace opossum {
 
 GetTable::GetTable(const std::string& name) : _name(name) {}
 
-const std::string GetTable::name() const { return "GetTable"; }
+const std::string GetTable::name() const { 
+  if(_excluded_chunks) {
+    return "GetTable (" + std::to_string(_excluded_chunks->size()) + " Chunks pruned)";
+  }
+  return "GetTable (nothing pruned)";
+}
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";

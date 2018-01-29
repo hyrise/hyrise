@@ -36,6 +36,7 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
+#include "storage/dictionary_compression.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -403,6 +404,7 @@ int Console::load_table(const std::string& args) {
   } else if (extension == "tbl") {
     try {
       auto table = opossum::load_table(filepath, 500000);
+      DictionaryCompression::compress_table(*table);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);
