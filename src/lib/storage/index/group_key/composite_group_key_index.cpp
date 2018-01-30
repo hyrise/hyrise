@@ -17,6 +17,11 @@
 
 namespace opossum {
 
+float CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
+                                                         uint32_t value_bytes) {
+  return (row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes / 1024.0f / 1024.0f;
+}
+
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns)
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
@@ -87,7 +92,12 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-float CompositeGroupKeyIndex::_memory_consumption() const { return std::numeric_limits<float>::quiet_NaN(); }
+float CompositeGroupKeyIndex::_memory_consumption() const {
+  float byte_count = _keys.size() * _keys.key_size();
+  byte_count += _key_offsets.size() * sizeof(ChunkOffset);
+  byte_count += _position_list.size() * sizeof(ChunkOffset);
+  return byte_count / 1024.0f / 1024.0f;
+}
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);

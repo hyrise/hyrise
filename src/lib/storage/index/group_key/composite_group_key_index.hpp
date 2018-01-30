@@ -44,6 +44,12 @@ class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;
 
  public:
+  /**
+   * Predicts the memory consumption in MiB of creating this index.
+   * See BaseIndex::predict_memory_consumption()
+   */
+  static float predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
+
   CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
   CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
   ~CompositeGroupKeyIndex() = default;
