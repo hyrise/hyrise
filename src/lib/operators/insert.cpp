@@ -1,6 +1,7 @@
 #include "insert.hpp"
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
