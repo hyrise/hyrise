@@ -20,7 +20,7 @@ namespace opossum {
 
 /*
  * This is an index join implementation. It expects to find an index on the right column.
- * It currently uses the index for the following join modes: inner, left, natural, self, semi, anti.
+ * It currently uses the index for the following join modes: inner, left, right, outer, natural, self, semi, anti.
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
@@ -79,10 +79,8 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
                                   RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                                   const ChunkID chunk_id_right, std::vector<bool>& left_matches,
                                   std::shared_ptr<BaseIndex> index) {
-  // We have a proper index and can use it, so we do an index join for this chunk combination
   if (index != nullptr) {
-    // We assume the first index to be efficient for our join
-    // as we do not want to spend time on evaluating the best index inside of this join loop
+  // We have a proper index and can use it, so we do an index join for this chunk combination
 
     for (; left_it != left_end; ++left_it) {
       const auto left_value = *left_it;
@@ -201,13 +199,12 @@ void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const Bas
 }
 
 void JoinIndex::_perform_join() {
+    DebugAssert(_mode != JoinMode::Cross, "Cross join mode is not supported by index join");
+
   _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   _right_matches.resize(_right_in_table->chunk_count());
   _left_matches.resize(_left_in_table->chunk_count());
-
-  // these joins can not be handled using index join, we therefore fall back on a nested loop join
-  // TODO(florian): make clear that cross_join is not supported
 
   auto left_data_type = _left_in_table->column_type(_left_column_id);
   auto right_data_type = _right_in_table->column_type(_right_column_id);
@@ -230,6 +227,8 @@ void JoinIndex::_perform_join() {
     std::shared_ptr<BaseIndex> index = nullptr;
 
     if (indices.size() > 0) {
+    // We assume the first index to be efficient for our join
+    // as we do not want to spend time on evaluating the best index inside of this join loop
       index = indices.front();
     }
 
@@ -276,9 +275,9 @@ void JoinIndex::_perform_join() {
     }
   }
 
+    // For Full Outer and Left Join we need to add all unmatched rows for the left side
   if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-      // add unmatched rows on the left for Left and Full Outer joins
       for (ChunkOffset chunk_offset{0}; chunk_offset < _left_matches[chunk_id_left].size(); ++chunk_offset) {
         if (!_left_matches[chunk_id_left][chunk_offset]) {
           _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
@@ -289,7 +288,6 @@ void JoinIndex::_perform_join() {
   }
 
   // For Full Outer and Right Join we need to add all unmatched rows for the right side.
-  // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
     for (ChunkID chunk_id{0}; chunk_id < _right_matches.size(); ++chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _right_matches[chunk_id].size(); ++chunk_offset) {
