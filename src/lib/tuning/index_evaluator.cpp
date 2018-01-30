@@ -11,6 +11,7 @@
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
+#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -79,9 +80,9 @@ void IndexEvaluator::_add_existing_indices() {
         _new_indices.erase({table_name, column_id});
       }
       if (indices.size() > 1) {
-        std::cout << "Found " << indices.size() << " indices on " << table_name << "." << column_name << "\n";
+        LOG_DEBUG("Found " << indices.size() << " indices on " << table_name << "." << column_name);
       } else if (indices.size() > 0) {
-        std::cout << "Found index on " << table_name << "." << column_name << "\n";
+        LOG_DEBUG("Found index on " << table_name << "." << column_name);
       }
     }
   }
@@ -143,14 +144,13 @@ void IndexEvaluator::_inspect_query_cache(const SQLQueryCache<std::shared_ptr<SQ
   const boost::heap::fibonacci_heap<GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>::GDFSCacheEntry>&
       fibonacci_heap = gdfs_cache_ptr->queue();
 
-  std::cout << "Query plan cache size: " << fibonacci_heap.size() << "\n";
+  LOG_DEBUG("Query plan cache (size: " << fibonacci_heap.size() << "):");
   auto cache_iterator = fibonacci_heap.ordered_begin();
   auto cache_end = fibonacci_heap.ordered_end();
 
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>::GDFSCacheEntry& entry = *cache_iterator;
-    std::cout << "Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority
-              << "\n";
+    LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
     for (const auto& operator_tree : entry.value->tree_roots()) {
       _operations.emplace_back(operator_tree, entry.frequency);
     }
@@ -160,29 +160,34 @@ void IndexEvaluator::_inspect_query_cache(const SQLQueryCache<std::shared_ptr<SQ
 void IndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency) {
   if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(op)) {
     // skipped because it is skipped in lqp_translator
-    if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
-      if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
-        const auto& table_name = get_table->table_name();
-        ColumnID column_id = table_scan->left_column_id();
-        std::cout << "TableScan on table " << table_name << " and column " << column_id << "\n";
+     if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
+    if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
+      const auto& table_name = get_table->table_name();
+      ColumnID column_id = table_scan->left_column_id();
 
-        auto table = StorageManager::get().get_table(table_name);
-        auto table_statistics = table->table_statistics();
-        // auto column_statistics = table->table_statistics()->column_statistics().at(column_id);
-        auto compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
-        auto predicate_statistics = table_statistics->predicate_statistics(column_id, table_scan->predicate_condition(),
-                                                                           table_scan->right_parameter());
-        auto selectivity = table_statistics->row_count() > 0
-                               ? predicate_statistics->row_count() / table_statistics->row_count()
-                               : 1.0f;
-        std::cout << table_name << "." << table->column_name(column_id);
-        std::cout << " " << *table_statistics << "\n";
-        std::cout << "predicate statistics: ";
-        std::cout << " " << *predicate_statistics << "\n";
-        std::cout << "-> selectivity: " << predicate_statistics->row_count() / (table_statistics->row_count() + 1)
-                  << "\n";
+      auto table = StorageManager::get().get_table(table_name);
+      auto table_statistics = table->table_statistics();
+      // auto column_statistics = table->table_statistics()->column_statistics().at(column_id);
+      auto compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
+      auto predicate_statistics = table_statistics->predicate_statistics(column_id, table_scan->predicate_condition(),
+                                                                         table_scan->right_parameter());
+      auto selectivity = table_statistics->row_count() > 0
+                             ? predicate_statistics->row_count() / table_statistics->row_count()
+                             : 1.0f;
 
-        _access_records.emplace_back(AccessRecord{table_name, column_id, query_frequency, selectivity});
+      const auto& column_name = table->column_name(column_id);
+      LOG_DEBUG("Found TableScan on table " << table_name << " and column " << column_name << " (selectivity: " << selectivity << ")");
+
+        /*
+      std::cout << table_name << "." << table->column_name(column_id);
+      std::cout << " " << *table_statistics << "\n";
+      std::cout << "predicate statistics: ";
+      std::cout << " " << *predicate_statistics << "\n";
+      std::cout << "-> selectivity: " << predicate_statistics->row_count() / (table_statistics->row_count() + 1)
+                << "\n";
+         */
+
+      _access_records.emplace_back(AccessRecord{table_name, column_id, query_frequency, selectivity});
       }
     }
   } else {
