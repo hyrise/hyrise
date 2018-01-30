@@ -93,14 +93,14 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = {104};
-  tests[ScanType::NotEquals] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::LessThan] = {100, 102};
-  tests[ScanType::LessThanEquals] = {100, 102, 104};
-  tests[ScanType::GreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::GreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[ScanType::Between] = {104, 106, 108};
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = {104};
+  tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::LessThan] = {100, 102};
+  tests[PredicateCondition::LessThanEquals] = {100, 102, 104};
+  tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::GreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[PredicateCondition::Between] = {104, 106, 108};
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_table_wrapper, this->_index_type, this->_column_ids, test.first,
@@ -119,13 +119,13 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = no_rows;
-  tests[ScanType::NotEquals] = all_rows;
-  tests[ScanType::LessThan] = all_rows;
-  tests[ScanType::LessThanEquals] = all_rows;
-  tests[ScanType::GreaterThan] = no_rows;
-  tests[ScanType::GreaterThanEquals] = no_rows;
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = no_rows;
+  tests[PredicateCondition::NotEquals] = all_rows;
+  tests[PredicateCondition::LessThan] = all_rows;
+  tests[PredicateCondition::LessThanEquals] = all_rows;
+  tests[PredicateCondition::GreaterThan] = no_rows;
+  tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_table_wrapper, this->_index_type, this->_column_ids, test.first,
@@ -143,13 +143,13 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
 
-  std::map<ScanType, std::vector<AllTypeVariant>> tests;
-  tests[ScanType::Equals] = no_rows;
-  tests[ScanType::NotEquals] = all_rows;
-  tests[ScanType::LessThan] = no_rows;
-  tests[ScanType::LessThanEquals] = no_rows;
-  tests[ScanType::GreaterThan] = all_rows;
-  tests[ScanType::GreaterThanEquals] = all_rows;
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = no_rows;
+  tests[PredicateCondition::NotEquals] = all_rows;
+  tests[PredicateCondition::LessThan] = no_rows;
+  tests[PredicateCondition::LessThanEquals] = no_rows;
+  tests[PredicateCondition::GreaterThan] = all_rows;
+  tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_table_wrapper, this->_index_type, this->_column_ids, test.first,
@@ -164,7 +164,7 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
   auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper, this->_index_type, this->_column_ids,
-                                                   ScanType::GreaterThanEquals, right_values);
+                                                   PredicateCondition::GreaterThanEquals, right_values);
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }
@@ -173,7 +173,7 @@ TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
   auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper, ColumnIndexType::Invalid, this->_column_ids,
-                                                   ScanType::GreaterThan, right_values);
+                                                   PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
 

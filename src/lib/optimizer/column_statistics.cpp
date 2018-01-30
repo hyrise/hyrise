@@ -177,17 +177,18 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_n
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2) {
+    const PredicateCondition predicate_condition, const AllTypeVariant& value,
+    const std::optional<AllTypeVariant>& value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
-  switch (scan_type) {
-    case ScanType::Equals: {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals: {
       return _create_column_stats_for_equals_predicate(casted_value);
     }
-    case ScanType::NotEquals: {
+    case PredicateCondition::NotEquals: {
       return _create_column_stats_for_not_equals_predicate(casted_value);
     }
-    case ScanType::LessThan: {
+    case PredicateCondition::LessThan: {
       // distinction between integers and decimals
       // for integers "< value" means that the new max is value <= value - 1
       // for decimals "< value" means that the new max is value <= value - ε
@@ -199,10 +200,10 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
-    case ScanType::LessThanEquals: {
+    case PredicateCondition::LessThanEquals: {
       return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value);
     }
-    case ScanType::GreaterThan: {
+    case PredicateCondition::GreaterThan: {
       // distinction between integers and decimals
       // for integers "> value" means that the new min value is >= value + 1
       // for decimals "> value" means that the new min value is >= value + ε
@@ -214,10 +215,10 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
-    case ScanType::GreaterThanEquals: {
+    case PredicateCondition::GreaterThanEquals: {
       return _create_column_stats_for_range_predicate(casted_value, _get_or_calculate_max());
     }
-    case ScanType::Between: {
+    case PredicateCondition::Between: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
       return _create_column_stats_for_range_predicate(casted_value, casted_value2);
@@ -231,18 +232,19 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
  */
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2) {
+    const PredicateCondition predicate_condition, const AllTypeVariant& value,
+    const std::optional<AllTypeVariant>& value2) {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, _this_without_null_values()};
   }
 
   auto casted_value = type_cast<std::string>(value);
-  switch (scan_type) {
-    case ScanType::Equals: {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals: {
       return _create_column_stats_for_equals_predicate(casted_value);
     }
-    case ScanType::NotEquals: {
+    case PredicateCondition::NotEquals: {
       return _create_column_stats_for_not_equals_predicate(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
@@ -252,33 +254,34 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const ValuePlaceholder& value, const std::optional<AllTypeVariant>& value2) {
+    const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+    const std::optional<AllTypeVariant>& value2) {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, _this_without_null_values()};
   }
 
-  switch (scan_type) {
-    case ScanType::Equals: {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals: {
       auto column_statistics =
           std::make_shared<ColumnStatistics>(_column_id, 1, _get_or_calculate_min(), _get_or_calculate_max());
       return {1.f / distinct_count(), column_statistics};
     }
-    case ScanType::NotEquals: {
+    case PredicateCondition::NotEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1,
                                                                   _get_or_calculate_min(), _get_or_calculate_max());
       return {(distinct_count() - 1.f) / distinct_count(), column_statistics};
     }
-    case ScanType::LessThan:
-    case ScanType::LessThanEquals:
-    case ScanType::GreaterThan:
-    case ScanType::GreaterThanEquals: {
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals: {
       auto column_statistics =
           std::make_shared<ColumnStatistics>(_column_id, distinct_count() * DEFAULT_OPEN_ENDED_SELECTIVITY,
                                              _get_or_calculate_min(), _get_or_calculate_max());
       return {_non_null_value_ratio * DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
-    case ScanType::Between: {
+    case PredicateCondition::Between: {
       // since the value2 is known,
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
@@ -307,7 +310,8 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 
 template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
-    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const PredicateCondition predicate_condition,
+    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
     const std::optional<AllTypeVariant>& value2) {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
@@ -315,7 +319,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * will have values below the overlapping range. The same applies to values above the overlapping range. If the max
    * values are not the same, then the column with the larger max value will have values above the overlapping range.
    *
-   * For the different scan types the appropriate ratios of values below, within and above the overlapping range from
+   * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping range from
    * both columns are taken to compute the selectivity.
    *
    * Example estimation:
@@ -338,7 +342,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * left_overlapping_distinct_count = (1 / 2) * 20 = 10
    * right_overlapping_distinct_count = (1 / 3) * 15 = 5
    *
-   * For scan type equals only the ratios of values in the overlapping range is considered as values. If values could
+   * For predicate condition equals only the ratios of values in the overlapping range is considered as values. If values could
    * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
    * equal value ratio, the column with fewer distinct values within the overlapping range is determined. In this case
    * this is col_right. Statistics component assumes that for two value sets for the same range the smaller set is
@@ -346,14 +350,14 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * column also exist in the left column. The equal value ratio is then calculated by multiplying
    * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left column (= 1 / 20):
    * equal_values_ratio = (1 / 2) * (1 / 20) = (1 / 40)
-   * This is also the selectivity for the scan type equals: (1 / 40) = 2.5 %
+   * This is also the selectivity for the predicate condition equals: (1 / 40) = 2.5 %
    *
-   * For scan type less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
+   * For predicate condition less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
    * table entries where the col_left value is below the common range or the col_right value is above it will always be
    * in the result. The probability that both values are within the overlapping range and that col_left < col_right is
    * (probability of col_left != col_right where left and right values are in overlapping range) / 2
    *
-   * The selectivity for scan type less is the sum of different probabilities: // NOLINT
+   * The selectivity for predicate condition less is the sum of different probabilities: // NOLINT
    *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT
    *  + prob. that right value is above overlapping range (= 1 / 3) // NOLINT
    *  - prob. that left value is below overlapping range and right value is above overlapping range (= 1 / 6) // NOLINT
@@ -422,7 +426,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
 
   float combined_non_null_ratio = _non_null_value_ratio * right_stats->_non_null_value_ratio;
 
-  // used for <, <=, > and >= scan_types
+  // used for <, <=, > and >= predicate_conditions
   auto estimate_selectivity_for_open_ended_operators = [&](float values_below_ratio, float values_above_ratio,
                                                            ColumnType new_min, ColumnType new_max,
                                                            bool add_equal_values) -> TwoColumnSelectivityResult {
@@ -446,21 +450,21 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
-  // Currently the distinct count, min and max calculation is incorrect if scan type is OpLessThan or OpGreaterThan and
-  // right column min = left column min or right column max = left column max.
+  // Currently the distinct count, min and max calculation is incorrect if predicate condition is OpLessThan or
+  // OpGreaterThan and right column min = left column min or right column max = left column max.
   //
   // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.
   //
   // Both new left and right column statistics will have the same min and max values of 1 and 3.
-  // However, for scan type OpLessThan, the left column max is actually 2 as there is no possibility for 3 < 3.
-  // Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
-  // The same also applies for scan type OpGreaterThan vice versa.
+  // However, for predicate condition OpLessThan, the left column max is actually 2 as there is no possibility
+  // for 3 < 3. Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
+  // The same also applies for predicate condition OpGreaterThan vice versa.
   // The smaller range between min and max values of a column will also lead to a smaller distinct count.
   //
   // TODO(Anyone): Fix issue mentioned above.
 
-  switch (scan_type) {
-    case ScanType::Equals: {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);
 
       auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count,
@@ -469,7 +473,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
           right_stats->_column_id, overlapping_distinct_count, overlapping_range_min, overlapping_range_max);
       return {combined_non_null_ratio * equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
-    case ScanType::NotEquals: {
+    case PredicateCondition::NotEquals: {
       auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, distinct_count(),
                                                                       _get_or_calculate_min(), _get_or_calculate_max());
       auto new_right_column_stats = std::make_shared<ColumnStatistics>(
@@ -477,27 +481,27 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
           right_stats->_get_or_calculate_max());
       return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_column_stats, new_right_column_stats};
     }
-    case ScanType::LessThan: {
+    case PredicateCondition::LessThan: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
                                                            _get_or_calculate_min(),
                                                            right_stats->_get_or_calculate_max(), false);
     }
-    case ScanType::LessThanEquals: {
+    case PredicateCondition::LessThanEquals: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
                                                            _get_or_calculate_min(),
                                                            right_stats->_get_or_calculate_max(), true);
     }
-    case ScanType::GreaterThan: {
+    case PredicateCondition::GreaterThan: {
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_stats->_get_or_calculate_min(),
                                                            _get_or_calculate_max(), false);
     }
-    case ScanType::GreaterThanEquals: {
+    case PredicateCondition::GreaterThanEquals: {
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_stats->_get_or_calculate_min(),
                                                            _get_or_calculate_max(), true);
     }
-    // case ScanType::Between is not supported for ColumnID as TableScan does not support this
+    // case PredicateCondition::Between is not supported for ColumnID as TableScan does not support this
     default: {
       return {combined_non_null_ratio, _this_without_null_values(), right_stats->_this_without_null_values()};
     }
@@ -509,7 +513,8 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
  */
 template <>
 TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_two_column_predicate(
-    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const PredicateCondition predicate_condition,
+    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
     const std::optional<AllTypeVariant>& value2) {
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);
