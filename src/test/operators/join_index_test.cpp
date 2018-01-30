@@ -21,67 +21,10 @@
 namespace opossum {
 
 template <typename DerivedIndex>
-class OperatorsJoinIndexTest : public BaseTest {
- protected:
-  void SetUp() override {
-    _index_type = get_index_type_of<DerivedIndex>();
-
-    auto left_table = std::make_shared<Table>(5);
-    left_table->add_column("left.a", DataType::Int);
-    left_table->add_column("left.b", DataType::Int);
-    for (int i = 0; i <= 24; i += 1) left_table->append({i, 100 + i});
-    DictionaryCompression::compress_table(*left_table);
-
-    auto right_table = std::make_shared<Table>(5);
-    right_table->add_column("right.a", DataType::Int);
-    right_table->add_column("right.b", DataType::Int);
-    for (int i = 0; i <= 48; i += 2) right_table->append({i, 100 + i});
-    DictionaryCompression::compress_table(*right_table);
-
-    _chunk_ids = std::vector<ChunkID>(right_table->chunk_count());
-    std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0u});
-
-    _column_ids = std::vector<ColumnID>{ColumnID{0u}};
-
-    for (const auto& chunk_id : _chunk_ids) {
-      auto& chunk = right_table->get_chunk(chunk_id);
-      chunk.create_index<DerivedIndex>(_column_ids);
-    }
-
-    _table_wrapper_left = std::make_shared<TableWrapper>(left_table);
-    _table_wrapper_left->execute();
-
-    _table_wrapper_right = std::make_shared<TableWrapper>(right_table);
-    _table_wrapper_right->execute();
-  }
-
-  void test_join_output(const std::shared_ptr<const AbstractOperator> left,
-                        const std::shared_ptr<const AbstractOperator> right,
-                        const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const JoinMode mode,
-                        std::shared_ptr<Table> expected_result, size_t chunk_size) {
-    // build and execute join
-    auto join = std::make_shared<JoinIndex>(left, right, mode, column_ids, scan_type);
-    EXPECT_NE(join, nullptr) << "Could not build Join";
-    join->execute();
-
-    auto result = join->get_output();
-
-    EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
-  }
-
-  std::shared_ptr<TableWrapper> _table_wrapper_left;
-  std::shared_ptr<TableWrapper> _table_wrapper_right;
-  std::shared_ptr<TableWrapper> _result_table_wrapper;
-  std::vector<ChunkID> _chunk_ids;
-  std::vector<ColumnID> _column_ids;
-  ColumnIndexType _index_type;
-};
-
-template <typename DerivedIndex>
 class JoinIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    // load and create regular ValueColumn tables
+    // load and create the indexed tables
     _table_wrapper_a = load_table_index("src/test/tables/int_float.tbl", 2);
     _table_wrapper_b = load_table_index("src/test/tables/int_float2.tbl", 2);
     _table_wrapper_c = load_table_index("src/test/tables/int_string.tbl", 4);
@@ -96,27 +39,6 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_l = load_table_index("src/test/tables/int.tbl", 1);
     _table_wrapper_m = load_table_index("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
     _table_wrapper_n = load_table_index("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
-
-    // load and create DictionaryColumn tables
-    auto table = load_table("src/test/tables/int_float.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
-    _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
-
-    table = load_table("src/test/tables/int_float2.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
-    _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
-
-    table = load_table("src/test/tables/int_float.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
-    _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
-
-    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
-    _table_wrapper_m_dict = std::make_shared<TableWrapper>(std::move(table));
-
-    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
-    _table_wrapper_n_dict = std::make_shared<TableWrapper>(std::move(table));
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
@@ -133,11 +55,6 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_l->execute();
     _table_wrapper_m->execute();
     _table_wrapper_n->execute();
-    _table_wrapper_a_dict->execute();
-    _table_wrapper_b_dict->execute();
-    _table_wrapper_c_dict->execute();
-    _table_wrapper_m_dict->execute();
-    _table_wrapper_n_dict->execute();
   }
 
   std::shared_ptr<TableWrapper> load_table_index(const std::string& filename, size_t chunk_size){
@@ -179,74 +96,12 @@ class JoinIndexTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
-      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_a_dict,
-      _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict, _table_wrapper_n_dict;
+      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n;
 };
 
-typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex> DerivedIndices;
+typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* , GroupKeyIndex */> DerivedIndices;
 
-TYPED_TEST_CASE(OperatorsJoinIndexTest, DerivedIndices);
 TYPED_TEST_CASE(JoinIndexTest, DerivedIndices);
-
-TYPED_TEST(OperatorsJoinIndexTest, SimpleInnerJoin) {
-  auto result_table = std::make_shared<Table>();
-  result_table->add_column("left.a", DataType::Int);
-  result_table->add_column("left.b", DataType::Int);
-  result_table->add_column("right.a", DataType::Int);
-  result_table->add_column("right.b", DataType::Int);
-  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
-  DictionaryCompression::compress_table(*result_table);
-
-  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
-                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner,
-                         result_table, 1);
-}
-
-TYPED_TEST(OperatorsJoinIndexTest, SimpleLeftJoin) {
-  auto result_table = std::make_shared<Table>();
-  result_table->add_column("left.a", DataType::Int);
-  result_table->add_column("left.b", DataType::Int);
-  result_table->add_column("right.a", DataType::Int, true);
-  result_table->add_column("right.b", DataType::Int, true);
-  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
-  for (int i = 1; i <= 24; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
-  DictionaryCompression::compress_table(*result_table);
-
-  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
-                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Left,
-                         result_table, 1);
-}
-
-TYPED_TEST(OperatorsJoinIndexTest, SimpleRightJoin) {
-  auto result_table = std::make_shared<Table>();
-  result_table->add_column("left.a", DataType::Int, true);
-  result_table->add_column("left.b", DataType::Int, true);
-  result_table->add_column("right.a", DataType::Int);
-  result_table->add_column("right.b", DataType::Int);
-  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
-  for (int i = 26; i <= 48; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
-  DictionaryCompression::compress_table(*result_table);
-
-  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
-                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Right,
-                         result_table, 1);
-}
-
-TYPED_TEST(OperatorsJoinIndexTest, SimpleOuterJoin) {
-  auto result_table = std::make_shared<Table>();
-  result_table->add_column("left.a", DataType::Int, true);
-  result_table->add_column("left.b", DataType::Int, true);
-  result_table->add_column("right.a", DataType::Int, true);
-  result_table->add_column("right.b", DataType::Int, true);
-  for (int i = 0; i <= 24; i += 2) result_table->append({i, i + 100, i, i + 100});
-  for (int i = 26; i <= 48; i += 2) result_table->append({NullValue{}, NullValue{}, i, i + 100});
-  for (int i = 1; i <= 24; i += 2) result_table->append({i, i + 100, NullValue{}, NullValue{}});
-  DictionaryCompression::compress_table(*result_table);
-
-  this->test_join_output(this->_table_wrapper_left, this->_table_wrapper_right,
-                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Outer,
-                         result_table, 1);
-}
 
 
 TYPED_TEST(JoinIndexTest, LeftJoin) {
@@ -267,12 +122,6 @@ TYPED_TEST(JoinIndexTest, RightJoin) {
       ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, OuterJoin) {
-  this->test_join_output(
-      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
-}
-
 TYPED_TEST(JoinIndexTest, InnerJoin) {
   this->test_join_output(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -285,45 +134,15 @@ TYPED_TEST(JoinIndexTest, InnerJoinOnString) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/string_inner_join.tbl", 1);
 }
 
+TYPED_TEST(JoinIndexTest, InnerJoinSingleChunk) {
+  this->test_join_output(
+      this->_table_wrapper_e, this->_table_wrapper_f, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_single_chunk.tbl", 1);
+}
+
 TYPED_TEST(JoinIndexTest, InnerRefJoin) {
   // scan that returns all rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
-  scan_b->execute();
-
-  this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::OpEquals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
-}
-
-TYPED_TEST(JoinIndexTest, InnerValueDictJoin) {
-  this->test_join_output(
-      this->_table_wrapper_a, this->_table_wrapper_b_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
-}
-
-TYPED_TEST(JoinIndexTest, InnerDictValueJoin) {
-  this->test_join_output(
-      this->_table_wrapper_a_dict, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
-}
-
-TYPED_TEST(JoinIndexTest, InnerValueDictRefJoin) {
-  // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
-  scan_b->execute();
-
-  this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::OpEquals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
-}
-
-TYPED_TEST(JoinIndexTest, InnerDictValueRefJoin) {
-  // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
@@ -346,15 +165,15 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
 
 TYPED_TEST(JoinIndexTest, InnerDictJoin) {
   this->test_join_output(
-      this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -363,9 +182,9 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, ColumnID{0}, ScanType::OpGreaterThan, 1000);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -390,19 +209,203 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
+TYPED_TEST(JoinIndexTest, OuterJoin) {
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, OuterJoinWithNull) {
+  this->test_join_output(
+      this->_table_wrapper_m, this->_table_wrapper_n, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join_null.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, OuterJoinDict) {
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+}
+
 TYPED_TEST(JoinIndexTest, SelfJoin) {
   this->test_join_output(
       this->_table_wrapper_a, this->_table_wrapper_a, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Self, "src/test/tables/joinoperators/int_self_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinOnMixedValueAndDictionaryColumns) {
+TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
+  // Joining two Integer Columns
   this->test_join_output(
-      this->_table_wrapper_c_dict, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+      ScanType::OpLessThan, JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinOnMixedValueAndReferenceColumns) {
+TYPED_TEST(JoinIndexTest, SmallerInnerJoinDict) {
+  // Joining two Integer Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+      ScanType::OpLessThan, JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, SmallerInnerJoin2) {
+  // Joining two Integer Columns
+  this->test_join_output(
+      this->_table_wrapper_j, this->_table_wrapper_i, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, SmallerOuterJoin) {
+  this->test_join_output(
+      this->_table_wrapper_k, this->_table_wrapper_l, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThan, JoinMode::Outer, "src/test/tables/joinoperators/int_smaller_outer_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin) {
+  // Joining two Integer Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThanEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_smallerequal_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+                                             ScanType::OpLessThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/float_smallerequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin2) {
+  // Joining two Integer Columns
+  this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpLessThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, SmallerEqualOuterJoin) {
+  this->test_join_output(
+      this->_table_wrapper_k, this->_table_wrapper_l, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThanEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_smallerequal_outer_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
+  // Joining two Integer Column
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpGreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+      ScanType::OpGreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterInnerJoinDict) {
+  // Joining two Integer Column
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpGreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+      ScanType::OpGreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterInnerJoin2) {
+  // Joining two Integer Columns
+  this->test_join_output(
+      this->_table_wrapper_i, this->_table_wrapper_j, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpGreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join_2.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterOuterJoin) {
+  this->test_join_output(
+      this->_table_wrapper_l, this->_table_wrapper_k, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpGreaterThan, JoinMode::Outer, "src/test/tables/joinoperators/int_greater_outer_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin) {
+  // Joining two Integer Columns
+  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpGreaterThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+                                             ScanType::OpGreaterThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoinDict) {
+  // Joining two Integer Columns
+  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpGreaterThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
+
+  // Joining two Float Columns
+  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+                                             ScanType::OpGreaterThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterEqualOuterJoin) {
+  this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpGreaterThanEquals, JoinMode::Outer,
+                                             "src/test/tables/joinoperators/int_greaterequal_outer_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin2) {
+  // Joining two Integer Columns
+  this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
+                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                             ScanType::OpGreaterThanEquals, JoinMode::Inner,
+                                             "src/test/tables/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, NotEqualInnerJoin) {
+  // Joining two Integer Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpNotEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
+  // Joining two Float Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+      ScanType::OpNotEquals, JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, NotEqualInnerJoinDict) {
+  // Joining two Integer Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpNotEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
+  // Joining two Float Columns
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}),
+      ScanType::OpNotEquals, JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, JoinLessThanOnDictAndDict) {
+  this->test_join_output(
+      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThanEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_leq_dict.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, JoinOnReferenceColumnAndDict) {
   // scan that returns all rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
@@ -410,6 +413,81 @@ TYPED_TEST(JoinIndexTest, JoinOnMixedValueAndReferenceColumns) {
   this->test_join_output(
       scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceColumn) {
+  // scan that returns all rows
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThan, 100);
+  scan_b->execute();
+
+  this->test_join_output(
+      this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpNotEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_neq.tbl", 1);
+}
+
+
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
+  // scan that returns all rows
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_f, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_g, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_b->execute();
+  auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_c->execute();
+
+  auto join = std::make_shared<JoinIndex>(scan_a, scan_b, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+  join->execute();
+
+  this->test_join_output(
+      join, scan_c, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner,
+      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
+  // scan that returns all rows
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_f, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_g, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_b->execute();
+  auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_c->execute();
+
+  auto join = std::make_shared<JoinIndex>(scan_a, scan_b, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+  join->execute();
+
+  this->test_join_output(
+      scan_c, join, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner,
+      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
+  // scan that returns all rows
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_f, ColumnID{0}, ScanType::OpGreaterThan, 6);
+  scan_a->execute();
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_g, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_b->execute();
+  auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_c->execute();
+
+  auto join = std::make_shared<JoinIndex>(scan_a, scan_b, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+  join->execute();
+
+  this->test_join_output(
+      join, scan_c, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner,
+      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
+  auto join = std::make_shared<JoinIndex>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
+  join->execute();
+
+  this->test_join_output(
+      join, this->_table_wrapper_h, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+      JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoinRefColumn) {
