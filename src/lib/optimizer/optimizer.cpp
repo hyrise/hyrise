@@ -4,6 +4,7 @@
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "strategy/join_detection_rule.hpp"
+#include "strategy/nested_expression_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 
 namespace opossum {
@@ -18,6 +19,7 @@ Optimizer Optimizer::create_default_optimizer() {
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
 
+  main_batch.add_rule(std::make_shared<NestedExpressionRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
 
