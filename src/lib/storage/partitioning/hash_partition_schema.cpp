@@ -29,8 +29,6 @@ PartitionID HashPartitionSchema::get_matching_partition_for(AllTypeVariant value
   return matching_partition;
 }
 
-const ColumnID HashPartitionSchema::get_column_id() {
-  return _column_id;
-}
+const ColumnID HashPartitionSchema::get_column_id() { return _column_id; }
 
 }  // namespace opossum

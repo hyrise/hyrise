@@ -22,7 +22,7 @@ class RangePartitionSchema : public AbstractPartitionSchema {
 
   const ColumnID get_column_id();
 
-protected:
+ protected:
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;
 };

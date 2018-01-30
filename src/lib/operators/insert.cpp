@@ -4,14 +4,14 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <storage/partitioning/range_partition_schema.hpp>
-#include <storage/partitioning/hash_partition_schema.hpp>
-#include <storage/partitioning/round_robin_partition_schema.hpp>
-#include <storage/partitioning/null_partition_schema.hpp>
 
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_dictionary_column.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/null_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/partitioning/round_robin_partition_schema.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
@@ -26,7 +26,8 @@ class AbstractTypedColumnProcessor {
   virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
                          std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) = 0;
   virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                         std::shared_ptr<BaseColumn> target, size_t target_start_index, std::vector<size_t> rows_to_copy) = 0;
+                         std::shared_ptr<BaseColumn> target, size_t target_start_index,
+                         std::vector<size_t> rows_to_copy) = 0;
 };
 
 template <typename T>
@@ -96,7 +97,8 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   }
 
   void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                 std::shared_ptr<BaseColumn> target, size_t target_start_index, std::vector<size_t> rows_to_copy) override {
+                 std::shared_ptr<BaseColumn> target, size_t target_start_index,
+                 std::vector<size_t> rows_to_copy) override {
     auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
     auto& values = casted_target->values();
@@ -118,7 +120,8 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
           target_index = target_start_index;
           for (size_t row_to_copy : rows_to_copy) {
             if (row_to_copy >= source_start_index) {
-              std::copy_n(casted_source->null_values().begin() + row_to_copy, 1, casted_target->null_values().begin() + target_index);
+              std::copy_n(casted_source->null_values().begin() + row_to_copy, 1,
+                          casted_target->null_values().begin() + target_index);
               target_index++;
             }
           }
@@ -174,7 +177,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   // partitioning
   const std::shared_ptr<AbstractPartitionSchema> target_partition_schema = _target_table->get_partition_schema();
-  std::map<RowID, PartitionID> target_partition_mapping = mapContentToAddToPartitions(target_partition_schema);
+  std::map<RowID, PartitionID> target_partition_mapping = map_content_to_add_to_partitions(target_partition_schema);
   std::map<PartitionID, uint32_t> rows_to_add_to_partition = count_rows_for_partitions(target_partition_mapping);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
@@ -184,7 +187,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
   }
 
-  for(std::map<PartitionID, uint32_t>::iterator iter = rows_to_add_to_partition.begin(); iter != rows_to_add_to_partition.end(); ++iter) {
+  for (std::map<PartitionID, uint32_t>::iterator iter = rows_to_add_to_partition.begin();
+       iter != rows_to_add_to_partition.end(); ++iter) {
     PartitionID partitionID = iter->first;
     uint32_t total_rows_to_insert = iter->second;
 
@@ -222,7 +226,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         Chunk& current_chunk_ref = *partition->last_chunk();
         ChunkID current_chunk_id = _target_table->get_chunk_id(current_chunk_ref);
         auto current_chunk = _target_table->get_modifiable_chunk(current_chunk_id);
-        auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
+        auto rows_to_insert_this_loop =
+            std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
         // Resize MVCC vectors.
         current_chunk->grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
@@ -245,9 +250,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           ChunkID chunk_id_to_add = _target_table->get_chunk_id(chunk_to_add);
           chunks_to_add_in_partition.emplace_back(chunk_id_to_add);
         }
-
       }
-
     }
     // TODO(all): make compress chunk thread-safe; if it gets called here by another thread, things will likely break.
 
@@ -257,15 +260,16 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     auto source_chunk_start_index = 0u;
 
     std::vector<RowID> rows_to_insert_into_partition;
-    for(std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin(); iter != target_partition_mapping.end(); ++iter) {
+    for (std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin();
+         iter != target_partition_mapping.end(); ++iter) {
       if (iter->second == partitionID) {
         rows_to_insert_into_partition.emplace_back(iter->first);
       }
     }
 
     for (auto target_chunk_id : chunks_to_add_in_partition) {
-    // for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
-         // target_chunk_id++) {
+      // for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
+      // target_chunk_id++) {
       auto target_chunk = _target_table->get_modifiable_chunk(target_chunk_id);
 
       const auto current_num_rows_to_insert =
@@ -285,7 +289,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         if (source_chunk->column_count() >= 1) {
           // doing this for one column only is enough because the rows to copy are the same in all columns
           for (size_t row = source_chunk_start_index; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
-            if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID && really_inserted < num_to_insert) {
+            if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID &&
+                really_inserted < num_to_insert) {
               rows_to_copy.push_back(row);
               really_inserted++;
               last_touched_index_source_chunk = row;
@@ -293,7 +298,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           }
           num_to_insert = std::min(num_to_insert, static_cast<uint32_t>(rows_to_copy.size()));
         }
-        
+
         for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
           const auto& source_column = source_chunk->get_column(column_id);
           typed_column_processors[column_id]->copy_data(source_column, source_chunk_start_index,
@@ -324,7 +329,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       input_offset += current_num_rows_to_insert;
       start_index = 0u;
     }
-
   }
 
   return nullptr;
@@ -353,7 +357,8 @@ void Insert::_on_rollback_records() {
   }
 }
 
-std::map<RowID, PartitionID> Insert::mapContentToAddToPartitions(const std::shared_ptr<AbstractPartitionSchema> target_partition_schema) {
+std::map<RowID, PartitionID> Insert::map_content_to_add_to_partitions(
+    const std::shared_ptr<AbstractPartitionSchema> target_partition_schema) {
   // TODO(partitioning group): refactor!
   std::map<RowID, PartitionID> target_partition_mapping;
   if (std::dynamic_pointer_cast<RangePartitionSchema>(target_partition_schema)) {
@@ -362,7 +367,8 @@ std::map<RowID, PartitionID> Insert::mapContentToAddToPartitions(const std::shar
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       auto column_with_partitioning_values = source_chunk->get_column(range_partition_schema->get_column_id());
       for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
-        target_partition_mapping[{chunkID, rowID}] = range_partition_schema->get_matching_partition_for((*column_with_partitioning_values)[rowID]);
+        target_partition_mapping[{chunkID, rowID}] =
+            range_partition_schema->get_matching_partition_for((*column_with_partitioning_values)[rowID]);
       }
     }
   } else if (std::dynamic_pointer_cast<HashPartitionSchema>(target_partition_schema)) {
@@ -371,7 +377,8 @@ std::map<RowID, PartitionID> Insert::mapContentToAddToPartitions(const std::shar
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       auto column_with_partitioning_values = source_chunk->get_column(hash_partition_schema->get_column_id());
       for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
-        target_partition_mapping[{chunkID, rowID}] = hash_partition_schema->get_matching_partition_for((*column_with_partitioning_values)[rowID]);
+        target_partition_mapping[{chunkID, rowID}] =
+            hash_partition_schema->get_matching_partition_for((*column_with_partitioning_values)[rowID]);
       }
     }
   } else if (std::dynamic_pointer_cast<RoundRobinPartitionSchema>(target_partition_schema)) {
@@ -395,9 +402,11 @@ std::map<RowID, PartitionID> Insert::mapContentToAddToPartitions(const std::shar
   return target_partition_mapping;
 }
 
-std::map<PartitionID, uint32_t> Insert::count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping) {
+std::map<PartitionID, uint32_t> Insert::count_rows_for_partitions(
+    std::map<RowID, PartitionID> target_partition_mapping) {
   std::map<PartitionID, uint32_t> rows_to_add_to_partition;
-  for(std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin(); iter != target_partition_mapping.end(); ++iter) {
+  for (std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin();
+       iter != target_partition_mapping.end(); ++iter) {
     PartitionID partitionID = iter->second;
     if (rows_to_add_to_partition.count(partitionID) == 1) {
       rows_to_add_to_partition[partitionID] += 1u;
