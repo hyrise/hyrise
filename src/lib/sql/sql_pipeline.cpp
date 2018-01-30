@@ -32,7 +32,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
   _sql_pipeline_statements.reserve(parse_result.size());
 
-  bool seen_altering_statement = false;
+  auto seen_altering_statement = false;
+  auto sql_string_offset = 0u;
 
   // We have to keep count of how many statements are owned by an SQLParseResult, which will free the memory on
   // deletion. In case of an error, we need to manually free the memory of all statements still owned by us.
@@ -61,8 +62,14 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
       parsed_statement->setIsValid(true);
 
-      auto pipeline_statement =
-          std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _transaction_context, use_mvcc);
+      // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
+      DebugAssert(sql_string_offset < sql.length(),
+                  "SQL statements have a total length that is longer than the original string.");
+      const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement->stringLength));
+      sql_string_offset += statement->stringLength;
+
+      auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
+                                                                       _transaction_context, use_mvcc);
       _sql_pipeline_statements.push_back(std::move(pipeline_statement));
     } catch (const std::exception&) {
       // Free all statements owned by us and pass on the error
@@ -81,17 +88,30 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   _requires_execution = seen_altering_statement && _num_statements > 1;
 }
 
+const std::vector<std::string>& SQLPipeline::get_sql_strings() {
+  if (!_sql_strings.empty()) {
+    return _sql_strings;
+  }
+
+  _sql_strings.reserve(_num_statements);
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    _sql_strings.push_back(pipeline_statement->get_sql_string());
+  }
+
+  return _sql_strings;
+}
+
 const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_parsed_sql_statements() {
   if (!_parsed_sql_statements.empty()) {
     return _parsed_sql_statements;
   }
 
   _parsed_sql_statements.reserve(_num_statements);
-  for (auto& pipeline : _sql_pipeline_statements) {
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
     try {
-      _parsed_sql_statements.push_back(pipeline->get_parsed_sql_statement());
+      _parsed_sql_statements.push_back(pipeline_statement->get_parsed_sql_statement());
     } catch (const std::exception& exception) {
-      _failed_pipeline_statement = pipeline;
+      _failed_pipeline_statement = pipeline_statement;
 
       // Don't keep bad values
       _parsed_sql_statements.clear();
@@ -111,11 +131,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimize
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
   _unoptimized_logical_plans.reserve(_num_statements);
-  for (auto& pipeline : _sql_pipeline_statements) {
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
     try {
-      _unoptimized_logical_plans.push_back(pipeline->get_unoptimized_logical_plan());
+      _unoptimized_logical_plans.push_back(pipeline_statement->get_unoptimized_logical_plan());
     } catch (const std::exception& exception) {
-      _failed_pipeline_statement = pipeline;
+      _failed_pipeline_statement = pipeline_statement;
 
       // Don't keep bad values
       _unoptimized_logical_plans.clear();
@@ -136,11 +156,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
   _optimized_logical_plans.reserve(_num_statements);
-  for (auto& pipeline : _sql_pipeline_statements) {
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
     try {
-      _optimized_logical_plans.push_back(pipeline->get_optimized_logical_plan());
+      _optimized_logical_plans.push_back(pipeline_statement->get_optimized_logical_plan());
     } catch (const std::exception& exception) {
-      _failed_pipeline_statement = pipeline;
+      _failed_pipeline_statement = pipeline_statement;
 
       // Don't keep bad values
       _optimized_logical_plans.clear();
@@ -166,11 +186,11 @@ const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans()
          "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
   _query_plans.reserve(_num_statements);
-  for (auto& pipeline : _sql_pipeline_statements) {
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
     try {
-      _query_plans.push_back(pipeline->get_query_plan());
+      _query_plans.push_back(pipeline_statement->get_query_plan());
     } catch (const std::exception& exception) {
-      _failed_pipeline_statement = pipeline;
+      _failed_pipeline_statement = pipeline_statement;
 
       // Don't keep bad values
       _query_plans.clear();
@@ -191,11 +211,11 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
          "Cannot generate tasks for all statements without executing, i.e. calling get_result_table()");
 
   _tasks.reserve(_num_statements);
-  for (auto& pipeline : _sql_pipeline_statements) {
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
     try {
-      _tasks.push_back(pipeline->get_tasks());
+      _tasks.push_back(pipeline_statement->get_tasks());
     } catch (const std::exception& exception) {
-      _failed_pipeline_statement = pipeline;
+      _failed_pipeline_statement = pipeline_statement;
 
       // Don't keep bad values
       _tasks.clear();
@@ -211,11 +231,11 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
     return _result_table;
   }
 
-  for (auto& pipeline : _sql_pipeline_statements) {
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
     try {
-      pipeline->get_result_table();
+      pipeline_statement->get_result_table();
     } catch (const std::exception& exception) {
-      _failed_pipeline_statement = pipeline;
+      _failed_pipeline_statement = pipeline_statement;
       throw;
     }
   }
@@ -246,8 +266,8 @@ std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
            "Cannot get compile time without having compiled or having executed a multi-statement query");
   }
 
-  for (const auto& pipeline : _sql_pipeline_statements) {
-    _compile_time_microseconds += pipeline->compile_time_microseconds();
+  for (const auto& pipeline_statement : _sql_pipeline_statements) {
+    _compile_time_microseconds += pipeline_statement->compile_time_microseconds();
   }
 
   return _compile_time_microseconds;
@@ -256,12 +276,16 @@ std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
   Assert(_pipeline_was_executed, "Cannot return execution duration without having executed.");
 
   if (_execution_time_microseconds.count() == 0) {
-    for (const auto& pipeline : _sql_pipeline_statements) {
-      _execution_time_microseconds += pipeline->execution_time_microseconds();
+    for (const auto& pipeline_statement : _sql_pipeline_statements) {
+      _execution_time_microseconds += pipeline_statement->execution_time_microseconds();
     }
   }
 
   return _execution_time_microseconds;
+}
+
+SQLQueryCache<SQLQueryPlan>& SQLPipeline::get_query_plan_cache() {
+  return SQLPipelineStatement::get_query_plan_cache();
 }
 
 }  // namespace opossum

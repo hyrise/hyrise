@@ -5,6 +5,7 @@
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
@@ -33,8 +34,11 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
-  SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
+  SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc);
+
+  // Returns the raw SQL string.
+  const std::string& get_sql_string();
 
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
@@ -53,6 +57,9 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Executes all tasks, waits for them to finish, and returns the resulting table.
   const std::shared_ptr<const Table>& get_result_table();
+
+  // Returns the query plan cache
+  static SQLQueryCache<SQLQueryPlan>& get_query_plan_cache();
 
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.
@@ -85,6 +92,9 @@ class SQLPipelineStatement : public Noncopyable {
   const bool _use_mvcc;
   const bool _auto_commit;
   std::shared_ptr<TransactionContext> _transaction_context;
+
+  // Caching
+  static SQLQueryCache<SQLQueryPlan> _query_plan_cache;
 };
 
 }  // namespace opossum

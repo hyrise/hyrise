@@ -10,10 +10,14 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+// Create a cache with a capacity of 0
+SQLQueryCache<SQLQueryPlan> SQLPipelineStatement::_query_plan_cache{1024};
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, bool use_mvcc)
     : _sql_string(sql), _use_mvcc(use_mvcc), _auto_commit(_use_mvcc) {}
@@ -24,11 +28,13 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql,
   DebugAssert(_transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
 }
 
-SQLPipelineStatement::SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
+SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc)
-    : _parsed_sql_statement(std::move(parsed_sql)),
+    : _sql_string(sql),
+      _parsed_sql_statement(std::move(parsed_sql)),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc && transaction_context == nullptr) {
+  DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
   Assert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
   // We don't want to create a new context yet, as it should contain all changes of previously created (possibly even in
   // same query) pipelines up to the point of this pipeline's execution.
@@ -36,6 +42,8 @@ SQLPipelineStatement::SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult
     _transaction_context = std::move(transaction_context);
   }
 }
+
+const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; }
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
   if (_parsed_sql_statement) {
@@ -105,25 +113,50 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     return _query_plan;
   }
 
-  const auto& lqp = get_optimized_logical_plan();
+  // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
+  if (!_transaction_context && _use_mvcc) {
+    _transaction_context = TransactionManager::get().new_transaction_context();
+  }
+
   _query_plan = std::make_shared<SQLQueryPlan>();
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  auto started = std::chrono::high_resolution_clock::now();
+
+  // Handle query plan if statement has been cached
+  auto cached_plan = _query_plan_cache.try_get(_sql_string);
+  if (cached_plan) {
+    auto& plan = *cached_plan;
+
+    DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
+    if (plan.tree_roots().front()->transaction_context_is_set()) {
+      Assert(_use_mvcc, "Cannot switch from MVCC use to non-MVCC use with cached queries.");
+    } else {
+      Assert(!_use_mvcc, "Cannot switch from non-MVCC use to MVCC use with cached queries.");
+    }
+
+    _query_plan->append_plan(plan.recreate());
+    if (_use_mvcc) _query_plan->set_transaction_context(_transaction_context);
+
+    const auto done = std::chrono::high_resolution_clock::now();
+    _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+
+    return _query_plan;
+  }
+
+  const auto& lqp = get_optimized_logical_plan();
 
   try {
     _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
+    if (_use_mvcc) _query_plan->set_transaction_context(_transaction_context);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while translating query plan:\n  " + std::string(exception.what()));
   }
 
-  if (_use_mvcc) {
-    // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
-    if (!_transaction_context) _transaction_context = TransactionManager::get().new_transaction_context();
-    _query_plan->set_transaction_context(_transaction_context);
-  }
-
   const auto done = std::chrono::high_resolution_clock::now();
   _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+
+  // Cache newly created plan for the according sql statement
+  _query_plan_cache.set(_sql_string, *_query_plan);
 
   return _query_plan;
 }
@@ -176,6 +209,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
   return _result_table;
 }
+
+SQLQueryCache<SQLQueryPlan>& SQLPipelineStatement::get_query_plan_cache() { return _query_plan_cache; }
 
 const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_context() const {
   return _transaction_context;
