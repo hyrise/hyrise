@@ -179,6 +179,11 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
 }
 
 TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
   const auto empty_memory_usage = DictionaryCompression::compress_column(DataType::Int, vc_int)
                                       ->estimate_memory_usage(MemoryUsageEstimationMode::Fast);
 

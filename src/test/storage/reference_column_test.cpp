@@ -111,6 +111,11 @@ TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
 }
 
 TEST_F(ReferenceColumnTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
   const auto pos_list_a = std::make_shared<PosList>();
   pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
   pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});

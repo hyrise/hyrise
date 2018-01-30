@@ -177,6 +177,11 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logic_error); }
 
 TEST_F(StorageTableTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
   const auto empty_memory_usage = t.estimate_memory_usage(MemoryUsageEstimationMode::Fast);
 
   t.append({4, "Hello"});

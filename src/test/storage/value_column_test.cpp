@@ -101,6 +101,11 @@ TEST_F(StorageValueColumnTest, StringTooLong) {
 }
 
 TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
   const auto memory_estimation_mode = MemoryUsageEstimationMode::Fast;
 
   const auto empty_usage_int = vc_int.estimate_memory_usage(memory_estimation_mode);
