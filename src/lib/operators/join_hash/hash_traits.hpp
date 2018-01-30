@@ -14,14 +14,14 @@ struct JoinHashTraits {
 // If both are floating types, use the larger type to hash
 template <typename L, typename R>
 struct JoinHashTraits<L, R, std::enable_if_t<std::is_floating_point_v<L> && std::is_floating_point_v<R>>> {
-  using HashType = std::conditional_t<sizeof(L) < sizeof(R), R, L>;
+  using HashType = std::conditional_t<sizeof(L) < sizeof(R), R, L>;  // NOLINT
   static constexpr bool needs_lexical_cast = false;
 };
 
 // If both are integer types, use the larger type to hash
 template <typename L, typename R>
 struct JoinHashTraits<L, R, std::enable_if_t<std::is_integral_v<L> && std::is_integral_v<R>>> {
-  using HashType = std::conditional_t<sizeof(L) < sizeof(R), R, L>;
+  using HashType = std::conditional_t<sizeof(L) < sizeof(R), R, L>;  // NOLINT
   static constexpr bool needs_lexical_cast = false;
 };
 
