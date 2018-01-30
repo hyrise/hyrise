@@ -53,13 +53,13 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
 
   // int with float
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_o,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_float_inner.tbl", 1);
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_float_inner.tbl", 1);
 
   // float with int
   this->template test_join_output<TypeParam>(this->_table_wrapper_o, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/float_int_inner.tbl", 1);
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/float_int_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
@@ -69,13 +69,13 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
 
   // int with double
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_p,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_double_inner.tbl", 1);
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_double_inner.tbl", 1);
 
   // double with int
   this->template test_join_output<TypeParam>(this->_table_wrapper_p, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/double_int_inner.tbl", 1);
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/double_int_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
@@ -84,8 +84,8 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
   }
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_q,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), ScanType::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_string_inner.tbl", 1);
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinOnString) {

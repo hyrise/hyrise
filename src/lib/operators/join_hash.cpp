@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -84,50 +85,6 @@ void JoinHash::_on_cleanup() { _impl.reset(); }
 // currently using 32bit Murmur
 using Hash = uint32_t;
 
-// JoinHashTraits. Use left type for hashing by default
-template <typename L, typename R, class Enable = void>
-struct JoinHashTraits {
-  typedef L hash_type;
-  static constexpr bool needs_lexical_cast = false;
-};
-
-// Same types
-template <typename L, typename R>
-struct JoinHashTraits<L, R, typename std::enable_if_t<std::is_same<L, R>::value, void>> {
-  typedef L hash_type;
-  static constexpr bool needs_lexical_cast = false;
-};
-
-// If both are floating types, use the larger type to hash
-template <typename L, typename R>
-struct JoinHashTraits<
-    L, R,
-    typename std::enable_if_t<
-        std::is_floating_point<L>::value && std::is_floating_point<R>::value && sizeof(L) < sizeof(R), void>> {
-  typedef R hash_type;
-  static constexpr bool needs_lexical_cast = false;
-};
-
-// If both are integer types, use the larger type to hash
-template <typename L, typename R>
-struct JoinHashTraits<
-    L, R,
-    typename std::enable_if_t<
-        std::numeric_limits<L>::is_integer && std::numeric_limits<R>::is_integer && sizeof(L) < sizeof(R), void>> {
-  typedef R hash_type;
-  static constexpr bool needs_lexical_cast = false;
-};
-
-// Joining strings with numbers is not supported at the moment
-template <typename L, typename R>
-struct JoinHashTraits<L, R,
-                      typename std::enable_if_t<!std::is_same<L, R>::value && (std::is_same<R, std::string>::value ||
-                                                                               std::is_same<L, std::string>::value),
-                                                void>> {
-  typedef std::string hash_type;
-  static constexpr bool needs_lexical_cast = true;
-};
-
 // We need to use the impl pattern because the join operator depends on the type of the columns
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
@@ -158,7 +115,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const size_t _radix_bits = 9;
 
   // Determine correct type for hashing
-  using HashType = typename JoinHashTraits<LeftType, RightType>::hash_type;
+  using HashType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
   /*
   This is how elements of the input relations are saved after materialization.
@@ -266,7 +223,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
               unsigned int hashed_value;
 
-              if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast) {
+              if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast && !std::is_same_v<T, HashType>) {
                 hashed_value = murmur2<HashType>(boost::lexical_cast<HashType>(elem.second), seed);
               } else {
                 hashed_value = murmur2<HashType>(elem.second, seed);
@@ -289,7 +246,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
             unsigned int hashed_value;
 
-            if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast) {
+            if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast && !std::is_same_v<T, HashType>) {
               hashed_value = murmur2<HashType>(boost::lexical_cast<HashType>(elem.second), seed);
             } else {
               hashed_value = murmur2<HashType>(elem.second, seed);
@@ -439,7 +396,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
              ++partition_offset) {
           auto& element = partition_left[partition_offset];
 
-          if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast) {
+          // use lexical cast if necessary
+          if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast &&
+                        !std::is_same_v<LeftType, HashType>) {
             hashtable->put(boost::lexical_cast<HashType>(element.value), element.row_id);
           } else {
             hashtable->put(element.value, element.row_id);
