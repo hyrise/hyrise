@@ -137,6 +137,7 @@ class Table : private Noncopyable {
   TableType get_type() const;
 
   // partitioning
+  void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                 const size_t number_of_partitions);
   void create_null_partitioning();

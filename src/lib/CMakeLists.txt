@@ -111,6 +111,8 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
+    operators/partitioning.cpp
+    operators/partitioning.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp

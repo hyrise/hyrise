@@ -213,6 +213,11 @@ TableType Table::get_type() const {
   }
 }
 
+void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
+  _partition_schema = partition_schema;
+  create_initial_chunks(static_cast<PartitionID>(partition_schema->partition_count()));
+}
+
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                      const size_t number_of_partitions) {
   _partition_schema = std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions);
