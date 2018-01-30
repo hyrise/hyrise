@@ -109,18 +109,17 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       name = column_expression->to_string(_input_table_left()->column_names());
     } else if (column_expression->is_subselect()) {
-      // TODO: add come kind of identifier for each subselect
-      name = "subselect";
-
       SQLQueryPlan query_plan;
       query_plan.add_tree_by_root(column_expression->subselect_operator());
       query_plan.set_transaction_context(this->transaction_context());
       std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-      auto result_table = tasks.back()->get_operator()->get_output();
 
-      // TODO: assert that only one column exists
+      auto result_table = tasks.back()->get_operator()->get_output();
+      DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
       column_expression->set_table(result_table);
+
+      name = result_table->column_names()[0];
     } else {
       Fail("Expression type is not supported.");
     }
