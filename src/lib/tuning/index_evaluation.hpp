@@ -66,7 +66,7 @@ class IndexEvaluation {
   /**
    * Operator for printing them (debugging)
    */
-  friend std::ostream& operator<<(std::ostream& output, IndexEvaluation& evaluation) {
+  friend std::ostream& operator<<(std::ostream& output, const IndexEvaluation& evaluation) {
     auto table_ptr = StorageManager::get().get_table(evaluation.table_name);
     auto& column_name = table_ptr->column_name(evaluation.column_id);
 
