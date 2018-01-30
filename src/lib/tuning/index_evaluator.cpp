@@ -160,23 +160,23 @@ void IndexEvaluator::_inspect_query_cache(const SQLQueryCache<std::shared_ptr<SQ
 void IndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency) {
   if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(op)) {
     // skipped because it is skipped in lqp_translator
-     if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
-    if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
-      const auto& table_name = get_table->table_name();
-      ColumnID column_id = table_scan->left_column_id();
+    if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
+      if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
+        const auto& table_name = get_table->table_name();
+        ColumnID column_id = table_scan->left_column_id();
 
-      auto table = StorageManager::get().get_table(table_name);
-      auto table_statistics = table->table_statistics();
-      // auto column_statistics = table->table_statistics()->column_statistics().at(column_id);
-      auto compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
-      auto predicate_statistics = table_statistics->predicate_statistics(column_id, table_scan->predicate_condition(),
-                                                                         table_scan->right_parameter());
-      auto selectivity = table_statistics->row_count() > 0
-                             ? predicate_statistics->row_count() / table_statistics->row_count()
-                             : 1.0f;
+        auto table = StorageManager::get().get_table(table_name);
+        auto table_statistics = table->table_statistics();
+        // auto column_statistics = table->table_statistics()->column_statistics().at(column_id);
+        auto compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
+        auto predicate_statistics = table_statistics->predicate_statistics(column_id, table_scan->predicate_condition(),
+                                                                           table_scan->right_parameter());
+        auto selectivity = table_statistics->row_count() > 0
+                               ? predicate_statistics->row_count() / table_statistics->row_count()
+                               : 1.0f;
 
-      const auto& column_name = table->column_name(column_id);
-      LOG_DEBUG("Found TableScan on table " << table_name << " and column " << column_name << " (selectivity: " << selectivity << ")");
+        LOG_DEBUG("Found TableScan on table " << table_name << " and column " << table->column_name(column_id)
+                                              << " (selectivity: " << selectivity << ")");
 
         /*
       std::cout << table_name << "." << table->column_name(column_id);
@@ -187,7 +187,7 @@ void IndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOpera
                 << "\n";
          */
 
-      _access_records.emplace_back(AccessRecord{table_name, column_id, query_frequency, selectivity});
+        _access_records.emplace_back(AccessRecord{table_name, column_id, query_frequency, selectivity});
       }
     }
   } else {
