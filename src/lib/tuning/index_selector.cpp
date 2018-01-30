@@ -10,6 +10,10 @@ std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvalu
   _operations.clear();
   _operations.reserve(evaluations.size());
 
+  if (evaluations.size() == 0) {
+    return _operations;
+  }
+
   // sort evaluations by ascending desirability
   std::sort(evaluations.begin(), evaluations.end());
 
