@@ -9,6 +9,7 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
+#include "storage/index/index_info.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
 #include "storage/partitioning/hash_function.hpp"
 #include "type_cast.hpp"
@@ -154,6 +155,18 @@ class Table : private Noncopyable {
   void remove_partitioning();
   uint16_t partition_count() const;
   ChunkID get_chunk_id(const Chunk& chunk) const;
+  std::vector<IndexInfo> get_indexes() const;
+
+  template <typename Index>
+  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
+    ColumnIndexType index_type = get_index_type_of<Index>();
+
+    for (auto& chunk : _chunks) {
+      chunk->create_index<Index>(column_ids);
+    }
+    IndexInfo i = {column_ids, name, index_type};
+    _indexes.emplace_back(i);
+  }
 
  protected:
   const uint32_t _max_chunk_size;
@@ -172,5 +185,6 @@ class Table : private Noncopyable {
   std::shared_ptr<AbstractPartitionSchema> _partition_schema;
 
   void create_initial_chunks(PartitionID number_of_partitions);
+  std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum

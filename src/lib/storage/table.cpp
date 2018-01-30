@@ -271,5 +271,6 @@ const std::shared_ptr<AbstractPartitionSchema> Table::get_partition_schema() con
 #if IS_DEBUG
 std::shared_ptr<AbstractPartitionSchema> Table::get_modifiable_partition_schema() { return _partition_schema; }
 #endif
+std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
 }  // namespace opossum
