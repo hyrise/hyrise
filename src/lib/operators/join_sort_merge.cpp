@@ -45,7 +45,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
                   op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
                   op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
-              "Unsupported scan type");
+              "Unsupported predicate condition");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
               "Outer joins are not implemented for not-equals joins.");
 }

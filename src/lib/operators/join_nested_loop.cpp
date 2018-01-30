@@ -18,7 +18,7 @@ namespace opossum {
 
 /*
  * This is a Nested Loop Join implementation completely based on iterables.
- * It supports all current join and scan types, as well as NULL values.
+ * It supports all current join and predicate conditions, as well as NULL values.
  * Because this is a Nested Loop Join, the performance is going to be far inferior to JoinHash and JoinSortMerge,
  * so only use this for testing or benchmarking purposes.
  */
