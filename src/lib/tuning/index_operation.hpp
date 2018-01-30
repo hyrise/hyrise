@@ -34,11 +34,10 @@ class IndexOperation {
     auto table_ptr = StorageManager::get().get_table(operation.table_name);
     auto& column_name = table_ptr->column_name(operation.column_id);
 
-    std::string operation_string = operation.create? "create" : "remove";
+    std::string operation_string = operation.create ? "create" : "remove";
 
     return output << "IndexOperation " << operation_string << " " << operation.table_name << "." << column_name;
   }
-
 };
 
 }  // namespace opossum

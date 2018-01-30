@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "storage/table.hpp"
 #include "storage/index/column_index_type.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {

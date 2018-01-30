@@ -52,7 +52,7 @@ void IndexTuner::execute() {
   for (const auto& operation : operations) {
     const auto& column_name = StorageManager::get().get_table(operation.table_name)->column_name(operation.column_id);
     if (operation.create) {
-        LOG_INFO("  -> Create index on table " << operation.table_name << ", column " << column_name);
+      LOG_INFO("  -> Create index on table " << operation.table_name << ", column " << column_name);
     } else {
       LOG_INFO("  -> Delete index on table " << operation.table_name << ", column " << column_name);
     }
