@@ -36,9 +36,7 @@ rm -fr coverage; mkdir coverage
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
 
 # generate HTML
-# gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k -g --html --html-details -o coverage/index.html > coverage_output.txt
-# Adapted line to avoid hundreds of .gcov files (reset before PR?):
-gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --html --html-details -o coverage/index.html > coverage_output.txt
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k -g --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
 if [ "true" == "$generate_badge" ]
