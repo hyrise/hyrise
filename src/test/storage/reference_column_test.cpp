@@ -44,7 +44,6 @@ class ReferenceColumnTest : public BaseTest {
 
  public:
   std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
-  std::shared_ptr<ReferenceColumn> _ref_column_1;
 };
 
 TEST_F(ReferenceColumnTest, IsImmutable) {
@@ -109,6 +108,19 @@ TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
   EXPECT_EQ(ref_column[1], column[1]);
   EXPECT_TRUE(variant_is_null(ref_column[2]));
   EXPECT_EQ(ref_column[3], column[2]);
+}
+
+TEST_F(ReferenceColumnTest, MemoryUsageEstimation) {
+  const auto pos_list_a = std::make_shared<PosList>();
+  pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  const auto pos_list_b = std::make_shared<PosList>();
+
+  ReferenceColumn reference_column_a(_test_table, ColumnID{0}, pos_list_a);
+  ReferenceColumn reference_column_b(_test_table, ColumnID{0}, pos_list_b);
+
+  EXPECT_EQ(reference_column_a.estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes,
+            reference_column_b.estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes + 2 * sizeof(RowID));
 }
 
 }  // namespace opossum

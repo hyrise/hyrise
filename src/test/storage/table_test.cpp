@@ -176,4 +176,14 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logic_error); }
 
+TEST_F(StorageTableTest, MemoryUsageEstimation) {
+  const auto empty_memory_usage = t.estimate_memory_usage(MemoryUsageEstimationMode::Fast);
+
+  t.append({4, "Hello"});
+  t.append({5, "Hello"});
+
+  EXPECT_GT(t.estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes,
+            empty_memory_usage.bytes + 2 * (sizeof(int) + sizeof(std::string)));
+}
+
 }  // namespace opossum

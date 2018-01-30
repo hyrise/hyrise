@@ -178,4 +178,18 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
   EXPECT_NE(attribute_vector_uint16_t, nullptr);
 }
 
+TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
+  const auto empty_memory_usage = DictionaryCompression::compress_column(DataType::Int, vc_int)
+                                      ->estimate_memory_usage(MemoryUsageEstimationMode::Fast);
+
+  vc_int->append(0);
+  vc_int->append(1);
+  vc_int->append(2);
+  const auto compressed_column = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  const auto dictionary_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(compressed_column);
+
+  EXPECT_GE(dictionary_column->estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes,
+            empty_memory_usage.bytes + 3 * (sizeof(int) + dictionary_column->attribute_vector()->width()));
+}
+
 }  // namespace opossum

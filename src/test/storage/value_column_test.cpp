@@ -100,4 +100,28 @@ TEST_F(StorageValueColumnTest, StringTooLong) {
   EXPECT_THROW(vc_str.append(std::string(std::numeric_limits<StringLength>::max() + 1ul, 'A')), std::exception);
 }
 
+TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
+  const auto memory_estimation_mode = MemoryUsageEstimationMode::Fast;
+
+  const auto empty_usage_int = vc_int.estimate_memory_usage(memory_estimation_mode);
+  const auto empty_usage_double = vc_double.estimate_memory_usage(memory_estimation_mode);
+  const auto empty_usage_str = vc_str.estimate_memory_usage(MemoryUsageEstimationMode::MoreExact);
+
+  vc_int.append(1);
+  vc_int.append(2);
+
+  const auto short_str = "Hello";
+  const auto longer_str = std::string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
+
+  vc_str.append(short_str);
+  vc_str.append(longer_str);
+
+  vc_double.append(42.1337);
+
+  EXPECT_EQ(empty_usage_int.bytes + sizeof(int) * 2, vc_int.estimate_memory_usage(memory_estimation_mode).bytes);
+  EXPECT_EQ(empty_usage_double.bytes + sizeof(double), vc_double.estimate_memory_usage(memory_estimation_mode).bytes);
+  EXPECT_GE(vc_str.estimate_memory_usage(MemoryUsageEstimationMode::MoreExact).bytes,
+            empty_usage_str.bytes + sizeof(std::string) + longer_str.size());
+}
+
 }  // namespace opossum

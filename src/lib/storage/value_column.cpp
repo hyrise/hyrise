@@ -157,7 +157,8 @@ std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const Polymorph
 
 template <typename T>
 MemoryUsage ValueColumn<T>::estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const {
-  return MemoryUsage{_values.size() * sizeof(T) + (_null_values ? _null_values->size() * sizeof(bool) : 0u)};
+  return MemoryUsage{sizeof(*this) + _values.size() * sizeof(T) +
+                     (_null_values ? _null_values->size() * sizeof(bool) : 0u)};
 }
 
 template <>
