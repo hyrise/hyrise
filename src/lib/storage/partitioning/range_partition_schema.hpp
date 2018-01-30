@@ -18,8 +18,11 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   RangePartitionSchema& operator=(RangePartitionSchema&&) = default;
 
   PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
+  PartitionID get_matching_partition_for(AllTypeVariant value);
 
- protected:
+  const ColumnID get_column_id();
+
+protected:
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;
 };
