@@ -25,10 +25,11 @@ class JoinNode : public AbstractLQPNode {
   explicit JoinNode(const JoinMode join_mode);
 
   // Constructor for predicated Joins
-  JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references, const ScanType scan_type);
+  JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
+           const PredicateCondition predicate_condition);
 
   const std::optional<LQPColumnReferencePair>& join_column_references() const;
-  const std::optional<ScanType>& scan_type() const;
+  const std::optional<PredicateCondition>& predicate_condition() const;
   JoinMode join_mode() const;
 
   std::string description() const override;
@@ -50,7 +51,7 @@ class JoinNode : public AbstractLQPNode {
  private:
   JoinMode _join_mode;
   std::optional<LQPColumnReferencePair> _join_column_references;
-  std::optional<ScanType> _scan_type;
+  std::optional<PredicateCondition> _predicate_condition;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

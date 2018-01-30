@@ -40,15 +40,16 @@ class ColumnStatistics : public BaseColumnStatistics {
   ~ColumnStatistics() override = default;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const AllTypeVariant& value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const ValuePlaceholder& value,
+      const PredicateCondition predicate_condition, const ValuePlaceholder& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const PredicateCondition predicate_condition,
+      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   /**
@@ -85,14 +86,14 @@ class ColumnStatistics : public BaseColumnStatistics {
   float estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum);
 
   /**
-   * Create column statistics and estimate selectivity for predicate with scan type equals and constant value.
+   * Create column statistics and estimate selectivity for predicate with predicate condition equals and constant value.
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */
   ColumnSelectivityResult _create_column_stats_for_equals_predicate(ColumnType value);
 
   /**
-   * Create column statistics and estimate selectivity for predicate with scan type not equals and constant value.
+   * Create column statistics and estimate selectivity for predicate with predicate condition not equals and constant value.
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */

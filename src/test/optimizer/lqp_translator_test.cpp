@@ -20,6 +20,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -29,6 +30,8 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/union_positions.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -40,6 +43,16 @@ class LQPTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
     StorageManager::get().add_table("table_alias_name",
                                     load_table("src/test/tables/table_alias_name.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("table_int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
+    DictionaryCompression::compress_table(*StorageManager::get().get_table("table_int_float_chunked"));
+  }
+
+  const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
+    return index_scan->_included_chunk_ids;
+  }
+
+  const std::vector<ChunkID> get_excluded_chunk_ids(const std::shared_ptr<const TableScan>& table_scan) {
+    return table_scan->_excluded_chunk_ids;
   }
 };
 
@@ -63,8 +76,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), ScanType::Equals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -74,7 +87,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
-  EXPECT_EQ(table_scan_op->scan_type(), ScanType::Equals);
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
 }
 
@@ -84,7 +97,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
    */
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::Between,
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::Between,
                                       AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -95,14 +108,119 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op2);
   EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{0} /* "a" */);
-  EXPECT_EQ(table_scan_op2->scan_type(), ScanType::LessThanEquals);
+  EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::LessThanEquals);
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(1337));
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
-  EXPECT_EQ(table_scan_op->scan_type(), ScanType::GreaterThanEquals);
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+
+  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 42);
+  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_scan_type(ScanType::IndexScan);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  ASSERT_TRUE(union_op);
+
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
+  ASSERT_TRUE(index_scan_op);
+  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+
+  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
+  auto predicate_node =
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Between,
+                                      AllParameterVariant(42), AllTypeVariant(1337));
+  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_scan_type(ScanType::IndexScan);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  ASSERT_TRUE(union_op);
+
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
+  ASSERT_TRUE(index_scan_op);
+  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(1337));
+
+  const auto table_scan_op2 = std::dynamic_pointer_cast<const TableScan>(table_scan_op->input_left());
+  ASSERT_TRUE(table_scan_op2);
+  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
+  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::GreaterThanEquals);
+  EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
+  if (!IS_DEBUG) return;
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+
+  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 42);
+  predicate_node->set_left_child(stored_table_node);
+  auto predicate_node2 = std::make_shared<PredicateNode>(LQPColumnReference(predicate_node, ColumnID{0}),
+                                                         PredicateCondition::LessThanEquals, 42);
+  predicate_node2->set_left_child(predicate_node);
+
+  // The optimizer should not set this ScanType in this situation
+  predicate_node2->set_scan_type(ScanType::IndexScan);
+  EXPECT_THROW(LQPTranslator{}.translate_node(predicate_node2), std::logic_error);
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {
@@ -151,7 +269,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Outer,
                                               std::make_pair(LQPColumnReference(stored_table_node_left, ColumnID{1}),
                                                              LQPColumnReference(stored_table_node_right, ColumnID{0})),
-                                              ScanType::Equals);
+                                              PredicateCondition::Equals);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = LQPTranslator{}.translate_node(join_node);
@@ -162,7 +280,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
   EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
-  EXPECT_EQ(join_op->scan_type(), ScanType::Equals);
+  EXPECT_EQ(join_op->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(join_op->mode(), JoinMode::Outer);
 }
 
@@ -293,18 +411,19 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
    */
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   auto predicate_node_left = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_left, ColumnID{0}),
-                                                             ScanType::Equals, AllParameterVariant(42));
+                                                             PredicateCondition::Equals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
 
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
-  auto predicate_node_right = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_right, ColumnID{1}),
-                                                              ScanType::GreaterThan, AllParameterVariant(30.0));
+  auto predicate_node_right =
+      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_right, ColumnID{1}),
+                                      PredicateCondition::GreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
   auto join_node = std::make_shared<JoinNode>(
       JoinMode::Inner, LQPColumnReferencePair(LQPColumnReference(stored_table_node_left, ColumnID{0}),
                                               LQPColumnReference(stored_table_node_right, ColumnID{0})),
-      ScanType::Equals);
+      PredicateCondition::Equals);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 
@@ -318,11 +437,11 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
 
   const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->input_left());
   ASSERT_TRUE(predicate_op_left);
-  EXPECT_EQ(predicate_op_left->scan_type(), ScanType::Equals);
+  EXPECT_EQ(predicate_op_left->predicate_condition(), PredicateCondition::Equals);
 
   const auto predicate_op_right = std::dynamic_pointer_cast<const TableScan>(join_op->input_right());
   ASSERT_TRUE(predicate_op_right);
-  EXPECT_EQ(predicate_op_right->scan_type(), ScanType::GreaterThan);
+  EXPECT_EQ(predicate_op_right->predicate_condition(), PredicateCondition::GreaterThan);
 
   const auto get_table_op_left = std::dynamic_pointer_cast<const GetTable>(predicate_op_left->input_left());
   ASSERT_TRUE(get_table_op_left);
@@ -379,11 +498,11 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
 
   auto table_node = std::make_shared<StoredTableNode>("table_int_float2");
   auto predicate_node_a =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, ScanType::Equals, 3);
+      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::Equals, 3);
   auto predicate_node_b =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, ScanType::Equals, 4);
+      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::Equals, 4);
   auto predicate_node_c =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{1}}, ScanType::Equals, 5.0);
+      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{1}}, PredicateCondition::Equals, 5.0);
   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
   const auto& lqp = union_node;
 

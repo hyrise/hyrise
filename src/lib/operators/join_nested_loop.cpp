@@ -18,21 +18,21 @@ namespace opossum {
 
 /*
  * This is a Nested Loop Join implementation completely based on iterables.
- * It supports all current join and scan types, as well as NULL values.
+ * It supports all current join and predicate conditions, as well as NULL values.
  * Because this is a Nested Loop Join, the performance is going to be far inferior to JoinHash and JoinSortMerge,
  * so only use this for testing or benchmarking purposes.
  */
 
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
                                const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                               const ColumnIDPair& column_ids, const ScanType scan_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
+                               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {}
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinNestedLoop>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                          _scan_type);
+                                          _predicate_condition);
 }
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
@@ -159,7 +159,7 @@ void JoinNestedLoop::_perform_join() {
 
             iterable_left.with_iterators([&](auto left_it, auto left_end) {
               iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                with_comparator(_scan_type, [&](auto comparator) {
+                with_comparator(_predicate_condition, [&](auto comparator) {
                   this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
                                           chunk_id_right, left_matches);
                 });
