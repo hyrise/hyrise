@@ -20,19 +20,20 @@ boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>:
   return boost::bimap<L, R>(list.begin(), list.end());
 }
 
-const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
-    {ScanType::OpEquals, "="},
-    {ScanType::OpNotEquals, "!="},
-    {ScanType::OpLessThan, "<"},
-    {ScanType::OpLessThanEquals, "<="},
-    {ScanType::OpGreaterThan, ">"},
-    {ScanType::OpGreaterThanEquals, ">="},
-    {ScanType::OpBetween, "BETWEEN"},
-    {ScanType::OpLike, "LIKE"},
-    {ScanType::OpNotLike, "NOT LIKE"},
-    {ScanType::OpIsNull, "IS NULL"},
-    {ScanType::OpIsNotNull, "IS NOT NULL"},
-});
+const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
+    make_bimap<PredicateCondition, std::string>({
+        {PredicateCondition::Equals, "="},
+        {PredicateCondition::NotEquals, "!="},
+        {PredicateCondition::LessThan, "<"},
+        {PredicateCondition::LessThanEquals, "<="},
+        {PredicateCondition::GreaterThan, ">"},
+        {PredicateCondition::GreaterThanEquals, ">="},
+        {PredicateCondition::Between, "BETWEEN"},
+        {PredicateCondition::Like, "LIKE"},
+        {PredicateCondition::NotLike, "NOT LIKE"},
+        {PredicateCondition::IsNull, "IS NULL"},
+        {PredicateCondition::IsNotNull, "IS NOT NULL"},
+    });
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},

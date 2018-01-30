@@ -35,8 +35,8 @@ class ReferenceColumn : public BaseColumn {
     values.reserve(_pos_list->size());
 
     for (const RowID& row : *_pos_list) {
-      auto& chunk = _referenced_table->get_chunk(row.chunk_id);
-      std::shared_ptr<const BaseColumn> column = chunk.get_column(_referenced_column_id);
+      auto chunk = _referenced_table->get_chunk(row.chunk_id);
+      std::shared_ptr<const BaseColumn> column = chunk->get_column(_referenced_column_id);
 
       if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
         values.push_back(std::nullopt);
@@ -79,9 +79,6 @@ class ReferenceColumn : public BaseColumn {
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
-  // writes the length and value at the chunk_offset to the end off row_string
-  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
-
   template <typename ContextClass>
   void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
     /*
@@ -106,17 +103,13 @@ class ReferenceColumn : public BaseColumn {
       auto& chunk_id = pair.first;
       auto& chunk_offsets = pair.second;
 
-      auto& chunk = _referenced_table->get_chunk(chunk_id);
-      auto referenced_column = chunk.get_column(_referenced_column_id);
+      auto chunk = _referenced_table->get_chunk(chunk_id);
+      auto referenced_column = chunk->get_column(_referenced_column_id);
 
       auto context = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
       referenced_column->visit(visitable, context);
     }
   }
-
-  // copies one of its own values to a different ValueColumn - mainly used for materialization
-  // we cannot always use the materialize method below because sort results might come from different BaseColumns
-  void copy_value_to_value_column(BaseColumn&, ChunkOffset) const override;
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 

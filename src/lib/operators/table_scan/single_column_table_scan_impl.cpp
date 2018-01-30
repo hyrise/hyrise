@@ -15,9 +15,10 @@
 namespace opossum {
 
 SingleColumnTableScanImpl::SingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
-                                                     const ColumnID left_column_id, const ScanType& scan_type,
+                                                     const ColumnID left_column_id,
+                                                     const PredicateCondition& predicate_condition,
                                                      const AllTypeVariant& right_value)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type}, _right_value{right_value} {}
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition}, _right_value{right_value} {}
 
 PosList SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   // early outs for specific NULL semantics
@@ -25,7 +26,7 @@ PosList SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
     /**
      * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
      * Therefore, these scans will always return an empty position list.
-     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl, 
+     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl,
      * we can assume that comparing with NULLs here will always return nothing.
      */
     return PosList{};
@@ -44,16 +45,16 @@ void SingleColumnTableScanImpl::handle_value_column(const BaseValueColumn& base_
   const auto left_column_type = _in_table->column_type(_left_column_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
-    using Type = typename decltype(type)::type;
+    using ColumnDataType = typename decltype(type)::type;
 
-    auto& left_column = static_cast<const ValueColumn<Type>&>(base_column);
+    auto& left_column = static_cast<const ValueColumn<ColumnDataType>&>(base_column);
 
     auto left_column_iterable = create_iterable_from_column(left_column);
-    auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+    auto right_value_iterable = ConstantValueIterable<ColumnDataType>{_right_value};
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-        with_comparator(_scan_type, [&](auto comparator) {
+        with_comparator(_predicate_condition, [&](auto comparator) {
           _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
@@ -120,7 +121,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
-      this->_with_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
+      this->_with_operator_for_dict_column_scan(_predicate_condition, [&](auto comparator) {
         this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
       });
     });
@@ -128,61 +129,59 @@ void SingleColumnTableScanImpl::handle_dictionary_column(const BaseDictionaryCol
 }
 
 ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) {
-  switch (_scan_type) {
-    case ScanType::OpEquals:
-    case ScanType::OpNotEquals:
-    case ScanType::OpLessThan:
-    case ScanType::OpGreaterThanEquals:
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::GreaterThanEquals:
       return column.lower_bound(_right_value);
 
-    case ScanType::OpLessThanEquals:
-    case ScanType::OpGreaterThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
       return column.upper_bound(_right_value);
 
     default:
       Fail("Unsupported comparison type encountered");
-      return INVALID_VALUE_ID;
   }
 }
 
 bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn& column,
                                                          const ValueID search_value_id) {
-  switch (_scan_type) {
-    case ScanType::OpEquals:
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals:
       return search_value_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
-    case ScanType::OpNotEquals:
+    case PredicateCondition::NotEquals:
       return search_value_id == column.upper_bound(_right_value);
 
-    case ScanType::OpLessThan:
-    case ScanType::OpLessThanEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
       return search_value_id == INVALID_VALUE_ID;
 
-    case ScanType::OpGreaterThanEquals:
-    case ScanType::OpGreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+    case PredicateCondition::GreaterThan:
       return search_value_id == ValueID{0u};
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 
 bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn& column,
                                                           const ValueID search_value_id) {
-  switch (_scan_type) {
-    case ScanType::OpEquals:
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals:
       return search_value_id == column.upper_bound(_right_value);
 
-    case ScanType::OpNotEquals:
+    case PredicateCondition::NotEquals:
       return search_value_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
-    case ScanType::OpLessThan:
-    case ScanType::OpLessThanEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
       return search_value_id == ValueID{0u};
 
-    case ScanType::OpGreaterThan:
-    case ScanType::OpGreaterThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
       return search_value_id == INVALID_VALUE_ID;
 
     default:

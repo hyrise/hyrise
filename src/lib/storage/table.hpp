@@ -9,6 +9,7 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
+#include "storage/index/index_info.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -48,23 +49,17 @@ class Table : private Noncopyable {
   // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
 
-  // Returns the number of valid rows (using approximate count of deleted rows)
-  uint64_t approx_valid_row_count() const;
-
-  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
-  void inc_invalid_row_count(uint64_t count);
-
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
   // returns the chunk with the given id
-  Chunk& get_chunk(ChunkID chunk_id);
-  const Chunk& get_chunk(ChunkID chunk_id) const;
+  std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
+  std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
-  void emplace_chunk(Chunk chunk);
+  void emplace_chunk(const std::shared_ptr<Chunk>& chunk);
 
   // Returns a list of all column names.
   const std::vector<std::string>& column_names() const;
@@ -114,14 +109,13 @@ class Table : private Noncopyable {
 
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
-      size_t current_size = chunk.size();
+      size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
+        return get<T>((*chunk->get_column(column_id))[row_number + current_size - row_counter]);
       }
     }
     Fail("Row does not exist.");
-    return {};
   }
 
   // creates a new chunk and appends it
@@ -132,6 +126,7 @@ class Table : private Noncopyable {
   void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
 
   std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
+  std::shared_ptr<const TableStatistics> table_statistics() const { return _table_statistics; }
 
   /**
    * Determines whether this table consists solely of ReferenceColumns, in which case it is a TableType::References,
@@ -140,14 +135,22 @@ class Table : private Noncopyable {
    */
   TableType get_type() const;
 
+  std::vector<IndexInfo> get_indexes() const;
+
+  template <typename Index>
+  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
+    ColumnIndexType index_type = get_index_type_of<Index>();
+
+    for (auto& chunk : _chunks) {
+      chunk->create_index<Index>(column_ids);
+    }
+    IndexInfo i = {column_ids, name, index_type};
+    _indexes.emplace_back(i);
+  }
+
  protected:
   const uint32_t _max_chunk_size;
-  std::vector<Chunk> _chunks;
-
-  // Stores the number of invalid (deleted) rows.
-  // This is currently not an atomic due to performance considerations.
-  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
-  uint64_t _approx_invalid_row_count{0};
+  std::vector<std::shared_ptr<Chunk>> _chunks;
 
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers
@@ -158,5 +161,7 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
 
   std::unique_ptr<std::mutex> _append_mutex;
+
+  std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum

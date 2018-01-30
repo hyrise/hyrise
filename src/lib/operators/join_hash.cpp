@@ -24,16 +24,16 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
-  DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {
+  DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
 std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                    _scan_type);
+                                    _predicate_condition);
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
@@ -73,7 +73,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }
 
@@ -87,13 +87,13 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
+               const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
-        _scan_type(scan_type),
+        _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _output_table(std::make_shared<Table>()) {}
 
@@ -102,8 +102,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const JoinMode _mode;
-  const std::pair<ColumnID, ColumnID> _column_ids;
-  const ScanType _scan_type;
+  const ColumnIDPair _column_ids;
+  const PredicateCondition _predicate_condition;
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;
@@ -161,7 +161,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // fill work queue
     size_t output_offset = 0;
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-      auto column = in_table->get_chunk(chunk_id).get_column(column_id);
+      auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
 
       chunk_offsets[chunk_id] = output_offset;
       output_offset += column->size();
@@ -178,7 +178,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         // Get information from work queue
         auto output_offset = chunk_offsets[chunk_id];
-        auto column = in_table->get_chunk(chunk_id).get_column(column_id);
+        auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
         auto& output = static_cast<Partition<T>&>(*elements);
 
         // prepare histogram
@@ -306,13 +306,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         // add up the output offsets for chunks before this one
         for (ChunkID i{0}; i < chunk_id; ++i) {
+          const auto& histogram = *histograms[i];
           for (size_t j = 0; j < num_partitions; ++j) {
-            output_offsets[j] += histograms[i]->operator[](j);
+            output_offsets[j] += histogram[j];
           }
         }
         for (auto i = chunk_id; i < offsets.size(); ++i) {
+          const auto& histogram = *histograms[i];
           for (size_t j = 1; j < num_partitions; ++j) {
-            output_offsets[j] += histograms[i]->operator[](j - 1);
+            output_offsets[j] += histogram[j - 1];
           }
         }
 
@@ -583,13 +585,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     size_t offset_left = 0;
     for (ChunkID i{0}; i < left_chunk_count; ++i) {
       left_chunk_offsets->operator[](i) = offset_left;
-      offset_left += _left_in_table->get_chunk(i).size();
+      offset_left += _left_in_table->get_chunk(i)->size();
     }
 
     size_t offset_right = 0;
     for (ChunkID i{0}; i < right_chunk_count; ++i) {
       right_chunk_offsets->operator[](i) = offset_right;
-      offset_right += _right_in_table->get_chunk(i).size();
+      offset_right += _right_in_table->get_chunk(i)->size();
     }
 
     // Materialization phase
@@ -654,13 +656,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
     */
     auto ref_col_left =
-        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
             ? true
             : false;
-    auto ref_col_right =
-        std::dynamic_pointer_cast<const ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
-            ? true
-            : false;
+    auto ref_col_right = std::dynamic_pointer_cast<const ReferenceColumn>(
+                             _right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
+                             ? true
+                             : false;
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       auto& left = left_pos_lists[partition_id];
@@ -670,7 +672,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      Chunk output_chunk;
+      auto output_chunk = std::make_shared<Chunk>();
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
@@ -690,8 +692,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return _output_table;
   }
 
-  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
-                                  PosList& pos_list, bool is_ref_column) {
+  static void write_output_chunks(const std::shared_ptr<Chunk>& output_chunk,
+                                  const std::shared_ptr<const Table> input_table, PosList& pos_list,
+                                  bool is_ref_column) {
     if (pos_list.empty()) return;
 
     // Add columns from input table to output chunk
@@ -700,14 +703,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (is_ref_column) {
         auto ref_col =
-            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
+            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
 
         // Get all the input pos lists so that we only have to pointer cast the columns once
         auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
           // This works because we assume that the columns have to be either all ReferenceColumns or none.
           auto ref_column =
-              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));
+              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id)->get_column(column_id));
           input_pos_lists.push_back(ref_column->pos_list());
         }
 
@@ -726,7 +729,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         column = std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list));
       }
 
-      output_chunk.add_column(column);
+      output_chunk->add_column(column);
     }
   }
 };

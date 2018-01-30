@@ -6,14 +6,15 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 InsertNode::InsertNode(const std::string table_name) : AbstractLQPNode(LQPNodeType::Insert), _table_name(table_name) {}
 
-std::shared_ptr<AbstractLQPNode> InsertNode::_deep_copy_impl() const {
+std::shared_ptr<AbstractLQPNode> InsertNode::_deep_copy_impl(
+    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   return std::make_shared<InsertNode>(_table_name);
 }
 

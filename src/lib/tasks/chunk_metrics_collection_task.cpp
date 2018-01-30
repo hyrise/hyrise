@@ -17,8 +17,8 @@ void ChunkMetricsCollectionTask::_on_execute() {
   for (const auto& table_name : table_names) {
     const auto& table = StorageManager::get().get_table(table_name);
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
-      const auto& _chunk = table->get_chunk(i);
-      if (const auto access_counter = _chunk.access_counter()) {
+      const auto _chunk = table->get_chunk(i);
+      if (const auto access_counter = _chunk->access_counter()) {
         access_counter->process();
       }
     }

@@ -14,7 +14,6 @@
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -57,7 +56,7 @@ class OperatorsExportCsvTest : public BaseTest {
   }
 
   std::shared_ptr<Table> table;
-  const std::string filename = "/tmp/export_test.csv";
+  const std::string filename = test_data_path + "export_test.csv";
   const std::string meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
 };
 
@@ -135,7 +134,7 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpLessThan, 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();

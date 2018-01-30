@@ -15,7 +15,8 @@ class BaseValueColumn;
 
 class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType& scan_type);
+  IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                      const PredicateCondition& predicate_condition);
 
   void handle_value_column(const BaseValueColumn& base_column,
                            std::shared_ptr<ColumnVisitableContext> base_context) override;
@@ -39,12 +40,12 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
 
  private:
   template <typename Functor>
-  void _resolve_scan_type(const Functor& func) {
-    switch (_scan_type) {
-      case ScanType::OpIsNull:
+  void _resolve_predicate_condition(const Functor& func) {
+    switch (_predicate_condition) {
+      case PredicateCondition::IsNull:
         return func([](const bool is_null) { return is_null; });
 
-      case ScanType::OpIsNotNull:
+      case PredicateCondition::IsNotNull:
         return func([](const bool is_null) { return !is_null; });
 
       default:
@@ -57,7 +58,7 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
     auto& matches_out = context._matches_out;
     const auto chunk_id = context._chunk_id;
 
-    _resolve_scan_type([&](auto comparator) {
+    _resolve_predicate_condition([&](auto comparator) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 

@@ -24,6 +24,22 @@ namespace opossum {
 
 struct GroupByContext;
 
+/**
+ * Aggregates are defined by the Column (ColumnID for Operators, ColumnReference in LQP) they operate on and the aggregate
+ * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
+ * Optionally, an alias can be specified to use as the output name.
+ */
+template <typename ColumnReferenceType>
+struct AggregateColumnDefinitionTemplate {
+  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
+                                    const std::optional<std::string>& alias = std::nullopt)
+      : column(column), function(function), alias(alias) {}
+
+  std::optional<ColumnReferenceType> column;
+  AggregateFunction function;
+  std::optional<std::string> alias;
+};
+
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
@@ -48,22 +64,7 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
-// ColumnID representing the '*' when using COUNT(*)
-constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
-
-/**
- * Struct to specify aggregates.
- * Aggregates are defined by the column_id they operate on and the aggregate function they use.
- * Optionally, an alias can be specified to use as the output name.
- */
-struct AggregateDefinition {
-  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const std::optional<std::string>& alias = std::nullopt);
-
-  ColumnID column_id;
-  AggregateFunction function;
-  std::optional<std::string> alias;
-};
+using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -78,13 +79,14 @@ using DistinctAggregateType = int8_t;
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
+  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
             const std::vector<ColumnID> groupby_column_ids);
 
-  const std::vector<AggregateDefinition>& aggregates() const;
+  const std::vector<AggregateColumnDefinition>& aggregates() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   const std::string name() const override;
+  const std::string description(DescriptionMode description_mode) const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   // write the aggregated output for a given aggregate column
@@ -112,11 +114,11 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
-  const std::vector<AggregateDefinition> _aggregates;
+  const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   std::shared_ptr<Table> _output;
-  Chunk _out_chunk;
+  std::shared_ptr<Chunk> _out_chunk;
   std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
   std::vector<std::shared_ptr<std::vector<AggregateKey>>> _keys_per_chunk;

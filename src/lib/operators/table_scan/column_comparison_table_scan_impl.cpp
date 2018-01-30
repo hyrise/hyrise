@@ -16,17 +16,18 @@
 namespace opossum {
 
 ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(std::shared_ptr<const Table> in_table,
-                                                             const ColumnID left_column_id, const ScanType& scan_type,
+                                                             const ColumnID left_column_id,
+                                                             const PredicateCondition& predicate_condition,
                                                              const ColumnID right_column_id)
-    : BaseTableScanImpl{in_table, left_column_id, scan_type}, _right_column_id{right_column_id} {}
+    : BaseTableScanImpl{in_table, left_column_id, predicate_condition}, _right_column_id{right_column_id} {}
 
 PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
-  const auto& chunk = _in_table->get_chunk(chunk_id);
+  const auto chunk = _in_table->get_chunk(chunk_id);
   const auto left_column_type = _in_table->column_type(_left_column_id);
   const auto right_column_type = _in_table->column_type(_right_column_id);
 
-  const auto left_column = chunk.get_column(_left_column_id);
-  const auto right_column = chunk.get_column(_right_column_id);
+  const auto left_column = chunk->get_column(_left_column_id);
+  const auto right_column = chunk->get_column(_right_column_id);
 
   auto matches_out = PosList{};
 
@@ -68,7 +69,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
 
         left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(_scan_type, [&](auto comparator) {
+            with_comparator(_predicate_condition, [&](auto comparator) {
               this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
             });
           });

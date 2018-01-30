@@ -13,13 +13,13 @@
 
 namespace opossum {
 
-IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
-                     std::vector<ColumnID> left_column_ids, const ScanType scan_type,
-                     std::vector<AllTypeVariant> right_values, std::vector<AllTypeVariant> right_values2)
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
+                     const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
+                     const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2)
     : AbstractReadOnlyOperator{in},
       _index_type{index_type},
       _left_column_ids{left_column_ids},
-      _scan_type{scan_type},
+      _predicate_condition{predicate_condition},
       _right_values{right_values},
       _right_values2{right_values2} {}
 
@@ -58,15 +58,15 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
-    const auto& chunk = _in_table->get_chunk(chunk_id);
+    const auto chunk = _in_table->get_chunk(chunk_id);
     // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
-    Chunk chunk_out{chunk.get_allocator(), chunk.access_counter()};
+    auto chunk_out = std::make_shared<Chunk>(chunk->get_allocator(), chunk->access_counter());
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
       auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-      chunk_out.add_column(ref_column_out);
+      chunk_out->add_column(ref_column_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
@@ -78,12 +78,12 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
 }
 
 void IndexScan::_validate_input() {
-  Assert(_scan_type != ScanType::OpLike, "Scan type not supported by index scan.");
-  Assert(_scan_type != ScanType::OpNotLike, "Scan type not supported by index scan.");
+  Assert(_predicate_condition != PredicateCondition::Like, "Predicate condition not supported by index scan.");
+  Assert(_predicate_condition != PredicateCondition::NotLike, "Predicate condition not supported by index scan.");
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
-  if (_scan_type == ScanType::OpBetween) {
+  if (_predicate_condition == PredicateCondition::Between) {
     Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
@@ -103,13 +103,13 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto index = chunk->get_index(_index_type, _left_column_ids);
   Assert(index != nullptr, "Index of specified type not found for column (vector).");
 
-  switch (_scan_type) {
-    case ScanType::OpEquals: {
+  switch (_predicate_condition) {
+    case PredicateCondition::Equals: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values);
       break;
     }
-    case ScanType::OpNotEquals: {
+    case PredicateCondition::NotEquals: {
       // first, get all values less than the search value
       range_begin = index->cbegin();
       range_end = index->lower_bound(_right_values);
@@ -122,27 +122,27 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->cend();
       break;
     }
-    case ScanType::OpLessThan: {
+    case PredicateCondition::LessThan: {
       range_begin = index->cbegin();
       range_end = index->lower_bound(_right_values);
       break;
     }
-    case ScanType::OpLessThanEquals: {
+    case PredicateCondition::LessThanEquals: {
       range_begin = index->cbegin();
       range_end = index->upper_bound(_right_values);
       break;
     }
-    case ScanType::OpGreaterThan: {
+    case PredicateCondition::GreaterThan: {
       range_begin = index->upper_bound(_right_values);
       range_end = index->cend();
       break;
     }
-    case ScanType::OpGreaterThanEquals: {
+    case PredicateCondition::GreaterThanEquals: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->cend();
       break;
     }
-    case ScanType::OpBetween: {
+    case PredicateCondition::Between: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values2);
       break;

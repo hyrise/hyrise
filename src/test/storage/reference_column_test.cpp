@@ -61,7 +61,7 @@ TEST_F(ReferenceColumnTest, RetrievesValues) {
       std::initializer_list<RowID>({RowID{ChunkID{0}, 0}, RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}}));
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
-  auto& column = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+  auto& column = *(_test_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column[0]);
   EXPECT_EQ(ref_column[1], column[1]);
@@ -74,7 +74,7 @@ TEST_F(ReferenceColumnTest, RetrievesValuesOutOfOrder) {
       std::initializer_list<RowID>({RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}, RowID{ChunkID{0}, 0}}));
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
-  auto& column = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+  auto& column = *(_test_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column[1]);
   EXPECT_EQ(ref_column[1], column[2]);
@@ -87,8 +87,8 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
       std::initializer_list<RowID>({RowID{ChunkID{0}, 2}, RowID{ChunkID{1}, 0}, RowID{ChunkID{1}, 1}}));
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
-  auto& column_1 = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
-  auto& column_2 = *(_test_table->get_chunk(ChunkID{1}).get_column(ColumnID{0}));
+  auto& column_1 = *(_test_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
+  auto& column_2 = *(_test_table->get_chunk(ChunkID{1})->get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column_1[2]);
   EXPECT_TRUE(variant_is_null(ref_column[1]) && variant_is_null(column_2[0]));
@@ -103,7 +103,7 @@ TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
 
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0u}, pos_list);
 
-  auto& column = *(_test_table->get_chunk(ChunkID{0u}).get_column(ColumnID{0u}));
+  auto& column = *(_test_table->get_chunk(ChunkID{0u})->get_column(ColumnID{0u}));
 
   EXPECT_EQ(ref_column[0], column[0]);
   EXPECT_EQ(ref_column[1], column[1]);

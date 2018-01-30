@@ -25,8 +25,8 @@ class SQLQueryPlanTest : public BaseTest {
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
 
-    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
+    SQLQueryOperator::get_parse_tree_cache().resize(0);
+    SQLQueryOperator::get_query_plan_cache().resize(0);
   }
 };
 

@@ -47,8 +47,9 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
 // @}
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type, ColumnID left_column_id,
-                            ColumnID right_column_id);
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
+                            const LQPColumnReference& left_column_reference,
+                            const LQPColumnReference& right_column_reference);
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 
@@ -112,19 +113,19 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Assert that the `expression` is a Column Expression referring to `actual_column_id`
  */
-#define ASSERT_COLUMN_EXPRESSION(expression, actual_column_id) \
-  ASSERT_EQ(expression->type(), ExpressionType::Column);       \
-  ASSERT_EQ(expression->column_id(), actual_column_id);
+#define ASSERT_COLUMN_EXPRESSION(expression, actual_column_reference) \
+  ASSERT_EQ(expression->type(), ExpressionType::Column);              \
+  ASSERT_EQ(expression->column_reference(), actual_column_reference);
 
 /**
  * Assert that `expression` models an Aggregate Function operating on `actual_column_id`
  */
-#define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_id) \
-  ASSERT_EQ(expression->type(), ExpressionType::Function);                                            \
-  ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                             \
-  ASSERT_EQ(expression->expression_list().size(), 1u);                                                \
-  ASSERT_EQ(expression->expression_list()[0]->type(), ExpressionType::Column);                        \
-  ASSERT_EQ(expression->expression_list()[0]->column_id(), actual_column_id);
+#define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_reference) \
+  ASSERT_EQ(expression->type(), ExpressionType::Function);                                                   \
+  ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                                    \
+  ASSERT_EQ(expression->aggregate_function_arguments().size(), 1u);                                          \
+  ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);                  \
+  ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_reference(), actual_column_reference);
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();

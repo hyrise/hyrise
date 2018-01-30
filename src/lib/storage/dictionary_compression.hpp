@@ -39,7 +39,7 @@ class DictionaryCompression {
    * @param column_types from the chunk’s table
    * @param chunk to be compressed
    */
-  static void compress_chunk(const std::vector<DataType>& column_types, Chunk& chunk);
+  static void compress_chunk(const std::vector<DataType>& column_types, const std::shared_ptr<Chunk>& chunk);
 
   /**
    * @brief Compresses specified chunks of a table

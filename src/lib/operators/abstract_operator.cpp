@@ -52,7 +52,7 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
         if (_output == nullptr) return true;
         if (_output->chunk_count() <= ChunkID{1}) return true;
         for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-          if (_output->get_chunk(chunk_id).size() < 1) return true;
+          if (_output->get_chunk(chunk_id)->size() < 1) return true;
         }
         return true;
       }(),
@@ -64,11 +64,10 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
   return _output;
 }
 
-const std::string AbstractOperator::description() const { return name(); }
+const std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
   Fail("Operator " + name() + " does not implement recreation.");
-  return {};
 }
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
@@ -119,6 +118,71 @@ void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& op
   _operator_task = operator_task;
 }
 
+void AbstractOperator::print(std::ostream& stream) const {
+  std::vector<bool> levels;
+  std::unordered_map<const AbstractOperator*, size_t> id_by_operator;
+  size_t id_counter = 0;
+  _print_impl(stream, levels, id_by_operator, id_counter);
+}
+
 void AbstractOperator::_on_cleanup() {}
+
+void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
+                                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
+                                   size_t& id_counter) const {
+  /**
+   * NOTE: Code taken from AbstractLQPNode::_print_impl() - wouldn't know how we could cleanly make it reusable, so
+   * C/P it is
+   */
+
+  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
+  for (size_t level = 0; level < max_level; ++level) {
+    if (levels[level]) {
+      out << " | ";
+    } else {
+      out << "   ";
+    }
+  }
+
+  if (!levels.empty()) {
+    out << " \\_";
+  }
+
+  /**
+   * Check whether the node has been printed before
+   */
+  const auto iter = id_by_operator.find(this);
+  if (iter != id_by_operator.end()) {
+    out << "Recurring Operator --> [" << iter->second << "]" << std::endl;
+    return;
+  }
+
+  const auto this_node_id = id_counter;
+  id_counter++;
+  id_by_operator.emplace(this, this_node_id);
+
+  out << "[" << this_node_id << "] " << description();
+
+  // If the operator was already executed, print some info about data and performance
+  const auto output = get_output();
+  if (output) {
+    out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << output->column_count()
+        << " column(s)/" << _performance_data.walltime_ns << "ns)";
+  }
+
+  out << std::endl;
+
+  levels.emplace_back(input_right() != nullptr);
+
+  if (input_left()) {
+    input_left()->_print_impl(out, levels, id_by_operator, id_counter);
+  }
+  if (input_right()) {
+    levels.back() = false;
+    input_right()->_print_impl(out, levels, id_by_operator, id_counter);
+  }
+
+  levels.pop_back();
+}
 
 }  // namespace opossum
