@@ -58,8 +58,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   // for left/right/outer joins
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets
-  std::vector<std::vector<bool>> _right_matches;
   std::vector<std::vector<bool>> _left_matches;
+  std::vector<std::vector<bool>> _right_matches;
 };
 
 }  // namespace opossum
