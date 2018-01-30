@@ -46,7 +46,8 @@ PredicateCondition translate_operator_type_to_predicate_condition(const hsql::Op
        {hsql::kOpGreater, PredicateCondition::GreaterThan}, {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
        {hsql::kOpLess, PredicateCondition::LessThan},       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
        {hsql::kOpBetween, PredicateCondition::Between},     {hsql::kOpLike, PredicateCondition::Like},
-       {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull}};
+       {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull},
+       {hsql::kOpIn, PredicateCondition::In}};
 
   auto it = operator_to_predicate_condition.find(operator_type);
   DebugAssert(it != operator_to_predicate_condition.end(), "Filter expression clause operator is not yet supported.");
@@ -943,6 +944,28 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
 
     Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
+  } else if (predicate_condition == PredicateCondition::In) {
+
+    Assert(hsql_expr.select, "The IN operand only supports subqueries so far");
+    // TODO: Also support lists of literals
+    auto subselect_node = const_cast<SQLTranslator*>(this)->_translate_select(*hsql_expr.select);
+    auto subselect_expression = LQPExpression::create_subselect(subselect_node);
+
+    const auto subselect_columns = LQPExpression::create_columns(subselect_node->output_column_references());
+    auto projection_node = std::make_shared<ProjectionNode>(subselect_columns);
+    projection_node->set_left_child(subselect_node);
+
+    const auto left_column = resolve_column(*column_ref_hsql_expr);
+    Assert(subselect_node->output_column_references().size() == 1, "You can only join on one column");
+    auto right_column = subselect_node->output_column_references()[0];
+    const auto column_references = std::make_pair(left_column, right_column);
+
+    auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, column_references, PredicateCondition::Equals);
+    join_node->set_left_child(input_node);
+    join_node->set_right_child(projection_node);
+    // TODO: add projection to subselect_node to make sure it is executed in time
+
+    return join_node;
   } else if (predicate_condition != PredicateCondition::IsNull &&
              predicate_condition != PredicateCondition::IsNotNull) {
     /**
