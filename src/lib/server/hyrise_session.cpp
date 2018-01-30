@@ -4,7 +4,9 @@
 #include <boost/asio/write.hpp>
 #include <boost/bind.hpp>
 
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
@@ -21,7 +23,7 @@ namespace opossum {
 void HyriseSession::start() {
   // Keep a pointer to itself that will be released once the connection is closed
   _self = shared_from_this();
-  async_receive_header(STARTUP_HEADER_LENGTH);
+  _async_receive_header(STARTUP_HEADER_LENGTH);
 }
 
 void HyriseSession::async_send_packet(OutputPacket& output_packet) {
@@ -30,11 +32,17 @@ void HyriseSession::async_send_packet(OutputPacket& output_packet) {
     PostgresWireHandler::write_output_packet_size(output_packet);
   }
 
-  boost::asio::async_write(_socket, boost::asio::buffer(output_packet.data),
-                           boost::bind(&HyriseSession::handle_packet_sent, this, boost::asio::placeholders::error));
+  if (_response_buffer.size() + output_packet.data.size() > _max_response_size) {
+    _async_flush();
+  }
+
+  _response_buffer.insert(_response_buffer.end(), output_packet.data.begin(), output_packet.data.end());
+
+//  boost::asio::async_write(_socket, boost::asio::buffer(output_packet.data),
+//                           boost::bind(&HyriseSession::_handle_packet_sent, this, boost::asio::placeholders::error));
 }
 
-void HyriseSession::handle_header_received(const boost::system::error_code& error, size_t bytes_transferred) {
+void HyriseSession::_handle_header_received(const boost::system::error_code& error, size_t bytes_transferred) {
   if (error) {
     std::cout << error.category().name() << ':' << error.value() << std::endl;
     Fail("An error occurred while reading from the connection.");
@@ -46,23 +54,23 @@ void HyriseSession::handle_header_received(const boost::system::error_code& erro
     auto startup_packet_length = PostgresWireHandler::handle_startup_package(_input_packet);
     if (startup_packet_length == 0) {
       // Handle SSL packet
-      return send_ssl_denied();
+      return _send_ssl_denied();
     }
     // Read content of this packet
-    return async_receive_content(startup_packet_length);
+    return _async_receive_content(startup_packet_length);
   }
 
   // We're currently idling, so read a new incoming message header
   auto command_header = PostgresWireHandler::handle_header(_input_packet);
   if (command_header.message_type == NetworkMessageType::TerminateCommand) {
     // This immediately releases the session object
-    return terminate_session();
+    return _terminate_session();
   }
 
-  return async_receive_content(command_header.payload_length);
+  return _async_receive_content(command_header.payload_length);
 }
 
-void HyriseSession::handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred) {
+void HyriseSession::_handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred) {
   if (error) {
     std::cout << error.category().name() << ':' << error.value() << std::endl;
     Fail("An error occurred while reading from the connection.");
@@ -73,79 +81,84 @@ void HyriseSession::handle_packet_received(const boost::system::error_code& erro
   if (_state == SessionState::Setup) {
     // Read these values and ignore them
     PostgresWireHandler::handle_startup_package_content(_input_packet, bytes_transferred);
-    return send_auth();
+    return _send_auth();
   }
 
   // We're currently waiting for a query, so accept the incoming one
-  return accept_query();
+  return _accept_query();
 }
 
-void HyriseSession::terminate_session() {
+void HyriseSession::_terminate_session() {
   _socket.close();
   _self.reset();
 }
 
-void HyriseSession::handle_packet_sent(const boost::system::error_code& error) {
+void HyriseSession::_handle_packet_sent(const boost::system::error_code& error) {
   if (error) {
     std::cout << error.category().name() << ':' << error.value() << std::endl;
     Fail("An error occurred when writing to the connection");
   }
+
+  _response_buffer.clear();
 }
 
-void HyriseSession::async_receive_header(const size_t size) {
-  return async_receive_packet(size, /* is_header = */ true);
+void HyriseSession::_async_receive_header(size_t size) {
+  return _async_receive_packet(size, /* is_header = */ true);
 }
 
-void HyriseSession::async_receive_content(const size_t size) {
-  return async_receive_packet(size, /* is_header = */ false);
+void HyriseSession::_async_receive_content(size_t size) {
+  return _async_receive_packet(size, /* is_header = */ false);
 }
 
-void HyriseSession::async_receive_packet(const size_t size, const bool is_header) {
+void HyriseSession::_async_receive_packet(size_t size, bool is_header) {
   _expected_input_packet_length = size;
   _input_packet.offset = _input_packet.data.begin();
 
-  auto next_handler = is_header ? &HyriseSession::handle_header_received : &HyriseSession::handle_packet_received;
+  auto next_handler = is_header ? &HyriseSession::_handle_header_received : &HyriseSession::_handle_packet_received;
 
   _socket.async_read_some(
       boost::asio::buffer(_input_packet.data, size),
       boost::bind(next_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
-void HyriseSession::send_ssl_denied() {
+void HyriseSession::_send_ssl_denied() {
   OutputPacket output_packet;
   PostgresWireHandler::write_value(output_packet, NetworkMessageType::SslNo);
   async_send_packet(output_packet);
-  async_receive_header(STARTUP_HEADER_LENGTH);
+  _async_flush();
+
+  _async_receive_header(STARTUP_HEADER_LENGTH);
 }
 
-void HyriseSession::send_auth() {
+void HyriseSession::_send_auth() {
   // This packet is our AuthenticationOK, which means we do not require any auth.
   OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
   PostgresWireHandler::write_value(output_packet, htonl(0u));
   async_send_packet(output_packet);
 
-  send_ready_for_query();
+  _send_ready_for_query();
 }
 
-void HyriseSession::send_ready_for_query() {
+void HyriseSession::_send_ready_for_query() {
   _state = SessionState::WaitingForQuery;
   // ReadyForQuery packet 'Z' with transaction status Idle 'I'
   OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ReadyForQuery);
   PostgresWireHandler::write_value(output_packet, TransactionStatusIndicator::Idle);
   async_send_packet(output_packet);
+  _async_flush();
 
   // Now we wait for the next query to come
-  async_receive_header();
+  _async_receive_header();
 }
 
-void HyriseSession::accept_query() {
+void HyriseSession::_accept_query() {
   const auto sql = PostgresWireHandler::handle_query_packet(_input_packet, _expected_input_packet_length);
   const std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<CreatePipelineTask>(_self, sql)};
   _state = SessionState::ExecutingQuery;
   CurrentScheduler::schedule_tasks(tasks);
 }
 
-void HyriseSession::send_error(const std::string& message) {
+void HyriseSession::_send_error(const std::string& message) {
   OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
 
   // An error response has to include at least one identified field
@@ -157,6 +170,7 @@ void HyriseSession::send_error(const std::string& message) {
   // Terminate the error response
   PostgresWireHandler::write_value(output_packet, '\0');
   async_send_packet(output_packet);
+  _async_flush();
 }
 
 void HyriseSession::pipeline_info(const std::string& notice) {
@@ -184,7 +198,7 @@ void HyriseSession::query_executed() {
   CurrentScheduler::schedule_tasks(tasks);
 }
 
-void HyriseSession::query_response_sent() { send_ready_for_query(); }
+void HyriseSession::query_response_sent() { _send_ready_for_query(); }
 
 void HyriseSession::load_table_file(const std::string& file_name, const std::string& table_name) {
   const std::vector<std::shared_ptr<LoadServerFileTask>> tasks = {
@@ -193,8 +207,16 @@ void HyriseSession::load_table_file(const std::string& file_name, const std::str
 }
 
 void HyriseSession::pipeline_error(const std::string& error_msg) {
-  send_error(error_msg);
-  send_ready_for_query();
+  _send_error(error_msg);
+  _send_ready_for_query();
+}
+
+
+void HyriseSession::_async_flush() {
+  boost::asio::async_write(_socket, boost::asio::buffer(_response_buffer),
+                           boost::bind(&HyriseSession::_handle_packet_sent, this, boost::asio::placeholders::error));
+
+//  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 }  // namespace opossum

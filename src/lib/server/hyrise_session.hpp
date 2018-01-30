@@ -28,7 +28,9 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   static const uint32_t HEADER_LENGTH = 5u;
 
   explicit HyriseSession(tcp::socket socket, boost::asio::io_service& io_service)
-      : _socket(std::move(socket)), _io_service(io_service), _input_packet(), _expected_input_packet_length(0) {}
+      : _socket(std::move(socket)), _io_service(io_service), _input_packet(), _expected_input_packet_length(0) {
+    _response_buffer.reserve(_max_response_size);
+  }
 
   void start();
 
@@ -44,26 +46,32 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void pipeline_info(const std::string& notice);
 
  protected:
-  void async_receive_header(size_t size = HEADER_LENGTH);
-  void async_receive_content(size_t size);
-  void async_receive_packet(size_t size, bool is_header);
+  void _async_receive_header(size_t size = HEADER_LENGTH);
+  void _async_receive_content(size_t size);
+  void _async_receive_packet(size_t size, bool is_header);
 
-  void send_ssl_denied();
-  void send_auth();
-  void send_ready_for_query();
-  void accept_query();
-  void send_error(const std::string& error_msg);
+  void _send_ssl_denied();
+  void _send_auth();
+  void _send_ready_for_query();
+  void _accept_query();
+  void _send_error(const std::string& error_msg);
 
-  void handle_header_received(const boost::system::error_code& error, size_t bytes_transferred);
-  void handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
+  void _handle_header_received(const boost::system::error_code& error, size_t bytes_transferred);
+  void _handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
 
-  void handle_packet_sent(const boost::system::error_code& error);
+  void _handle_packet_sent(const boost::system::error_code& error);
 
-  void terminate_session();
+  void _async_flush();
+
+  void _terminate_session();
 
   tcp::socket _socket;
   boost::asio::io_service& _io_service;
   InputPacket _input_packet;
+
+  // Max 2048 bytes per IP packet sent
+  uint32_t _max_response_size = 2048;
+  ByteBuffer _response_buffer;
 
   SessionState _state = SessionState::Setup;
   std::size_t _expected_input_packet_length;
