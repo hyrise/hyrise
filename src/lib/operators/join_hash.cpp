@@ -221,7 +221,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           ChunkOffset offset = 0;
           for (auto&& elem : materialized_chunk) {
             if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
-              unsigned int hashed_value;
+              uint32_t hashed_value;
 
               if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast && !std::is_same_v<T, HashType>) {
                 hashed_value = murmur2<HashType>(boost::lexical_cast<HashType>(elem.second), seed);
@@ -244,7 +244,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           for (auto&& elem : materialized_chunk) {
             if (elem.first.chunk_offset == INVALID_CHUNK_OFFSET) continue;
 
-            unsigned int hashed_value;
+            uint32_t hashed_value;
 
             if constexpr (JoinHashTraits<LeftType, RightType>::needs_lexical_cast && !std::is_same_v<T, HashType>) {
               hashed_value = murmur2<HashType>(boost::lexical_cast<HashType>(elem.second), seed);
