@@ -32,8 +32,6 @@ PartitionID RangePartitionSchema::get_matching_partition_for(AllTypeVariant valu
   return static_cast<PartitionID>(_bounds.size());
 }
 
-const ColumnID RangePartitionSchema::get_column_id() {
-  return _column_id;
-}
+const ColumnID RangePartitionSchema::get_column_id() { return _column_id; }
 
 }  // namespace opossum
