@@ -176,7 +176,7 @@ void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const Bas
 
   if (num_right_matches > 0) {
     // Remember the matches for outer joins
-    if (_is_outer_join) {
+    if (left_matches.size() > 0) {
       left_matches[chunk_offset_left] = true;
     }
 
@@ -201,7 +201,6 @@ void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const Bas
 }
 
 void JoinIndex::_perform_join() {
-  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
 
   _right_matches.resize(_right_in_table->chunk_count());
   _left_matches.resize(_left_in_table->chunk_count());
@@ -240,7 +239,7 @@ void JoinIndex::_perform_join() {
       // for Outer joins, remember matches on the left side
       auto& left_matches = _left_matches[chunk_id_left];
 
-      if (_is_outer_join) {
+      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
         left_matches.resize(chunk_column_left->size());
       }
 
