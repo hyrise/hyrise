@@ -45,6 +45,8 @@ TEST_F(StorageRangePartitionSchemaTest, AppendViaTable) {
   EXPECT_EQ(t0.chunk_count(), 4u);
 }
 
+#if IS_DEBUG
+
 TEST_F(StorageRangePartitionSchemaTest, AppendDirectly) {
   t0.get_modifiable_partition_schema()->append({1, "Foo"});
   t0.get_modifiable_partition_schema()->append({2, "Bar"});
@@ -68,6 +70,8 @@ TEST_F(StorageRangePartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
   EXPECT_EQ(t0.chunk_count(), 3u);
   EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 3u);
 }
+
+#endif
 
 TEST_F(StorageRangePartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "RangePartition"); }
 
