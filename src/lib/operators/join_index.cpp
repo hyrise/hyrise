@@ -73,6 +73,114 @@ void JoinIndex::_create_table_structure() {
   }
 }
 
+void JoinIndex::_perform_join() {
+  DebugAssert(_mode != JoinMode::Cross, "Cross join mode is not supported by index join");
+
+  _right_matches.resize(_right_in_table->chunk_count());
+  _left_matches.resize(_left_in_table->chunk_count());
+
+  auto left_data_type = _left_in_table->column_type(_left_column_id);
+  auto right_data_type = _right_in_table->column_type(_right_column_id);
+
+  _pos_list_left = std::make_shared<PosList>();
+  _pos_list_right = std::make_shared<PosList>();
+
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+    // initialize the data structures for left matches
+    _left_matches[chunk_id_left].resize(_left_in_table->get_chunk(chunk_id_left).size());
+  }
+
+  // Scan all chunks for right input
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
+    const auto& chunk_right = _right_in_table->get_chunk(chunk_id_right);
+    auto column_right = chunk_right.get_column(_right_column_id);
+    const auto indices = chunk_right.get_indices(std::vector<ColumnID>{_right_column_id});
+    _right_matches[chunk_id_right].resize(chunk_right.size());
+
+    std::shared_ptr<BaseIndex> index = nullptr;
+
+    if (indices.size() > 0) {
+      // We assume the first index to be efficient for our join
+      // as we do not want to spend time on evaluating the best index inside of this join loop
+      index = indices.front();
+    }
+
+    // Scan all chunks from left input
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+      auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left).get_column(_left_column_id);
+
+      // for Outer joins, remember matches on the left side
+      auto& left_matches = _left_matches[chunk_id_left];
+
+      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+        left_matches.resize(chunk_column_left->size());
+      }
+
+      resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
+        resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
+          using LeftType = typename decltype(left_type)::type;
+          using RightType = typename decltype(right_type)::type;
+
+          // make sure that we do not compile invalid versions of these lambdas
+          constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
+          constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
+
+          constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+          constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
+
+          // clang-format off
+          if constexpr (neither_is_string_column || both_are_string_columns) {
+              auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+              auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
+
+              iterable_left.with_iterators([&](auto left_it, auto left_end) {
+                  iterable_right.with_iterators([&](auto right_it, auto right_end) {
+                      with_comparator(_scan_type, [&](auto comparator) {
+                          this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
+                                                  chunk_id_right, left_matches, index);
+                      });
+                  });
+              });
+          }
+          // clang-format on
+        });
+      });
+    }
+  }
+
+  // For Full Outer and Left Join we need to add all unmatched rows for the left side
+  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < _left_matches[chunk_id_left].size(); ++chunk_offset) {
+        if (!_left_matches[chunk_id_left][chunk_offset]) {
+          _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+          _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        }
+      }
+    }
+  }
+
+  // For Full Outer and Right Join we need to add all unmatched rows for the right side.
+  if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+    for (ChunkID chunk_id{0}; chunk_id < _right_matches.size(); ++chunk_id) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < _right_matches[chunk_id].size(); ++chunk_offset) {
+        if (!_right_matches[chunk_id][chunk_offset]) {
+          _pos_list_right->emplace_back(RowID{chunk_id, chunk_offset});
+          _pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        }
+      }
+    }
+  }
+
+  // write output chunks
+  auto output_chunk = Chunk();
+
+  _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
+  _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
+
+  _output_table->emplace_chunk(std::move(output_chunk));
+}
+
 // join loop that joins two chunks of two columns via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
@@ -80,7 +188,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
                                   const ChunkID chunk_id_right, std::vector<bool>& left_matches,
                                   std::shared_ptr<BaseIndex> index) {
   if (index != nullptr) {
-  // We have a proper index and can use it, so we do an index join for this chunk combination
+    // We have a proper index and can use it, so we do an index join for this chunk combination
 
     for (; left_it != left_end; ++left_it) {
       const auto left_value = *left_it;
@@ -196,114 +304,6 @@ void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const Bas
       });
     }
   }
-}
-
-void JoinIndex::_perform_join() {
-  DebugAssert(_mode != JoinMode::Cross, "Cross join mode is not supported by index join");
-
-  _right_matches.resize(_right_in_table->chunk_count());
-  _left_matches.resize(_left_in_table->chunk_count());
-
-  auto left_data_type = _left_in_table->column_type(_left_column_id);
-  auto right_data_type = _right_in_table->column_type(_right_column_id);
-
-  _pos_list_left = std::make_shared<PosList>();
-  _pos_list_right = std::make_shared<PosList>();
-
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-    // initialize the data structures for left matches
-    _left_matches[chunk_id_left].resize(_left_in_table->get_chunk(chunk_id_left).size());
-  }
-
-  // Scan all chunks for right input
-  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
-    const auto& chunk_right = _right_in_table->get_chunk(chunk_id_right);
-    auto column_right = chunk_right.get_column(_right_column_id);
-    const auto indices = chunk_right.get_indices(std::vector<ColumnID>{_right_column_id});
-    _right_matches[chunk_id_right].resize(chunk_right.size());
-
-    std::shared_ptr<BaseIndex> index = nullptr;
-
-    if (indices.size() > 0) {
-    // We assume the first index to be efficient for our join
-    // as we do not want to spend time on evaluating the best index inside of this join loop
-      index = indices.front();
-    }
-
-    // Scan all chunks from left input
-    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-      auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left).get_column(_left_column_id);
-
-      // for Outer joins, remember matches on the left side
-      auto& left_matches = _left_matches[chunk_id_left];
-
-      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-        left_matches.resize(chunk_column_left->size());
-      }
-
-      resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
-        resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
-          using LeftType = typename decltype(left_type)::type;
-          using RightType = typename decltype(right_type)::type;
-
-          // make sure that we do not compile invalid versions of these lambdas
-          constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
-          constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
-
-          constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
-          constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
-
-          // clang-format off
-          if constexpr (neither_is_string_column || both_are_string_columns) {
-            auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
-            auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
-
-            iterable_left.with_iterators([&](auto left_it, auto left_end) {
-              iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                with_comparator(_scan_type, [&](auto comparator) {
-                  this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                          chunk_id_right, left_matches, index);
-                });
-              });
-            });
-          }
-          // clang-format on
-        });
-      });
-    }
-  }
-
-    // For Full Outer and Left Join we need to add all unmatched rows for the left side
-  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < _left_matches[chunk_id_left].size(); ++chunk_offset) {
-        if (!_left_matches[chunk_id_left][chunk_offset]) {
-          _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-          _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-        }
-      }
-    }
-  }
-
-  // For Full Outer and Right Join we need to add all unmatched rows for the right side.
-  if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
-    for (ChunkID chunk_id{0}; chunk_id < _right_matches.size(); ++chunk_id) {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < _right_matches[chunk_id].size(); ++chunk_offset) {
-        if (!_right_matches[chunk_id][chunk_offset]) {
-          _pos_list_right->emplace_back(RowID{chunk_id, chunk_offset});
-          _pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-        }
-      }
-    }
-  }
-
-  // write output chunks
-  auto output_chunk = Chunk();
-
-  _write_output_chunk(output_chunk, _left_in_table, _pos_list_left);
-  _write_output_chunk(output_chunk, _right_in_table, _pos_list_right);
-
-  _output_table->emplace_chunk(std::move(output_chunk));
 }
 
 void JoinIndex::_write_output_chunk(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,

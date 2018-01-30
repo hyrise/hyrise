@@ -10,9 +10,9 @@
 #include "join_test.hpp"
 
 #include "operators/get_table.hpp"
+#include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
