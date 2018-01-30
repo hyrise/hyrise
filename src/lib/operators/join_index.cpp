@@ -113,22 +113,22 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           range_end = index->cend();
           break;
         }
-        case ScanType::OpLessThan: {
+        case ScanType::OpGreaterThan: {
           range_begin = index->cbegin();
           range_end = index->lower_bound(comp_values);
           break;
         }
-        case ScanType::OpLessThanEquals: {
+        case ScanType::OpGreaterThanEquals: {
           range_begin = index->cbegin();
           range_end = index->upper_bound(comp_values);
           break;
         }
-        case ScanType::OpGreaterThan: {
+        case ScanType::OpLessThan: {
           range_begin = index->upper_bound(comp_values);
           range_end = index->cend();
           break;
         }
-        case ScanType::OpGreaterThanEquals: {
+        case ScanType::OpLessThanEquals: {
           range_begin = index->lower_bound(comp_values);
           range_end = index->cend();
           break;
