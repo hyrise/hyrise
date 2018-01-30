@@ -28,7 +28,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                      const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type), _fallback{false} {
-  DebugAssert(mode != JoinMode::Cross, "Cross Join ist not supported by index join.");
+  DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
 }
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
