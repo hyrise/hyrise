@@ -45,9 +45,14 @@ void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const Abstrac
   VizEdgeInfo info = _default_edge;
 
   if (const auto& output = from->get_output()) {
-    // the input operator was executed, print the number of rows
-    info.label = std::to_string(output->row_count()) + " row(s)/";
-    info.label += std::to_string(output->chunk_count()) + " chunk(s)";
+    std::stringstream stream;
+
+    stream << std::to_string(output->row_count()) + " row(s)/";
+    stream << std::to_string(output->chunk_count()) + " chunk(s)/";
+    output->estimate_memory_usage(MemoryUsageEstimationMode::Fast).print(stream);
+
+    info.label = stream.str();
+
     info.pen_width = std::fmax(1, std::ceil(std::log10(output->row_count()) / 2));
   }
 
