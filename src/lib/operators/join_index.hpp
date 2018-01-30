@@ -55,7 +55,6 @@ class JoinIndex : public AbstractJoinOperator {
 
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;
-  bool _fallback;
 
   // for outer joins
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets
