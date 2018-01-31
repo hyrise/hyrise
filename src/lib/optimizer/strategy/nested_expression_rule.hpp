@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "types.hpp"
 #include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -27,9 +27,10 @@ class NestedExpressionRule : public AbstractRule {
   DataType _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 
   template <typename T>
-  AllTypeVariant _evaluate_expression(boost::hana::basic_type<T> type, const std::shared_ptr<LQPExpression>& expression) const;
+  AllTypeVariant _evaluate_expression(boost::hana::basic_type<T> type,
+                                      const std::shared_ptr<LQPExpression>& expression) const;
 
-    /**
+  /**
    * Operators that all numerical types support.
    */
   template <typename T>

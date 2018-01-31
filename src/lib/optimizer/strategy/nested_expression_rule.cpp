@@ -1,16 +1,16 @@
 #include "nested_expression_rule.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
-#include <functional>
 
-#include "resolve_type.hpp"
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -27,7 +27,8 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
     return _apply_to_children(node);
   }
 
-  if (predicate_node->left_child()->type() != LQPNodeType::Projection || predicate_node->parents().front()->type() != LQPNodeType::Projection) {
+  if (predicate_node->left_child()->type() != LQPNodeType::Projection ||
+      predicate_node->parents().front()->type() != LQPNodeType::Projection) {
     return _apply_to_children(node);
   }
 
@@ -47,15 +48,14 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   }
 
   auto value = NULL_VALUE;
-  resolve_data_type(expression_type, [&] (auto type) {
-    value = _evaluate_expression(type, expression);
-  });
+  resolve_data_type(expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
 
   if (variant_is_null(value)) {
     return _apply_to_children(node);
   }
 
-  auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), value);
+  auto new_predicate_node =
+      std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), value);
   predicate_node->replace_with(new_predicate_node);
 
   projection_node_front->remove_from_tree();
@@ -83,7 +83,8 @@ DataType NestedExpressionRule::_get_type_of_expression(const std::shared_ptr<LQP
 }
 
 template <typename T>
-AllTypeVariant NestedExpressionRule::_evaluate_expression(boost::hana::basic_type<T> type, const std::shared_ptr<LQPExpression>& expression) const {
+AllTypeVariant NestedExpressionRule::_evaluate_expression(boost::hana::basic_type<T> type,
+                                                          const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return AllTypeVariant(boost::get<T>(expression->value()));
   }
@@ -170,12 +171,14 @@ inline std::function<std::string(const std::string&, const std::string&)> Nested
  *
  */
 template <>
-inline std::function<float(const float&, const float&)> NestedExpressionRule::_get_operator_function(ExpressionType type) {
+inline std::function<float(const float&, const float&)> NestedExpressionRule::_get_operator_function(
+    ExpressionType type) {
   return _get_base_operator_function<float>(type);
 }
 
 template <>
-inline std::function<double(const double&, const double&)> NestedExpressionRule::_get_operator_function(ExpressionType type) {
+inline std::function<double(const double&, const double&)> NestedExpressionRule::_get_operator_function(
+    ExpressionType type) {
   return _get_base_operator_function<double>(type);
 }
 
