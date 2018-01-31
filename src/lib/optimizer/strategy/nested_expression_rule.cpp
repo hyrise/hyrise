@@ -10,8 +10,8 @@
 #include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "utils/arithmetic_operator_expression.hpp"
 #include "resolve_type.hpp"
+#include "utils/arithmetic_operator_expression.hpp"
 
 namespace opossum {
 
