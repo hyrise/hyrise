@@ -203,4 +203,6 @@ TableType Table::get_type() const {
   }
 }
 
+std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
+
 }  // namespace opossum

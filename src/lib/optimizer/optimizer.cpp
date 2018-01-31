@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/nested_expression_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
@@ -22,8 +23,11 @@ Optimizer Optimizer::create_default_optimizer() {
   main_batch.add_rule(std::make_shared<NestedExpressionRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
-
   optimizer.add_rule_batch(main_batch);
+
+  RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
+  final_batch.add_rule(std::make_shared<IndexScanRule>());
+  optimizer.add_rule_batch(final_batch);
 
   return optimizer;
 }

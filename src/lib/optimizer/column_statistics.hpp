@@ -86,14 +86,14 @@ class ColumnStatistics : public BaseColumnStatistics {
   float estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum);
 
   /**
-   * Create column statistics and estimate selectivity for predicate with scan type equals and constant value.
+   * Create column statistics and estimate selectivity for predicate with predicate condition equals and constant value.
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */
   ColumnSelectivityResult _create_column_stats_for_equals_predicate(ColumnType value);
 
   /**
-   * Create column statistics and estimate selectivity for predicate with scan type not equals and constant value.
+   * Create column statistics and estimate selectivity for predicate with predicate condition not equals and constant value.
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */

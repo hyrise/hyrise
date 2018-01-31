@@ -885,7 +885,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     /**
      * It should be possible for any predicate to be negated with "NOT",
      * e.g., WHERE NOT a > 5. However, this is currently not supported.
-     * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` scan type.
+     * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` predicate condition.
      */
     Assert(predicate_condition == PredicateCondition::IsNull, "Only IS NULL can be negated");
 

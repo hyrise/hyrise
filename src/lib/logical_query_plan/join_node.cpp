@@ -18,7 +18,7 @@ namespace opossum {
 
 JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), _join_mode(join_mode) {
   DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
-              "Specified JoinMode must also specify column ids and scan type.");
+              "Specified JoinMode must also specify column ids and predicate condition.");
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
@@ -28,7 +28,7 @@ JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_
       _join_column_references(join_column_references),
       _predicate_condition(predicate_condition) {
   DebugAssert(join_mode != JoinMode::Cross && join_mode != JoinMode::Natural,
-              "Specified JoinMode must specify neither column ids nor scan type.");
+              "Specified JoinMode must specify neither column ids nor predicate condition.");
 }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
@@ -86,7 +86,8 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   } else {
     Assert(_join_column_references,
            "Only cross joins and joins with join column ids supported for generating join statistics");
-    Assert(_predicate_condition, "Only cross joins and joins with scan type supported for generating join statistics");
+    Assert(_predicate_condition,
+           "Only cross joins and joins with predicate condition supported for generating join statistics");
 
     ColumnIDPair join_colum_ids{left_child->get_output_column_id(_join_column_references->first),
                                 right_child->get_output_column_id(_join_column_references->second)};

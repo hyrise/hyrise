@@ -13,9 +13,9 @@
 
 namespace opossum {
 
-IndexScan::IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
-                     std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
-                     std::vector<AllTypeVariant> right_values, std::vector<AllTypeVariant> right_values2)
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
+                     const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
+                     const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2)
     : AbstractReadOnlyOperator{in},
       _index_type{index_type},
       _left_column_ids{left_column_ids},
@@ -78,8 +78,8 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
 }
 
 void IndexScan::_validate_input() {
-  Assert(_predicate_condition != PredicateCondition::Like, "Scan type not supported by index scan.");
-  Assert(_predicate_condition != PredicateCondition::NotLike, "Scan type not supported by index scan.");
+  Assert(_predicate_condition != PredicateCondition::Like, "Predicate condition not supported by index scan.");
+  Assert(_predicate_condition != PredicateCondition::NotLike, "Predicate condition not supported by index scan.");
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
