@@ -28,6 +28,8 @@ float TableStatistics::row_count() const { return _row_count; }
 uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
 const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::column_statistics() const {
+  // Lazily initialize column statistics
+  _create_all_column_statistics();
   return _column_statistics;
 }
 
@@ -254,7 +256,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
 
 void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
-std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(const ColumnID column_id) {
+std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(
+    const ColumnID column_id) const {
   if (_column_statistics[column_id]) {
     return _column_statistics[column_id];
   }
@@ -268,7 +271,7 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_s
   return _column_statistics[column_id];
 }
 
-void TableStatistics::_create_all_column_statistics() {
+void TableStatistics::_create_all_column_statistics() const {
   for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
     _get_or_generate_column_statistics(column_id);
   }
