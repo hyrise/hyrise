@@ -7,6 +7,12 @@
 
 namespace opossum {
 
+/*
+ * PartitionSchema distributing tuples over a number of Partitions (defined in the constructor)
+ * using the hash value of the tuple's value in the column referenced by column_id.
+ * Hash values are calculated by hash_function.
+ */
+
 class HashPartitionSchema : public AbstractPartitionSchema {
  public:
   HashPartitionSchema(ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);

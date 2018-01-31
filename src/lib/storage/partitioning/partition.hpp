@@ -12,6 +12,15 @@ namespace opossum {
 
 class Table;
 
+/*
+ * A Partition is a logical horizontal slice of a Table.
+ * It is one level of abstraction above Chunks,
+ * hence a Partition holds vector of shared_ptr's to Chunks of an associated Table.
+ * The Table knows its PartitionSchema knowing its Partitions but there is no reference back.
+ * All tuples in a Partition share a common property defined by the PartitionSchema,
+ * holding a number of Partitions.
+ */
+
 class Partition {
  public:
   explicit Partition(PartitionID partition_id);

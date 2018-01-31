@@ -8,6 +8,14 @@
 
 namespace opossum {
 
+/*
+ * PartitionSchema determine how to partition a table logically.
+ * This is a strategy pattern with AbstractPartitionSchema defining the interface.
+ * A PartitionSchema has a number of partitions referencing Chunks of the associated Table.
+ * Chunks have to be created in the Table to be then passed by reference (i.e. shared_ptr)
+ * to the PartitionSchema.
+ */
+
 class AbstractPartitionSchema {
  public:
   AbstractPartitionSchema() = default;

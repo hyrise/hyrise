@@ -7,6 +7,12 @@
 
 namespace opossum {
 
+/*
+ * This is a null object for the PartitionSchema strategy.
+ * If there should not be any partitioning, NullPartitionSchema is used.
+ * It holds exactly one Partition where all Chunks of a Table are referenced in.
+ */
+
 class NullPartitionSchema : public AbstractPartitionSchema {
  public:
   NullPartitionSchema();
