@@ -61,7 +61,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Create the TableStatistics by explicitly specifying its underlying data. Intended for statistics tests or to
    * supply mocked statistics to a MockNode
    */
-  TableStatistics(float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& get_all_column_statistics);
+  TableStatistics(float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
 
   /**
    * Returns the expected row_count of the output of the corresponding operator.
@@ -72,7 +72,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // Returns the number of valid rows (using approximate count of deleted rows)
   uint64_t approx_valid_row_count() const;
 
-  const std::vector<std::shared_ptr<BaseColumnStatistics>>& get_all_column_statistics();
+  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics();
 
   /**
    * Generate table statistics for the operator table scan table scan.
