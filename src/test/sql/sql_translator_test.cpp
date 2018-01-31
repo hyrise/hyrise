@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "SQLParser.h"
@@ -11,6 +12,7 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/build_lqps.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
@@ -24,6 +26,8 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
+
+using namespace std::string_literals;  // NOLINT
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
@@ -49,11 +53,7 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
-  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
-  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
-  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
-  projection_node->set_left_child(stored_table_node);
+  auto projection_node = make_star_projection_node(make_stored_table_node("table_a"));
 
   EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
@@ -83,22 +83,13 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
-  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
-  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
-  const auto predicate_node = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::Equals, table_a_b);
-  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
+  const auto stored_table_node = make_stored_table_node("table_a");
 
-  projection_node->set_left_child(predicate_node);
-  predicate_node->set_left_child(stored_table_node);
-
-//  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
-
-//  auto projection_node = make_star_projection_node(
-//    make_predicate_node(stored_table_node["a"], PredicateCondition::Equals, stored_table_node["b"],
-//      stored_table_node
-//    )
-//  );
+  auto projection_node = make_star_projection_node(
+    make_predicate_node(stored_table_node->get_column("a"s), PredicateCondition::Equals, stored_table_node->get_column("b"s),
+      stored_table_node
+    )
+  );
 
   EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
@@ -107,14 +98,13 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
-  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
-  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
-  const auto predicate_node = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::Equals, "b");
-  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
+  const auto stored_table_node = make_stored_table_node("table_a");
 
-  projection_node->set_left_child(predicate_node);
-  predicate_node->set_left_child(stored_table_node);
+  auto projection_node = make_star_projection_node(
+    make_predicate_node(stored_table_node->get_column("a"s), PredicateCondition::Equals, "b",
+       stored_table_node
+    )
+  );
 
   EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
@@ -123,16 +113,15 @@ TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
-  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
-  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
-  const auto predicate_node_a = std::make_shared<PredicateNode>(table_a_b, PredicateCondition::LessThan, 457.9f);
-  const auto predicate_node_b = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::GreaterThanEquals, 1234l);
-  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
+  const auto stored_table_node = make_stored_table_node("table_a");
 
-  projection_node->set_left_child(predicate_node_a);
-  predicate_node_a->set_left_child(predicate_node_b);
-  predicate_node_b->set_left_child(stored_table_node);
+  auto projection_node = make_star_projection_node(
+    make_predicate_node(stored_table_node->get_column("b"s), PredicateCondition::LessThan, 457.9f,
+      make_predicate_node(stored_table_node->get_column("a"s), PredicateCondition::GreaterThanEquals, 1234l,
+        stored_table_node
+      )
+    )
+  );
 
   EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
@@ -141,6 +130,24 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
+  result_node->print();
+
+  const auto stored_table_node = make_stored_table_node("table_a");
+
+  const auto aggregate_columns = make_aggregate_columns({{AggregateFunction::Sum, stored_table_node->get_column("b"s)}});
+  const auto aggregate_node = make_aggregate_node(aggregate_columns, {stored_table_node->get_column("a"s)}, stored_table_node);
+  const auto projection_node = make_projection_node()
+//
+//
+//
+//  auto projection_node = make_star_projection_node(
+//    make_predicate_node(stored_table_node->get_column("a"s), PredicateCondition::GreaterThanEquals, 1234l,
+//        make_predicate_node(stored_table_node->get_column("b"s), PredicateCondition::LessThan, 457.9f,
+//                            stored_table_node
+//        )
+//    )
+//  );
+//
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 

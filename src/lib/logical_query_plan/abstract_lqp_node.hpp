@@ -42,6 +42,8 @@ enum class LQPNodeType {
 enum class LQPChildSide { Left, Right };
 
 struct QualifiedColumnName {
+  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name = std::nullopt);
+
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
 
@@ -171,10 +173,15 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::optional<LQPColumnReference> find_column(const QualifiedColumnName& qualified_column_name) const;
 
   /**
-   * Convenience method for (*find_column_reference_by_qualified_column_name()), DebugAssert()s that the
+   * Convenience method for (*find_column()), DebugAssert()s that the
    * qualified_column_name could be resolved
    */
   LQPColumnReference get_column(const QualifiedColumnName& qualified_column_name) const;
+
+//  /**
+//   * @returns column with the specified name
+////   */
+////  LQPColumnReference get_column(const std::string& column_name) const;
 
   /**
    * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
