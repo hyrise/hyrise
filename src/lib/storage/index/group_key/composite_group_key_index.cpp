@@ -19,7 +19,7 @@ namespace opossum {
 
 float CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
                                                          uint32_t value_bytes) {
-  return (row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes / 1024.0f / 1024.0f;
+  return ((row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes) / 1024.0f / 1024.0f;
 }
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns)
