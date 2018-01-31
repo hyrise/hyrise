@@ -28,6 +28,7 @@ TEST_F(ShowTablesTest, CanBeRecreated) {
 }
 
 TEST_F(ShowTablesTest, CanShowTables) {
+  StorageManager::reset();
   auto& sm = StorageManager::get();
 
   sm.add_table("first_table", std::make_shared<Table>());
