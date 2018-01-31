@@ -176,11 +176,11 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
 
 const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
 
-MemoryUsage Chunk::estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const {
+size_t Chunk::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
 
   for (const auto& column : _columns) {
-    bytes += column->estimate_memory_usage(estimation_mode).bytes;
+    bytes += column->estimate_memory_usage();
   }
 
   // TODO(anybody) Index memory usage missing
@@ -193,7 +193,7 @@ MemoryUsage Chunk::estimate_memory_usage(MemoryUsageEstimationMode estimation_mo
     bytes += _mvcc_columns->end_cids.size() * sizeof(decltype(_mvcc_columns->end_cids)::value_type);
   }
 
-  return MemoryUsage{bytes};
+  return bytes;
 }
 
 uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {

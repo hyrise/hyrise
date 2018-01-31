@@ -205,11 +205,11 @@ TableType Table::get_type() const {
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
-MemoryUsage Table::estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const {
+size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
 
   for (const auto& chunk : _chunks) {
-    bytes += chunk->estimate_memory_usage(estimation_mode).bytes;
+    bytes += chunk->estimate_memory_usage();
   }
 
   for (const auto& column_name : _column_names) {
@@ -221,7 +221,7 @@ MemoryUsage Table::estimate_memory_usage(MemoryUsageEstimationMode estimation_mo
 
   // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
 
-  return MemoryUsage{bytes};
+  return bytes;
 }
 
 }  // namespace opossum

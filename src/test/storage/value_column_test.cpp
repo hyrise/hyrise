@@ -106,11 +106,9 @@ TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto memory_estimation_mode = MemoryUsageEstimationMode::Fast;
-
-  const auto empty_usage_int = vc_int.estimate_memory_usage(memory_estimation_mode);
-  const auto empty_usage_double = vc_double.estimate_memory_usage(memory_estimation_mode);
-  const auto empty_usage_str = vc_str.estimate_memory_usage(MemoryUsageEstimationMode::MoreExact);
+  const auto empty_usage_int = vc_int.estimate_memory_usage();
+  const auto empty_usage_double = vc_double.estimate_memory_usage();
+  const auto empty_usage_str = vc_str.estimate_memory_usage();
 
   vc_int.append(1);
   vc_int.append(2);
@@ -123,10 +121,10 @@ TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
 
   vc_double.append(42.1337);
 
-  EXPECT_EQ(empty_usage_int.bytes + sizeof(int) * 2, vc_int.estimate_memory_usage(memory_estimation_mode).bytes);
-  EXPECT_EQ(empty_usage_double.bytes + sizeof(double), vc_double.estimate_memory_usage(memory_estimation_mode).bytes);
-  EXPECT_GE(vc_str.estimate_memory_usage(MemoryUsageEstimationMode::MoreExact).bytes,
-            empty_usage_str.bytes + sizeof(std::string) + longer_str.size());
+  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vc_int.estimate_memory_usage());
+  EXPECT_EQ(empty_usage_double + sizeof(double), vc_double.estimate_memory_usage());
+  EXPECT_GE(vc_str.estimate_memory_usage(),
+            empty_usage_str + 2 * sizeof(std::string));
 }
 
 }  // namespace opossum

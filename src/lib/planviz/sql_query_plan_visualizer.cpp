@@ -49,7 +49,7 @@ void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const Abstrac
 
     stream << std::to_string(output->row_count()) + " row(s)/";
     stream << std::to_string(output->chunk_count()) + " chunk(s)/";
-    output->estimate_memory_usage(MemoryUsageEstimationMode::Fast).print(stream);
+    stream << format_bytes(output->estimate_memory_usage());
 
     info.label = stream.str();
 

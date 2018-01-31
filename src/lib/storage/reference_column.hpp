@@ -113,7 +113,7 @@ class ReferenceColumn : public BaseColumn {
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
-  MemoryUsage estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const override;
+  size_t estimate_memory_usage() const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need

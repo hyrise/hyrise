@@ -1,18 +1,17 @@
-#include "memory_usage.hpp"
+#include "format_bytes.hpp"
 
 #include <iomanip>
 
 namespace opossum {
 
-MemoryUsage::MemoryUsage(const size_t bytes) : bytes(bytes) {}
+std::string format_bytes(size_t bytes) {
+  std::stringstream stream;
 
-void MemoryUsage::print(std::ostream& stream) const {
   const auto gigabytes = bytes / 1'000'000'000;
   const auto megabytes = (bytes / 1'000'000) % 1'000;
   const auto kilobytes = (bytes / 1'000) % 1'000;
-  const auto bytes = (this->bytes) % 1000;
+  bytes %= 1000;
 
-  const auto previous_fill = stream.fill();
   if (gigabytes > 0) {
     stream << gigabytes << ".";
     stream << std::setfill('0') << std::setw(3) << megabytes;
@@ -29,7 +28,7 @@ void MemoryUsage::print(std::ostream& stream) const {
     stream << bytes << "B";
   }
 
-  stream << std::setfill(previous_fill);
+  return stream.str();
 }
 
 }  // namespace opossum

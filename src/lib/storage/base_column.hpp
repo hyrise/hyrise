@@ -5,7 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
-#include "utils/memory_usage.hpp"
+#include "utils/format_bytes.hpp"
 
 namespace opossum {
 
@@ -41,7 +41,6 @@ class BaseColumn : private Noncopyable {
 
   // Estimate how much memory the Column is using. Might be inaccurate, especially if the column contains non-primitive
   // data, such as strings who memory usage is implementation defined
-  virtual MemoryUsage estimate_memory_usage(
-      MemoryUsageEstimationMode estimation_mode = MemoryUsageEstimationMode::Fast) const = 0;
+  virtual size_t estimate_memory_usage() const = 0;
 };
 }  // namespace opossum

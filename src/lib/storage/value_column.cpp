@@ -156,34 +156,9 @@ std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const Polymorph
 }
 
 template <typename T>
-MemoryUsage ValueColumn<T>::estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const {
-  return MemoryUsage{sizeof(*this) + _values.size() * sizeof(T) +
-                     (_null_values ? _null_values->size() * sizeof(bool) : 0u)};
-}
-
-template <>
-MemoryUsage ValueColumn<std::string>::estimate_memory_usage(MemoryUsageEstimationMode estimation_mode) const {
-  auto bytes = size_t{(_null_values ? _null_values->size() * sizeof(bool) : 0u) + sizeof(*this)};
-
-  switch (estimation_mode) {
-    case MemoryUsageEstimationMode::Fast:
-      return MemoryUsage{bytes + _values.size() * sizeof(std::string)};
-    case MemoryUsageEstimationMode::MoreExact: {
-      for (const auto& string : _values) {
-        if (string.size() < sizeof(std::string)) {
-          // Assume small string optimization is used
-          // https://blogs.msmvps.com/gdicanio/2016/11/17/the-small-string-optimization/
-          bytes += sizeof(std::string);
-        } else {
-          bytes += sizeof(std::string) + string.size();
-        }
-      }
-      return MemoryUsage{bytes};
-    }
-  }
-
-  Fail("Clang thinks this might be reachable, can't see how it would be...");
-  return MemoryUsage{0};
+size_t ValueColumn<T>::estimate_memory_usage() const {
+  return sizeof(*this) + _values.size() * sizeof(T) +
+                     (_null_values ? _null_values->size() * sizeof(bool) : 0u);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);

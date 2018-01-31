@@ -124,8 +124,8 @@ TEST_F(ReferenceColumnTest, MemoryUsageEstimation) {
   ReferenceColumn reference_column_a(_test_table, ColumnID{0}, pos_list_a);
   ReferenceColumn reference_column_b(_test_table, ColumnID{0}, pos_list_b);
 
-  EXPECT_EQ(reference_column_a.estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes,
-            reference_column_b.estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes + 2 * sizeof(RowID));
+  EXPECT_EQ(reference_column_a.estimate_memory_usage(),
+            reference_column_b.estimate_memory_usage() + 2 * sizeof(RowID));
 }
 
 }  // namespace opossum

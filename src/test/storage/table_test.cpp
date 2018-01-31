@@ -182,13 +182,13 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto empty_memory_usage = t.estimate_memory_usage(MemoryUsageEstimationMode::Fast);
+  const auto empty_memory_usage = t.estimate_memory_usage();
 
   t.append({4, "Hello"});
   t.append({5, "Hello"});
 
-  EXPECT_GT(t.estimate_memory_usage(MemoryUsageEstimationMode::Fast).bytes,
-            empty_memory_usage.bytes + 2 * (sizeof(int) + sizeof(std::string)));
+  EXPECT_GT(t.estimate_memory_usage(),
+            empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
 }
 
 }  // namespace opossum
