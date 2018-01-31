@@ -72,7 +72,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // Returns the number of valid rows (using approximate count of deleted rows)
   uint64_t approx_valid_row_count() const;
 
-  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics();
+  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics() const;
 
   /**
    * Generate table statistics for the operator table scan table scan.
@@ -98,9 +98,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   void increment_invalid_row_count(uint64_t count);
 
  protected:
-  std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);
+  std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id) const;
 
-  void _create_all_column_statistics();
+  void _create_all_column_statistics() const;
 
   /**
    * Resets the pointer variable _table after checking that the table is no longer needed. If the pointer is null, all
@@ -151,7 +151,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
   uint64_t _approx_invalid_row_count{0};
 
-  std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
+  mutable std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
 
   friend std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 };
