@@ -49,7 +49,7 @@ class ProjectionNodeTest : public BaseTest {
 };
 
 TEST_F(ProjectionNodeTest, Description) {
-  EXPECT_EQ(_projection_node->description(), "[Projection] t_a.c, t_a.a, t_a.b, t_a.b + t_a.c, t_a.a + t_a.c");
+  EXPECT_EQ(_projection_node->description(), "[Projection] t_a.c, t_a.a, t_a.b AS alias_for_b, t_a.b + t_a.c, t_a.a + t_a.c");
 }
 
 TEST_F(ProjectionNodeTest, ColumnReferenceByNamedColumnReference) {

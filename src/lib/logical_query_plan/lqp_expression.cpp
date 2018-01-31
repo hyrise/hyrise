@@ -50,7 +50,7 @@ void LQPExpression::set_column_reference(const LQPColumnReference& column_refere
 std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                      bool is_root) const {
   if (type() == ExpressionType::Column) {
-    return column_reference().description();
+    return column_reference().description() + (_alias ? " AS " + *_alias : std::string{});
   }
   return AbstractExpression<LQPExpression>::to_string(input_column_names, is_root);
 }

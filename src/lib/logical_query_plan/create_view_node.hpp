@@ -14,6 +14,7 @@ class CreateViewNode : public AbstractLQPNode {
   explicit CreateViewNode(const std::string& view_name, std::shared_ptr<const AbstractLQPNode> lqp);
 
   std::string description() const override;
+  const std::vector<std::string>& output_column_names() const override;
 
   std::string view_name() const;
   std::shared_ptr<const AbstractLQPNode> lqp() const;
@@ -24,6 +25,10 @@ class CreateViewNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
   const std::string _view_name;
   const std::shared_ptr<const AbstractLQPNode> _lqp;
+
+ private:
+  // Need an instance since we're returning a reference in the getter
+  std::vector<std::string> _output_column_names_dummy;
 };
 
 }  // namespace opossum

@@ -1,6 +1,7 @@
 #include "create_view_node.hpp"
 
 #include <string>
+#include <sstream>
 
 namespace opossum {
 
@@ -8,6 +9,7 @@ CreateViewNode::CreateViewNode(const std::string& view_name, std::shared_ptr<con
     : AbstractLQPNode(LQPNodeType::CreateView), _view_name(view_name), _lqp(lqp) {}
 
 std::string CreateViewNode::view_name() const { return _view_name; }
+
 std::shared_ptr<const AbstractLQPNode> CreateViewNode::lqp() const { return _lqp; }
 
 std::shared_ptr<AbstractLQPNode> CreateViewNode::_deep_copy_impl(
@@ -17,6 +19,15 @@ std::shared_ptr<AbstractLQPNode> CreateViewNode::_deep_copy_impl(
   return std::make_shared<CreateViewNode>(_view_name, _lqp);
 }
 
-std::string CreateViewNode::description() const { return "[CreateView]"; }
+std::string CreateViewNode::description() const {
+  std::stringstream stream;
+  _lqp->print(stream);
+
+  return "[CreateView] Name: '" + _view_name + "' (\n" + stream.str() + ")";
+}
+
+const std::vector<std::string>& CreateViewNode::output_column_names() const {
+  return _output_column_names_dummy;
+}
 
 }  // namespace opossum
