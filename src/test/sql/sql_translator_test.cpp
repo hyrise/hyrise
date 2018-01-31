@@ -49,10 +49,10 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   const auto result_node = compile_query(query);
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
   const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
   const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
-  auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
+  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
   projection_node->set_left_child(stored_table_node);
 
   EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
@@ -83,55 +83,58 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
+  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
+  const auto predicate_node = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::Equals, table_a_b);
+  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
 
-  ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
-  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
-  EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(predicate_node->value(),
-            AllParameterVariant(LQPColumnReference(predicate_node->left_child(), ColumnID{1})));
+  projection_node->set_left_child(predicate_node);
+  predicate_node->set_left_child(stored_table_node);
 
-  EXPECT_EQ(result_node->output_column_references()[0], LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(result_node->output_column_references()[1], LQPColumnReference(predicate_node->left_child(), ColumnID{1}));
+//  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+
+//  auto projection_node = make_star_projection_node(
+//    make_predicate_node(stored_table_node["a"], PredicateCondition::Equals, stored_table_node["b"],
+//      stored_table_node
+//    )
+//  );
+
+  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
+  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
+  const auto predicate_node = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::Equals, "b");
+  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
 
-  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
-  EXPECT_EQ(predicate_node->type(), LQPNodeType::Predicate);
-  EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
-  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(predicate_node->value(), AllParameterVariant{std::string{"b"}});
+  projection_node->set_left_child(predicate_node);
+  predicate_node->set_left_child(stored_table_node);
+
+  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  const auto table_a_a = LQPColumnReference{stored_table_node, ColumnID{0}};
+  const auto table_a_b = LQPColumnReference{stored_table_node, ColumnID{1}};
+  const auto predicate_node_a = std::make_shared<PredicateNode>(table_a_b, PredicateCondition::LessThan, 457.9f);
+  const auto predicate_node_b = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::GreaterThanEquals, 1234l);
+  const auto projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({table_a_a, table_a_b}));
 
-  const auto predicate_node_a = result_node->left_child();
-  EXPECT_EQ(predicate_node_a->type(), LQPNodeType::Predicate);
-  EXPECT_FALSE(predicate_node_a->right_child());
+  projection_node->set_left_child(predicate_node_a);
+  predicate_node_a->set_left_child(predicate_node_b);
+  predicate_node_b->set_left_child(stored_table_node);
 
-  const auto predicate_node_b = predicate_node_a->left_child();
-  EXPECT_EQ(predicate_node_b->type(), LQPNodeType::Predicate);
-  EXPECT_FALSE(predicate_node_b->right_child());
-
-  const auto stored_table_node = predicate_node_b->left_child();
-  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-  EXPECT_FALSE(stored_table_node->left_child());
-  EXPECT_FALSE(stored_table_node->right_child());
+  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {

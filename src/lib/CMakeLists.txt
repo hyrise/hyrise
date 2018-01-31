@@ -25,6 +25,8 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
+    logical_query_plan/build_lqps.cpp
+    logical_query_plan/build_lqps.hpp
     logical_query_plan/lqp_column_reference.cpp
     logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/compare_lqps.cpp

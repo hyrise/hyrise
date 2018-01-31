@@ -68,11 +68,11 @@ class CompareLQPsTest : public ::testing::Test {
     const auto table_c_a = LQPColumnReference{query_nodes.mock_node_b, ColumnID{0}};
     const auto table_c_b = LQPColumnReference{query_nodes.mock_node_b, ColumnID{1}};
 
-    query_nodes.predicate_node_a = std::make_shared<PredicateNode>(table_a_a, ScanType::LessThan, 41);
-    query_nodes.predicate_node_b = std::make_shared<PredicateNode>(table_a_a, ScanType::GreaterThan, 42);
+    query_nodes.predicate_node_a = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::LessThan, 41);
+    query_nodes.predicate_node_b = std::make_shared<PredicateNode>(table_a_a, PredicateCondition::GreaterThan, 42);
     query_nodes.union_node = std::make_shared<UnionNode>(UnionMode::Positions);
     query_nodes.limit_node = std::make_shared<LimitNode>(10);
-    query_nodes.join_node = std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{table_a_a, table_c_b}, ScanType::Equals);
+    query_nodes.join_node = std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{table_a_a, table_c_b}, PredicateCondition::Equals);
 
     std::vector<std::shared_ptr<LQPExpression>> aggregates{LQPExpression::create_aggregate_function(AggregateFunction::Sum, LQPExpression::create_columns({table_c_a}))};
     std::vector<LQPColumnReference> groupby_column_references{table_c_b};
