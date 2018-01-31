@@ -299,6 +299,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/logging.hpp
 )
 
 set(

@@ -26,9 +26,6 @@ class SystemStatistics {
 
   const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& cache() const;
 
-  // Retrieves recent query plans from the currently active query cache implementation
-  const std::vector<SQLQueryCacheEntry>& recent_queries() const;
-
  protected:
   mutable std::vector<SQLQueryCacheEntry> _recent_queries;
   const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& _cache;

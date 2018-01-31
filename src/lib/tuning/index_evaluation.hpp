@@ -3,6 +3,8 @@
 #include <string>
 
 #include "storage/index/column_index_type.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -60,6 +62,18 @@ class IndexEvaluation {
    */
   bool operator<(const IndexEvaluation& other) const { return (desirablility < other.desirablility); }
   bool operator>(const IndexEvaluation& other) const { return (desirablility > other.desirablility); }
+
+  /**
+   * Operator for printing them (debugging)
+   */
+  friend std::ostream& operator<<(std::ostream& output, const IndexEvaluation& evaluation) {
+    auto table_ptr = StorageManager::get().get_table(evaluation.table_name);
+    auto& column_name = table_ptr->column_name(evaluation.column_id);
+
+    return output << "IndexEvaluation for " << evaluation.table_name << "." << column_name << ": "
+                  << "desirability: " << evaluation.desirablility << " (memory cost: " << evaluation.memory_cost
+                  << " MiB, exists: " << evaluation.exists << ")";
+  }
 };
 
 }  // namespace opossum

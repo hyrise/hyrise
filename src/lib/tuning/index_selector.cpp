@@ -1,7 +1,7 @@
 #include <algorithm>
-#include <iostream>
 
 #include "index_selector.hpp"
+#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -9,6 +9,10 @@ std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvalu
                                                           float memory_budget) {
   _operations.clear();
   _operations.reserve(evaluations.size());
+
+  if (evaluations.size() == 0) {
+    return _operations;
+  }
 
   // sort evaluations by ascending desirability
   std::sort(evaluations.begin(), evaluations.end());
@@ -29,6 +33,7 @@ std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvalu
     if (worst_index->desirablility < 0.0f && -worst_index->desirablility > best_index->desirablility) {
       // deleting worst index is more beneficial than creating best index
       if (worst_index->exists) {
+        LOG_DEBUG("Planned operation: delete worst existing index " << *worst_index);
         _operations.emplace_back(worst_index->table_name, worst_index->column_id, false);
         memory_consumption -= worst_index->memory_cost;
       }
@@ -55,11 +60,13 @@ std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvalu
           // delete the previously selected indices, then create the better index
           for (auto delete_index = worst_index; delete_index != sacrifice_index; ++delete_index) {
             if (delete_index->exists) {
+              LOG_DEBUG("Planned operation: delete existing index " << *delete_index);
               _operations.emplace_back(delete_index->table_name, delete_index->column_id, false);
               memory_consumption -= delete_index->memory_cost;
             }
           }
           worst_index = sacrifice_index;
+          LOG_DEBUG("Planned operation: create new index " << *best_index);
           _operations.emplace_back(best_index->table_name, best_index->column_id, true);
           memory_consumption += best_index->memory_cost;
         }

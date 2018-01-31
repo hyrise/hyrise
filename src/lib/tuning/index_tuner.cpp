@@ -10,6 +10,7 @@
 #include "storage/storage_manager.hpp"
 #include "tuning/index_evaluator.hpp"
 #include "tuning/index_selector.hpp"
+#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -33,19 +34,33 @@ void IndexTuner::disable_memory_budget() { _memory_budget = std::numeric_limits<
 float IndexTuner::memory_budget() { return _memory_budget; }
 
 void IndexTuner::execute() {
-  const auto& operations = _selector->select_indices(_evaluator->evaluate_indices(*_statistics), _memory_budget);
+  LOG_INFO("Evaluating indices...");
+  auto index_evaluations = _evaluator->evaluate_indices(*_statistics);
 
-  std::cout << "Recommended changes: \n";
+  LOG_DEBUG("Evaluations:");
+  for (auto evaluation : index_evaluations) {
+    LOG_DEBUG("-> " << evaluation);
+  }
+
+  LOG_INFO("Indices evaluated.");
+
+  LOG_INFO("Selecting indices...");
+  const auto& operations = _selector->select_indices(index_evaluations, _memory_budget);
+  LOG_INFO("Indices selected.");
+
+  LOG_INFO("Recommended changes:");
   for (const auto& operation : operations) {
     const auto& column_name = StorageManager::get().get_table(operation.table_name)->column_name(operation.column_id);
     if (operation.create) {
-      std::cout << "  Create index on table " << operation.table_name << ", column " << column_name << "\n";
+      LOG_INFO("  -> Create index on table " << operation.table_name << ", column " << column_name);
     } else {
-      std::cout << "  Delete index on table " << operation.table_name << ", column " << column_name << "\n";
+      LOG_INFO("  -> Delete index on table " << operation.table_name << ", column " << column_name);
     }
   }
 
+  LOG_INFO("Executing planned operations...");
   _execute_operations(operations);
+  LOG_INFO("Planned operations executed.");
 }
 
 void IndexTuner::_execute_operations(const std::vector<IndexOperation>& operations) {
@@ -54,8 +69,10 @@ void IndexTuner::_execute_operations(const std::vector<IndexOperation>& operatio
 
   for (const auto& operation : operations) {
     if (operation.create) {
+      LOG_DEBUG("  -> " << operation);
       _create_index(operation.table_name, operation.column_id);
     } else {
+      LOG_DEBUG("  -> " << operation);
       _delete_index(operation.table_name, operation.column_id);
     }
     auto end = std::chrono::high_resolution_clock::now();
