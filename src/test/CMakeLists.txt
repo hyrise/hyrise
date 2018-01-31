@@ -71,6 +71,8 @@ set(
     optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/optimizer_test.cpp
+    optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
@@ -132,6 +134,7 @@ set(
     LIBRARIES
     gtest
     sqlite3
+    ${FILESYSTEM_LIBRARY}
 )
 
 # Build special sanitizer version of googletest

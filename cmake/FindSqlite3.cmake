@@ -1,7 +1,7 @@
 # Find the sqlite3 library.
 # Output variables:
 #  SQLITE3_INCLUDE_DIR : e.g., /usr/include/.
-#  SQLITE3_LIBRARY     : Library path of readline library
+#  SQLITE3_LIBRARY     : Library path of sqlite3 library
 #  SQLITE3_FOUND       : True if found.
 
 FIND_PATH(SQLITE3_INCLUDE_DIR NAME sqlite3.h HINTS
