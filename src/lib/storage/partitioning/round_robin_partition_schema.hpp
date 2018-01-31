@@ -6,6 +6,11 @@
 
 namespace opossum {
 
+/*
+ * PartitionSchema distributing tuples over a number of Partitions (defined in the constructor)
+ * using round-robin scheduling. This way all Partitions are always almost equally filled.
+ */
+
 class RoundRobinPartitionSchema : public AbstractPartitionSchema {
  public:
   explicit RoundRobinPartitionSchema(size_t number_of_partitions);

@@ -137,7 +137,27 @@ class Table : private Noncopyable {
    */
   TableType get_type() const;
 
-  // partitioning
+  std::vector<IndexInfo> get_indexes() const;
+
+  template <typename Index>
+  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
+    ColumnIndexType index_type = get_index_type_of<Index>();
+
+    for (auto& chunk : _chunks) {
+      chunk->create_index<Index>(column_ids);
+    }
+    IndexInfo i = {column_ids, name, index_type};
+    _indexes.emplace_back(i);
+  }
+
+  ChunkID get_chunk_id(const Chunk& chunk) const;
+
+  /**
+   * Partitioning
+   * Standard PartitionSchema is NullPartitionSchema which creates no partitioning at all.
+   * On empty Tables, the PartitionSchema can be altered using the functions below.
+   * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
+   */
   void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                 const size_t number_of_partitions);
@@ -154,19 +174,6 @@ class Table : private Noncopyable {
 
   void remove_partitioning();
   uint16_t partition_count() const;
-  ChunkID get_chunk_id(const Chunk& chunk) const;
-  std::vector<IndexInfo> get_indexes() const;
-
-  template <typename Index>
-  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    ColumnIndexType index_type = get_index_type_of<Index>();
-
-    for (auto& chunk : _chunks) {
-      chunk->create_index<Index>(column_ids);
-    }
-    IndexInfo i = {column_ids, name, index_type};
-    _indexes.emplace_back(i);
-  }
 
  protected:
   const uint32_t _max_chunk_size;
