@@ -10,14 +10,31 @@
 namespace opossum {
 
 /**
+ * A ColumnRef is used to reference one specific column by the name of its table
+ * and its index in that table
+ */
+struct ColumnRef {
+  ColumnRef(std::string table_name, ColumnID column_id) : table_name{table_name}, column_id{column_id} {}
+
+  std::string table_name;
+  ColumnID column_id;
+
+  bool operator<(const ColumnRef& other) const {
+    return (table_name == other.table_name) ? column_id < other.column_id : table_name < other.table_name;
+  }
+  bool operator>(const ColumnRef& other) const {
+    return (table_name == other.table_name) ? column_id > other.column_id : table_name > other.table_name;
+  }
+};
+
+/**
  * An IndexEvaluation contains the characteristics of one particular index
  * as recognized by an AbstractIndexEvaluator
  */
 class IndexEvaluation {
  public:
   IndexEvaluation(const std::string& table_name, ColumnID column_id, bool exists = false)
-      : table_name{table_name},
-        column_id{column_id},
+      : column{table_name, column_id},
         desirablility{0.0f},
         exists{exists},
         type{ColumnIndexType::Invalid},
@@ -26,8 +43,7 @@ class IndexEvaluation {
   /**
    * The column the this index refers to
    */
-  std::string table_name;
-  ColumnID column_id;
+  ColumnRef column;
 
   /**
    * An IndexEvaluator specific, signed value that indicates
@@ -67,10 +83,10 @@ class IndexEvaluation {
    * Operator for printing them (debugging)
    */
   friend std::ostream& operator<<(std::ostream& output, const IndexEvaluation& evaluation) {
-    auto table_ptr = StorageManager::get().get_table(evaluation.table_name);
-    auto& column_name = table_ptr->column_name(evaluation.column_id);
+    auto table_ptr = StorageManager::get().get_table(evaluation.column.table_name);
+    auto& column_name = table_ptr->column_name(evaluation.column.column_id);
 
-    return output << "IndexEvaluation for " << evaluation.table_name << "." << column_name << ": "
+    return output << "IndexEvaluation for " << evaluation.column.table_name << "." << column_name << ": "
                   << "desirability: " << evaluation.desirablility << " (memory cost: " << evaluation.memory_cost
                   << " MiB, exists: " << evaluation.exists << ")";
   }

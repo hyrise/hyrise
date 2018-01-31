@@ -34,7 +34,7 @@ std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvalu
       // deleting worst index is more beneficial than creating best index
       if (worst_index->exists) {
         LOG_DEBUG("Planned operation: delete worst existing index " << *worst_index);
-        _operations.emplace_back(worst_index->table_name, worst_index->column_id, false);
+        _operations.emplace_back(worst_index->column.table_name, worst_index->column.column_id, false);
         memory_consumption -= worst_index->memory_cost;
       }
       ++worst_index;
@@ -61,13 +61,13 @@ std::vector<IndexOperation> IndexSelector::select_indices(std::vector<IndexEvalu
           for (auto delete_index = worst_index; delete_index != sacrifice_index; ++delete_index) {
             if (delete_index->exists) {
               LOG_DEBUG("Planned operation: delete existing index " << *delete_index);
-              _operations.emplace_back(delete_index->table_name, delete_index->column_id, false);
+              _operations.emplace_back(delete_index->column.table_name, delete_index->column.column_id, false);
               memory_consumption -= delete_index->memory_cost;
             }
           }
           worst_index = sacrifice_index;
           LOG_DEBUG("Planned operation: create new index " << *best_index);
-          _operations.emplace_back(best_index->table_name, best_index->column_id, true);
+          _operations.emplace_back(best_index->column.table_name, best_index->column.column_id, true);
           memory_consumption += best_index->memory_cost;
         }
         --best_index;
