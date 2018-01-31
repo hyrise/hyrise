@@ -641,4 +641,61 @@ TEST_F(SQLTranslatorTest, ColumnAlias) {
   EXPECT_EQ(*expressions[1]->alias(), std::string("z"));
 }
 
+TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnLeftSide) {
+  const auto query =
+      "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND table_a.b NOT LIKE 'special request'";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+      JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
+        PredicateNode::make(_table_a_b, PredicateCondition::NotLike, std::string("special request"),
+          _stored_table_node_a),
+        _stored_table_node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
+TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnRightSide) {
+  const auto query =
+      "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND table_b.b NOT LIKE 'special request'";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
+      _stored_table_node_a,
+      PredicateNode::make(_table_b_b, PredicateCondition::NotLike, std::string("special request"),
+        _stored_table_node_b)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
+TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
+  const auto query =
+      "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a "
+      "AND table_a.b != 3 "
+      "AND table_a.a == table_a.b "
+      "AND table_b.b NOT LIKE 'special request' "
+      "AND table_b.b == table_b.a ";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
+
+      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_a_b,
+        PredicateNode::make(_table_a_b, PredicateCondition::NotEquals, static_cast<int64_t>(3),
+          _stored_table_node_a)),
+
+      PredicateNode::make(_table_b_b, PredicateCondition::Equals, _table_b_a,
+        PredicateNode::make(_table_b_b, PredicateCondition::NotLike, std::string("special request"),
+          _stored_table_node_b))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
 }  // namespace opossum

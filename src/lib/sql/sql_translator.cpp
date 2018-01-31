@@ -362,11 +362,27 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
 
-  const hsql::Expr& condition = *join.condition;
+  /* In general there is currently no support for multiple join conditions using AND and OR.
+   * The current implementation expects a single join condition in a set of conjunctive
+   * clauses. The remaining clauses are expected to be relevant for only one of
+   * the join partners and are therefore converted into predicates inserted in between the
+   * source relations and the actual join node.
+   * See TPC-H 13 for an example query.
+   */
+  std::vector<const hsql::Expr*> condition_list;
+  _flatten_conjunctive_expression_tree(join.condition, condition_list);
 
-  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
+  std::vector<const hsql::Expr*> join_conditions, left_conditions, right_conditions;
+  _get_sides_from_operator_expressions(condition_list, left_node, right_node, join_conditions, left_conditions,
+                                       right_conditions);
+
+  Assert(join_conditions.size() == 1,
+         "No or more than one possible join condition (= condition involving columns of different origin) supplied. "
+         "The join operator does currently not support this.");
+  const auto join_condition = join_conditions[0];
+
   // The Join operators only support simple comparisons for now.
-  switch (condition.opType) {
+  switch (join_condition->opType) {
     case hsql::kOpEquals:
     case hsql::kOpNotEquals:
     case hsql::kOpLess:
@@ -377,13 +393,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
     default:
       Fail("Join condition must be a simple comparison operator.");
   }
-  Assert(condition.expr && condition.expr->type == hsql::kExprColumnRef,
-         "Left arg of join condition must be column ref");
-  Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
-         "Right arg of join condition must be column ref");
 
-  const auto left_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*condition.expr);
-  const auto right_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*condition.expr2);
+  const auto left_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr);
+  const auto right_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr2);
 
   /**
    * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
@@ -409,14 +421,89 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   const auto column_references = left_in_left_node ? std::make_pair(*left_in_left_node, *right_in_right_node)
                                                    : std::make_pair(*left_in_right_node, *right_in_left_node);
 
-  // Joins currently only support one simple condition (i.e., not multiple conditions).
-  auto predicate_condition = translate_operator_type_to_predicate_condition(condition.opType);
-
+  auto predicate_condition = translate_operator_type_to_predicate_condition(join_condition->opType);
   auto join_node = JoinNode::make(join_mode, column_references, predicate_condition);
   join_node->set_left_input(left_node);
   join_node->set_right_input(right_node);
-
+  _insert_predicates_before(join_node, left_conditions);
+  _insert_predicates_before(join_node, right_conditions, LQPInputSide::Right);
   return join_node;
+}
+
+LQPInputSide SQLTranslator::_get_side(const std::shared_ptr<AbstractLQPNode>& left_node,
+                                      const std::shared_ptr<AbstractLQPNode>& right_node, const hsql::Expr* expr) {
+  DebugAssert(expr && expr->type == hsql::kExprColumnRef, "only applicable to columnar expressions");
+  const auto qualified = HSQLExprTranslator::to_qualified_column_name(*expr);
+  if (left_node->find_column(qualified)) {
+    return LQPInputSide::Left;
+  }
+
+  if (right_node->find_column(qualified)) {
+    return LQPInputSide::Right;
+  }
+
+  Fail("Column not found: " + qualified.as_string());
+}
+
+void SQLTranslator::_get_sides_from_operator_expressions(const std::vector<const hsql::Expr*>& operators,
+                                                         const std::shared_ptr<AbstractLQPNode>& left_node,
+                                                         const std::shared_ptr<AbstractLQPNode>& right_node,
+                                                         std::vector<const hsql::Expr*>& both,
+                                                         std::vector<const hsql::Expr*>& left,
+                                                         std::vector<const hsql::Expr*>& right) {
+  for (const auto* op : operators) {
+    const bool left_is_column = op->expr && op->expr->type == hsql::kExprColumnRef;
+    const bool right_is_column = op->expr2 && op->expr2->type == hsql::kExprColumnRef;
+
+    if (left_is_column && right_is_column &&
+        _get_side(left_node, right_node, op->expr) != _get_side(left_node, right_node, op->expr2)) {
+      both.push_back(op);
+      continue;
+    }
+
+    if (left_is_column) {
+      auto& side = (_get_side(left_node, right_node, op->expr) == LQPInputSide::Left) ? left : right;
+      side.push_back(op);
+    } else if (right_is_column) {
+      auto& side = (_get_side(left_node, right_node, op->expr2) == LQPInputSide::Left) ? left : right;
+      side.push_back(op);
+    } else {
+      Fail("Cannot determine a side for an expression which does not contain any columns");
+    }
+  }
+}
+
+void SQLTranslator::_insert_predicates_before(const std::shared_ptr<AbstractLQPNode>& node,
+                                              const std::vector<const hsql::Expr*>& conditions,
+                                              const LQPInputSide side) {
+  if (conditions.empty()) {
+    return;
+  }
+
+  auto last_node = node->input(side);
+  for (const auto* condition : conditions) {
+    last_node = _translate_predicate(
+        *condition, false, [&node](const auto& expr) { return HSQLExprTranslator::to_column_reference(expr, node); },
+        last_node);
+  }
+
+  DebugAssert(node->input(side),
+              "Unable to insert predicates in between since the node does not have an input on that side."
+              "Is the node's input side and type correct?");
+  node->set_input(side, last_node);
+}
+
+void SQLTranslator::_flatten_conjunctive_expression_tree(const hsql::Expr* expression,
+                                                         std::vector<const hsql::Expr*>& expressions) {
+  if (expression->opType == hsql::kOpAnd) {
+    Assert(expression->expr && expression->expr2, "kOpAnd should have two children expressions");
+    _flatten_conjunctive_expression_tree(expression->expr, expressions);
+    _flatten_conjunctive_expression_tree(expression->expr2, expressions);
+    return;
+  }
+
+  Assert(expression->opType != hsql::kOpOr, "Disjunction is not supported.");
+  expressions.push_back(expression);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
