@@ -18,7 +18,7 @@
 #if IS_DEBUG
 #define LOG_DEBUG(msg) \
   __LOG_TIME;          \
-  std::cout << " [DEBUG] " << msg << "\n"
+  std::cout << " [DEBUG] " << msg << std::endl;
 #else
 #define LOG_DEBUG(msg)
 #endif
