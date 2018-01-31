@@ -9,6 +9,7 @@
 
 #include "../lib/resolve_type.hpp"
 #include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/partitioning/round_robin_partition_schema.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {
@@ -39,6 +40,19 @@ TEST_F(StorageTableTest, GetChunk) {
   t.append({6, "world"});
   t.append({3, "!"});
   t.get_chunk(ChunkID{1});
+}
+
+TEST_F(StorageTableTest, GetModifiableChunkWithAccessCounting) {
+  t.get_chunk(ChunkID{0});
+  // TODO(anyone): Do we want checks here?
+  // EXPECT_THROW(t.get_chunk(ChunkID{q}), std::exception);
+  t.append({4, "Hello,"});
+  t.append({6, "world"});
+  t.append({3, "!"});
+  auto chunk = t.get_modifiable_chunk_with_access_counting(ChunkID{1});
+  EXPECT_EQ(chunk->size(), 1u);
+  chunk->append({1, "Test"});
+  EXPECT_EQ(chunk->size(), 2u);
 }
 
 TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t.column_count(), 2u); }
@@ -181,6 +195,19 @@ TEST_F(StorageTableTest, IsPartitioned) {
   EXPECT_FALSE(t0.is_partitioned());
   t0.create_round_robin_partitioning(2u);
   EXPECT_TRUE(t0.is_partitioned());
+}
+
+TEST_F(StorageTableTest, CreatePartitioningOnNonEmptyTable) {
+  t.append({4, "Hello,"});
+  EXPECT_ANY_THROW(t.create_round_robin_partitioning(2u));
+}
+
+TEST_F(StorageTableTest, ApplyPartitioning) {
+  auto p = std::make_shared<RoundRobinPartitionSchema>(2u);
+  EXPECT_FALSE(t.is_partitioned());
+  t.apply_partitioning(p);
+  EXPECT_TRUE(t.is_partitioned());
+  EXPECT_EQ(t.chunk_count(), 2u);
 }
 
 }  // namespace opossum
