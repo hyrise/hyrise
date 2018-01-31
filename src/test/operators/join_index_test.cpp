@@ -208,7 +208,7 @@ TYPED_TEST(JoinIndexTest, OuterJoin) {
 }
 
 /* currently disabled because it breaks with AdaptiveRadixTreeIndex */
-TYPED_TEST(JoinIndexTest, DISABLED_OuterJoinWithNull) {
+TYPED_TEST(JoinIndexTest, DISABLED_OuterJoinWithNull /* #670 */) {
   this->test_join_output(this->_table_wrapper_m, this->_table_wrapper_n,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Outer,
                          "src/test/tables/joinoperators/int_outer_join_null.tbl", 1);
