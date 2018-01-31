@@ -28,6 +28,8 @@ float TableStatistics::row_count() const { return _row_count; }
 uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
 const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::column_statistics() const {
+  // Lazily initialize column statistics
+  _create_all_column_statistics();
   return _column_statistics;
 }
 
