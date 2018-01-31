@@ -211,15 +211,15 @@ TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
 }
 
 TEST_F(TableStatisticsTest, DirectlyAccessColumnStatistics) {
-    /**
+  /**
      * check that column statistics are generated even without a predicate
      */
-    auto column_statistics = _table_a_with_statistics.statistics->get_all_column_statistics();
-    EXPECT_EQ(column_statistics.size(), 4u);
-    for (auto col = ColumnID{0}; col < column_statistics.size(); ++col) {
-        EXPECT_TRUE(column_statistics.at(col));
-        EXPECT_FLOAT_EQ(column_statistics.at(col)->distinct_count(), 6.f);
-    }
+  auto column_statistics = _table_a_with_statistics.statistics->get_all_column_statistics();
+  EXPECT_EQ(column_statistics.size(), 4u);
+  for (auto col = ColumnID{0}; col < column_statistics.size(); ++col) {
+    EXPECT_TRUE(column_statistics.at(col));
+    EXPECT_FLOAT_EQ(column_statistics.at(col)->distinct_count(), 6.f);
+  }
 }
 
 }  // namespace opossum
