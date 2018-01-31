@@ -38,7 +38,7 @@ TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
 TEST_F(OperatorsGetTableTest, OperatorName) {
   auto gt = std::make_shared<opossum::GetTable>("aNiceTestTable");
 
-  EXPECT_EQ(gt->name(), "GetTable (nothing pruned)");
+  EXPECT_EQ(gt->name(), "GetTable");
 }
 
 TEST_F(OperatorsGetTableTest, ExcludedChunks) {

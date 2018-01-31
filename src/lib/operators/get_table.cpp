@@ -19,7 +19,7 @@ const std::string GetTable::name() const {
 const std::string GetTable::description(DescriptionMode description_mode) const {
   auto prune_description = _excluded_chunks ? "(" + std::to_string(_excluded_chunks->size()) + " Chunks pruned)" : "(nothing pruned)";
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  return name() + separator + "(" + table_name() + ")" + seperator + prune_description;
+  return name() + separator + "(" + table_name() + ")" + separator + prune_description;
 }
 
 const std::string& GetTable::table_name() const { return _name; }

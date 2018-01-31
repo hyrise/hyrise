@@ -35,6 +35,8 @@ class ChunkPruningTest : public StrategyBaseTest {
     man.add_table("a", load_table("src/test/tables/int_float2.tbl", 2u));
     DictionaryCompression::compress_table(*man.get_table("a"));
     _rule = std::make_shared<ChunkPruningRule>();
+
+    man.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
   }
 
   std::shared_ptr<ChunkPruningRule> _rule;
@@ -43,7 +45,7 @@ class ChunkPruningTest : public StrategyBaseTest {
 TEST_F(ChunkPruningTest, SimplePruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::GreaterThan, 200);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::GreaterThan, 200);
   predicate_node->set_left_child(stored_table_node);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -54,13 +56,31 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
   EXPECT_EQ(excluded, expected);
 }
 
+TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
+  auto table = StorageManager::get().get_table("uncompressed");
+  auto chunk = table->get_chunk(ChunkID(0));
+  EXPECT_TRUE(chunk->statistics() == nullptr);
+
+  auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
+
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::GreaterThan, 200);
+  predicate_node->set_left_child(stored_table_node);
+
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = { };
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  EXPECT_EQ(excluded, expected);
+}
+
 TEST_F(ChunkPruningTest, TwoOperatorPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::GreaterThan, 200);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::GreaterThan, 200);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), ScanType::LessThanEquals, 400);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::LessThanEquals, 400);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
@@ -74,10 +94,10 @@ TEST_F(ChunkPruningTest, TwoOperatorPruningTest) {
 TEST_F(ChunkPruningTest, IntersectionPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::LessThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::LessThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::GreaterThan, 200);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::GreaterThan, 200);
   predicate_node_1->set_left_child(stored_table_node);
 
   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
@@ -96,7 +116,7 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest) {
   {
     auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::GreaterThan, 12345);
+    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::GreaterThan, 12345);
     predicate_node->set_left_child(stored_table_node);
 
     auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -109,7 +129,7 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest) {
   {
     auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), ScanType::Equals, 458.7);
+    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 458.7);
     predicate_node->set_left_child(stored_table_node);
 
     auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -124,7 +144,7 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest) {
 TEST_F(ChunkPruningTest, GetTablePruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
-  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), ScanType::GreaterThan, 200);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::GreaterThan, 200);
   predicate_node->set_left_child(stored_table_node);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -151,19 +171,19 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 //   auto statistics_mock = std::make_shared<TableStatisticsMock>();
 //   stored_table_node->set_statistics(statistics_mock);
 //
-//   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
+//   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 10);
 //   predicate_node_0->set_left_child(stored_table_node);
 //
-//   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
+//   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, PredicateCondition::GreaterThan, 50);
 //   predicate_node_1->set_left_child(predicate_node_0);
 //
 //   auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
 //   sort_node->set_left_child(predicate_node_1);
 //
-//   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::GreaterThan, 90);
+//   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, PredicateCondition::GreaterThan, 90);
 //   predicate_node_2->set_left_child(sort_node);
 //
-//   auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 50);
+//   auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{1}, PredicateCondition::GreaterThan, 50);
 //   predicate_node_3->set_left_child(predicate_node_2);
 //
 //   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
@@ -193,10 +213,10 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 //
 //   // Setup first LQP
 //   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-//   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::LessThan, 20);
+//   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::LessThan, 20);
 //   predicate_node_0->set_left_child(stored_table_node);
 //
-//   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 458.5);
+//   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, PredicateCondition::GreaterThan, 458.5);
 //   predicate_node_1->set_left_child(predicate_node_0);
 //
 //   predicate_node_1->get_statistics();
@@ -205,10 +225,10 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 //
 //   // Setup second LQP
 //   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-//   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::GreaterThan, 458.5);
+//   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, PredicateCondition::GreaterThan, 458.5);
 //   predicate_node_2->set_left_child(stored_table_node);
 //
-//   auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::LessThan, 20);
+//   auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::LessThan, 20);
 //   predicate_node_3->set_left_child(predicate_node_2);
 //
 //   predicate_node_3->get_statistics();
@@ -255,11 +275,11 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 //       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 //
 //   auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
-//   auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 80);
-//   auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 60);
-//   auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 90);
-//   auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 50);
-//   auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 30);
+//   auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 80);
+//   auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 60);
+//   auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 90);
+//   auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 50);
+//   auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 30);
 //   auto table_0 = std::make_shared<MockNode>(table_statistics);
 //   auto table_1 = std::make_shared<MockNode>(table_statistics);
 //
@@ -306,8 +326,8 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 //       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 //
 //   auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
-//   auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 90);
-//   auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::GreaterThan, 10);
+//   auto predicate_a_node = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 90);
+//   auto predicate_b_node = std::make_shared<PredicateNode>(ColumnID{0}, PredicateCondition::GreaterThan, 10);
 //   auto table_node = std::make_shared<MockNode>(table_statistics);
 //
 //   union_node->set_left_child(predicate_a_node);
