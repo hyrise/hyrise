@@ -71,7 +71,7 @@ class IndexEvaluation {
     auto& column_name = table_ptr->column_name(evaluation.column_id);
 
     return output << "IndexEvaluation for " << evaluation.table_name << "." << column_name << ": "
-                  << evaluation.desirablility << "% (memory cost: " << evaluation.memory_cost
+                  << "desirability: " << evaluation.desirablility << " (memory cost: " << evaluation.memory_cost
                   << " MiB, exists: " << evaluation.exists << ")";
   }
 };
