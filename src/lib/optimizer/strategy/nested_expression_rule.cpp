@@ -17,7 +17,6 @@ namespace opossum {
 std::string NestedExpressionRule::name() const { return "Nested Expression Rule"; }
 
 bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
-  std::cout << name() << ": " << node->description() << std::endl;
   if (node->type() != LQPNodeType::Predicate || node->parents().size() > 1) {
     return _apply_to_children(node);
   }
@@ -32,34 +31,37 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
     return _apply_to_children(node);
   }
 
-  auto projection_node_child = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
-  auto projection_node_parent = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->parents().front());
+  auto projection_node_front = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
+  auto projection_node_back = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->parents().front());
 
-  auto expression = projection_node_child->column_expressions()[boost::get<ColumnID>(predicate_node->value())];
+  if (projection_node_front->column_expressions().size() != projection_node_back->column_expressions().size() + 1) {
+    return _apply_to_children(node);
+  }
 
-  expression->print();
+  auto expression = projection_node_front->column_expressions()[boost::get<ColumnID>(predicate_node->value())];
+
   const auto expression_type = _get_type_of_expression(expression);
 
   if (expression_type == DataType::Null) {
     return false;
   }
 
-  std::cout << data_type_to_string.left.at(expression_type) << std::endl;
-
   auto value = NULL_VALUE;
-
   resolve_data_type(expression_type, [&] (auto type) {
     value = _evaluate_expression(type, expression);
   });
 
   if (variant_is_null(value)) {
-    std::cout << "NULL" << std::endl;
     return _apply_to_children(node);
   }
 
-  std::cout << value << std::endl;
+  auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), value);
+  predicate_node->replace_with(new_predicate_node);
 
-  return false;
+  projection_node_front->remove_from_tree();
+  projection_node_back->remove_from_tree();
+
+  return true;
 }
 
 DataType NestedExpressionRule::_get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const {
