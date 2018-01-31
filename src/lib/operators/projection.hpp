@@ -77,18 +77,6 @@ class Projection : public AbstractReadOnlyOperator {
       const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
       const ChunkID chunk_id);
 
-  /**
-   * Operators that all numerical types support.
-   */
-  template <typename T>
-  static std::function<T(const T&, const T&)> _get_base_operator_function(ExpressionType type);
-
-  /**
-   * Operators that integral types support.
-   */
-  template <typename T>
-  static std::function<T(const T&, const T&)> _get_operator_function(ExpressionType type);
-
   std::shared_ptr<const Table> _on_execute() override;
 };
 
