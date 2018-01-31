@@ -22,7 +22,7 @@ MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std
     : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {
   set_statistics(statistics);
 
-  for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();
+  for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->get_all_column_statistics().size();
        ++column_statistics_idx) {
     _output_column_names.emplace_back("MockCol" + std::to_string(column_statistics_idx));
   }
