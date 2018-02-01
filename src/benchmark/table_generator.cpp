@@ -6,6 +6,10 @@
 #include <utility>
 #include <vector>
 
+#include <boost/math/distributions/uniform.hpp>
+#include <boost/math/distributions/skew_normal.hpp>
+#include <boost/math/distributions/pareto.hpp>
+
 #include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
@@ -69,4 +73,106 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, 
 
   return table;
 }
+
+    std::shared_ptr<Table> TableGenerator::generate_table(
+            const std::vector<ColumnConfiguration> & column_configurations,
+            const bool compress, const size_t num_rows, const ChunkID chunk_size) {
+
+        const auto num_columns = column_configurations.size();
+        const auto num_chunks = std::ceil((double) num_rows / (double) chunk_size);
+
+        // create result table and container for vectors holding the generated values for the columns
+        std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
+        std::vector<tbb::concurrent_vector<int>> value_vectors;
+
+        // add column definitions and initialize each value vector
+        for (size_t column = 0; column < num_columns; ++column) {
+            auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + column));
+            table->add_column_definition(column_name, DataType::Int);
+            value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
+        }
+
+        auto chunk = Chunk();
+
+        std::random_device rd;
+        auto noise_generator = std::default_random_engine{};
+
+        auto uniform_dist = boost::math::uniform_distribution<double>{0.0, 1.0};
+        auto skew_dist = boost::math::skew_normal_distribution<double>(0.0, 1.0, 0.0);
+        auto pareto_dist = boost::math::pareto_distribution<double>{1.0, 1.0};
+
+        noise_generator.seed(rd());
+
+        for (auto chunk_index = 0; chunk_index < num_chunks; ++chunk_index) {
+
+            for (auto column_index = 0; column_index < num_columns; ++column_index) {
+
+                const auto &column_configuration = column_configurations[column_index];
+
+                // generate distribution from column configuration
+                switch (column_configuration.distribution_type) {
+                    case uniform:
+                        uniform_dist = boost::math::uniform_distribution<double>{
+                                column_configuration.min_value,
+                                column_configuration.max_value
+                        };
+                        break;
+                    case normal_skewed:
+                        skew_dist = boost::math::skew_normal_distribution<double>{
+                                column_configuration.skew_location,
+                                column_configuration.skew_scale,
+                                column_configuration.skew_shape
+                        };
+                        break;
+                    case pareto:
+                        pareto_dist = boost::math::pareto_distribution<double>{
+                                column_configuration.pareto_scale,
+                                column_configuration.pareto_shape
+                        };
+                        break;
+                }
+
+                // generate values according to distribution
+                for (auto row_index = 0; row_index < chunk_size; ++row_index) {
+
+                    // bounds check
+                    if ((chunk_index + 1) * chunk_size + (row_index + 1) > num_rows) {
+                        break;
+                    }
+
+                    const auto probability = uniform_dist(noise_generator);
+                    int value;
+                    switch (column_configuration.distribution_type) {
+                        case uniform:
+                            value = std::floor(boost::math::quantile(uniform_dist, probability));
+                            break;
+                        case normal_skewed:
+                            value = std::round(boost::math::quantile(skew_dist, probability) * 10);
+                            break;
+                        case pareto:
+                            value = std::floor(boost::math::quantile(pareto_dist, probability));
+                            break;
+                    }
+                    value_vectors[column_index][row_index] = value;
+                }
+
+                // add values to column in chunk, reset value vector
+                chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[column_index])));
+                value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
+
+
+                // add full chunk to table
+                if (column_index == num_columns - 1) {
+                    table->emplace_chunk(std::move(chunk));
+                    chunk = Chunk();
+                }
+            }
+        }
+
+        if (compress) {
+            DictionaryCompression::compress_table(*table);
+        }
+
+        return table;
+    }
 }  // namespace opossum
