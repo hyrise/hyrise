@@ -16,6 +16,7 @@ class DropViewNode : public AbstractLQPNode {
 
   std::string description() const override;
   bool subtree_is_read_only() const override;
+  const std::vector<std::string>& output_column_names() const override;
 
   const std::string& view_name() const;
 
@@ -23,7 +24,12 @@ class DropViewNode : public AbstractLQPNode {
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_child,
       const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
+
+ private:
   const std::string _view_name;
+
+  // Need an instance since we're returning a reference in the getter
+  std::vector<std::string> _output_column_names_dummy;
 };
 
 }  // namespace opossum

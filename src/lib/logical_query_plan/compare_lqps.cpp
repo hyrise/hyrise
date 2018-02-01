@@ -57,6 +57,7 @@ bool SemanticLQPCompare::_structural_traverse(const std::shared_ptr<const Abstra
 bool SemanticLQPCompare::_semantical_traverse(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs) {
   if (!lhs && !rhs) return true;
   if (!lhs || !rhs) return false;
+  if (lhs == rhs) return true;
 
   auto semantically_equal = false;
 
