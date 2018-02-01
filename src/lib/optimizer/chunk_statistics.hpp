@@ -1,8 +1,8 @@
 #pragma once
 
+#include <exception>
 #include <memory>
 #include <vector>
-#include <exception>
 
 #include "all_type_variant.hpp"
 #include "type_cast.hpp"
@@ -45,7 +45,8 @@ class ChunkColumnStatistics : public BaseChunkColumnStatistics {
         return t_value < _min;
       case PredicateCondition::Equals:
         return t_value < _min || t_value > _max;
-      default: return false;
+      default:
+        return false;
     }
   }
 
@@ -56,7 +57,7 @@ class ChunkColumnStatistics : public BaseChunkColumnStatistics {
 
 class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
  public:
-  ChunkStatistics(std::vector<std::shared_ptr<BaseChunkColumnStatistics>> stats) : _statistics(stats) {}
+  explicit ChunkStatistics(std::vector<std::shared_ptr<BaseChunkColumnStatistics>> stats) : _statistics(stats) {}
 
   const std::vector<std::shared_ptr<BaseChunkColumnStatistics>>& statistics() const { return _statistics; }
 
@@ -67,4 +68,4 @@ class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
  protected:
   std::vector<std::shared_ptr<BaseChunkColumnStatistics>> _statistics;
 };
-}
+}  // namespace opossum

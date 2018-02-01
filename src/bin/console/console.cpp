@@ -33,10 +33,10 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
-#include "storage/dictionary_compression.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"

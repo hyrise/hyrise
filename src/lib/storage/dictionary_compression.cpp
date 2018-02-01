@@ -124,7 +124,7 @@ DictionaryCompression::compress_column(DataType data_type, const std::shared_ptr
 }
 
 std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
-                                           const std::shared_ptr<Chunk>& chunk) {
+                                                                       const std::shared_ptr<Chunk>& chunk) {
   DebugAssert((column_types.size() == chunk->column_count()),
               "Number of column types does not match the chunk’s column count.");
 
@@ -132,7 +132,7 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
 
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     auto value_column = chunk->get_mutable_column(column_id);
-    auto [dict_column, stats] = compress_column(column_types[column_id], value_column);
+    auto[dict_column, stats] = compress_column(column_types[column_id], value_column);
     chunk->replace_column(column_id, dict_column);
     column_stats.push_back(stats);
   }

@@ -77,12 +77,8 @@ std::optional<QualifiedColumnName> StoredTableNode::_resolve_local_table_name(
   return reference_without_local_alias;
 }
 
-std::vector<ChunkID>& StoredTableNode::excluded_chunks() {
-  return _excluded_chunks;
-}
+std::vector<ChunkID>& StoredTableNode::excluded_chunks() { return _excluded_chunks; }
 
-const std::vector<ChunkID>& StoredTableNode::excluded_chunks() const {
-  return _excluded_chunks;
-}
+const std::vector<ChunkID>& StoredTableNode::excluded_chunks() const { return _excluded_chunks; }
 
 }  // namespace opossum
