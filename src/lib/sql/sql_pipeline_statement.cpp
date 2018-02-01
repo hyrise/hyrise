@@ -16,9 +16,6 @@
 
 namespace opossum {
 
-// Create a cache with a capacity of 0
-SQLQueryCache<SQLQueryPlan> SQLPipelineStatement::_query_plan_cache{1024};
-
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, bool use_mvcc)
     : _sql_string(sql), _use_mvcc(use_mvcc), _auto_commit(_use_mvcc) {}
 
@@ -123,7 +120,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   auto started = std::chrono::high_resolution_clock::now();
 
   // Handle query plan if statement has been cached
-  auto cached_plan = _query_plan_cache.try_get(_sql_string);
+  const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string);
   if (cached_plan) {
     auto& plan = *cached_plan;
 
@@ -156,7 +153,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
   // Cache newly created plan for the according sql statement
-  _query_plan_cache.set(_sql_string, *_query_plan);
+  SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
 
   return _query_plan;
 }
@@ -209,8 +206,6 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
 
   return _result_table;
 }
-
-SQLQueryCache<SQLQueryPlan>& SQLPipelineStatement::get_query_plan_cache() { return _query_plan_cache; }
 
 const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_context() const {
   return _transaction_context;

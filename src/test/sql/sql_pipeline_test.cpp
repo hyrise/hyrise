@@ -56,8 +56,7 @@ class SQLPipelineTest : public BaseTest {
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
-    // Reset cache
-    SQLPipeline::get_query_plan_cache().clear();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -457,6 +456,7 @@ TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
 }
 
 TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
+  // Tests that the string passed into the pipeline is correctly split into the statement substrings
   SQLPipeline select_pipeline{_select_query_a};
   const auto& select_strings = select_pipeline.get_sql_strings();
   EXPECT_EQ(select_strings.size(), 1u);
@@ -500,7 +500,7 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  const auto& cache = sql_pipeline1.get_query_plan_cache();
+  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   EXPECT_EQ(cache.size(), 2u);
   EXPECT_TRUE(cache.has(_select_query_a));
   EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
@@ -508,12 +508,10 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   SQLPipeline sql_pipeline3{_select_query_a};
   sql_pipeline3.get_result_table();
 
-  // This is the same cache as above, just making sure it really is
-  const auto& same_cache = sql_pipeline3.get_query_plan_cache();
-
-  EXPECT_EQ(same_cache.size(), 2u);
-  EXPECT_TRUE(same_cache.has(_select_query_a));
-  EXPECT_TRUE(same_cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
+  // Make sure the cache hasn't changed
+  EXPECT_EQ(cache.size(), 2u);
+  EXPECT_TRUE(cache.has(_select_query_a));
+  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
 }
 
 }  // namespace opossum

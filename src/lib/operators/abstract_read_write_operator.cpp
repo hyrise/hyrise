@@ -9,11 +9,6 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const std::shared_ptr<const
                                                      const std::shared_ptr<const AbstractOperator> right)
     : AbstractOperator(left, right), _state{ReadWriteOperatorState::Pending} {}
 
-std::shared_ptr<AbstractOperator> AbstractReadWriteOperator::recreate(
-    const std::vector<AllParameterVariant>& args) const {
-  Fail("ReadWrite operator '" + name() + "' cannot implement recreation.");
-}
-
 void AbstractReadWriteOperator::execute() {
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");

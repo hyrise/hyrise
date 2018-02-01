@@ -75,9 +75,6 @@ class SQLPipeline : public Noncopyable {
   // Returns the entire execution time
   std::chrono::microseconds execution_time_microseconds();
 
-  // Returns the query plan cache from the underlying SQLPipelineStatements
-  static SQLQueryCache<SQLQueryPlan>& get_query_plan_cache();
-
  private:
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc);
 

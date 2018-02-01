@@ -284,8 +284,4 @@ std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
   return _execution_time_microseconds;
 }
 
-SQLQueryCache<SQLQueryPlan>& SQLPipeline::get_query_plan_cache() {
-  return SQLPipelineStatement::get_query_plan_cache();
-}
-
 }  // namespace opossum

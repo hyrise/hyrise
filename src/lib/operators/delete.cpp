@@ -123,7 +123,7 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 }
 
 std::shared_ptr<AbstractOperator> Delete::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Delete>(_table_name, _input_left->recreate());
+  return std::make_shared<Delete>(_table_name, _input_left->recreate(args));
 }
 
 }  // namespace opossum

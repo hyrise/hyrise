@@ -58,8 +58,7 @@ class SQLPipelineStatementTest : public BaseTest {
     _multi_statement_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
-    // Reset cache
-    SQLPipelineStatement::get_query_plan_cache().clear();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -455,7 +454,7 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   SQLPipelineStatement sql_pipeline{_select_query_a};
   sql_pipeline.get_result_table();
 
-  const auto& cache = sql_pipeline.get_query_plan_cache();
+  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   EXPECT_EQ(cache.size(), 1u);
   EXPECT_TRUE(cache.has(_select_query_a));
 }

@@ -58,9 +58,6 @@ class SQLPipelineStatement : public Noncopyable {
   // Executes all tasks, waits for them to finish, and returns the resulting table.
   const std::shared_ptr<const Table>& get_result_table();
 
-  // Returns the query plan cache
-  static SQLQueryCache<SQLQueryPlan>& get_query_plan_cache();
-
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
@@ -92,9 +89,6 @@ class SQLPipelineStatement : public Noncopyable {
   const bool _use_mvcc;
   const bool _auto_commit;
   std::shared_ptr<TransactionContext> _transaction_context;
-
-  // Caching
-  static SQLQueryCache<SQLQueryPlan> _query_plan_cache;
 };
 
 }  // namespace opossum
