@@ -13,24 +13,28 @@ BENCHMARK_DEFINE_F(BenchmarkJoinFixture, BM_JoinHash)(benchmark::State& state) {
   clear_cache();
 
   auto warm_up =
-      std::make_shared<JoinHash>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner, std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+      std::make_shared<JoinHash>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner,
+                                 std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
   while (state.KeepRunning()) {
     auto table_scan =
-        std::make_shared<JoinHash>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+        std::make_shared<JoinHash>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner,
+                                   std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
     table_scan->execute();
   }
 }
 
-BENCHMARK_DEFINE_F(BenchmarkJoinFixture, BM_JoinIndex)(benchmark::State& state){
+BENCHMARK_DEFINE_F(BenchmarkJoinFixture, BM_JoinIndex)(benchmark::State& state) {
   clear_cache();
 
   auto warm_up =
-      std::make_shared<JoinIndex>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner, std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+      std::make_shared<JoinIndex>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner,
+                                  std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan =
-        std::make_shared<JoinIndex>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto table_scan = std::make_shared<JoinIndex>(_tw_small_uni1, _tw_small_uni2, JoinMode::Inner,
+                                                  std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+                                                  PredicateCondition::Equals);
     table_scan->execute();
   }
 }
