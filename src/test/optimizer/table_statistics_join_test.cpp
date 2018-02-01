@@ -71,8 +71,8 @@ class TableStatisticsJoinTest : public BaseTest {
 };
 
 TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
-  // test selectivity calculations for join_modes which do not produce null values in the result, scan types and column
-  // combinations of int_equal_distribution.tbl
+  // test selectivity calculations for join_modes which do not produce null values in the result, predicate conditions
+  // and column combinations of int_equal_distribution.tbl
   std::vector<JoinMode> join_modes{JoinMode::Inner, JoinMode::Self};
   std::vector<PredicateCondition> predicate_conditions{
       PredicateCondition::Equals,         PredicateCondition::NotEquals,   PredicateCondition::LessThan,
@@ -116,8 +116,8 @@ TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
 
 // This is what InnerJoinTest would look like without cached join result size:
 // TEST_F(TableStatisticsJoinTest, InnerJoinRealDataTest) {
-//   // test selectivity calculations for join_modes which do not produce null values in the result, scan types and
-//   // column combinations of int_equal_distribution.tbl
+//   // test selectivity calculations for join_modes which do not produce null values in the result, predicate
+// conditions and column combinations of int_equal_distribution.tbl
 //   std::vector<JoinMode> join_modes{JoinMode::Inner, JoinMode::Self};
 //   std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
 //                                    PredicateCondition::LessThan, PredicateCondition::LessThanEquals,
@@ -138,13 +138,13 @@ TEST_F(TableStatisticsJoinTest, CrossJoinTest) {
 }
 
 TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
-  // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and
-  // column combinations of int_equal_distribution.tbl
+  // Test selectivity calculations for all join_modes which can produce null values in the result, predicate conditions
+  // and column combinations of int_equal_distribution.tbl
 
   // Currently, the statistics component produces in some cases for a two column predicate with
   // PredicateCondition::LessThan and PredicateCondition::GreaterThan a column statistics with a too high distinct
   // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated distinct
-  // counts of the columns. Therefore, tests for the mentioned scan types with null values are skipped.
+  // counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are skipped.
 
   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
   std::vector<PredicateCondition> predicate_conditions{
@@ -194,13 +194,14 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
 
 // This is what OuterJoinsTest would look like without cached join result size:
 // TEST_F(TableStatisticsJoinTest, OuterJoinsRealDataTest) {
-//   // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and
-//   // column combinations of int_equal_distribution.tbl
+//   // Test selectivity calculations for all join_modes which can produce null values in the result, predicate
+//   // conditions and column combinations of int_equal_distribution.tbl
 
 //   // Currently, the statistics component produces in some cases for a two column predicate with
 //   // PredicateCondition::LessThan and PredicateCondition::GreaterThan a column statistics with a too high distinct
 //   // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated
-//   // distinct counts of the columns. Therefore, tests for the mentioned scan types with null values are skipped.
+//   // distinct counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are
+//   // skipped.
 
 //   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
 //   std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
