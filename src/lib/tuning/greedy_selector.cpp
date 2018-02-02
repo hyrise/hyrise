@@ -1,81 +1,143 @@
 #include "greedy_selector.hpp"
 
 #include <algorithm>
+#include <limits>
+#include <list>
 
 #include "utils/logging.hpp"
 
 namespace opossum {
 
-std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(std::vector<std::shared_ptr<TuningChoice>> choices,
-                                                                     float memory_budget) {
+// This subroutine scans the least desirable available choices until the
+// accumulated reject_cost() is lower than a required value.
+// If the thereby accumulated reject_desirability is not lower than a threshold
+// an iterator to the choice one past the subsequence to reject is returned.
+// Otherwise the end() iterator is returned, that the constraints are not satisfied
+// by any continuous subsequence starting at sorted_choices.begin().
+std::list<std::shared_ptr<TuningChoice>>::iterator sacrifice_choices(
+    std::list<std::shared_ptr<TuningChoice>>& sorted_choices, float required_cost_delta,
+    float acceptible_desirability_delta = -std::numeric_limits<float>::infinity()) {
+  float desirability_delta = 0.0f;
+  float cost_delta = 0.0f;
+
+  auto choice = sorted_choices.begin();
+  while (choice != sorted_choices.end()) {
+    if (cost_delta <= required_cost_delta) {
+      break;
+    }
+    desirability_delta += (*choice)->reject_desirability();
+    cost_delta += (*choice)->reject_cost();
+    ++choice;
+  }
+
+  if (cost_delta <= required_cost_delta && desirability_delta >= acceptible_desirability_delta) {
+    return choice;
+  }
+  return sorted_choices.end();
+}
+
+std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
+    const std::vector<std::shared_ptr<TuningChoice>>& choices, float cost_budget) {
   std::vector<std::shared_ptr<TuningOperation>> operations;
   operations.reserve(choices.size());
+  // Assumption: cost() >= 0 ==> accept_cost() >= 0 && current_cost() >= 0 && reject_cost() <= 0
 
-  if (choices.size() == 0) {
-    return operations;
+  // Accumulate absolute cost balance from currently chosen choices.
+  float cost_balance = 0.0f;
+  for (const auto& choice : choices) {
+    cost_balance += choice->current_cost();
   }
 
-  // sort evaluations by ascending desirability
-  std::sort(choices.begin(), choices.end());
+  // Desirability balance is always relative to current system state.
+  float desirability_balance = 0.0f;
 
-  float memory_consumption = 0.0f;
-  for (const auto& index : choices) {
-    if (index->is_currently_chosen()) {
-      memory_consumption += index->cost();
+  // Sort choices:
+  //  1) by reject_cost() ascending
+  //  2) by accept_desirability() ascending stable
+  // The most desirable choice is at back() and among equaly desirable choices
+  // the least costly choices to accept are nearer back().
+  std::list<std::shared_ptr<TuningChoice>> sorted_choices(choices.size());
+  std::copy(choices.cbegin(), choices.cend(), sorted_choices.begin());
+  sorted_choices.sort([](std::shared_ptr<TuningChoice> lhs, std::shared_ptr<TuningChoice> rhs) {
+    return lhs->reject_cost() < rhs->reject_cost();
+  });
+  sorted_choices.sort([](std::shared_ptr<TuningChoice> lhs, std::shared_ptr<TuningChoice> rhs) {
+    return lhs->accept_desirability() < rhs->accept_desirability();
+  });
+
+  // If current state exceeds cost_budget,
+  // reject the least desirable choices to reduce cost_balance.
+  if (cost_balance > cost_budget) {
+    LOG_INFO("Cost balance of " << cost_balance << " exceeds budget of " << cost_budget);
+    auto sacrifice_until = sacrifice_choices(sorted_choices, cost_budget - cost_balance);
+    if (sacrifice_until == sorted_choices.end()) {
+      LOG_WARN("Cost budget is impossible to maintain. No Operations are performed.");
+      return operations;
     }
+    for (auto choice = sorted_choices.begin(); choice != sacrifice_until; ++choice) {
+      LOG_DEBUG(" ! Reject " << **choice << " to reduce cost balance");
+      operations.push_back((*choice)->reject());
+      cost_balance += (*choice)->reject_cost();
+      desirability_balance += (*choice)->reject_desirability();
+    }
+    sorted_choices.erase(sorted_choices.begin(), sacrifice_until);
   }
 
-  auto best_index = choices.end() - 1;
-  auto worst_index = choices.begin();
+  // Select the most desirable operations first
+  // always maintaining the cost budget
+  while (sorted_choices.size() > 0) {
+    if (sorted_choices.front()->reject_desirability() > sorted_choices.back()->accept_desirability()) {
+      LOG_DEBUG("Rejecting " << *sorted_choices.front() << " is most beneficial.");
+      // Rejecting a choice can only reduce cost_balance and never exceed cost_budget (as cost()>=0)
 
-  // ToDo(group01): research if this problem can actually be solved by a greedy algorithm
+      LOG_DEBUG(" ! Reject " << *sorted_choices.front());
+      operations.push_back(sorted_choices.front()->reject());
+      cost_balance += sorted_choices.front()->reject_cost();
+      desirability_balance += sorted_choices.front()->reject_desirability();
+      sorted_choices.pop_front();
 
-  while (best_index >= worst_index) {
-    if ((*worst_index)->desirability() < 0.0f && -(*worst_index)->desirability() > (*best_index)->desirability()) {
-      // deleting worst index is more beneficial than creating best index
-      if ((*worst_index)->is_currently_chosen()) {
-        LOG_DEBUG("Planned operation: delete worst existing index " << **worst_index);
-        operations.push_back((*worst_index)->reject());
-        memory_consumption -= (*worst_index)->cost();
-      }
-      ++worst_index;
     } else {
-      // best index is positive and more beneficial than removal of worst index
-      if ((*best_index)->is_currently_chosen()) {
-        --best_index;
+      LOG_DEBUG("Accepting " << *sorted_choices.back() << " is most beneficial.");
+      // Accepting a choice could exceed cost_budget, so reduce cost_balance first
+
+      auto sacrifice_until =
+          sacrifice_choices(sorted_choices, cost_budget - cost_balance - sorted_choices.back()->accept_cost(),
+                            -sorted_choices.back()->accept_desirability());
+      if (sacrifice_until == sorted_choices.end()) {
+        LOG_DEBUG(" ! Reject " << *sorted_choices.back() << " as required cost would sacrifice more desirability.");
+        operations.push_back(sorted_choices.back()->reject());
+        cost_balance += sorted_choices.back()->reject_cost();
+        desirability_balance += sorted_choices.back()->reject_desirability();
       } else {
-        // determine minimum desirability that must be sacrificed
-        // to obtain enough memory for the new index
-        float sacrificed_desirability = 0.0f;
-        float obtained_memory = 0.0f;
-        float required_memory = (*best_index)->cost() + memory_consumption - memory_budget;
-        auto sacrifice_index = worst_index;
-        while (obtained_memory < required_memory && sacrifice_index != best_index) {
-          if ((*sacrifice_index)->is_currently_chosen()) {
-            sacrificed_desirability += (*sacrifice_index)->desirability();
-            obtained_memory += (*sacrifice_index)->cost();
-          }
-          ++sacrifice_index;
+        for (auto choice = sorted_choices.begin(); choice != sacrifice_until; ++choice) {
+          LOG_DEBUG(" ! Reject " << **choice << " to reduce cost balance");
+          operations.push_back((*choice)->reject());
+          cost_balance += (*choice)->reject_cost();
+          desirability_balance += (*choice)->reject_desirability();
         }
-        if (obtained_memory >= required_memory && sacrificed_desirability <= (*best_index)->desirability()) {
-          // delete the previously selected indices, then create the better index
-          for (auto delete_index = worst_index; delete_index != sacrifice_index; ++delete_index) {
-            if ((*delete_index)->is_currently_chosen()) {
-              LOG_DEBUG("Planned operation: delete existing index " << *delete_index);
-              operations.push_back((*delete_index)->reject());
-              memory_consumption -= (*delete_index)->cost();
-            }
+        sorted_choices.erase(sorted_choices.begin(), sacrifice_until);
+
+        LOG_DEBUG(" ! Accept " << *sorted_choices.back());
+        operations.push_back(sorted_choices.back()->accept());
+        cost_balance += sorted_choices.back()->accept_cost();
+        desirability_balance += sorted_choices.back()->accept_desirability();
+
+        // ToDo(group01) invalidate before or after accept?
+        for (auto choice = sorted_choices.begin(); choice != sorted_choices.end(); ++choice) {
+          // Assumption: choice.invalidates() never contains choice itself!
+          if (sorted_choices.back()->invalidates().count(*choice) > 0) {
+            LOG_DEBUG(" ! Reject " << **choice << " because it was invalidated");
+            operations.push_back((*choice)->reject());
+            cost_balance += (*choice)->reject_cost();
+            // reject_desirability() of invalid choice is always 0.0f
           }
-          worst_index = sacrifice_index;
-          LOG_DEBUG("Planned operation: create new index " << *best_index);
-          operations.push_back((*best_index)->accept());
-          memory_consumption += (*best_index)->cost();
         }
-        --best_index;
       }
+      sorted_choices.pop_back();
     }
   }
 
+  LOG_INFO("Acheived desirability of " << desirability_balance << " at a cost balance of " << cost_balance);
   return operations;
 }
 

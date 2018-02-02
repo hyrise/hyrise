@@ -12,7 +12,7 @@ float IndexChoice::cost() const { return memory_cost; }
 
 bool IndexChoice::is_currently_chosen() const { return exists; }
 
-const std::vector<std::shared_ptr<TuningChoice> >& IndexChoice::invalidates() const { return _invalidates; }
+const std::set<std::shared_ptr<TuningChoice> >& IndexChoice::invalidates() const { return _invalidates; }
 
 void IndexChoice::print_on(std::ostream& output) const {
   output << "IndexChoice{on: " << column << ", exists: " << exists << ", saved_work: " << saved_work

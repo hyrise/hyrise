@@ -23,8 +23,8 @@ class AbstractSelector {
    * Determine the index operation sequence as specified above based on the
    * given list of choices and the budget value.
    */
-  virtual std::vector<std::shared_ptr<TuningOperation>> select(std::vector<std::shared_ptr<TuningChoice>> choices,
-                                                               float budget) = 0;
+  virtual std::vector<std::shared_ptr<TuningOperation>> select(
+      const std::vector<std::shared_ptr<TuningChoice>>& choices, float budget) = 0;
 };
 
 }  // namespace opossum

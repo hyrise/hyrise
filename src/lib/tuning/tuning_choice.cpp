@@ -2,6 +2,41 @@
 
 namespace opossum {
 
+float TuningChoice::accept_desirability() const {
+  if (!is_currently_chosen()) {
+    return desirability();
+  }
+  return 0.0f;
+}
+
+float TuningChoice::reject_desirability() const {
+  if (is_currently_chosen()) {
+    return -desirability();
+  }
+  return 0.0f;
+}
+
+float TuningChoice::current_cost() const {
+  if (is_currently_chosen()) {
+    return cost();
+  }
+  return 0.0f;
+}
+
+float TuningChoice::accept_cost() const {
+  if (!is_currently_chosen()) {
+    return cost();
+  }
+  return 0.0f;
+}
+
+float TuningChoice::reject_cost() const {
+  if (is_currently_chosen()) {
+    return -cost();
+  }
+  return 0.0f;
+}
+
 std::shared_ptr<TuningOperation> TuningChoice::accept() const {
   if (is_currently_chosen()) {
     // No Operation

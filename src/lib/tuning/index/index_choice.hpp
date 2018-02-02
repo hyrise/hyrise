@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "storage/index/column_index_type.hpp"
 #include "tuning/index/column_ref.hpp"
 #include "tuning/tuning_choice.hpp"
@@ -25,7 +27,7 @@ class IndexChoice : public TuningChoice {
 
   bool is_currently_chosen() const final;
 
-  const std::vector<std::shared_ptr<TuningChoice>>& invalidates() const final;
+  const std::set<std::shared_ptr<TuningChoice>>& invalidates() const final;
 
   void print_on(std::ostream& output) const final;
 
@@ -67,7 +69,7 @@ class IndexChoice : public TuningChoice {
   std::shared_ptr<TuningOperation> _reject_operation() const final;
 
   // ToDo(group01) currently unused and empty. Add invalidate logic.
-  std::vector<std::shared_ptr<TuningChoice>> _invalidates;
+  std::set<std::shared_ptr<TuningChoice>> _invalidates;
 };
 
 }  // namespace opossum

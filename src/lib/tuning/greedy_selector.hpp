@@ -11,8 +11,8 @@ namespace opossum {
  */
 class GreedySelector : public AbstractSelector {
  public:
-  std::vector<std::shared_ptr<TuningOperation>> select(std::vector<std::shared_ptr<TuningChoice>> choices,
-                                                       float memory_budget) final;
+  std::vector<std::shared_ptr<TuningOperation>> select(const std::vector<std::shared_ptr<TuningChoice>>& choices,
+                                                       float cost_budget) final;
 };
 
 }  // namespace opossum

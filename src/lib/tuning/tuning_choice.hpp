@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <vector>
+#include <set>
 
 #include "tuning/tuning_operation.hpp"
 
@@ -28,12 +28,28 @@ class TuningChoice {
   virtual float desirability() const = 0;
 
   /**
+   * Convenience accessors for desirability() that in their default implementation
+   * return the performance benetfts expected from accepting or rejecting this choice.
+   */
+  virtual float accept_desirability() const;
+  virtual float reject_desirability() const;
+
+  /**
    * An estimate of the absolute costs of this modification.
    *
    * As this value is intended to be counted against a common budget,
    * care must be taken that all AbstractEvaluators use the same cost measure.
    */
   virtual float cost() const = 0;
+
+  /**
+   * Convenience accessors for cost() that in their default implementation
+   * return the cost this choice currently imposes on the system and the respective
+   * cost delta resulting from an accept and reject operation.
+   */
+  virtual float current_cost() const;
+  virtual float accept_cost() const;
+  virtual float reject_cost() const;
 
   /**
    * True, if this modification is already present in the current system state.
@@ -44,7 +60,7 @@ class TuningChoice {
    * A list of other TuningChoices that should/can not be chosen if this
    * TuningChoice is accepted.
    */
-  virtual const std::vector<std::shared_ptr<TuningChoice>>& invalidates() const = 0;
+  virtual const std::set<std::shared_ptr<TuningChoice>>& invalidates() const = 0;
 
   /**
    * Get a TuningOperation that causes this modification to be present
