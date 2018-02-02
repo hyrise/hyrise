@@ -39,8 +39,8 @@ class JoinIndex : public AbstractJoinOperator {
                          std::shared_ptr<BaseIndex> index);
 
   void append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
-                      const ChunkOffset chunk_offset_left, std::vector<bool>& left_matches, ChunkID chunk_id_left,
-                      ChunkID chunk_id_right);
+                      const ChunkOffset chunk_offset_left, std::vector<bool>& left_matches, const ChunkID chunk_id_left,
+                      const ChunkID chunk_id_right);
 
   void _create_table_structure();
 

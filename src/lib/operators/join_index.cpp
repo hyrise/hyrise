@@ -277,7 +277,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
 
 void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                                const ChunkOffset chunk_offset_left, std::vector<bool>& left_matches,
-                               ChunkID chunk_id_left, ChunkID chunk_id_right) {
+                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
   auto num_right_matches = std::distance(range_begin, range_end);
 
   if (num_right_matches > 0) {
