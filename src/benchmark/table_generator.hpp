@@ -8,10 +8,21 @@ namespace opossum {
 
 class Table;
 
-enum Distribution { uniform, normal_skewed, pareto };
+enum class Distribution { uniform, normal_skewed, pareto };
+
+//struct ParetoConfig{
+//  double scale = 1.0;
+//  double shape = 0.0;
+//};
+
+//struct SkewedNormalConfig{
+//  double location = 0.0;
+//  double scale = 1.0;
+//  double shape = 0.0;
+//};
 
 struct ColumnConfiguration {
-  Distribution distribution_type = uniform;
+  Distribution distribution_type = Distribution::uniform;
 
   int num_different_values = 1000;
 
@@ -29,9 +40,9 @@ struct ColumnConfiguration {
 class TableGenerator {
  public:
   std::shared_ptr<Table> generate_table(const ChunkID chunk_size, const bool compress = false);
-  std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnConfiguration>& column_configurations,
+  std::shared_ptr<Table> generate_table(const std::vector<ColumnConfiguration>& column_configurations,
                                                         const bool compress, const size_t num_rows,
-                                                        const ChunkID chunk_size);
+                                                        const size_t chunk_size);
 
  protected:
   const size_t _num_columns = 10;
