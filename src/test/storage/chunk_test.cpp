@@ -7,6 +7,7 @@
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/types.hpp"
+#include "../lib/storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
 
@@ -23,12 +24,17 @@ class StorageChunkTest : public BaseTest {
     vc_str->append("world");
     vc_str->append("!");
 
+    dc_int = DictionaryCompression::compress_column(DataType::Int, vc_int);
+    dc_str = DictionaryCompression::compress_column(DataType::String, vc_str);
+
     c = std::make_shared<Chunk>();
   }
 
   std::shared_ptr<Chunk> c;
   std::shared_ptr<BaseColumn> vc_int = nullptr;
   std::shared_ptr<BaseColumn> vc_str = nullptr;
+  std::shared_ptr<BaseColumn> dc_int = nullptr;
+  std::shared_ptr<BaseColumn> dc_str = nullptr;
 };
 
 TEST_F(StorageChunkTest, AddColumnToChunk) {
@@ -66,6 +72,17 @@ TEST_F(StorageChunkTest, UnknownColumnType) {
     auto wrapper = []() { make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Null); };
     EXPECT_THROW(wrapper(), std::logic_error);
   }
+}
+
+TEST_F(StorageChunkTest, AddIndex) {
+  c->add_column(dc_int);
+  c->add_column(dc_str);
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<ColumnID>{ColumnID{0}});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<ColumnID>{ColumnID{0}});
+  auto index_int_str = c->create_index<GroupKeyIndex>(std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  EXPECT_TRUE(index_int);
+  EXPECT_TRUE(index_str);
+  EXPECT_TRUE(index_int_str);
 }
 
 }  // namespace opossum
