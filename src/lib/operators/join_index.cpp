@@ -259,7 +259,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
           _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
-          if (left_matches.size() > 0) {
+          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
             left_matches[left_value.chunk_offset()] = true;
           }
 
@@ -282,7 +282,7 @@ void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const Bas
 
   if (num_right_matches > 0) {
     // Remember the matches for outer joins
-    if (left_matches.size() > 0) {
+    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
       left_matches[chunk_offset_left] = true;
     }
 
