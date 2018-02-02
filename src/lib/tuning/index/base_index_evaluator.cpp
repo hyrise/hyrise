@@ -22,6 +22,9 @@ BaseIndexEvaluator::BaseIndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared
     : _query_cache{query_cache} {}
 
 void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
+  // Allow concrete implementation to initialize
+  _setup();
+
   // Scan query cache for indexable table column accesses
   _inspect_query_cache();
 
@@ -29,22 +32,22 @@ void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& ch
   _aggregate_access_records();
 
   // Fill index_evaluations vector
-  _evaluations.clear();
+  _choices.clear();
   _add_existing_indices();
   _add_new_indices();
 
   // Evaluate
-  for (auto& index_evaluation : _evaluations) {
-    if (index_evaluation.exists) {
-      index_evaluation.memory_cost = _existing_memory_cost(index_evaluation);
+  for (auto& index_choice : _choices) {
+    if (index_choice.exists) {
+      index_choice.memory_cost = _existing_memory_cost(index_choice);
     } else {
-      index_evaluation.type = _propose_index_type(index_evaluation);
-      index_evaluation.memory_cost = _predict_memory_cost(index_evaluation);
+      index_choice.type = _propose_index_type(index_choice);
+      index_choice.memory_cost = _predict_memory_cost(index_choice);
     }
-    index_evaluation.saved_work = _calculate_saved_work(index_evaluation);
+    index_choice.saved_work = _calculate_saved_work(index_choice);
 
     // Transfer results to choices vector
-    choices.push_back(std::make_shared<IndexChoice>(index_evaluation));
+    choices.push_back(std::make_shared<IndexChoice>(index_choice));
   }
 }
 
@@ -53,11 +56,11 @@ void BaseIndexEvaluator::_setup() {}
 void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& /*record*/) {}
 
 float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
-  auto table = StorageManager::get().get_table(index_choice.column.table_name);
+  auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
   float memory_cost = 0.0f;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
-    auto index = chunk->get_index(index_choice.type, std::vector<ColumnID>{index_choice.column.column_id});
+    auto index = chunk->get_index(index_choice.type, index_choice.column_ref.column_ids);
     if (index) {
       memory_cost += index->memory_consumption();
     }
@@ -137,8 +140,8 @@ void BaseIndexEvaluator::_add_existing_indices() {
       column_ids.emplace_back(column_id);
       auto indices = first_chunk->get_indices(column_ids);
       for (const auto& index : indices) {
-        _evaluations.emplace_back(table_name, column_id, true);
-        _evaluations.back().type = index->type();
+        _choices.emplace_back(ColumnRef{table_name, column_id}, true);
+        _choices.back().type = index->type();
         _new_indices.erase({table_name, column_id});
       }
       if (indices.size() > 1) {
@@ -152,8 +155,7 @@ void BaseIndexEvaluator::_add_existing_indices() {
 
 void BaseIndexEvaluator::_add_new_indices() {
   for (const auto& index_spec : _new_indices) {
-    _evaluations.emplace_back(index_spec.table_name, index_spec.column_id, false);
-    _evaluations.back().type = _propose_index_type(_evaluations.back());
+    _choices.emplace_back(index_spec, false);
   }
 }
 

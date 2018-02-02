@@ -28,20 +28,17 @@ void IndexOperation::_create_index() {
   auto table = StorageManager::get().get_table(column.table_name);
   auto chunk_count = table->chunk_count();
 
-  std::vector<ColumnID> column_ids;
-  column_ids.emplace_back(column.column_id);
-
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
     switch (type) {
       case ColumnIndexType::GroupKey:
-        chunk->create_index<GroupKeyIndex>(column_ids);
+        chunk->create_index<GroupKeyIndex>(column.column_ids);
         break;
       case ColumnIndexType::CompositeGroupKey:
-        chunk->create_index<CompositeGroupKeyIndex>(column_ids);
+        chunk->create_index<CompositeGroupKeyIndex>(column.column_ids);
         break;
       case ColumnIndexType::AdaptiveRadixTree:
-        chunk->create_index<AdaptiveRadixTreeIndex>(column_ids);
+        chunk->create_index<AdaptiveRadixTreeIndex>(column.column_ids);
         break;
       default:
         LOG_WARN("Can not create invalid index type");
@@ -52,9 +49,6 @@ void IndexOperation::_create_index() {
 void IndexOperation::_delete_index() {
   auto table = StorageManager::get().get_table(column.table_name);
   auto chunk_count = table->chunk_count();
-
-  std::vector<ColumnID> column_ids;
-  column_ids.emplace_back(column.column_id);
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);

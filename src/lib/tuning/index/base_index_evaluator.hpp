@@ -98,7 +98,7 @@ class BaseIndexEvaluator : public AbstractEvaluator {
   std::vector<AccessRecord> _access_records;
   std::set<ColumnRef> _new_indices;
 
-  std::vector<IndexChoice> _evaluations;
+  std::vector<IndexChoice> _choices;
 };
 
 }  // namespace opossum

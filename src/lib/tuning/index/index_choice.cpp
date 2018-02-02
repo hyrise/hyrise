@@ -15,16 +15,16 @@ bool IndexChoice::is_currently_chosen() const { return exists; }
 const std::set<std::shared_ptr<TuningChoice> >& IndexChoice::invalidates() const { return _invalidates; }
 
 void IndexChoice::print_on(std::ostream& output) const {
-  output << "IndexChoice{on: " << column << ", exists: " << exists << ", saved_work: " << saved_work
+  output << "IndexChoice{on: " << column_ref << ", exists: " << exists << ", saved_work: " << saved_work
          << " RowScans, memory_cost: " << memory_cost << " MiB}";
 }
 
 std::shared_ptr<TuningOperation> IndexChoice::_accept_operation() const {
-  return std::make_shared<IndexOperation>(column, type, true);
+  return std::make_shared<IndexOperation>(column_ref, type, true);
 }
 
 std::shared_ptr<TuningOperation> IndexChoice::_reject_operation() const {
-  return std::make_shared<IndexOperation>(column, type, false);
+  return std::make_shared<IndexOperation>(column_ref, type, false);
 }
 
 }  // namespace opossum

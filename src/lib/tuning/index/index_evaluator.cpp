@@ -4,6 +4,7 @@
 #include "optimizer/table_statistics.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/logging.hpp"
 
@@ -16,8 +17,9 @@ void IndexEvaluator::_setup() { _saved_work.clear(); }
 
 void IndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& record) {
   auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
+  // ToDo(group01) adapt for multi column indices...
   auto predicate_statistics =
-      table_statistics->predicate_statistics(record.column_ref.column_id, record.condition, record.compare_value);
+      table_statistics->predicate_statistics(record.column_ref.column_ids[0], record.condition, record.compare_value);
   auto total_rows = table_statistics->row_count();
   auto match_rows = predicate_statistics->row_count();
   auto unscanned_rows = total_rows - match_rows;
@@ -34,8 +36,9 @@ ColumnIndexType IndexEvaluator::_propose_index_type(const IndexChoice& index_eva
 }
 
 float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
-  auto table = StorageManager::get().get_table(index_evaluation.column.table_name);
-  auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column.column_id);
+  auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
+  // ToDo(group01) adapt for multi column indices...
+  auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
   auto value_count = column_statistics->distinct_count();
 
   // ToDo(group01) understand DataType and sample column for average byte counts
@@ -53,8 +56,8 @@ float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) 
 }
 
 float IndexEvaluator::_calculate_saved_work(const IndexChoice& index_evaluation) const {
-  if (_saved_work.count(index_evaluation.column) > 0) {
-    return _saved_work.at(index_evaluation.column);
+  if (_saved_work.count(index_evaluation.column_ref) > 0) {
+    return _saved_work.at(index_evaluation.column_ref);
   } else {
     return 0.0f;
   }

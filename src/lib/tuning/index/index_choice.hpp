@@ -14,12 +14,8 @@ namespace opossum {
  */
 class IndexChoice : public TuningChoice {
  public:
-  IndexChoice(const std::string& table_name, ColumnID column_id, bool exists = false)
-      : column{table_name, column_id},
-        saved_work{0.0f},
-        exists{exists},
-        type{ColumnIndexType::Invalid},
-        memory_cost{0.0f} {}
+  explicit IndexChoice(ColumnRef column_ref, bool exists = false)
+      : column_ref{column_ref}, saved_work{0.0f}, exists{exists}, type{ColumnIndexType::Invalid}, memory_cost{0.0f} {}
 
   float desirability() const final;
 
@@ -34,7 +30,7 @@ class IndexChoice : public TuningChoice {
   /**
    * The column the this index refers to
    */
-  ColumnRef column;
+  ColumnRef column_ref;
 
   /**
    * An IndexEvaluator specific, signed value that indicates

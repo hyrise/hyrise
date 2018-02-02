@@ -280,6 +280,7 @@ set(
     tuning/greedy_selector.hpp
     tuning/index/base_index_evaluator.cpp
     tuning/index/base_index_evaluator.hpp
+    tuning/index/column_ref.cpp
     tuning/index/column_ref.hpp
     tuning/index/index_evaluator.cpp
     tuning/index/index_evaluator.hpp
