@@ -141,12 +141,12 @@ TEST_F(StorageChunkTest, GetIndicesByColumnIDs) {
   auto index_int_str =
       c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
 
-  auto ind_col_0 = c->get_indices(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
+  auto ind_col_0 = c->get_indices(std::vector<ColumnID>{ColumnID{0}});
   // Make sure it finds both the single-column index as well as the multi-column index
   EXPECT_NE(std::find(ind_col_0.cbegin(), ind_col_0.cend(), index_int), ind_col_0.cend());
   EXPECT_NE(std::find(ind_col_0.cbegin(), ind_col_0.cend(), index_int_str), ind_col_0.cend());
 
-  auto ind_col_1 = c->get_indices(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto ind_col_1 = c->get_indices(std::vector<ColumnID>{ColumnID{1}});
   // Make sure it only finds the single-column index
   EXPECT_NE(std::find(ind_col_1.cbegin(), ind_col_1.cend(), index_str), ind_col_1.cend());
   EXPECT_EQ(std::find(ind_col_1.cbegin(), ind_col_1.cend(), index_int_str), ind_col_1.cend());
@@ -160,12 +160,12 @@ TEST_F(StorageChunkTest, GetIndicesByColumnPointers) {
   auto index_int_str =
       c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
 
-  auto ind_col_0 = c->get_indices(std::vector<ColumnID>{ColumnID{0}});
+  auto ind_col_0 = c->get_indices(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   // Make sure it finds both the single-column index as well as the multi-column index
   EXPECT_NE(std::find(ind_col_0.cbegin(), ind_col_0.cend(), index_int), ind_col_0.cend());
   EXPECT_NE(std::find(ind_col_0.cbegin(), ind_col_0.cend(), index_int_str), ind_col_0.cend());
 
-  auto ind_col_1 = c->get_indices(std::vector<ColumnID>{ColumnID{1}});
+  auto ind_col_1 = c->get_indices(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   // Make sure it only finds the single-column index
   EXPECT_NE(std::find(ind_col_1.cbegin(), ind_col_1.cend(), index_str), ind_col_1.cend());
   EXPECT_EQ(std::find(ind_col_1.cbegin(), ind_col_1.cend(), index_int_str), ind_col_1.cend());
