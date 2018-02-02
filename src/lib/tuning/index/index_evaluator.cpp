@@ -1,11 +1,5 @@
-#include <algorithm>
-#include <iostream>
-
 #include "index_evaluator.hpp"
 
-#include "operators/get_table.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/validate.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/index/base_index.hpp"
@@ -15,7 +9,8 @@
 
 namespace opossum {
 
-IndexEvaluator::IndexEvaluator() {}
+IndexEvaluator::IndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan> > > query_cache)
+    : BaseIndexEvaluator{query_cache} {}
 
 void IndexEvaluator::_setup() { _saved_work.clear(); }
 
@@ -34,11 +29,11 @@ void IndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessReco
   }
 }
 
-ColumnIndexType IndexEvaluator::_propose_index_type(const IndexEvaluation& index_evaluation) const {
+ColumnIndexType IndexEvaluator::_propose_index_type(const IndexChoice& index_evaluation) const {
   return ColumnIndexType::GroupKey;
 }
 
-float IndexEvaluator::_predict_memory_cost(const IndexEvaluation& index_evaluation) const {
+float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
   auto table = StorageManager::get().get_table(index_evaluation.column.table_name);
   auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column.column_id);
   auto value_count = column_statistics->distinct_count();
@@ -57,7 +52,7 @@ float IndexEvaluator::_predict_memory_cost(const IndexEvaluation& index_evaluati
   return memory_cost_per_chunk * chunk_count;
 }
 
-float IndexEvaluator::_calculate_desirability(const IndexEvaluation& index_evaluation) const {
+float IndexEvaluator::_calculate_saved_work(const IndexChoice& index_evaluation) const {
   if (_saved_work.count(index_evaluation.column) > 0) {
     return _saved_work.at(index_evaluation.column);
   } else {

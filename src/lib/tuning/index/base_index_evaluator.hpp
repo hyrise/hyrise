@@ -6,9 +6,11 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "tuning/abstract_index_evaluator.hpp"
-#include "tuning/index_evaluation.hpp"
-#include "tuning/system_statistics.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
+#include "tuning/abstract_evaluator.hpp"
+#include "tuning/index/column_ref.hpp"
+#include "tuning/index/index_choice.hpp"
 
 namespace opossum {
 
@@ -20,7 +22,7 @@ namespace opossum {
  * operations that might benefit from an index on a specific column
  * and of searching for already existing indices.
  */
-class BaseIndexEvaluator : public AbstractIndexEvaluator {
+class BaseIndexEvaluator : public AbstractEvaluator {
  protected:
   /**
    * Data class representing a node in the query plan where an index could be used.
@@ -41,9 +43,9 @@ class BaseIndexEvaluator : public AbstractIndexEvaluator {
   };
 
  public:
-  BaseIndexEvaluator();
+  explicit BaseIndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> query_cache);
 
-  std::vector<IndexEvaluation> evaluate_indices(const SystemStatistics& statistics) final;
+  void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final;
 
  protected:
   /**
@@ -66,34 +68,37 @@ class BaseIndexEvaluator : public AbstractIndexEvaluator {
    * This method is called for every non-existing index to determine the best
    * index type to create.
    */
-  virtual ColumnIndexType _propose_index_type(const IndexEvaluation& index_evaluation) const = 0;
+  virtual ColumnIndexType _propose_index_type(const IndexChoice& index_choice) const = 0;
   /**
    * This method is called on an existing index to determine its memory cost in MiB
    *
-   * The existing implementation simply accumulates the individual index cost
+   * The existing implementation simply accumulates the individual index costs
    * as reported by the specific index object over all chunks of a column.
    */
-  virtual float _existing_memory_cost(const IndexEvaluation& index_evaluation) const;
+  virtual float _existing_memory_cost(const IndexChoice& index_choice) const;
   /**
    * This method is called for every non-existing index to predict its memory cost.
    */
-  virtual float _predict_memory_cost(const IndexEvaluation& index_evaluation) const = 0;
+  virtual float _predict_memory_cost(const IndexChoice& index_choice) const = 0;
   /**
    * This method is called for every index to calculate its final desirability metric.
    */
-  virtual float _calculate_desirability(const IndexEvaluation& index_evaluation) const = 0;
+  virtual float _calculate_saved_work(const IndexChoice& index_choice) const = 0;
 
  private:
-  void _inspect_query_cache(const SQLQueryCache<std::shared_ptr<SQLQueryPlan> >& cache);
+  void _inspect_query_cache();
   void _inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
   void _aggregate_access_records();
   void _add_existing_indices();
   void _add_new_indices();
 
+  // ToDo(group01) remove once query cache is globally accessible
+  std::shared_ptr<const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> _query_cache;
+
   std::vector<AccessRecord> _access_records;
   std::set<ColumnRef> _new_indices;
 
-  std::vector<IndexEvaluation> _evaluations;
+  std::vector<IndexChoice> _evaluations;
 };
 
 }  // namespace opossum

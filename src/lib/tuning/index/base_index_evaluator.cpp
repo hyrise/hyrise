@@ -1,14 +1,16 @@
 #include "base_index_evaluator.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <list>
+#include <memory>
+#include <string>
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "sql/gdfs_cache.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
@@ -16,11 +18,12 @@
 
 namespace opossum {
 
-BaseIndexEvaluator::BaseIndexEvaluator() {}
+BaseIndexEvaluator::BaseIndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> query_cache)
+    : _query_cache{query_cache} {}
 
-std::vector<IndexEvaluation> BaseIndexEvaluator::evaluate_indices(const SystemStatistics& statistics) {
+void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
   // Scan query cache for indexable table column accesses
-  _inspect_query_cache(statistics.cache());
+  _inspect_query_cache();
 
   // Aggregate column accesses to set of new columns to index
   _aggregate_access_records();
@@ -38,22 +41,23 @@ std::vector<IndexEvaluation> BaseIndexEvaluator::evaluate_indices(const SystemSt
       index_evaluation.type = _propose_index_type(index_evaluation);
       index_evaluation.memory_cost = _predict_memory_cost(index_evaluation);
     }
-    index_evaluation.desirablility = _calculate_desirability(index_evaluation);
-  }
+    index_evaluation.saved_work = _calculate_saved_work(index_evaluation);
 
-  return std::vector<IndexEvaluation>(_evaluations);
+    // Transfer results to choices vector
+    choices.push_back(std::make_shared<IndexChoice>(index_evaluation));
+  }
 }
 
 void BaseIndexEvaluator::_setup() {}
 
 void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& /*record*/) {}
 
-float BaseIndexEvaluator::_existing_memory_cost(const IndexEvaluation& index_evaluation) const {
-  auto table = StorageManager::get().get_table(index_evaluation.column.table_name);
+float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
+  auto table = StorageManager::get().get_table(index_choice.column.table_name);
   float memory_cost = 0.0f;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
-    auto index = chunk->get_index(index_evaluation.type, std::vector<ColumnID>{index_evaluation.column.column_id});
+    auto index = chunk->get_index(index_choice.type, std::vector<ColumnID>{index_choice.column.column_id});
     if (index) {
       memory_cost += index->memory_consumption();
     }
@@ -61,13 +65,14 @@ float BaseIndexEvaluator::_existing_memory_cost(const IndexEvaluation& index_eva
   return memory_cost;
 }
 
-void BaseIndexEvaluator::_inspect_query_cache(const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>& cache) {
+void BaseIndexEvaluator::_inspect_query_cache() {
   _access_records.clear();
 
   // ToDo(group01) introduce values() method in AbstractCache interface and implement in all subclasses
   //   const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
   // ToDo(group01) implement for cache implementations other than GDFS cache
-  auto gdfs_cache_ptr = dynamic_cast<const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>*>(&cache.cache());
+  auto gdfs_cache_ptr =
+      dynamic_cast<const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>*>(&(_query_cache->cache()));
   Assert(gdfs_cache_ptr, "Expected GDFS Cache");
 
   const boost::heap::fibonacci_heap<GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>::GDFSCacheEntry>&

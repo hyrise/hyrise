@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <memory>
 
 #include "concurrency/transaction_manager.hpp"
 #include "operators/import_binary.hpp"
@@ -8,8 +9,9 @@
 #include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "tuning/index_tuner.hpp"
-#include "tuning/system_statistics.hpp"
+#include "tuning/greedy_selector.hpp"
+#include "tuning/index/index_evaluator.hpp"
+#include "tuning/tuner.hpp"
 #include "utils/assert.hpp"
 #include "utils/logging.hpp"
 
@@ -36,9 +38,10 @@ int _execute_query(const std::string& query, unsigned int execution_count,
                    opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache);
 
 int main() {
-  opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>> cache(1024);
-  auto statistics = std::make_shared<opossum::SystemStatistics>(cache);
-  opossum::IndexTuner tuner(statistics);
+  auto cache = std::make_shared<opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>>(1024);
+  opossum::Tuner tuner;
+  tuner.add_evaluator(std::make_unique<opossum::IndexEvaluator>(cache));
+  tuner.set_selector(std::make_unique<opossum::GreedySelector>());
 
   LOG_INFO("Loading binary table...");
   auto importer = std::make_shared<opossum::ImportBinary>("group01_CUSTOMER.bin", "CUSTOMER");
@@ -54,7 +57,7 @@ int main() {
   // Fire SQL query and cache it
   for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
     LOG_DEBUG("  -> " << query_index + 1 << "/" << test_queries.size() << ": " << test_queries[query_index]);
-    first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, cache);
+    first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, *cache);
   }
   LOG_INFO("Queries executed.\n");
 
@@ -68,7 +71,7 @@ int main() {
 
   // Execute the same queries a second time and measure the speedup
   for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
-    second_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, cache);
+    second_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, *cache);
 
     float percentage = (static_cast<float>(second_execution_times[query_index]) /
                         static_cast<float>(first_execution_times[query_index])) *

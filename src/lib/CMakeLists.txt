@@ -274,20 +274,25 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
-    tuning/abstract_index_evaluator.hpp
-    tuning/abstract_index_selector.hpp
-    tuning/base_index_evaluator.cpp
-    tuning/base_index_evaluator.hpp
-    tuning/index_evaluator.cpp
-    tuning/index_evaluator.hpp
-    tuning/index_evaluation.hpp
-    tuning/index_operation.hpp
-    tuning/index_selector.cpp
-    tuning/index_selector.hpp
-    tuning/index_tuner.cpp
-    tuning/index_tuner.hpp
-    tuning/system_statistics.cpp
-    tuning/system_statistics.hpp
+    tuning/abstract_evaluator.hpp
+    tuning/abstract_selector.hpp
+    tuning/greedy_selector.cpp
+    tuning/greedy_selector.hpp
+    tuning/index/base_index_evaluator.cpp
+    tuning/index/base_index_evaluator.hpp
+    tuning/index/column_ref.hpp
+    tuning/index/index_evaluator.cpp
+    tuning/index/index_evaluator.hpp
+    tuning/index/index_choice.cpp
+    tuning/index/index_choice.hpp
+    tuning/index/index_operation.cpp
+    tuning/index/index_operation.hpp
+    tuning/tuner.cpp
+    tuning/tuner.hpp
+    tuning/tuning_choice.hpp
+    tuning/tuning_choice.cpp
+    tuning/tuning_operation.hpp
+    tuning/tuning_operation.cpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
