@@ -7,6 +7,7 @@
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -18,67 +19,75 @@ namespace opossum {
 std::string NestedExpressionRule::name() const { return "Nested Expression Rule"; }
 
 bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type() != LQPNodeType::Predicate || node->parents().size() > 1) {
+  if (node->type() != LQPNodeType::Projection) {
     return _apply_to_children(node);
   }
 
-  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
 
-  if (!is_column_id(predicate_node->value())) {
-    return _apply_to_children(node);
+  bool tree_changed = false;
+
+  auto column_id = ColumnID{0};
+  for (auto expression : projection_node->column_expressions()) {
+
+    if (expression->is_arithmetic_operator()) {
+
+      const auto expression_type = _get_type_of_expression(expression);
+      if (expression_type != std::nullopt) {
+
+        auto value = NULL_VALUE;
+        resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
+
+        if (!variant_is_null(value)) {
+          tree_changed |= _replace_expression_in_parents(node, node->output_column_references()[column_id], value);
+        }
+      }
+    }
+
+    column_id++;
   }
 
-  if (predicate_node->left_child()->type() != LQPNodeType::Projection ||
-      predicate_node->parents().front()->type() != LQPNodeType::Projection) {
-    return _apply_to_children(node);
-  }
+  tree_changed |= _apply_to_children(node);
 
-  auto projection_node_front = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
-  auto projection_node_back = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->parents().front());
-
-  if (projection_node_front->column_expressions().size() != projection_node_back->column_expressions().size() + 1) {
-    return _apply_to_children(node);
-  }
-
-  auto expression = projection_node_front->column_expressions()[boost::get<ColumnID>(predicate_node->value())];
-
-  const auto expression_type = _get_type_of_expression(expression);
-
-  if (expression_type == DataType::Null) {
-    return false;
-  }
-
-  auto value = NULL_VALUE;
-  resolve_data_type(expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
-
-  if (variant_is_null(value)) {
-    return _apply_to_children(node);
-  }
-
-  auto new_predicate_node =
-      std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), value);
-  predicate_node->replace_with(new_predicate_node);
-
-  projection_node_front->remove_from_tree();
-  projection_node_back->remove_from_tree();
-
-  return true;
+  return tree_changed;
 }
 
-DataType NestedExpressionRule::_get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const {
+bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column_reference, const AllTypeVariant& value) {
+  bool tree_changed = false;
+
+  for (auto parent : node->parents()) {
+    if (parent->type() == LQPNodeType::Predicate) {
+      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
+
+      if (is_lqp_column_reference(predicate_node->value()) && boost::get<LQPColumnReference>(predicate_node->value()) == column_reference) {
+        auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), value);
+        predicate_node->replace_with(new_predicate_node);
+
+        tree_changed = true;
+      }
+    }
+
+    tree_changed |= _replace_expression_in_parents(parent, column_reference, value);
+  }
+
+  return tree_changed;
+}
+
+std::optional<DataType> NestedExpressionRule::_get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
   }
 
   if (!expression->is_arithmetic_operator()) {
-    return DataType::Null;
+    return std::nullopt;
   }
 
   const auto type_left = _get_type_of_expression(expression->left_child());
   const auto type_right = _get_type_of_expression(expression->right_child());
 
   if (type_left == DataType::Null) return type_right;
-  if (type_left != type_right) return DataType::Null;
+  if (type_right == DataType::Null) return type_left;
+  if (type_left != type_right) return std::nullopt;
 
   return type_left;
 }

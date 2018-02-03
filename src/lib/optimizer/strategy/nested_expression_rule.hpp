@@ -13,6 +13,7 @@ namespace opossum {
 class AbstractLQPNode;
 class PredicateNode;
 class LQPExpression;
+class LQPColumnReference;
 
 /**
  * 
@@ -23,7 +24,8 @@ class NestedExpressionRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  DataType _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  bool _replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column_reference, const AllTypeVariant& value);
+  std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 
   template <typename T>
   AllTypeVariant _evaluate_expression(boost::hana::basic_type<T> type,
