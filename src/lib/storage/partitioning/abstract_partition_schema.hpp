@@ -25,6 +25,7 @@ class AbstractPartitionSchema {
   AbstractPartitionSchema& operator=(AbstractPartitionSchema&&) = default;
 
   virtual std::string name() const = 0;
+  virtual PartitionSchemaType get_type() const = 0;
   uint16_t partition_count() const;
 
   void clear();

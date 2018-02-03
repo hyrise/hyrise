@@ -150,7 +150,7 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
-  ChunkID get_chunk_id(const Chunk& chunk) const;
+  ChunkID get_chunk_id(const std::shared_ptr<Chunk> chunk) const;
 
   /**
    * Partitioning
@@ -158,6 +158,7 @@ class Table : private Noncopyable {
    * On empty Tables, the PartitionSchema can be altered using the functions below.
    * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
    */
+  void set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                 const size_t number_of_partitions);

@@ -204,8 +204,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     {
       auto scoped_lock = _target_table->acquire_append_mutex();
 
-      Chunk& start_chunk = *partition->last_chunk();
-      start_chunk_id = _target_table->get_chunk_id(start_chunk);
+      start_chunk_id = _target_table->get_chunk_id(partition->last_chunk());
       chunks_to_add_in_partition.emplace_back(start_chunk_id);
       auto last_chunk = _target_table->get_chunk(start_chunk_id);
       start_index = last_chunk->size();
@@ -217,15 +216,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         _target_table->create_new_chunk(partitionID);
         total_chunks_inserted++;
 
-        Chunk& chunk_to_add = *partition->last_chunk();
-        ChunkID chunk_id_to_add = _target_table->get_chunk_id(chunk_to_add);
+        ChunkID chunk_id_to_add = _target_table->get_chunk_id(partition->last_chunk());
         chunks_to_add_in_partition.emplace_back(chunk_id_to_add);
       }
 
       auto remaining_rows = total_rows_to_insert;
       while (remaining_rows > 0) {
-        Chunk& current_chunk_ref = *partition->last_chunk();
-        ChunkID current_chunk_id = _target_table->get_chunk_id(current_chunk_ref);
+        ChunkID current_chunk_id = _target_table->get_chunk_id(partition->last_chunk());
         auto current_chunk = _target_table->get_modifiable_chunk(current_chunk_id);
         auto rows_to_insert_this_loop =
             std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
@@ -247,8 +244,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           _target_table->create_new_chunk(partitionID);
           total_chunks_inserted++;
 
-          Chunk& chunk_to_add = *partition->last_chunk();
-          ChunkID chunk_id_to_add = _target_table->get_chunk_id(chunk_to_add);
+          ChunkID chunk_id_to_add = _target_table->get_chunk_id(partition->last_chunk());
           chunks_to_add_in_partition.emplace_back(chunk_id_to_add);
         }
       }

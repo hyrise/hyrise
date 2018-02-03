@@ -213,6 +213,11 @@ TableType Table::get_type() const {
   }
 }
 
+void Table::set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
+  _partition_schema = partition_schema;
+  _chunks.clear();
+}
+
 void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
   _partition_schema = partition_schema;
   create_initial_chunks(static_cast<PartitionID>(partition_schema->partition_count()));
@@ -254,11 +259,11 @@ bool Table::is_partitioned() const { return _partition_schema->is_partitioned();
 
 uint16_t Table::partition_count() const { return _partition_schema->partition_count(); }
 
-ChunkID Table::get_chunk_id(const Chunk& chunk) const {
+ChunkID Table::get_chunk_id(const std::shared_ptr<Chunk> chunk) const {
   ptrdiff_t pos =
       std::distance(_chunks.begin(),
                     std::find_if(_chunks.begin(), _chunks.end(),
-                                 [&chunk](const std::shared_ptr<Chunk> each) -> bool { return each.get() == &chunk; }));
+                                 [chunk](const std::shared_ptr<Chunk> each) -> bool { return each == chunk; }));
   if (pos >= static_cast<ptrdiff_t>(_chunks.size())) {
     return static_cast<ChunkID>(_chunks.size());
   } else {

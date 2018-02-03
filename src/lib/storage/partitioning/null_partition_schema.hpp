@@ -18,6 +18,7 @@ class NullPartitionSchema : public AbstractPartitionSchema {
   NullPartitionSchema();
 
   std::string name() const override;
+  PartitionSchemaType get_type() const override;
 
   void append(std::vector<AllTypeVariant> values) override;
 

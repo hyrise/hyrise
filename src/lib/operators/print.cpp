@@ -66,33 +66,32 @@ std::shared_ptr<const Table> Print::_on_execute() {
       _out << "=== Partition " << partition_id << std::endl;
     }
     // print each chunk
-    for (const auto chunk_ptr : partition->get_chunks()) {
-      const Chunk& chunk = *(chunk_ptr.get());
+    for (const auto chunk : partition->get_chunks()) {
       const auto chunk_id = _input_table_left()->get_chunk_id(chunk);
-      if (chunk.size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
+      if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
         continue;
       }
 
       _out << "=== Chunk " << chunk_id << " === " << std::endl;
 
-      if (chunk.size() == 0) {
+      if (chunk->size() == 0) {
         _out << "Empty chunk." << std::endl;
         continue;
       }
 
       // print the rows in the chunk
-      for (size_t row = 0; row < chunk.size(); ++row) {
+      for (size_t row = 0; row < chunk->size(); ++row) {
         _out << "|";
-        for (ColumnID col{0}; col < chunk.column_count(); ++col) {
+        for (ColumnID col{0}; col < chunk->column_count(); ++col) {
           // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
           // be part of a regular query plan, let's keep things simple here
           auto col_width = widths[col];
-          auto cell = _truncate_cell((*chunk.get_column(col))[row], col_width);
+          auto cell = _truncate_cell((*chunk->get_column(col))[row], col_width);
           _out << std::setw(col_width) << cell << "|" << std::setw(0);
         }
 
-        if (_flags & PrintMvcc && chunk.has_mvcc_columns()) {
-          auto mvcc_columns = chunk.mvcc_columns();
+        if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
+          auto mvcc_columns = chunk->mvcc_columns();
 
           auto begin = mvcc_columns->begin_cids[row];
           auto end = mvcc_columns->end_cids[row];

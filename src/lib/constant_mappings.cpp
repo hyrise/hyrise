@@ -132,6 +132,14 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
     });
 
+const boost::bimap<PartitionSchemaType, uint8_t> partition_schema_type_to_uint =
+    make_bimap<PartitionSchemaType, uint8_t>({
+        {PartitionSchemaType::Null, 0},
+        {PartitionSchemaType::RoundRobin, 1},
+        {PartitionSchemaType::Hash, 2},
+        {PartitionSchemaType::Range, 3}
+    });
+
 const boost::bimap<DataType, std::string> data_type_to_string =
     hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{},
                [](auto map, auto pair) {

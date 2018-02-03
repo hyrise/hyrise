@@ -18,6 +18,7 @@ class HashPartitionSchema : public AbstractPartitionSchema {
   HashPartitionSchema(ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);
 
   std::string name() const override;
+  PartitionSchemaType get_type() const override;
 
   void append(std::vector<AllTypeVariant> values) override;
 

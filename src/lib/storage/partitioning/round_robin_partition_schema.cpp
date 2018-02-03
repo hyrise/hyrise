@@ -13,6 +13,8 @@ RoundRobinPartitionSchema::RoundRobinPartitionSchema(size_t number_of_partitions
 
 std::string RoundRobinPartitionSchema::name() const { return "RoundRobinPartition"; }
 
+PartitionSchemaType RoundRobinPartitionSchema::get_type() const { return PartitionSchemaType::RoundRobin; }
+
 void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values) {
   AbstractPartitionSchema::append(values, _next_partition);
   _go_to_next_partition();

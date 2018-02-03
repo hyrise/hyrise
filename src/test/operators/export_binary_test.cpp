@@ -10,6 +10,7 @@
 
 #include "import_export/binary.hpp"
 #include "operators/export_binary.hpp"
+#include "operators/import_binary.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
@@ -153,27 +154,6 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
 }
-TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnPartitioned) {
-  auto table = std::make_shared<opossum::Table>(2);
-  table->create_range_partitioning(ColumnID{3}, {2.5f, 4.0f});
-  table->add_column("a", DataType::String);
-  table->add_column("b", DataType::Int);
-  table->add_column("c", DataType::Long);
-  table->add_column("d", DataType::Float);
-  table->add_column("e", DataType::Double);
-  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
-  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
-  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
-  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
-
-  EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnPartitioned.bin", filename));
-}
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   auto table = std::make_shared<opossum::Table>(2);
   table->add_column("a", DataType::String);
@@ -218,6 +198,73 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesMixColumn.bin", filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
+  auto table = std::make_shared<opossum::Table>(2);
+  table->create_round_robin_partitioning(3);
+  table->add_column("a", DataType::String);
+  table->add_column("b", DataType::Int);
+  table->add_column("c", DataType::Long);
+  table->add_column("d", DataType::Float);
+  table->add_column("e", DataType::Double);
+  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnRoundRobinPartitioned.bin", filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnRangePartitioned) {
+  auto table = std::make_shared<opossum::Table>(2);
+  table->create_range_partitioning(ColumnID{3}, {2.5f, 4.0f});
+  table->add_column("a", DataType::String);
+  table->add_column("b", DataType::Int);
+  table->add_column("c", DataType::Long);
+  table->add_column("d", DataType::Float);
+  table->add_column("e", DataType::Double);
+  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnRangePartitioned.bin", filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnHashPartitioned) {
+  auto table = std::make_shared<opossum::Table>(2);
+  HashFunction hf;
+  table->create_hash_partitioning(ColumnID{3}, std::move(hf), 3);
+  table->add_column("a", DataType::String);
+  table->add_column("b", DataType::Int);
+  table->add_column("c", DataType::Long);
+  table->add_column("d", DataType::Float);
+  table->add_column("e", DataType::Double);
+  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnHashPartitioned.bin", filename));
 }
 
 // A table with reference columns is materialized while exporting. The content of the export file should not be
