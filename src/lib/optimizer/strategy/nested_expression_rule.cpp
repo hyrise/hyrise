@@ -25,8 +25,6 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
 
-  bool tree_changed = false;
-
   auto column_id = ColumnID{0};
   for (auto expression : projection_node->column_expressions()) {
     if (expression->is_arithmetic_operator()) {
@@ -36,7 +34,7 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
         resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
 
         if (!variant_is_null(value)) {
-          tree_changed |= _replace_expression_in_parents(node, node->output_column_references()[column_id], value);
+          _replace_expression_in_parents(node, node->output_column_references()[column_id], value);
         }
       }
     }
@@ -44,16 +42,12 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
     column_id++;
   }
 
-  tree_changed |= _apply_to_children(node);
-
-  return tree_changed;
+  return _apply_to_children(node);
 }
 
-bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+void NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
                                                           const LQPColumnReference& column_reference,
                                                           const AllTypeVariant& value) {
-  bool tree_changed = false;
-
   for (auto parent : node->parents()) {
     if (parent->type() == LQPNodeType::Predicate) {
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
@@ -63,15 +57,11 @@ bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
         auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
                                                                   predicate_node->predicate_condition(), value);
         predicate_node->replace_with(new_predicate_node);
-
-        tree_changed = true;
       }
     }
 
-    tree_changed |= _replace_expression_in_parents(parent, column_reference, value);
+    _replace_expression_in_parents(parent, column_reference, value);
   }
-
-  return tree_changed;
 }
 
 std::optional<DataType> NestedExpressionRule::_get_type_of_expression(
