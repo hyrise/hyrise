@@ -264,6 +264,8 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
+    storage/table_layout.cpp
+    storage/table_layout.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp

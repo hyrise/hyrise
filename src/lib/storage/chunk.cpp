@@ -21,26 +21,21 @@ const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 // The last chunk offset is reserved for NULL as used in ReferenceColumns.
 const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-Chunk::Chunk(ChunkUseMvcc mvcc_mode, ChunkUseAccessCounter counter_mode) : Chunk({}, mvcc_mode, counter_mode) {}
+Chunk::Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+      ChunkUseMvcc use_mvcc,
+      const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+      const std::shared_ptr<AccessCounter> access_counter): _columns(columns.begin(), columns.end()), _access_counter(access_counter) {
 
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter)
-    : _alloc(alloc), _access_counter(access_counter) {}
+  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+#if IS_DEBUG
+  for (const auto& column : columns) {
+    Assert(column->size() == chunk_size, "Columns don't have the same length");
+  }
+#endif
+  grow_mvcc_column_size_by(chunk_size, 0);
 
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
-             const ChunkUseAccessCounter counter_mode)
-    : _alloc(alloc), _columns(alloc), _indices(alloc) {
-  if (mvcc_mode == ChunkUseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
-  if (counter_mode == ChunkUseAccessCounter::Yes) _access_counter = std::make_shared<AccessCounter>(alloc);
-}
-
-void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
-  // The added column must have the same size as the chunk.
-  DebugAssert((_columns.size() <= 0 || size() == column->size()),
-              "Trying to add column with mismatching size to chunk");
-
-  if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
-
-  _columns.push_back(column);
+  if (use_mvcc == ChunkUseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
+  if (alloc) _alloc = alloc;
 }
 
 void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {

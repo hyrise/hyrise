@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "table_layout.hpp"
 
 namespace opossum {
 
@@ -98,20 +100,17 @@ class Chunk : private Noncopyable {
   };
 
  public:
-  explicit Chunk(ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No, ChunkUseAccessCounter = ChunkUseAccessCounter::No);
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
-  Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter);
-  Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
-        const ChunkUseAccessCounter counter_mode);
+  Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+                 ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No,
+                 const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+                 const std::shared_ptr<AccessCounter> access_counter = nullptr);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   Chunk(Chunk&&) = default;
   Chunk& operator=(Chunk&&) = default;
-
-  // adds a column to the "right" of the chunk
-  void add_column(std::shared_ptr<BaseColumn> column);
 
   // Atomically replaces the current column at column_id with the passed column
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);

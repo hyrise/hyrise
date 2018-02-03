@@ -10,6 +10,7 @@
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
+#include "storage/table_layout.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -22,24 +23,17 @@ class TableStatistics;
 // A table is partitioned horizontally into a number of chunks
 class Table : private Noncopyable {
  public:
-  // Creates a new table that has the same layout (column-{types, names}) as the input table
-  static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table>& in_table,
-                                                        const uint32_t max_chunk_size = Chunk::MAX_SIZE);
-
-  /**
-   * @returns whether both tables contain the same columns (in name and type) in the same order
-   */
-  static bool layouts_equal(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right);
-
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default is the maximum allowed chunk size. A table holds always at least one chunk
-  explicit Table(const uint32_t max_chunk_size = Chunk::MAX_SIZE);
+  explicit Table(const TableLayout& layout, ChunkUseMvcc use_mvcc = ChunkUseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   Table(Table&&) = default;
   Table& operator=(Table&&) = default;
+
+  const TableLayout& layout() const;
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t column_count() const;
@@ -58,40 +52,12 @@ class Table : private Noncopyable {
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
-  // Adds a chunk to the table. If the first chunk is empty, it is replaced.
-  void emplace_chunk(const std::shared_ptr<Chunk>& chunk);
-
-  // Returns a list of all column names.
-  const std::vector<std::string>& column_names() const;
-
-  // returns the column name of the nth column
-  const std::string& column_name(ColumnID column_id) const;
-
-  // returns the data type of the nth column
-  DataType column_type(ColumnID column_id) const;
-
-  // return whether nth column is nullable
-  bool column_is_nullable(ColumnID column_id) const;
-
-  // returns the vector of column types
-  const std::vector<DataType>& column_types() const;
-
-  // returns the vector of column nullables
-  const std::vector<bool>& column_nullables() const;
-
-  // Returns the column with the given name.
-  // This method is intended for debugging purposes only.
-  // It does not verify whether a column name is unambiguous.
-  ColumnID column_id_by_name(const std::string& column_name) const;
+  std::shared_ptr<Chunk> emplace_chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+                                       const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+                                       const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   uint32_t max_chunk_size() const;
-
-  // adds column definition without creating the actual columns
-  void add_column_definition(const std::string& name, DataType data_type, bool nullable = false);
-
-  // adds a column to the end, i.e., right, of the table
-  void add_column(const std::string& name, DataType data_type, bool nullable = false);
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -117,9 +83,6 @@ class Table : private Noncopyable {
     }
     Fail("Row does not exist.");
   }
-
-  // creates a new chunk and appends it
-  void create_new_chunk();
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
@@ -149,19 +112,12 @@ class Table : private Noncopyable {
   }
 
  protected:
+  const TableLayout _layout;
+  const ChunkUseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
   std::vector<std::shared_ptr<Chunk>> _chunks;
-
-  // these should be const strings, but having a vector of const values is a C++17 feature
-  // that is not yet completely implemented in all compilers
-  std::vector<std::string> _column_names;
-  std::vector<DataType> _column_types;
-  std::vector<bool> _column_nullable;
-
   std::shared_ptr<TableStatistics> _table_statistics;
-
   std::unique_ptr<std::mutex> _append_mutex;
-
   std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum
