@@ -75,16 +75,23 @@ void JoinIndex::_perform_join() {
   _right_matches.resize(_right_in_table->chunk_count());
   _left_matches.resize(_left_in_table->chunk_count());
 
+  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+      // initialize the data structures for left matches
+      _left_matches[chunk_id_left].resize(_left_in_table->get_chunk(chunk_id_left)->size());
+    }
+  }
+
   auto left_data_type = _left_in_table->column_type(_left_column_id);
   auto right_data_type = _right_in_table->column_type(_right_column_id);
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-    // initialize the data structures for left matches
-    _left_matches[chunk_id_left].resize(_left_in_table->get_chunk(chunk_id_left)->size());
-  }
+  size_t worst_case = _left_in_table->row_count() * _right_in_table->row_count();
+
+  _pos_list_left->reserve(worst_case);
+  _pos_list_right->reserve(worst_case);
 
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
@@ -108,9 +115,7 @@ void JoinIndex::_perform_join() {
       // for Outer joins, remember matches on the left side
       auto& left_matches = _left_matches[chunk_id_left];
 
-      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-        left_matches.resize(chunk_column_left->size());
-      }
+
 
       resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
@@ -167,6 +172,9 @@ void JoinIndex::_perform_join() {
       }
     }
   }
+
+  _pos_list_left->shrink_to_fit();
+  _pos_list_right->shrink_to_fit();
 
   // write output chunks
   auto output_chunk = std::make_shared<Chunk>();
@@ -255,7 +263,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
           _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
-          if (left_matches.size() > 0) {
+          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
             left_matches[left_value.chunk_offset()] = true;
           }
 
@@ -273,18 +281,14 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
 
 void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                                const ChunkOffset chunk_offset_left, std::vector<bool>& left_matches,
-                               ChunkID chunk_id_left, ChunkID chunk_id_right) {
+                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
   auto num_right_matches = std::distance(range_begin, range_end);
 
   if (num_right_matches > 0) {
     // Remember the matches for outer joins
-    if (left_matches.size() > 0) {
+    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
       left_matches[chunk_offset_left] = true;
     }
-
-    // Only when there is a match we try to reserve new memory and insert matches
-    _pos_list_left->reserve(_pos_list_left->size() + num_right_matches);
-    _pos_list_right->reserve(_pos_list_right->size() + num_right_matches);
 
     // we replicate the left value for each right value
     std::fill_n(std::back_inserter(*_pos_list_left), num_right_matches, RowID{chunk_id_left, chunk_offset_left});
