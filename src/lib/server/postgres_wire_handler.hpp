@@ -44,12 +44,16 @@ class PostgresWireHandler {
   static RequestHeader handle_header(const InputPacket& packet);
 
   static std::string handle_query_packet(const InputPacket& packet, size_t length);
+  static std::string handle_parse_packet(const InputPacket& packet, size_t length);
+  static std::string handle_bind_packet(const InputPacket& packet, size_t length);
 
   template <typename T>
   static T read_value(const InputPacket& packet);
 
   template <typename T>
   static std::vector<T> read_values(const InputPacket& packet, size_t num_values);
+  
+  static std::string read_string(const InputPacket& packet);
 
   template <typename T>
   static void write_value(OutputPacket& packet, T value);

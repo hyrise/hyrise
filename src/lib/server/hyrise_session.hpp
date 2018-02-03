@@ -54,6 +54,8 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void _send_auth();
   void _send_ready_for_query();
   void _accept_query();
+  void accept_parse();
+  void accept_bind();
   void _send_error(const std::string& error_msg);
 
   void _handle_header_received(const boost::system::error_code& error, size_t bytes_transferred);
@@ -68,6 +70,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   tcp::socket _socket;
   boost::asio::io_service& _io_service;
   InputPacket _input_packet;
+  NetworkMessageType _input_packet_type;
 
   // Max 2048 bytes per IP packet sent
   uint32_t _max_response_size = 2048;

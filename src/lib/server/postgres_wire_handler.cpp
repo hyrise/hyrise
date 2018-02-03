@@ -1,6 +1,7 @@
 #include "postgres_wire_handler.hpp"
 
 #include <iostream>
+#include <iterator>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -53,6 +54,42 @@ std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet, 
   return std::string(buffer.data(), buffer.size());
 }
 
+std::string PostgresWireHandler::handle_parse_packet(const InputPacket& packet, size_t length) {
+  
+  auto statement_name = read_string(packet);
+  
+  auto query = read_string(packet);
+  
+  auto n_parameter_data_types = read_value<uint16_t>(packet);
+  
+  auto parameter_data_types = read_values<uint32_t>(packet, n_parameter_data_types);
+  
+  return query;
+}
+
+std::string PostgresWireHandler::handle_bind_packet(const InputPacket &packet, size_t length) {
+  auto portal = read_string(packet);
+
+  auto statement_name = read_string(packet);
+
+  auto n_format_codes = read_value<int16_t>(packet);
+  
+  auto format_codes = read_values<int16_t>(packet, n_format_codes);
+  
+  auto n_parameter_values = read_value<int16_t>(packet);
+  
+  std::vector<ByteBuffer> parameter_values;
+  for (auto i = 0; i < n_parameter_values; ++i) {
+    auto parameter_value_length = read_value<int32_t>(packet);
+    parameter_values.emplace_back(read_values<char>(packet, parameter_value_length));
+  }
+  
+  auto n_result_column_format_codes = read_value<int16_t>(packet);
+  auto result_column_format_codes = read_values<int16_t>(packet, n_result_column_format_codes);
+  
+  return statement_name;
+}
+
 void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& value, bool terminate) {
   auto num_bytes = value.length();
   auto& data = packet.data;
@@ -91,6 +128,12 @@ void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
   for (auto byte_offset = 0u; byte_offset < sizeof(total_bytes); ++byte_offset) {
     data[size_offset + byte_offset] = size_chars[byte_offset];
   }
+}
+
+std::string PostgresWireHandler::read_string(const InputPacket &packet) {
+  std::string result(packet.data.data() + std::distance(packet.data.cbegin(), packet.offset));
+  packet.offset += result.length() + 1;
+  return result;
 }
 
 }  // namespace opossum

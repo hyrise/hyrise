@@ -1,5 +1,6 @@
 #include "hyrise_session.hpp"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/bind.hpp>
@@ -62,6 +63,7 @@ void HyriseSession::_handle_header_received(const boost::system::error_code& err
 
   // We're currently idling, so read a new incoming message header
   auto command_header = PostgresWireHandler::handle_header(_input_packet);
+  _input_packet_type = command_header.message_type;
   if (command_header.message_type == NetworkMessageType::TerminateCommand) {
     // This immediately releases the session object
     return _terminate_session();
@@ -85,7 +87,20 @@ void HyriseSession::_handle_packet_received(const boost::system::error_code& err
   }
 
   // We're currently waiting for a query, so accept the incoming one
-  return _accept_query();
+  switch (_input_packet_type) {
+    case NetworkMessageType::SimpleQueryCommand:
+      _accept_query();
+      break;
+    case NetworkMessageType::ParseCommand:
+      accept_parse();
+      break;
+    case NetworkMessageType::BindCommand:
+      accept_bind();
+      break;
+    default:
+      _send_error("Unsupported message type");
+      _send_ready_for_query();
+  }
 }
 
 void HyriseSession::_terminate_session() {
@@ -156,6 +171,25 @@ void HyriseSession::_accept_query() {
   const std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<CreatePipelineTask>(_self, sql)};
   _state = SessionState::ExecutingQuery;
   CurrentScheduler::schedule_tasks(tasks);
+}
+
+void HyriseSession::accept_parse() {
+  const auto parse_packet = PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length);
+  
+  if (boost::starts_with(parse_packet, "SET")) {
+    OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
+    async_send_packet(output_packet);
+    _async_receive_header();
+    return;
+  }
+ 
+  assert(false);
+}
+
+void HyriseSession::accept_bind() {
+  const auto bind_packet = PostgresWireHandler::handle_bind_packet(_input_packet, _expected_input_packet_length);
+  
+  
 }
 
 void HyriseSession::_send_error(const std::string& message) {
