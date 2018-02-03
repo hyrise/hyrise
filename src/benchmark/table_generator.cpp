@@ -75,8 +75,9 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, 
 }
 
 std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnConfiguration>& column_configurations,
-                                                      const bool compress, const size_t num_rows,
-                                                      const size_t chunk_size) {
+                                                      const size_t num_rows,
+                                                      const size_t chunk_size,
+                                                      const bool compress) {
   const auto num_columns = column_configurations.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 

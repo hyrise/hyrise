@@ -13,7 +13,9 @@ class BenchmarkJoinFixture : public benchmark::Fixture {
   void SetUp(::benchmark::State& state) override;
   void TearDown(::benchmark::State&) override;
 
-  static void ChunkSizeIn(benchmark::internal::Benchmark* b);
+  static void ChunkSizeInUni(benchmark::internal::Benchmark* b);
+  static void ChunkSizeInPareto(benchmark::internal::Benchmark* b);
+  static void ChunkSizeInNormal(benchmark::internal::Benchmark* b);
 
  protected:
   void clear_cache();

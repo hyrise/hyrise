@@ -67,9 +67,16 @@ BENCHMARK_DEFINE_F(BenchmarkJoinFixture, BM_JoinIndex)(benchmark::State& state){
   }
 }
 
-//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinHash)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinNestedLoop)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
+//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinHash)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
+//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
+//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinNestedLoop)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
+//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeIn);
+
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInNormal);
+//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInPareto);
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInNormal);
+//BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInPareto);
 
 }  // namespace opossum
