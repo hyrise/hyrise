@@ -29,12 +29,9 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 
   auto column_id = ColumnID{0};
   for (auto expression : projection_node->column_expressions()) {
-
     if (expression->is_arithmetic_operator()) {
-
       const auto expression_type = _get_type_of_expression(expression);
       if (expression_type != std::nullopt) {
-
         auto value = NULL_VALUE;
         resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
 
@@ -52,15 +49,19 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   return tree_changed;
 }
 
-bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column_reference, const AllTypeVariant& value) {
+bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+                                                          const LQPColumnReference& column_reference,
+                                                          const AllTypeVariant& value) {
   bool tree_changed = false;
 
   for (auto parent : node->parents()) {
     if (parent->type() == LQPNodeType::Predicate) {
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
 
-      if (is_lqp_column_reference(predicate_node->value()) && boost::get<LQPColumnReference>(predicate_node->value()) == column_reference) {
-        auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), value);
+      if (is_lqp_column_reference(predicate_node->value()) &&
+          boost::get<LQPColumnReference>(predicate_node->value()) == column_reference) {
+        auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
+                                                                  predicate_node->predicate_condition(), value);
         predicate_node->replace_with(new_predicate_node);
 
         tree_changed = true;
@@ -73,7 +74,8 @@ bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
   return tree_changed;
 }
 
-std::optional<DataType> NestedExpressionRule::_get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const {
+std::optional<DataType> NestedExpressionRule::_get_type_of_expression(
+    const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
   }

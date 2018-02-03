@@ -82,7 +82,8 @@ TEST_F(SQLTranslatorTest, NestedExpressionTest) {
   // The value() of the PredicateNode is the LQPColumnReference to the (added) projection node column containing the nested expression
   ASSERT_TRUE(is_lqp_column_reference(predicate_node->value()));
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(original_node, ColumnID{0}));
-  EXPECT_EQ(boost::get<LQPColumnReference>(predicate_node->value()), LQPColumnReference(projection_node, ColumnID{2}));
+  EXPECT_EQ(boost::get<LQPColumnReference>(predicate_node->value()),
+            LQPColumnReference(projection_node, ColumnID{2}));
 }
 
 TEST_F(SQLTranslatorTest, TwoColumnFilter) {

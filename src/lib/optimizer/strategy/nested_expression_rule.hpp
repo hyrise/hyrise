@@ -24,7 +24,8 @@ class NestedExpressionRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  bool _replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column_reference, const AllTypeVariant& value);
+  bool _replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+                                      const LQPColumnReference& column_reference, const AllTypeVariant& value);
   std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 
   template <typename T>
