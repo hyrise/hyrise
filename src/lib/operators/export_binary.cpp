@@ -189,7 +189,7 @@ void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>
       const auto range_schema = std::dynamic_pointer_cast<RangePartitionSchema>(partition_schema);
       const auto bound_type_string = data_type_to_string.left.at(range_schema->get_bound_type());
       _export_value(ofstream, static_cast<ColumnID>(range_schema->get_column_id()));
-      _export_value(ofstream, bound_type_string);
+      _export_values(ofstream, std::vector<std::string>{bound_type_string});
       resolve_data_type(range_schema->get_bound_type(), [&](auto type) {
         using VectorDataType = typename decltype(type)::type;
         std::vector<VectorDataType> typed_bounds;

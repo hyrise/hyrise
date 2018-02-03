@@ -93,7 +93,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * ColumnID              | ColumnID                              |   4
-   * Bounds                | std::vector<AllTypeVariant>           |   Partition count - 1 * x
+   * DataType of bounds    | std::string array                     |   Length of DataType string representation
+   * Bounds                | Typed array                           |   Partition count - 1 * x
    * 
    * 
    * HashPartitioningSchema:

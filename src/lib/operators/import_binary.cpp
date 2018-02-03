@@ -52,12 +52,6 @@ pmr_vector<bool> ImportBinary::_read_values(std::ifstream& file, const size_t co
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
-std::vector<AllTypeVariant> ImportBinary::_read_all_type_variants(std::ifstream& file, const size_t count) {
-  std::vector<AllTypeVariant> all_type_variants(count);
-  file.read(reinterpret_cast<char*>(all_type_variants.data()), all_type_variants.size() * sizeof(AllTypeVariant));
-  return all_type_variants;
-}
-
 template <typename T>
 pmr_vector<std::string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
   const auto string_lengths = _read_values<T>(file, count);
@@ -168,8 +162,8 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
     }
     case PartitionSchemaType::Range: {
       auto column_id = _read_value<ColumnID>(file);
-      auto bound_type_string = _read_value<std::string>(file);
-      auto bound_type = data_type_to_string.right.at(bound_type_string);
+      auto bound_type_string = _read_values<std::string>(file, 1);
+      auto bound_type = data_type_to_string.right.at(bound_type_string.front());
       std::vector<AllTypeVariant> bounds;
       resolve_data_type(bound_type, [&](auto type) {
         using VectorDataType = typename decltype(type)::type;
