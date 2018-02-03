@@ -58,24 +58,20 @@ void JoinIndex::_create_table_structure() {
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
 
-  // Preparing output table by adding columns from left table
-  for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
-    auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
-    _output_table->add_column_definition(_left_in_table->column_name(column_id), _left_in_table->column_type(column_id),
-                                         nullable);
-  }
+  // Preparing output table by adding columns from left and right table
+  auto add_column_definitions = [&](auto from_table, auto from_may_produce_null) {
+    for (ColumnID column_id{0}; column_id < from_table->column_count(); ++column_id) {
+      auto nullable = (from_may_produce_null || from_table->column_is_nullable(column_id));
+      _output_table->add_column_definition(from_table->column_name(column_id), from_table->column_type(column_id),
+                                           nullable);
+    }
+  };
 
-  // Preparing output table by adding columns from right table
-  for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
-    auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
-    _output_table->add_column_definition(_right_in_table->column_name(column_id),
-                                         _right_in_table->column_type(column_id), nullable);
-  }
+  add_column_definitions(_left_in_table, left_may_produce_null);
+  add_column_definitions(_right_in_table, right_may_produce_null);
 }
 
 void JoinIndex::_perform_join() {
-  DebugAssert(_mode != JoinMode::Cross, "Cross join mode is not supported by index join");
-
   _right_matches.resize(_right_in_table->chunk_count());
   _left_matches.resize(_left_in_table->chunk_count());
 
