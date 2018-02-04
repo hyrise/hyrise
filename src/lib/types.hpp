@@ -84,9 +84,12 @@ using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+
 struct RowID {
-  ChunkID chunk_id;
-  ChunkOffset chunk_offset;
+  ChunkID chunk_id{0};
+  ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {
@@ -126,9 +129,6 @@ constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
-
-// Used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
 
 // ... in ReferenceColumns
 const RowID NULL_ROW_ID = RowID{ChunkID{0u}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
