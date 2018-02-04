@@ -33,8 +33,8 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
         auto value = NULL_VALUE;
         resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
 
-        if (!variant_is_null(value)) {
-          _replace_expression_in_parents(node, node->output_column_references()[column_id], value);
+        if (!variant_is_null(value) &&
+            _replace_expression_in_parents(node, node->output_column_references()[column_id], value)) {
           _remove_column_from_projection(projection_node, column_id);
         }
       }
@@ -46,9 +46,10 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   return _apply_to_children(node);
 }
 
-void NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
                                                           const LQPColumnReference& column_reference,
                                                           const AllTypeVariant& value) {
+  auto changed = false;
   for (auto parent : node->parents()) {
     if (parent->type() == LQPNodeType::Predicate) {
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
@@ -58,11 +59,13 @@ void NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
         auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
                                                                   predicate_node->predicate_condition(), value);
         predicate_node->replace_with(new_predicate_node);
+        changed = true;
       }
     }
 
-    _replace_expression_in_parents(parent, column_reference, value);
+    changed |= _replace_expression_in_parents(parent, column_reference, value);
   }
+  return changed;
 }
 
 void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
