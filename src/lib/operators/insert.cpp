@@ -25,8 +25,6 @@ class AbstractTypedColumnProcessor {
  public:
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
   virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                         std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) = 0;
-  virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
                          std::shared_ptr<BaseColumn> target, size_t target_start_index,
                          std::vector<size_t> rows_to_copy) = 0;
 };
@@ -47,56 +45,6 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   }
 
   // this copies
-  void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                 std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) override {
-    auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
-    DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
-    auto& values = casted_target->values();
-
-    auto target_is_nullable = casted_target->is_nullable();
-
-    if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
-      std::copy_n(casted_source->values().begin() + source_start_index, length, values.begin() + target_start_index);
-
-      if (casted_source->is_nullable()) {
-        // Values to insert contain null, copy them
-        if (target_is_nullable) {
-          std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                      casted_target->null_values().begin() + target_start_index);
-        } else {
-          for (const auto null_value : casted_source->null_values()) {
-            Assert(!null_value, "Trying to insert NULL into non-NULL column");
-          }
-        }
-      }
-    } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueColumn<int32_t>>(source)) {
-      // We use the column type of the Dummy table used to insert a single null value.
-      // A few asserts are needed to guarantee correct behaviour.
-      Assert(length == 1, "Cannot insert multiple unknown null values at once.");
-      Assert(casted_dummy_source->size() == 1, "Source column is of wrong type.");
-      Assert(casted_dummy_source->null_values().front() == true, "Only value in dummy table must be NULL!");
-      Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target.");
-
-      // Ignore source value and only set null to true
-      casted_target->null_values()[target_start_index] = true;
-    } else {
-      // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
-      // since we have no guarantee that a referenceColumn references only a single other column,
-      // this would require us to find out the referenced column's type for each single row.
-      // instead, we just use the slow path below.
-      for (auto i = 0u; i < length; i++) {
-        auto ref_value = (*source)[source_start_index + i];
-        if (variant_is_null(ref_value)) {
-          Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target");
-          values[target_start_index + i] = T{};
-          casted_target->null_values()[target_start_index + i] = true;
-        } else {
-          values[target_start_index + i] = type_cast<T>(ref_value);
-        }
-      }
-    }
-  }
-
   void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
                  std::shared_ptr<BaseColumn> target, size_t target_start_index,
                  std::vector<size_t> rows_to_copy) override {
