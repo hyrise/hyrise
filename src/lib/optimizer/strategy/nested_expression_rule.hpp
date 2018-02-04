@@ -11,7 +11,7 @@
 namespace opossum {
 
 class AbstractLQPNode;
-class PredicateNode;
+class ProjectionNode;
 class LQPExpression;
 class LQPColumnReference;
 
@@ -26,6 +26,8 @@ class NestedExpressionRule : public AbstractRule {
  private:
   void _replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
                                       const LQPColumnReference& column_reference, const AllTypeVariant& value);
+  void _remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id);
+
   std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 
   template <typename T>

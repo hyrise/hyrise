@@ -51,11 +51,10 @@ TEST_F(NestedExpressionRuleTest, ResolveExpressionTest) {
 
   ASSERT_EQ(predicate_node->left_child()->type(), LQPNodeType::Projection);
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
-  EXPECT_TRUE(projection_node->column_expressions().back()->is_arithmetic_operator());
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
 
   const auto original_node = projection_node->left_child();
 
-  // The value() of the PredicateNode is the LQPColumnReference to the (added) projection node column containing the nested expression
   ASSERT_TRUE(is_variant(predicate_node->value()));
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(original_node, ColumnID{0}));
   EXPECT_EQ(boost::get<AllTypeVariant>(predicate_node->value()), AllTypeVariant{1234});

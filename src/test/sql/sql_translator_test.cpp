@@ -60,8 +60,8 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   EXPECT_EQ(result_node->output_column_references()[1], LQPColumnReference(result_node->left_child(), ColumnID{1}));
 }
 
-TEST_F(SQLTranslatorTest, NestedExpressionTest) {
-  const auto query = "SELECT * FROM table_a WHERE a = 1232 + 1 + 1";
+TEST_F(SQLTranslatorTest, ExpressionTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1233 + 1";
   const auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);

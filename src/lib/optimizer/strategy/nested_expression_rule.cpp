@@ -35,6 +35,7 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 
         if (!variant_is_null(value)) {
           _replace_expression_in_parents(node, node->output_column_references()[column_id], value);
+          _remove_column_from_projection(projection_node, column_id);
         }
       }
     }
@@ -62,6 +63,14 @@ void NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
 
     _replace_expression_in_parents(parent, column_reference, value);
   }
+}
+
+void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id) {
+  auto column_expressions = node->column_expressions();
+  column_expressions.erase(column_expressions.begin() + column_id);
+
+  auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
+  node->replace_with(projection_node);
 }
 
 std::optional<DataType> NestedExpressionRule::_get_type_of_expression(
