@@ -140,6 +140,12 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
   return get_index(index_type, columns);
 }
 
+void Chunk::remove_index(std::shared_ptr<BaseIndex> index) {
+  auto it = std::find(_indices.cbegin(), _indices.cend(), index);
+  DebugAssert(it != _indices.cend(), "Trying to remove a non-existing index");
+  _indices.erase(it);
+}
+
 bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
