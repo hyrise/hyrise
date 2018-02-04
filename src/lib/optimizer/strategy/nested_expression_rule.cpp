@@ -65,7 +65,8 @@ void NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
   }
 }
 
-void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id) {
+void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
+                                                          ColumnID column_id) {
   auto column_expressions = node->column_expressions();
   column_expressions.erase(column_expressions.begin() + column_id);
 
