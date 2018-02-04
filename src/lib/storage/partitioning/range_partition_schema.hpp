@@ -1,6 +1,7 @@
 #pragma once
 
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
 #include "types.hpp"
 
@@ -22,6 +23,7 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds);
 
   std::string name() const override;
+  PartitionSchemaType get_type() const override;
 
   void append(std::vector<AllTypeVariant> values) override;
 
@@ -31,11 +33,14 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
   PartitionID get_matching_partition_for(AllTypeVariant value);
 
-  const ColumnID get_column_id();
+  const ColumnID get_column_id() const;
+  const std::vector<AllTypeVariant> get_bounds() const;
+  DataType get_bound_type() const;
 
  protected:
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;
+  DataType _bound_type;
 };
 
 }  // namespace opossum

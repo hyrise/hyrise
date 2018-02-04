@@ -13,6 +13,8 @@ HashPartitionSchema::HashPartitionSchema(ColumnID column_id, HashFunction hash_f
 
 std::string HashPartitionSchema::name() const { return "HashPartition"; }
 
+PartitionSchemaType HashPartitionSchema::get_type() const { return PartitionSchemaType::Hash; }
+
 void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
   AbstractPartitionSchema::append(values, get_matching_partition_for(values));
 }

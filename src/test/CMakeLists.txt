@@ -44,6 +44,7 @@ set(
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
+    operators/insert_partitioned_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
     operators/join_null_test.cpp

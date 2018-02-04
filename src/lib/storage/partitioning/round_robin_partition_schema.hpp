@@ -16,6 +16,7 @@ class RoundRobinPartitionSchema : public AbstractPartitionSchema {
   explicit RoundRobinPartitionSchema(size_t number_of_partitions);
 
   std::string name() const override;
+  PartitionSchemaType get_type() const override;
 
   void append(std::vector<AllTypeVariant> values) override;
 

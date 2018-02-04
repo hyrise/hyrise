@@ -8,6 +8,8 @@
 
 #include "import_export/binary.hpp"
 #include "storage/fitted_attribute_vector.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
@@ -127,6 +129,14 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
     _write_chunk(table, ofstream, chunk_id);
   }
 
+  if (table->is_partitioned()) {
+    _write_partitioning_header(table, ofstream);
+
+    for (PartitionID partition_id{0}; partition_id < table->get_partition_schema()->partition_count(); partition_id++) {
+      _write_partition(table, ofstream, partition_id);
+    }
+  }
+
   return _input_left->get_output();
 }
 
@@ -162,6 +172,54 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
     auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(column_id));
     chunk->get_column(column_id)->visit(*visitor, context);
   }
+}
+
+void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
+  const auto partition_schema = table->get_partition_schema();
+  _export_value(ofstream, partition_schema_type_to_uint.left.at(partition_schema->get_type()));
+  _export_value(ofstream, partition_schema->partition_count());
+
+  switch (partition_schema->get_type()) {
+    case PartitionSchemaType::Hash: {
+      const auto hash_schema = std::dynamic_pointer_cast<HashPartitionSchema>(partition_schema);
+      _export_value(ofstream, static_cast<ColumnID>(hash_schema->get_column_id()));
+      break;
+    }
+    case PartitionSchemaType::Range: {
+      const auto range_schema = std::dynamic_pointer_cast<RangePartitionSchema>(partition_schema);
+      const auto bound_type_string = data_type_to_string.left.at(range_schema->get_bound_type());
+      _export_value(ofstream, static_cast<ColumnID>(range_schema->get_column_id()));
+      _export_values(ofstream, std::vector<std::string>{bound_type_string});
+      resolve_data_type(range_schema->get_bound_type(), [&](auto type) {
+        using VectorDataType = typename decltype(type)::type;
+        std::vector<VectorDataType> typed_bounds;
+        for (auto bound : range_schema->get_bounds()) {
+          typed_bounds.emplace_back(get<VectorDataType>(bound));
+        }
+        _export_values(ofstream, typed_bounds);
+      });
+      break;
+    }
+    case PartitionSchemaType::RoundRobin:
+    case PartitionSchemaType::Null: {
+      break;
+    }
+    default: { throw std::runtime_error("binary header for partitioning schema is not implemented"); }
+  }
+}
+
+void ExportBinary::_write_partition(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+                                    const PartitionID& partition_id) {
+  const auto partition = table->get_partition_schema()->get_partition(partition_id);
+
+  // Iterating over all chunks and get corresponding id
+  const auto chunks = partition->get_chunks();
+  std::vector<ChunkID> chunk_ids;
+  for (const auto chunk : chunks) {
+    chunk_ids.emplace_back(table->get_chunk_id(chunk));
+  }
+  _export_value(ofstream, ChunkID{chunk_ids.size()});
+  _export_values(ofstream, chunk_ids);
 }
 
 template <typename T>

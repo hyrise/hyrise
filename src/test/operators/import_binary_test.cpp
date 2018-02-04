@@ -259,4 +259,63 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
+  auto expected_table = std::make_shared<opossum::Table>(2);
+  expected_table->create_round_robin_partitioning(3);
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumnRoundRobinPartitioned.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRangePartitioned) {
+  auto expected_table = std::make_shared<opossum::Table>(2);
+  expected_table->create_range_partitioning(ColumnID{3}, {2.5f, 4.0f});
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumnRangePartitioned.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnHashPartitioned) {
+  auto expected_table = std::make_shared<opossum::Table>(2);
+  HashFunction hf;
+  expected_table->create_hash_partitioning(ColumnID{3}, std::move(hf), 3);
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumnHashPartitioned.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 }  // namespace opossum
