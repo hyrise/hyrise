@@ -8,9 +8,9 @@
 
 #include "import_export/binary.hpp"
 #include "storage/fitted_attribute_vector.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -204,15 +204,12 @@ void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>
     case PartitionSchemaType::Null: {
       break;
     }
-    default: {
-      throw std::runtime_error("binary header for partitioning schema is not implemented");
-    }
+    default: { throw std::runtime_error("binary header for partitioning schema is not implemented"); }
   }
-
 }
 
 void ExportBinary::_write_partition(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
-                                const PartitionID& partition_id) {
+                                    const PartitionID& partition_id) {
   const auto partition = table->get_partition_schema()->get_partition(partition_id);
 
   // Iterating over all chunks and get corresponding id

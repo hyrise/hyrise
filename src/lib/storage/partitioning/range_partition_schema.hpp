@@ -37,7 +37,6 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   const std::vector<AllTypeVariant> get_bounds() const;
   DataType get_bound_type() const;
 
-
  protected:
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;

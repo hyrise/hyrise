@@ -120,7 +120,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static std::shared_ptr<AbstractPartitionSchema> _read_partitioning_header(std::ifstream& file);
 
   // Reads the partition info from the given file and adds the corresponding chunks to it
-  static void _import_partition(std::ifstream& file, std::shared_ptr<Table>& table, PartitionID partition_id, std::map<ChunkID, PartitionID>& chunk_to_partition);
+  static void _import_partition(std::ifstream& file, std::shared_ptr<Table>& table, PartitionID partition_id,
+                                std::map<ChunkID, PartitionID>& chunk_to_partition);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
@@ -191,7 +192,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static pmr_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
 
   static std::vector<AllTypeVariant> _read_all_type_variants(std::ifstream& file, const size_t count);
-  
+
   // Reads a single value of type T from the input file.
   template <typename T>
   static T _read_value(std::ifstream& file);

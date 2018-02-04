@@ -124,7 +124,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param partitionId The id of the chunk that is to be worked on now
    *
    */
-  static void _write_partition(const std::shared_ptr<const Table>& table, std::ofstream& ofstream, const PartitionID& partition_id);
+  static void _write_partition(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+                               const PartitionID& partition_id);
 
   template <typename T>
   class ExportBinaryVisitor;

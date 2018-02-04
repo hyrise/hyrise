@@ -16,12 +16,12 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/fitted_attribute_vector.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/partitioning/round_robin_partition_schema.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -109,13 +109,12 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       table->emplace_chunk(chunks[chunk_id], chunk_to_partition[chunk_id]);
     }
-  } catch (const std::ios_base::failure &fail) {
+  } catch (const std::ios_base::failure& fail) {
     // unpartitioned table
     for (auto chunk : chunks) {
       table->emplace_chunk(chunk);
     }
   }
-
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);
@@ -147,7 +146,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header(std::ifstream& file) {
   const auto partition_schema_type = partition_schema_type_to_uint.right.at(_read_value<uint8_t>(file));
   const auto partition_count = _read_value<PartitionID>(file);
-  
+
   switch (partition_schema_type) {
     case PartitionSchemaType::Null: {
       return std::make_shared<NullPartitionSchema>();
@@ -177,7 +176,8 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
   }
 }
 
-void ImportBinary::_import_partition(std::ifstream& file, std::shared_ptr<Table>& table, PartitionID partition_id, std::map<ChunkID, PartitionID>& chunk_to_partition) {
+void ImportBinary::_import_partition(std::ifstream& file, std::shared_ptr<Table>& table, PartitionID partition_id,
+                                     std::map<ChunkID, PartitionID>& chunk_to_partition) {
   const auto partition = table->get_partition_schema()->get_partition(partition_id);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto chunk_ids = _read_values<ChunkID>(file, chunk_count);
