@@ -205,4 +205,23 @@ TableType Table::get_type() const {
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
+size_t Table::estimate_memory_usage() const {
+  auto bytes = size_t{sizeof(*this)};
+
+  for (const auto& chunk : _chunks) {
+    bytes += chunk->estimate_memory_usage();
+  }
+
+  for (const auto& column_name : _column_names) {
+    bytes += column_name.size();
+  }
+
+  bytes += _column_types.size() * sizeof(decltype(_column_types)::value_type);
+  bytes += _column_nullable.size() * sizeof(decltype(_column_nullable)::value_type);
+
+  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+
+  return bytes;
+}
+
 }  // namespace opossum
