@@ -178,4 +178,23 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
   EXPECT_NE(attribute_vector_uint16_t, nullptr);
 }
 
+TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
+  const auto empty_memory_usage = DictionaryCompression::compress_column(DataType::Int, vc_int)
+                                      ->estimate_memory_usage();
+
+  vc_int->append(0);
+  vc_int->append(1);
+  vc_int->append(2);
+  const auto compressed_column = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  const auto dictionary_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(compressed_column);
+
+  EXPECT_GE(dictionary_column->estimate_memory_usage(),
+            empty_memory_usage + 3 * (sizeof(int) + dictionary_column->attribute_vector()->width()));
+}
+
 }  // namespace opossum
