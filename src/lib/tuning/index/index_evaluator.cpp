@@ -2,6 +2,7 @@
 
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -41,9 +42,16 @@ float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) 
   auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
   auto value_count = column_statistics->distinct_count();
 
-  // ToDo(group01) understand DataType and sample column for average byte counts
-  // DataType column_type = table->column_type(index_evaluation.column_id);
-  auto value_bytes = 8;
+  // Sum up column data type widths
+  size_t value_bytes = 0;
+  for (auto column_id : index_evaluation.column_ref.column_ids) {
+      auto data_type = table->column_type(column_id);
+      opossum::resolve_data_type(data_type, [&](auto boost_type) {
+        using ColumnDataType = typename decltype(boost_type)::type;
+        // This assumes that elements are self-contained
+        value_bytes += sizeof(ColumnDataType);
+      });
+  }
 
   auto row_count = table->row_count();
   auto chunk_count = table->chunk_count();
