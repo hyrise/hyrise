@@ -10,6 +10,8 @@ float IndexChoice::desirability() const { return saved_work; }
 
 float IndexChoice::cost() const { return memory_cost; }
 
+float IndexChoice::confidence() const { return 1.0f; }
+
 bool IndexChoice::is_currently_chosen() const { return exists; }
 
 const std::set<std::shared_ptr<TuningChoice> >& IndexChoice::invalidates() const { return _invalidates; }
