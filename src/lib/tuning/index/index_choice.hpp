@@ -21,6 +21,8 @@ class IndexChoice : public TuningChoice {
 
   float cost() const final;
 
+  float confidence() const final;
+
   bool is_currently_chosen() const final;
 
   const std::set<std::shared_ptr<TuningChoice>>& invalidates() const final;

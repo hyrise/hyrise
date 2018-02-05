@@ -51,4 +51,8 @@ std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const Polymorp
   Fail("Cannot migrate a ReferenceColumn");
 }
 
+size_t ReferenceColumn::estimate_memory_usage() const {
+  return sizeof(*this) + _pos_list->size() * sizeof(decltype(_pos_list)::element_type::value_type);
+}
+
 }  // namespace opossum

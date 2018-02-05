@@ -28,6 +28,17 @@ class TuningChoice {
   virtual float desirability() const = 0;
 
   /**
+   * How certain the producing evaluator was when generating this choice.
+   * Very basic evaluators will probably output choices with low confidence
+   * in general.
+   * Similarly, if an evaluator is very specialized for a certain edge case,
+   * it might produce few choices with high confidence and several other
+   * choices with a low confidence value, as other evaluators might be able
+   * to give better results in these cases.
+   */
+  virtual float confidence() const = 0;
+
+  /**
    * Convenience accessors for desirability() that in their default implementation
    * return the performance benetfts expected from accepting or rejecting this choice.
    */

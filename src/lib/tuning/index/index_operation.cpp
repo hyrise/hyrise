@@ -52,7 +52,12 @@ void IndexOperation::_delete_index() {
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
-    // ToDo(group01): Currently there seems to be no way to remove an index from a chunk
+    auto index = chunk->get_index(type, column.column_ids);
+    if (!index) {
+        LOG_WARN("Couldn't find specified index for deletion");
+        continue;
+    }
+    chunk->remove_index(index);
   }
 }
 
