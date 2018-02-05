@@ -53,6 +53,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
+# auto_ptr was removed in clang 5 so we need to tell boost to not include it
+add_definitions(-DBOOST_NO_AUTO_PTR)
+
 # Link Time Optimization (LTO)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
