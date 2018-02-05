@@ -98,7 +98,7 @@ int main() {
 // Creates a Pipeline based on the supplied query and puts its query plan in the supplied cache
 std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
     const std::string& query, opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache) {
-  auto pipeline = std::make_shared<opossum::SQLPipeline>(query);
+  auto pipeline = std::make_shared<opossum::SQLPipeline>(query, false);
 
   auto query_plans = pipeline->get_query_plans();
 

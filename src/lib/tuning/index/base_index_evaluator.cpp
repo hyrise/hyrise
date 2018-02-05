@@ -101,15 +101,15 @@ void BaseIndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractO
     auto node = queue.front();
     queue.pop_front();
     if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(node)) {
-      if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
-        if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(validate->input_left())) {
+//      if (const auto& validate = std::dynamic_pointer_cast<const Validate>(table_scan->input_left())) {
+        if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(table_scan->input_left())) {
           const auto& table_name = get_table->table_name();
           ColumnID column_id = table_scan->left_column_id();
           _access_records.emplace_back(table_name, column_id, query_frequency);
           _access_records.back().condition = table_scan->predicate_condition();
           _access_records.back().compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
         }
-      }
+//      }
     } else {
       if (op->input_left()) {
         queue.push_back(op->input_left());
