@@ -66,10 +66,9 @@ template <typename T>
 size_t RunLengthColumn<T>::estimate_memory_usage() const {
   static const auto bits_per_byte = 8u;
 
-  return sizeof(*this) +
-      _values->size() * sizeof(typename decltype(_values)::element_type::value_type) +
-      _null_values->size() / bits_per_byte +
-      _end_positions->size() * sizeof(typename decltype(_end_positions)::element_type::value_type);
+  return sizeof(*this) + _values->size() * sizeof(typename decltype(_values)::element_type::value_type) +
+         _null_values->size() / bits_per_byte +
+         _end_positions->size() * sizeof(typename decltype(_end_positions)::element_type::value_type);
 }
 
 template <typename T>

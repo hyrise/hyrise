@@ -141,9 +141,8 @@ std::shared_ptr<BaseColumn> DeprecatedDictionaryColumn<T>::copy_using_allocator(
 
 template <typename T>
 size_t DeprecatedDictionaryColumn<T>::estimate_memory_usage() const {
-  return sizeof(*this) +
-      _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
-      _attribute_vector->size() * _attribute_vector->width();
+  return sizeof(*this) + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
+         _attribute_vector->size() * _attribute_vector->width();
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DeprecatedDictionaryColumn);

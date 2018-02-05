@@ -187,8 +187,7 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
   t.append({4, "Hello"});
   t.append({5, "Hello"});
 
-  EXPECT_GT(t.estimate_memory_usage(),
-            empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
+  EXPECT_GT(t.estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
 }
 
 }  // namespace opossum

@@ -123,8 +123,7 @@ TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
 
   EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vc_int.estimate_memory_usage());
   EXPECT_EQ(empty_usage_double + sizeof(double), vc_double.estimate_memory_usage());
-  EXPECT_GE(vc_str.estimate_memory_usage(),
-            empty_usage_str + 2 * sizeof(std::string));
+  EXPECT_GE(vc_str.estimate_memory_usage(), empty_usage_str + 2 * sizeof(std::string));
 }
 
 }  // namespace opossum
