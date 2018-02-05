@@ -54,7 +54,7 @@ int main() {
   auto table = opossum::StorageManager::get().get_table("CUSTOMER");
   const auto & statistics = table->table_statistics()->column_statistics();
   statistics.size();
-  LOG_INFO("Table statistics (" << statistics.at(0)->distinct_count() << ", "<< statistics.at(1)->distinct_count() << ", "<< statistics.at(2)->distinct_count() << ", "<< statistics.at(3)->distinct_count() << ")");
+  LOG_INFO("Table statistics (" << statistics.at(0)->distinct_count() << ", "<< statistics.at(1)->distinct_count() << ", "<< statistics.at(2)->distinct_count() << ",  "<< statistics.at(3)->distinct_count() << ")");
 
   constexpr unsigned int execution_count = 5;
 
@@ -98,7 +98,7 @@ int main() {
 // Creates a Pipeline based on the supplied query and puts its query plan in the supplied cache
 std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
     const std::string& query, opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache) {
-  auto pipeline = std::make_shared<opossum::SQLPipeline>(query);
+  auto pipeline = std::make_shared<opossum::SQLPipeline>(query, false);
 
   auto query_plans = pipeline->get_query_plans();
 
