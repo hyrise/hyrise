@@ -741,7 +741,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
     const auto expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
 
     DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
-                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal,
+                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal ||
+    expr->type() == ExpressionType::Placeholder,
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
     if (expr->type() == ExpressionType::Star) {
