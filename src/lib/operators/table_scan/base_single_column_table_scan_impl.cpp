@@ -5,8 +5,11 @@
 #include <utility>
 
 #include "storage/chunk.hpp"
+#include "storage/column_iterables/chunk_offset_mapping.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/iterables/chunk_offset_mapping.hpp"
+#include "storage/dictionary_column/attribute_vector_iterable.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -31,8 +34,8 @@ PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   return matches_out;
 }
 
-void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColumn& left_column,
-                                                            std::shared_ptr<ColumnVisitableContext> base_context) {
+void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_column,
+                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const ChunkID chunk_id = context->_chunk_id;
   auto& matches_out = context->_matches_out;
@@ -52,6 +55,16 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(const ReferenceColum
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
     referenced_column->visit(*this, new_context);
   }
+}
+
+AttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribute_vector_iterable(
+    const BaseDictionaryColumn& column) {
+  return AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()};
+}
+
+DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribute_vector_iterable(
+    const BaseDeprecatedDictionaryColumn& column) {
+  return DeprecatedAttributeVectorIterable{*column.attribute_vector()};
 }
 
 }  // namespace opossum
