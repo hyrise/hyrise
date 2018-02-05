@@ -137,7 +137,7 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
     }
   }
 
-  LOG_INFO("Acheived desirability of " << desirability_balance << " at a cost balance of " << cost_balance);
+  LOG_INFO("Desirability delta: " << desirability_balance << "; Cost balance: " << cost_balance);
   return operations;
 }
 

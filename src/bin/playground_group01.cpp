@@ -4,6 +4,8 @@
 
 #include "concurrency/transaction_manager.hpp"
 #include "operators/import_binary.hpp"
+#include "optimizer/table_statistics.hpp"
+#include "optimizer/column_statistics.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
@@ -47,6 +49,12 @@ int main() {
   auto importer = std::make_shared<opossum::ImportBinary>("group01_CUSTOMER.bin", "CUSTOMER");
   importer->execute();
   LOG_INFO("Table loaded.\n");
+
+  LOG_INFO("Request table statistics.");
+  auto table = opossum::StorageManager::get().get_table("CUSTOMER");
+  const auto & statistics = table->table_statistics()->column_statistics();
+  statistics.size();
+  LOG_INFO("Table statistics (" << statistics.at(0)->distinct_count() << ", "<< statistics.at(1)->distinct_count() << ", "<< statistics.at(2)->distinct_count() << ", "<< statistics.at(3)->distinct_count() << ")");
 
   constexpr unsigned int execution_count = 5;
 
