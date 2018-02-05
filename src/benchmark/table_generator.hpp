@@ -1,7 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <math.h>
+#include <memory>
 
 #include "types.hpp"
 
@@ -12,15 +12,15 @@ class Table;
 enum class Distribution { uniform, normal_skewed, pareto };
 
 struct ColumnConfiguration {
-  static ColumnConfiguration make_uniform_config(double min, double max){
+  static ColumnConfiguration make_uniform_config(double min, double max) {
     ColumnConfiguration c{};
     c.min_value = min;
     c.max_value = max;
-    c.num_different_values = std::floor(max-min);
+    c.num_different_values = std::floor(max - min);
     return c;
   }
 
-  static ColumnConfiguration make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0){
+  static ColumnConfiguration make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0) {
     ColumnConfiguration c{};
     c.pareto_scale = pareto_scale;
     c.pareto_shape = pareto_shape;
@@ -28,7 +28,8 @@ struct ColumnConfiguration {
     return c;
   }
 
-  static ColumnConfiguration make_skewed_normal_config(double skew_location = 0.0, double skew_scale = 1.0, double skew_shape = 0.0){
+  static ColumnConfiguration make_skewed_normal_config(double skew_location = 0.0, double skew_scale = 1.0,
+                                                       double skew_shape = 0.0) {
     ColumnConfiguration c{};
     c.skew_location = skew_location;
     c.skew_scale = skew_scale;
@@ -56,9 +57,7 @@ class TableGenerator {
  public:
   std::shared_ptr<Table> generate_table(const ChunkID chunk_size, const bool compress = false);
   std::shared_ptr<Table> generate_table(const std::vector<ColumnConfiguration>& column_configurations,
-                                                        const size_t num_rows,
-                                                        const size_t chunk_size,
-                                                        const bool compress = false);
+                                        const size_t num_rows, const size_t chunk_size, const bool compress = false);
 
  protected:
   const size_t _num_columns = 10;

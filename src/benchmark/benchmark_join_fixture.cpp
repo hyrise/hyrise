@@ -6,10 +6,10 @@
 #include "benchmark/benchmark.h"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_generator.hpp"
 #include "types.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 
 namespace opossum {
 
@@ -24,7 +24,7 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
 
   ColumnConfiguration right_config;
 
-  switch (right_distribution){
+  switch (right_distribution) {
     case Distribution::normal_skewed:
       right_config = ColumnConfiguration::make_skewed_normal_config();
       break;
@@ -35,11 +35,12 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
       right_config = ColumnConfiguration::make_uniform_config(0.0, 10000);
   }
 
+  auto table_1 = table_generator->generate_table(std::vector<ColumnConfiguration>{left_config}, state.range(0),
+                                                 state.range(0) / 4, true);
+  auto table_2 = table_generator->generate_table(std::vector<ColumnConfiguration>{right_config}, state.range(1),
+                                                 state.range(1) / 4, true);
 
-  auto table_1 = table_generator->generate_table(std::vector<ColumnConfiguration>{left_config}, state.range(0), state.range(0)/4, true);
-  auto table_2 = table_generator->generate_table(std::vector<ColumnConfiguration>{right_config}, state.range(1), state.range(1)/4, true);
-
-  for(auto table : {table_1, table_2}){
+  for (auto table : {table_1, table_2}) {
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto chunk = table->get_chunk(chunk_id);
 
@@ -63,9 +64,9 @@ void BenchmarkJoinFixture::ChunkSizeInUni(benchmark::internal::Benchmark* b) {
   for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
-      if(static_cast<unsigned long long>(left_size)*static_cast<unsigned long long>(right_size) <= 1e9)
-      {
-        b->Args({left_size, right_size, static_cast<int>(Distribution::uniform)});  // left size, right size, distribution
+      if (static_cast<uint64_t>(left_size) * static_cast<unsigned long long>(right_size) <= 1e9) {
+        b->Args(
+            {left_size, right_size, static_cast<int>(Distribution::uniform)});  // left size, right size, distribution
       }
     }
   }
@@ -75,20 +76,20 @@ void BenchmarkJoinFixture::ChunkSizeInNormal(benchmark::internal::Benchmark* b) 
   for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
-      if(static_cast<unsigned long long>(left_size)*static_cast<unsigned long long>(right_size) <= 1e9)
-      {
-        b->Args({left_size, right_size, static_cast<int>(Distribution::normal_skewed)});  // left size, right size, distribution
+      if (static_cast<uint64_t>(left_size) * static_cast<unsigned long long>(right_size) <= 1e9) {
+        b->Args({left_size, right_size,
+                 static_cast<int>(Distribution::normal_skewed)});  // left size, right size, distribution
       }
     }
   }
 }
-void BenchmarkJoinFixture::ChunkSizeInPareto(benchmark::internal::Benchmark *b) {
+void BenchmarkJoinFixture::ChunkSizeInPareto(benchmark::internal::Benchmark* b) {
   for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
-      if(static_cast<unsigned long long>(left_size)*static_cast<unsigned long long>(right_size) <= 1e9)
-      {
-        b->Args({left_size, right_size, static_cast<int>(Distribution::pareto)});  // left size, right size, distribution
+      if (static_cast<uint64_t>(left_size) * static_cast<unsigned long long>(right_size) <= 1e9) {
+        b->Args(
+            {left_size, right_size, static_cast<int>(Distribution::pareto)});  // left size, right size, distribution
       }
     }
   }

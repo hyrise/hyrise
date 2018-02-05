@@ -6,11 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
+#include "boost/math/distributions/pareto.hpp"
+#include "boost/math/distributions/skew_normal.hpp"
+#include "boost/math/distributions/uniform.hpp"
 
-#include <boost/math/distributions/pareto.hpp>
-#include <boost/math/distributions/skew_normal.hpp>
-#include <boost/math/distributions/uniform.hpp>
+#include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
 #include "storage/dictionary_compression.hpp"
@@ -75,8 +75,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, 
 }
 
 std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnConfiguration>& column_configurations,
-                                                      const size_t num_rows,
-                                                      const size_t chunk_size,
+                                                      const size_t num_rows, const size_t chunk_size,
                                                       const bool compress) {
   const auto num_columns = column_configurations.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
@@ -95,7 +94,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnCo
   auto chunk = std::make_shared<Chunk>();
 
   std::random_device rd;
-  // using mt19937 because std::default_random engine is not guaranteed to be a sensible default and mt19937 is always provided
+  // using mt19937 because std::default_random engine is not guaranteed to be a sensible default
   auto pseudorandom_engine = std::mt19937{};
 
   auto probability_dist = std::uniform_real_distribution{0.0, 1.0};

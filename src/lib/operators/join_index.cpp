@@ -115,8 +115,6 @@ void JoinIndex::_perform_join() {
       // for Outer joins, remember matches on the left side
       auto& left_matches = _left_matches[chunk_id_left];
 
-
-
       resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
           using LeftType = typename decltype(left_type)::type;
