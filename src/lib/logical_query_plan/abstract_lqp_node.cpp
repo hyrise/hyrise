@@ -135,7 +135,12 @@ void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<Abstrac
   _child_changed();
 }
 
-uint8_t AbstractLQPNode::child_count() const { return _children[0] ? (_children[1] ? 2 : 1) : (_children[1] ? 1 : 0); }
+uint8_t AbstractLQPNode::child_count() const {
+  /**
+   * Testing the shared_ptrs for null in _children to determine child count
+   */
+  return _children[0] ? (_children[1] ? 2 : 1) : (_children[1] ? 1 : 0);
+}
 
 bool AbstractLQPNode::is_leaf() const { return child_count() == 0; }
 
