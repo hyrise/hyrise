@@ -54,6 +54,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   /**@}*/
 
+  size_t estimate_memory_usage() const override;
+
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;

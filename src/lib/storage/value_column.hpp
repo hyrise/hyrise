@@ -63,6 +63,8 @@ class ValueColumn : public BaseValueColumn {
   // Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
+  size_t estimate_memory_usage() const override;
+
  protected:
   pmr_concurrent_vector<T> _values;
 
