@@ -56,8 +56,8 @@ std::shared_ptr<TuningOperation> TuningChoice::reject() const {
 }
 
 void TuningChoice::print_on(std::ostream& output) const {
-  output << "TuningChoice{desirability: " << desirability() << ", cost: " << cost()
-         << ", chosen: " << is_currently_chosen() << "}";
+  output << "TuningChoice{desirability: " << desirability() << ", confidence: " << confidence() << ", cost: " << cost()
+         << ", chosen: " << is_currently_chosen() << "}\n";
 }
 
 }  // namespace opossum
