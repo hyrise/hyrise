@@ -403,7 +403,8 @@ int Console::load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      auto table = opossum::load_table(filepath, 500000);
+      const auto default_chunk_size = 500000u;
+      auto table = opossum::load_table(filepath, default_chunk_size);
       DictionaryCompression::compress_table(*table);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
