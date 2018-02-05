@@ -49,7 +49,7 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
                                                           const LQPColumnReference& column_reference,
                                                           const AllTypeVariant& value) {
-  auto changed = false;
+  auto parent_tree_changed = false;
   for (auto parent : node->parents()) {
     if (parent->type() == LQPNodeType::Predicate) {
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
@@ -59,13 +59,13 @@ bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
         auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
                                                                   predicate_node->predicate_condition(), value);
         predicate_node->replace_with(new_predicate_node);
-        changed = true;
+        parent_tree_changed = true;
       }
     }
 
-    changed |= _replace_expression_in_parents(parent, column_reference, value);
+    parent_tree_changed |= _replace_expression_in_parents(parent, column_reference, value);
   }
-  return changed;
+  return parent_tree_changed;
 }
 
 void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
@@ -112,29 +112,29 @@ AllTypeVariant NestedExpressionRule::_evaluate_expression(boost::hana::basic_typ
 
   auto value = AllTypeVariant{};
 
-  const auto& left = expression->left_child();
-  const auto& right = expression->right_child();
-  const auto left_is_literal = left->type() == ExpressionType::Literal;
-  const auto right_is_literal = right->type() == ExpressionType::Literal;
+  const auto& left_child = expression->left_child();
+  const auto& right_child = expression->right_child();
+  const auto left_is_literal = left_child->type() == ExpressionType::Literal;
+  const auto right_is_literal = right_child->type() == ExpressionType::Literal;
 
-  if ((left_is_literal && variant_is_null(left->value())) || (right_is_literal && variant_is_null(right->value()))) {
+  if ((left_is_literal && variant_is_null(left_child->value())) || (right_is_literal && variant_is_null(right_child->value()))) {
     // one of the operands is a literal null - early out.
     value = NULL_VALUE;
 
   } else if (left_is_literal && right_is_literal) {
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left->value()), boost::get<T>(right->value())));
+    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_child->value())));
 
   } else if (right_is_literal) {
-    auto left_value = _evaluate_expression(type, left);
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right->value())));
+    auto left_value = _evaluate_expression(type, left_child);
+    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right_child->value())));
 
   } else if (left_is_literal) {
-    auto right_value = _evaluate_expression(type, right);
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left->value()), boost::get<T>(right_value)));
+    auto right_value = _evaluate_expression(type, right_child);
+    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_value)));
 
   } else {
-    auto left_value = _evaluate_expression(type, left);
-    auto right_value = _evaluate_expression(type, right);
+    auto left_value = _evaluate_expression(type, left_child);
+    auto right_value = _evaluate_expression(type, right_child);
     value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right_value)));
   }
 
