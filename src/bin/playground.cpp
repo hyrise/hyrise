@@ -52,15 +52,6 @@ int main() {
   auto table = opossum::load_table("src/test/tables/int_int_int.tbl", opossum::Chunk::MAX_SIZE);
   storage_manager.add_table("items", table);
 
-//  auto prepare_query = "PREPARE x FROM 'INSERT INTO items VALUES (?, ?, ?)'";
-//  
-//  opossum::SQLQueryOperator test_prp(prepare_query, false);
-//  test_prp.execute();
-//  
-//  auto execute = "EXECUTE x(1, 2, 3)";
-//  opossum::SQLQueryOperator test_ex(execute, false);
-//  test_ex.execute();
-
   {
     auto sql_pipeline = std::make_unique<opossum::SQLPipeline>("SELECT * FROM items");
     auto matrix = _table_to_matrix(sql_pipeline->get_result_table());
@@ -69,7 +60,6 @@ int main() {
     std::cout << "Before" << std::endl;
     std::cout << matrix.size() << std::endl;
   }
-
 
   auto query = "INSERT INTO items VALUES (?, ?, ?)";
   
@@ -99,16 +89,8 @@ int main() {
 
   auto tx = opossum::TransactionManager::get().new_transaction_context();
   super_plan.set_transaction_context(tx);
-  
-  auto _result_op = std::make_shared<opossum::SQLResultOperator>();
-  auto _result_task = std::make_shared<opossum::OperatorTask>(_result_op);
 
   std::vector<std::shared_ptr<opossum::OperatorTask>> tasks = super_plan.create_tasks();
-  if (tasks.size() > 0) {
-    _result_op->set_input_operator(tasks.back()->get_operator());
-    tasks.back()->set_as_predecessor_of(_result_task);
-  }
-  tasks.push_back(_result_task);
   
   opossum::CurrentScheduler::schedule_and_wait_for_tasks(tasks);
   
