@@ -53,10 +53,15 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void _send_ssl_denied();
   void _send_auth();
   void _send_ready_for_query();
-  void _accept_query();
-  void accept_parse();
-  void accept_bind();
   void _send_error(const std::string& error_msg);
+
+  void _accept_query();
+  void _accept_parse();
+  void _accept_bind();
+  void _accept_execute();
+  void _accept_sync();
+  void _accept_flush();
+  void _accept_describe();
 
   void _handle_header_received(const boost::system::error_code& error, size_t bytes_transferred);
   void _handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
@@ -80,6 +85,10 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   std::size_t _expected_input_packet_length;
   std::shared_ptr<HyriseSession> _self;
   std::unique_ptr<SQLPipeline> _sql_pipeline;
+
+  std::unique_ptr<PreparedStatementInfo> _parse_info;
+  std::vector<AllParameterVariant> _params;
+
 };
 
 }  // namespace opossum

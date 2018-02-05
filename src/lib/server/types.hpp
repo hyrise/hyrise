@@ -24,6 +24,7 @@ enum class NetworkMessageType : unsigned char {
   // Commands
   ExecuteCommand = 'E',
   SyncCommand = 'S',
+  FlushCommand = 'H',
   TerminateCommand = 'X',
   DescribeCommand = 'D',
   BindCommand = 'B',

@@ -8,7 +8,9 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <sql/sql_translator.hpp>
 
+#include "SQLParserResult.h"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
@@ -92,10 +94,22 @@ void HyriseSession::_handle_packet_received(const boost::system::error_code& err
       _accept_query();
       break;
     case NetworkMessageType::ParseCommand:
-      accept_parse();
+      _accept_parse();
       break;
     case NetworkMessageType::BindCommand:
-      accept_bind();
+      _accept_bind();
+      break;
+    case NetworkMessageType::DescribeCommand:
+      _accept_describe();
+      break;
+    case NetworkMessageType::SyncCommand:
+      _accept_sync();
+      break;
+    case NetworkMessageType::FlushCommand:
+      _accept_flush();
+      break;
+    case NetworkMessageType::ExecuteCommand:
+      _accept_execute();
       break;
     default:
       _send_error("Unsupported message type");
@@ -173,23 +187,42 @@ void HyriseSession::_accept_query() {
   CurrentScheduler::schedule_tasks(tasks);
 }
 
-void HyriseSession::accept_parse() {
-  const auto parse_packet = PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length);
-  
-  if (boost::starts_with(parse_packet, "SET")) {
-    OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
-    async_send_packet(output_packet);
-    _async_receive_header();
-    return;
-  }
- 
-  assert(false);
+void HyriseSession::_accept_parse() {
+  auto x = PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length);
+  _parse_info = std::make_unique<PreparedStatementInfo>(std::move(x));
+  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
+  async_send_packet(output_packet);
+  return _async_receive_header();
 }
 
-void HyriseSession::accept_bind() {
-  const auto bind_packet = PostgresWireHandler::handle_bind_packet(_input_packet, _expected_input_packet_length);
-  
-  
+void HyriseSession::_accept_bind() {
+  _params = PostgresWireHandler::handle_bind_packet(_input_packet, _expected_input_packet_length);
+  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
+  async_send_packet(output_packet);
+  return _async_receive_header();
+}
+
+void HyriseSession::_accept_execute() {
+  const auto portal = PostgresWireHandler::handle_execute_packet(_input_packet, _expected_input_packet_length);
+  SQLPipelineStatement sql_pipeline_statement{std::make_shared<hsql::SQLParserResult>(std::move(_parse_info->parse_result)),
+                                              nullptr, false};
+  sql_pipeline_statement.get_query_plan();
+  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
+  async_send_packet(output_packet);
+  return _async_receive_header();
+}
+
+void HyriseSession::_accept_sync() {
+
+}
+
+void HyriseSession::_accept_flush() {
+
+}
+
+void HyriseSession::_accept_describe() {
+  PostgresWireHandler::handle_describe_packet(_input_packet, _expected_input_packet_length);
+  return _async_receive_header();
 }
 
 void HyriseSession::_send_error(const std::string& message) {

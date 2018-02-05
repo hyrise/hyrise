@@ -4,7 +4,9 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <SQLParserResult.h>
 
+#include "all_parameter_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -33,6 +35,12 @@ struct RequestHeader {
   uint32_t payload_length;
 };
 
+struct PreparedStatementInfo {
+  std::string statement_name;
+  std::string query;
+  hsql::SQLParserResult parse_result;
+};
+
 class PostgresWireHandler {
  public:
   static OutputPacket new_output_packet(NetworkMessageType type);
@@ -44,8 +52,9 @@ class PostgresWireHandler {
   static RequestHeader handle_header(const InputPacket& packet);
 
   static std::string handle_query_packet(const InputPacket& packet, size_t length);
-  static std::string handle_parse_packet(const InputPacket& packet, size_t length);
-  static std::string handle_bind_packet(const InputPacket& packet, size_t length);
+  static PreparedStatementInfo handle_parse_packet(const InputPacket& packet, size_t length);
+  static std::vector<AllParameterVariant> handle_bind_packet(const InputPacket& packet, size_t length);
+  static std::string handle_describe_packet(const InputPacket& packet, size_t length);
 
   template <typename T>
   static T read_value(const InputPacket& packet);
@@ -59,6 +68,7 @@ class PostgresWireHandler {
   static void write_value(OutputPacket& packet, T value);
 
   static void write_string(OutputPacket& packet, const std::string& value, bool terminate = true);
+  static std::string handle_execute_packet(const InputPacket& packet, size_t length);
 };
 
 template <typename T>
