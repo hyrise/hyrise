@@ -45,12 +45,12 @@ float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) 
   // Sum up column data type widths
   size_t value_bytes = 0;
   for (auto column_id : index_evaluation.column_ref.column_ids) {
-      auto data_type = table->column_type(column_id);
-      opossum::resolve_data_type(data_type, [&](auto boost_type) {
-        using ColumnDataType = typename decltype(boost_type)::type;
-        // This assumes that elements are self-contained
-        value_bytes += sizeof(ColumnDataType);
-      });
+    auto data_type = table->column_type(column_id);
+    opossum::resolve_data_type(data_type, [&](auto boost_type) {
+      using ColumnDataType = typename decltype(boost_type)::type;
+      // This assumes that elements are self-contained
+      value_bytes += sizeof(ColumnDataType);
+    });
   }
 
   auto row_count = table->row_count();

@@ -55,7 +55,7 @@ void Tuner::execute() {
 
   for (const auto& choice : choices) {
     LOG_DEBUG("-> " << *choice);
-    (void)choice; // Silence warning about unused variable in release builds
+    (void)choice;  // Silence warning about unused variable in release builds
   }
 
   LOG_INFO("Running Selector...");
@@ -64,7 +64,7 @@ void Tuner::execute() {
   LOG_DEBUG("Operation sequence:");
   for (const auto& operation : operations) {
     LOG_DEBUG("-> " << *operation);
-    (void)operation; // Silence warning about unused variable in release builds
+    (void)operation;  // Silence warning about unused variable in release builds
   }
 
   LOG_INFO("Executing operations...");
