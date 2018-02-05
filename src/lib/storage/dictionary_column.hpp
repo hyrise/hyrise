@@ -36,6 +36,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
+  size_t estimate_memory_usage() const final;
+
   /**@}*/
 
   /**
@@ -53,8 +55,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
   const ValueID null_value_id() const final;
 
   /**@}*/
-
-  size_t estimate_memory_usage() const override;
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;

@@ -53,6 +53,13 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const Poly
 }
 
 template <typename T>
+size_t DictionaryColumn<T>::estimate_memory_usage() const {
+  return sizeof(*this) +
+      _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
+      _attribute_vector->data_size();
+}
+
+template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
@@ -87,13 +94,6 @@ std::shared_ptr<const BaseCompressedVector> DictionaryColumn<T>::attribute_vecto
 template <typename T>
 const ValueID DictionaryColumn<T>::null_value_id() const {
   return _null_value_id;
-}
-
-template <typename T>
-size_t DictionaryColumn<T>::estimate_memory_usage() const {
-  return sizeof(*this) +
-                     _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
-                     _attribute_vector->size() * _attribute_vector->width();
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);

@@ -139,6 +139,13 @@ std::shared_ptr<BaseColumn> DeprecatedDictionaryColumn<T>::copy_using_allocator(
       alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
+template <typename T>
+size_t DeprecatedDictionaryColumn<T>::estimate_memory_usage() const {
+  return sizeof(*this) +
+      _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
+      _attribute_vector->size() * _attribute_vector->width();
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DeprecatedDictionaryColumn);
 
 }  // namespace opossum

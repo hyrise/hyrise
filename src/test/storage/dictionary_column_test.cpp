@@ -173,17 +173,19 @@ TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto empty_memory_usage = DictionaryCompression::compress_column(DataType::Int, vc_int)
+  const auto empty_memory_usage = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary)
                                       ->estimate_memory_usage();
 
   vc_int->append(0);
   vc_int->append(1);
   vc_int->append(2);
-  const auto compressed_column = DictionaryCompression::compress_column(DataType::Int, vc_int);
+  const auto compressed_column = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
   const auto dictionary_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(compressed_column);
 
+  static constexpr auto size_of_attribute = 1u;
+
   EXPECT_GE(dictionary_column->estimate_memory_usage(),
-            empty_memory_usage + 3 * (sizeof(int) + dictionary_column->attribute_vector()->width()));
+            empty_memory_usage + 3 * size_of_attribute);
 }
 
 }  // namespace opossum

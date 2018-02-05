@@ -8,6 +8,7 @@
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/storage/index/group_key/group_key_index.hpp"
+#include "../lib/storage/deprecated_dictionary_compression.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {
@@ -25,8 +26,8 @@ class StorageChunkTest : public BaseTest {
     vc_str->append("world");
     vc_str->append("!");
 
-    dc_int = DictionaryCompression::compress_column(DataType::Int, vc_int);
-    dc_str = DictionaryCompression::compress_column(DataType::String, vc_str);
+    dc_int = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int);
+    dc_str = DeprecatedDictionaryCompression::compress_column(DataType::String, vc_str);
 
     c = std::make_shared<Chunk>();
   }
