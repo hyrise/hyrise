@@ -12,6 +12,8 @@ namespace opossum {
  *
  * An enum constant extends the concept of an integral constant to enum types.
  * This makes it possible to use enums in hana data structures such as maps.
+ *
+ * @see https://github.com/hyrise/hyrise/wiki/enum-constants
  */
 
 template <typename EnumType>
