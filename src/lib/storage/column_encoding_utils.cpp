@@ -43,7 +43,7 @@ std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, Dat
   auto encoder = create_encoder(encoding_type);
 
   if (zero_suppression_type.has_value()) {
-    encoder->set_vector_compression(zero_suppression_type.value());
+    encoder->set_vector_compression(*zero_suppression_type);
   }
 
   return encoder->encode(column, data_type);
