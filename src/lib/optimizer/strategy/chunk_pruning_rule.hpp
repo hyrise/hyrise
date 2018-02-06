@@ -15,6 +15,11 @@ class AbstractLQPNode;
 class ChunkStatistics;
 class PredicateNode;
 
+/**
+ * This rule determines which chunks can be excluded from table scans based on
+ * the predicates present in the LQP and stores that information in the stored
+ * table nodes.
+ */
 class ChunkPruningRule : public AbstractRule {
  public:
   std::string name() const override;

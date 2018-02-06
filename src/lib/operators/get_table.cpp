@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -16,10 +17,12 @@ const std::string GetTable::name() const { return "GetTable"; }
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  auto prune_description =
-      _excluded_chunks ? std::string() + separator + "(" + std::to_string(_excluded_chunks->size()) + " Chunks pruned)"
-                       : "";
-  return name() + separator + "(" + table_name() + ")" + prune_description;
+  std::stringstream ss;
+  ss << name() << separator << "(" << table_name() << ")";
+  if (_excluded_chunks) {
+    ss << separator << "(" << _excluded_chunks->size() << " Chunks pruned)";
+  }
+  return ss.str();
 }
 
 const std::string& GetTable::table_name() const { return _name; }

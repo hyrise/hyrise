@@ -46,7 +46,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       return false;
     }
     auto stored_table = std::dynamic_pointer_cast<StoredTableNode>(current_node);
-    DebugAssert(stored_table->is_leaf(), "Stored table nodes should be leafs.");
+    DebugAssert(stored_table->is_leaf(), "Stored table nodes should be leaves.");
 
     /**
      * A chain of predicates was found.
@@ -71,9 +71,9 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
       std::vector<ChunkID> intersection;
       std::set_intersection(stored_table->excluded_chunks().begin(), stored_table->excluded_chunks().end(),
                             excluded_chunks.begin(), excluded_chunks.end(), std::back_inserter(intersection));
-      stored_table->excluded_chunks() = intersection;
+      stored_table->set_excluded_chunks(intersection);
     } else {
-      stored_table->excluded_chunks() = std::vector<ChunkID>(excluded_chunks.begin(), excluded_chunks.end());
+      stored_table->set_excluded_chunks(std::vector<ChunkID>(excluded_chunks.begin(), excluded_chunks.end()));
     }
 
   } else {

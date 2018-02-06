@@ -105,7 +105,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     auto stats = dictionary.empty()
                      ? std::shared_ptr<BaseChunkColumnStatistics>()
                      : std::dynamic_pointer_cast<BaseChunkColumnStatistics>(
-                           std::make_shared<ChunkColumnStatistics<T>>(*dictionary.begin(), *(dictionary.end() - 1)));
+                           std::make_shared<ChunkColumnStatistics<T>>(dictionary.front(), dictionary.back()));
     auto out_column = std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
 
     return std::make_tuple(out_column, stats);
@@ -142,7 +142,6 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
   }
 
   auto stats = std::make_shared<ChunkStatistics>(column_stats);
-  // std::cout << stats->to_string();
   chunk->set_statistics(stats);
 
   return stats;
