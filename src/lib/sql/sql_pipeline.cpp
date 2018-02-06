@@ -35,11 +35,12 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   auto seen_altering_statement = false;
   auto sql_string_offset = 0u;
 
-  // We have to keep count of how many statements are owned by an SQLParseResult, which will free the memory on
-  // deletion. In case of an error, we need to manually free the memory of all statements still owned by us.
-  auto num_statements_released = 0u;
-  auto released_statements = parse_result.releaseStatements();
-  for (auto statement : released_statements) {
+  std::vector<std::unique_ptr<hsql::SQLStatement>> released_statements;
+  for (auto* statement : parse_result.releaseStatements()) {
+    released_statements.emplace_back(statement);
+  }
+
+  for (auto& statement : released_statements) {
     switch (statement->type()) {
       // Check if statement alters the structure of the database in a way that following statements might depend upon.
       case hsql::StatementType::kStmtImport:
@@ -54,31 +55,19 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
       }
     }
 
-    try {
-      auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement);
+    const auto statement_string_length = statement->stringLength;
+    auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement.release());
+    parsed_statement->setIsValid(true);
 
-      // This statements is now owned by the parse result, which will free the memory.
-      num_statements_released++;
+    // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
+    DebugAssert(sql_string_offset < sql.length(),
+                "SQL statements have a total length that is longer than the original string.");
+    const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
+    sql_string_offset += statement_string_length;
 
-      parsed_statement->setIsValid(true);
-
-      // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
-      DebugAssert(sql_string_offset < sql.length(),
-                  "SQL statements have a total length that is longer than the original string.");
-      const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement->stringLength));
-      sql_string_offset += statement->stringLength;
-
-      auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
-                                                                       _transaction_context, use_mvcc);
-      _sql_pipeline_statements.push_back(std::move(pipeline_statement));
-    } catch (const std::exception&) {
-      // Free all statements owned by us and pass on the error
-      for (auto pos = num_statements_released; pos < released_statements.size(); ++pos) {
-        delete released_statements[pos];
-      }
-
-      throw;
-    }
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
+                                                                     _transaction_context, use_mvcc);
+    _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
   _num_statements = _sql_pipeline_statements.size();
