@@ -111,11 +111,11 @@ void BaseIndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractO
       }
       //      }
     } else {
-      if (op->input_left()) {
-        queue.push_back(op->input_left());
+      if (node->input_left()) {
+        queue.push_back(node->input_left());
       }
-      if (op->input_right()) {
-        queue.push_back(op->input_right());
+      if (node->input_right()) {
+        queue.push_back(node->input_right());
       }
     }
   }
