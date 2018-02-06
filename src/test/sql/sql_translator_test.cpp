@@ -91,7 +91,8 @@ TEST_F(SQLTranslatorTest, ExpressionWithColumnTest) {
   const auto result_node = compile_query(query);
 
   ASSERT_EQ(result_node->left_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child()->left_child()->left_child());
+  const auto projection_node =
+      std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child()->left_child()->left_child());
 
   const auto expression = projection_node->column_expressions().back();
   EXPECT_TRUE(expression->is_arithmetic_operator());
