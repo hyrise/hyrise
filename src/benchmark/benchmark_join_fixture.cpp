@@ -64,7 +64,7 @@ void BenchmarkJoinFixture::ChunkSizeInUni(benchmark::internal::Benchmark* b) {
   for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
-      if (static_cast<uint64_t>(left_size) * static_cast<unsigned long long>(right_size) <= 1e9) {
+      if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args(
             {left_size, right_size, static_cast<int>(Distribution::uniform)});  // left size, right size, distribution
       }
@@ -76,7 +76,7 @@ void BenchmarkJoinFixture::ChunkSizeInNormal(benchmark::internal::Benchmark* b) 
   for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
-      if (static_cast<uint64_t>(left_size) * static_cast<unsigned long long>(right_size) <= 1e9) {
+      if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args({left_size, right_size,
                  static_cast<int>(Distribution::normal_skewed)});  // left size, right size, distribution
       }
@@ -87,7 +87,7 @@ void BenchmarkJoinFixture::ChunkSizeInPareto(benchmark::internal::Benchmark* b) 
   for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
-      if (static_cast<uint64_t>(left_size) * static_cast<unsigned long long>(right_size) <= 1e9) {
+      if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args(
             {left_size, right_size, static_cast<int>(Distribution::pareto)});  // left size, right size, distribution
       }
