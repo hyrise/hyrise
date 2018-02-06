@@ -25,22 +25,26 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
 
-  auto column_id = ColumnID{0};
-  for (auto expression : projection_node->column_expressions()) {
-    if (expression->is_arithmetic_operator()) {
-      const auto expression_type = _get_type_of_expression(expression);
-      if (expression_type != std::nullopt) {
-        auto value = NULL_VALUE;
-        resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
+  const auto column_expressions = projection_node->column_expressions();
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); column_id++) {
 
-        if (!variant_is_null(value) &&
-            _replace_expression_in_parents(node, node->output_column_references()[column_id], value)) {
-          _remove_column_from_projection(projection_node, column_id);
-        }
-      }
+    const auto expression = column_expressions[column_id];
+    if (!expression->is_arithmetic_operator()) {
+      continue;
     }
 
-    column_id++;
+    const auto expression_type = _get_type_of_expression(expression);
+    if (expression_type == std::nullopt) {
+      continue;
+    }
+
+    auto value = NULL_VALUE;
+    resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
+
+    if (!variant_is_null(value) &&
+        _replace_expression_in_parents(node, node->output_column_references()[column_id], value)) {
+      _remove_column_from_projection(projection_node, column_id);
+    }
   }
 
   return _apply_to_children(node);
@@ -51,16 +55,19 @@ bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
                                                           const AllTypeVariant& value) {
   auto parent_tree_changed = false;
   for (auto parent : node->parents()) {
-    if (parent->type() == LQPNodeType::Predicate) {
-      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
+    if (parent->type() != LQPNodeType::Predicate) {
+      parent_tree_changed |= _replace_expression_in_parents(parent, column_reference, value);
+      continue;
+    }
 
-      if (is_lqp_column_reference(predicate_node->value()) &&
-          boost::get<LQPColumnReference>(predicate_node->value()) == column_reference) {
-        auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
-                                                                  predicate_node->predicate_condition(), value);
-        predicate_node->replace_with(new_predicate_node);
-        parent_tree_changed = true;
-      }
+    auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
+
+    if (is_lqp_column_reference(predicate_node->value()) &&
+        boost::get<LQPColumnReference>(predicate_node->value()) == column_reference) {
+      auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
+                                                                predicate_node->predicate_condition(), value);
+      predicate_node->replace_with(new_predicate_node);
+      parent_tree_changed = true;
     }
 
     parent_tree_changed |= _replace_expression_in_parents(parent, column_reference, value);
