@@ -86,6 +86,20 @@ TEST_F(SQLTranslatorTest, ExpressionTest) {
   EXPECT_EQ(boost::get<LQPColumnReference>(predicate_node->value()), LQPColumnReference(projection_node, ColumnID{2}));
 }
 
+TEST_F(SQLTranslatorTest, ExpressionWithColumnTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1231 + b";
+  const auto result_node = compile_query(query);
+
+  ASSERT_EQ(result_node->left_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child()->left_child()->left_child());
+
+  const auto expression = projection_node->column_expressions().back();
+  EXPECT_TRUE(expression->is_arithmetic_operator());
+  EXPECT_EQ(expression->type(), ExpressionType::Addition);
+  EXPECT_EQ(expression->left_child()->type(), ExpressionType::Literal);
+  EXPECT_EQ(expression->right_child()->type(), ExpressionType::Column);
+}
+
 TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   const auto result_node = compile_query(query);
