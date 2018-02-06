@@ -36,11 +36,14 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   if (!_excluded_chunks || _excluded_chunks->empty()) {
     return original_table;
   }
+
+  // we create a copy of the original table and don't include the excluded chunks
   auto pruned_table = Table::create_with_layout_from(original_table, original_table->max_chunk_size());
   auto excluded_chunks_it = _excluded_chunks->begin();
   for (ChunkID i = ChunkID{0}; i < original_table->chunk_count(); ++i) {
     if (excluded_chunks_it != _excluded_chunks->end()) {
       DebugAssert(i <= (*excluded_chunks_it), "Excluded Chunks vector must be sorted");
+      // exclude chunk i if it is present in _excluded_chunks
       if (*excluded_chunks_it == i) {
         ++excluded_chunks_it;
         continue;
