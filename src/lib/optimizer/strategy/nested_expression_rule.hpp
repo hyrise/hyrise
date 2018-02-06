@@ -16,7 +16,10 @@ class LQPExpression;
 class LQPColumnReference;
 
 /**
- * 
+ * This optimizer rule looks for ProjectionNodes that contain calculable Expressions.
+ * It then calculates the Expressions, and replaces all LQPColumnReferences to these columns
+ * in any PredicateNode of the parent tree with the Expression result.
+ * The column containin the Expression is then removed from the ProjectionNode.
  */
 class NestedExpressionRule : public AbstractRule {
  public:
@@ -25,7 +28,7 @@ class NestedExpressionRule : public AbstractRule {
 
  private:
   bool _replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
-                                      const LQPColumnReference& column_reference, const AllTypeVariant& value);
+                                      const LQPColumnReference& expression_column, const AllTypeVariant& value);
   void _remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id);
 
   std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
