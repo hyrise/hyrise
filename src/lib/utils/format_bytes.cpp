@@ -1,6 +1,7 @@
 #include "format_bytes.hpp"
 
 #include <iomanip>
+#include <sstream>
 
 namespace opossum {
 
