@@ -9,7 +9,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "resolve_type.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "types.hpp"
 
 namespace opossum {

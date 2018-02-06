@@ -141,7 +141,7 @@ size_t ValueColumn<T>::size() const {
 
 template <typename T>
 void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
-  visitable.handle_value_column(*this, std::move(context));
+  visitable.handle_column(*this, std::move(context));
 }
 
 template <typename T>
@@ -157,8 +157,7 @@ std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const Polymorph
 
 template <typename T>
 size_t ValueColumn<T>::estimate_memory_usage() const {
-  return sizeof(*this) + _values.size() * sizeof(T) +
-                     (_null_values ? _null_values->size() * sizeof(bool) : 0u);
+  return sizeof(*this) + _values.size() * sizeof(T) + (_null_values ? _null_values->size() * sizeof(bool) : 0u);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);
