@@ -27,7 +27,6 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 
   const auto column_expressions = projection_node->column_expressions();
   for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); column_id++) {
-
     const auto expression = column_expressions[column_id];
     if (!expression->is_arithmetic_operator()) {
       continue;
@@ -133,20 +132,24 @@ AllTypeVariant NestedExpressionRule::_evaluate_expression(boost::hana::basic_typ
   const auto left_is_literal = left_child->type() == ExpressionType::Literal;
   const auto right_is_literal = right_child->type() == ExpressionType::Literal;
 
-  if ((left_is_literal && variant_is_null(left_child->value())) || (right_is_literal && variant_is_null(right_child->value()))) {
+  if ((left_is_literal && variant_is_null(left_child->value())) ||
+      (right_is_literal && variant_is_null(right_child->value()))) {
     // one of the operands is a literal null - early out.
     value = NULL_VALUE;
 
   } else if (left_is_literal && right_is_literal) {
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_child->value())));
+    value = AllTypeVariant(
+        arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_child->value())));
 
   } else if (right_is_literal) {
     auto left_value = _evaluate_expression(type, left_child);
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right_child->value())));
+    value =
+        AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right_child->value())));
 
   } else if (left_is_literal) {
     auto right_value = _evaluate_expression(type, right_child);
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_value)));
+    value =
+        AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_value)));
 
   } else {
     auto left_value = _evaluate_expression(type, left_child);
