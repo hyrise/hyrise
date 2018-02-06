@@ -109,7 +109,7 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> _output;
 
   // Weak pointer breaks cyclical dependency between operators and context
-  std::weak_ptr<TransactionContext> _transaction_context;
+  std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   PerformanceData _performance_data;
 
