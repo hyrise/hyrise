@@ -20,8 +20,8 @@ static const size_t DefaultCacheCapacity = 1024;
 template <typename Value, typename Key = std::string>
 class SQLQueryCache {
  public:
-  explicit SQLQueryCache(size_t capacity = DefaultCacheCapacity) :
-    _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
+  explicit SQLQueryCache(size_t capacity = DefaultCacheCapacity)
+      : _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
   virtual ~SQLQueryCache() {}
 
