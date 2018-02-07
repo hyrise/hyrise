@@ -12,7 +12,6 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/build_lqps.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
@@ -49,9 +48,9 @@ class SQLTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     load_test_tables();
-    _stored_table_node_a = make_stored_table_node("table_a");
-    _stored_table_node_b = make_stored_table_node("table_b");
-    _stored_table_node_c = make_stored_table_node("table_c");
+    _stored_table_node_a = StoredTableNode::make("table_a");
+    _stored_table_node_b = StoredTableNode::make("table_b");
+    _stored_table_node_c = StoredTableNode::make("table_c");
     _table_a_a = _stored_table_node_a->get_column("a"s);
     _table_a_b = _stored_table_node_a->get_column("b"s);
     _table_b_a = _stored_table_node_b->get_column("a"s);
@@ -76,9 +75,9 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   const auto result_node = compile_query(query);
 
-  auto projection_node = make_star_projection_node(_stored_table_node_a);
+  auto projection_node = ProjectionNode::make_pass_through(_stored_table_node_a);
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 /*
@@ -106,41 +105,41 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   const auto result_node = compile_query(query);
 
-  auto projection_node = make_star_projection_node(
-    make_predicate_node(_table_a_a, PredicateCondition::Equals, _table_a_b,
+  auto projection_node = ProjectionNode::make_pass_through(
+    PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_a_b,
       _stored_table_node_a
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   const auto result_node = compile_query(query);
 
-  auto projection_node = make_star_projection_node(
-    make_predicate_node(_table_a_a, PredicateCondition::Equals, "b",
+  auto projection_node = ProjectionNode::make_pass_through(
+    PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
        _stored_table_node_a
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   const auto result_node = compile_query(query);
 
-  auto projection_node = make_star_projection_node(
-    make_predicate_node(_table_a_b, PredicateCondition::LessThan, 457.9f,
-      make_predicate_node(_table_a_a, PredicateCondition::GreaterThanEquals, 1234l,
+  auto projection_node = ProjectionNode::make_pass_through(
+    PredicateNode::make(_table_a_b, PredicateCondition::LessThan, 457.9f,
+      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, 1234l,
         _stored_table_node_a
       )
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
@@ -150,9 +149,9 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 //  const auto a = LQPExpression::create_column(_table_a_a);
 //  const auto b = LQPExpression::create_column(aggregate_node->output_column_references().at(1));
 //
-//  const auto projection_node = make_projection_node({a, b}, aggregate_node);
+//  const auto projection_node = ProjectionNode::make({a, b}, aggregate_node);
 //
-//  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+//  EXPECT_LQP_EQ(projection_node, result_node);
 
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
@@ -254,11 +253,11 @@ TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   const auto result_node = compile_query(query);
 
-  const auto projection_node = make_sort_node({{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
-    make_star_projection_node(_stored_table_node_a)
+  const auto projection_node = SortNode::make({{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
+    ProjectionNode::make_pass_through(_stored_table_node_a)
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, SelectInnerJoin) {
@@ -268,13 +267,13 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
   _stored_table_node_a->set_alias("a");
   _stored_table_node_b->set_alias("b");
 
-  const auto projection_node = make_star_projection_node(
-    make_join_node(JoinMode::Inner, {_table_a_a, _table_b_a}, PredicateCondition::Equals,
+  const auto projection_node = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, {_table_a_a, _table_b_a}, PredicateCondition::Equals,
       _stored_table_node_a, _stored_table_node_b
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 class SQLTranslatorJoinTest : public ::testing::TestWithParam<JoinMode> {
@@ -293,18 +292,18 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
   const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node_a = make_stored_table_node("table_a", "a");
-  const auto stored_table_node_b = make_stored_table_node("table_b", "b");
+  const auto stored_table_node_a = StoredTableNode::make("table_a", "a");
+  const auto stored_table_node_b = StoredTableNode::make("table_b", "b");
   const auto table_a_a = stored_table_node_a->get_column("a"s);
   const auto table_b_a = stored_table_node_b->get_column("a"s);
 
-  const auto projection_node = make_star_projection_node(
-    make_join_node(mode, {table_a_a, table_b_a}, PredicateCondition::Equals,
+  const auto projection_node = ProjectionNode::make_pass_through(
+    JoinNode::make(mode, {table_a_a, table_b_a}, PredicateCondition::Equals,
       stored_table_node_a, stored_table_node_b
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 INSTANTIATE_TEST_CASE_P(SQLTranslatorJoinTestInstanciation, SQLTranslatorJoinTest,
@@ -314,33 +313,33 @@ TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto query = "SELECT * FROM table_a AS t1 JOIN table_a AS t2 ON t1.a = t2.b;";
   auto result_node = compile_query(query);
 
-  const auto stored_table_node_t1 = make_stored_table_node("table_a", "t1");
-  const auto stored_table_node_t2 = make_stored_table_node("table_a", "t2");
+  const auto stored_table_node_t1 = StoredTableNode::make("table_a", "t1");
+  const auto stored_table_node_t2 = StoredTableNode::make("table_a", "t2");
   const auto t1_a = stored_table_node_t1->get_column("a"s);
   const auto t2_b = stored_table_node_t2->get_column("b"s);
 
-  const auto projection_node = make_star_projection_node(
-    make_join_node(JoinMode::Inner, {t1_a, t2_b}, PredicateCondition::Equals,
+  const auto projection_node = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, {t1_a, t2_b}, PredicateCondition::Equals,
       stored_table_node_t1, stored_table_node_t2
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
   const auto query = "SELECT * FROM table_a NATURAL JOIN table_c;";
   auto result_node = compile_query(query);
 
-  const auto projection_node = make_projection_node(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-    make_projection_node(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-      make_predicate_node(_table_a_a, PredicateCondition::Equals, _table_c_a,
-        make_join_node(JoinMode::Cross, _stored_table_node_a, _stored_table_node_c)
+  const auto projection_node = ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
+    ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
+      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_c_a,
+        JoinNode::make(JoinMode::Cross, _stored_table_node_a, _stored_table_node_c)
       )
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, SelectCrossJoin) {
@@ -350,22 +349,22 @@ TEST_F(SQLTranslatorTest, SelectCrossJoin) {
   _stored_table_node_a->set_alias("a");
   _stored_table_node_b->set_alias("b");
 
-  const auto projection_node = make_star_projection_node(
-    make_predicate_node(_table_a_a, PredicateCondition::Equals, _table_b_a,
-      make_join_node(JoinMode::Cross, _stored_table_node_a, _stored_table_node_b)
+  const auto projection_node = ProjectionNode::make_pass_through(
+    PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_b_a,
+      JoinNode::make(JoinMode::Cross, _stored_table_node_a, _stored_table_node_b)
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(projection_node, result_node);
+  EXPECT_LQP_EQ(projection_node, result_node);
 }
 
 TEST_F(SQLTranslatorTest, SelectLimit) {
   const auto query = "SELECT * FROM table_a LIMIT 2;";
   auto result_node = compile_query(query);
 
-  const auto lqp = make_limit_node(2, make_star_projection_node(_stored_table_node_a));
+  const auto lqp = LimitNode::make(2, ProjectionNode::make_pass_through(_stored_table_node_a));
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, InsertValues) {
@@ -375,9 +374,9 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   const auto value_a = LQPExpression::create_literal(10);
   const auto value_b = LQPExpression::create_literal(12.5f);
 
-  const auto lqp = make_insert_node("table_a", make_projection_node({value_a, value_b}, std::make_shared<DummyTableNode>()));
+  const auto lqp = InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
@@ -387,9 +386,9 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   const auto value_a = LQPExpression::create_literal(12.5f);
   const auto value_b = LQPExpression::create_literal(10);
 
-  const auto lqp = make_insert_node("table_a", make_projection_node({value_a, value_b}, std::make_shared<DummyTableNode>()));
+  const auto lqp = InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
@@ -399,9 +398,9 @@ TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
   const auto value_a = LQPExpression::create_literal(10);
   const auto value_b = LQPExpression::create_literal(NullValue{});
 
-  const auto lqp = make_insert_node("table_a", make_projection_node({value_a, value_b}, std::make_shared<DummyTableNode>()));
+  const auto lqp = InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, InsertSubquery) {
@@ -410,9 +409,9 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
   const auto columns = LQPExpression::create_columns({_table_b_a, _table_b_b});
 
-  const auto lqp = make_insert_node("table_a", make_projection_node(columns, _stored_table_node_b));
+  const auto lqp = InsertNode::make("table_a", ProjectionNode::make(columns, _stored_table_node_b));
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, Update) {
@@ -423,13 +422,13 @@ TEST_F(SQLTranslatorTest, Update) {
   const auto update_b = LQPExpression::create_literal(3.2f);
 
   const auto lqp =
-  make_update_node("table_a", {update_a, update_b},
-    make_predicate_node(_table_a_a, PredicateCondition::GreaterThan, 1l,
+  UpdateNode::make("table_a", {update_a, update_b},
+    PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, 1l,
       _stored_table_node_a
     )
   );
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
@@ -508,15 +507,15 @@ TEST_F(SQLTranslatorTest, CreateView) {
   const auto result_node = compile_query(query);
 
   const auto view_node =
-  make_star_projection_node(
-    make_predicate_node(_table_a_a, PredicateCondition::Equals, "b",
+  ProjectionNode::make_pass_through(
+    PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
       _stored_table_node_a
     )
   );
 
-  const auto lqp = make_create_view_node("my_first_view", view_node);
+  const auto lqp = CreateViewNode::make("my_first_view", view_node);
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
@@ -527,17 +526,17 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto alias_d = LQPExpression::create_column(_table_a_b, "d");
 
   const auto view_node =
-    make_projection_node({alias_c, alias_d},
-      make_star_projection_node(
-        make_predicate_node(_table_a_a, PredicateCondition::Equals, "b",
+    ProjectionNode::make({alias_c, alias_d},
+      ProjectionNode::make_pass_through(
+        PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
           _stored_table_node_a
         )
       )
     );
 
-  const auto lqp = make_create_view_node("my_second_view", view_node);
+  const auto lqp = CreateViewNode::make("my_second_view", view_node);
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, DropView) {
@@ -546,7 +545,7 @@ TEST_F(SQLTranslatorTest, DropView) {
 
   const auto lqp = std::make_shared<DropViewNode>("my_third_view");
 
-  EXPECT_LQP_SEMANTICALLY_EQ(lqp, result_node);
+  EXPECT_LQP_EQ(lqp, result_node);
 }
 
 TEST_F(SQLTranslatorTest, AccessInvalidColumn) {

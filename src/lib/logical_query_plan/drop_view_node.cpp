@@ -9,6 +9,10 @@
 
 namespace opossum {
 
+std::shared_ptr<DropViewNode> DropViewNode::make(const std::string& view_name) {
+  return std::make_shared<DropViewNode>(view_name);
+}
+
 DropViewNode::DropViewNode(const std::string& view_name)
     : AbstractLQPNode(LQPNodeType::DropView), _view_name(view_name) {}
 
@@ -33,5 +37,12 @@ const std::vector<std::string>& DropViewNode::output_column_names() const {
 }
 
 const std::string& DropViewNode::view_name() const { return _view_name; }
+
+bool DropViewNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& drop_view_node = dynamic_cast<const DropViewNode&>(rhs);
+
+  return _view_name == drop_view_node._view_name;
+}
 
 }  // namespace opossum

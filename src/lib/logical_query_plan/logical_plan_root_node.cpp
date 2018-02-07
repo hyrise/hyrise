@@ -16,4 +16,9 @@ std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_deep_copy_impl(
 
 std::string LogicalPlanRootNode::description() const { return "[LogicalPlanRootNode]"; }
 
+bool LogicalPlanRootNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  return true;
+}
+
 }  // namespace opossum

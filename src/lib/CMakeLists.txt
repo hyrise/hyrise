@@ -3,6 +3,7 @@ set(
     SOURCES
     all_parameter_variant.cpp
     all_parameter_variant.hpp
+    all_type_variant.cpp
     all_type_variant.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
@@ -25,12 +26,8 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
-    logical_query_plan/build_lqps.cpp
-    logical_query_plan/build_lqps.hpp
     logical_query_plan/lqp_column_reference.cpp
     logical_query_plan/lqp_column_reference.hpp
-    logical_query_plan/compare_lqps.cpp
-    logical_query_plan/compare_lqps.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp

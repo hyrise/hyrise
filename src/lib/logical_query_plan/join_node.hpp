@@ -21,6 +21,11 @@ using LQPColumnReferencePair = std::pair<LQPColumnReference, LQPColumnReference>
  */
 class JoinNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<JoinNode> make(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
+                                        const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child);
+
+  static std::shared_ptr<JoinNode> make(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child);
+
   // Constructor for Natural and Cross Joins
   explicit JoinNode(const JoinMode join_mode);
 
@@ -41,6 +46,8 @@ class JoinNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_child) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   void _on_child_changed() override;

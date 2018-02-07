@@ -11,11 +11,15 @@ namespace opossum {
  */
 class LimitNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<LimitNode> make(const size_t num_rows, const std::shared_ptr<AbstractLQPNode>& child);
+
   explicit LimitNode(const size_t num_rows);
 
   std::string description() const override;
 
   size_t num_rows() const;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

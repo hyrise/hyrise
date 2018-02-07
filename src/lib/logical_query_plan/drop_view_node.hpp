@@ -12,11 +12,15 @@ namespace opossum {
  */
 class DropViewNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<DropViewNode> make(const std::string& view_name);
+
   explicit DropViewNode(const std::string& view_name);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;
   const std::vector<std::string>& output_column_names() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
   const std::string& view_name() const;
 

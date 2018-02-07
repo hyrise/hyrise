@@ -16,6 +16,21 @@
 
 namespace opossum {
 
+std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
+                                      const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) {
+  const auto join_node = std::make_shared<JoinNode>(join_mode, join_column_references, predicate_condition);
+  join_node->set_left_child(left_child);
+  join_node->set_right_child(right_child);
+  return join_node;
+}
+
+std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) {
+  const auto join_node = std::make_shared<JoinNode>(join_mode);
+  join_node->set_left_child(left_child);
+  join_node->set_right_child(right_child);
+  return join_node;
+}
+
 JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), _join_mode(join_mode) {
   DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
               "Specified JoinMode must also specify column ids and predicate condition.");
@@ -112,6 +127,19 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
     return left_child()->get_verbose_column_name(column_id);
   }
   return right_child()->get_verbose_column_name(static_cast<ColumnID>(column_id - left_child()->output_column_count()));
+}
+
+bool JoinNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& join_node = dynamic_cast<const JoinNode&>(rhs);
+
+  if (_join_mode != join_node._join_mode || _predicate_condition != join_node._predicate_condition) return false;
+  if (_join_column_references.has_value() != join_node._join_column_references.has_value()) return false;
+
+  if (!_join_column_references.has_value()) return true;
+
+  return _equals(*this, _join_column_references->first, join_node, join_node._join_column_references->first) &&
+         _equals(*this, _join_column_references->second, join_node, join_node._join_column_references->second);
 }
 
 void JoinNode::_on_child_changed() { _output_column_names.reset(); }

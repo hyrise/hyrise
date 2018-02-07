@@ -11,6 +11,8 @@ namespace opossum {
 
 class UnionNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<UnionNode> make(UnionMode union_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child);
+
   explicit UnionNode(UnionMode union_mode);
 
   UnionMode union_mode() const;
@@ -25,6 +27,8 @@ class UnionNode : public AbstractLQPNode {
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,
       const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

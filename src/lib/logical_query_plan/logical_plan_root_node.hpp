@@ -20,6 +20,8 @@ class LogicalPlanRootNode : public AbstractLQPNode {
 
   std::string description() const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_child,

@@ -9,6 +9,10 @@
 
 namespace opossum {
 
+std::shared_ptr<DummyTableNode> DummyTableNode::make() {
+  return std::make_shared<DummyTableNode>();
+}
+
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) { _output_column_references.emplace(); }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(
@@ -20,5 +24,10 @@ std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(
 std::string DummyTableNode::description() const { return "[DummyTable]"; }
 
 const std::vector<std::string>& DummyTableNode::output_column_names() const { return _output_column_names; }
+
+bool DummyTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  return true;
+}
 
 }  // namespace opossum

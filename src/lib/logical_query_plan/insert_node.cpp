@@ -10,6 +10,12 @@
 
 namespace opossum {
 
+std::shared_ptr<InsertNode> InsertNode::make(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& child) {
+  const auto insert_node = std::make_shared<InsertNode>(table_name);
+  insert_node->set_left_child(child);
+  return insert_node;
+}
+
 InsertNode::InsertNode(const std::string table_name) : AbstractLQPNode(LQPNodeType::Insert), _table_name(table_name) {}
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_deep_copy_impl(
@@ -29,5 +35,12 @@ std::string InsertNode::description() const {
 bool InsertNode::subtree_is_read_only() const { return false; }
 
 const std::string& InsertNode::table_name() const { return _table_name; }
+
+bool InsertNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& insert_node = dynamic_cast<const InsertNode&>(rhs);
+
+  return _table_name == insert_node._table_name;
+}
 
 }  // namespace opossum

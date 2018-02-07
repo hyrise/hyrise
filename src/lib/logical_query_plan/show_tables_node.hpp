@@ -11,9 +11,13 @@ namespace opossum {
  */
 class ShowTablesNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<ShowTablesNode> make();
+
   ShowTablesNode();
 
   std::string description() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

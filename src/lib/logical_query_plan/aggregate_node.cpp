@@ -182,6 +182,15 @@ std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
   return std::nullopt;
 }
 
+bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& aggregate_node = dynamic_cast<const AggregateNode&>(rhs);
+
+  Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
+  return _equals(*left_child(), _aggregate_expressions, *rhs.left_child(), aggregate_node.aggregate_expressions()) &&
+         _equals(*left_child(), _groupby_column_references, *rhs.left_child(), aggregate_node.groupby_column_references());
+}
+
 void AggregateNode::_update_output() const {
   /**
    * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is

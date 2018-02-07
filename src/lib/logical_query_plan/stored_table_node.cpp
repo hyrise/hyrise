@@ -12,6 +12,12 @@
 
 namespace opossum {
 
+std::shared_ptr<StoredTableNode> StoredTableNode::make(const std::string& table_name, const std::optional<std::string>& alias) {
+  const auto stored_table_node = std::make_shared<StoredTableNode>(table_name);
+  stored_table_node->set_alias(alias);
+  return stored_table_node;
+}
+
 StoredTableNode::StoredTableNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), _table_name(table_name) {
   /**
@@ -52,6 +58,13 @@ std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
     return "(" + _table_name + " AS " + *_table_alias + ")." + output_column_names()[column_id];
   }
   return _table_name + "." + output_column_names()[column_id];
+}
+
+bool StoredTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& stored_table_node = dynamic_cast<const StoredTableNode&>(rhs);
+
+  return _table_name == stored_table_node._table_name;
 }
 
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }

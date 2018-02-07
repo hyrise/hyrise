@@ -4,6 +4,10 @@
 
 namespace opossum {
 
+std::shared_ptr<ShowColumnsNode> ShowColumnsNode::make(const std::string& table_name) {
+  return std::make_shared<ShowColumnsNode>(table_name);
+}
+
 ShowColumnsNode::ShowColumnsNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::ShowColumns), _table_name(table_name) {}
 
@@ -16,5 +20,11 @@ std::shared_ptr<AbstractLQPNode> ShowColumnsNode::_deep_copy_impl(
 std::string ShowColumnsNode::description() const { return "[ShowColumns] Table: '" + _table_name + "'"; }
 
 const std::string& ShowColumnsNode::table_name() const { return _table_name; }
+
+bool ShowColumnsNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& show_columns_node = dynamic_cast<const ShowColumnsNode&>(rhs);
+  return _table_name == show_columns_node._table_name;
+}
 
 }  // namespace opossum

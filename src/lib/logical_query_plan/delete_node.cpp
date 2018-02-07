@@ -9,6 +9,10 @@
 
 namespace opossum {
 
+std::shared_ptr<DeleteNode> DeleteNode::make(const std::string& table_name) {
+  return std::make_shared<DeleteNode>(table_name);
+}
+
 DeleteNode::DeleteNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Delete), _table_name(table_name) {}
 
 std::shared_ptr<AbstractLQPNode> DeleteNode::_deep_copy_impl(
@@ -28,5 +32,12 @@ std::string DeleteNode::description() const {
 bool DeleteNode::subtree_is_read_only() const { return false; }
 
 const std::string& DeleteNode::table_name() const { return _table_name; }
+
+bool DeleteNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& delete_node = dynamic_cast<const DeleteNode&>(rhs);
+
+  return _table_name == delete_node._table_name;
+}
 
 }  // namespace opossum

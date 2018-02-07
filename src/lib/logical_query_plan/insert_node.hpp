@@ -13,10 +13,14 @@ namespace opossum {
  */
 class InsertNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<InsertNode> make(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& child);
+
   explicit InsertNode(const std::string table_name);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
   const std::string& table_name() const;
 

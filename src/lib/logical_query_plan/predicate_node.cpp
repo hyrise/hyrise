@@ -12,6 +12,16 @@
 
 namespace opossum {
 
+std::shared_ptr<PredicateNode> PredicateNode::make(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition, const AllParameterVariant& value, const std::shared_ptr<AbstractLQPNode>& child) {
+  return make(column_reference, predicate_condition, value, std::nullopt, child);
+}
+
+std::shared_ptr<PredicateNode> PredicateNode::make(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition, const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2, const std::shared_ptr<AbstractLQPNode>& child) {
+  const auto predicate_node =  std::make_shared<PredicateNode>(column_reference, predicate_condition, value, value2);
+  predicate_node->set_left_child(child);
+  return predicate_node;
+}
+
 PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
                              const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2)
     : AbstractLQPNode(LQPNodeType::Predicate),
@@ -92,6 +102,25 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
 
   return left_child->get_statistics()->predicate_statistics(left_child->get_output_column_id(_column_reference),
                                                             _predicate_condition, value, _value2);
+}
+
+bool PredicateNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& predicate_node = dynamic_cast<const PredicateNode&>(rhs);
+
+  if (!_equals(*this, _column_reference, predicate_node, predicate_node._column_reference)) return false;
+  if (_predicate_condition != predicate_node._predicate_condition) return false;
+  if (is_lqp_column_reference(_value) != is_lqp_column_reference(predicate_node._value)) return false;
+  if (is_lqp_column_reference(_value)) {
+    if (!_equals(*this, boost::get<LQPColumnReference>(_value), predicate_node, boost::get<LQPColumnReference>(predicate_node._value))) return false;
+  } else {
+    if (!all_parameter_variant_near(_value, predicate_node._value)) return false;
+  }
+
+  if (_value2.has_value() != predicate_node._value2.has_value()) return false;
+  if (!_value2.has_value() && !predicate_node._value2.has_value()) return true;
+
+  return all_type_variant_near(*_value2, *predicate_node._value2);
 }
 
 }  // namespace opossum

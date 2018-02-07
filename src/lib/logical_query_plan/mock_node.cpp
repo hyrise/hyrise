@@ -58,4 +58,13 @@ std::string MockNode::get_verbose_column_name(ColumnID column_id) const {
 }
 
 std::string MockNode::description() const { return "[MockTable]"; }
+
+bool MockNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& mock_node = dynamic_cast<const MockNode&>(rhs);
+
+  Assert (_constructor_arguments.type() != typeid(std::shared_ptr<TableStatistics>), "Comparison of statistics not implemented, because this is painful");
+  return _constructor_arguments == mock_node._constructor_arguments;
+}
+
 }  // namespace opossum

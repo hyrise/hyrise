@@ -25,6 +25,9 @@ enum class ScanType : uint8_t { TableScan, IndexScan };
  */
 class PredicateNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<PredicateNode> make(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition, const AllParameterVariant& value, const std::shared_ptr<AbstractLQPNode>& child);
+  static std::shared_ptr<PredicateNode> make(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition, const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2, const std::shared_ptr<AbstractLQPNode>& child);
+
   PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
                 const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
@@ -41,6 +44,8 @@ class PredicateNode : public AbstractLQPNode {
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

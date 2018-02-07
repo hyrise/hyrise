@@ -113,4 +113,6 @@ static const auto NULL_VALUE = AllTypeVariant{};
 
 /**@}*/
 
+bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
+
 }  // namespace opossum

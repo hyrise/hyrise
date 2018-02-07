@@ -10,6 +10,13 @@
 
 namespace opossum {
 
+std::shared_ptr<UnionNode> UnionNode::make(UnionMode union_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) {
+  const auto union_node = std::make_shared<UnionNode>(union_mode);
+  union_node->set_left_child(left_child);
+  union_node->set_right_child(right_child);
+  return union_node;
+}
+
 UnionNode::UnionNode(UnionMode union_mode) : AbstractLQPNode(LQPNodeType::Union), _union_mode(union_mode) {}
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(
@@ -58,4 +65,12 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
 }
+
+bool UnionNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& union_node = dynamic_cast<const UnionNode&>(rhs);
+
+  return _union_mode == union_node._union_mode;
+}
+
 }  // namespace opossum

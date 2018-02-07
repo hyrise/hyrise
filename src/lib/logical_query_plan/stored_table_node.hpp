@@ -18,6 +18,8 @@ class TableStatistics;
  */
 class StoredTableNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<StoredTableNode> make(const std::string& table_name, const std::optional<std::string>& alias = std::nullopt);
+
   explicit StoredTableNode(const std::string& table_name);
 
   const std::string& table_name() const;
@@ -31,6 +33,8 @@ class StoredTableNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

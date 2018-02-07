@@ -12,10 +12,14 @@ namespace opossum {
  */
 class DeleteNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<DeleteNode> make(const std::string& table_name);
+
   explicit DeleteNode(const std::string& table_name);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
   const std::string& table_name() const;
 

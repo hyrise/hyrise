@@ -107,7 +107,7 @@ class CompareLQPsTest : public ::testing::Test {
 
 TEST_F(CompareLQPsTest, EqualsTest) {
   _build_query_lqps();
-  EXPECT_LQP_SEMANTICALLY_EQ(_query_lqp_lhs, _query_lqp_rhs);
+  EXPECT_LQP_EQ(_query_lqp_lhs, _query_lqp_rhs);
 }
 
 }  // namespace opossum

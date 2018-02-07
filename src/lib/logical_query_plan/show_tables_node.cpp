@@ -4,6 +4,10 @@
 
 namespace opossum {
 
+std::shared_ptr<ShowTablesNode> ShowTablesNode::make() {
+  return std::make_shared<ShowTablesNode>();
+}
+
 ShowTablesNode::ShowTablesNode() : AbstractLQPNode(LQPNodeType::ShowTables) {}
 
 std::shared_ptr<AbstractLQPNode> ShowTablesNode::_deep_copy_impl(
@@ -13,5 +17,10 @@ std::shared_ptr<AbstractLQPNode> ShowTablesNode::_deep_copy_impl(
 }
 
 std::string ShowTablesNode::description() const { return "[ShowTables]"; }
+
+bool ShowTablesNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  return true;
+}
 
 }  // namespace opossum

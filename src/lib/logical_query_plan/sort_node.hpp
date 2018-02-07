@@ -27,11 +27,15 @@ using OrderByDefinitions = std::vector<OrderByDefinition>;
  */
 class SortNode : public AbstractLQPNode {
  public:
+  static std::shared_ptr<SortNode> make(const OrderByDefinitions& order_by_definitions, const std::shared_ptr<AbstractLQPNode>& child);
+
   explicit SortNode(const OrderByDefinitions& order_by_definitions);
 
   std::string description() const override;
 
   const OrderByDefinitions& order_by_definitions() const;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

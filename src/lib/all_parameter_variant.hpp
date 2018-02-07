@@ -49,4 +49,6 @@ inline bool is_placeholder(const AllParameterVariant& variant) { return (variant
 
 std::string to_string(const AllParameterVariant& x);
 
+bool all_parameter_variant_near(const AllParameterVariant& lhs, const AllParameterVariant& rhs);
+
 }  // namespace opossum
