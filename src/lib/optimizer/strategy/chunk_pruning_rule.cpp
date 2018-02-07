@@ -80,6 +80,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     _apply_to_children(node);
   }
 
+  // always returns false as we never modify the LQP
   return false;
 }
 
