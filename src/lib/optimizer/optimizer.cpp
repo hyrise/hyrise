@@ -21,10 +21,10 @@ Optimizer Optimizer::create_default_optimizer() {
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
-  main_batch.add_rule(std::make_shared<ChunkPruningRule>());
   optimizer.add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
+  final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
   optimizer.add_rule_batch(final_batch);
 
