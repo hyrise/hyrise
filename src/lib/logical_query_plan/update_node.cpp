@@ -10,7 +10,9 @@
 
 namespace opossum {
 
-std::shared_ptr<UpdateNode> UpdateNode::make(const std::string& table_name, const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& child) {
+std::shared_ptr<UpdateNode> UpdateNode::make(const std::string& table_name,
+                                             const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
+                                             const std::shared_ptr<AbstractLQPNode>& child) {
   const auto update_node = std::make_shared<UpdateNode>(table_name, column_expressions);
   update_node->set_left_child(child);
   return update_node;
@@ -69,6 +71,8 @@ bool UpdateNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   const auto& update_node = dynamic_cast<const UpdateNode&>(rhs);
 
-  return _table_name == update_node._table_name && _equals(*this, _column_expressions, update_node, update_node._column_expressions);
+  Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
+  return _table_name == update_node._table_name &&
+         _equals(*left_child(), _column_expressions, *update_node.left_child(), update_node._column_expressions);
 }
 }  // namespace opossum

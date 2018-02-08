@@ -18,7 +18,9 @@ set(
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     logical_query_plan/aggregate_node_test.cpp
-    logical_query_plan/compare_lqps_test.cpp
+    logical_query_plan/create_view_node_test.cpp
+    logical_query_plan/drop_view_node_test.cpp
+    logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     logical_query_plan/delete_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
     logical_query_plan/insert_node_test.cpp

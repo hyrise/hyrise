@@ -237,7 +237,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     const auto column_id = current_values_node->get_output_column_id(column_reference);
 
     auto expr = HSQLExprTranslator::to_lqp_expression(*sql_expr->value, current_values_node);
-    expr->set_alias(sql_expr->column);
     update_expressions[column_id] = expr;
   }
 

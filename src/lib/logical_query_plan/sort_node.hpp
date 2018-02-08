@@ -27,7 +27,8 @@ using OrderByDefinitions = std::vector<OrderByDefinition>;
  */
 class SortNode : public AbstractLQPNode {
  public:
-  static std::shared_ptr<SortNode> make(const OrderByDefinitions& order_by_definitions, const std::shared_ptr<AbstractLQPNode>& child);
+  static std::shared_ptr<SortNode> make(const OrderByDefinitions& order_by_definitions,
+                                        const std::shared_ptr<AbstractLQPNode>& child);
 
   explicit SortNode(const OrderByDefinitions& order_by_definitions);
 

@@ -10,7 +10,8 @@
 
 namespace opossum {
 
-std::shared_ptr<InsertNode> InsertNode::make(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& child) {
+std::shared_ptr<InsertNode> InsertNode::make(const std::string& table_name,
+                                             const std::shared_ptr<AbstractLQPNode>& child) {
   const auto insert_node = std::make_shared<InsertNode>(table_name);
   insert_node->set_left_child(child);
   return insert_node;

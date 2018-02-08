@@ -45,7 +45,8 @@ std::shared_ptr<AbstractLQPNode> MockNode::_deep_copy_impl(
 
 const std::vector<std::string>& MockNode::output_column_names() const { return _output_column_names; }
 
-const boost::variant<MockNode::ColumnDefinitions, std::shared_ptr<TableStatistics>>& MockNode::constructor_arguments() const {
+const boost::variant<MockNode::ColumnDefinitions, std::shared_ptr<TableStatistics>>& MockNode::constructor_arguments()
+    const {
   return _constructor_arguments;
 }
 
@@ -63,7 +64,8 @@ bool MockNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   const auto& mock_node = dynamic_cast<const MockNode&>(rhs);
 
-  Assert (_constructor_arguments.type() != typeid(std::shared_ptr<TableStatistics>), "Comparison of statistics not implemented, because this is painful");
+  Assert(_constructor_arguments.type() != typeid(std::shared_ptr<TableStatistics>),
+         "Comparison of statistics not implemented, because this is painful");
   return _constructor_arguments == mock_node._constructor_arguments;
 }
 

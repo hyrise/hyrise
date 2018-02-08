@@ -46,4 +46,11 @@ TEST_F(MockNodeTest, ColumnNamesWithAlias) {
   }
 }
 
+TEST_F(MockNodeTest, ShallowEquals) {
+  EXPECT_ANY_THROW(_mock_node->shallow_equals(*_mock_node));
+
+  const auto other_mock_node = std::make_shared<MockNode>(_statistics);
+  EXPECT_ANY_THROW(other_mock_node->shallow_equals(*_mock_node));
+}
+
 }  // namespace opossum

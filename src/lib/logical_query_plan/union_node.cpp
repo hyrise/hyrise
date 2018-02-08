@@ -10,7 +10,8 @@
 
 namespace opossum {
 
-std::shared_ptr<UnionNode> UnionNode::make(UnionMode union_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) {
+std::shared_ptr<UnionNode> UnionNode::make(UnionMode union_mode, const std::shared_ptr<AbstractLQPNode>& left_child,
+                                           const std::shared_ptr<AbstractLQPNode>& right_child) {
   const auto union_node = std::make_shared<UnionNode>(union_mode);
   union_node->set_left_child(left_child);
   union_node->set_right_child(right_child);

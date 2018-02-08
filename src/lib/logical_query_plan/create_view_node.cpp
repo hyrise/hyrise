@@ -1,11 +1,12 @@
 #include "create_view_node.hpp"
 
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace opossum {
 
-std::shared_ptr<CreateViewNode> CreateViewNode::make(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp) {
+std::shared_ptr<CreateViewNode> CreateViewNode::make(const std::string& view_name,
+                                                     const std::shared_ptr<const AbstractLQPNode>& lqp) {
   return std::make_shared<CreateViewNode>(view_name, lqp);
 }
 
@@ -30,15 +31,13 @@ std::string CreateViewNode::description() const {
   return "[CreateView] Name: '" + _view_name + "' (\n" + stream.str() + ")";
 }
 
-const std::vector<std::string>& CreateViewNode::output_column_names() const {
-  return _output_column_names_dummy;
-}
+const std::vector<std::string>& CreateViewNode::output_column_names() const { return _output_column_names_dummy; }
 
 bool CreateViewNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   const auto& create_view_node = dynamic_cast<const CreateViewNode&>(rhs);
 
-  return _view_name == create_view_node._view_name && _lqp->deep_equals(create_view_node._lqp);
+  return _view_name == create_view_node._view_name && !_lqp->find_subplan_mismatch(create_view_node._lqp);
 }
 
 }  // namespace opossum

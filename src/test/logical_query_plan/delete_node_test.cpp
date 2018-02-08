@@ -17,4 +17,11 @@ class DeleteNodeTest : public BaseTest {
 
 TEST_F(DeleteNodeTest, Description) { EXPECT_EQ(_delete_node->description(), "[Delete] Table: 'table_a'"); }
 
+TEST_F(DeleteNodeTest, ShallowEquals) {
+  EXPECT_TRUE(_delete_node->shallow_equals(*_delete_node));
+
+  const auto other_delete_node = std::make_shared<DeleteNode>("table_b");
+  EXPECT_FALSE(other_delete_node->shallow_equals(*_delete_node));
+}
+
 }  // namespace opossum

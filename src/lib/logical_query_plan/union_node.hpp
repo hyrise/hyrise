@@ -11,7 +11,8 @@ namespace opossum {
 
 class UnionNode : public AbstractLQPNode {
  public:
-  static std::shared_ptr<UnionNode> make(UnionMode union_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child);
+  static std::shared_ptr<UnionNode> make(UnionMode union_mode, const std::shared_ptr<AbstractLQPNode>& left_child,
+                                         const std::shared_ptr<AbstractLQPNode>& right_child);
 
   explicit UnionNode(UnionMode union_mode);
 

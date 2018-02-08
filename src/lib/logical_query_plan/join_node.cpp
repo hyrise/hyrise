@@ -17,14 +17,17 @@
 namespace opossum {
 
 std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-                                      const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) {
+                                         const PredicateCondition predicate_condition,
+                                         const std::shared_ptr<AbstractLQPNode>& left_child,
+                                         const std::shared_ptr<AbstractLQPNode>& right_child) {
   const auto join_node = std::make_shared<JoinNode>(join_mode, join_column_references, predicate_condition);
   join_node->set_left_child(left_child);
   join_node->set_right_child(right_child);
   return join_node;
 }
 
-std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) {
+std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child,
+                                         const std::shared_ptr<AbstractLQPNode>& right_child) {
   const auto join_node = std::make_shared<JoinNode>(join_mode);
   join_node->set_left_child(left_child);
   join_node->set_right_child(right_child);

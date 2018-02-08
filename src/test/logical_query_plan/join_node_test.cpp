@@ -81,4 +81,22 @@ TEST_F(JoinNodeTest, OutputColumnReferences) {
   EXPECT_EQ(_join_node->output_column_references().at(4), _t_b_y);
 }
 
+TEST_F(JoinNodeTest, ShallowEquals) {
+  EXPECT_TRUE(_inner_join_node->shallow_equals(*_inner_join_node));
+
+  const auto other_join_node_a =
+  JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_x), PredicateCondition::Equals, _mock_node_a, _mock_node_b);
+  const auto other_join_node_b =
+  JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::NotLike, _mock_node_a, _mock_node_b);
+  const auto other_join_node_c =
+  JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+  const auto other_join_node_d =
+  JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals, _mock_node_a, _mock_node_b);
+
+  EXPECT_FALSE(other_join_node_a->shallow_equals(*_inner_join_node));
+  EXPECT_FALSE(other_join_node_b->shallow_equals(*_inner_join_node));
+  EXPECT_FALSE(other_join_node_c->shallow_equals(*_inner_join_node));
+  EXPECT_TRUE(other_join_node_d->shallow_equals(*_inner_join_node));
+}
+
 }  // namespace opossum

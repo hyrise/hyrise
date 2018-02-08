@@ -127,15 +127,15 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
 
-#define EXPECT_LQP_EQ(lhs, rhs) {  \
-  const auto mismatch = lhs->deep_equals(rhs); \
-  if (mismatch) { \
-    std::cout << "Differing subtrees" << std::endl;\
-    mismatch->first->print();\
-    std::cout << std::endl;\
-    mismatch->second->print();\
-    std::cout << std::endl;\
-    GTEST_FAIL(); \
-  }\
-} \
-
+#define EXPECT_LQP_EQ(lhs, rhs)                            \
+  {                                                        \
+    const auto mismatch = lhs->find_subplan_mismatch(rhs); \
+    if (mismatch) {                                        \
+      std::cout << "Differing subtrees" << std::endl;      \
+      mismatch->first->print();                            \
+      std::cout << std::endl;                              \
+      mismatch->second->print();                           \
+      std::cout << std::endl;                              \
+      GTEST_FAIL();                                        \
+    }                                                      \
+  }

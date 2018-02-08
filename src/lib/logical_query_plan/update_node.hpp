@@ -15,7 +15,9 @@ class LQPExpression;
  */
 class UpdateNode : public AbstractLQPNode {
  public:
-  static std::shared_ptr<UpdateNode> make(const std::string& table_name, const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& child);
+  static std::shared_ptr<UpdateNode> make(const std::string& table_name,
+                                          const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
+                                          const std::shared_ptr<AbstractLQPNode>& child);
 
   explicit UpdateNode(const std::string& table_name,
                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);

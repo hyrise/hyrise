@@ -12,7 +12,8 @@
 
 namespace opossum {
 
-std::shared_ptr<StoredTableNode> StoredTableNode::make(const std::string& table_name, const std::optional<std::string>& alias) {
+std::shared_ptr<StoredTableNode> StoredTableNode::make(const std::string& table_name,
+                                                       const std::optional<std::string>& alias) {
   const auto stored_table_node = std::make_shared<StoredTableNode>(table_name);
   stored_table_node->set_alias(alias);
   return stored_table_node;

@@ -188,7 +188,8 @@ bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
 
   Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
   return _equals(*left_child(), _aggregate_expressions, *rhs.left_child(), aggregate_node.aggregate_expressions()) &&
-         _equals(*left_child(), _groupby_column_references, *rhs.left_child(), aggregate_node.groupby_column_references());
+         _equals(*left_child(), _groupby_column_references, *rhs.left_child(),
+                 aggregate_node.groupby_column_references());
 }
 
 void AggregateNode::_update_output() const {

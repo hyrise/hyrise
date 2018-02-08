@@ -81,4 +81,10 @@ TEST_F(UnionNodeTest, VerboseColumnNames) {
   EXPECT_EQ(verbose_union->get_verbose_column_name(ColumnID{1}), "union_alias.b");
 }
 
+TEST_F(UnionNodeTest, ShallowEquals) {
+  EXPECT_TRUE(_union_node->shallow_equals(*_union_node));
+  const auto other_union_node_a = std::make_shared<UnionNode>(UnionMode::Positions);
+  EXPECT_TRUE(other_union_node_a->shallow_equals(*_union_node));
+}
+
 }  // namespace opossum

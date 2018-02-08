@@ -268,13 +268,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /**
    * @defgroup Comparing two LQPs
-   * shallow_equals() compares only the nodes without considering the children, deep_equals() will compare the entire
+   * shallow_equals() compares only the nodes without considering the children, find_subplan_mismatch() will compare the entire
    * sub plan
    * @}
    */
   virtual bool shallow_equals(const AbstractLQPNode& rhs) const = 0;
 
-  std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>> deep_equals(const std::shared_ptr<const AbstractLQPNode>& rhs) const;
+  std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
+  find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const;
   /**
    * @{
    */
@@ -316,15 +317,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
       const QualifiedColumnName& qualified_column_name) const;
 
-  static bool _equals(const AbstractLQPNode&lqp_left, const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
-                      const AbstractLQPNode&lqp_right, const std::vector<std::shared_ptr<LQPExpression>>& expressions_right);
-  static bool _equals(const AbstractLQPNode&lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
-                      const AbstractLQPNode&lqp_right, const std::shared_ptr<const LQPExpression>& expression_right);
+  static bool _equals(const AbstractLQPNode& lqp_left,
+                      const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
+                      const AbstractLQPNode& lqp_right,
+                      const std::vector<std::shared_ptr<LQPExpression>>& expressions_right);
+  static bool _equals(const AbstractLQPNode& lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
+                      const AbstractLQPNode& lqp_right, const std::shared_ptr<const LQPExpression>& expression_right);
 
-  static bool _equals(const AbstractLQPNode&lqp_left, const std::vector<LQPColumnReference>& column_references_left,
-                      const AbstractLQPNode&lqp_right, const std::vector<LQPColumnReference>& column_references_right);
-  static bool _equals(const AbstractLQPNode&lqp_left, const LQPColumnReference& column_reference_left,
-                      const AbstractLQPNode&lqp_right, const LQPColumnReference& column_reference_right);
+  static bool _equals(const AbstractLQPNode& lqp_left, const std::vector<LQPColumnReference>& column_references_left,
+                      const AbstractLQPNode& lqp_right, const std::vector<LQPColumnReference>& column_references_right);
+  static bool _equals(const AbstractLQPNode& lqp_left, const LQPColumnReference& column_reference_left,
+                      const AbstractLQPNode& lqp_right, const LQPColumnReference& column_reference_right);
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;
@@ -344,7 +347,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
                    std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
                    size_t& id_counter) const;
 
-  static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>> _deep_equals_impl(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs);
+  static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
+  _find_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                              const std::shared_ptr<const AbstractLQPNode>& rhs);
 
   // @{
   /**
