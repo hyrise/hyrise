@@ -7,9 +7,7 @@ namespace opossum {
 
 class DropViewNodeTest : public ::testing::Test {
  public:
-  void SetUp() override {
-    _drop_view_node = std::make_shared<DropViewNode>("some_view");
-  }
+  void SetUp() override { _drop_view_node = std::make_shared<DropViewNode>("some_view"); }
 
   std::shared_ptr<DropViewNode> _drop_view_node;
 };

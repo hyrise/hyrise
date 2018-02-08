@@ -268,12 +268,6 @@ LQPColumnReference AbstractLQPNode::get_column(const QualifiedColumnName& qualif
   DebugAssert(colum_origin, "Couldn't resolve column origin of " + qualified_column_name.as_string());
   return *colum_origin;
 }
-//
-//LQPColumnReference AbstractLQPNode::get_column(const std::string& column_name) const {
-//  const auto iter = std::find(output_column_names().begin(), output_column_names().end(), column_name);
-//  DebugAssert(iter != output_column_names().end(), "Couldn't find column " + column_name);
-//  return LQPColumnReference{shared_from_this(), static_cast<ColumnID>(std::distance(output_column_names().begin(), iter))};
-//}
 
 std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(const std::string& table_name) const {
   // If this node has an ALIAS that matches the table_name, this is the node we're looking for

@@ -3,7 +3,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <vector>
 
 #include "../base_test.hpp"
 #include "SQLParser.h"
@@ -133,16 +132,6 @@ TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
-  //  const auto aggregate_columns = make_aggregate_column_definitions({{AggregateFunction::Sum, _table_a_b}});
-  //  const auto aggregate_node = make_aggregate_node(aggregate_columns, {_table_a_a}, _stored_table_node_a);
-  //
-  //  const auto a = LQPExpression::create_column(_table_a_a);
-  //  const auto b = LQPExpression::create_column(aggregate_node->output_column_references().at(1));
-  //
-  //  const auto projection_node = ProjectionNode::make({a, b}, aggregate_node);
-  //
-  //  EXPECT_LQP_EQ(projection_node, result_node);
-
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
@@ -180,12 +169,6 @@ TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
 TEST_F(SQLTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
-
-  //  const auto a_plus_b = LQPExpression::create_binary_operator(ExpressionType::Addition, LQPExpression::create_column(_table_a_a), LQPExpression::create_column(_table_a_b));
-  //  const auto a_times_b = LQPExpression::create_binary_operator(ExpressionType::Multiplication, LQPExpression::create_column(_table_a_a), LQPExpression::create_column(_table_a_b));
-  //
-  //  const auto sum_a_plus_b = LQPExpression::create_aggregate_function(AggregateFunction::Sum, )
-  //  const auto sum_a_times_b = LQPExpression::create_aggregate_function(AggregateFunction::Sum)
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());

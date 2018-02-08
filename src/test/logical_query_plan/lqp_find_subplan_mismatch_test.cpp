@@ -27,35 +27,30 @@
 
 #include "testing_assert.hpp"
 
-namespace {
-
-using namespace opossum;
-
-struct QueryNodes {
-  std::shared_ptr<ValidateNode> validate_node;
-  std::shared_ptr<StoredTableNode> stored_table_node_a;
-  std::shared_ptr<MockNode> mock_node_a;
-  std::shared_ptr<MockNode> mock_node_b;
-  std::shared_ptr<PredicateNode> predicate_node_a;
-  std::shared_ptr<PredicateNode> predicate_node_b;
-  std::shared_ptr<UnionNode> union_node;
-  std::shared_ptr<LimitNode> limit_node;
-  std::shared_ptr<JoinNode> join_node;
-  std::shared_ptr<AggregateNode> aggregate_node;
-  std::shared_ptr<SortNode> sort_node;
-  std::shared_ptr<ProjectionNode> projection_node;
-
-  LQPColumnReference table_a_a;
-  LQPColumnReference table_b_a;
-  LQPColumnReference table_c_a;
-  LQPColumnReference table_c_b;
-};
-}
-
 namespace opossum {
 
 class LQPFindSubplanMismatchTest : public ::testing::Test {
  protected:
+  struct QueryNodes {
+    std::shared_ptr<ValidateNode> validate_node;
+    std::shared_ptr<StoredTableNode> stored_table_node_a;
+    std::shared_ptr<MockNode> mock_node_a;
+    std::shared_ptr<MockNode> mock_node_b;
+    std::shared_ptr<PredicateNode> predicate_node_a;
+    std::shared_ptr<PredicateNode> predicate_node_b;
+    std::shared_ptr<UnionNode> union_node;
+    std::shared_ptr<LimitNode> limit_node;
+    std::shared_ptr<JoinNode> join_node;
+    std::shared_ptr<AggregateNode> aggregate_node;
+    std::shared_ptr<SortNode> sort_node;
+    std::shared_ptr<ProjectionNode> projection_node;
+
+    LQPColumnReference table_a_a;
+    LQPColumnReference table_b_a;
+    LQPColumnReference table_c_a;
+    LQPColumnReference table_c_b;
+  };
+
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int.tbl", 2));
 
@@ -63,9 +58,7 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     _init_query_nodes(_query_nodes_rhs);
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 
   void _init_query_nodes(QueryNodes& query_nodes) const {
     query_nodes.stored_table_node_a = std::make_shared<StoredTableNode>("table_a");

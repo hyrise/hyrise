@@ -29,8 +29,10 @@ TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name(), "table
 TEST_F(UpdateNodeTest, ShallowEquals) {
   EXPECT_TRUE(_update_node->shallow_equals(*_update_node));
 
-  const auto other_update_node_a = UpdateNode::make("table_a", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
-  const auto other_update_node_b = UpdateNode::make("table_b", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
+  const auto other_update_node_a =
+      UpdateNode::make("table_a", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
+  const auto other_update_node_b =
+      UpdateNode::make("table_b", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
 
   std::vector<std::shared_ptr<LQPExpression>> update_expressions;
   update_expressions.emplace_back(LQPExpression::create_literal(5));

@@ -42,7 +42,7 @@ enum class LQPNodeType {
 enum class LQPChildSide { Left, Right };
 
 struct QualifiedColumnName {
-  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name = std::nullopt);
+  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name = std::nullopt);  // NOLINT - implicit conversion intended
 
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;

@@ -16,7 +16,7 @@ class PredicateNodeTest : public BaseTest {
 
     _table_node = std::make_shared<StoredTableNode>("table_a");
     _predicate_node =
-    std::make_shared<PredicateNode>(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5);
+        std::make_shared<PredicateNode>(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5);
     _predicate_node->set_left_child(_table_node);
   }
 
@@ -46,10 +46,14 @@ TEST_F(PredicateNodeTest, Descriptions) {
 TEST_F(PredicateNodeTest, ShallowEquals) {
   EXPECT_TRUE(_predicate_node->shallow_equals(*_predicate_node));
 
-  const auto other_predicate_node_a = PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5, _table_node);
-  const auto other_predicate_node_b = PredicateNode::make(LQPColumnReference{_table_node, ColumnID{1}}, PredicateCondition::Equals, 5, _table_node);
-  const auto other_predicate_node_c = PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::NotLike, 5, _table_node);
-  const auto other_predicate_node_d = PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 6, _table_node);
+  const auto other_predicate_node_a =
+      PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5, _table_node);
+  const auto other_predicate_node_b =
+      PredicateNode::make(LQPColumnReference{_table_node, ColumnID{1}}, PredicateCondition::Equals, 5, _table_node);
+  const auto other_predicate_node_c =
+      PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::NotLike, 5, _table_node);
+  const auto other_predicate_node_d =
+      PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 6, _table_node);
 
   EXPECT_TRUE(_predicate_node->shallow_equals(*other_predicate_node_a));
   EXPECT_FALSE(_predicate_node->shallow_equals(*other_predicate_node_b));

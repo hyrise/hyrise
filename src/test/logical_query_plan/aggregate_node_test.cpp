@@ -31,13 +31,12 @@ class AggregateNodeTest : public BaseTest {
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
     _aggregates = std::vector<std::shared_ptr<LQPExpression>>{
-    LQPExpression::create_aggregate_function(
-    AggregateFunction::Sum,
-    {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
-    LQPExpression::create_aggregate_function(
-    AggregateFunction::Sum,
-    {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
-    {std::string("some_sum")})};
+        LQPExpression::create_aggregate_function(
+            AggregateFunction::Sum,
+            {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
+        LQPExpression::create_aggregate_function(
+            AggregateFunction::Sum, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
+            {std::string("some_sum")})};
 
     _groupby_columns = std::vector<LQPColumnReference>{_a, _c};
 
@@ -132,13 +131,11 @@ TEST_F(AggregateNodeTest, ShallowEquals) {
 
   // Build a slightly different aggregate node
   const auto aggregates_a = std::vector<std::shared_ptr<LQPExpression>>{
-  LQPExpression::create_aggregate_function(
-  AggregateFunction::Min,
-  {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
-  LQPExpression::create_aggregate_function(
-  AggregateFunction::Sum,
-  {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
-  {std::string("some_sum")})};
+      LQPExpression::create_aggregate_function(
+          AggregateFunction::Min, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
+      LQPExpression::create_aggregate_function(
+          AggregateFunction::Sum, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
+          {std::string("some_sum")})};
 
   const auto groupby_columns_a = std::vector<LQPColumnReference>{_a, _c};
 
