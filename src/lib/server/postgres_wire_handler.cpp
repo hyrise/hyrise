@@ -63,20 +63,15 @@ PreparedStatementInfo PostgresWireHandler::handle_parse_packet(const InputPacket
   
   auto n_parameter_data_types = read_value<uint16_t>(packet);
   
-  auto parameter_data_types = read_values<uint32_t>(packet, n_parameter_data_types);
+  /*auto parameter_data_types = */read_values<uint32_t>(packet, n_parameter_data_types);
 
-  SQLPipeline sql_pipeline{query};
-  auto parsed_statements = sql_pipeline.get_parsed_sql_statements();
-  if (parsed_statements.size() != 1) {
-    throw std::runtime_error("Only exactly 1 statement supported.");
-  }
+//  SQLPipeline sql_pipeline{query};
+//  auto parsed_statements = sql_pipeline.get_parsed_sql_statements();
+//  if (parsed_statements.size() != 1) {
+//    throw std::runtime_error("Only exactly 1 statement supported.");
+//  }
 
-  PreparedStatementInfo prepared_info{std::move(statement_name), std::move(query), std::move(*(sql_pipeline.get_parsed_sql_statements().front()))};
-//  prepared_info.statement_name = std::move(statement_name);
-//  prepared_info.query = std::move(query);
-//  prepared_info.parse_result{std::move(*(sql_pipeline.get_parsed_sql_statements().front()))};
-
-  return prepared_info;
+  return PreparedStatementInfo{std::move(statement_name), std::move(query)}; //, std::move(sql_pipeline)};
 }
 
 std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const InputPacket& packet, size_t length) {
@@ -88,11 +83,11 @@ std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const I
   
   auto format_codes = read_values<int16_t>(packet, n_format_codes);
   
-  auto n_parameter_values = read_value<int16_t>(packet);
+  auto n_parameter_values = ntohs(read_value<int16_t>(packet));
   
   std::vector<AllParameterVariant> parameter_values;
   for (auto i = 0; i < n_parameter_values; ++i) {
-    auto parameter_value_length = read_value<int32_t>(packet);
+    auto parameter_value_length = ntohl(read_value<int32_t>(packet));
     auto x = read_values<char>(packet, parameter_value_length);
     const std::string x_str(x.begin(), x.end());
     parameter_values.emplace_back(std::stoi(x_str));

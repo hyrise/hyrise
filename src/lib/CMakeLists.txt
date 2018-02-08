@@ -302,7 +302,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-)
+        tasks/server/execute_server_prepared_statement.cpp tasks/server/execute_server_prepared_statement.hpp tasks/server/bind_server_prepared_statement.cpp tasks/server/bind_server_prepared_statement.hpp)
 
 set(
     LIBRARIES

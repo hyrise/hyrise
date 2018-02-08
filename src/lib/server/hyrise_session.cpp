@@ -9,6 +9,8 @@
 #include <iostream>
 #include <thread>
 #include <sql/sql_translator.hpp>
+#include <tasks/server/execute_server_prepared_statement.hpp>
+#include <tasks/server/bind_server_prepared_statement.hpp>
 
 #include "SQLParserResult.h"
 #include "scheduler/current_scheduler.hpp"
@@ -20,6 +22,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
+#include "concurrency/transaction_manager.hpp"
 
 namespace opossum {
 
@@ -188,36 +191,36 @@ void HyriseSession::_accept_query() {
 }
 
 void HyriseSession::_accept_parse() {
-  auto x = PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length);
-  _parse_info = std::make_unique<PreparedStatementInfo>(std::move(x));
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
-  async_send_packet(output_packet);
-  return _async_receive_header();
+  _parse_info = std::make_unique<PreparedStatementInfo>(PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length));
+  const std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<CreatePipelineTask>(_self, _parse_info->query)};
+  _state = SessionState::PreparingStatement;
+  CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::_accept_bind() {
-  _params = PostgresWireHandler::handle_bind_packet(_input_packet, _expected_input_packet_length);
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
-  async_send_packet(output_packet);
-  return _async_receive_header();
+  auto params = PostgresWireHandler::handle_bind_packet(_input_packet, _expected_input_packet_length);
+  _state = SessionState::BindingStatement;
+
+  const std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<BindServerPreparedStatement>(_self, _sql_pipeline, std::move(params))};
+  CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::_accept_execute() {
   const auto portal = PostgresWireHandler::handle_execute_packet(_input_packet, _expected_input_packet_length);
-  SQLPipelineStatement sql_pipeline_statement{std::make_shared<hsql::SQLParserResult>(std::move(_parse_info->parse_result)),
-                                              nullptr, false};
-  sql_pipeline_statement.get_query_plan();
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
-  async_send_packet(output_packet);
-  return _async_receive_header();
+
+  const std::vector<std::shared_ptr<ServerTask>> tasks =
+    {std::make_shared<ExecuteServerPreparedStatement>(_self, std::move(_prepared_query_plan), std::move(_prepared_transaction_context))};
+  CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::_accept_sync() {
-
+  PostgresWireHandler::read_values<char>(_input_packet, _expected_input_packet_length);
+  return _async_receive_header();
 }
 
 void HyriseSession::_accept_flush() {
-
+  PostgresWireHandler::read_values<char>(_input_packet, _expected_input_packet_length);
+  return _async_receive_header();
 }
 
 void HyriseSession::_accept_describe() {
@@ -254,14 +257,34 @@ void HyriseSession::pipeline_info(const std::string& notice) {
 void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) {
   _sql_pipeline = std::move(sql_pipeline);
 
-  const std::vector<std::shared_ptr<ExecuteServerQueryTask>> tasks = {
-      std::make_shared<ExecuteServerQueryTask>(_self, *_sql_pipeline)};
+  if (_state == SessionState::PreparingStatement) {
+    auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
+    async_send_packet(output_packet);
+    return _async_receive_header();
+  }
+
+  std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<ExecuteServerQueryTask>(_self, *_sql_pipeline)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::query_executed() {
   const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
-      std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline)};
+      std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline, _sql_pipeline->get_result_table())};
+  CurrentScheduler::schedule_tasks(tasks);
+}
+
+void HyriseSession::prepared_bound(std::unique_ptr<SQLQueryPlan> query_plan,
+                                   std::shared_ptr<TransactionContext> transaction_context) {
+  _prepared_query_plan = std::move(query_plan);
+  _prepared_transaction_context = std::move(transaction_context);
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
+  async_send_packet(output_packet);
+  return _async_receive_header();
+}
+
+void HyriseSession::prepared_executed(std::shared_ptr<const Table> result_table) {
+  const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
+    std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline, std::move(result_table))};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
@@ -278,12 +301,14 @@ void HyriseSession::pipeline_error(const std::string& error_msg) {
   _send_ready_for_query();
 }
 
+bool HyriseSession::is_extended_query_mode() const {
+  return _state == SessionState::PreparingStatement || _state == SessionState::BindingStatement || _state == SessionState::ExecutingQuery;
+};
+
 
 void HyriseSession::_async_flush() {
   boost::asio::async_write(_socket, boost::asio::buffer(_response_buffer),
                            boost::bind(&HyriseSession::_handle_packet_sent, this, boost::asio::placeholders::error));
-
-//  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 }  // namespace opossum

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <SQLParserResult.h>
+#include <sql/sql_pipeline_statement.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "types.hpp"
@@ -38,7 +39,6 @@ struct RequestHeader {
 struct PreparedStatementInfo {
   std::string statement_name;
   std::string query;
-  hsql::SQLParserResult parse_result;
 };
 
 class PostgresWireHandler {

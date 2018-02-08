@@ -16,6 +16,11 @@ enum SessionState {
   Setup = 100,
   WaitingForQuery,
   ExecutingQuery,
+
+  // Extended protocol
+    PreparingStatement,
+  BindingStatement,
+  ExecutingStatement
 };
 
 using boost::asio::ip::tcp;
@@ -28,11 +33,13 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   static const uint32_t HEADER_LENGTH = 5u;
 
   explicit HyriseSession(tcp::socket socket, boost::asio::io_service& io_service)
-      : _socket(std::move(socket)), _io_service(io_service), _input_packet(), _expected_input_packet_length(0) {
+    : _socket(std::move(socket)), _io_service(io_service), _input_packet(), _expected_input_packet_length(0) {
     _response_buffer.reserve(_max_response_size);
   }
 
   void start();
+
+  bool is_extended_query_mode() const;
 
   void async_send_packet(OutputPacket& output_packet);
 
@@ -41,6 +48,10 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void query_executed();
   void query_response_sent();
   void load_table_file(const std::string& file_name, const std::string& table_name);
+
+  void prepared_bound(std::unique_ptr<SQLQueryPlan> query_plan,
+                      std::shared_ptr<TransactionContext> transaction_context);
+  void prepared_executed(std::shared_ptr<const Table> result_table);
 
   void pipeline_error(const std::string& error_msg);
   void pipeline_info(const std::string& notice);
@@ -87,8 +98,8 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   std::unique_ptr<SQLPipeline> _sql_pipeline;
 
   std::unique_ptr<PreparedStatementInfo> _parse_info;
-  std::vector<AllParameterVariant> _params;
-
+  std::unique_ptr<SQLQueryPlan> _prepared_query_plan;
+  std::shared_ptr<TransactionContext> _prepared_transaction_context;
 };
 
 }  // namespace opossum

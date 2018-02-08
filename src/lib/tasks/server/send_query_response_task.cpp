@@ -182,7 +182,9 @@ void SendQueryResponseTask::_on_execute() {
   _send_row_description();
   _send_row_data();
   _send_command_complete();
-  _send_execution_info();
+  if (!_session->is_extended_query_mode()) {
+    _send_execution_info();
+  }
   _session->query_response_sent();
 }
 
