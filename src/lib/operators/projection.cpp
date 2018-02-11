@@ -64,7 +64,6 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   }
   else if (expression->type() == ExpressionType::Select) {
-    // TODO: IN as special case
     auto subselect_value = expression->table()->get_value<T>(ColumnID(0), 0);
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
 
