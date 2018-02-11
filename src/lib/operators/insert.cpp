@@ -327,7 +327,8 @@ std::map<RowID, PartitionID> Insert::_map_content_to_add_to_partitions(
       }
     }
   } else if (std::dynamic_pointer_cast<const RoundRobinPartitionSchema>(target_partition_schema)) {
-    auto round_robin_partition_schema = std::dynamic_pointer_cast<const RoundRobinPartitionSchema>(target_partition_schema);
+    auto round_robin_partition_schema =
+        std::dynamic_pointer_cast<const RoundRobinPartitionSchema>(target_partition_schema);
     for (ChunkID chunkID = ChunkID{0}; chunkID < _input_table_left()->chunk_count(); ++chunkID) {
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {

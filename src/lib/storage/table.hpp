@@ -164,7 +164,7 @@ class Table : private Noncopyable {
   void create_null_partitioning();
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
   void create_round_robin_partitioning(const size_t number_of_partitions);
-  
+
   bool is_partitioned() const;
   PartitionID partition_count() const;
   const std::shared_ptr<const AbstractPartitionSchema> get_partition_schema() const;
@@ -172,7 +172,6 @@ class Table : private Noncopyable {
 #if IS_DEBUG
   std::shared_ptr<AbstractPartitionSchema> get_mutable_partition_schema();
 #endif
-
 
  protected:
   const uint32_t _max_chunk_size;

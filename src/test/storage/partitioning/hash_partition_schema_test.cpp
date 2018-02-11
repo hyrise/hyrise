@@ -61,7 +61,8 @@ TEST_F(StorageHashPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
 TEST_F(StorageHashPartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "HashPartition"); }
 
 TEST_F(StorageHashPartitionSchemaTest, GetColumnID) {
-  EXPECT_EQ(std::dynamic_pointer_cast<const HashPartitionSchema>(t0.get_partition_schema())->get_column_id(), ColumnID{0});
+  EXPECT_EQ(std::dynamic_pointer_cast<const HashPartitionSchema>(t0.get_partition_schema())->get_column_id(),
+            ColumnID{0});
 }
 
 }  // namespace opossum

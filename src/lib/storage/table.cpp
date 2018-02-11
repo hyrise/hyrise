@@ -93,7 +93,7 @@ void Table::create_new_chunk(PartitionID partition_id) {
 
     new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
-  
+
   new_chunk->set_id(ChunkID{_chunks.size()});
   _chunks.push_back(new_chunk);
   _partition_schema->add_new_chunk(new_chunk, partition_id);
@@ -234,9 +234,7 @@ void Table::create_hash_partitioning(const ColumnID column_id, const HashFunctio
   apply_partitioning(std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions));
 }
 
-void Table::create_null_partitioning() {
-  apply_partitioning(std::make_shared<NullPartitionSchema>());
-}
+void Table::create_null_partitioning() { apply_partitioning(std::make_shared<NullPartitionSchema>()); }
 
 void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
   apply_partitioning(std::make_shared<RangePartitionSchema>(column_id, bounds));
