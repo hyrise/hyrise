@@ -142,7 +142,7 @@ const std::vector<DataType>& Table::column_types() const { return _column_types;
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
-std::shared_ptr<Chunk> Table::get_modifiable_chunk(ChunkID chunk_id) {
+std::shared_ptr<Chunk> Table::get_mutable_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
@@ -152,7 +152,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
-ProxyChunk Table::get_modifiable_chunk_with_access_counting(ChunkID chunk_id) {
+ProxyChunk Table::get_mutable_chunk_with_access_counting(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return ProxyChunk(_chunks[chunk_id]);
 }
@@ -273,7 +273,7 @@ ChunkID Table::get_chunk_id(const std::shared_ptr<Chunk> chunk) const {
 const std::shared_ptr<AbstractPartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
 
 #if IS_DEBUG
-std::shared_ptr<AbstractPartitionSchema> Table::get_modifiable_partition_schema() { return _partition_schema; }
+std::shared_ptr<AbstractPartitionSchema> Table::get_mutable_partition_schema() { return _partition_schema; }
 #endif
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 

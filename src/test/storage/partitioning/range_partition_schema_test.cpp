@@ -50,10 +50,10 @@ TEST_F(StorageRangePartitionSchemaTest, AppendViaTable) {
 #if IS_DEBUG
 
 TEST_F(StorageRangePartitionSchemaTest, AppendDirectly) {
-  t0.get_modifiable_partition_schema()->append({1, "Foo"});
-  t0.get_modifiable_partition_schema()->append({2, "Bar"});
+  t0.get_mutable_partition_schema()->append({1, "Foo"});
+  t0.get_mutable_partition_schema()->append({2, "Bar"});
 
-  t0.get_modifiable_partition_schema()->append({6, "Baz"});
+  t0.get_mutable_partition_schema()->append({6, "Baz"});
 
   EXPECT_EQ(t0.row_count(), 3u);
   EXPECT_EQ(t0.chunk_count(), 3u);
@@ -63,9 +63,9 @@ TEST_F(StorageRangePartitionSchemaTest, AppendDirectly) {
 }
 
 TEST_F(StorageRangePartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
-  t0.get_modifiable_partition_schema()->append({1, "Foo"});
-  t0.get_modifiable_partition_schema()->append({2, "Bar"});
-  t0.get_modifiable_partition_schema()->append({3, "Baz"});
+  t0.get_mutable_partition_schema()->append({1, "Foo"});
+  t0.get_mutable_partition_schema()->append({2, "Bar"});
+  t0.get_mutable_partition_schema()->append({3, "Baz"});
 
   // No new chunk is created since this is done by Table which is not involved here.
   EXPECT_EQ(t0.row_count(), 3u);

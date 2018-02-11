@@ -58,9 +58,9 @@ class Table : private Noncopyable {
   void create_new_chunk(PartitionID partition_id = PartitionID{0});
 
   // returns the chunk with the given id
-  std::shared_ptr<Chunk> get_modifiable_chunk(ChunkID chunk_id);
+  std::shared_ptr<Chunk> get_mutable_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id);
+  ProxyChunk get_mutable_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
@@ -170,7 +170,7 @@ class Table : private Noncopyable {
   const std::shared_ptr<AbstractPartitionSchema> get_partition_schema() const;
 
 #if IS_DEBUG
-  std::shared_ptr<AbstractPartitionSchema> get_modifiable_partition_schema();
+  std::shared_ptr<AbstractPartitionSchema> get_mutable_partition_schema();
 #endif
 
   void remove_partitioning();
