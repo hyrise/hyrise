@@ -15,7 +15,6 @@
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
-#include "storage/dictionary_compression.hpp"
 
 namespace opossum {
 
