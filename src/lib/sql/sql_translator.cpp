@@ -882,8 +882,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
            (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
   };
 
-  // TODO(anybody): handle IN with join
-
   auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
 
   const auto* column_ref_hsql_expr = hsql_expr.expr;
@@ -947,7 +945,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else if (predicate_condition == PredicateCondition::In) {
 
     Assert(hsql_expr.select, "The IN operand only supports subqueries so far");
-    // TODO: Also support lists of literals
+    // TODO(anybody): Also support lists of literals
     auto subselect_node = _translate_select(*hsql_expr.select);
     auto subselect_expression = LQPExpression::create_subselect(subselect_node);
 
@@ -960,10 +958,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     auto right_column = subselect_node->output_column_references()[0];
     const auto column_references = std::make_pair(left_column, right_column);
 
-    auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, column_references, PredicateCondition::Equals);
+    auto join_node = std::make_shared<JoinNode>(JoinMode::Semi, column_references, PredicateCondition::Equals);
     join_node->set_left_child(input_node);
     join_node->set_right_child(projection_node);
-    // TODO: add projection to subselect_node to make sure it is executed in time
 
     return join_node;
   } else if (predicate_condition != PredicateCondition::IsNull &&
