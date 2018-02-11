@@ -37,9 +37,9 @@ class Insert : public AbstractReadWriteOperator {
 
   PosList _inserted_rows;
 
-  std::map<RowID, PartitionID> map_content_to_add_to_partitions(
-      const std::shared_ptr<AbstractPartitionSchema> target_partition_schema);
-  std::map<PartitionID, uint32_t> count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping);
+  std::map<RowID, PartitionID> _map_content_to_add_to_partitions(
+      std::shared_ptr<const AbstractPartitionSchema> target_partition_schema);
+  std::map<PartitionID, uint32_t> _count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping);
 };
 
 }  // namespace opossum

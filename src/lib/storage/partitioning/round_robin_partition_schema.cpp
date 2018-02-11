@@ -20,16 +20,16 @@ void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values) {
   _go_to_next_partition();
 }
 
-PartitionID RoundRobinPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
+PartitionID RoundRobinPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) const {
   return get_next_partition();
 }
 
-PartitionID RoundRobinPartitionSchema::get_next_partition() {
+PartitionID RoundRobinPartitionSchema::get_next_partition() const {
   _go_to_next_partition();
   return _next_partition;
 }
 
-void RoundRobinPartitionSchema::_go_to_next_partition() {
+void RoundRobinPartitionSchema::_go_to_next_partition() const {
   _next_partition = static_cast<PartitionID>(_next_partition + 1);
   if (_next_partition >= static_cast<PartitionID>(_partitions.size())) {
     _next_partition = 0;

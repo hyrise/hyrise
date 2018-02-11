@@ -23,14 +23,14 @@ class RoundRobinPartitionSchema : public AbstractPartitionSchema {
   RoundRobinPartitionSchema(RoundRobinPartitionSchema&&) = default;
   RoundRobinPartitionSchema& operator=(RoundRobinPartitionSchema&&) = default;
 
-  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
-  PartitionID get_next_partition();
+  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
+  PartitionID get_next_partition() const;
 
  protected:
   int _number_of_partitions;
-  PartitionID _next_partition;
+  mutable PartitionID _next_partition;
 
-  void _go_to_next_partition();
+  void _go_to_next_partition() const;
 };
 
 }  // namespace opossum

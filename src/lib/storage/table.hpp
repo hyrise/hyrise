@@ -150,14 +150,13 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
-  ChunkID get_chunk_id(const std::shared_ptr<Chunk> chunk) const;
-
   /**
    * Partitioning
    * Standard PartitionSchema is NullPartitionSchema which creates no partitioning at all.
    * On empty Tables, the PartitionSchema can be altered using the functions below.
    * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
    */
+  // this function is needed for deserialization, it does not create a set of initial chunks
   void set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
@@ -165,16 +164,15 @@ class Table : private Noncopyable {
   void create_null_partitioning();
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
   void create_round_robin_partitioning(const size_t number_of_partitions);
-
+  
   bool is_partitioned() const;
-  const std::shared_ptr<AbstractPartitionSchema> get_partition_schema() const;
+  PartitionID partition_count() const;
+  const std::shared_ptr<const AbstractPartitionSchema> get_partition_schema() const;
 
 #if IS_DEBUG
   std::shared_ptr<AbstractPartitionSchema> get_mutable_partition_schema();
 #endif
 
-  void remove_partitioning();
-  uint16_t partition_count() const;
 
  protected:
   const uint32_t _max_chunk_size;
@@ -192,7 +190,7 @@ class Table : private Noncopyable {
 
   std::shared_ptr<AbstractPartitionSchema> _partition_schema;
 
-  void create_initial_chunks(PartitionID number_of_partitions);
+  void _create_initial_chunks(PartitionID number_of_partitions);
   std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum

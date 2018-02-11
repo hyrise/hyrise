@@ -23,13 +23,13 @@ void RangePartitionSchema::append(std::vector<AllTypeVariant> values) {
   AbstractPartitionSchema::append(values, get_matching_partition_for(values));
 }
 
-PartitionID RangePartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
+PartitionID RangePartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) const {
   DebugAssert(values.size() > static_cast<size_t>(_column_id), "Can not determine partition, too few values given");
   auto value = values[_column_id];
   return get_matching_partition_for(value);
 }
 
-PartitionID RangePartitionSchema::get_matching_partition_for(AllTypeVariant value) {
+PartitionID RangePartitionSchema::get_matching_partition_for(AllTypeVariant value) const {
   for (size_t index = 0; index < _bounds.size(); ++index) {
     if (value <= _bounds.at(index)) {
       return static_cast<PartitionID>(index);
@@ -38,7 +38,7 @@ PartitionID RangePartitionSchema::get_matching_partition_for(AllTypeVariant valu
   return static_cast<PartitionID>(_bounds.size());
 }
 
-const ColumnID RangePartitionSchema::get_column_id() const { return _column_id; }
+ColumnID RangePartitionSchema::get_column_id() const { return _column_id; }
 const std::vector<AllTypeVariant> RangePartitionSchema::get_bounds() const { return _bounds; }
 DataType RangePartitionSchema::get_bound_type() const { return _bound_type; }
 

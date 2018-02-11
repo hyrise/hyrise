@@ -93,6 +93,8 @@ void Table::create_new_chunk(PartitionID partition_id) {
 
     new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
+  
+  new_chunk->set_id(ChunkID{_chunks.size()});
   _chunks.push_back(new_chunk);
   _partition_schema->add_new_chunk(new_chunk, partition_id);
 }
@@ -172,6 +174,7 @@ void Table::emplace_chunk(const std::shared_ptr<Chunk>& chunk, PartitionID parti
   DebugAssert(chunk->column_count() == column_count(),
               std::string("adding chunk with ") + std::to_string(chunk->column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");
+  chunk->set_id(ChunkID{_chunks.size()});
   _chunks.emplace_back(chunk);
   _partition_schema->add_new_chunk(chunk, partition_id);
 }
@@ -219,32 +222,31 @@ void Table::set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> 
 }
 
 void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
+  if (row_count() > 0) {
+    throw std::runtime_error("Unable to create partitioning on non-empty table");
+  }
   _partition_schema = partition_schema;
-  create_initial_chunks(static_cast<PartitionID>(partition_schema->partition_count()));
+  _create_initial_chunks(static_cast<PartitionID>(partition_schema->partition_count()));
 }
 
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
                                      const size_t number_of_partitions) {
-  _partition_schema = std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions);
-  create_initial_chunks(static_cast<PartitionID>(number_of_partitions));
+  apply_partitioning(std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions));
 }
 
 void Table::create_null_partitioning() {
-  _partition_schema = std::make_shared<NullPartitionSchema>();
-  create_new_chunk(PartitionID{0});
+  apply_partitioning(std::make_shared<NullPartitionSchema>());
 }
 
 void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
-  _partition_schema = std::make_shared<RangePartitionSchema>(column_id, bounds);
-  create_initial_chunks(static_cast<PartitionID>(bounds.size() + 1));
+  apply_partitioning(std::make_shared<RangePartitionSchema>(column_id, bounds));
 }
 
 void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
-  _partition_schema = std::make_shared<RoundRobinPartitionSchema>(number_of_partitions);
-  create_initial_chunks(static_cast<PartitionID>(number_of_partitions));
+  apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(number_of_partitions));
 }
 
-void Table::create_initial_chunks(PartitionID number_of_partitions) {
+void Table::_create_initial_chunks(PartitionID number_of_partitions) {
   if (row_count() > 0) {
     // the initial chunk was not used yet
     throw std::runtime_error("Unable to create partitioning on non-empty table");
@@ -257,20 +259,9 @@ void Table::create_initial_chunks(PartitionID number_of_partitions) {
 
 bool Table::is_partitioned() const { return _partition_schema->is_partitioned(); }
 
-uint16_t Table::partition_count() const { return _partition_schema->partition_count(); }
+PartitionID Table::partition_count() const { return _partition_schema->partition_count(); }
 
-ChunkID Table::get_chunk_id(const std::shared_ptr<Chunk> chunk) const {
-  ptrdiff_t pos = std::distance(
-      _chunks.begin(), std::find_if(_chunks.begin(), _chunks.end(),
-                                    [chunk](const std::shared_ptr<Chunk> each) -> bool { return each == chunk; }));
-  if (pos >= static_cast<ptrdiff_t>(_chunks.size())) {
-    return static_cast<ChunkID>(_chunks.size());
-  } else {
-    return static_cast<ChunkID>(pos);
-  }
-}
-
-const std::shared_ptr<AbstractPartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
+const std::shared_ptr<const AbstractPartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
 
 #if IS_DEBUG
 std::shared_ptr<AbstractPartitionSchema> Table::get_mutable_partition_schema() { return _partition_schema; }

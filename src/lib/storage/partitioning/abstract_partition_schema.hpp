@@ -26,19 +26,19 @@ class AbstractPartitionSchema {
 
   virtual std::string name() const = 0;
   virtual PartitionSchemaType get_type() const = 0;
-  uint16_t partition_count() const;
+  PartitionID partition_count() const;
 
   void clear();
   virtual void append(std::vector<AllTypeVariant> values) = 0;
   void append(std::vector<AllTypeVariant> values, PartitionID partition_id);
 
-  virtual PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) = 0;
+  virtual PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const = 0;
 
   virtual void add_new_chunk(std::shared_ptr<Chunk> chunk, PartitionID partition_id);
   virtual bool is_partitioned() const { return true; }
 
-  std::shared_ptr<Partition> get_partition(PartitionID partition_id);
-  std::shared_ptr<Chunk> last_chunk(PartitionID partition_id);
+  std::shared_ptr<const Partition> get_partition(PartitionID partition_id) const;
+  std::shared_ptr<const Chunk> last_chunk(PartitionID partition_id) const;
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;

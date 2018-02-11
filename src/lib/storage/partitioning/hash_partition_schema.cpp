@@ -19,18 +19,18 @@ void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
   AbstractPartitionSchema::append(values, get_matching_partition_for(values));
 }
 
-PartitionID HashPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
+PartitionID HashPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) const {
   DebugAssert(values.size() > static_cast<size_t>(_column_id), "Can not determine partition, too few values given");
   auto value = values[_column_id];
   return get_matching_partition_for(value);
 }
 
-PartitionID HashPartitionSchema::get_matching_partition_for(AllTypeVariant value) {
+PartitionID HashPartitionSchema::get_matching_partition_for(AllTypeVariant value) const {
   const HashValue hash = _hash_function(value);
   PartitionID matching_partition = static_cast<PartitionID>(hash % _number_of_partitions);
   return matching_partition;
 }
 
-const ColumnID HashPartitionSchema::get_column_id() { return _column_id; }
+ColumnID HashPartitionSchema::get_column_id() const { return _column_id; }
 
 }  // namespace opossum

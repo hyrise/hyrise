@@ -25,10 +25,10 @@ class HashPartitionSchema : public AbstractPartitionSchema {
   HashPartitionSchema(HashPartitionSchema&&) = default;
   HashPartitionSchema& operator=(HashPartitionSchema&&) = default;
 
-  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
-  PartitionID get_matching_partition_for(AllTypeVariant value);
+  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
+  PartitionID get_matching_partition_for(AllTypeVariant value) const;
 
-  const ColumnID get_column_id();
+  ColumnID get_column_id() const;
 
  protected:
   ColumnID _column_id;

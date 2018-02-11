@@ -181,12 +181,12 @@ void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>
 
   switch (partition_schema->get_type()) {
     case PartitionSchemaType::Hash: {
-      const auto hash_schema = std::dynamic_pointer_cast<HashPartitionSchema>(partition_schema);
+      const auto hash_schema = std::dynamic_pointer_cast<const HashPartitionSchema>(partition_schema);
       _export_value(ofstream, static_cast<ColumnID>(hash_schema->get_column_id()));
       break;
     }
     case PartitionSchemaType::Range: {
-      const auto range_schema = std::dynamic_pointer_cast<RangePartitionSchema>(partition_schema);
+      const auto range_schema = std::dynamic_pointer_cast<const RangePartitionSchema>(partition_schema);
       const auto bound_type_string = data_type_to_string.left.at(range_schema->get_bound_type());
       _export_value(ofstream, static_cast<ColumnID>(range_schema->get_column_id()));
       _export_values(ofstream, std::vector<std::string>{bound_type_string});
@@ -216,7 +216,7 @@ void ExportBinary::_write_partition(const std::shared_ptr<const Table>& table, s
   const auto chunks = partition->get_chunks();
   std::vector<ChunkID> chunk_ids;
   for (const auto chunk : chunks) {
-    chunk_ids.emplace_back(table->get_chunk_id(chunk));
+    chunk_ids.emplace_back(chunk->id());
   }
   _export_value(ofstream, ChunkID{chunk_ids.size()});
   _export_values(ofstream, chunk_ids);

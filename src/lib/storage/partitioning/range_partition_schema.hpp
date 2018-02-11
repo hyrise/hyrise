@@ -30,10 +30,10 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   RangePartitionSchema(RangePartitionSchema&&) = default;
   RangePartitionSchema& operator=(RangePartitionSchema&&) = default;
 
-  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
-  PartitionID get_matching_partition_for(AllTypeVariant value);
+  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
+  PartitionID get_matching_partition_for(AllTypeVariant value) const;
 
-  const ColumnID get_column_id() const;
+  ColumnID get_column_id() const;
   const std::vector<AllTypeVariant> get_bounds() const;
   DataType get_bound_type() const;
 

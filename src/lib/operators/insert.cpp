@@ -125,9 +125,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // partitioning
-  const std::shared_ptr<AbstractPartitionSchema> target_partition_schema = _target_table->get_partition_schema();
-  std::map<RowID, PartitionID> target_partition_mapping = map_content_to_add_to_partitions(target_partition_schema);
-  std::map<PartitionID, uint32_t> rows_to_add_to_partition = count_rows_for_partitions(target_partition_mapping);
+  std::shared_ptr<const AbstractPartitionSchema> target_partition_schema = _target_table->get_partition_schema();
+  std::map<RowID, PartitionID> target_partition_mapping = _map_content_to_add_to_partitions(target_partition_schema);
+  std::map<PartitionID, uint32_t> rows_to_add_to_partition = _count_rows_for_partitions(target_partition_mapping);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
@@ -141,7 +141,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     PartitionID partitionID = iter->first;
     uint32_t total_rows_to_insert = iter->second;
 
-    std::shared_ptr<Partition> partition = _target_table->get_partition_schema()->get_partition(partitionID);
+    auto partition = _target_table->get_partition_schema()->get_partition(partitionID);
 
     // First, allocate space for all the rows to insert. Do so while locking the table to prevent multiple threads
     // modifying the table's size simultaneously.
@@ -152,25 +152,25 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     {
       auto scoped_lock = _target_table->acquire_append_mutex();
 
-      start_chunk_id = _target_table->get_chunk_id(partition->last_chunk());
+      start_chunk_id = partition->last_chunk()->id();
       chunks_to_add_in_partition.emplace_back(start_chunk_id);
       auto last_chunk = _target_table->get_chunk(start_chunk_id);
       start_index = last_chunk->size();
 
-      std::shared_ptr<Partition> partition = _target_table->get_partition_schema()->get_partition(partitionID);
+      auto partition = _target_table->get_partition_schema()->get_partition(partitionID);
 
       // If last chunk is compressed, add a new uncompressed chunk
       if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
         _target_table->create_new_chunk(partitionID);
         total_chunks_inserted++;
 
-        ChunkID chunk_id_to_add = _target_table->get_chunk_id(partition->last_chunk());
+        ChunkID chunk_id_to_add = partition->last_chunk()->id();
         chunks_to_add_in_partition.emplace_back(chunk_id_to_add);
       }
 
       auto remaining_rows = total_rows_to_insert;
       while (remaining_rows > 0) {
-        ChunkID current_chunk_id = _target_table->get_chunk_id(partition->last_chunk());
+        ChunkID current_chunk_id = partition->last_chunk()->id();
         auto current_chunk = _target_table->get_mutable_chunk(current_chunk_id);
         auto rows_to_insert_this_loop =
             std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
@@ -192,7 +192,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           _target_table->create_new_chunk(partitionID);
           total_chunks_inserted++;
 
-          ChunkID chunk_id_to_add = _target_table->get_chunk_id(partition->last_chunk());
+          ChunkID chunk_id_to_add = partition->last_chunk()->id();
           chunks_to_add_in_partition.emplace_back(chunk_id_to_add);
         }
       }
@@ -302,12 +302,12 @@ void Insert::_on_rollback_records() {
   }
 }
 
-std::map<RowID, PartitionID> Insert::map_content_to_add_to_partitions(
-    const std::shared_ptr<AbstractPartitionSchema> target_partition_schema) {
+std::map<RowID, PartitionID> Insert::_map_content_to_add_to_partitions(
+    std::shared_ptr<const AbstractPartitionSchema> target_partition_schema) {
   // TODO(partitioning group): refactor!
   std::map<RowID, PartitionID> target_partition_mapping;
-  if (std::dynamic_pointer_cast<RangePartitionSchema>(target_partition_schema)) {
-    auto range_partition_schema = std::dynamic_pointer_cast<RangePartitionSchema>(target_partition_schema);
+  if (std::dynamic_pointer_cast<const RangePartitionSchema>(target_partition_schema)) {
+    auto range_partition_schema = std::dynamic_pointer_cast<const RangePartitionSchema>(target_partition_schema);
     for (ChunkID chunkID = ChunkID{0}; chunkID < _input_table_left()->chunk_count(); ++chunkID) {
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       auto column_with_partitioning_values = source_chunk->get_column(range_partition_schema->get_column_id());
@@ -316,8 +316,8 @@ std::map<RowID, PartitionID> Insert::map_content_to_add_to_partitions(
             range_partition_schema->get_matching_partition_for((*column_with_partitioning_values)[rowID]);
       }
     }
-  } else if (std::dynamic_pointer_cast<HashPartitionSchema>(target_partition_schema)) {
-    auto hash_partition_schema = std::dynamic_pointer_cast<HashPartitionSchema>(target_partition_schema);
+  } else if (std::dynamic_pointer_cast<const HashPartitionSchema>(target_partition_schema)) {
+    auto hash_partition_schema = std::dynamic_pointer_cast<const HashPartitionSchema>(target_partition_schema);
     for (ChunkID chunkID = ChunkID{0}; chunkID < _input_table_left()->chunk_count(); ++chunkID) {
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       auto column_with_partitioning_values = source_chunk->get_column(hash_partition_schema->get_column_id());
@@ -326,15 +326,15 @@ std::map<RowID, PartitionID> Insert::map_content_to_add_to_partitions(
             hash_partition_schema->get_matching_partition_for((*column_with_partitioning_values)[rowID]);
       }
     }
-  } else if (std::dynamic_pointer_cast<RoundRobinPartitionSchema>(target_partition_schema)) {
-    auto round_robin_partition_schema = std::dynamic_pointer_cast<RoundRobinPartitionSchema>(target_partition_schema);
+  } else if (std::dynamic_pointer_cast<const RoundRobinPartitionSchema>(target_partition_schema)) {
+    auto round_robin_partition_schema = std::dynamic_pointer_cast<const RoundRobinPartitionSchema>(target_partition_schema);
     for (ChunkID chunkID = ChunkID{0}; chunkID < _input_table_left()->chunk_count(); ++chunkID) {
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
         target_partition_mapping[{chunkID, rowID}] = round_robin_partition_schema->get_next_partition();
       }
     }
-  } else if (std::dynamic_pointer_cast<NullPartitionSchema>(target_partition_schema)) {
+  } else if (std::dynamic_pointer_cast<const NullPartitionSchema>(target_partition_schema)) {
     for (ChunkID chunkID = ChunkID{0}; chunkID < _input_table_left()->chunk_count(); ++chunkID) {
       const auto source_chunk = _input_table_left()->get_chunk(chunkID);
       for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
@@ -347,7 +347,7 @@ std::map<RowID, PartitionID> Insert::map_content_to_add_to_partitions(
   return target_partition_mapping;
 }
 
-std::map<PartitionID, uint32_t> Insert::count_rows_for_partitions(
+std::map<PartitionID, uint32_t> Insert::_count_rows_for_partitions(
     std::map<RowID, PartitionID> target_partition_mapping) {
   std::map<PartitionID, uint32_t> rows_to_add_to_partition;
   for (std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin();
