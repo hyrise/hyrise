@@ -138,10 +138,11 @@ void ProjectionNode::_update_output() const {
 
     } else if (expression->type() == ExpressionType::Select) {
       auto node = expression->subselect_node();
-      // TODO: error handling
-      _output_column_references->emplace_back(LQPColumnReference(node, ColumnID(0)));
+
+      // TODO: add support for aliased subselects
+      _output_column_references->emplace_back(node, ColumnID(0));
     } else {
-      Fail("Only column references, arithmetic expressions, and literals supported for now.");
+      Fail("Only column references, arithmetic expressions, subqueries and literals supported for now.");
     }
 
     column_id++;

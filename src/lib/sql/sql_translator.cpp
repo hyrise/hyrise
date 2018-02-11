@@ -841,7 +841,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::Lim
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     const hsql::Expr& hsql_expr, bool allow_function_columns,
     const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
+    const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 
   /**
@@ -948,7 +948,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
     Assert(hsql_expr.select, "The IN operand only supports subqueries so far");
     // TODO: Also support lists of literals
-    auto subselect_node = const_cast<SQLTranslator*>(this)->_translate_select(*hsql_expr.select);
+    auto subselect_node = _translate_select(*hsql_expr.select);
     auto subselect_expression = LQPExpression::create_subselect(subselect_node);
 
     const auto subselect_columns = LQPExpression::create_columns(subselect_node->output_column_references());
@@ -996,7 +996,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
       const auto column_references = input_node->output_column_references();
       const auto original_column_expressions = LQPExpression::create_columns(column_references);
 
-      auto subselect_node = const_cast<SQLTranslator*>(this)->_translate_select(*value_ref_hsql_expr->select);
+      auto subselect_node = _translate_select(*value_ref_hsql_expr->select);
       auto subselect_expression = LQPExpression::create_subselect(subselect_node);
 
       auto column_expressions = original_column_expressions;
