@@ -2,12 +2,12 @@
 
 namespace opossum {
 
-RoundRobinPartitionSchema::RoundRobinPartitionSchema(size_t number_of_partitions)
+RoundRobinPartitionSchema::RoundRobinPartitionSchema(PartitionID number_of_partitions)
     : _number_of_partitions(number_of_partitions) {
   _partitions.reserve(number_of_partitions);
 
-  for (size_t index = 0; index < number_of_partitions; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>(static_cast<PartitionID>(index)));
+  for (PartitionID index{0}; index < number_of_partitions; ++index) {
+    _partitions.emplace_back(std::make_shared<Partition>(index));
   }
 }
 
@@ -30,9 +30,9 @@ PartitionID RoundRobinPartitionSchema::get_next_partition() const {
 }
 
 void RoundRobinPartitionSchema::_go_to_next_partition() const {
-  _next_partition = static_cast<PartitionID>(_next_partition + 1);
-  if (_next_partition >= static_cast<PartitionID>(_partitions.size())) {
-    _next_partition = 0;
+  ++_next_partition;
+  if (_next_partition >= _number_of_partitions) {
+    _next_partition = PartitionID{0};
   }
 }
 

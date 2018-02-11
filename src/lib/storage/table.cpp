@@ -230,7 +230,7 @@ void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partitio
 }
 
 void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
-                                     const size_t number_of_partitions) {
+                                     const PartitionID number_of_partitions) {
   apply_partitioning(std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions));
 }
 
@@ -240,7 +240,7 @@ void Table::create_range_partitioning(const ColumnID column_id, const std::vecto
   apply_partitioning(std::make_shared<RangePartitionSchema>(column_id, bounds));
 }
 
-void Table::create_round_robin_partitioning(const size_t number_of_partitions) {
+void Table::create_round_robin_partitioning(const PartitionID number_of_partitions) {
   apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(number_of_partitions));
 }
 

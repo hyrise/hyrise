@@ -193,17 +193,17 @@ TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logi
 TEST_F(StorageTableTest, IsPartitioned) {
   Table t0 = Table(5);
   EXPECT_FALSE(t0.is_partitioned());
-  t0.create_round_robin_partitioning(2u);
+  t0.create_round_robin_partitioning(PartitionID{2});
   EXPECT_TRUE(t0.is_partitioned());
 }
 
 TEST_F(StorageTableTest, CreatePartitioningOnNonEmptyTable) {
   t.append({4, "Hello,"});
-  EXPECT_ANY_THROW(t.create_round_robin_partitioning(2u));
+  EXPECT_ANY_THROW(t.create_round_robin_partitioning(PartitionID{2}));
 }
 
 TEST_F(StorageTableTest, ApplyPartitioning) {
-  auto p = std::make_shared<RoundRobinPartitionSchema>(2u);
+  auto p = std::make_shared<RoundRobinPartitionSchema>(PartitionID{2});
   EXPECT_FALSE(t.is_partitioned());
   t.apply_partitioning(p);
   EXPECT_TRUE(t.is_partitioned());

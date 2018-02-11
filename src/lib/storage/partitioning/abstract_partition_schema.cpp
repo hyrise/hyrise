@@ -30,4 +30,8 @@ std::shared_ptr<const Chunk> AbstractPartitionSchema::last_chunk(PartitionID par
   return _partitions[partition_id]->last_chunk();
 }
 
+std::vector<ChunkID> AbstractPartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,
+                                                                       AllTypeVariant value) const {
+  return std::vector<ChunkID>();
+}
 }  // namespace opossum

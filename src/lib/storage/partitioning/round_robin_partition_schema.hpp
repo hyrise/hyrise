@@ -13,7 +13,7 @@ namespace opossum {
 
 class RoundRobinPartitionSchema : public AbstractPartitionSchema {
  public:
-  explicit RoundRobinPartitionSchema(size_t number_of_partitions);
+  explicit RoundRobinPartitionSchema(PartitionID number_of_partitions);
 
   std::string name() const override;
   PartitionSchemaType get_type() const override;
@@ -27,7 +27,7 @@ class RoundRobinPartitionSchema : public AbstractPartitionSchema {
   PartitionID get_next_partition() const;
 
  protected:
-  int _number_of_partitions;
+  PartitionID _number_of_partitions;
   mutable PartitionID _next_partition;
 
   void _go_to_next_partition() const;

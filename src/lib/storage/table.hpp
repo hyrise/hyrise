@@ -160,10 +160,10 @@ class Table : private Noncopyable {
   void set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
-                                const size_t number_of_partitions);
+                                const PartitionID number_of_partitions);
   void create_null_partitioning();
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
-  void create_round_robin_partitioning(const size_t number_of_partitions);
+  void create_round_robin_partitioning(const PartitionID number_of_partitions);
 
   bool is_partitioned() const;
   PartitionID partition_count() const;

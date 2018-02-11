@@ -202,7 +202,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
   auto table = std::make_shared<opossum::Table>(2);
-  table->create_round_robin_partitioning(3);
+  table->create_round_robin_partitioning(PartitionID{3});
   table->add_column("a", DataType::String);
   table->add_column("b", DataType::Int);
   table->add_column("c", DataType::Long);
@@ -247,7 +247,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnRangePartitioned) {
 TEST_F(OperatorsExportBinaryTest, AllTypesValueColumnHashPartitioned) {
   auto table = std::make_shared<opossum::Table>(2);
   HashFunction hf;
-  table->create_hash_partitioning(ColumnID{3}, std::move(hf), 3);
+  table->create_hash_partitioning(ColumnID{3}, std::move(hf), PartitionID{3});
   table->add_column("a", DataType::String);
   table->add_column("b", DataType::Int);
   table->add_column("c", DataType::Long);

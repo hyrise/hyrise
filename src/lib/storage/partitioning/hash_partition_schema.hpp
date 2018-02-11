@@ -15,7 +15,7 @@ namespace opossum {
 
 class HashPartitionSchema : public AbstractPartitionSchema {
  public:
-  HashPartitionSchema(ColumnID column_id, HashFunction hash_function, size_t number_of_partitions);
+  HashPartitionSchema(ColumnID column_id, HashFunction hash_function, PartitionID number_of_partitions);
 
   std::string name() const override;
   PartitionSchemaType get_type() const override;
@@ -27,13 +27,14 @@ class HashPartitionSchema : public AbstractPartitionSchema {
 
   PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
   PartitionID get_matching_partition_for(AllTypeVariant value) const;
+  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, AllTypeVariant value) const override;
 
   ColumnID get_column_id() const;
 
  protected:
   ColumnID _column_id;
   HashFunction _hash_function;
-  size_t _number_of_partitions;
+  PartitionID _number_of_partitions;
 };
 
 }  // namespace opossum

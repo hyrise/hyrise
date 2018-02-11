@@ -11,7 +11,7 @@ class StorageHashPartitionSchemaTest : public BaseTest {
     HashFunction hf;
     // Creating a Table partitioned by a HashFunction applied on column 0
     // splitting the Table in 3 Partitions.
-    t0.create_hash_partitioning(ColumnID{0}, hf, 3u);
+    t0.create_hash_partitioning(ColumnID{0}, hf, PartitionID{3});
     t0.add_column("int_column", opossum::DataType::Int, false);
     t0.add_column("string_column", opossum::DataType::String, false);
   }

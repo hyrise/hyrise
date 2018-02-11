@@ -32,6 +32,7 @@ class RangePartitionSchema : public AbstractPartitionSchema {
 
   PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
   PartitionID get_matching_partition_for(AllTypeVariant value) const;
+  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, AllTypeVariant value) const override;
 
   ColumnID get_column_id() const;
   const std::vector<AllTypeVariant> get_bounds() const;
@@ -41,6 +42,9 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;
   DataType _bound_type;
+
+  bool _partition_matches_condition(PartitionID partition_id, PredicateCondition condition,
+                                    PartitionID matching_partition_id);
 };
 
 }  // namespace opossum

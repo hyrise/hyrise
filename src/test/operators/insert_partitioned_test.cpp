@@ -68,7 +68,7 @@ TEST_F(OperatorsInsertPartitionedTest, InsertHashPartitioned) {
 
   auto target_table_name = "partitioned_table";
   auto p = Table::create_with_layout_from(t, Chunk::MAX_SIZE);
-  p->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), 3));
+  p->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
   StorageManager::get().add_table(target_table_name, p);
 
   auto gt = std::make_shared<GetTable>(table_name);
@@ -155,7 +155,7 @@ TEST_F(OperatorsInsertPartitionedTest, InsertRoundRobinPartitioned) {
 
   auto target_table_name = "partitioned_table";
   auto p = Table::create_with_layout_from(t, Chunk::MAX_SIZE);
-  p->apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(3));
+  p->apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(PartitionID{3}));
   StorageManager::get().add_table(target_table_name, p);
 
   auto gt = std::make_shared<GetTable>(table_name);

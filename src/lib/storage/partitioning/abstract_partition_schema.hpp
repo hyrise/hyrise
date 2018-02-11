@@ -33,6 +33,7 @@ class AbstractPartitionSchema {
   void append(std::vector<AllTypeVariant> values, PartitionID partition_id);
 
   virtual PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const = 0;
+  virtual std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, AllTypeVariant value) const;
 
   virtual void add_new_chunk(std::shared_ptr<Chunk> chunk, PartitionID partition_id);
   virtual bool is_partitioned() const { return true; }
