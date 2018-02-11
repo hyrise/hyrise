@@ -80,7 +80,7 @@ class TableStatisticsTest : public BaseTest {
   }
 
   /**
-   * Predict output sizes of table scans with two values (scan type = OpBetween) and compare with actual output sizes.
+   * Predict output sizes of table scans with two values (predicate condition = OpBetween) and compare with actual output sizes.
    * Does not work with ValuePlaceholder of stored procedures.
    */
   template <typename T>
@@ -208,6 +208,18 @@ TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
   container =
       check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::GreaterThan, AllParameterVariant(2));
   check_statistic_with_table_scan(container, ColumnID{0}, PredicateCondition::Equals, AllParameterVariant(3));
+}
+
+TEST_F(TableStatisticsTest, DirectlyAccessColumnStatistics) {
+  /**
+     * check that column statistics are generated even without a predicate
+     */
+  auto column_statistics = _table_a_with_statistics.statistics->column_statistics();
+  EXPECT_EQ(column_statistics.size(), 4u);
+  for (auto col = ColumnID{0}; col < column_statistics.size(); ++col) {
+    EXPECT_TRUE(column_statistics.at(col));
+    EXPECT_FLOAT_EQ(column_statistics.at(col)->distinct_count(), 6.f);
+  }
 }
 
 }  // namespace opossum

@@ -7,7 +7,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
@@ -63,7 +63,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the columns in the respective format (depending on the type
-   * of the column, such as ReferenceColumn, DictionaryColumn, ValueColumn).
+   * of the column, such as ReferenceColumn, DeprecatedDictionaryColumn, ValueColumn).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -105,8 +105,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_value_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) final;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final;
 
   /**
    * Reference Columns are dumped with the following layout, which is similar to value columns:
@@ -127,8 +126,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_reference_column(const ReferenceColumn& ref_column,
-                               std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
   /**
    * Dictionary Columns are dumped with the following layout:
    *
@@ -151,8 +149,14 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  void handle_column(const BaseDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  void handle_column(const BaseEncodedColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   // Chooses the right FittedAttributeVector depending on the attribute_vector_width and exports it.

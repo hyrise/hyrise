@@ -12,12 +12,13 @@
 #include <string>
 #include <vector>
 
-#include "copyable_atomic.hpp"
 #include "index/column_index_type.hpp"
-#include "scoped_locking_ptr.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "utils/copyable_atomic.hpp"
+#include "utils/format_bytes.hpp"
+#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 
@@ -198,6 +199,8 @@ class Chunk : private Noncopyable {
     return create_index<Index>(columns);
   }
 
+  void remove_index(std::shared_ptr<BaseIndex> index);
+
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
@@ -205,6 +208,11 @@ class Chunk : private Noncopyable {
   bool references_exactly_one_table() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
+
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
+   */
+  size_t estimate_memory_usage() const;
 
  private:
   std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;

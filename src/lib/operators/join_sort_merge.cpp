@@ -14,7 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
@@ -45,7 +45,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
                   op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
                   op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
-              "Unsupported scan type");
+              "Unsupported predicate condition");
   DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
               "Outer joins are not implemented for not-equals joins.");
 }
