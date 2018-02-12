@@ -492,6 +492,14 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
   EXPECT_EQ(expressions[1]->column_reference(), LQPColumnReference(table_b_node, ColumnID{1}));
 }
 
+TEST_F(SQLTranslatorTest, InsertInvalidDataType) {
+  auto query = "INSERT INTO table_a VALUES (10, 11);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+
+  query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
 TEST_F(SQLTranslatorTest, Update) {
   const auto query = "UPDATE table_a SET b = 3.2 WHERE a > 1;";
   auto result_node = compile_query(query);
