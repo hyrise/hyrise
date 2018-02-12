@@ -19,7 +19,7 @@ class LQPColumnReference;
  * This optimizer rule looks for ProjectionNodes that contain calculable Expressions.
  * It then calculates the Expressions, and replaces all LQPColumnReferences to these columns
  * in any PredicateNode of the parent tree with the Expression result.
- * The column containin the Expression is then removed from the ProjectionNode.
+ * The column containinǵ the Expression is then removed from the ProjectionNode.
  */
 class NestedExpressionRule : public AbstractRule {
  public:
