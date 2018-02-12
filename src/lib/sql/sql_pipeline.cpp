@@ -59,11 +59,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
       }
     }
 
+    const auto statement_string_length = statement->stringLength;
     auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement.release());
     parsed_statement->setIsValid(true);
 
     // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
-    const auto statement_string_length = statement->stringLength;
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
