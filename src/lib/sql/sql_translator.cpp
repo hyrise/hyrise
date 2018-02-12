@@ -144,6 +144,40 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     current_result_node = std::make_shared<DummyTableNode>();
   }
 
+  auto data_type_is_equal = [](const DataType& column_type, const hsql::Expr& expr) {
+    switch (column_type) {
+      case DataType::Int:
+        return expr.isType(hsql::kExprLiteralInt);
+      case DataType::Long:
+        return expr.isType(hsql::kExprLiteralInt);
+      case DataType::Float:
+        return expr.isType(hsql::kExprLiteralFloat);
+      case DataType::Double:
+        return expr.isType(hsql::kExprLiteralFloat);
+      case DataType::String:
+        return expr.isType(hsql::kExprLiteralString);
+      case DataType::Null:
+        return expr.isType(hsql::kExprLiteralNull);
+      default:
+        return false;
+    }
+  };
+
+  auto column_types_are_equal = [data_type_is_equal](const std::vector<DataType>& table_column_types, const std::vector<hsql::Expr*>& statement_expressions) {
+    auto column_types_it = table_column_types.begin();
+    auto expressions_it = statement_expressions.begin();
+
+    while (column_types_it != table_column_types.end() && expressions_it != statement_expressions.end()) {
+      if (!data_type_is_equal(*column_types_it, *(*expressions_it))) {
+        return false;
+      }
+      column_types_it++;
+      expressions_it++;
+    }
+
+    return true;
+  };
+
   if (!insert.columns) {
     // No column order given. Assuming all columns in regular order.
     // For SELECT ... INTO we are basically done because can use the above node as input.
@@ -151,11 +185,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     if (insert.type == hsql::kInsertValues) {
       DebugAssert(insert.values != nullptr, "Insert: no values given");
 
+      Assert(column_types_are_equal(target_table->column_types(), *insert.values), "Insert: Column type mismatch");
+
       // In the case of INSERT ... VALUES (...), simply create a
       current_result_node = _translate_projection(*insert.values, current_result_node);
     }
 
-    Assert(current_result_node->output_column_count() == target_table->column_count(), "Insert: column mismatch");
+    Assert(current_result_node->output_column_count() == target_table->column_count(), "Insert: Column count mismatch");
   } else {
     // Certain columns have been specified. In this case we create a new expression list
     // for the Projection, so that it contains as many columns as the target table.
@@ -172,6 +208,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
       if (insert.type == hsql::kInsertValues) {
         // when inserting values, simply translate the literal expression
         const auto& hsql_expr = *(*insert.values)[insert_column_index];
+
+        Assert(data_type_is_equal(target_table->column_types()[column_id], hsql_expr), "Insert: Column type mismatch");
+        
         projections[column_id] = HSQLExprTranslator::to_lqp_expression(hsql_expr, nullptr);
       } else {
         DebugAssert(insert.type == hsql::kInsertSelect, "Unexpected Insert type");
