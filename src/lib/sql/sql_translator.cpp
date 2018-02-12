@@ -144,7 +144,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     current_result_node = std::make_shared<DummyTableNode>();
   }
 
-  auto data_type_is_equal = [](const DataType& column_type, const hsql::Expr& expr) {
+  // Lambda to compare a DataType to the type of an hqsl::Expr
+  auto data_type_matches_expr_type = [](const DataType& column_type, const hsql::Expr& expr) {
     switch (column_type) {
       case DataType::Int:
         return expr.isType(hsql::kExprLiteralInt);
@@ -163,15 +164,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     }
   };
 
-  auto column_types_are_equal = [data_type_is_equal](const std::vector<DataType>& table_column_types, const std::vector<hsql::Expr*>& statement_expressions) {
-    auto column_types_it = table_column_types.begin();
-    auto expressions_it = statement_expressions.begin();
+  // Lambda to compare a vector of DataType to the types of a vector of hqsl::Expr
+  auto data_types_match_expr_types = [&](const std::vector<DataType>& data_types, const std::vector<hsql::Expr*>& expressions) {
+    auto data_types_it = data_types.begin();
+    auto expressions_it = expressions.begin();
 
-    while (column_types_it != table_column_types.end() && expressions_it != statement_expressions.end()) {
-      if (!data_type_is_equal(*column_types_it, *(*expressions_it))) {
+    while (data_types_it != data_types.end() && expressions_it != expressions.end()) {
+      if (!data_type_matches_expr_type(*data_types_it, *(*expressions_it))) {
         return false;
       }
-      column_types_it++;
+      data_types_it++;
       expressions_it++;
     }
 
@@ -185,7 +187,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     if (insert.type == hsql::kInsertValues) {
       DebugAssert(insert.values != nullptr, "Insert: no values given");
 
-      Assert(column_types_are_equal(target_table->column_types(), *insert.values), "Insert: Column type mismatch");
+      Assert(data_types_match_expr_types(target_table->column_types(), *insert.values), "Insert: Column type mismatch");
 
       // In the case of INSERT ... VALUES (...), simply create a
       current_result_node = _translate_projection(*insert.values, current_result_node);
@@ -209,8 +211,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
         // when inserting values, simply translate the literal expression
         const auto& hsql_expr = *(*insert.values)[insert_column_index];
 
-        Assert(data_type_is_equal(target_table->column_types()[column_id], hsql_expr), "Insert: Column type mismatch");
-        
+        Assert(data_type_matches_expr_type(target_table->column_types()[column_id], hsql_expr), "Insert: Column type mismatch");
+
         projections[column_id] = HSQLExprTranslator::to_lqp_expression(hsql_expr, nullptr);
       } else {
         DebugAssert(insert.type == hsql::kInsertSelect, "Unexpected Insert type");
