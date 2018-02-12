@@ -114,6 +114,7 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    tuning/index/column_ref.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
     utils/format_bytes_test.cpp
