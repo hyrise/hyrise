@@ -3,9 +3,9 @@
 #include <iostream>
 #include <iterator>
 
+#include "sql/sql_pipeline.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "sql/sql_pipeline.hpp"
 
 namespace opossum {
 
@@ -56,22 +56,21 @@ std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet, 
 }
 
 PreparedStatementInfo PostgresWireHandler::handle_parse_packet(const InputPacket& packet, size_t length) {
-  
   auto statement_name = read_string(packet);
-  
+
   auto query = read_string(packet);
-  
+
   auto n_parameter_data_types = read_value<uint16_t>(packet);
-  
-  /*auto parameter_data_types = */read_values<uint32_t>(packet, n_parameter_data_types);
 
-//  SQLPipeline sql_pipeline{query};
-//  auto parsed_statements = sql_pipeline.get_parsed_sql_statements();
-//  if (parsed_statements.size() != 1) {
-//    throw std::runtime_error("Only exactly 1 statement supported.");
-//  }
+  /*auto parameter_data_types = */ read_values<uint32_t>(packet, n_parameter_data_types);
 
-  return PreparedStatementInfo{std::move(statement_name), std::move(query)}; //, std::move(sql_pipeline)};
+  //  SQLPipeline sql_pipeline{query};
+  //  auto parsed_statements = sql_pipeline.get_parsed_sql_statements();
+  //  if (parsed_statements.size() != 1) {
+  //    throw std::runtime_error("Only exactly 1 statement supported.");
+  //  }
+
+  return PreparedStatementInfo{std::move(statement_name), std::move(query)};  //, std::move(sql_pipeline)};
 }
 
 std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const InputPacket& packet, size_t length) {
@@ -80,11 +79,11 @@ std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const I
   auto statement_name = read_string(packet);
 
   auto n_format_codes = read_value<int16_t>(packet);
-  
+
   auto format_codes = read_values<int16_t>(packet, n_format_codes);
-  
+
   auto n_parameter_values = ntohs(read_value<int16_t>(packet));
-  
+
   std::vector<AllParameterVariant> parameter_values;
   for (auto i = 0; i < n_parameter_values; ++i) {
     auto parameter_value_length = ntohl(read_value<int32_t>(packet));
@@ -92,16 +91,16 @@ std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const I
     const std::string x_str(x.begin(), x.end());
     parameter_values.emplace_back(std::stoi(x_str));
   }
-  
+
   auto n_result_column_format_codes = read_value<int16_t>(packet);
   auto result_column_format_codes = read_values<int16_t>(packet, n_result_column_format_codes);
-  
+
   return parameter_values;
 }
 
 std::string PostgresWireHandler::handle_execute_packet(const InputPacket& packet, size_t length) {
   const auto portal = read_string(packet);
-  /*const auto max_rows = */read_value<int32_t>(packet);
+  /*const auto max_rows = */ read_value<int32_t>(packet);
   return portal;
 }
 
@@ -110,7 +109,6 @@ std::string PostgresWireHandler::handle_describe_packet(const InputPacket& packe
   const auto portal = read_string(packet);
   return portal;
 }
-
 
 void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& value, bool terminate) {
   auto num_bytes = value.length();
@@ -152,7 +150,7 @@ void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
   }
 }
 
-std::string PostgresWireHandler::read_string(const InputPacket &packet) {
+std::string PostgresWireHandler::read_string(const InputPacket& packet) {
   std::string result(packet.data.data() + std::distance(packet.data.cbegin(), packet.offset));
   packet.offset += result.length() + 1;
   return result;

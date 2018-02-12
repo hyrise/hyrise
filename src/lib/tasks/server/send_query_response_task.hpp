@@ -7,10 +7,9 @@ namespace opossum {
 
 class SendQueryResponseTask : public ServerTask {
  public:
-  SendQueryResponseTask(std::shared_ptr<HyriseSession> session,
-                        SQLPipeline& sql_pipeline,
-                        std::shared_ptr<const Table> explicit_result_table )
-    : ServerTask(std::move(session)), _sql_pipeline(sql_pipeline), _result_table(std::move(explicit_result_table)) {}
+  SendQueryResponseTask(std::shared_ptr<HyriseSession> session, SQLPipeline& sql_pipeline,
+                        std::shared_ptr<const Table> explicit_result_table)
+      : ServerTask(std::move(session)), _sql_pipeline(sql_pipeline), _result_table(std::move(explicit_result_table)) {}
 
  protected:
   void _on_execute() override;

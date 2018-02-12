@@ -6,12 +6,6 @@ namespace opossum {
 
 void SendQueryResponseTask::_send_row_description() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
-
-  if (!_result_table) {
-    // There is no result table, e.g. after an INSERT command
-    return;
-  }
-
   const auto& column_names = _result_table->column_names();
 
   // Int16 Specifies the number of fields in a row (can be zero).
@@ -79,10 +73,6 @@ void SendQueryResponseTask::_send_row_description() {
 }
 
 void SendQueryResponseTask::_send_row_data() {
-  if (!_result_table) {
-    // There is no result table, e.g. after an INSERT command so the client doesn't expect any data
-    return;
-  }
   /*
     DataRow (B)
     Byte1('D')
@@ -133,10 +123,6 @@ void SendQueryResponseTask::_send_row_data() {
 }
 
 void SendQueryResponseTask::_send_command_complete() {
-  if (!_result_table) {
-    return;
-  }
-
   std::string completed_msg;
   const auto* statement = _sql_pipeline.get_parsed_sql_statements().front()->getStatements().front();
   switch (statement->type()) {
@@ -179,12 +165,19 @@ void SendQueryResponseTask::_send_execution_info() {
 }
 
 void SendQueryResponseTask::_on_execute() {
-  _send_row_description();
-  _send_row_data();
+  // If there is no result table, e.g. after an INSERT command, we cannot send this data
+  if (_result_table) {
+    _send_row_description();
+    _send_row_data();
+  }
+
   _send_command_complete();
-  if (!_session->is_extended_query_mode()) {
+
+  // This information is currently not available in the extended protocol because it doesn't use the SQLPipeline
+  if (_session->state() == SessionState::SimpleQuery) {
     _send_execution_info();
   }
+
   _session->query_response_sent();
 }
 

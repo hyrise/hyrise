@@ -14,7 +14,7 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const std::shared_ptr<const
 //   As of now, we only support caching (and thus, recreation) for SELECTs.
 //   There should be no conceptual problem with R/W though.
 //  Fail("ReadWrite operators (here: " + name() + ") can not implement recreation.");
-  
+
 //}
 
 void AbstractReadWriteOperator::execute() {

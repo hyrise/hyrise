@@ -1,11 +1,11 @@
 #pragma once
 
+#include <SQLParserResult.h>
 #include <arpa/inet.h>
 #include <algorithm>
+#include <sql/sql_pipeline_statement.hpp>
 #include <string>
 #include <vector>
-#include <SQLParserResult.h>
-#include <sql/sql_pipeline_statement.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "types.hpp"
@@ -61,7 +61,7 @@ class PostgresWireHandler {
 
   template <typename T>
   static std::vector<T> read_values(const InputPacket& packet, size_t num_values);
-  
+
   static std::string read_string(const InputPacket& packet);
 
   template <typename T>
@@ -75,9 +75,11 @@ template <typename T>
 T PostgresWireHandler::read_value(const InputPacket& packet) {
   T result;
   auto num_bytes = sizeof(T);
-  // TODO(lawben): bounds check
+  DebugAssert(packet.offset + num_bytes < packet.data.end(), "Reading too many bytes from buffer.");
+
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(&result));
   packet.offset += num_bytes;
+
   return result;
 }
 
@@ -85,11 +87,11 @@ template <typename T>
 std::vector<T> PostgresWireHandler::read_values(const InputPacket& packet, const size_t num_values) {
   std::vector<T> result(num_values);
   auto num_bytes = result.size() * sizeof(T);
-
-  // TODO(lawben): bounds check
+  DebugAssert(packet.offset + num_bytes < packet.data.end(), "Reading too many bytes from buffer.");
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(result.data()));
   packet.offset += num_bytes;
+
   return result;
 }
 

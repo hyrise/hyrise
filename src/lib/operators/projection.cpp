@@ -36,11 +36,11 @@ const Projection::ColumnExpressions& Projection::column_expressions() const { re
 
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
   ColumnExpressions new_column_expressions;
-  
+
   for (const auto& column_expression : _column_expressions) {
     if (column_expression->type() == ExpressionType::Placeholder) {
       auto value_placeholder = column_expression->value_placeholder();
-      
+
       if (value_placeholder.index() < args.size()) {
         const auto& parameter_variant = args[value_placeholder.index()];
         assert(is_variant(parameter_variant));
@@ -49,10 +49,10 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
         continue;
       }
     }
-    
+
     new_column_expressions.emplace_back(column_expression);
   }
-  
+
   return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
 }
 

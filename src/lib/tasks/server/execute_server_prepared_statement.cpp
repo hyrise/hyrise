@@ -1,8 +1,7 @@
-#include <concurrency/transaction_manager.hpp>
 #include "execute_server_prepared_statement.hpp"
+#include <concurrency/transaction_manager.hpp>
 
 #include "scheduler/current_scheduler.hpp"
-
 
 namespace opossum {
 
