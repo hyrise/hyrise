@@ -430,7 +430,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
-  const auto query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
+  const auto query = "INSERT INTO table_a (b, a) VALUES (12.5, 10);";
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Insert);
@@ -443,9 +443,9 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 
   auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<float>(expressions[0]->value()), 12.5);
+  EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int32_t>(expressions[1]->value()), 10);
+  EXPECT_EQ(boost::get<float>(expressions[1]->value()), 12.5);
 
   EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
