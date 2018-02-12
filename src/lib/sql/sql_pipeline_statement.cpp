@@ -117,18 +117,17 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
   _query_plan = std::make_shared<SQLQueryPlan>();
 
-  auto started = std::chrono::high_resolution_clock::now();
+  const auto started = std::chrono::high_resolution_clock::now();
 
   // Handle query plan if statement has been cached
-  const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string);
-  if (cached_plan) {
+  if (const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string)) {
     auto& plan = *cached_plan;
 
     DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
     if (plan.tree_roots().front()->transaction_context_is_set()) {
-      Assert(_use_mvcc, "Cannot switch from MVCC use to non-MVCC use with cached queries.");
+      Assert(_use_mvcc, "Trying to use MVCC cached query without a transaction context.");
     } else {
-      Assert(!_use_mvcc, "Cannot switch from non-MVCC use to MVCC use with cached queries.");
+      Assert(!_use_mvcc, "Trying to use non-MVCC cached query with a transaction context.");
     }
 
     _query_plan->append_plan(plan.recreate());

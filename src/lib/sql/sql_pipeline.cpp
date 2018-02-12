@@ -32,13 +32,17 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
   _sql_pipeline_statements.reserve(parse_result.size());
 
-  auto seen_altering_statement = false;
-  auto sql_string_offset = 0u;
-
   std::vector<std::unique_ptr<hsql::SQLStatement>> released_statements;
   for (auto* statement : parse_result.releaseStatements()) {
     released_statements.emplace_back(statement);
   }
+
+  auto seen_altering_statement = false;
+
+  // We want to split the (multi-) statement SQL string into the strings for each statement. We can then use those
+  // statement strings to cache query plans.
+  // The sql parser only offers us the length of the string, so we need to split it manually.
+  auto sql_string_offset = 0u;
 
   for (auto& statement : released_statements) {
     switch (statement->type()) {
@@ -55,13 +59,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
       }
     }
 
-    const auto statement_string_length = statement->stringLength;
     auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement.release());
     parsed_statement->setIsValid(true);
 
     // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
-    DebugAssert(sql_string_offset < sql.length(),
-                "SQL statements have a total length that is longer than the original string.");
+    const auto statement_string_length = statement->stringLength;
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
