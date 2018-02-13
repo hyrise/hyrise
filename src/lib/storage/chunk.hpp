@@ -18,7 +18,6 @@
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 #include "utils/scoped_locking_ptr.hpp"
-#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 
