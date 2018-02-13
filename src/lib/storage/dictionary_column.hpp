@@ -43,6 +43,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
    * @{
    */
 
+  size_t estimate_memory_usage() const final;
+
   ValueID lower_bound(const AllTypeVariant& value) const final;
   ValueID upper_bound(const AllTypeVariant& value) const final;
 

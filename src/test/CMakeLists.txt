@@ -71,6 +71,7 @@ set(
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
@@ -120,6 +121,7 @@ set(
     testing_assert.hpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
+    utils/format_bytes_test.cpp
 )
 
 set (

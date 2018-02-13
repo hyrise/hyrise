@@ -101,7 +101,7 @@ class OperatorsAggregateTest : public BaseTest {
 
     if (test_references) {
       for (const auto& agg : aggregates) {
-        ref_columns.insert(agg.column.value());
+        ref_columns.insert(*agg.column);
       }
 
       for (const auto column_id : groupby_column_ids) {

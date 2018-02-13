@@ -8,6 +8,7 @@
 #include "storage/column_encoding_utils.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 namespace opossum {
@@ -165,6 +166,28 @@ TEST_F(StorageDictionaryColumnTest, FixedSizeByteAlignedVectorSize) {
 
   EXPECT_EQ(attribute_vector_uint8_t, nullptr);
   EXPECT_NE(attribute_vector_uint16_t, nullptr);
+}
+
+TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
+  const auto empty_memory_usage =
+      encode_column(EncodingType::Dictionary, DataType::Int, vc_int)
+          ->estimate_memory_usage();
+
+  vc_int->append(0);
+  vc_int->append(1);
+  vc_int->append(2);
+  const auto compressed_column =
+      encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
+  const auto dictionary_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(compressed_column);
+
+  static constexpr auto size_of_attribute = 1u;
+
+  EXPECT_GE(dictionary_column->estimate_memory_usage(), empty_memory_usage + 3 * size_of_attribute);
 }
 
 }  // namespace opossum

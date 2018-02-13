@@ -319,7 +319,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * will have values below the overlapping range. The same applies to values above the overlapping range. If the max
    * values are not the same, then the column with the larger max value will have values above the overlapping range.
    *
-   * For the different scan types the appropriate ratios of values below, within and above the overlapping range from
+   * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping range from
    * both columns are taken to compute the selectivity.
    *
    * Example estimation:
@@ -342,7 +342,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * left_overlapping_distinct_count = (1 / 2) * 20 = 10
    * right_overlapping_distinct_count = (1 / 3) * 15 = 5
    *
-   * For scan type equals only the ratios of values in the overlapping range is considered as values. If values could
+   * For predicate condition equals only the ratios of values in the overlapping range is considered as values. If values could
    * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
    * equal value ratio, the column with fewer distinct values within the overlapping range is determined. In this case
    * this is col_right. Statistics component assumes that for two value sets for the same range the smaller set is
@@ -350,14 +350,14 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * column also exist in the left column. The equal value ratio is then calculated by multiplying
    * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left column (= 1 / 20):
    * equal_values_ratio = (1 / 2) * (1 / 20) = (1 / 40)
-   * This is also the selectivity for the scan type equals: (1 / 40) = 2.5 %
+   * This is also the selectivity for the predicate condition equals: (1 / 40) = 2.5 %
    *
-   * For scan type less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
+   * For predicate condition less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
    * table entries where the col_left value is below the common range or the col_right value is above it will always be
    * in the result. The probability that both values are within the overlapping range and that col_left < col_right is
    * (probability of col_left != col_right where left and right values are in overlapping range) / 2
    *
-   * The selectivity for scan type less is the sum of different probabilities: // NOLINT
+   * The selectivity for predicate condition less is the sum of different probabilities: // NOLINT
    *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT
    *  + prob. that right value is above overlapping range (= 1 / 3) // NOLINT
    *  - prob. that left value is below overlapping range and right value is above overlapping range (= 1 / 6) // NOLINT
@@ -450,15 +450,15 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
-  // Currently the distinct count, min and max calculation is incorrect if scan type is OpLessThan or OpGreaterThan and
-  // right column min = left column min or right column max = left column max.
+  // Currently the distinct count, min and max calculation is incorrect if predicate condition is OpLessThan or
+  // OpGreaterThan and right column min = left column min or right column max = left column max.
   //
   // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.
   //
   // Both new left and right column statistics will have the same min and max values of 1 and 3.
-  // However, for scan type OpLessThan, the left column max is actually 2 as there is no possibility for 3 < 3.
-  // Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
-  // The same also applies for scan type OpGreaterThan vice versa.
+  // However, for predicate condition OpLessThan, the left column max is actually 2 as there is no possibility
+  // for 3 < 3. Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
+  // The same also applies for predicate condition OpGreaterThan vice versa.
   // The smaller range between min and max values of a column will also lead to a smaller distinct count.
   //
   // TODO(Anyone): Fix issue mentioned above.
