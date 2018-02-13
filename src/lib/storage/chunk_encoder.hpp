@@ -21,8 +21,7 @@ struct ColumnEncodingSpec {
   constexpr ColumnEncodingSpec() : encoding_type{EncodingType::DeprecatedDictionary} {}
   constexpr ColumnEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
   constexpr ColumnEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
-      : encoding_type{encoding_type_},
-        vector_compression_type{vector_compression_type_} {}
+      : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 
   EncodingType encoding_type;
   std::optional<VectorCompressionType> vector_compression_type;
@@ -84,7 +83,8 @@ class ChunkEncoder {
   /**
    * @brief Encodes an entire table using the same column-encoding spec
    */
-  static void encode_all_chunks(const std::shared_ptr<Table>& table, const ColumnEncodingSpec& column_encoding_spec = {});
+  static void encode_all_chunks(const std::shared_ptr<Table>& table,
+                                const ColumnEncodingSpec& column_encoding_spec = {});
 };
 
 }  // namespace opossum

@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "storage/base_column.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
-#include "storage/column_encoding_utils.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {

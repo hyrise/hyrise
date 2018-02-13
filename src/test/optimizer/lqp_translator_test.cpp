@@ -31,9 +31,9 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/chunk_encoder.hpp"
 
 namespace opossum {
 

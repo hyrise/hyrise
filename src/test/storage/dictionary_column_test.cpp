@@ -5,10 +5,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "storage/chunk_encoder.hpp"
 #include "storage/column_encoding_utils.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 namespace opossum {
@@ -175,14 +175,12 @@ TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
    */
 
   const auto empty_memory_usage =
-      encode_column(EncodingType::Dictionary, DataType::Int, vc_int)
-          ->estimate_memory_usage();
+      encode_column(EncodingType::Dictionary, DataType::Int, vc_int)->estimate_memory_usage();
 
   vc_int->append(0);
   vc_int->append(1);
   vc_int->append(2);
-  const auto compressed_column =
-      encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
+  const auto compressed_column = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   const auto dictionary_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(compressed_column);
 
   static constexpr auto size_of_attribute = 1u;
