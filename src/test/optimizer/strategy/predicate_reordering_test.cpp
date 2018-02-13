@@ -78,6 +78,13 @@ class PredicateReorderingTest : public StrategyBaseTest {
 };
 
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThan, 10,
+    PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThan, 50,
+      _mock_node));
+  // clang-format on
+
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
@@ -124,24 +131,26 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
-  const auto input_lqp = PredicateNode::make(
-      _mock_node_a, PredicateCondition::Equals, 42,
-      PredicateNode::make(
-          _mock_node_b, PredicateCondition::GreaterThan, 50,
-          PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
-                              ProjectionNode::make_pass_through(PredicateNode::make(
-                                  _mock_node_a, PredicateCondition::GreaterThanEquals, 90,
-                                  PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500, _mock_node))))));
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
+    PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
+      PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
+        ProjectionNode::make_pass_through(
+          PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+            PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
+              _mock_node))))));
 
-  const auto expected_optimized_lqp = PredicateNode::make(
-      _mock_node_b, PredicateCondition::GreaterThan, 40,
-      PredicateNode::make(
-          _mock_node_b, PredicateCondition::GreaterThan, 50,
-          PredicateNode::make(
-              _mock_node_a, PredicateCondition::Equals, 42,
-              ProjectionNode::make_pass_through(PredicateNode::make(
-                  _mock_node_c, PredicateCondition::LessThan, 500,
-                  PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90, _mock_node))))));
+
+  const auto expected_optimized_lqp =
+  PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
+    PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
+      PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
+        ProjectionNode::make_pass_through(
+          PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
+            PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+              _mock_node))))));
+  // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);

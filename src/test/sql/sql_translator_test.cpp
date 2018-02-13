@@ -240,9 +240,13 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
   _stored_table_node_a->set_alias("a");
   _stored_table_node_b->set_alias("b");
 
-  const auto projection_node = ProjectionNode::make_pass_through(
-      JoinNode::make(JoinMode::Inner, {_table_a_a, _table_b_a}, PredicateCondition::Equals, _stored_table_node_a,
-                     _stored_table_node_b));
+  // clang-format off
+  const auto projection_node =
+  ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, {_table_a_a, _table_b_a}, PredicateCondition::Equals,
+      _stored_table_node_a,
+      _stored_table_node_b));
+  // clang-format on
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -268,8 +272,13 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
   const auto table_a_a = stored_table_node_a->get_column("a"s);
   const auto table_b_a = stored_table_node_b->get_column("a"s);
 
-  const auto projection_node = ProjectionNode::make_pass_through(JoinNode::make(
-      mode, {table_a_a, table_b_a}, PredicateCondition::Equals, stored_table_node_a, stored_table_node_b));
+  // clang-format off
+  const auto projection_node =
+  ProjectionNode::make_pass_through(
+    JoinNode::make(mode, {table_a_a, table_b_a}, PredicateCondition::Equals,
+        stored_table_node_a,
+        stored_table_node_b));
+  // clang-format on
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -286,8 +295,13 @@ TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto t1_a = stored_table_node_t1->get_column("a"s);
   const auto t2_b = stored_table_node_t2->get_column("b"s);
 
-  const auto projection_node = ProjectionNode::make_pass_through(JoinNode::make(
-      JoinMode::Inner, {t1_a, t2_b}, PredicateCondition::Equals, stored_table_node_t1, stored_table_node_t2));
+  // clang-format off
+  const auto projection_node =
+  ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, {t1_a, t2_b}, PredicateCondition::Equals,
+      stored_table_node_t1,
+      stored_table_node_t2));
+  // clang-format on
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -296,12 +310,15 @@ TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
   const auto query = "SELECT * FROM table_a NATURAL JOIN table_c;";
   auto result_node = compile_query(query);
 
-  const auto projection_node = ProjectionNode::make(
-      LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-      ProjectionNode::make(
-          LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-          PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_c_a,
-                              JoinNode::make(JoinMode::Cross, _stored_table_node_a, _stored_table_node_c))));
+  // clang-format off
+  const auto projection_node =
+  ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
+    ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
+      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_c_a,
+        JoinNode::make(JoinMode::Cross,
+          _stored_table_node_a,
+          _stored_table_node_c))));
+  // clang-format on
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -313,9 +330,14 @@ TEST_F(SQLTranslatorTest, SelectCrossJoin) {
   _stored_table_node_a->set_alias("a");
   _stored_table_node_b->set_alias("b");
 
-  const auto projection_node = ProjectionNode::make_pass_through(
-      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_b_a,
-                          JoinNode::make(JoinMode::Cross, _stored_table_node_a, _stored_table_node_b)));
+  // clang-format off
+  const auto projection_node =
+  ProjectionNode::make_pass_through(
+    PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_b_a,
+      JoinNode::make(JoinMode::Cross,
+        _stored_table_node_a,
+        _stored_table_node_b)));
+  // clang-format on
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -483,9 +505,13 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto alias_c = LQPExpression::create_column(_table_a_a, "c");
   const auto alias_d = LQPExpression::create_column(_table_a_b, "d");
 
+  // clang-format off
   const auto view_node =
-      ProjectionNode::make({alias_c, alias_d}, ProjectionNode::make_pass_through(PredicateNode::make(
-                                                   _table_a_a, PredicateCondition::Equals, "b", _stored_table_node_a)));
+  ProjectionNode::make({alias_c, alias_d},
+    ProjectionNode::make_pass_through(
+      PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
+        _stored_table_node_a)));
+  // clang-format on
 
   const auto lqp = CreateViewNode::make("my_second_view", view_node);
 
