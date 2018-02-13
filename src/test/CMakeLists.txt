@@ -51,6 +51,7 @@ set(
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
+    operators/partitioning_test.cpp
     operators/physical_query_plan_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/drop_view_test.cpp

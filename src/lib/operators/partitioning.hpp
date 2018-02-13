@@ -23,8 +23,8 @@ class Partitioning : public AbstractReadWriteOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
-  void _on_commit_records(const CommitID cid) override;
-  void _on_rollback_records() override;
+  void _on_commit_records(const CommitID cid) override {};
+  void _on_rollback_records() override {};
 
   std::shared_ptr<const Table> _get_and_drop_table_to_be_partitioned();
   std::shared_ptr<Table> _create_partitioned_table_copy(std::shared_ptr<const Table> table_to_be_partitioned);
