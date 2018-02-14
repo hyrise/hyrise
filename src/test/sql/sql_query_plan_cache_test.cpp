@@ -7,9 +7,9 @@
 #include "sql/gdfs_cache.hpp"
 #include "sql/lru_cache.hpp"
 #include "sql/lru_k_cache.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
-#include "sql/sql_pipeline_statement.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

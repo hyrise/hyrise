@@ -5,15 +5,15 @@ add_executable(
     benchmark_basic_fixture.hpp
     benchmark_main.cpp
     benchmark_template.cpp
-#    operators/aggregate_benchmark.cpp
-#    operators/difference_benchmark.cpp
-#    operators/product_benchmark.cpp
-#    operators/projection_benchmark.cpp
-#    operators/union_positions_benchmark.cpp
-#    operators/sort_benchmark.cpp
+    operators/aggregate_benchmark.cpp
+    operators/difference_benchmark.cpp
+    operators/product_benchmark.cpp
+    operators/projection_benchmark.cpp
+    operators/union_positions_benchmark.cpp
+    operators/sort_benchmark.cpp
     operators/sql_benchmark.cpp
-#    operators/table_scan_benchmark.cpp
-#    operators/union_all_benchmark.cpp
+    operators/table_scan_benchmark.cpp
+    operators/union_all_benchmark.cpp
     table_generator.cpp
     table_generator.hpp
     tpch_db_generator_benchmark.cpp

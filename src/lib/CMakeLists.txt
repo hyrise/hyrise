@@ -200,9 +200,7 @@ set(
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
     sql/sql_query_cache.hpp
-    sql/sql_query_operator.cpp
-    sql/sql_query_operator.hpp
-    sql/sql_query_plan.cpp
+        sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
