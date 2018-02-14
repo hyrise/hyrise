@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "storage/table.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
 
 #include "constant_mappings.hpp"
 
@@ -24,16 +22,12 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
   std::vector<std::string> col_types = _split<std::string>(line, '|');
 
   auto col_nullable = std::vector<bool>{};
-  auto col_indexed = std::vector<bool>{};
   for (auto& type : col_types) {
     auto type_nullable = _split<std::string>(type, '_');
     type = type_nullable[0];
 
     auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
     col_nullable.push_back(nullable);
-
-    auto indexed = type_nullable.size() > 1 && type_nullable[1] == "indexed";
-    col_indexed.push_back(indexed);
   }
 
   std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
@@ -60,13 +54,6 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     auto mvcc_columns = chunk->mvcc_columns();
     mvcc_columns->begin_cids.back() = 0;
   }
-
-  DeprecatedDictionaryCompression::compress_table(*test_table);
-
-  for (size_t i = 0; i < col_names.size(); i++) {
-    if(col_indexed[i]) test_table->create_index<GroupKeyIndex>({ColumnID{i}});
-  }
-
   return test_table;
 }
 
