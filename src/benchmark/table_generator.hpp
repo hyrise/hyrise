@@ -61,7 +61,8 @@ class TableGenerator {
                                         std::optional<EncodingType> encoding_type = std::nullopt);
 
   std::shared_ptr<Table> generate_table(const std::vector<ColumnConfiguration>& column_configurations,
-                                        const size_t num_rows, const size_t chunk_size, const bool compress = false);
+                                        const size_t num_rows, const size_t chunk_size,
+                                        std::optional<EncodingType> encoding_type = std::nullopt);
 
  protected:
   const size_t _num_columns = 10;

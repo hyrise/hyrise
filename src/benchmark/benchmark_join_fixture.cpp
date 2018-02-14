@@ -36,9 +36,9 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
   }
 
   auto table_1 = table_generator->generate_table(std::vector<ColumnConfiguration>{left_config}, state.range(0),
-                                                 state.range(0) / 4, true);
+                                                 state.range(0) / 4, EncodingType::Dictionary);
   auto table_2 = table_generator->generate_table(std::vector<ColumnConfiguration>{right_config}, state.range(1),
-                                                 state.range(1) / 4, true);
+                                                 state.range(1) / 4, EncodingType::Dictionary);
 
   for (auto table : {table_1, table_2}) {
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
