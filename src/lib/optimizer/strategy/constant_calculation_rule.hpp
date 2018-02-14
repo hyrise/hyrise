@@ -16,12 +16,10 @@ class LQPExpression;
 class LQPColumnReference;
 
 /**
- * This optimizer rule looks for ProjectionNodes that contain calculable Expressions.
- * It then calculates the Expressions, and replaces all LQPColumnReferences to these columns
- * in any PredicateNode of the parent tree with the Expression result.
- * The column containinǵ the Expression is then removed from the ProjectionNode.
+ * This optimizer rule looks for Expressions in ProjectionNodes that are calculable at planning time
+ * and replaces them with a constant.
  */
-class NestedExpressionRule : public AbstractRule {
+class ConstantCalculationRule : public AbstractRule {
  public:
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;

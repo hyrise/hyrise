@@ -1,4 +1,4 @@
-#include "nested_expression_rule.hpp"
+#include "constant_calculation_rule.hpp"
 
 #include <functional>
 #include <memory>
@@ -16,9 +16,9 @@
 
 namespace opossum {
 
-std::string NestedExpressionRule::name() const { return "Nested Expression Rule"; }
+std::string ConstantCalculationRule::name() const { return "Constant Calculation Rule"; }
 
-bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() != LQPNodeType::Projection) {
     return _apply_to_children(node);
   }
@@ -46,7 +46,7 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
     // e.g. because it is not an arithmetic operator.
     if (!variant_is_null(value) &&
         _replace_expression_in_parents(node, node->output_column_references()[column_id], value)) {
-      // If we successfully replaced the occurences of the Expression in the parent tree
+      // If we successfully replaced the occurrences of the expression in the parent tree,
       // we can remove the column here.
       _remove_column_from_projection(projection_node, column_id);
     }
@@ -55,7 +55,7 @@ bool NestedExpressionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   return _apply_to_children(node);
 }
 
-bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
                                                           const LQPColumnReference& expression_column,
                                                           const AllTypeVariant& value) {
   auto parent_tree_changed = false;
@@ -83,7 +83,7 @@ bool NestedExpressionRule::_replace_expression_in_parents(const std::shared_ptr<
   return parent_tree_changed;
 }
 
-void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
+void ConstantCalculationRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
                                                           ColumnID column_id) {
   auto column_expressions = node->column_expressions();
   column_expressions.erase(column_expressions.begin() + column_id);
@@ -92,7 +92,7 @@ void NestedExpressionRule::_remove_column_from_projection(const std::shared_ptr<
   node->replace_with(projection_node);
 }
 
-std::optional<DataType> NestedExpressionRule::_get_type_of_expression(
+std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
     const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
@@ -113,7 +113,7 @@ std::optional<DataType> NestedExpressionRule::_get_type_of_expression(
 }
 
 template <typename T>
-AllTypeVariant NestedExpressionRule::_evaluate_expression(boost::hana::basic_type<T> type,
+AllTypeVariant ConstantCalculationRule::_evaluate_expression(boost::hana::basic_type<T> type,
                                                           const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return AllTypeVariant(boost::get<T>(expression->value()));

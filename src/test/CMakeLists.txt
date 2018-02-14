@@ -71,9 +71,9 @@ set(
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
-    optimizer/strategy/nested_expression_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp

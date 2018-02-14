@@ -154,12 +154,12 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/constant_calculation_rule.cpp
+    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
-    optimizer/strategy/nested_expression_rule.cpp
-    optimizer/strategy/nested_expression_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
