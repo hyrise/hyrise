@@ -11,7 +11,7 @@
 #include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -60,7 +60,16 @@ class JoinIndexTest : public BaseTest {
   std::shared_ptr<TableWrapper> load_table_index(const std::string& filename, size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
-    DictionaryCompression::compress_table(*table);
+    auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{};
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      auto chunk_encoding_spec = ChunkEncodingSpec{};
+      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+        chunk_encoding_spec.push_back(ColumnEncodingSpec{EncodingType::Dictionary});
+      }
+      chunk_encoding_specs.push_back(chunk_encoding_spec);
+    }
+
+    ChunkEncoder::encode_all_chunks(table, chunk_encoding_specs);
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto chunk = table->get_chunk(chunk_id);
