@@ -19,7 +19,6 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::Transa
 // Private constructor
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
                          ChunkUseMvcc use_mvcc) {
-  /** Create control block */
   _control_block = std::make_shared<SQLPipelineControlBlock>(use_mvcc, transaction_context);
 
   hsql::SQLParserResult parse_result;

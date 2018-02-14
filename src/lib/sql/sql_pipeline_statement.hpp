@@ -72,7 +72,7 @@ class SQLPipelineStatement : public Noncopyable {
 
   std::shared_ptr<const SQLPipelineControlBlock> _control_block;
 
-  // Might be the Statements own transaction context, or the one from the control block
+  // Might be the Statement's own transaction context, or the one from the control block
   std::shared_ptr<TransactionContext> _transaction_context;
 
   // Execution results

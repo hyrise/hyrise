@@ -10,6 +10,10 @@ namespace opossum {
 
 class TransactionContext;
 
+/**
+ * State shared by the SQLPipeline and its SQLPipelineStatements. E.g., facilitates changing the Optimizer for all
+ * SQLPipelineStatements
+ */
 struct SQLPipelineControlBlock {
   SQLPipelineControlBlock(const ChunkUseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                           const std::shared_ptr<Optimizer>& optimizer = Optimizer::get_default_optimizer())
