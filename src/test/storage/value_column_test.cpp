@@ -100,4 +100,30 @@ TEST_F(StorageValueColumnTest, StringTooLong) {
   EXPECT_THROW(vc_str.append(std::string(std::numeric_limits<StringLength>::max() + 1ul, 'A')), std::exception);
 }
 
+TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
+  const auto empty_usage_int = vc_int.estimate_memory_usage();
+  const auto empty_usage_double = vc_double.estimate_memory_usage();
+  const auto empty_usage_str = vc_str.estimate_memory_usage();
+
+  vc_int.append(1);
+  vc_int.append(2);
+
+  const auto short_str = "Hello";
+  const auto longer_str = std::string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
+
+  vc_str.append(short_str);
+  vc_str.append(longer_str);
+
+  vc_double.append(42.1337);
+
+  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vc_int.estimate_memory_usage());
+  EXPECT_EQ(empty_usage_double + sizeof(double), vc_double.estimate_memory_usage());
+  EXPECT_GE(vc_str.estimate_memory_usage(), empty_usage_str + 2 * sizeof(std::string));
+}
+
 }  // namespace opossum

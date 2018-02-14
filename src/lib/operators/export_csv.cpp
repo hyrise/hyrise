@@ -8,8 +8,8 @@
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "json.hpp"
-#include "storage/base_attribute_vector.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
@@ -92,8 +92,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
 template <typename T>
 class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
-  void handle_value_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
     const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
@@ -107,19 +106,27 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     }
   }
 
-  void handle_reference_column(const ReferenceColumn& ref_column,
-                               std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
 
     context->csv_writer.write(ref_column[context->current_row]);
   }
 
-  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
-    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+    const auto& column = static_cast<const DeprecatedDictionaryColumn<T>&>(base_column);
 
     context->csv_writer.write((*column.dictionary())[(column.attribute_vector()->get(context->current_row))]);
+  }
+
+  void handle_column(const BaseDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) final {
+    Fail("CSV export not implemented yet for new version of dictionary column.");
+  }
+
+  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
+    Fail("CSV export not implemented yet for encoded columns.");
   }
 };
 

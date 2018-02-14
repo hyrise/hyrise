@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_attribute_vector.hpp"
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
@@ -34,7 +34,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());
   for (const auto& column : indexed_columns) {
-    auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
+    auto dict_column = std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(column);
     DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with DictionaryColumns");
     _indexed_columns.emplace_back(dict_column);
   }

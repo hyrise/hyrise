@@ -55,7 +55,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
-    DictionaryCompression::compress_table(*StorageManager::get().get_table("a"));
+    DeprecatedDictionaryCompression::compress_table(*StorageManager::get().get_table("a"));
 
     _rule = std::make_shared<IndexScanRule>();
   }

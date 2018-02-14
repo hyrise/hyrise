@@ -21,6 +21,7 @@ class Print : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   static void print(std::shared_ptr<const Table> table, uint32_t flags = 0, std::ostream& out = std::cout);
+  static void print(std::shared_ptr<const AbstractOperator> in, uint32_t flags = 0, std::ostream& out = std::cout);
 
  protected:
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;

@@ -2,7 +2,9 @@
 
 #include <math.h>
 #include <memory>
+#include <optional>
 
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -55,14 +57,16 @@ struct ColumnConfiguration {
 
 class TableGenerator {
  public:
-  std::shared_ptr<Table> generate_table(const ChunkID chunk_size, const bool compress = false);
+  std::shared_ptr<Table> generate_table(const ChunkID chunk_size,
+                                        std::optional<EncodingType> encoding_type = std::nullopt);
+
   std::shared_ptr<Table> generate_table(const std::vector<ColumnConfiguration>& column_configurations,
                                         const size_t num_rows, const size_t chunk_size, const bool compress = false);
 
  protected:
   const size_t _num_columns = 10;
-  const size_t _num_rows = 5 * 1000;
-  const int _max_different_value = 1000;
+  const size_t _num_rows = 4'000'000;
+  const int _max_different_value = 10'000;
 };
 
 }  // namespace opossum
