@@ -10,31 +10,33 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_pipeline_control_block.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, bool use_mvcc)
-    : _sql_string(sql), _use_mvcc(use_mvcc), _auto_commit(_use_mvcc) {}
+SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, ChunkUseMvcc use_mvcc)
+    : SQLPipelineStatement(
+          sql, std::make_shared<SQLPipelineControlBlock>(use_mvcc, nullptr, Optimizer::get_default_optimizer())) {}
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql,
                                            std::shared_ptr<TransactionContext> transaction_context)
-    : _sql_string(sql), _use_mvcc(true), _auto_commit(false), _transaction_context(std::move(transaction_context)) {
+    : SQLPipelineStatement(sql, std::make_shared<SQLPipelineControlBlock>(ChunkUseMvcc::Yes, transaction_context,
+                                                                          Optimizer::get_default_optimizer())) {
   DebugAssert(_transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
 }
 
+SQLPipelineStatement::SQLPipelineStatement(const std::string& sql,
+                                           const std::shared_ptr<const SQLPipelineControlBlock>& control_block)
+    : _sql_string(sql), _control_block(control_block), _transaction_context(control_block->transaction_context) {}
+
 SQLPipelineStatement::SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc)
-    : _parsed_sql_statement(std::move(parsed_sql)),
-      _use_mvcc(use_mvcc),
-      _auto_commit(_use_mvcc && transaction_context == nullptr) {
+                                           const std::shared_ptr<const SQLPipelineControlBlock>& control_block)
+    : _control_block(control_block),
+      _transaction_context(control_block->transaction_context),
+      _parsed_sql_statement(std::move(parsed_sql)) {
   Assert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
-  // We don't want to create a new context yet, as it should contain all changes of previously created (possibly even in
-  // same query) pipelines up to the point of this pipeline's execution.
-  if (transaction_context != nullptr) {
-    _transaction_context = std::move(transaction_context);
-  }
 }
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
@@ -70,7 +72,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   const auto& parsed_sql = get_parsed_sql_statement();
   try {
-    const auto lqp_roots = SQLTranslator{_use_mvcc}.translate_parse_result(*parsed_sql);
+    const auto lqp_roots =
+        SQLTranslator{_control_block->use_mvcc == ChunkUseMvcc::Yes}.translate_parse_result(*parsed_sql);
     DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
     _unoptimized_logical_plan = lqp_roots.front();
   } catch (const std::exception& exception) {
@@ -87,7 +90,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   const auto& unoptimized_lqp = get_unoptimized_logical_plan();
   try {
-    _optimized_logical_plan = Optimizer::get().optimize(unoptimized_lqp);
+    _optimized_logical_plan = _control_block->optimizer->optimize(unoptimized_lqp);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while optimizing query plan:\n  " + std::string(exception.what()));
   }
@@ -116,8 +119,9 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     throw std::runtime_error("Error while translating query plan:\n  " + std::string(exception.what()));
   }
 
-  if (_use_mvcc) {
-    // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
+  if (_control_block->use_mvcc == ChunkUseMvcc::Yes) {
+    // If we need a transaction context but haven't got one in the control block, this is the latest point where we can
+    // create it
     if (!_transaction_context) _transaction_context = TransactionManager::get().new_transaction_context();
     _query_plan->set_transaction_context(_transaction_context);
   }
@@ -159,11 +163,11 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   try {
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
   } catch (const std::exception& exception) {
-    if (_use_mvcc) _transaction_context->rollback();
+    if (_control_block->use_mvcc == ChunkUseMvcc::Yes) _transaction_context->rollback();
     throw std::runtime_error("Error while executing tasks:\n  " + std::string(exception.what()));
   }
 
-  if (_auto_commit) {
+  if (_control_block->use_mvcc == ChunkUseMvcc::Yes && !_control_block->transaction_context) {
     _transaction_context->commit();
   }
 

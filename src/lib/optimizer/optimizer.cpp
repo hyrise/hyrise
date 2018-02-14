@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-const Optimizer& Optimizer::get() {
-  static Optimizer optimizer{create_default_optimizer()};
+const std::shared_ptr<Optimizer>& Optimizer::get_default_optimizer() {
+  static std::shared_ptr<Optimizer> optimizer{std::make_shared<Optimizer>(create_default_optimizer())};
   return optimizer;
 }
 

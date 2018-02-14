@@ -2,13 +2,14 @@
 
 #include "SQLParser.h"
 #include "sql_pipeline.hpp"
+#include "sql_pipeline_control_block.hpp"
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, bool use_mvcc) : SQLPipeline(sql, nullptr, use_mvcc) {}
+SQLPipeline::SQLPipeline(const std::string& sql, ChunkUseMvcc use_mvcc) : SQLPipeline(sql, nullptr, use_mvcc) {}
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context)
-    : SQLPipeline(sql, std::move(transaction_context), true) {
+    : SQLPipeline(sql, std::move(transaction_context), ChunkUseMvcc::Yes) {
   DebugAssert(_sql_pipeline_statements.front()->transaction_context() != nullptr,
               "Cannot pass nullptr as explicit transaction context.");
   DebugAssert(_sql_pipeline_statements.front()->transaction_context()->phase() == TransactionPhase::Active,
@@ -16,8 +17,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::Transa
 }
 
 // Private constructor
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc)
-    : _transaction_context(std::move(transaction_context)) {
+SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+                         ChunkUseMvcc use_mvcc) {
+  /** Create control block */
+  _control_block = std::make_shared<SQLPipelineControlBlock>(use_mvcc, transaction_context);
+
   hsql::SQLParserResult parse_result;
   try {
     hsql::SQLParser::parse(sql, &parse_result);
@@ -61,8 +65,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
       parsed_statement->setIsValid(true);
 
-      auto pipeline_statement =
-          std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _transaction_context, use_mvcc);
+      auto pipeline_statement = std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _control_block);
       _sql_pipeline_statements.push_back(std::move(pipeline_statement));
     } catch (const std::exception&) {
       // Free all statements owned by us and pass on the error
@@ -74,11 +77,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
     }
   }
 
-  _num_statements = _sql_pipeline_statements.size();
-
   // If we see at least one structure altering statement and we have more than one statement, we require execution of a
   // statement before the next one can be translated (so the next statement sees the previous structural changes).
-  _requires_execution = seen_altering_statement && _num_statements > 1;
+  _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
 const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_parsed_sql_statements() {
@@ -86,7 +87,7 @@ const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_pars
     return _parsed_sql_statements;
   }
 
-  _parsed_sql_statements.reserve(_num_statements);
+  _parsed_sql_statements.reserve(statement_count());
   for (auto& pipeline : _sql_pipeline_statements) {
     try {
       _parsed_sql_statements.push_back(pipeline->get_parsed_sql_statement());
@@ -110,7 +111,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimize
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
-  _unoptimized_logical_plans.reserve(_num_statements);
+  _unoptimized_logical_plans.reserve(statement_count());
   for (auto& pipeline : _sql_pipeline_statements) {
     try {
       _unoptimized_logical_plans.push_back(pipeline->get_unoptimized_logical_plan());
@@ -135,7 +136,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
-  _optimized_logical_plans.reserve(_num_statements);
+  _optimized_logical_plans.reserve(statement_count());
   for (auto& pipeline : _sql_pipeline_statements) {
     try {
       _optimized_logical_plans.push_back(pipeline->get_optimized_logical_plan());
@@ -165,7 +166,7 @@ const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans()
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
-  _query_plans.reserve(_num_statements);
+  _query_plans.reserve(statement_count());
   for (auto& pipeline : _sql_pipeline_statements) {
     try {
       _query_plans.push_back(pipeline->get_query_plan());
@@ -190,7 +191,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot generate tasks for all statements without executing, i.e. calling get_result_table()");
 
-  _tasks.reserve(_num_statements);
+  _tasks.reserve(statement_count());
   for (auto& pipeline : _sql_pipeline_statements) {
     try {
       _tasks.push_back(pipeline->get_tasks());
@@ -226,15 +227,17 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   return _result_table;
 }
 
-const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const { return _transaction_context; }
+const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const {
+  return _control_block->transaction_context;
+}
 
-const std::shared_ptr<SQLPipelineStatement>& SQLPipeline::failed_pipeline_statement() {
+const std::shared_ptr<SQLPipelineStatement>& SQLPipeline::failed_pipeline_statement() const {
   return _failed_pipeline_statement;
 }
 
-size_t SQLPipeline::num_statements() { return _num_statements; }
+size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.size(); }
 
-bool SQLPipeline::requires_execution() { return _requires_execution; }
+bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
 std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
   if (_compile_time_microseconds.count() > 0) {
@@ -263,5 +266,7 @@ std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
 
   return _execution_time_microseconds;
 }
+
+void SQLPipeline::set_optimizer(const std::shared_ptr<Optimizer>& optimizer) { _control_block->optimizer = optimizer; }
 
 }  // namespace opossum

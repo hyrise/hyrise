@@ -20,7 +20,7 @@ class AbstractLQPNode;
  */
 class Optimizer final {
  public:
-  static const Optimizer& get();
+  static const std::shared_ptr<Optimizer>& get_default_optimizer();
 
   static Optimizer create_default_optimizer();
 

@@ -195,6 +195,7 @@ set(
     sql/lru_cache.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
+    sql/sql_pipeline_control_block.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
     sql/sql_planner.cpp
