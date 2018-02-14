@@ -18,9 +18,7 @@ void IndexOperation::execute() {
 }
 
 void IndexOperation::print_on(std::ostream& output) const {
-  output << "IndexOperation{" << (_create ? "Create" : "Delete")
-         /*<< " " << type*/
-         << " on " << _column << "}";
+  output << "IndexOperation{" << (_create ? "Create" : "Delete") << " on " << _column << "}";
 }
 
 void IndexOperation::_create_index() {
