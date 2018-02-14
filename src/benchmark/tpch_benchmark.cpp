@@ -125,7 +125,8 @@ class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
                 const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
-                const Duration max_duration, const std::optional<std::string>& output_file_path, const ChunkUseMvcc use_mvcc)
+                const Duration max_duration, const std::optional<std::string>& output_file_path,
+                const ChunkUseMvcc use_mvcc)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
