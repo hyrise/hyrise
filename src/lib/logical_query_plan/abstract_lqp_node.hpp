@@ -42,7 +42,8 @@ enum class LQPNodeType {
 enum class LQPChildSide { Left, Right };
 
 struct QualifiedColumnName {
-  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name = std::nullopt);  // NOLINT - implicit conversion intended
+  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name =
+                                                          std::nullopt);  // NOLINT - implicit conversion intended
 
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
@@ -270,15 +271,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @defgroup Comparing two LQPs
    * shallow_equals() compares only the nodes without considering the children, find_subplan_mismatch() will compare the entire
    * sub plan
-   * @}
+   * @{
    */
   virtual bool shallow_equals(const AbstractLQPNode& rhs) const = 0;
 
+  /**
+   * Perform a deep equality check of this LQP with another. Floating point numbers will be compared allowing a small
+   * absolute offset.
+   * @return std::nullopt if the LQPs were equal. A pair of a node in this LQP and a node in the rhs LQP that were first
+   *         discovered to differ.
+   */
   std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
   find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const;
-  /**
-   * @{
-   */
+  // @}
 
  protected:
   /**

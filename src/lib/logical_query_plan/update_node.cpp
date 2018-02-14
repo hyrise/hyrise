@@ -69,7 +69,7 @@ const std::string& UpdateNode::table_name() const { return _table_name; }
 
 bool UpdateNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& update_node = dynamic_cast<const UpdateNode&>(rhs);
+  const auto& update_node = static_cast<const UpdateNode&>(rhs);
 
   Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
   return _table_name == update_node._table_name &&

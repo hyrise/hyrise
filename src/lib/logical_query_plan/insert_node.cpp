@@ -39,7 +39,7 @@ const std::string& InsertNode::table_name() const { return _table_name; }
 
 bool InsertNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& insert_node = dynamic_cast<const InsertNode&>(rhs);
+  const auto& insert_node = static_cast<const InsertNode&>(rhs);
 
   return _table_name == insert_node._table_name;
 }

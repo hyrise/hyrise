@@ -119,7 +119,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
 
 bool PredicateNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& predicate_node = dynamic_cast<const PredicateNode&>(rhs);
+  const auto& predicate_node = static_cast<const PredicateNode&>(rhs);
 
   if (!_equals(*this, _column_reference, predicate_node, predicate_node._column_reference)) return false;
   if (_predicate_condition != predicate_node._predicate_condition) return false;

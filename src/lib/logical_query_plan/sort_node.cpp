@@ -65,7 +65,7 @@ const OrderByDefinitions& SortNode::order_by_definitions() const { return _order
 
 bool SortNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& sort_node = dynamic_cast<const SortNode&>(rhs);
+  const auto& sort_node = static_cast<const SortNode&>(rhs);
 
   if (_order_by_definitions.size() != sort_node._order_by_definitions.size()) return false;
 

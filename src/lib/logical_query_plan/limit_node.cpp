@@ -26,7 +26,7 @@ size_t LimitNode::num_rows() const { return _num_rows; }
 
 bool LimitNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& limit_node = dynamic_cast<const LimitNode&>(rhs);
+  const auto& limit_node = static_cast<const LimitNode&>(rhs);
 
   return _num_rows == limit_node._num_rows;
 }

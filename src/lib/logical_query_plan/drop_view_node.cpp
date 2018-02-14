@@ -38,7 +38,7 @@ const std::string& DropViewNode::view_name() const { return _view_name; }
 
 bool DropViewNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& drop_view_node = dynamic_cast<const DropViewNode&>(rhs);
+  const auto& drop_view_node = static_cast<const DropViewNode&>(rhs);
 
   return _view_name == drop_view_node._view_name;
 }

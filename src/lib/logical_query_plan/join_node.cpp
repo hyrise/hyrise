@@ -134,7 +134,7 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
 
 bool JoinNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& join_node = dynamic_cast<const JoinNode&>(rhs);
+  const auto& join_node = static_cast<const JoinNode&>(rhs);
 
   if (_join_mode != join_node._join_mode || _predicate_condition != join_node._predicate_condition) return false;
   if (_join_column_references.has_value() != join_node._join_column_references.has_value()) return false;

@@ -35,7 +35,7 @@ const std::vector<std::string>& CreateViewNode::output_column_names() const { re
 
 bool CreateViewNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& create_view_node = dynamic_cast<const CreateViewNode&>(rhs);
+  const auto& create_view_node = static_cast<const CreateViewNode&>(rhs);
 
   return _view_name == create_view_node._view_name && !_lqp->find_subplan_mismatch(create_view_node._lqp);
 }

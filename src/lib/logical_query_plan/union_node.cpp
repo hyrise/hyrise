@@ -69,7 +69,7 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
 
 bool UnionNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& union_node = dynamic_cast<const UnionNode&>(rhs);
+  const auto& union_node = static_cast<const UnionNode&>(rhs);
 
   return _union_mode == union_node._union_mode;
 }

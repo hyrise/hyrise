@@ -63,7 +63,7 @@ std::string StoredTableNode::get_verbose_column_name(ColumnID column_id) const {
 
 bool StoredTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& stored_table_node = dynamic_cast<const StoredTableNode&>(rhs);
+  const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
 
   return _table_name == stored_table_node._table_name;
 }

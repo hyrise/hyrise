@@ -35,7 +35,7 @@ const std::string& DeleteNode::table_name() const { return _table_name; }
 
 bool DeleteNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
-  const auto& delete_node = dynamic_cast<const DeleteNode&>(rhs);
+  const auto& delete_node = static_cast<const DeleteNode&>(rhs);
 
   return _table_name == delete_node._table_name;
 }
