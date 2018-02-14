@@ -73,7 +73,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   explicit AbstractLQPNode(LQPNodeType node_type);
 
   // Creates a deep copy
-  virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
+  using PreviousCopiesMap = std::map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
+  std::shared_ptr<AbstractLQPNode> deep_copy(
+      std::shared_ptr<PreviousCopiesMap> previous_copies = std::make_shared<PreviousCopiesMap>()) const;
 
   // @{
   /**
