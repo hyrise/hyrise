@@ -1,6 +1,6 @@
 #pragma once
 
-#include <math.h>
+#include <cmath>
 #include <memory>
 #include <optional>
 
@@ -11,36 +11,36 @@ namespace opossum {
 
 class Table;
 
-enum class Distribution { uniform, normal_skewed, pareto };
+enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
 
-struct ColumnConfiguration {
-  static ColumnConfiguration make_uniform_config(double min, double max) {
-    ColumnConfiguration c{};
+struct ColumnDataDistribution {
+  static ColumnDataDistribution make_uniform_config(double min, double max) {
+    ColumnDataDistribution c{};
     c.min_value = min;
     c.max_value = max;
-    c.num_different_values = std::floor(max - min);
+    c.num_different_values = static_cast<int>(std::floor(max - min));
     return c;
   }
 
-  static ColumnConfiguration make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0) {
-    ColumnConfiguration c{};
+  static ColumnDataDistribution make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0) {
+    ColumnDataDistribution c{};
     c.pareto_scale = pareto_scale;
     c.pareto_shape = pareto_shape;
-    c.distribution_type = Distribution::pareto;
+    c.distribution_type = DataDistributionType::Pareto;
     return c;
   }
 
-  static ColumnConfiguration make_skewed_normal_config(double skew_location = 0.0, double skew_scale = 1.0,
-                                                       double skew_shape = 0.0) {
-    ColumnConfiguration c{};
+  static ColumnDataDistribution make_skewed_normal_config(double skew_location = 0.0, double skew_scale = 1.0,
+                                                          double skew_shape = 0.0) {
+    ColumnDataDistribution c{};
     c.skew_location = skew_location;
     c.skew_scale = skew_scale;
     c.skew_shape = skew_shape;
-    c.distribution_type = Distribution::normal_skewed;
+    c.distribution_type = DataDistributionType::NormalSkewed;
     return c;
   }
 
-  Distribution distribution_type = Distribution::uniform;
+  DataDistributionType distribution_type = DataDistributionType::Uniform;
 
   int num_different_values = 1000;
 
@@ -60,7 +60,7 @@ class TableGenerator {
   std::shared_ptr<Table> generate_table(const ChunkID chunk_size,
                                         std::optional<EncodingType> encoding_type = std::nullopt);
 
-  std::shared_ptr<Table> generate_table(const std::vector<ColumnConfiguration>& column_configurations,
+  std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const size_t num_rows, const size_t chunk_size,
                                         std::optional<EncodingType> encoding_type = std::nullopt);
 

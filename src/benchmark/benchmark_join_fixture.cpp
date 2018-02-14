@@ -18,26 +18,26 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
 
   auto table_generator = std::make_shared<TableGenerator>();
 
-  Distribution right_distribution = static_cast<Distribution>(state.range(2));
+  DataDistributionType right_distribution = static_cast<DataDistributionType>(state.range(2));
 
-  auto left_config = ColumnConfiguration::make_uniform_config(0.0, 10000);
+  auto left_config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
 
-  ColumnConfiguration right_config;
+  ColumnDataDistribution right_config;
 
   switch (right_distribution) {
-    case Distribution::normal_skewed:
-      right_config = ColumnConfiguration::make_skewed_normal_config();
+    case DataDistributionType::NormalSkewed:
+      right_config = ColumnDataDistribution::make_skewed_normal_config();
       break;
-    case Distribution::pareto:
-      right_config = ColumnConfiguration::make_pareto_config();
+    case DataDistributionType::Pareto:
+      right_config = ColumnDataDistribution::make_pareto_config();
       break;
-    case Distribution::uniform:
-      right_config = ColumnConfiguration::make_uniform_config(0.0, 10000);
+    case DataDistributionType::Uniform:
+      right_config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
   }
 
-  auto table_1 = table_generator->generate_table(std::vector<ColumnConfiguration>{left_config}, state.range(0),
+  auto table_1 = table_generator->generate_table(std::vector<ColumnDataDistribution>{left_config}, state.range(0),
                                                  state.range(0) / 4, EncodingType::Dictionary);
-  auto table_2 = table_generator->generate_table(std::vector<ColumnConfiguration>{right_config}, state.range(1),
+  auto table_2 = table_generator->generate_table(std::vector<ColumnDataDistribution>{right_config}, state.range(1),
                                                  state.range(1) / 4, EncodingType::Dictionary);
 
   for (auto table : {table_1, table_2}) {
@@ -65,8 +65,8 @@ void BenchmarkJoinFixture::ChunkSizeInUni(benchmark::internal::Benchmark* b) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
-        b->Args(
-            {left_size, right_size, static_cast<int>(Distribution::uniform)});  // left size, right size, distribution
+        b->Args({left_size, right_size,
+                 static_cast<int>(DataDistributionType::Uniform)});  // left size, right size, distribution
       }
     }
   }
@@ -78,7 +78,7 @@ void BenchmarkJoinFixture::ChunkSizeInNormal(benchmark::internal::Benchmark* b) 
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args({left_size, right_size,
-                 static_cast<int>(Distribution::normal_skewed)});  // left size, right size, distribution
+                 static_cast<int>(DataDistributionType::NormalSkewed)});  // left size, right size, distribution
       }
     }
   }
@@ -88,8 +88,8 @@ void BenchmarkJoinFixture::ChunkSizeInPareto(benchmark::internal::Benchmark* b) 
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
-        b->Args(
-            {left_size, right_size, static_cast<int>(Distribution::pareto)});  // left size, right size, distribution
+        b->Args({left_size, right_size,
+                 static_cast<int>(DataDistributionType::Pareto)});  // left size, right size, distribution
       }
     }
   }

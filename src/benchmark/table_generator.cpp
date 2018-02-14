@@ -76,10 +76,10 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   return table;
 }
 
-std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnConfiguration>& column_configurations,
-                                                      const size_t num_rows, const size_t chunk_size,
-                                                      std::optional<EncodingType> encoding_type) {
-  const auto num_columns = column_configurations.size();
+std::shared_ptr<Table> TableGenerator::generate_table(
+    const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
+    const size_t chunk_size, std::optional<EncodingType> encoding_type) {
+  const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
   // create result table and container for vectors holding the generated values for the columns
@@ -109,21 +109,22 @@ std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnCo
 
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
     for (ChunkID column_index{0}; column_index < num_columns; ++column_index) {
-      const auto& column_configuration = column_configurations[column_index];
+      const auto& column_data_distribution = column_data_distributions[column_index];
 
       // generate distribution from column configuration
-      switch (column_configuration.distribution_type) {
-        case Distribution::uniform:
-          uniform_dist =
-              boost::math::uniform_distribution<double>{column_configuration.min_value, column_configuration.max_value};
+      switch (column_data_distribution.distribution_type) {
+        case DataDistributionType::Uniform:
+          uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
+                                                                   column_data_distribution.max_value};
           break;
-        case Distribution::normal_skewed:
-          skew_dist = boost::math::skew_normal_distribution<double>{
-              column_configuration.skew_location, column_configuration.skew_scale, column_configuration.skew_shape};
+        case DataDistributionType::NormalSkewed:
+          skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
+                                                                    column_data_distribution.skew_scale,
+                                                                    column_data_distribution.skew_shape};
           break;
-        case Distribution::pareto:
-          pareto_dist = boost::math::pareto_distribution<double>{column_configuration.pareto_scale,
-                                                                 column_configuration.pareto_shape};
+        case DataDistributionType::Pareto:
+          pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
+                                                                 column_data_distribution.pareto_shape};
           break;
       }
 
@@ -136,15 +137,15 @@ std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnCo
 
         const auto probability = probability_dist(pseudorandom_engine);
         int value{0};
-        switch (column_configuration.distribution_type) {
-          case Distribution::uniform:
-            value = std::floor(boost::math::quantile(uniform_dist, probability));
+        switch (column_data_distribution.distribution_type) {
+          case DataDistributionType::Uniform:
+            value = static_cast<int>(std::floor(boost::math::quantile(uniform_dist, probability)));
             break;
-          case Distribution::normal_skewed:
-            value = std::round(boost::math::quantile(skew_dist, probability) * 10);
+          case DataDistributionType::NormalSkewed:
+            value = static_cast<int>(std::round(boost::math::quantile(skew_dist, probability) * 10));
             break;
-          case Distribution::pareto:
-            value = std::floor(boost::math::quantile(pareto_dist, probability));
+          case DataDistributionType::Pareto:
+            value = static_cast<int>(std::floor(boost::math::quantile(pareto_dist, probability)));
             break;
         }
         value_vectors[column_index][row_offset] = value;

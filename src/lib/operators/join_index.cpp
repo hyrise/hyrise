@@ -10,8 +10,8 @@
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
-#include "storage/index/base_index.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "storage/index/base_index.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
