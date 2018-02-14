@@ -20,7 +20,7 @@ namespace opossum {
 
 /*
  * This is an index join implementation. It expects to find an index on the right column.
- * It currently uses the index for the following join modes: inner, left, right, outer, natural, self, semi, anti.
+ * It can be used for all join modes except JoinMode::Cross.
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
@@ -59,7 +59,7 @@ void JoinIndex::_create_table_structure() {
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
 
   // Preparing output table by adding columns from left and right table
-  auto add_column_definitions = [&](auto from_table, auto from_may_produce_null) {
+  auto add_column_definitions = [&](auto from_table, bool from_may_produce_null) {
     for (ColumnID column_id{0}; column_id < from_table->column_count(); ++column_id) {
       auto nullable = (from_may_produce_null || from_table->column_is_nullable(column_id));
       _output_table->add_column_definition(from_table->column_name(column_id), from_table->column_type(column_id),
@@ -112,9 +112,6 @@ void JoinIndex::_perform_join() {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
       auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
 
-      // for Outer joins, remember matches on the left side
-      auto& left_matches = _left_matches[chunk_id_left];
-
       resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
         resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
           using LeftType = typename decltype(left_type)::type;
@@ -136,7 +133,7 @@ void JoinIndex::_perform_join() {
                   iterable_right.with_iterators([&](auto right_it, auto right_end) {
                       with_comparator(_predicate_condition, [&](auto comparator) {
                           this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                                  chunk_id_right, left_matches, index);
+                                                  chunk_id_right, index);
                       });
                   });
               });
@@ -187,8 +184,7 @@ void JoinIndex::_perform_join() {
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                                   RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                  const ChunkID chunk_id_right, std::vector<bool>& left_matches,
-                                  std::shared_ptr<BaseIndex> index) {
+                                  const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index) {
   if (index != nullptr) {
     // We have a proper index and can use it, so we do an index join for this chunk combination
 
@@ -213,8 +209,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           range_begin = index->cbegin();
           range_end = index->lower_bound(comp_values);
 
-          append_matches(range_begin, range_end, left_value.chunk_offset(), left_matches, chunk_id_left,
-                         chunk_id_right);
+          append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
 
           // set range for second half to all values greater than the search value
           range_begin = index->upper_bound(comp_values);
@@ -245,7 +240,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           Fail("Unsupported comparison type encountered");
       }
 
-      append_matches(range_begin, range_end, left_value.chunk_offset(), left_matches, chunk_id_left, chunk_id_right);
+      append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
     }
   } else {
     // No index so we fall back on a nested loop join
@@ -262,7 +257,7 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
           _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
           if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-            left_matches[left_value.chunk_offset()] = true;
+            _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
           }
 
           if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
@@ -278,14 +273,14 @@ void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_i
 }
 
 void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
-                               const ChunkOffset chunk_offset_left, std::vector<bool>& left_matches,
-                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
+                               const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left,
+                               const ChunkID chunk_id_right) {
   auto num_right_matches = std::distance(range_begin, range_end);
 
   if (num_right_matches > 0) {
     // Remember the matches for outer joins
     if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-      left_matches[chunk_offset_left] = true;
+      _left_matches[chunk_id_left][chunk_offset_left] = true;
     }
 
     // we replicate the left value for each right value

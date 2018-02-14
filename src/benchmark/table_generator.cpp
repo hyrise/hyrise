@@ -1,6 +1,7 @@
 #include "table_generator.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <random>
 #include <string>
@@ -28,11 +29,11 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
-   * Generate table layout with column names from 'a' to 'z'.
+   * Generate table layout with enumerated column names (i.e., "col_1", "col_2", ...)
    * Create a vector for each column.
    */
-  for (size_t i = 0; i < _num_columns; i++) {
-    auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
+  for (size_t i = 1; i <= _num_columns; i++) {
+    auto column_name = "col_" + std::to_string(i);
     table->add_column_definition(column_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
@@ -87,8 +88,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   std::vector<tbb::concurrent_vector<int>> value_vectors;
 
   // add column definitions and initialize each value vector
-  for (size_t column = 0; column < num_columns; ++column) {
-    auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + column));
+  for (size_t column = 1; column <= num_columns; ++column) {
+    auto column_name = "col_" + std::to_string(column);
     table->add_column_definition(column_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
   }
@@ -100,10 +101,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   auto pseudorandom_engine = std::mt19937{};
 
   auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
-
-  auto uniform_dist = boost::math::uniform_distribution<double>{0.0, 1.0};
-  auto skew_dist = boost::math::skew_normal_distribution<double>(0.0, 1.0, 0.0);
-  auto pareto_dist = boost::math::pareto_distribution<double>{1.0, 1.0};
+  auto generate_value_by_distribution_type = std::function<int(void)>{};
 
   pseudorandom_engine.seed(rd());
 
@@ -113,19 +111,34 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
       // generate distribution from column configuration
       switch (column_data_distribution.distribution_type) {
-        case DataDistributionType::Uniform:
-          uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
-                                                                   column_data_distribution.max_value};
+        case DataDistributionType::Uniform: {
+          auto uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
+                                                                        column_data_distribution.max_value};
+          generate_value_by_distribution_type = [uniform_dist, &probability_dist, &pseudorandom_engine]() {
+            const auto probability = probability_dist(pseudorandom_engine);
+            return static_cast<int>(std::floor(boost::math::quantile(uniform_dist, probability)));
+          };
           break;
-        case DataDistributionType::NormalSkewed:
-          skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
-                                                                    column_data_distribution.skew_scale,
-                                                                    column_data_distribution.skew_shape};
+        }
+        case DataDistributionType::NormalSkewed: {
+          auto skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
+                                                                         column_data_distribution.skew_scale,
+                                                                         column_data_distribution.skew_shape};
+          generate_value_by_distribution_type = [skew_dist, &probability_dist, &pseudorandom_engine]() {
+            const auto probability = probability_dist(pseudorandom_engine);
+            return static_cast<int>(std::round(boost::math::quantile(skew_dist, probability) * 10));
+          };
           break;
-        case DataDistributionType::Pareto:
-          pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
-                                                                 column_data_distribution.pareto_shape};
+        }
+        case DataDistributionType::Pareto: {
+          auto pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
+                                                                      column_data_distribution.pareto_shape};
+          generate_value_by_distribution_type = [pareto_dist, &probability_dist, &pseudorandom_engine]() {
+            const auto probability = probability_dist(pseudorandom_engine);
+            return static_cast<int>(std::floor(boost::math::quantile(pareto_dist, probability)));
+          };
           break;
+        }
       }
 
       // generate values according to distribution
@@ -135,20 +148,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           break;
         }
 
-        const auto probability = probability_dist(pseudorandom_engine);
-        int value{0};
-        switch (column_data_distribution.distribution_type) {
-          case DataDistributionType::Uniform:
-            value = static_cast<int>(std::floor(boost::math::quantile(uniform_dist, probability)));
-            break;
-          case DataDistributionType::NormalSkewed:
-            value = static_cast<int>(std::round(boost::math::quantile(skew_dist, probability) * 10));
-            break;
-          case DataDistributionType::Pareto:
-            value = static_cast<int>(std::floor(boost::math::quantile(pareto_dist, probability)));
-            break;
-        }
-        value_vectors[column_index][row_offset] = value;
+        value_vectors[column_index][row_offset] = generate_value_by_distribution_type();
       }
 
       // add values to column in chunk, reset value vector
