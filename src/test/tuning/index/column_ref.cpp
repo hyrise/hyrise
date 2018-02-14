@@ -62,4 +62,23 @@ TEST_F(ColumnRefTest, StreamingOperatorTest) {
   std::string result = stream.str();
   EXPECT_EQ(result, "table_name.(column_name)");
 }
+
+TEST_F(ColumnRefTest, EqualityTest) {
+  std::vector<ColumnID> column_ids{ColumnID{0}};
+  ColumnRef column_ref{"table_name", column_ids};
+
+  std::vector<ColumnID> same_column_ids{ColumnID{0}};
+  ColumnRef column_ref_same_column_ids{"table_name", same_column_ids};
+
+  std::vector<ColumnID> different_column_ids{ColumnID{1}};
+  ColumnRef column_ref_different_column_ids{"table_name", different_column_ids};
+
+  ColumnRef column_ref_other_table{"other_table", same_column_ids};
+
+  EXPECT_TRUE(column_ref == column_ref);
+  EXPECT_TRUE(column_ref == column_ref_same_column_ids);
+
+  EXPECT_FALSE(column_ref == column_ref_other_table);
+  EXPECT_FALSE(column_ref == column_ref_different_column_ids);
+}
 }  // namespace opossum

@@ -30,4 +30,8 @@ std::ostream& operator<<(std::ostream& output, const ColumnRef& column_ref) {
   return output << ")";
 }
 
+bool ColumnRef::operator==(const ColumnRef& other) const {
+  return other.table_name == table_name && other.column_ids == column_ids;
+}
+
 }  // namespace opossum
