@@ -83,10 +83,8 @@ PredicateCondition get_predicate_condition_for_reverse_order(const PredicateCond
 
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
-      {hsql::kJoinInner, JoinMode::Inner},     {hsql::kJoinOuter, JoinMode::Outer},
-      {hsql::kJoinLeft, JoinMode::Left},       {hsql::kJoinLeftOuter, JoinMode::Left},
-      {hsql::kJoinRight, JoinMode::Right},     {hsql::kJoinRightOuter, JoinMode::Right},
-      {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
+      {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::Outer},      {hsql::kJoinLeft, JoinMode::Left},
+      {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
   };
 
   auto it = join_type_to_mode.find(join_type);
@@ -441,8 +439,37 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const s
   return product;
 }
 
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                           const hsql::TableRef& table) {
+  // Add a new projection node for table alias with column alias declarations
+  // e.g. select * from foo as bar(a, b)
+  if (!table.alias || !table.alias->columns) {
+    return node;
+  }
+
+  DebugAssert(table.type == hsql::kTableName || table.type == hsql::kTableSelect,
+              "Aliases are only applicable to table names and subselects");
+
+  // To stick to the sql standard there must be an alias for every column of the renamed table
+  // https://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt 6.3
+  Assert(table.alias->columns->size() == node->output_column_count(),
+         "The number of column aliases must match the number of columns");
+
+  auto& column_references = node->output_column_references();
+  std::vector<std::shared_ptr<LQPExpression>> projections;
+  projections.reserve(table.alias->columns->size());
+  size_t column_id = 0;
+  for (const char* column : *(table.alias->columns)) {
+    projections.push_back(LQPExpression::create_column(column_references.at(column_id), std::string(column)));
+    ++column_id;
+  }
+  auto projection_node = std::make_shared<ProjectionNode>(projections);
+  projection_node->set_left_child(node);
+  return projection_node;
+}
+
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
-  auto alias = table.alias ? std::optional<std::string>(table.alias) : std::nullopt;
+  auto alias = table.alias ? std::optional<std::string>(table.alias->name) : std::nullopt;
   std::shared_ptr<AbstractLQPNode> node;
   switch (table.type) {
     case hsql::kTableName:
@@ -452,7 +479,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
          */
         auto stored_table_node = std::make_shared<StoredTableNode>(table.name);
         stored_table_node->set_alias(alias);
-        return _validate_if_active(stored_table_node);
+        return _translate_table_ref_alias(_validate_if_active(stored_table_node), table);
       } else if (StorageManager::get().has_view(table.name)) {
         node = StorageManager::get().get_view(table.name);
         Assert(!_validate || node->subtree_is_validated(), "Trying to add non-validated view to validated query");
@@ -463,6 +490,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
       Assert(alias, "Every derived table must have its own alias");
+      node = _translate_table_ref_alias(node, table);
       break;
     case hsql::kTableJoin:
       node = _translate_join(*table.join);
@@ -473,6 +501,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
     default:
       Fail("Unable to translate source table.");
   }
+
   node->set_alias(alias);
   return node;
 }

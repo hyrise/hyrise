@@ -636,4 +636,16 @@ TEST_F(SQLTranslatorTest, AccessInvalidTable) {
   EXPECT_THROW(compile_query(query), std::runtime_error);
 }
 
+TEST_F(SQLTranslatorTest, ColumnAlias) {
+  const auto query = "SELECT z, y FROM table_a AS x (y, z)";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+
+  const auto& expressions = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child())->column_expressions();
+  EXPECT_EQ(expressions.size(), 2u);
+  EXPECT_EQ(*expressions[0]->alias(), std::string("y"));
+  EXPECT_EQ(*expressions[1]->alias(), std::string("z"));
+}
+
 }  // namespace opossum
