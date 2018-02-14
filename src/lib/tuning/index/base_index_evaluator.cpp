@@ -5,6 +5,9 @@
 #include <memory>
 #include <string>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
@@ -71,30 +74,79 @@ float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice)
 void BaseIndexEvaluator::_inspect_query_cache() {
   _access_records.clear();
 
+  // ToDo(group01) add switching logic to prefer LQP over PQP if both are cached
+
   // ToDo(group01) introduce values() method in AbstractCache interface and implement in all subclasses
   //   const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
   // ToDo(group01) implement for cache implementations other than GDFS cache
+
+  // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
       dynamic_cast<const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>*>(&(_query_cache->cache()));
   Assert(gdfs_cache_ptr, "Expected GDFS Cache");
 
-  const boost::heap::fibonacci_heap<GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>::GDFSCacheEntry>&
-      fibonacci_heap = gdfs_cache_ptr->queue();
+  const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
   LOG_DEBUG("Query plan cache (size: " << fibonacci_heap.size() << "):");
   auto cache_iterator = fibonacci_heap.ordered_begin();
   auto cache_end = fibonacci_heap.ordered_end();
 
   for (; cache_iterator != cache_end; ++cache_iterator) {
-    const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>::GDFSCacheEntry& entry = *cache_iterator;
+    const auto& entry = *cache_iterator;
     LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
     for (const auto& operator_tree : entry.value->tree_roots()) {
-      _inspect_operator(operator_tree, entry.frequency);
+      _inspect_pqp_operator(operator_tree, entry.frequency);
     }
   }
 }
 
-void BaseIndexEvaluator::_inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency) {
+void BaseIndexEvaluator::_inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op,
+                                               size_t query_frequency) {
+  std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
+  queue.push_back(op);
+  while (!queue.empty()) {
+    auto lqp_node = queue.front();
+    queue.pop_front();
+
+    if (auto left_child = lqp_node->left_child()) {
+      queue.push_back(left_child);
+    }
+    if (auto right_child = lqp_node->right_child()) {
+      queue.push_back(right_child);
+    }
+
+    switch (lqp_node->type()) {
+      case LQPNodeType::Predicate: {
+        auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
+        DebugAssert(predicate_node, "LQP node is not actually a PredicateNode");
+        auto lqp_ref = predicate_node->column_reference();
+        if (lqp_ref.original_node()) {
+          auto original_node = lqp_ref.original_node();
+          auto original_columnID = original_node->find_output_column_id(lqp_ref);
+          if (original_node->type() == LQPNodeType::StoredTable) {
+            DebugAssert(original_columnID, "Could not find column ID for LQPColumnReference");
+            auto storedTable = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
+            Assert(storedTable, "referenced node is not actually a StoredTableNode");
+
+            AccessRecord access_record(storedTable->table_name(), *original_columnID, query_frequency);
+            access_record.condition = predicate_node->predicate_condition();
+            access_record.compare_value = boost::get<AllTypeVariant>(predicate_node->value());
+            _access_records.push_back(access_record);
+          }
+        }
+      } break;
+      case LQPNodeType::Join:
+        // Probably interesting, room for future work
+        break;
+      default:
+        // Not interesting
+        break;
+    }
+  }
+}
+
+void BaseIndexEvaluator::_inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op,
+                                               size_t query_frequency) {
   std::list<const std::shared_ptr<const AbstractOperator>> queue;
   queue.push_back(op);
   while (!queue.empty()) {
