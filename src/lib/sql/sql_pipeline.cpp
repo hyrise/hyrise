@@ -32,9 +32,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
   _sql_pipeline_statements.reserve(parse_result.size());
 
-  std::vector<std::unique_ptr<hsql::SQLStatement>> released_statements;
+  std::vector<std::shared_ptr<hsql::SQLParserResult>> parsed_statements;
   for (auto* statement : parse_result.releaseStatements()) {
-    released_statements.emplace_back(statement);
+    parsed_statements.emplace_back(std::make_shared<hsql::SQLParserResult>(statement));
   }
 
   auto seen_altering_statement = false;
@@ -44,7 +44,12 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   // The sql parser only offers us the length of the string, so we need to split it manually.
   auto sql_string_offset = 0u;
 
-  for (auto& statement : released_statements) {
+  for (auto& parsed_statement : parsed_statements) {
+    parsed_statement->setIsValid(true);
+
+    // We will always have one at 0 because we set it ourselves
+    const auto* statement = parsed_statement->getStatement(0);
+
     switch (statement->type()) {
       // Check if statement alters the structure of the database in a way that following statements might depend upon.
       case hsql::StatementType::kStmtImport:
@@ -59,11 +64,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
       }
     }
 
-    const auto statement_string_length = statement->stringLength;
-    auto parsed_statement = std::make_shared<hsql::SQLParserResult>(statement.release());
-    parsed_statement->setIsValid(true);
-
     // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
+    const auto statement_string_length = statement->stringLength;
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
