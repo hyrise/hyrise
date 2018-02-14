@@ -10,7 +10,16 @@
 
 namespace opossum {
 
-class ColumnRefTest : public BaseTest {};
+class ColumnRefTest : public BaseTest {
+ protected:
+  void SetUp() override {
+    auto table = std::make_shared<Table>();
+    table->add_column("column_name", DataType::Int);
+    StorageManager::get().add_table("table_name", table);
+  }
+
+  void TearDown() override { StorageManager::get().drop_table("table_name"); }
+};
 
 TEST_F(ColumnRefTest, GetPropertiesTest) {
   std::vector<ColumnID> column_ids{ColumnID{123}};
@@ -51,10 +60,6 @@ TEST_F(ColumnRefTest, LessThanOperatorTest) {
 TEST_F(ColumnRefTest, StreamingOperatorTest) {
   std::vector<ColumnID> column_ids{ColumnID{0}};
   ColumnRef column_ref{"table_name", column_ids};
-
-  auto table = std::make_shared<Table>();
-  table->add_column("column_name", DataType::Int);
-  StorageManager::get().add_table("table_name", table);
 
   std::stringstream stream;
   stream << column_ref;
