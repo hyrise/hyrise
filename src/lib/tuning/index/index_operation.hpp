@@ -12,7 +12,7 @@ namespace opossum {
 class IndexOperation : public TuningOperation {
  public:
   IndexOperation(const ColumnRef& column, ColumnIndexType type, bool create)
-      : column{column}, type{type}, create{create} {}
+      : _column{column}, _type{type}, _create{create} {}
 
   void execute() final;
 
@@ -21,19 +21,23 @@ class IndexOperation : public TuningOperation {
   /**
    * The column the this operation refers to
    */
-  ColumnRef column;
+  const ColumnRef& column() const;
 
   /**
    * The type of index that should be created or deleted
    */
-  ColumnIndexType type;
+  ColumnIndexType type();
 
   /**
    * true: create index, false: delete index
    */
-  bool create;
+  bool create();
 
  protected:
+  ColumnRef _column;
+  ColumnIndexType _type;
+  bool _create;
+
   void _create_index();
   void _delete_index();
 };
