@@ -55,6 +55,8 @@ void IndexOperation::_delete_index() {
     }
     chunk->remove_index(index);
   }
+
+  // ToDo(group01) invalidate cache
 }
 
 }  // namespace opossum
