@@ -84,7 +84,7 @@ TEST_F(ProjectionNodeTest, VerboseColumnNames) {
 TEST_F(ProjectionNodeTest, ShallowEquals) {
   EXPECT_TRUE(_projection_node->shallow_equals(*_projection_node));
 
-  const auto other_projection_node_a = ProjectionNode::make(
+  const auto other_projection_node_a = std::make_shared<ProjectionNode>(
       std::vector<std::shared_ptr<LQPExpression>>{
           _c_expr, _a_expr, LQPExpression::create_column(_b, {"alias_for_b"}),
           LQPExpression::create_binary_operator(ExpressionType::Addition, _b_expr, _c_expr, {"some_addition"}),
@@ -92,7 +92,7 @@ TEST_F(ProjectionNodeTest, ShallowEquals) {
       _mock_node);
   EXPECT_TRUE(other_projection_node_a->shallow_equals(*_projection_node));
 
-  const auto other_projection_node_b = ProjectionNode::make(
+  const auto other_projection_node_b = std::make_shared<ProjectionNode>(
       std::vector<std::shared_ptr<LQPExpression>>{
           _c_expr, _a_expr, LQPExpression::create_column(_b, {"alias_for_bs"}),
           LQPExpression::create_binary_operator(ExpressionType::Addition, _b_expr, _c_expr, {"some_addition"}),

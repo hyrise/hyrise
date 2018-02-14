@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr)
+StoredTableNode::StoredTableNode(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& left_child)
     : AbstractLQPNode(LQPNodeType::StoredTable, left_child), _table_name(table_name) {
   /**
    * Initialize output information.

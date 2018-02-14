@@ -47,9 +47,9 @@ class SQLTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     load_test_tables();
-    _stored_table_node_a = StoredTableNode::make("table_a");
-    _stored_table_node_b = StoredTableNode::make("table_b");
-    _stored_table_node_c = StoredTableNode::make("table_c");
+    _stored_table_node_a = std::make_shared<StoredTableNode>("table_a");
+    _stored_table_node_b = std::make_shared<StoredTableNode>("table_b");
+    _stored_table_node_c = std::make_shared<StoredTableNode>("table_c");
     _table_a_a = _stored_table_node_a->get_column("a"s);
     _table_a_b = _stored_table_node_a->get_column("b"s);
     _table_b_a = _stored_table_node_b->get_column("a"s);
@@ -105,7 +105,7 @@ TEST_F(SQLTranslatorTest, TwoColumnFilter) {
   const auto result_node = compile_query(query);
 
   auto projection_node = ProjectionNode::make_pass_through(
-      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_a_b, _stored_table_node_a));
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, _table_a_b, _stored_table_node_a));
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -115,7 +115,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   const auto result_node = compile_query(query);
 
   auto projection_node = ProjectionNode::make_pass_through(
-      PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b", _stored_table_node_a));
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, "b", _stored_table_node_a));
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -124,9 +124,9 @@ TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   const auto result_node = compile_query(query);
 
-  auto projection_node = ProjectionNode::make_pass_through(PredicateNode::make(
+  auto projection_node = ProjectionNode::make_pass_through(std::make_shared<PredicateNode>(
       _table_a_b, PredicateCondition::LessThan, 457.9f,
-      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, 1234l, _stored_table_node_a)));
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::GreaterThanEquals, 1234l, _stored_table_node_a)));
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -227,7 +227,7 @@ TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
   const auto result_node = compile_query(query);
 
   const auto projection_node =
-      SortNode::make({{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
+      std::make_shared<SortNode>(OrderByDefinitions{{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
                      ProjectionNode::make_pass_through(_stored_table_node_a));
 
   EXPECT_LQP_EQ(projection_node, result_node);
@@ -243,7 +243,7 @@ TEST_F(SQLTranslatorTest, SelectInnerJoin) {
   // clang-format off
   const auto projection_node =
   ProjectionNode::make_pass_through(
-    JoinNode::make(JoinMode::Inner, {_table_a_a, _table_b_a}, PredicateCondition::Equals,
+    std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
       _stored_table_node_a,
       _stored_table_node_b));
   // clang-format on
@@ -267,15 +267,15 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
   const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node_a = StoredTableNode::make("table_a", "a");
-  const auto stored_table_node_b = StoredTableNode::make("table_b", "b");
+  const auto stored_table_node_a = std::make_shared<StoredTableNode>("table_a", "a");
+  const auto stored_table_node_b = std::make_shared<StoredTableNode>("table_b", "b");
   const auto table_a_a = stored_table_node_a->get_column("a"s);
   const auto table_b_a = stored_table_node_b->get_column("a"s);
 
   // clang-format off
   const auto projection_node =
   ProjectionNode::make_pass_through(
-    JoinNode::make(mode, {table_a_a, table_b_a}, PredicateCondition::Equals,
+    std::make_shared<JoinNode>(mode, LQPColumnReferencePair{table_a_a, table_b_a}, PredicateCondition::Equals,
         stored_table_node_a,
         stored_table_node_b));
   // clang-format on
@@ -290,15 +290,15 @@ TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto query = "SELECT * FROM table_a AS t1 JOIN table_a AS t2 ON t1.a = t2.b;";
   auto result_node = compile_query(query);
 
-  const auto stored_table_node_t1 = StoredTableNode::make("table_a", "t1");
-  const auto stored_table_node_t2 = StoredTableNode::make("table_a", "t2");
+  const auto stored_table_node_t1 = std::make_shared<StoredTableNode>("table_a", "t1");
+  const auto stored_table_node_t2 = std::make_shared<StoredTableNode>("table_a", "t2");
   const auto t1_a = stored_table_node_t1->get_column("a"s);
   const auto t2_b = stored_table_node_t2->get_column("b"s);
 
   // clang-format off
   const auto projection_node =
   ProjectionNode::make_pass_through(
-    JoinNode::make(JoinMode::Inner, {t1_a, t2_b}, PredicateCondition::Equals,
+    std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{t1_a, t2_b}, PredicateCondition::Equals,
       stored_table_node_t1,
       stored_table_node_t2));
   // clang-format on
@@ -312,10 +312,10 @@ TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
 
   // clang-format off
   const auto projection_node =
-  ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-    ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_c_a,
-        JoinNode::make(JoinMode::Cross,
+  std::make_shared<ProjectionNode>(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
+    std::make_shared<ProjectionNode>(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, _table_c_a,
+        std::make_shared<JoinNode>(JoinMode::Cross,
           _stored_table_node_a,
           _stored_table_node_c))));
   // clang-format on
@@ -333,8 +333,8 @@ TEST_F(SQLTranslatorTest, SelectCrossJoin) {
   // clang-format off
   const auto projection_node =
   ProjectionNode::make_pass_through(
-    PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_b_a,
-      JoinNode::make(JoinMode::Cross,
+    std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, _table_b_a,
+      std::make_shared<JoinNode>(JoinMode::Cross,
         _stored_table_node_a,
         _stored_table_node_b)));
   // clang-format on
@@ -346,7 +346,7 @@ TEST_F(SQLTranslatorTest, SelectLimit) {
   const auto query = "SELECT * FROM table_a LIMIT 2;";
   auto result_node = compile_query(query);
 
-  const auto lqp = LimitNode::make(2, ProjectionNode::make_pass_through(_stored_table_node_a));
+  const auto lqp = std::make_shared<LimitNode>(2, ProjectionNode::make_pass_through(_stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -359,7 +359,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   const auto value_b = LQPExpression::create_literal(12.5f);
 
   const auto lqp =
-      InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
+      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, std::make_shared<DummyTableNode>()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -372,7 +372,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   const auto value_b = LQPExpression::create_literal(12.5f);
 
   const auto lqp =
-      InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
+      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, std::make_shared<DummyTableNode>()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -385,7 +385,7 @@ TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
   const auto value_b = LQPExpression::create_literal(NullValue{});
 
   const auto lqp =
-      InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
+      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, std::make_shared<DummyTableNode>()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -396,7 +396,7 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
   const auto columns = LQPExpression::create_columns({_table_b_a, _table_b_b});
 
-  const auto lqp = InsertNode::make("table_a", ProjectionNode::make(columns, _stored_table_node_b));
+  const auto lqp = std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(columns, _stored_table_node_b));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -417,8 +417,8 @@ TEST_F(SQLTranslatorTest, Update) {
   const auto update_b = LQPExpression::create_literal(3.2f);
 
   const auto lqp =
-      UpdateNode::make("table_a", {update_a, update_b},
-                       PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, 1l, _stored_table_node_a));
+      std::make_shared<UpdateNode>("table_a", {update_a, update_b},
+                       std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::GreaterThan, 1l, _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -499,9 +499,9 @@ TEST_F(SQLTranslatorTest, CreateView) {
   const auto result_node = compile_query(query);
 
   const auto view_node = ProjectionNode::make_pass_through(
-      PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b", _stored_table_node_a));
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, "b", _stored_table_node_a));
 
-  const auto lqp = CreateViewNode::make("my_first_view", view_node);
+  const auto lqp = std::make_shared<CreateViewNode>("my_first_view", view_node);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -515,13 +515,13 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   // clang-format off
   const auto view_node =
-  ProjectionNode::make({alias_c, alias_d},
+  std::make_shared<ProjectionNode>({alias_c, alias_d},
     ProjectionNode::make_pass_through(
-      PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, "b",
         _stored_table_node_a)));
   // clang-format on
 
-  const auto lqp = CreateViewNode::make("my_second_view", view_node);
+  const auto lqp = std::make_shared<CreateViewNode>("my_second_view", view_node);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }

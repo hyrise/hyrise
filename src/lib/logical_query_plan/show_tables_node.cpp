@@ -14,6 +14,8 @@ std::shared_ptr<AbstractLQPNode> ShowTablesNode::_deep_copy_impl(
 
 std::string ShowTablesNode::description() const { return "[ShowTables]"; }
 
+const std::vector<std::string>& ShowTablesNode::output_column_names() const { static std::vector<std::string> output_column_names_dummy; return output_column_names_dummy; }
+
 bool ShowTablesNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   return true;

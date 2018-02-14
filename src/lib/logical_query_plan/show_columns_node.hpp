@@ -17,6 +17,7 @@ class ShowColumnsNode : public AbstractLQPNode {
 
   const std::string& table_name() const;
 
+  const std::vector<std::string>& output_column_names() const override;
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:

@@ -29,9 +29,6 @@ class DropViewNode : public AbstractLQPNode {
 
  private:
   const std::string _view_name;
-
-  // Need an instance since we're returning a reference in the getter
-  std::vector<std::string> _output_column_names_dummy;
 };
 
 }  // namespace opossum

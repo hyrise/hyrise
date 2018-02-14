@@ -17,6 +17,8 @@ class ShowTablesNode : public AbstractLQPNode {
 
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
+  const std::vector<std::string>& output_column_names() const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_child,

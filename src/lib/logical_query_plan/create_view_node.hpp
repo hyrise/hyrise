@@ -29,8 +29,6 @@ class CreateViewNode : public AbstractLQPNode {
   const std::shared_ptr<const AbstractLQPNode> _lqp;
 
  private:
-  // Need an instance since we're returning a reference in the getter
-  std::vector<std::string> _output_column_names_dummy;
 };
 
 }  // namespace opossum

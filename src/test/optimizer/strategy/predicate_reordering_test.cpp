@@ -80,8 +80,8 @@ class PredicateReorderingTest : public StrategyBaseTest {
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThan, 10,
-    PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThan, 50,
+  std::make_shared<PredicateNode>(_mock_node_a, PredicateCondition::GreaterThan, 10,
+    std::make_shared<PredicateNode>(_mock_node_a, PredicateCondition::GreaterThan, 50,
       _mock_node));
   // clang-format on
 
@@ -133,22 +133,22 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
-    PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
-      PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
+  std::make_shared<PredicateNode>(_mock_node_a, PredicateCondition::Equals, 42,
+    std::make_shared<PredicateNode>(_mock_node_b, PredicateCondition::GreaterThan, 50,
+      std::make_shared<PredicateNode>(_mock_node_b, PredicateCondition::GreaterThan, 40,
         ProjectionNode::make_pass_through(
-          PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
-            PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
+          std::make_shared<PredicateNode>(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+            std::make_shared<PredicateNode>(_mock_node_c, PredicateCondition::LessThan, 500,
               _mock_node))))));
 
 
   const auto expected_optimized_lqp =
-  PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
-    PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
-      PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
+  std::make_shared<PredicateNode>(_mock_node_b, PredicateCondition::GreaterThan, 40,
+    std::make_shared<PredicateNode>(_mock_node_b, PredicateCondition::GreaterThan, 50,
+      std::make_shared<PredicateNode>(_mock_node_a, PredicateCondition::Equals, 42,
         ProjectionNode::make_pass_through(
-          PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
-            PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+          std::make_shared<PredicateNode>(_mock_node_c, PredicateCondition::LessThan, 500,
+            std::make_shared<PredicateNode>(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
               _mock_node))))));
   // clang-format on
 
