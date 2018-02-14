@@ -25,12 +25,6 @@ node {
         wait"
       }
 
-      stage("Linting") {
-        sh '''
-          scripts/lint.sh pre
-        '''
-      }
-
       parallel clangRelease: {
         stage("clang-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
@@ -40,19 +34,11 @@ node {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
         }
-      }, moreLint: {
-        stage("Stricter Linting") {
-          script {
-            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
-            if (lintFails?.trim()) {
-              echo lintFails
-              writeFile file: "post_lint.txt", text: lintFails
-              archive "post_lint.txt"
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Click Details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
-            } else {
-              githubNotify context: 'Strict Lint', status: 'SUCCESS'
-            }
-          }
+      }, lint: {
+        stage("Linting") {
+          sh '''
+            scripts/lint.sh pre
+          '''
         }
       }
 
