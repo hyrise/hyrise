@@ -7,7 +7,6 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
-#include "sql/sql_query_operator.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 

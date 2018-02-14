@@ -135,6 +135,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
     const auto done = std::chrono::high_resolution_clock::now();
     _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+    _query_plan_cache_hit = true;
 
     return _query_plan;
   }
@@ -256,6 +257,11 @@ std::string SQLPipelineStatement::create_parse_error_message(const std::string& 
             << "\nError message: " << result.errorMsg();
 
   return error_msg.str();
+}
+
+bool SQLPipelineStatement::query_plan_cache_hit() const {
+  DebugAssert(_query_plan != nullptr, "Asking for cache hit before compiling query plan will return undefined result");
+  return _query_plan_cache_hit;
 }
 
 }  // namespace opossum
