@@ -30,7 +30,7 @@ struct SQLPipelineControlBlock;
 class SQLPipelineStatement : public Noncopyable {
  public:
   // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, ChunkUseMvcc use_mvcc = ChunkUseMvcc::Yes);
+  explicit SQLPipelineStatement(const std::string& sql, UseMvcc use_mvcc = UseMvcc::Yes);
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
   SQLPipelineStatement(const std::string& sql, const std::shared_ptr<const SQLPipelineControlBlock>& control_block);
 

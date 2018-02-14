@@ -82,7 +82,7 @@ TEST_F(SQLPipelineTest, SimpleCreation) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
-  SQLPipeline sql_pipeline{_select_query_a, ChunkUseMvcc::No};
+  SQLPipeline sql_pipeline{_select_query_a, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 1u);
@@ -104,7 +104,7 @@ TEST_F(SQLPipelineTest, SimpleCreationMulti) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
-  SQLPipeline sql_pipeline{_multi_statement_query, ChunkUseMvcc::No};
+  SQLPipeline sql_pipeline{_multi_statement_query, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 2u);

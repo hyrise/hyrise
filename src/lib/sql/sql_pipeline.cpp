@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, ChunkUseMvcc use_mvcc) : SQLPipeline(sql, nullptr, use_mvcc) {}
+SQLPipeline::SQLPipeline(const std::string& sql, UseMvcc use_mvcc) : SQLPipeline(sql, nullptr, use_mvcc) {}
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context)
-    : SQLPipeline(sql, std::move(transaction_context), ChunkUseMvcc::Yes) {
+    : SQLPipeline(sql, std::move(transaction_context), UseMvcc::Yes) {
   DebugAssert(_sql_pipeline_statements.front()->transaction_context() != nullptr,
               "Cannot pass nullptr as explicit transaction context.");
   DebugAssert(_sql_pipeline_statements.front()->transaction_context()->phase() == TransactionPhase::Active,
@@ -18,7 +18,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::Transa
 
 // Private constructor
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                         ChunkUseMvcc use_mvcc) {
+                         UseMvcc use_mvcc) {
   _control_block = std::make_shared<SQLPipelineControlBlock>(use_mvcc, transaction_context);
 
   hsql::SQLParserResult parse_result;

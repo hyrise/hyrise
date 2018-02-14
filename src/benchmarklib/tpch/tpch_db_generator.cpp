@@ -63,7 +63,7 @@ class TableBuilder {
  public:
   template <typename... Strings>
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
-               const boost::hana::tuple<Strings...>& column_names, opossum::ChunkUseMvcc use_mvcc)
+               const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc)
       : _use_mvcc(use_mvcc) {
     _table = std::make_shared<opossum::Table>(chunk_size);
 
@@ -113,7 +113,7 @@ class TableBuilder {
 
  private:
   std::shared_ptr<opossum::Table> _table;
-  opossum::ChunkUseMvcc _use_mvcc;
+  opossum::UseMvcc _use_mvcc;
   boost::hana::tuple<opossum::pmr_concurrent_vector<DataTypes>...> _column_vectors;
 
   size_t _current_chunk_row_count() const { return _column_vectors[boost::hana::llong_c<0>].size(); }
@@ -197,14 +197,14 @@ TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
     : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
-  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, ChunkUseMvcc::Yes};
-  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, ChunkUseMvcc::Yes};
-  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, ChunkUseMvcc::Yes};
-  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, ChunkUseMvcc::Yes};
-  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names, ChunkUseMvcc::Yes};
-  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names, ChunkUseMvcc::Yes};
-  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names, ChunkUseMvcc::Yes};
-  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names, ChunkUseMvcc::Yes};
+  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes};
+  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes};
+  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes};
+  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, UseMvcc::Yes};
+  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names, UseMvcc::Yes};
+  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names, UseMvcc::Yes};
+  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes};
+  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names, UseMvcc::Yes};
 
   dbgen_reset_seeds();
 

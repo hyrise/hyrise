@@ -126,7 +126,7 @@ class TpchBenchmark final {
   TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
                 const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
                 const Duration max_duration, const std::optional<std::string>& output_file_path,
-                const ChunkUseMvcc use_mvcc)
+                const UseMvcc use_mvcc)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
@@ -176,7 +176,7 @@ class TpchBenchmark final {
   const size_t _max_num_query_runs;
   const Duration _max_duration;
   const std::optional<std::string> _output_file_path;
-  const ChunkUseMvcc _use_mvcc;
+  const UseMvcc _use_mvcc;
 
   BenchmarkResults _query_results_by_query_id;
 
@@ -381,7 +381,7 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   opossum::TpchBenchmark(benchmark_mode, query_ids, chunk_size, scale_factor, num_iterations,
                          std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}),
-                         output_file_path, enable_mvcc ? opossum::ChunkUseMvcc::Yes : opossum::ChunkUseMvcc::No)
+                         output_file_path, enable_mvcc ? opossum::UseMvcc::Yes : opossum::UseMvcc::No)
       .run();
 
   return 0;
