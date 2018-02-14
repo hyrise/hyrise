@@ -321,7 +321,7 @@ TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
+  std::shared_ptr<Table>                                                   expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
 
   auto table_wrapper = get_table_op_filtered();
   auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 10);
