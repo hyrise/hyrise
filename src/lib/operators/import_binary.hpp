@@ -11,7 +11,7 @@
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
@@ -117,7 +117,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
                                                               bool is_nullable);
 
   /*
-   * Imports a serialized DictionaryColumn from the given file.
+   * Imports a serialized DeprecatedDictionaryColumn from the given file.
    * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes
@@ -133,7 +133,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<DeprecatedDictionaryColumn<T>> _import_dictionary_column(std::ifstream& file,
+                                                                                  ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseAttributeVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,

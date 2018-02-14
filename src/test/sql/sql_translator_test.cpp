@@ -365,11 +365,11 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
-  const auto query = "INSERT INTO table_a (b,a) VALUES (10, 12.5);";
+  const auto query = "INSERT INTO table_a (b, a) VALUES (12.5, 10);";
   auto result_node = compile_query(query);
 
-  const auto value_a = LQPExpression::create_literal(12.5f);
-  const auto value_b = LQPExpression::create_literal(10);
+  const auto value_a = LQPExpression::create_literal(10);
+  const auto value_b = LQPExpression::create_literal(12.5f);
 
   const auto lqp =
       InsertNode::make("table_a", ProjectionNode::make({value_a, value_b}, std::make_shared<DummyTableNode>()));
@@ -399,6 +399,14 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
   const auto lqp = InsertNode::make("table_a", ProjectionNode::make(columns, _stored_table_node_b));
 
   EXPECT_LQP_EQ(lqp, result_node);
+}
+
+TEST_F(SQLTranslatorTest, InsertInvalidDataType) {
+  auto query = "INSERT INTO table_a VALUES (10, 11);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+
+  query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
 }
 
 TEST_F(SQLTranslatorTest, Update) {
@@ -535,6 +543,18 @@ TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
 TEST_F(SQLTranslatorTest, AccessInvalidTable) {
   const auto query = "SELECT * FROM invalid_table;";
   EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
+TEST_F(SQLTranslatorTest, ColumnAlias) {
+  const auto query = "SELECT z, y FROM table_a AS x (y, z)";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+
+  const auto& expressions = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child())->column_expressions();
+  EXPECT_EQ(expressions.size(), 2u);
+  EXPECT_EQ(*expressions[0]->alias(), std::string("y"));
+  EXPECT_EQ(*expressions[1]->alias(), std::string("z"));
 }
 
 }  // namespace opossum

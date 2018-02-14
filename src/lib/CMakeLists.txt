@@ -1,6 +1,8 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+    abstract_expression.cpp
+    abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.cpp
@@ -26,8 +28,6 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
-    logical_query_plan/lqp_column_reference.cpp
-    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -44,6 +44,8 @@ set(
     logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
+    logical_query_plan/lqp_column_reference.cpp
+    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/lqp_expression.cpp
     logical_query_plan/lqp_expression.hpp
     logical_query_plan/lqp_translator.cpp
@@ -112,6 +114,8 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
+    operators/pqp_expression.cpp
+    operators/pqp_expression.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -147,10 +151,6 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    abstract_expression.cpp
-    abstract_expression.hpp
-    operators/pqp_expression.cpp
-    operators/pqp_expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -191,15 +191,15 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    sql/lru_cache.hpp
-    sql/sql_planner.cpp
-    sql/sql_planner.hpp
     sql/hsql_expr_translator.cpp
     sql/hsql_expr_translator.hpp
+    sql/lru_cache.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
+    sql/sql_planner.cpp
+    sql/sql_planner.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
@@ -209,19 +209,43 @@ set(
     sql/sql_result_operator.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_attribute_vector.hpp
     storage/base_column.hpp
+    storage/base_column_encoder.hpp
+    storage/base_deprecated_dictionary_column.hpp
+    storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
+    storage/base_encoded_column.cpp
+    storage/base_encoded_column.hpp
     storage/base_value_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
+    storage/chunk_encoder.cpp
+    storage/chunk_encoder.hpp
+    storage/column_encoding_utils.cpp
+    storage/column_encoding_utils.hpp
+    storage/column_iterables.hpp
+    storage/column_iterables/base_column_iterators.hpp
+    storage/column_iterables/chunk_offset_mapping.cpp
+    storage/column_iterables/chunk_offset_mapping.hpp
+    storage/column_iterables/column_iterator_values.hpp
+    storage/column_iterables/constant_value_iterable.hpp
     storage/column_visitable.hpp
-    storage/copyable_atomic.hpp
+    storage/create_iterable_from_column.hpp
+    storage/deprecated_dictionary_column.cpp
+    storage/deprecated_dictionary_column.hpp
+    storage/deprecated_dictionary_column/base_attribute_vector.hpp
+    storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
+    storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
+    storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
+    storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column.hpp
-    storage/dictionary_compression.cpp
-    storage/dictionary_compression.hpp
-    storage/fitted_attribute_vector.hpp
+    storage/dictionary_column/attribute_vector_iterable.hpp
+    storage/dictionary_column/dictionary_column_iterable.hpp
+    storage/dictionary_column/dictionary_encoder.hpp
+    storage/deprecated_dictionary_compression.cpp
+    storage/deprecated_dictionary_compression.hpp
+    storage/encoding_type.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -242,31 +266,48 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/iterables/attribute_vector_iterable.hpp
-    storage/iterables/base_iterators.hpp
-    storage/iterables/chunk_offset_mapping.cpp
-    storage/iterables/chunk_offset_mapping.hpp
-    storage/iterables/column_value.hpp
-    storage/iterables/constant_value_iterable.hpp
-    storage/iterables/create_iterable_from_column.hpp
-    storage/iterables/dictionary_column_iterable.hpp
-    storage/iterables/iterables.hpp
-    storage/iterables/null_value_vector_iterable.hpp
-    storage/iterables/reference_column_iterable.hpp
-    storage/iterables/value_column_iterable.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
     storage/proxy_chunk.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
-    storage/scoped_locking_ptr.hpp
+    storage/reference_column/reference_column_iterable.hpp
+    storage/resolve_encoded_column_type.hpp
+    storage/run_length_column.cpp
+    storage/run_length_column.hpp
+    storage/run_length_column/run_length_column_iterable.hpp
+    storage/run_length_column/run_length_encoder.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
     storage/value_column.cpp
     storage/value_column.hpp
+    storage/value_column/null_value_vector_iterable.hpp
+    storage/value_column/value_column_iterable.hpp
+    storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/base_vector_compressor.hpp
+    storage/vector_compression/base_compressed_vector.hpp
+    storage/vector_compression/vector_compression.cpp
+    storage/vector_compression/vector_compression.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/resolve_compressed_vector_type.hpp
+    storage/vector_compression/simd_bp128/oversized_types.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
+    storage/vector_compression/compressed_vector_type.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
     tasks/chunk_metrics_collection_task.cpp
@@ -281,9 +322,13 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
+    utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
+    utils/enum_constant.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/format_bytes.cpp
+    utils/format_bytes.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
@@ -292,6 +337,8 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/scoped_locking_ptr.hpp
+    utils/template_type.hpp
 )
 
 set(
