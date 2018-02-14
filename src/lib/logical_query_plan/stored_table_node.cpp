@@ -12,15 +12,8 @@
 
 namespace opossum {
 
-std::shared_ptr<StoredTableNode> StoredTableNode::make(const std::string& table_name,
-                                                       const std::optional<std::string>& alias) {
-  const auto stored_table_node = std::make_shared<StoredTableNode>(table_name);
-  stored_table_node->set_alias(alias);
-  return stored_table_node;
-}
-
-StoredTableNode::StoredTableNode(const std::string& table_name)
-    : AbstractLQPNode(LQPNodeType::StoredTable), _table_name(table_name) {
+StoredTableNode::StoredTableNode(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr)
+    : AbstractLQPNode(LQPNodeType::StoredTable, left_child), _table_name(table_name) {
   /**
    * Initialize output information.
    */

@@ -12,8 +12,6 @@ namespace opossum {
  */
 class DropViewNode : public AbstractLQPNode {
  public:
-  static std::shared_ptr<DropViewNode> make(const std::string& view_name);
-
   explicit DropViewNode(const std::string& view_name);
 
   std::string description() const override;

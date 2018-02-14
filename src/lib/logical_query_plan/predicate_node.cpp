@@ -12,26 +12,9 @@
 
 namespace opossum {
 
-std::shared_ptr<PredicateNode> PredicateNode::make(const LQPColumnReference& column_reference,
-                                                   const PredicateCondition predicate_condition,
-                                                   const AllParameterVariant& value,
-                                                   const std::shared_ptr<AbstractLQPNode>& child) {
-  return make(column_reference, predicate_condition, value, std::nullopt, child);
-}
-
-std::shared_ptr<PredicateNode> PredicateNode::make(const LQPColumnReference& column_reference,
-                                                   const PredicateCondition predicate_condition,
-                                                   const AllParameterVariant& value,
-                                                   const std::optional<AllTypeVariant>& value2,
-                                                   const std::shared_ptr<AbstractLQPNode>& child) {
-  const auto predicate_node = std::make_shared<PredicateNode>(column_reference, predicate_condition, value, value2);
-  predicate_node->set_left_child(child);
-  return predicate_node;
-}
-
 PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
-                             const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2)
-    : AbstractLQPNode(LQPNodeType::Predicate),
+                             const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2, const std::shared_ptr<AbstractLQPNode>& left_child)
+    : AbstractLQPNode(LQPNodeType::Predicate, left_child),
       _column_reference(column_reference),
       _predicate_condition(predicate_condition),
       _value(value),

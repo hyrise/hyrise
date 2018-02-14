@@ -9,10 +9,6 @@
 
 namespace opossum {
 
-std::shared_ptr<DeleteNode> DeleteNode::make(const std::string& table_name) {
-  return std::make_shared<DeleteNode>(table_name);
-}
-
 DeleteNode::DeleteNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Delete), _table_name(table_name) {}
 
 std::shared_ptr<AbstractLQPNode> DeleteNode::_deep_copy_impl(

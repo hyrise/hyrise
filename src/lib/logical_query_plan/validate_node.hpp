@@ -11,9 +11,7 @@ namespace opossum {
  */
 class ValidateNode : public AbstractLQPNode {
  public:
-  std::shared_ptr<ValidateNode> make(const std::shared_ptr<AbstractLQPNode>& child);
-
-  ValidateNode();
+  ValidateNode(const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
 
   std::string description() const override;
 

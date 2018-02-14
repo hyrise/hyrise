@@ -11,8 +11,6 @@ namespace opossum {
  */
 class ShowColumnsNode : public AbstractLQPNode {
  public:
-  static std::shared_ptr<ShowColumnsNode> make(const std::string& table_name);
-
   explicit ShowColumnsNode(const std::string& table_name);
 
   std::string description() const override;

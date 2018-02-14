@@ -9,10 +9,6 @@
 
 namespace opossum {
 
-std::shared_ptr<DropViewNode> DropViewNode::make(const std::string& view_name) {
-  return std::make_shared<DropViewNode>(view_name);
-}
-
 DropViewNode::DropViewNode(const std::string& view_name)
     : AbstractLQPNode(LQPNodeType::DropView), _view_name(view_name) {}
 

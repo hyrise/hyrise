@@ -12,15 +12,8 @@ namespace opossum {
 OrderByDefinition::OrderByDefinition(const LQPColumnReference& column_reference, const OrderByMode order_by_mode)
     : column_reference(column_reference), order_by_mode(order_by_mode) {}
 
-std::shared_ptr<SortNode> SortNode::make(const OrderByDefinitions& order_by_definitions,
-                                         const std::shared_ptr<AbstractLQPNode>& child) {
-  const auto sort_node = std::make_shared<SortNode>(order_by_definitions);
-  sort_node->set_left_child(child);
-  return sort_node;
-}
-
-SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
-    : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
+SortNode::SortNode(const OrderByDefinitions& order_by_definitions, const std::shared_ptr<AbstractLQPNode>& left_child)
+    : AbstractLQPNode(LQPNodeType::Sort, left_child), _order_by_definitions(order_by_definitions) {}
 
 std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

@@ -5,11 +5,6 @@
 
 namespace opossum {
 
-std::shared_ptr<CreateViewNode> CreateViewNode::make(const std::string& view_name,
-                                                     const std::shared_ptr<const AbstractLQPNode>& lqp) {
-  return std::make_shared<CreateViewNode>(view_name, lqp);
-}
-
 CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp)
     : AbstractLQPNode(LQPNodeType::CreateView), _view_name(view_name), _lqp(lqp) {}
 

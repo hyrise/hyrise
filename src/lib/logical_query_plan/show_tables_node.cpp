@@ -4,8 +4,6 @@
 
 namespace opossum {
 
-std::shared_ptr<ShowTablesNode> ShowTablesNode::make() { return std::make_shared<ShowTablesNode>(); }
-
 ShowTablesNode::ShowTablesNode() : AbstractLQPNode(LQPNodeType::ShowTables) {}
 
 std::shared_ptr<AbstractLQPNode> ShowTablesNode::_deep_copy_impl(

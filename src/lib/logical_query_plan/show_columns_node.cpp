@@ -4,10 +4,6 @@
 
 namespace opossum {
 
-std::shared_ptr<ShowColumnsNode> ShowColumnsNode::make(const std::string& table_name) {
-  return std::make_shared<ShowColumnsNode>(table_name);
-}
-
 ShowColumnsNode::ShowColumnsNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::ShowColumns), _table_name(table_name) {}
 

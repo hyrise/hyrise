@@ -4,13 +4,7 @@
 
 namespace opossum {
 
-std::shared_ptr<ValidateNode> ValidateNode::make(const std::shared_ptr<AbstractLQPNode>& child) {
-  const auto validate_node = std::make_shared<ValidateNode>();
-  validate_node->set_left_child(child);
-  return validate_node;
-}
-
-ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
+ValidateNode::ValidateNode(const std::shared_ptr<AbstractLQPNode>& left_child) : AbstractLQPNode(LQPNodeType::Validate, left_child) {}
 
 std::shared_ptr<AbstractLQPNode> ValidateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

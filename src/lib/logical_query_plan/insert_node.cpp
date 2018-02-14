@@ -10,14 +10,7 @@
 
 namespace opossum {
 
-std::shared_ptr<InsertNode> InsertNode::make(const std::string& table_name,
-                                             const std::shared_ptr<AbstractLQPNode>& child) {
-  const auto insert_node = std::make_shared<InsertNode>(table_name);
-  insert_node->set_left_child(child);
-  return insert_node;
-}
-
-InsertNode::InsertNode(const std::string table_name) : AbstractLQPNode(LQPNodeType::Insert), _table_name(table_name) {}
+InsertNode::InsertNode(const std::string table_name, const std::shared_ptr<AbstractLQPNode>& left_child) : AbstractLQPNode(LQPNodeType::Insert, left_child), _table_name(table_name) {}
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

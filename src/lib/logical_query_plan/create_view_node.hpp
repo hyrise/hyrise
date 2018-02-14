@@ -11,9 +11,6 @@ namespace opossum {
  */
 class CreateViewNode : public AbstractLQPNode {
  public:
-  static std::shared_ptr<CreateViewNode> make(const std::string& view_name,
-                                              const std::shared_ptr<const AbstractLQPNode>& lqp);
-
   explicit CreateViewNode(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp);
 
   std::string description() const override;

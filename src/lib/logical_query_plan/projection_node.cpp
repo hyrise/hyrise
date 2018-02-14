@@ -16,19 +16,11 @@ namespace opossum {
 std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& child) {
   std::vector<std::shared_ptr<LQPExpression>> expressions =
       LQPExpression::create_columns(child->output_column_references());
-  return make(expressions, child);
+  return std::make_shared<ProjectionNode>(expressions, child);
 }
 
-std::shared_ptr<ProjectionNode> ProjectionNode::make(
-    const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
-    const std::shared_ptr<AbstractLQPNode>& child) {
-  const auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
-  projection_node->set_left_child(child);
-  return projection_node;
-}
-
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
-    : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
+ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& left_child)
+    : AbstractLQPNode(LQPNodeType::Projection, left_child), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
   std::ostringstream desc;

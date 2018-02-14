@@ -16,32 +16,14 @@
 
 namespace opossum {
 
-std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-                                         const PredicateCondition predicate_condition,
-                                         const std::shared_ptr<AbstractLQPNode>& left_child,
-                                         const std::shared_ptr<AbstractLQPNode>& right_child) {
-  const auto join_node = std::make_shared<JoinNode>(join_mode, join_column_references, predicate_condition);
-  join_node->set_left_child(left_child);
-  join_node->set_right_child(right_child);
-  return join_node;
-}
-
-std::shared_ptr<JoinNode> JoinNode::make(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child,
-                                         const std::shared_ptr<AbstractLQPNode>& right_child) {
-  const auto join_node = std::make_shared<JoinNode>(join_mode);
-  join_node->set_left_child(left_child);
-  join_node->set_right_child(right_child);
-  return join_node;
-}
-
-JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), _join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child , const std::shared_ptr<AbstractLQPNode>& right_child) : AbstractLQPNode(LQPNodeType::Join, left_child, right_child), _join_mode(join_mode) {
   DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
               "Specified JoinMode must also specify column ids and predicate condition.");
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-                   const PredicateCondition predicate_condition)
-    : AbstractLQPNode(LQPNodeType::Join),
+                   const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child , const std::shared_ptr<AbstractLQPNode>& right_child)
+    : AbstractLQPNode(LQPNodeType::Join, left_child, right_child),
       _join_mode(join_mode),
       _join_column_references(join_column_references),
       _predicate_condition(predicate_condition) {
