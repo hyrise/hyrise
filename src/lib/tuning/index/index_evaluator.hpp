@@ -17,6 +17,8 @@ namespace opossum {
  * ToDo(group01): describe specific mechanism to determine desirability and memory_cost
  */
 class IndexEvaluator : public BaseIndexEvaluator {
+  friend class IndexEvaluatorTest;
+
  public:
   explicit IndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan> > > query_cache);
 
