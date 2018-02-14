@@ -23,6 +23,7 @@ namespace opossum {
  * and of searching for already existing indices.
  */
 class BaseIndexEvaluator : public AbstractEvaluator {
+ friend class IndexEvaluatorTest;
  protected:
   /**
    * Data class representing a node in the query plan where an index could be used.
@@ -85,9 +86,10 @@ class BaseIndexEvaluator : public AbstractEvaluator {
    */
   virtual float _calculate_saved_work(const IndexChoice& index_choice) const = 0;
 
- private:
+ protected:
   void _inspect_query_cache();
-  void _inspect_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
+  void _inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
+  void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency);
   void _aggregate_access_records();
   void _add_existing_indices();
   void _add_new_indices();
