@@ -30,6 +30,11 @@ class IndexChoice : public TuningChoice {
   void print_on(std::ostream& output) const final;
 
   /**
+    * Notice: we decided to keep public member variables and not create explicit setters/getters
+    * beyond the TuningChoice interface, since this class is 95% data object and 5% virtual.
+    */
+
+  /**
    * The column the this index refers to
    */
   ColumnRef column_ref;
