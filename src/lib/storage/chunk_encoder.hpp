@@ -67,7 +67,7 @@ class ChunkEncoder {
                             const std::map<ChunkID, ChunkEncodingSpec>& encoding_specs);
 
   /**
-   * @brief Encodes the specified chunks of the passed table using the same column-encoding spec
+   * @brief Encodes the specified chunks of the passed table using a single column-encoding spec
    */
   static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                             const ColumnEncodingSpec& column_encoding_spec = {});
@@ -81,7 +81,7 @@ class ChunkEncoder {
                                 const std::vector<ChunkEncodingSpec>& encoding_specs);
 
   /**
-   * @brief Encodes an entire table using the same column-encoding spec
+   * @brief Encodes an entire table using a single column-encoding spec
    */
   static void encode_all_chunks(const std::shared_ptr<Table>& table,
                                 const ColumnEncodingSpec& column_encoding_spec = {});
