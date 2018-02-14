@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-static const size_t DefaultCacheCapacity = 1024;
+inline constexpr size_t DefaultCacheCapacity = 1024;
 
 // Cache that stores instances of SQLParserResult.
 // Per-default, uses the GDFS cache as underlying storage.
