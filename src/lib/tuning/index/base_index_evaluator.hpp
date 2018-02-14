@@ -23,7 +23,8 @@ namespace opossum {
  * and of searching for already existing indices.
  */
 class BaseIndexEvaluator : public AbstractEvaluator {
- friend class IndexEvaluatorTest;
+  friend class IndexEvaluatorTest;
+
  protected:
   /**
    * Data class representing a node in the query plan where an index could be used.
