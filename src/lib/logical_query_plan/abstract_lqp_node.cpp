@@ -19,26 +19,6 @@ class TableStatistics;
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(
-    std::shared_ptr<std::map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>> previous_copies)
-    const {
-  if (auto it = previous_copies->find(shared_from_this()); it != previous_copies->cend()) {
-    return it->second;
-  }
-
-  auto copied_left_child = left_child() ? left_child()->deep_copy(previous_copies) : nullptr;
-  auto copied_right_child = this->right_child() ? this->right_child()->deep_copy(previous_copies) : nullptr;
-
-  // We cannot use the copy constructor here, because it does not work with shared_from_this()
-  auto deep_copy = _deep_copy_impl(copied_left_child, copied_right_child);
-  if (copied_left_child) deep_copy->set_left_child(copied_left_child);
-  if (copied_right_child) deep_copy->set_right_child(copied_right_child);
-
-  previous_copies->emplace(shared_from_this(), deep_copy);
-
-  return deep_copy;
-}
-
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
     const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
     const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
@@ -538,6 +518,29 @@ std::string QualifiedColumnName::as_string() const {
   if (table_name) ss << *table_name << ".";
   ss << column_name;
   return ss.str();
+}
+
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
+  PreviousCopiesMap previous_copies;
+  return _deep_copy(previous_copies);
+}
+
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy(PreviousCopiesMap& previous_copies) const {
+  if (auto it = previous_copies.find(shared_from_this()); it != previous_copies.cend()) {
+    return it->second;
+  }
+
+  auto copied_left_child = left_child() ? left_child()->_deep_copy(previous_copies) : nullptr;
+  auto copied_right_child = right_child() ? right_child()->_deep_copy(previous_copies) : nullptr;
+
+  // We cannot use the copy constructor here, because it does not work with shared_from_this()
+  auto deep_copy = _deep_copy_impl(copied_left_child, copied_right_child);
+  if (copied_left_child) deep_copy->set_left_child(copied_left_child);
+  if (copied_right_child) deep_copy->set_right_child(copied_right_child);
+
+  previous_copies.emplace(shared_from_this(), deep_copy);
+
+  return deep_copy;
 }
 
 }  // namespace opossum
