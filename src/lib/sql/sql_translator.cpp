@@ -1035,7 +1035,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {
     /**
      * If there is a nested expression (e.g. 1233 + 1) instead of a column reference or literal,
-     * we need to add a Projection node which handles this before adding the PredicateNode.
+     * we need to add a Projection node that handles this before adding the PredicateNode.
      */
     auto column_expressions = LQPExpression::create_columns(current_node->output_column_references());
     column_expressions.push_back(HSQLExprTranslator::to_lqp_expression(*value_ref_hsql_expr, current_node));

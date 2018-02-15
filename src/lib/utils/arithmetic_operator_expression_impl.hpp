@@ -22,7 +22,7 @@ std::function<T(const T&, const T&)> _get_base_operator_function(ExpressionType 
 }
 
 template <typename T>
-std::function<T(const T&, const T&)> arithmetic_operator_function_from_expression(ExpressionType type) {
+std::function<T(const T&, const T&)> function_for_arithmetic_expression(ExpressionType type) {
   if (type == ExpressionType::Modulo) return std::modulus<T>();
   return _get_base_operator_function<T>(type);
 }
@@ -35,7 +35,7 @@ std::function<T(const T&, const T&)> arithmetic_operator_function_from_expressio
  *
  */
 template <>
-inline std::function<std::string(const std::string&, const std::string&)> arithmetic_operator_function_from_expression(
+inline std::function<std::string(const std::string&, const std::string&)> function_for_arithmetic_expression(
     ExpressionType type) {
   Assert(type == ExpressionType::Addition, "Arithmetic operator except for addition not defined for std::string");
   return std::plus<std::string>();
@@ -49,13 +49,13 @@ inline std::function<std::string(const std::string&, const std::string&)> arithm
  *
  */
 template <>
-inline std::function<float(const float&, const float&)> arithmetic_operator_function_from_expression(
+inline std::function<float(const float&, const float&)> function_for_arithmetic_expression(
     ExpressionType type) {
   return _get_base_operator_function<float>(type);
 }
 
 template <>
-inline std::function<double(const double&, const double&)> arithmetic_operator_function_from_expression(
+inline std::function<double(const double&, const double&)> function_for_arithmetic_expression(
     ExpressionType type) {
   return _get_base_operator_function<double>(type);
 }
@@ -65,7 +65,7 @@ inline std::function<double(const double&, const double&)> arithmetic_operator_f
  * Division by 0 needs to be caught when using integers.
  */
 template <>
-inline std::function<int(const int&, const int&)> arithmetic_operator_function_from_expression(ExpressionType type) {
+inline std::function<int(const int&, const int&)> function_for_arithmetic_expression(ExpressionType type) {
   if (type == ExpressionType::Division) {
     return [](const int& lhs, const int& rhs) {
       if (rhs == 0) {

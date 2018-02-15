@@ -124,7 +124,7 @@ std::optional<AllTypeVariant> ConstantCalculationRule::_calculate_expression(boo
     return std::nullopt;
   }
 
-  const auto& arithmetic_operator_function = arithmetic_operator_function_from_expression<T>(expression->type());
+  const auto& arithmetic_operator_function = function_for_arithmetic_expression<T>(expression->type());
 
   const auto& left_expr = _calculate_expression(type, expression->left_child());
   const auto& right_expr = _calculate_expression(type, expression->right_child());

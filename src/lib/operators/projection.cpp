@@ -195,7 +195,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    */
   Assert(expression->is_arithmetic_operator(), "Projection only supports literals, column refs and arithmetics");
 
-  const auto& arithmetic_operator_function = arithmetic_operator_function_from_expression<T>(expression->type());
+  const auto& arithmetic_operator_function = function_for_arithmetic_expression<T>(expression->type());
 
   pmr_concurrent_vector<std::optional<T>> values;
   values.resize(table->get_chunk(chunk_id)->size());
