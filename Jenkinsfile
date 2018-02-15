@@ -37,7 +37,7 @@ node {
       }, lint: {
         stage("Linting") {
           sh '''
-            scripts/lint.sh pre
+            scripts/lint.sh
           '''
         }
       }
