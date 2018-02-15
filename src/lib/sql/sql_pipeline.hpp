@@ -37,6 +37,9 @@ class SQLPipeline : public Noncopyable {
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
               const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
+  // Returns the SQL string for each statement.
+  const std::vector<std::string>& get_sql_strings();
+
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
 
@@ -86,6 +89,7 @@ class SQLPipeline : public Noncopyable {
   std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
+  std::vector<std::string> _sql_strings;
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;

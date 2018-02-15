@@ -239,7 +239,7 @@ enum class TableType { References, Data };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 
-enum class UseMvcc { Yes, No };
+enum class UseMvcc : bool { Yes = true, No = false };
 
 class Noncopyable {
  protected:

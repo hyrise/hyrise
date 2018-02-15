@@ -128,4 +128,8 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
+std::shared_ptr<AbstractOperator> Update::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Update>(_table_to_update_name, _input_left->recreate(args), _input_right->recreate(args));
+}
+
 }  // namespace opossum

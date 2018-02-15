@@ -6,6 +6,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "optimizer/optimizer.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
@@ -36,9 +37,12 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
-  SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql, const UseMvcc use_mvcc,
+  SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql, const UseMvcc use_mvcc,
                        const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+
+  // Returns the raw SQL string.
+  const std::string& get_sql_string();
 
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
