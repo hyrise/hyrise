@@ -430,7 +430,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
-  const auto query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
+  const auto query = "INSERT INTO table_a (b, a) VALUES (12.5, 10);";
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Insert);
@@ -443,9 +443,9 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 
   auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<float>(expressions[0]->value()), 12.5);
+  EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int32_t>(expressions[1]->value()), 10);
+  EXPECT_EQ(boost::get<float>(expressions[1]->value()), 12.5);
 
   EXPECT_EQ(projection->left_child()->type(), LQPNodeType::DummyTable);
 }
@@ -490,6 +490,14 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
   EXPECT_EQ(expressions[0]->column_reference(), LQPColumnReference(table_b_node, ColumnID{0}));
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Column);
   EXPECT_EQ(expressions[1]->column_reference(), LQPColumnReference(table_b_node, ColumnID{1}));
+}
+
+TEST_F(SQLTranslatorTest, InsertInvalidDataType) {
+  auto query = "INSERT INTO table_a VALUES (10, 11);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+
+  query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
 }
 
 TEST_F(SQLTranslatorTest, Update) {
@@ -634,6 +642,18 @@ TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
 TEST_F(SQLTranslatorTest, AccessInvalidTable) {
   const auto query = "SELECT * FROM invalid_table;";
   EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
+TEST_F(SQLTranslatorTest, ColumnAlias) {
+  const auto query = "SELECT z, y FROM table_a AS x (y, z)";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+
+  const auto& expressions = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child())->column_expressions();
+  EXPECT_EQ(expressions.size(), 2u);
+  EXPECT_EQ(*expressions[0]->alias(), std::string("y"));
+  EXPECT_EQ(*expressions[1]->alias(), std::string("z"));
 }
 
 }  // namespace opossum
