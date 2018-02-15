@@ -14,7 +14,7 @@ SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result, bool validate
   SQLQueryPlan plan{};
 
   for (const auto& node : result_nodes) {
-    auto optimized = Optimizer::get().optimize(node);
+    auto optimized = Optimizer::create_default_optimizer()->optimize(node);
     auto op = LQPTranslator{}.translate_node(optimized);
 
     plan.add_tree_by_root(op);

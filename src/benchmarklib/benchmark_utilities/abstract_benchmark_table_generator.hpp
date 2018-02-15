@@ -115,7 +115,7 @@ class AbstractBenchmarkTableGenerator {
           auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
 
           if (is_first_column) {
-            auto chunk = std::make_shared<opossum::Chunk>(opossum::ChunkUseMvcc::Yes);
+            auto chunk = std::make_shared<opossum::Chunk>(opossum::UseMvcc::Yes);
             chunk->add_column(value_column);
             table->emplace_chunk(std::move(chunk));
           } else {
@@ -138,7 +138,7 @@ class AbstractBenchmarkTableGenerator {
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
-        auto chunk = std::make_shared<opossum::Chunk>(opossum::ChunkUseMvcc::Yes);
+        auto chunk = std::make_shared<opossum::Chunk>(opossum::UseMvcc::Yes);
         chunk->add_column(value_column);
         table->emplace_chunk(std::move(chunk));
       } else {
