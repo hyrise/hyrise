@@ -57,6 +57,8 @@ class SQLPipelineStatementTest : public BaseTest {
 
     _multi_statement_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
+
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -88,12 +90,14 @@ TEST_F(SQLPipelineStatementTest, SimpleCreation) {
   SQLPipelineStatement sql_pipeline{_select_query_a};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline.get_sql_string(), _select_query_a);
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleCreationWithoutMVCC) {
   SQLPipelineStatement sql_pipeline{_join_query, false};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline.get_sql_string(), _join_query);
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
@@ -101,17 +105,18 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
   SQLPipelineStatement sql_pipeline{_select_query_a, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
+  EXPECT_EQ(sql_pipeline.get_sql_string(), _select_query_a);
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreation) {
-  SQLPipelineStatement sql_pipeline{_select_parse_result, nullptr, true};
+  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, nullptr, true};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
-  SQLPipelineStatement sql_pipeline{_select_parse_result, nullptr, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, nullptr, false};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
@@ -119,14 +124,15 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
-  SQLPipelineStatement sql_pipeline{_select_parse_result, context, true};
+  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, context, true};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationTooManyStatements) {
-  EXPECT_THROW(SQLPipelineStatement(_multi_statement_parse_result, nullptr, false), std::exception);
+  EXPECT_THROW(SQLPipelineStatement(_multi_statement_dependant, _multi_statement_parse_result, nullptr, false),
+               std::exception);
 }
 
 TEST_F(SQLPipelineStatementTest, GetParsedSQL) {
@@ -442,6 +448,15 @@ TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
     // Check that the ^ was actually inserted in the error message
     EXPECT_TRUE(error_msg.find('^') != std::string::npos);
   }
+}
+
+TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
+  SQLPipelineStatement sql_pipeline{_select_query_a};
+  sql_pipeline.get_result_table();
+
+  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  EXPECT_EQ(cache.size(), 1u);
+  EXPECT_TRUE(cache.has(_select_query_a));
 }
 
 }  // namespace opossum
