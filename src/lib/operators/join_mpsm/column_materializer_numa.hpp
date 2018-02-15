@@ -29,10 +29,10 @@ template <typename T>
 using MaterializedValueAllocator = PolymorphicAllocator<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedChunk = std::vector<MaterializedValue<T>;
+using MaterializedChunk = std::vector<MaterializedValue<T>>;
 
 template <typename T>
-struct MaterializedNUMAPartition<T>{
+struct MaterializedNUMAPartition{
   std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
   NodeID _node_id;
 
@@ -41,7 +41,7 @@ struct MaterializedNUMAPartition<T>{
   }
 
   void fit(){
-      std::vector::erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), nullptr));
+      _chunk_columns.erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), nullptr));
   }
 };
 
@@ -72,13 +72,13 @@ class ColumnMaterializer {
       std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
     // ensure we have enough lists to represent the NUMA Nodes
-    const auto topology = NUMAPlacementManager.get().topology();
+    const auto topology = NUMAPlacementManager::get().topology();
     output->reserve(topology->nodes().size());
 
     for(NodeID node_id{0}; node_id < topology->nodes().size(); node_id++){
         // The vectors only contain pointers so the higher bound estimate won't really hurt us here
         // Also we shrink this in the end
-        output->push_back(MaterializedNUMAPartition<T>{node_id}, input->row_count());
+        output->emplace_back(MaterializedNUMAPartition<T>{node_id, input->row_count()});
     }
     auto null_rows = std::make_unique<PosList>();
 
@@ -91,7 +91,7 @@ class ColumnMaterializer {
         NodeID numa_node_id{0}; // default NUMA Node, everything is on the same node for non numa systems
 
         // Find out whether we actually are on a NUMA System, if so, remember the numa node
-        auto numa_res = dynamic_cast<NUMAMemoryResource>(alloc.resource());
+        auto numa_res = dynamic_cast<NUMAMemoryResource *>(alloc.resource());
         if(numa_res != nullptr){
             numa_node_id = NodeID{numa_res->get_node_id()};
         }
@@ -127,11 +127,11 @@ class ColumnMaterializer {
     // This introduces runtime overhead that is not amortized for non-NUMA systems, so maybe this should be a compile time switch.
     MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id).get_allocator()};
 
-    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, alloc] {
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, alloc, numa_node_id] {
       auto column = input->get_chunk(chunk_id).get_column(column_id);
       resolve_column_type<T>(*column, [&](auto& typed_column) {
         // TODO: think about how to write the chunks to multiple
-        (*output)[numa_node_id].chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
+        (*output)[numa_node_id]._chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
       });
     });
   }
@@ -143,6 +143,8 @@ class ColumnMaterializer {
   std::shared_ptr<MaterializedChunk<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output,
                                                              MaterializedValueAllocator<T> alloc) {
+
+    // TODO(florian): think long and hard about allocator lifetimes
     auto output = MaterializedChunk<T>{alloc};
     output.reserve(column.size());
 
