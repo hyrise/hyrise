@@ -73,7 +73,8 @@ struct QualifiedColumnName {
  */
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, private Noncopyable {
  public:
-  explicit AbstractLQPNode(LQPNodeType node_type, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr, const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
+  explicit AbstractLQPNode(LQPNodeType node_type, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
+                           const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
 
   // Creates a deep copy
   virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;

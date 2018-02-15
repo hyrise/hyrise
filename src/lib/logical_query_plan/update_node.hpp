@@ -16,7 +16,8 @@ class LQPExpression;
 class UpdateNode : public AbstractLQPNode {
  public:
   explicit UpdateNode(const std::string& table_name,
-                      const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+                      const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
+                      const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;

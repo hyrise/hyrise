@@ -29,7 +29,8 @@ class PredicateNode : public AbstractLQPNode {
                 const AllParameterVariant& value, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
 
   PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
-                const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+                const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2,
+                const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
 
   std::string description() const override;
 

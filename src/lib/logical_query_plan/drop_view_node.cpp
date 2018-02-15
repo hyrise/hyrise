@@ -28,7 +28,10 @@ std::string DropViewNode::description() const {
 
 bool DropViewNode::subtree_is_read_only() const { return false; }
 
-const std::vector<std::string>& DropViewNode::output_column_names() const { static std::vector<std::string> output_column_names_dummy; return output_column_names_dummy; }
+const std::vector<std::string>& DropViewNode::output_column_names() const {
+  static std::vector<std::string> output_column_names_dummy;
+  return output_column_names_dummy;
+}
 
 const std::string& DropViewNode::view_name() const { return _view_name; }
 

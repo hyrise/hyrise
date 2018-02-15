@@ -17,7 +17,8 @@ PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const P
     : PredicateNode(column_reference, predicate_condition, value, std::nullopt, left_child) {}
 
 PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
-                             const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2, const std::shared_ptr<AbstractLQPNode>& left_child)
+                             const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2,
+                             const std::shared_ptr<AbstractLQPNode>& left_child)
     : AbstractLQPNode(LQPNodeType::Predicate, left_child),
       _column_reference(column_reference),
       _predicate_condition(predicate_condition),

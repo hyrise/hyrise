@@ -22,11 +22,13 @@ using LQPColumnReferencePair = std::pair<LQPColumnReference, LQPColumnReference>
 class JoinNode : public AbstractLQPNode {
  public:
   // Constructor for Natural and Cross Joins
-  explicit JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr, const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
+  explicit JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
+                    const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
 
   // Constructor for predicated Joins
   JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-           const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr, const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
+           const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
+           const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
 
   const std::optional<LQPColumnReferencePair>& join_column_references() const;
   const std::optional<PredicateCondition>& predicate_condition() const;

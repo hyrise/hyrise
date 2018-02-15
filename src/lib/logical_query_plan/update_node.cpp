@@ -11,8 +11,11 @@
 namespace opossum {
 
 UpdateNode::UpdateNode(const std::string& table_name,
-                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& left_child)
-    : AbstractLQPNode(LQPNodeType::Update, left_child), _table_name(table_name), _column_expressions(column_expressions) {}
+                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
+                       const std::shared_ptr<AbstractLQPNode>& left_child)
+    : AbstractLQPNode(LQPNodeType::Update, left_child),
+      _table_name(table_name),
+      _column_expressions(column_expressions) {}
 
 std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

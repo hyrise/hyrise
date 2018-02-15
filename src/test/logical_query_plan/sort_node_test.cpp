@@ -21,8 +21,8 @@ class SortNodeTest : public BaseTest {
     _a_b = LQPColumnReference{_table_node, ColumnID{1}};
     _a_c = LQPColumnReference{_table_node, ColumnID{2}};
 
-    _sort_node =
-        std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
+    _sort_node = std::make_shared<SortNode>(
+        std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
   }
 
   std::shared_ptr<StoredTableNode> _table_node;
@@ -63,14 +63,14 @@ TEST_F(SortNodeTest, OutputColumnIDs) {
 TEST_F(SortNodeTest, ShallowEquals) {
   EXPECT_TRUE(_sort_node->shallow_equals(*_sort_node));
 
-  const auto other_sort_node_a =
-      std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
+  const auto other_sort_node_a = std::make_shared<SortNode>(
+      std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
   const auto other_sort_node_b =
       std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending},
-                                                    OrderByDefinition{_a_b, OrderByMode::Ascending}},
-                     _table_node);
-  const auto other_sort_node_c =
-      std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_b, OrderByMode::Ascending}}, _table_node);
+                                                                OrderByDefinition{_a_b, OrderByMode::Ascending}},
+                                 _table_node);
+  const auto other_sort_node_c = std::make_shared<SortNode>(
+      std::vector<OrderByDefinition>{OrderByDefinition{_a_b, OrderByMode::Ascending}}, _table_node);
 
   EXPECT_TRUE(other_sort_node_a->shallow_equals(*_sort_node));
   EXPECT_FALSE(other_sort_node_b->shallow_equals(*_sort_node));

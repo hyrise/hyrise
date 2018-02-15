@@ -26,7 +26,10 @@ std::string CreateViewNode::description() const {
   return "[CreateView] Name: '" + _view_name + "' (\n" + stream.str() + ")";
 }
 
-const std::vector<std::string>& CreateViewNode::output_column_names() const { static std::vector<std::string> output_column_names_dummy; return output_column_names_dummy; }
+const std::vector<std::string>& CreateViewNode::output_column_names() const {
+  static std::vector<std::string> output_column_names_dummy;
+  return output_column_names_dummy;
+}
 
 bool CreateViewNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");

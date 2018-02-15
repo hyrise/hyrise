@@ -17,7 +17,10 @@ std::string ShowColumnsNode::description() const { return "[ShowColumns] Table: 
 
 const std::string& ShowColumnsNode::table_name() const { return _table_name; }
 
-const std::vector<std::string>& ShowColumnsNode::output_column_names() const { static std::vector<std::string> output_column_names_dummy; return output_column_names_dummy; }
+const std::vector<std::string>& ShowColumnsNode::output_column_names() const {
+  static std::vector<std::string> output_column_names_dummy;
+  return output_column_names_dummy;
+}
 
 bool ShowColumnsNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");

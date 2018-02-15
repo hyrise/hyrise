@@ -226,9 +226,9 @@ TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   const auto result_node = compile_query(query);
 
-  const auto projection_node =
-      std::make_shared<SortNode>(OrderByDefinitions{{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
-                     ProjectionNode::make_pass_through(_stored_table_node_a));
+  const auto projection_node = std::make_shared<SortNode>(
+      OrderByDefinitions{{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
+      ProjectionNode::make_pass_through(_stored_table_node_a));
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -358,8 +358,9 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   const auto value_a = LQPExpression::create_literal(10);
   const auto value_b = LQPExpression::create_literal(12.5f);
 
-  const auto lqp =
-      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, std::make_shared<DummyTableNode>()));
+  const auto lqp = std::make_shared<InsertNode>(
+      "table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b},
+                                                  std::make_shared<DummyTableNode>()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -371,8 +372,9 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   const auto value_a = LQPExpression::create_literal(10);
   const auto value_b = LQPExpression::create_literal(12.5f);
 
-  const auto lqp =
-      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, std::make_shared<DummyTableNode>()));
+  const auto lqp = std::make_shared<InsertNode>(
+      "table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b},
+                                                  std::make_shared<DummyTableNode>()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -384,8 +386,9 @@ TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
   const auto value_a = LQPExpression::create_literal(10);
   const auto value_b = LQPExpression::create_literal(NullValue{});
 
-  const auto lqp =
-      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, std::make_shared<DummyTableNode>()));
+  const auto lqp = std::make_shared<InsertNode>(
+      "table_a", std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b},
+                                                  std::make_shared<DummyTableNode>()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -396,7 +399,8 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
   const auto columns = LQPExpression::create_columns({_table_b_a, _table_b_b});
 
-  const auto lqp = std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(columns, _stored_table_node_b));
+  const auto lqp =
+      std::make_shared<InsertNode>("table_a", std::make_shared<ProjectionNode>(columns, _stored_table_node_b));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -416,9 +420,9 @@ TEST_F(SQLTranslatorTest, Update) {
   const auto update_a = LQPExpression::create_column(_table_a_a);
   const auto update_b = LQPExpression::create_literal(3.2f);
 
-  const auto lqp =
-      std::make_shared<UpdateNode>("table_a", {update_a, update_b},
-                       std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::GreaterThan, 1l, _stored_table_node_a));
+  const auto lqp = std::make_shared<UpdateNode>(
+      "table_a", {update_a, update_b},
+      std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::GreaterThan, 1l, _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }

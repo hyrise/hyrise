@@ -27,7 +27,8 @@ using OrderByDefinitions = std::vector<OrderByDefinition>;
  */
 class SortNode : public AbstractLQPNode {
  public:
-  explicit SortNode(const OrderByDefinitions& order_by_definitions, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+  explicit SortNode(const OrderByDefinitions& order_by_definitions,
+                    const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
 
   std::string description() const override;
 

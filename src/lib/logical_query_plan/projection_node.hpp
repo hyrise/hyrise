@@ -20,7 +20,8 @@ class ProjectionNode : public AbstractLQPNode {
  public:
   static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& child);
 
-  explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+  explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
+                          const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
 
   const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
 

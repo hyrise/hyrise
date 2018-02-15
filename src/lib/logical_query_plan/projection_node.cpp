@@ -19,7 +19,8 @@ std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::sha
   return std::make_shared<ProjectionNode>(expressions, child);
 }
 
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions, const std::shared_ptr<AbstractLQPNode>& left_child)
+ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions,
+                               const std::shared_ptr<AbstractLQPNode>& left_child)
     : AbstractLQPNode(LQPNodeType::Projection, left_child), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
