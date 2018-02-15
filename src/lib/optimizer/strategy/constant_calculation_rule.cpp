@@ -23,11 +23,12 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     return _apply_to_children(node);
   }
 
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
+  auto projection_node = std::static_pointer_cast<ProjectionNode>(node);
 
   const auto column_expressions = projection_node->column_expressions();
   for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); column_id++) {
-    const auto expression = column_expressions[column_id];
+
+    const auto& expression = column_expressions[column_id];
     if (!expression->is_arithmetic_operator()) {
       continue;
     }
@@ -39,13 +40,13 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       continue;
     }
 
-    auto value = NULL_VALUE;
-    resolve_data_type(*expression_type, [&](auto type) { value = _evaluate_expression(type, expression); });
+    auto value = std::optional<AllTypeVariant>{};
+    resolve_data_type(*expression_type, [&](auto type) { value = _calculate_expression(type, expression); });
 
-    // If the value is still NULL_VALUE, then the expression could not be resolved at this point,
+    // If the value is std::nullopt, then the expression could not be resolved at this point,
     // e.g. because it is not an arithmetic operator.
-    if (!variant_is_null(value) &&
-        _replace_expression_in_parents(node, node->output_column_references()[column_id], value)) {
+    if (value != std::nullopt &&
+        _replace_expression_in_parents(node, node->output_column_references()[column_id], *value)) {
       // If we successfully replaced the occurrences of the expression in the parent tree,
       // we can remove the column here.
       _remove_column_from_projection(projection_node, column_id);
@@ -65,7 +66,7 @@ bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_p
       continue;
     }
 
-    auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(parent);
+    auto predicate_node = std::static_pointer_cast<PredicateNode>(parent);
 
     // We look for a PredicateNode which has an LQPColumnReference as value,
     // referring to the column which contains the Expression we resolved before.
@@ -113,51 +114,26 @@ std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
 }
 
 template <typename T>
-AllTypeVariant ConstantCalculationRule::_evaluate_expression(boost::hana::basic_type<T> type,
+std::optional<AllTypeVariant> ConstantCalculationRule::_calculate_expression(boost::hana::basic_type<T> type,
                                                           const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
-    return AllTypeVariant(boost::get<T>(expression->value()));
+    return expression->value();
   }
 
   if (!expression->is_arithmetic_operator()) {
-    return NULL_VALUE;
+    return std::nullopt;
   }
 
   const auto& arithmetic_operator_function = arithmetic_operator_function_from_expression<T>(expression->type());
 
-  auto value = AllTypeVariant{};
+  const auto& left_expr = _calculate_expression(type, expression->left_child());
+  const auto& right_expr = _calculate_expression(type, expression->right_child());
 
-  const auto& left_child = expression->left_child();
-  const auto& right_child = expression->right_child();
-  const auto left_is_literal = left_child->type() == ExpressionType::Literal;
-  const auto right_is_literal = right_child->type() == ExpressionType::Literal;
-
-  if ((left_is_literal && variant_is_null(left_child->value())) ||
-      (right_is_literal && variant_is_null(right_child->value()))) {
-    // one of the operands is a literal null - early out.
-    value = NULL_VALUE;
-
-  } else if (left_is_literal && right_is_literal) {
-    value = AllTypeVariant(
-        arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_child->value())));
-
-  } else if (right_is_literal) {
-    auto left_value = _evaluate_expression(type, left_child);
-    value =
-        AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right_child->value())));
-
-  } else if (left_is_literal) {
-    auto right_value = _evaluate_expression(type, right_child);
-    value =
-        AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_child->value()), boost::get<T>(right_value)));
-
-  } else {
-    auto left_value = _evaluate_expression(type, left_child);
-    auto right_value = _evaluate_expression(type, right_child);
-    value = AllTypeVariant(arithmetic_operator_function(boost::get<T>(left_value), boost::get<T>(right_value)));
+  if (variant_is_null(*left_expr) || variant_is_null(*right_expr)) {
+    return NULL_VALUE;
   }
 
-  return value;
+  return AllTypeVariant(arithmetic_operator_function(boost::get<T>(*left_expr), boost::get<T>(*right_expr)));
 }
 
 }  // namespace opossum

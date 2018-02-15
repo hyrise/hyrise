@@ -32,7 +32,7 @@ class ConstantCalculationRule : public AbstractRule {
   std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 
   template <typename T>
-  AllTypeVariant _evaluate_expression(boost::hana::basic_type<T> type,
+  std::optional<AllTypeVariant> _calculate_expression(boost::hana::basic_type<T> type,
                                       const std::shared_ptr<LQPExpression>& expression) const;
 };
 
