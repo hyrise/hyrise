@@ -41,7 +41,12 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
 
     auto value = std::optional<AllTypeVariant>{};
-    resolve_data_type(*expression_type, [&](auto type) { value = _calculate_expression(type, expression); });
+
+    if (*expression_type == DataType::Null) {
+      value = NULL_VALUE;
+    } else {
+      resolve_data_type(*expression_type, [&](auto type) { value = _calculate_expression(type, expression); });
+    }
 
     // If the value is std::nullopt, then the expression could not be resolved at this point,
     // e.g. because it is not an arithmetic operator.
