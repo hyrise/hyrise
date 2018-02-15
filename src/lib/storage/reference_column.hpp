@@ -16,13 +16,15 @@
 
 namespace opossum {
 
+enum class ReferenceColumnType { SingleChunk, MultiChunk };
+
 // ReferenceColumn is a specific column type that stores all its values as position list of a referenced column
 class ReferenceColumn : public BaseColumn {
  public:
   // creates a reference column
   // the parameters specify the positions and the referenced column
   ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const ColumnID referenced_column_id,
-                  const std::shared_ptr<const PosList> pos);
+                  const std::shared_ptr<const PosList> pos, ReferenceColumnType type = ReferenceColumnType::MultiChunk);
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
@@ -76,6 +78,8 @@ class ReferenceColumn : public BaseColumn {
 
   ColumnID referenced_column_id() const;
 
+  ReferenceColumnType type() const;
+
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
@@ -124,6 +128,8 @@ class ReferenceColumn : public BaseColumn {
 
   // The position list can be shared amongst multiple columns
   const std::shared_ptr<const PosList> _pos_list;
+
+  const ReferenceColumnType _type;
 };
 
 }  // namespace opossum

@@ -4,9 +4,12 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <type_traits>
 
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
+#include "resolve_type.hpp"
+#include "storage/create_iterable_from_column.hpp"
 
 namespace opossum {
 
@@ -20,12 +23,31 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
-    const auto begin_it = _column.pos_list()->begin();
-    const auto end_it = _column.pos_list()->end();
+    const auto references_single_chunk = (_column.type() == ReferenceColumnType::SingleChunk);
+    if (references_single_chunk) {
+      const auto chunk_id = _column.pos_list()->front().chunk_id;
+      const auto chunk_offsets_list = to_chunk_offsets_list(*_column.pos_list());
 
-    auto begin = Iterator{table, column_id, begin_it, begin_it};
-    auto end = Iterator{table, column_id, begin_it, end_it};
-    functor(begin, end);
+      const auto base_column = table->get_chunk(chunk_id)->get_column(column_id);
+      resolve_column_type<T>(*base_column, [&](auto& column) {
+        using ColumnTypeT = std::decay_t<decltype(column)>;
+        constexpr auto is_reference_column = std::is_same_v<ColumnTypeT, ReferenceColumn>;
+
+        if constexpr (!is_reference_column) {
+          auto iterable = create_iterable_from_column<T>(column);
+          iterable.with_iterators(&chunk_offsets_list, [&](auto it, auto end) { functor(it, end); });
+        } else {
+          Fail("Reference column must not reference another reference column.");
+        }
+      });
+    } else {  // references multiple chunks
+      const auto begin_it = _column.pos_list()->begin();
+      const auto end_it = _column.pos_list()->end();
+
+      auto begin = Iterator::create_begin(table, column_id, begin_it, begin_it);
+      auto end = Iterator::create_end(end_it);
+      functor(begin, end);
+    }
   }
 
  private:
@@ -35,6 +57,15 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
   class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
+
+   public:
+    static Iterator create_begin(const std::shared_ptr<const Table> table, const ColumnID column_id,
+                                 const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it) {
+      return Iterator{table, column_id, begin_pos_list_it, pos_list_it};
+    }
+    static Iterator create_end(const PosListIterator& pos_list_it) {
+      return Iterator{{}, {}, {}, pos_list_it};
+    }
 
    public:
     explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
@@ -52,8 +83,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     ColumnIteratorValue<T> dereference() const {
       if (*_pos_list_it == NULL_ROW_ID) return ColumnIteratorValue<T>{T{}, true, 0u};
 
-      const auto chunk_id = _pos_list_it->chunk_id;
-      const auto& chunk_offset = _pos_list_it->chunk_offset;
+      const auto& [chunk_id, chunk_offset] = *_pos_list_it;
 
       auto value_column_it = _value_columns.find(chunk_id);
       if (value_column_it != _value_columns.end()) {
@@ -79,7 +109,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       }
 
       /**
-       * This is just a temporary solution to supporting encoded column type.
+       * This is just a temporary solution for supporting encoded column types.
        * It’s very slow and is going to be replaced very soon!
        */
       return _value_from_any_column(*column, chunk_offset);

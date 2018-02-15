@@ -1,5 +1,6 @@
 #include "reference_column.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -11,14 +12,18 @@
 namespace opossum {
 
 ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_table,
-                                 const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos)
-    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
-#if IS_DEBUG
-  auto referenced_column = _referenced_table->get_chunk(ChunkID{0})->get_column(referenced_column_id);
-  auto reference_col = std::dynamic_pointer_cast<const ReferenceColumn>(referenced_column);
+                                 const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos,
+                                 ReferenceColumnType type)
+    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos), _type(type) {
+  DebugAssert(_referenced_table->get_type() == TableType::Data, "Referenced table must be a data table.");
+  DebugAssert([&]() {
+    if (_type == ReferenceColumnType::MultiChunk)
+      return true;
 
-  DebugAssert(!(reference_col), "referenced_column must not be a ReferenceColumn");
-#endif
+    const auto chunk_id = _pos_list->front().chunk_id;
+    return std::all_of(_pos_list->cbegin(), _pos_list->cend(),
+                       [chunk_id](const auto& row_id) { return row_id.chunk_id == chunk_id; });
+  }(), "Position list must only contain positions of one chunk if type is SingleChunk.");
 }
 
 const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset) const {
@@ -38,6 +43,7 @@ void ReferenceColumn::append(const AllTypeVariant&) { Fail("ReferenceColumn is i
 const std::shared_ptr<const PosList> ReferenceColumn::pos_list() const { return _pos_list; }
 const std::shared_ptr<const Table> ReferenceColumn::referenced_table() const { return _referenced_table; }
 ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_column_id; }
+ReferenceColumnType ReferenceColumn::type() const { return _type; }
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 

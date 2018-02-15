@@ -33,4 +33,9 @@ using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
  */
 ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list, bool skip_null_row_ids = true);
 
+/**
+ * Note: Assumes that the position list references only a single chunk
+ */
+ChunkOffsetsList to_chunk_offsets_list(const PosList& pos_list, bool skip_null_row_ids = true);
+
 }  // namespace opossum
