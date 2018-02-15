@@ -102,8 +102,7 @@ class Chunk : private Noncopyable {
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
   Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter);
-  Chunk(const PolymorphicAllocator<Chunk>& alloc, const UseMvcc mvcc_mode,
-        const ChunkUseAccessCounter counter_mode);
+  Chunk(const PolymorphicAllocator<Chunk>& alloc, const UseMvcc mvcc_mode, const ChunkUseAccessCounter counter_mode);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

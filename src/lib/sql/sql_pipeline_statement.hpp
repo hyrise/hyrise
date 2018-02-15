@@ -5,12 +5,11 @@
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "optimizer/optimizer.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
-
-struct SQLPipelineControlBlock;
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
@@ -30,14 +29,16 @@ struct SQLPipelineControlBlock;
 class SQLPipelineStatement : public Noncopyable {
  public:
   // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, UseMvcc use_mvcc = UseMvcc::Yes);
-  SQLPipelineStatement(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<const SQLPipelineControlBlock>& control_block);
+  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes,
+                                const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
+                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
-  SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                       const std::shared_ptr<const SQLPipelineControlBlock>& control_block);
+  SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql, const UseMvcc use_mvcc,
+                       const std::shared_ptr<TransactionContext>& transaction_context,
+                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
@@ -69,11 +70,15 @@ class SQLPipelineStatement : public Noncopyable {
 
  private:
   const std::string _sql_string;
+  const UseMvcc _use_mvcc;
 
-  std::shared_ptr<const SQLPipelineControlBlock> _control_block;
+  // Perform MVCC commit right after the Statement was executed
+  const bool _auto_commit;
 
-  // Might be the Statement's own transaction context, or the one from the control block
+  // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
+
+  std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;

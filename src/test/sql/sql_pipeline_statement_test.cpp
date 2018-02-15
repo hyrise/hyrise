@@ -15,7 +15,6 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_pipeline_control_block.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
@@ -105,16 +104,14 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreation) {
-  SQLPipelineStatement sql_pipeline{_select_parse_result,
-                                    std::make_shared<SQLPipelineControlBlock>(UseMvcc::Yes, nullptr)};
+  SQLPipelineStatement sql_pipeline{_select_parse_result, UseMvcc::Yes, nullptr};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
-  SQLPipelineStatement sql_pipeline{_select_parse_result,
-                                    std::make_shared<SQLPipelineControlBlock>(UseMvcc::No, nullptr)};
+  SQLPipelineStatement sql_pipeline{_select_parse_result, UseMvcc::No, nullptr};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
@@ -122,17 +119,14 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
-  SQLPipelineStatement sql_pipeline{_select_parse_result,
-                                    std::make_shared<SQLPipelineControlBlock>(UseMvcc::Yes, context)};
+  SQLPipelineStatement sql_pipeline{_select_parse_result, UseMvcc::Yes, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationTooManyStatements) {
-  EXPECT_THROW(SQLPipelineStatement(_multi_statement_parse_result,
-                                    std::make_shared<SQLPipelineControlBlock>(UseMvcc::No, nullptr)),
-               std::exception);
+  EXPECT_THROW(SQLPipelineStatement(_multi_statement_parse_result, UseMvcc::No, nullptr), std::exception);
 }
 
 TEST_F(SQLPipelineStatementTest, GetParsedSQL) {

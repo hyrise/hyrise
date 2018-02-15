@@ -32,8 +32,10 @@ namespace opossum {
  */
 class SQLPipeline : public Noncopyable {
  public:
-  explicit SQLPipeline(const std::string& sql, UseMvcc use_mvcc = UseMvcc::Yes);
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
+  explicit SQLPipeline(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes,
+                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+              const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
@@ -74,14 +76,14 @@ class SQLPipeline : public Noncopyable {
   // Returns the entire execution time
   std::chrono::microseconds execution_time_microseconds();
 
-  void set_optimizer(const std::shared_ptr<Optimizer>& optimizer);
-
  private:
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, UseMvcc use_mvcc);
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
+              const std::shared_ptr<Optimizer>& optimizer);
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
-  std::shared_ptr<SQLPipelineControlBlock> _control_block;
+  std::shared_ptr<TransactionContext> _transaction_context;
+  std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;

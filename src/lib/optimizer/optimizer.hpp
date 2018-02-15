@@ -20,9 +20,7 @@ class AbstractLQPNode;
  */
 class Optimizer final {
  public:
-  static const std::shared_ptr<Optimizer>& get_default_optimizer();
-
-  static Optimizer create_default_optimizer();
+  static std::shared_ptr<Optimizer> create_default_optimizer();
 
   explicit Optimizer(const uint32_t max_num_iterations);
 

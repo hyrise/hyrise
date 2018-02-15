@@ -2,25 +2,24 @@
 
 #include "SQLParser.h"
 #include "sql_pipeline.hpp"
-#include "sql_pipeline_control_block.hpp"
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, UseMvcc use_mvcc) : SQLPipeline(sql, nullptr, use_mvcc) {}
+SQLPipeline::SQLPipeline(const std::string& sql, const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer)
+    : SQLPipeline(sql, nullptr, use_mvcc, optimizer) {}
 
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context)
-    : SQLPipeline(sql, std::move(transaction_context), UseMvcc::Yes) {
-  DebugAssert(_sql_pipeline_statements.front()->transaction_context() != nullptr,
-              "Cannot pass nullptr as explicit transaction context.");
-  DebugAssert(_sql_pipeline_statements.front()->transaction_context()->phase() == TransactionPhase::Active,
+SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context,
+                         const std::shared_ptr<Optimizer>& optimizer)
+    : SQLPipeline(sql, transaction_context, UseMvcc::Yes, optimizer) {
+  DebugAssert(transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
+  DebugAssert(transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
 }
 
 // Private constructor
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                         UseMvcc use_mvcc) {
-  _control_block = std::make_shared<SQLPipelineControlBlock>(use_mvcc, transaction_context);
-
+                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer)
+    : _transaction_context(transaction_context), _optimizer(optimizer) {
   hsql::SQLParserResult parse_result;
   try {
     hsql::SQLParser::parse(sql, &parse_result);
@@ -64,7 +63,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
       parsed_statement->setIsValid(true);
 
-      auto pipeline_statement = std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _control_block);
+      auto pipeline_statement =
+          std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), use_mvcc, transaction_context, optimizer);
       _sql_pipeline_statements.push_back(std::move(pipeline_statement));
     } catch (const std::exception&) {
       // Free all statements owned by us and pass on the error
@@ -226,9 +226,7 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   return _result_table;
 }
 
-const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const {
-  return _control_block->transaction_context;
-}
+const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const { return _transaction_context; }
 
 const std::shared_ptr<SQLPipelineStatement>& SQLPipeline::failed_pipeline_statement() const {
   return _failed_pipeline_statement;
@@ -265,7 +263,5 @@ std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
 
   return _execution_time_microseconds;
 }
-
-void SQLPipeline::set_optimizer(const std::shared_ptr<Optimizer>& optimizer) { _control_block->optimizer = optimizer; }
 
 }  // namespace opossum
