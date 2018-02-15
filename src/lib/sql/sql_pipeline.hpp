@@ -33,6 +33,9 @@ class SQLPipeline : public Noncopyable {
   explicit SQLPipeline(const std::string& sql, bool use_mvcc = true);
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
 
+  // Returns the SQL string for each statement.
+  const std::vector<std::string>& get_sql_strings();
+
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
 
@@ -79,6 +82,7 @@ class SQLPipeline : public Noncopyable {
   size_t _num_statements;
 
   // Execution results
+  std::vector<std::string> _sql_strings;
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
