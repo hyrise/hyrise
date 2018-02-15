@@ -112,7 +112,8 @@ node {
         }
       }, memcheck: {
         stage("valgrind-memcheck") {
-          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          sh "mkdir ./clang-release-memcheck"
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
         }
       }
 
