@@ -60,6 +60,8 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
     opossum::CurrentScheduler::set(
         std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   std::unique_ptr<SQLiteWrapper> _sqlite;
