@@ -16,12 +16,7 @@
 
 namespace opossum {
 
-class ChunkCompressionTaskTest : public BaseTest {
- protected:
-  void SetUp() override {}
-
- private:
-};
+class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   auto table = load_table("src/test/tables/compression_input.tbl", 12u);
