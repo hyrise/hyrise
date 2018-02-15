@@ -217,7 +217,7 @@ TableType Table::get_type() const {
 }
 
 void Table::set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
-  _partition_schema = partition_schema;
+  _partition_schema = std::move(partition_schema);
   _chunks.clear();
 }
 

@@ -37,12 +37,13 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * |---------------|
    * |     Chunks¹   |
    * |---------------|
-   * |  Part. Header |
+   * |  Part. Header²|
    * |---------------|
-   * |   Partitions  |
+   * |   Partitions² |
    * -----------------
    *
    * ¹ Zero or more chunks
+   * ² Partition header is optional. If present, there is at least one partition.
    */
   std::shared_ptr<const Table> _on_execute() final;
 
@@ -92,7 +93,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Partition schema      | uint8_t                               |   1
-   * Partition count       | PartitionID                           |   4
+   * Partition count       | PartitionID                           |   2
    * Partition specific    | ?                                     |   ?
    * 
    * The partition specific information consists of the following:
@@ -103,24 +104,24 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * 
    * RangePartitioningSchema:
    * 
-   * Description           | Type                                  | Size in bytes
+   * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * ColumnID              | ColumnID                              |   4
-   * DataType of bounds    | std::string array                     |   Length of DataType string representation
-   * Bounds                | Typed array                           |   Partition count - 1 * x
+   * Column to partition by | ColumnID                              |   4
+   * DataType of bounds     | std::string array                     |   Length of DataType string representation
+   * Bounds                 | Typed array                           |   (Partition count - 1) * x
    * 
    * 
    * HashPartitioningSchema:
    * 
-   * Description           | Type                                  | Size in bytes
+   * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * ColumnID              | ColumnID                              |   4
+   * Column to partition by | ColumnID                              |   4
    *
    */
   static std::shared_ptr<AbstractPartitionSchema> _read_partitioning_header(std::ifstream& file);
 
   // Reads the partition info from the given file and adds the corresponding chunks to it
-  static void _import_partition(std::ifstream& file, std::shared_ptr<Table>& table, PartitionID partition_id,
+  static void _import_partition(std::ifstream& file, const std::shared_ptr<AbstractPartitionSchema>& partition_schema, const PartitionID partition_id,
                                 std::map<ChunkID, PartitionID>& chunk_to_partition);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.

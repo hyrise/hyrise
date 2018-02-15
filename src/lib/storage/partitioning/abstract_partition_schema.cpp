@@ -15,7 +15,7 @@ void AbstractPartitionSchema::add_new_chunk(std::shared_ptr<Chunk> chunk, Partit
   _partitions[partition_id]->add_new_chunk(chunk);
 }
 
-void AbstractPartitionSchema::append(std::vector<AllTypeVariant> values, PartitionID partition_id) {
+void AbstractPartitionSchema::append(const std::vector<AllTypeVariant>& values, PartitionID partition_id) {
   DebugAssert(partition_id < _partitions.size(), "Partition ID exceeds number of partitions");
   _partitions[partition_id]->append(values);
 }
@@ -31,7 +31,7 @@ std::shared_ptr<const Chunk> AbstractPartitionSchema::last_chunk(PartitionID par
 }
 
 std::vector<ChunkID> AbstractPartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,
-                                                                       AllTypeVariant value) const {
+                                                                       const AllTypeVariant& value) const {
   return std::vector<ChunkID>();
 }
 }  // namespace opossum

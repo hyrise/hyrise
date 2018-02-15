@@ -29,11 +29,11 @@ class AbstractPartitionSchema {
   PartitionID partition_count() const;
 
   void clear();
-  virtual void append(std::vector<AllTypeVariant> values) = 0;
-  void append(std::vector<AllTypeVariant> values, PartitionID partition_id);
+  virtual void append(const std::vector<AllTypeVariant>& values) = 0;
+  void append(const std::vector<AllTypeVariant>& values, PartitionID partition_id);
 
-  virtual PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const = 0;
-  virtual std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, AllTypeVariant value) const;
+  virtual PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const = 0;
+  virtual std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, const AllTypeVariant& value) const;
 
   virtual void add_new_chunk(std::shared_ptr<Chunk> chunk, PartitionID partition_id);
   virtual bool is_partitioned() const { return true; }

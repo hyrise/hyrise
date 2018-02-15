@@ -92,6 +92,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
   ChunkID chunk_count;
   std::tie(table, chunk_count) = _read_header(file);
   std::vector<std::shared_ptr<Chunk>> chunks;
+  chunks.reserve(chunk_count);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     chunks.emplace_back(_import_chunk(file, table));
   }
@@ -103,7 +104,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
 
     std::map<ChunkID, PartitionID> chunk_to_partition;
     for (PartitionID partition_id{0}; partition_id < partition_schema->partition_count(); ++partition_id) {
-      _import_partition(file, table, partition_id, chunk_to_partition);
+      _import_partition(file, partition_schema, partition_id, chunk_to_partition);
     }
 
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -176,9 +177,9 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
   }
 }
 
-void ImportBinary::_import_partition(std::ifstream& file, std::shared_ptr<Table>& table, PartitionID partition_id,
+void ImportBinary::_import_partition(std::ifstream& file, const std::shared_ptr<AbstractPartitionSchema>& partition_schema, const PartitionID partition_id,
                                      std::map<ChunkID, PartitionID>& chunk_to_partition) {
-  const auto partition = table->get_partition_schema()->get_partition(partition_id);
+  const auto partition = partition_schema->get_partition(partition_id);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto chunk_ids = _read_values<ChunkID>(file, chunk_count);
   for (const auto chunk_id : chunk_ids) {

@@ -18,12 +18,9 @@ class RoundRobinPartitionSchema : public AbstractPartitionSchema {
   std::string name() const override;
   PartitionSchemaType get_type() const override;
 
-  void append(std::vector<AllTypeVariant> values) override;
+  void append(const std::vector<AllTypeVariant>& values) override;
 
-  RoundRobinPartitionSchema(RoundRobinPartitionSchema&&) = default;
-  RoundRobinPartitionSchema& operator=(RoundRobinPartitionSchema&&) = default;
-
-  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
+  PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
   PartitionID get_next_partition() const;
 
  protected:

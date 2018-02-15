@@ -17,8 +17,6 @@ class Partitioning : public AbstractReadWriteOperator {
   explicit Partitioning(const std::string& table_to_partition_name,
                         std::shared_ptr<AbstractPartitionSchema> target_partition_schema);
 
-  ~Partitioning();
-
   const std::string name() const override;
 
  protected:

@@ -16,24 +16,24 @@ std::string HashPartitionSchema::name() const { return "HashPartition"; }
 
 PartitionSchemaType HashPartitionSchema::get_type() const { return PartitionSchemaType::Hash; }
 
-void HashPartitionSchema::append(std::vector<AllTypeVariant> values) {
+void HashPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
   AbstractPartitionSchema::append(values, get_matching_partition_for(values));
 }
 
-PartitionID HashPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) const {
+PartitionID HashPartitionSchema::get_matching_partition_for(const std::vector<AllTypeVariant>& values) const {
   DebugAssert(values.size() > static_cast<size_t>(_column_id), "Can not determine partition, too few values given");
-  auto value = values[_column_id];
+  const auto& value = values[_column_id];
   return get_matching_partition_for(value);
 }
 
-PartitionID HashPartitionSchema::get_matching_partition_for(AllTypeVariant value) const {
-  const HashValue hash = _hash_function(value);
-  PartitionID matching_partition = static_cast<PartitionID>(hash % _number_of_partitions);
+PartitionID HashPartitionSchema::get_matching_partition_for(const AllTypeVariant& value) const {
+  const auto hash = _hash_function(value);
+  PartitionID matching_partition{hash % _number_of_partitions};
   return matching_partition;
 }
 
 std::vector<ChunkID> HashPartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,
-                                                                   AllTypeVariant value) const {
+                                                                   const AllTypeVariant& value) const {
   PartitionID matching_partition = get_matching_partition_for(value);
   std::vector<ChunkID> chunk_ids_to_exclude;
 

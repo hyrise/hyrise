@@ -20,14 +20,11 @@ class HashPartitionSchema : public AbstractPartitionSchema {
   std::string name() const override;
   PartitionSchemaType get_type() const override;
 
-  void append(std::vector<AllTypeVariant> values) override;
+  void append(const std::vector<AllTypeVariant>& values) override;
 
-  HashPartitionSchema(HashPartitionSchema&&) = default;
-  HashPartitionSchema& operator=(HashPartitionSchema&&) = default;
-
-  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) const override;
-  PartitionID get_matching_partition_for(AllTypeVariant value) const;
-  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, AllTypeVariant value) const override;
+  PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
+  PartitionID get_matching_partition_for(const AllTypeVariant& value) const;
+  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, const AllTypeVariant& value) const override;
 
   ColumnID get_column_id() const;
 

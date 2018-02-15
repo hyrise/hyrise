@@ -193,7 +193,8 @@ void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>
       resolve_data_type(range_schema->get_bound_type(), [&](auto type) {
         using VectorDataType = typename decltype(type)::type;
         std::vector<VectorDataType> typed_bounds;
-        for (auto bound : range_schema->get_bounds()) {
+        typed_bounds.reserve(range_schema->get_bounds().size());
+        for (const auto& bound : range_schema->get_bounds()) {
           typed_bounds.emplace_back(get<VectorDataType>(bound));
         }
         _export_values(ofstream, typed_bounds);
@@ -215,6 +216,7 @@ void ExportBinary::_write_partition(const std::shared_ptr<const Table>& table, s
   // Iterating over all chunks and get corresponding id
   const auto chunks = partition->get_chunks();
   std::vector<ChunkID> chunk_ids;
+  chunk_ids.reserve(chunks.size());
   for (const auto chunk : chunks) {
     chunk_ids.emplace_back(chunk->id());
   }

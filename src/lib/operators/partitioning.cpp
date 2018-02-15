@@ -12,8 +12,6 @@ Partitioning::Partitioning(const std::string& table_to_partition_name,
       _table_to_partition_name{table_to_partition_name},
       _target_partition_schema{target_partition_schema} {}
 
-Partitioning::~Partitioning() = default;
-
 const std::string Partitioning::name() const { return "Partitioning"; }
 
 std::shared_ptr<const Table> Partitioning::_on_execute(std::shared_ptr<TransactionContext> context) {
