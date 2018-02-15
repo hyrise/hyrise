@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
@@ -10,7 +11,7 @@
 
 namespace opossum {
 
-class PhysicalQueryPlanTest : public ::testing::Test {};
+class PhysicalQueryPlanTest : public BaseTest {};
 
 TEST_F(PhysicalQueryPlanTest, Print) {
   StorageManager::get().add_table("int_int_int_100", load_table("src/test/tables/sqlite/int_int_int_100.tbl", 20));
