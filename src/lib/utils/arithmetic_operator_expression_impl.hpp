@@ -49,14 +49,12 @@ inline std::function<std::string(const std::string&, const std::string&)> functi
  *
  */
 template <>
-inline std::function<float(const float&, const float&)> function_for_arithmetic_expression(
-    ExpressionType type) {
+inline std::function<float(const float&, const float&)> function_for_arithmetic_expression(ExpressionType type) {
   return _get_base_operator_function<float>(type);
 }
 
 template <>
-inline std::function<double(const double&, const double&)> function_for_arithmetic_expression(
-    ExpressionType type) {
+inline std::function<double(const double&, const double&)> function_for_arithmetic_expression(ExpressionType type) {
   return _get_base_operator_function<double>(type);
 }
 

@@ -33,7 +33,7 @@ class ConstantCalculationRule : public AbstractRule {
 
   template <typename T>
   std::optional<AllTypeVariant> _calculate_expression(boost::hana::basic_type<T> type,
-                                      const std::shared_ptr<LQPExpression>& expression) const;
+                                                      const std::shared_ptr<LQPExpression>& expression) const;
 };
 
 }  // namespace opossum

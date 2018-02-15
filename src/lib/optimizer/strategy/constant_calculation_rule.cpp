@@ -27,7 +27,6 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   const auto column_expressions = projection_node->column_expressions();
   for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); column_id++) {
-
     const auto& expression = column_expressions[column_id];
     if (!expression->is_arithmetic_operator()) {
       continue;
@@ -62,8 +61,8 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 }
 
 bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
-                                                          const LQPColumnReference& expression_column,
-                                                          const AllTypeVariant& value) {
+                                                             const LQPColumnReference& expression_column,
+                                                             const AllTypeVariant& value) {
   auto parent_tree_changed = false;
   for (auto parent : node->parents()) {
     if (parent->type() != LQPNodeType::Predicate) {
@@ -90,7 +89,7 @@ bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_p
 }
 
 void ConstantCalculationRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
-                                                          ColumnID column_id) {
+                                                             ColumnID column_id) {
   auto column_expressions = node->column_expressions();
   column_expressions.erase(column_expressions.begin() + column_id);
 
@@ -119,8 +118,8 @@ std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
 }
 
 template <typename T>
-std::optional<AllTypeVariant> ConstantCalculationRule::_calculate_expression(boost::hana::basic_type<T> type,
-                                                          const std::shared_ptr<LQPExpression>& expression) const {
+std::optional<AllTypeVariant> ConstantCalculationRule::_calculate_expression(
+    boost::hana::basic_type<T> type, const std::shared_ptr<LQPExpression>& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return expression->value();
   }
