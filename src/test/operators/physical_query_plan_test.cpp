@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
