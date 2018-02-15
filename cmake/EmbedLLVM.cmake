@@ -18,7 +18,7 @@ function(EMBED_LLVM OUTPUT_FILE)
     set(FLAGS -std=c++17 -O3 -fwhole-program-vtables -flto ${CMAKE_CXX_FLAGS})
     add_custom_command(
         OUTPUT ${LLVM_BUNDLE_FILE}
-        COMMAND ${CMAKE_CXX_COMPILER} ${FLAGS} -DSOURCE_PATH_SIZE -I${CMAKE_CURRENT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/third_party/sql-parser/src -emit-llvm -o ${LLVM_BUNDLE_FILE} ${CPP_BUNDLE_FILE}
+        COMMAND ${CMAKE_CXX_COMPILER} ${FLAGS} -c -emit-llvm -DSOURCE_PATH_SIZE -I${CMAKE_CURRENT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/third_party/sql-parser/src -o ${LLVM_BUNDLE_FILE} ${CPP_BUNDLE_FILE}
         DEPENDS ${CPP_BUNDLE_FILE} ${INPUT_FILES})
     set_source_files_properties(${LLVM_BUNDLE_FILE} PROPERTIES GENERATED TRUE)
 
