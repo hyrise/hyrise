@@ -18,7 +18,7 @@
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
-  return opossum::SQLPipeline{query, false}.get_unoptimized_logical_plans().at(0);
+  return opossum::SQLPipeline{query, opossum::UseMvcc::No}.get_unoptimized_logical_plans().at(0);
 }
 }  // namespace
 
