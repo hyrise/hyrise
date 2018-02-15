@@ -8,6 +8,8 @@
 
 #include "column_materializer_numa.hpp"
 #include "resolve_type.hpp"
+#include "utils/numa_memory_resource.hpp"
+#include "storage/numa_placement_manager.hpp"
 
 namespace opossum {
 
@@ -16,8 +18,8 @@ namespace opossum {
 */
 template <typename T>
 struct RadixClusterOutput {
-  std::unique_ptr<MaterializedChunkList<T>>> clusters_left;
-  std::unique_ptr<MaterializedChunkList<T>>> clusters_right;
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> clusters_left;
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> clusters_right;
   std::unique_ptr<PosList> null_rows_left;
   std::unique_ptr<PosList> null_rows_right;
 };
@@ -88,18 +90,19 @@ class RadixClusterSort {
   };
 
   /**
-  * The TableInformation structure is used to gather statistics regarding the value distribution of a table
-  *  and its chunks in order to be able to appropriately reserve space for the clustering output.
+  * The NUMAPartitionInformation structure is used to gather statistics regarding the value distribution of a single NUMA Partition
+  *  and its chunks in order to be able to appropriately reserve space for the radix clustering output.
   **/
-  struct TableInformation {
-    TableInformation(size_t chunk_count, size_t cluster_count) {
-      cluster_histogram.resize(cluster_count);
+  struct NUMAPartitionInformation {
+    NUMAPartitionInformation(size_t chunk_count, size_t cluster_count) {
+
+      cluster_histogram.reserve(cluster_count);
       chunk_information.reserve(chunk_count);
       for (size_t i = 0; i < chunk_count; ++i) {
         chunk_information.push_back(ChunkInformation(cluster_count));
       }
     }
-    // Used to count the number of entries for each cluster from the whole table
+
     std::vector<size_t> cluster_histogram;
     std::vector<ChunkInformation> chunk_information;
   };
@@ -173,18 +176,19 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  std::unique_ptr<MaterializedNUMAPartition<Y>> _cluster_public(std::unique_ptr<MaterializedNUMAPartition<T>>& input_chunks,
+  std::unique_ptr<MaterializedNUMAPartition<T>> _cluster(std::unique_ptr<MaterializedNUMAPartition<T>>& input_chunks,
                                                       std::function<size_t(const T&)> clusterer,
                                                       NodeID node_id) {
 
+    auto num_chunks = input_chunks->_chunk_columns.size();
     auto output_table = std::make_unique<MaterializedNUMAPartition<T>>(node_id, _cluster_count);
-    TableInformation table_information(input_chunks->size(), _cluster_count);
+    NUMAPartitionInformation numa_part_info(num_chunks, _cluster_count, input_chunks->_node_id);
 
     // Count for every chunk the number of entries for each cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto& chunk_information = table_information.chunk_information[chunk_number];
-      auto input_chunk = (*input_chunks)[chunk_number];
+    for (size_t chunk_number = 0; chunk_number < num_chunks; ++chunk_number) {
+      auto& chunk_information = numa_part_info.chunk_information[chunk_number];
+      auto input_chunk = input_chunks->_chunk_columns[chunk_number];
 
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
       auto job = std::make_shared<JobTask>([&input_chunk, &clusterer, &chunk_information] {
@@ -201,30 +205,32 @@ class RadixClusterSort {
     CurrentScheduler::wait_for_tasks(histogram_jobs);
 
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
-    for (auto& chunk_information : table_information.chunk_information) {
+    for (auto& chunk_information : numa_part_info.chunk_information) {
       for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-        chunk_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
-        table_information.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
+        chunk_information.insert_position[cluster_id] = numa_part_info.cluster_histogram[cluster_id];
+        numa_part_info.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
       }
     }
 
     // Reserve the appropriate output space for the clusters
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-      auto cluster_size = table_information.cluster_histogram[cluster_id];
-      (*output_table)._chunk_columns[cluster_id] = std::make_shared<MaterializedColumn<T>>(cluster_size);
+      auto cluster_size = numa_part_info.cluster_histogram[cluster_id];
+      // TODO(florian): these vectors need to be located on the correct numa_node
+      output_table->chunk_columns[cluster_id] = std::make_shared<MaterializedColumn<T>>(cluster_size);
     }
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
+    for (size_t chunk_number = 0; chunk_number < num_chunks; ++chunk_number) {
       auto job =
-          std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
-            auto& chunk_information = table_information.chunk_information[chunk_number];
-            for (auto& entry : *(*input_chunks)[chunk_number]) {
+          std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &numa_part_info, &clusterer] {
+            auto& chunk_information = numa_part_info.chunk_information[chunk_number];
+            for (auto& entry : input_chunks->_chunk_columns[chunk_number]) {
               auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = *(*output_table)[cluster_id];
+              auto& output_cluster = output_table->_chunk_columns[cluster_id];
               auto& insert_position = chunk_information.insert_position[cluster_id];
               output_cluster[insert_position] = entry;
+              //TODO(florian): THIS is actually thread unsafe and evil and should be destroyed with fire
               ++insert_position;
             }
           });
@@ -246,11 +252,48 @@ class RadixClusterSort {
   * - hand select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa_public(std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
-    // TODO: do this for all NUMA partitions
-    //      make them all run on their respective nodes using jobs so we can assume to be on a node from here on
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa(std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
+    // TODO(florian): do this for all NUMA partitions
+    // make them all run on their respective nodes using jobs so we can assume to be on a single node from here on
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster_public(input_chunks[0], [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster(input_chunks[0], [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+  }
+
+
+
+  std::unique_ptr<MaterializedNUMAPartitionList<T> _repartition_clusters(std::unique_ptr<MaterializedNUMAPartitionList<T>>& private_partitions){
+    // TODO(florian): implement this, like this
+    // create a new partition list with n partitions, each on a different numa node
+    std::unique_ptr<MaterializedNUMAPartitionList<T>> homogenous_partitions;
+
+    std::vector<size_t> cluster_sizes{_cluster_count, 0};
+
+    for(const auto& partition : (*private_partitions)){
+      DebugAssert(partition.chunk_columns.size() == _cluster_count, "Number of clusters does not match the number of NUMA partitions.");
+      for(size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id){
+        cluster_sizes[cluster_id] += partition.chunk_columns[cluster_id]->size();
+      }
+    }
+
+    for(NodeID numa_node = 0; numa_node < _cluster_count; ++numa_node){
+        homogenous_partitions->emplace_back(numa_node, 1);
+    }
+
+    for(NodeID numa_node = 0; numa_node < _cluster_count; ++numa_node){
+        auto& homogenous_partition = (*homogenous_partitions)[numa_node];
+
+        homogenous_partition._chunk_columns[0]->reserve(cluster_sizes[numa_node]);
+
+        // TODO(florian): make this multi threaded
+        for(const auto& partition : (*private_partitions)){
+          const auto& src = partition.chunk_columns[numa_node];
+
+          // TODO(florian): when everything is parallel then this probably needs to overwrite instead of back-inserting
+          std::copy(src.begin(), src.end(), std::back_inserter(partition));
+        }
+    }
+
+    homogenous_partitions;
   }
 
   /**
@@ -326,6 +369,7 @@ class RadixClusterSort {
   * Sorts all clusters of a materialized table.
   **/
   void _sort_clusters(std::unique_ptr<MaterializedColumnList<T>>& clusters) {
+    //TODO(florian) colocate sorting with the actual cluster
     for (auto cluster : *clusters) {
       std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
     }
@@ -354,8 +398,8 @@ class RadixClusterSort {
       output.clusters_left = _concatenate_chunks(materialized_left_columns);
       output.clusters_right = _concatenate_chunks(materialized_right_columns);
     } else if (_equi_case) {
-      output.clusters_left = _radix_cluster_numa_private(materialized_left_columns);
-      output.clusters_right = _radix_cluster_numa_public(materialized_right_columns);
+      output.clusters_left = _radix_cluster_numa(materialized_left_columns);
+      output.clusters_right = _radix_cluster_numa(materialized_right_columns);
     } else {
       auto result = _range_cluster(materialized_left_columns, materialized_right_columns);
       output.clusters_left = std::move(result.first);
@@ -364,6 +408,10 @@ class RadixClusterSort {
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
     // an more efficient algorithm, if subparts are already sorted [InsertionSort?!])
+
+    // TODO(florian): repartition clusters_left so that each cluster is contiguous on one numa-node
+    output.clusters_left = _repartition_clusters(output.clusters_left);
+    // TODO(florian): ensure that _sort_clusters works per numa-node
     _sort_clusters(output.clusters_left);
     _sort_clusters(output.clusters_right);
 
