@@ -20,8 +20,7 @@ ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list, bool s
 }
 
 ChunkOffsetsList to_chunk_offsets_list(const PosList& pos_list, bool skip_null_row_ids) {
-  auto chunk_offsets_list = ChunkOffsetsList{};
-  chunk_offsets_list.reserve(pos_list.size());
+  auto chunk_offsets_list = ChunkOffsetsList(pos_list.size());
 
   [[maybe_unused]] const auto chunk_id = pos_list.front().chunk_id;
 
@@ -29,7 +28,7 @@ ChunkOffsetsList to_chunk_offsets_list(const PosList& pos_list, bool skip_null_r
     const auto row_id = pos_list[chunk_offset];
     DebugAssert(row_id.chunk_id == chunk_id, "Position list must only reference a single chunk.");
 
-    chunk_offsets_list.push_back({chunk_offset, row_id.chunk_offset});
+    chunk_offsets_list[chunk_offset] = ChunkOffsetMapping{chunk_offset, row_id.chunk_offset};
   }
 
   return chunk_offsets_list;
