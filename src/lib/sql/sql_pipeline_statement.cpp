@@ -40,7 +40,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _optimizer(optimizer),
       _parsed_sql_statement(parsed_sql) {
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
-  DebugAssert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
+  Assert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_transaction_context || _use_mvcc == UseMvcc::Yes,
               "Transaction context without MVCC enabled makes no sense");
 }
