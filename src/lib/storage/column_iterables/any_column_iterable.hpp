@@ -3,8 +3,8 @@
 #include <iterator>
 #include <type_traits>
 
-#include "storage/column_iterables.hpp"
 #include "storage/column_iterables/any_column_iterator.hpp"
+#include "storage/column_iterables.hpp"
 
 namespace opossum {
 
@@ -19,6 +19,7 @@ struct is_any_column_iterable<AnyColumnIterable<IterableT>> : std::true_type {};
 
 template <typename IterableT>
 constexpr auto is_any_column_iterable_v = is_any_column_iterable<IterableT>::value;
+
 
 /**
  * @brief Makes any column iterable return type erased iterators
@@ -69,13 +70,11 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
  */
 template <typename IterableT>
 auto erase_type_from_iterable(const IterableT& iterable) {
-  // clang-format off
-  if constexpr(is_any_column_iterable_v<IterableT>) {
+  if constexpr (is_any_column_iterable_v<IterableT>) {
     return iterable;
   } else {
     return AnyColumnIterable{iterable};
   }
-  // clang-format on
 }
 
 }  // namespace opossum
