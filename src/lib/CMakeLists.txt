@@ -101,6 +101,12 @@ set(
     operators/join_hash.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_nested_loop_outer_resolve.hpp
+    operators/join_nested_loop_outer_resolve_int32.cpp
+    operators/join_nested_loop_outer_resolve_int64.cpp
+    operators/join_nested_loop_outer_resolve_float.cpp
+    operators/join_nested_loop_outer_resolve_double.cpp
+    operators/join_nested_loop_outer_resolve_string.cpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/limit.cpp

@@ -23,6 +23,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
+ private:
   void _perform_join();
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
@@ -34,6 +35,22 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _write_output_chunks(const std::shared_ptr<Chunk>& output_chunk, const std::shared_ptr<const Table> input_table,
                             std::shared_ptr<PosList> pos_list);
+
+  struct OuterResolve {
+    OuterResolve(JoinNestedLoop& join_nested_loop, std::vector<bool>& left_matches, ChunkID chunk_id_left, ChunkID chunk_id_right, DataType right_data_type, const BaseColumn& column_right, PredicateCondition predicate_condition):
+    join_nested_loop(join_nested_loop), left_matches(left_matches), chunk_id_left(chunk_id_left), chunk_id_right(chunk_id_right), right_data_type(right_data_type), column_right(column_right), predicate_condition(predicate_condition) {}
+
+    JoinNestedLoop& join_nested_loop;
+    std::vector<bool>& left_matches;
+    ChunkID chunk_id_left;
+    ChunkID chunk_id_right;
+    DataType right_data_type;
+    const BaseColumn& column_right;
+    PredicateCondition predicate_condition;
+
+    template<typename ColumnDataType, typename ColumnType>
+    void operator()(ColumnDataType left_type, ColumnType& typed_left_column) const;
+  };
 
   std::shared_ptr<Table> _output_table;
   std::shared_ptr<const Table> _left_in_table;
