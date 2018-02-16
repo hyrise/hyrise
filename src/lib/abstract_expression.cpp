@@ -257,6 +257,8 @@ std::string AbstractExpression<DerivedExpression>::to_string(
              _aggregate_function_arguments[0]->to_string(input_column_names, true) + ")";
     case ExpressionType::Star:
       return std::string("*");
+    case ExpressionType::Select:
+      return "subquery";
     default:
       // Handled further down.
       break;
