@@ -38,22 +38,12 @@ void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_co
                                                   std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
 
-  const auto is_not_empty = left_column.size() > 0u;
-  if (left_column.pos_list_type() == PosListType::SingleChunk && is_not_empty) {
-    const auto referenced_chunk_id = left_column.pos_list()->front().chunk_id;
-    auto chunk_offsets_list = to_chunk_offsets_list(*left_column.pos_list(), _skip_null_row_ids);
+  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(),
+                                                              left_column.pos_list_type(),
+                                                              _skip_null_row_ids);
 
+  for (auto& [referenced_chunk_id, chunk_offsets_list] : chunk_offsets_by_chunk_id) {
     _visit_referenced(left_column, referenced_chunk_id, *context, std::move(chunk_offsets_list));
-  } else {
-    auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
-
-    // Visit each referenced column
-    for (auto& pair : chunk_offsets_by_chunk_id) {
-      const auto& referenced_chunk_id = pair.first;
-      auto& chunk_offsets_list = pair.second;
-
-      _visit_referenced(left_column, referenced_chunk_id, *context, std::move(chunk_offsets_list));
-    }
   }
 }
 

@@ -31,11 +31,13 @@ using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
  * any row that contains a null value is automatically excluded from the result because
  * a value compared to NULL is undefined.
  */
-ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list, bool skip_null_row_ids = true);
+ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list,
+                                                 PosListType pos_list_type = PosListType::MultiChunk,
+                                                 bool skip_null_row_ids = true);
 
 /**
  * Note: Assumes that the position list references only a single chunk
  */
-ChunkOffsetsList to_chunk_offsets_list(const PosList& pos_list, bool skip_null_row_ids = true);
+ChunkOffsetsList to_chunk_offsets_list(const PosList& pos_list);
 
 }  // namespace opossum
