@@ -322,7 +322,7 @@ void AbstractLQPNode::remove_from_tree() {
   auto left_child = this->left_child();
   set_left_child(nullptr);
 
-  /**stream
+  /**
    * Tie this nodes previous parents with this nodes previous left child
    * If left_child is nullptr, still call set_child so this node will get untied from the LQP.
    */
