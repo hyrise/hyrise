@@ -4,6 +4,7 @@
 #include <boost/bind.hpp>
 
 #include "hyrise_session.hpp"
+#include "client_connection.hpp"
 
 namespace opossum {
 
@@ -18,7 +19,8 @@ void HyriseServer::accept_next_connection() {
 
 void HyriseServer::start_session(boost::system::error_code error) {
   if (!error) {
-    std::make_shared<HyriseSession>(std::move(_socket), _io_service)->start();
+    auto connection = std::make_shared<ClientConnection>(std::move(_socket));
+    std::make_shared<HyriseSession>(_io_service, connection)->start();
   }
 
   accept_next_connection();

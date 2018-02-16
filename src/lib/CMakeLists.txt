@@ -193,6 +193,10 @@ set(
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
     server/types.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
+    server/use_boost_future.hpp
+    server/use_boost_future_impl.hpp
     sql/lru_cache.hpp
     sql/sql_planner.cpp
     sql/sql_planner.hpp

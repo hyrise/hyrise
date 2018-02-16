@@ -75,7 +75,11 @@ template <typename T>
 T PostgresWireHandler::read_value(const InputPacket& packet) {
   T result;
   auto num_bytes = sizeof(T);
-  DebugAssert(packet.offset + num_bytes < packet.data.end(), "Reading too many bytes from buffer.");
+  auto test = packet.offset + num_bytes;
+  auto bar = packet.data.end();
+  
+  if (test < bar)
+    DebugAssert(packet.offset + num_bytes < packet.data.end(), "Reading too many bytes from buffer.");
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(&result));
   packet.offset += num_bytes;

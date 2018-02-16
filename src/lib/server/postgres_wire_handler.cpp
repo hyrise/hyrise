@@ -22,7 +22,7 @@ uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) 
   // Reset data buffer
   packet.offset = packet.data.cbegin();
 
-  // Special SLL version number
+  // Special SSL version number
   if (version == 80877103) {
     return 0;
   } else {

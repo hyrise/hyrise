@@ -10,6 +10,7 @@ target_link_libraries(
     # Temporarily link benchmarks for tpcc demo data
     hyriseBenchmarkLib
     ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
     boost_program_options
 )
 target_include_directories(

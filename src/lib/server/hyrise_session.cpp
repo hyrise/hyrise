@@ -23,13 +23,42 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
+#include "client_connection.hpp"
 
 namespace opossum {
+
 
 void HyriseSession::start() {
   // Keep a pointer to itself that will be released once the connection is closed
   _self = shared_from_this();
-  _async_receive_header(STARTUP_HEADER_LENGTH);
+  
+  perform_session_startup()
+    .then([=](boost::future<void> f) {
+      try {
+        f.get();
+      } catch (std::exception e) {
+        // Something went wrong
+        _self.reset();
+      }
+    }
+  );
+}
+
+boost::future<void> HyriseSession::perform_session_startup() {
+  return _connection->receive_startup_package_header()
+    .then([=](boost::future<uint32_t> f) {
+      auto startup_package_length = f.get();
+
+      if (startup_package_length == 0) {
+        // This is a request for SSL
+        return _connection->send_ssl_denied()
+          .then([=](boost::future<void> f) {f.get(); return this->perform_session_startup(); }).unwrap();
+      }
+
+      return _connection->receive_startup_package_contents(startup_package_length)
+        .then([=](boost::future<void> f) { f.get(); return _connection->send_auth(); }).unwrap()
+        .then([=](boost::future<void> f) { f.get(); return _connection->send_ready_for_query(); }).unwrap();
+    }).unwrap();
 }
 
 void HyriseSession::async_send_packet(OutputPacket& output_packet) {
@@ -112,7 +141,7 @@ void HyriseSession::_handle_packet_received(const boost::system::error_code& err
 }
 
 void HyriseSession::_terminate_session() {
-  _socket.close();
+//  _socket.close();
   _self.reset();
 }
 
@@ -133,10 +162,10 @@ void HyriseSession::_async_receive_packet(size_t size, bool is_header) {
   _expected_input_packet_length = size;
   _input_packet.offset = _input_packet.data.begin();
 
-  auto next_handler = is_header ? &HyriseSession::_handle_header_received : &HyriseSession::_handle_packet_received;
-  _socket.async_read_some(
-      boost::asio::buffer(_input_packet.data, size),
-      boost::bind(next_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+//  auto next_handler = is_header ? &HyriseSession::_handle_header_received : &HyriseSession::_handle_packet_received;
+//  _socket.async_read_some(
+//      boost::asio::buffer(_input_packet.data, size),
+//      boost::bind(next_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void HyriseSession::_send_ssl_denied() {
@@ -293,8 +322,8 @@ void HyriseSession::pipeline_error(const std::string& error_msg) {
 SessionState HyriseSession::state() const { return _state; }
 
 void HyriseSession::_async_flush() {
-  boost::asio::async_write(_socket, boost::asio::buffer(_response_buffer),
-                           boost::bind(&HyriseSession::_handle_packet_sent, this, boost::asio::placeholders::error));
+//  boost::asio::async_write(_socket, boost::asio::buffer(_response_buffer),
+//                           boost::bind(&HyriseSession::_handle_packet_sent, this, boost::asio::placeholders::error));
 }
 
 }  // namespace opossum

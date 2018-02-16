@@ -2,6 +2,7 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/thread/future.hpp>
 
 #include <memory>
 #include <optional>
@@ -17,14 +18,15 @@ enum SessionState { Setup = 100, WaitingForQuery, SimpleQuery, ExtendedQuery };
 using boost::asio::ip::tcp;
 
 class AbstractCommand;
+class ClientConnection;
 
 class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
  public:
   static const uint32_t STARTUP_HEADER_LENGTH = 8u;
   static const uint32_t HEADER_LENGTH = 5u;
 
-  explicit HyriseSession(tcp::socket socket, boost::asio::io_service& io_service)
-      : _socket(std::move(socket)), _io_service(io_service), _input_packet(), _expected_input_packet_length(0) {
+  explicit HyriseSession(boost::asio::io_service& io_service, std::shared_ptr<ClientConnection> connection)
+      : _io_service(io_service), _connection(connection), _input_packet(), _expected_input_packet_length(0) {
     _response_buffer.reserve(_max_response_size);
   }
 
@@ -46,6 +48,8 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   SessionState state() const;
 
  protected:
+  boost::future<void> perform_session_startup();
+    
   void _async_receive_header(size_t size = HEADER_LENGTH);
   void _async_receive_content(size_t size);
   void _async_receive_packet(size_t size, bool is_header);
@@ -72,8 +76,8 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
 
   void _terminate_session();
 
-  tcp::socket _socket;
   boost::asio::io_service& _io_service;
+  std::shared_ptr<ClientConnection> _connection;
   InputPacket _input_packet;
   NetworkMessageType _input_packet_type;
 
