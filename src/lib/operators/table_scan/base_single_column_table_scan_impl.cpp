@@ -38,14 +38,13 @@ void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_co
                                                   std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
 
-  if (left_column.type() == ReferenceColumnType::SingleChunk) {
+  const auto is_not_empty = left_column.size() > 0u;
+  if (left_column.pos_list_type() == PosListType::SingleChunk && is_not_empty) {
     const auto referenced_chunk_id = left_column.pos_list()->front().chunk_id;
-    auto chunk_offsets_list = to_chunk_offsets_list(*left_column.pos_list, _skip_null_row_ids);
+    auto chunk_offsets_list = to_chunk_offsets_list(*left_column.pos_list(), _skip_null_row_ids);
 
     _visit_referenced(left_column, referenced_chunk_id, *context, std::move(chunk_offsets_list));
   } else {
-    context->_references_single_chunk = false;
-
     auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
 
     // Visit each referenced column
@@ -70,7 +69,7 @@ DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribu
 
 void BaseSingleColumnTableScanImpl::_visit_referenced(const ReferenceColumn& left_column,
                                                       const ChunkID referenced_chunk_id,
-                                                      Context& context
+                                                      Context& context,
                                                       ChunkOffsetsList chunk_offsets_list) {
   const auto chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
   auto referenced_column = chunk->get_column(left_column.referenced_column_id());

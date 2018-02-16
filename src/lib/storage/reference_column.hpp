@@ -78,7 +78,7 @@ class ReferenceColumn : public BaseColumn {
 
   ColumnID referenced_column_id() const;
 
-  ReferenceColumnType type() const;
+  PosListType pos_list_type() const;
 
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;

@@ -133,12 +133,16 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             filtered_pos_list->reserve(matches_out->size());
 
             auto references_single_chunk = true;
-            const auto first_chunk_id = matches_out->front().chunk_id;
 
-            for (const auto& match : *matches_out) {
-              const auto row_id = (*pos_list_in)[match.chunk_offset];
-              references_single_chunk = (row_id.chunk_id == first_chunk_id);
-              filtered_pos_list->push_back(row_id);
+            if (!matches_out->empty()) {
+              const auto first_position_in_matches = matches_out->front().chunk_offset;
+              const auto first_chunk_id = (*pos_list_in)[first_position_in_matches].chunk_id;
+
+              for (const auto& match : *matches_out) {
+                const auto row_id = (*pos_list_in)[match.chunk_offset];
+                references_single_chunk = (row_id.chunk_id == first_chunk_id);
+                filtered_pos_list->push_back(row_id);
+              }
             }
 
             pos_list_type = references_single_chunk ? PosListType::SingleChunk : PosListType::MultiChunk;

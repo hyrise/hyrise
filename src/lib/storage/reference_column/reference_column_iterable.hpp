@@ -23,15 +23,16 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
-    const auto references_single_chunk = (_column.type() == ReferenceColumnType::SingleChunk);
-    if (references_single_chunk) {
+    const auto references_single_chunk = (_column.pos_list_type() == PosListType::SingleChunk);
+    const auto is_not_empty = (_column.size() > 0u);
+    if (references_single_chunk && is_not_empty) {
       const auto chunk_id = _column.pos_list()->front().chunk_id;
       const auto chunk_offsets_list = to_chunk_offsets_list(*_column.pos_list());
 
       const auto base_column = table->get_chunk(chunk_id)->get_column(column_id);
       resolve_column_type<T>(*base_column, [&](auto& column) {
-        using ColumnTypeT = std::decay_t<decltype(column)>;
-        constexpr auto is_reference_column = std::is_same_v<ColumnTypeT, ReferenceColumn>;
+        using ColumnT = std::decay_t<decltype(column)>;
+        constexpr auto is_reference_column = std::is_same_v<ColumnT, ReferenceColumn>;
 
         // clang-format off
         if constexpr(!is_reference_column) {
