@@ -12,13 +12,15 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& left_child)
-    : AbstractLQPNode(LQPNodeType::StoredTable, left_child), _table_name(table_name) {
+StoredTableNode::StoredTableNode(const std::string& table_name, const std::optional<std::string>& alias)
+    : AbstractLQPNode(LQPNodeType::StoredTable), _table_name(table_name) {
   /**
    * Initialize output information.
    */
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
+
+  set_alias(alias);
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_deep_copy_impl(

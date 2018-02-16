@@ -18,7 +18,7 @@ class TableStatistics;
  */
 class StoredTableNode : public AbstractLQPNode {
  public:
-  explicit StoredTableNode(const std::string& table_name, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+  explicit StoredTableNode(const std::string& table_name, const std::optional<std::string>& alias = std::nullopt);
 
   const std::string& table_name() const;
 

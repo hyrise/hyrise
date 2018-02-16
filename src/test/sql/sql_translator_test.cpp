@@ -421,7 +421,7 @@ TEST_F(SQLTranslatorTest, Update) {
   const auto update_b = LQPExpression::create_literal(3.2f);
 
   const auto lqp = std::make_shared<UpdateNode>(
-      "table_a", {update_a, update_b},
+      "table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
       std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::GreaterThan, 1l, _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
@@ -519,7 +519,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   // clang-format off
   const auto view_node =
-  std::make_shared<ProjectionNode>({alias_c, alias_d},
+  std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{alias_c, alias_d},
     ProjectionNode::make_pass_through(
       std::make_shared<PredicateNode>(_table_a_a, PredicateCondition::Equals, "b",
         _stored_table_node_a)));
