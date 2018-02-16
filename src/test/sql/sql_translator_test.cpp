@@ -513,6 +513,41 @@ TEST_F(SQLTranslatorTest, Update) {
   EXPECT_EQ(*expressions[1]->alias(), "b");
 }
 
+TEST_F(SQLTranslatorTest, WhereSubquery) {
+    const auto query = "SELECT * FROM table_a WHERE a < (SELECT MAX(a) FROM table_b);";
+    auto result_node = compile_query(query);
+
+    EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+    const auto final_projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+
+    EXPECT_EQ(final_projection_node->left_child()->type(), LQPNodeType::Projection);
+    const auto reduce_projection_node = std::dynamic_pointer_cast<ProjectionNode>(final_projection_node->left_child());
+    EXPECT_EQ(reduce_projection_node->output_column_references().size(), final_projection_node->output_column_references().size());
+
+    EXPECT_EQ(reduce_projection_node->left_child()->type(), LQPNodeType::Predicate);
+    const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(reduce_projection_node->left_child());
+    EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::LessThan);
+
+    EXPECT_EQ(predicate_node->left_child()->type(), LQPNodeType::Projection);
+    const auto expand_projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
+    EXPECT_EQ(expand_projection_node->output_column_references().size(), 3u);
+
+    const auto subselect_expression = expand_projection_node->column_expressions().back();
+    EXPECT_EQ(subselect_expression->type(), ExpressionType::Select);
+}
+
+TEST_F(SQLTranslatorTest, SelectSubquery) {
+    const auto query = "SELECT a, (SELECT MAX(b) FROM table_b) FROM table_a;";
+    auto result_node = compile_query(query);
+
+    EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+    const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+
+    const auto subselect_expression = projection_node->column_expressions().back();
+    EXPECT_EQ(subselect_expression->type(), ExpressionType::Select);
+}
+
+
 TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   /**
    * Test:
