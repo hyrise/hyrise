@@ -1,8 +1,7 @@
-#include "../../base_test.hpp"
-
 #include <memory>
 #include <vector>
 
+#include "../../base_test.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"

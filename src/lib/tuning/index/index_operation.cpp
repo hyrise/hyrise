@@ -63,3 +63,4 @@ ColumnIndexType IndexOperation::type() { return _type; }
 bool IndexOperation::create() { return _create; }
 
 }  // namespace opossum
+

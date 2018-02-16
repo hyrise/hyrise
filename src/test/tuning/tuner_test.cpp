@@ -1,10 +1,9 @@
-#include "../base_test.hpp"
-
 #include <chrono>
 #include <memory>
 #include <thread>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "tuning/abstract_evaluator.hpp"
 #include "tuning/abstract_selector.hpp"
 #include "tuning/tuner.hpp"
@@ -12,12 +11,14 @@
 
 namespace opossum {
 
+namespace {
+
 using Runtime = std::chrono::milliseconds;
 using RuntimeMs = std::chrono::milliseconds::rep;
 using RuntimeMsList = std::vector<std::chrono::milliseconds::rep>;
 
 struct MockOperation : public TuningOperation {
-  MockOperation(RuntimeMs runtime) : runtime{runtime} {}
+  explicit MockOperation(RuntimeMs runtime) : runtime{runtime} {}
 
   void execute() final { std::this_thread::sleep_for(runtime); }
 
@@ -25,7 +26,7 @@ struct MockOperation : public TuningOperation {
 };
 
 struct MockSelector : public AbstractSelector {
-  MockSelector(RuntimeMs runtime, RuntimeMsList operation_runtimes) : runtime{runtime} {
+  explicit MockSelector(RuntimeMs runtime, RuntimeMsList operation_runtimes) : runtime{runtime} {
     operations.clear();
     operations.reserve(operation_runtimes.size());
     for (auto operation_runtime : operation_runtimes) {
@@ -45,12 +46,14 @@ struct MockSelector : public AbstractSelector {
 };
 
 struct MockEvaluator : public AbstractEvaluator {
-  MockEvaluator(RuntimeMs runtime) : runtime{runtime} {}
+  explicit MockEvaluator(RuntimeMs runtime) : runtime{runtime} {}
 
   void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final { std::this_thread::sleep_for(runtime); }
 
   Runtime runtime;
 };
+
+}  // namespace
 
 class TunerTest : public BaseTest {};
 

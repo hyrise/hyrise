@@ -20,7 +20,7 @@ class IndexEvaluator : public BaseIndexEvaluator {
   friend class IndexEvaluatorTest;
 
  public:
-  explicit IndexEvaluator();
+  IndexEvaluator();
 
  protected:
   void _setup() final;

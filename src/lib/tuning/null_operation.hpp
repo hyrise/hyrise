@@ -8,8 +8,8 @@ namespace opossum {
 
 class NullOperation : public TuningOperation {
  public:
-  virtual void execute() override;
-  virtual void print_on(std::ostream& output) const override;
+  void execute() final;
+  void print_on(std::ostream& output) const final;
 };
 
 }  // namespace opossum

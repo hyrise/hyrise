@@ -1,7 +1,6 @@
-#include "../../base_test.hpp"
-
 #include <memory>
 
+#include "../../base_test.hpp"
 #include "tuning/index/index_choice.hpp"
 #include "tuning/index/index_operation.hpp"
 
