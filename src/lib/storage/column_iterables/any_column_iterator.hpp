@@ -20,7 +20,7 @@ class AnyColumnIteratorWrapperBase {
 template <typename T, typename Iterator>
 class AnyColumnIteratorWrapper : public AnyColumnIteratorWrapperBase<T> {
  public:
-  AnyColumnIteratorWrapper(const Iterator& iterator) : _iterator{iterator} {}
+  explicit AnyColumnIteratorWrapper(const Iterator& iterator) : _iterator{iterator} {}
 
   void increment() final { ++_iterator; }
 
@@ -54,7 +54,7 @@ template <typename T>
 class AnyColumnIterator : public BaseColumnIterator<AnyColumnIterator<T>, ColumnIteratorValue<T>> {
  public:
   template <typename Iterator>
-  AnyColumnIterator(const Iterator& iterator)
+  explicit AnyColumnIterator(const Iterator& iterator)
       : _wrapper{std::make_unique<detail::AnyColumnIteratorWrapper<T, Iterator>>(iterator)} {}
 
   AnyColumnIterator(const AnyColumnIterator& other) : _wrapper{other._wrapper->clone()} {}

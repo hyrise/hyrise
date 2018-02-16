@@ -31,7 +31,7 @@ decltype(auto) may_erase_type(const Iterable& iterable) {
 #endif
 }
 
-}  // detail
+}  // namespace detail
 
 /**
  * @defgroup Uniform interface to create an iterable from a column
