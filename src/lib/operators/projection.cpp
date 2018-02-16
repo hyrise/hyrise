@@ -115,6 +115,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
       auto result_table = tasks.back()->get_operator()->get_output();
       DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
+
+      if (result_table->row_count() != 1) {
+          Fail("Subselect returned more than one row.");
+      }
+
       column_expression->set_table(result_table);
 
       name = result_table->column_names()[0];
