@@ -28,7 +28,7 @@ class TransactionContext;
 //
 // Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
 
-class AbstractOperator : private Noncopyable {
+class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
