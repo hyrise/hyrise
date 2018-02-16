@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "adaptive_radix_tree_nodes.hpp"
-#include "storage/base_attribute_vector.hpp"
 #include "storage/base_column.hpp"
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/index/base_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -25,7 +25,7 @@ float AdaptiveRadixTreeIndex::predict_memory_consumption(ChunkOffset row_count, 
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
-      _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns.front())) {
+      _index_column(std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(index_columns.front())) {
   DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
   DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 

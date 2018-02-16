@@ -44,7 +44,7 @@ class LQPTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_alias_name",
                                     load_table("src/test/tables/table_alias_name.tbl", Chunk::MAX_SIZE));
     StorageManager::get().add_table("table_int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
-    DictionaryCompression::compress_table(*StorageManager::get().get_table("table_int_float_chunked"));
+    DeprecatedDictionaryCompression::compress_table(*StorageManager::get().get_table("table_int_float_chunked"));
   }
 
   const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {

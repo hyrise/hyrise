@@ -16,7 +16,7 @@ namespace hana = boost::hana;
 
 namespace detail {
 
-// Returns the index of type T in an Iterable
+// Returns the index of type T in an ColumnIterable
 template <typename Sequence, typename T>
 constexpr auto index_of(Sequence const& sequence, T const& element) {
   constexpr auto size = decltype(hana::size(hana::take_while(sequence, hana::not_equal.to(element)))){};

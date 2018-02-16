@@ -1,5 +1,6 @@
 #include "table_generator.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <random>
 #include <string>
@@ -9,7 +10,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -17,10 +18,11 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, const bool compress) {
+std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
+                                                      std::optional<EncodingType> encoding_type) {
   std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
-  auto vector_size = chunk_size > 0 ? chunk_size : _num_rows;
+  auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
    * Generate table layout with column names from 'a' to 'z'.
    * Create a vector for each column.
@@ -63,8 +65,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size, 
     table->emplace_chunk(std::move(chunk));
   }
 
-  if (compress) {
-    DictionaryCompression::compress_table(*table);
+  if (encoding_type.has_value()) {
+    DeprecatedDictionaryCompression::compress_table(*table, encoding_type.value());
   }
 
   return table;
