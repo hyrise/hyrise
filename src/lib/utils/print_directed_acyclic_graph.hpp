@@ -8,8 +8,7 @@
 namespace opossum {
 
 template <typename Node>
-using NodeGetChildrenFn =
-    std::function<std::vector<std::shared_ptr<Node>>(const std::shared_ptr<Node>&)>;
+using NodeGetChildrenFn = std::function<std::vector<std::shared_ptr<Node>>(const std::shared_ptr<Node>&)>;
 
 template <typename Node>
 using NodePrintFn = std::function<void(const std::shared_ptr<Node>&, std::ostream& stream)>;
@@ -24,9 +23,12 @@ namespace detail {
  * @param id_counter    used to generate ids for nodes
  */
 template <typename Node>
-void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
-                      const NodePrintFn<Node>& node_print_fn, std::ostream& stream, std::vector<bool>& indentation,
-                      std::unordered_map<std::shared_ptr<const Node>, size_t>& id_by_node, size_t& id_counter) {
+void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
+                                       const NodeGetChildrenFn<Node>& get_children_fn,
+                                       const NodePrintFn<Node>& node_print_fn, std::ostream& stream,
+                                       std::vector<bool>& indentation,
+                                       std::unordered_map<std::shared_ptr<const Node>, size_t>& id_by_node,
+                                       size_t& id_counter) {
   /**
    * Indent whilst drawing the edges
    */
@@ -72,13 +74,13 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node, const 
    */
   for (size_t child_idx = 0; child_idx < children.size(); ++child_idx) {
     if (child_idx + 1 == children.size()) indentation.back() = false;
-    print_directed_acyclic_graph_impl<Node>(children[child_idx], get_children_fn, node_print_fn, stream, indentation, id_by_node, id_counter);
+    print_directed_acyclic_graph_impl<Node>(children[child_idx], get_children_fn, node_print_fn, stream, indentation,
+                                            id_by_node, id_counter);
   }
 
   indentation.pop_back();
 }
-
-}
+}  // namespace detail
 
 /**
  * Utility for formatted printing of any Directed Acyclic Graph.
@@ -106,12 +108,13 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node, const 
  */
 template <typename Node>
 void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
-                const NodePrintFn<Node>& print_node_fn, std::ostream& stream = std::cout) {
+                                  const NodePrintFn<Node>& print_node_fn, std::ostream& stream = std::cout) {
   std::vector<bool> levels;
   std::unordered_map<std::shared_ptr<Node>, size_t> id_by_node;
   auto id_counter = size_t{0};
 
-  detail::print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node, id_counter);
+  detail::print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node,
+                                                  id_counter);
 }
 
 }  //  namespace opossum

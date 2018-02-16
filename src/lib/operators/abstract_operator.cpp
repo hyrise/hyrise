@@ -128,8 +128,8 @@ void AbstractOperator::print(std::ostream& stream) const {
     // If the operator was already executed, print some info about data and performance
     const auto output = op->get_output();
     if (output) {
-      stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << output->column_count()
-          << " column(s)/";
+      stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+             << output->column_count() << " column(s)/";
 
       stream << format_bytes(output->estimate_memory_usage());
       stream << "/";
