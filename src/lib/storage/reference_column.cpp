@@ -16,14 +16,15 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
                                  ReferenceColumnType type)
     : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos), _type(type) {
   DebugAssert(_referenced_table->get_type() == TableType::Data, "Referenced table must be a data table.");
-  DebugAssert([&]() {
-    if (_type == ReferenceColumnType::MultiChunk)
-      return true;
+  DebugAssert(
+      [&]() {
+        if (_type == ReferenceColumnType::MultiChunk) return true;
 
-    const auto chunk_id = _pos_list->front().chunk_id;
-    return std::all_of(_pos_list->cbegin(), _pos_list->cend(),
-                       [chunk_id](const auto& row_id) { return row_id.chunk_id == chunk_id; });
-  }(), "Position list must only contain positions of one chunk if type is SingleChunk.");
+        const auto chunk_id = _pos_list->front().chunk_id;
+        return std::all_of(_pos_list->cbegin(), _pos_list->cend(),
+                           [chunk_id](const auto& row_id) { return row_id.chunk_id == chunk_id; });
+      }(),
+      "Position list must only contain positions of one chunk if type is SingleChunk.");
 }
 
 const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset) const {

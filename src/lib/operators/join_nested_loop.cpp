@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_column.hpp"
 #include "storage/column_iterables/any_column_iterable.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

@@ -2,14 +2,14 @@
 
 #include <map>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <type_traits>
 
-#include "storage/column_iterables.hpp"
-#include "storage/reference_column.hpp"
 #include "resolve_type.hpp"
+#include "storage/column_iterables.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "storage/reference_column.hpp"
 
 namespace opossum {
 
@@ -33,12 +33,14 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
         using ColumnTypeT = std::decay_t<decltype(column)>;
         constexpr auto is_reference_column = std::is_same_v<ColumnTypeT, ReferenceColumn>;
 
-        if constexpr (!is_reference_column) {
+        // clang-format off
+        if constexpr(!is_reference_column) {
           auto iterable = create_iterable_from_column<T>(column);
           iterable.with_iterators(&chunk_offsets_list, [&](auto it, auto end) { functor(it, end); });
         } else {
           Fail("Reference column must not reference another reference column.");
         }
+        // class-format on
       });
     } else {  // references multiple chunks
       const auto begin_it = _column.pos_list()->begin();
@@ -63,9 +65,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
                                  const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it) {
       return Iterator{table, column_id, begin_pos_list_it, pos_list_it};
     }
-    static Iterator create_end(const PosListIterator& pos_list_it) {
-      return Iterator{{}, {}, {}, pos_list_it};
-    }
+    static Iterator create_end(const PosListIterator& pos_list_it) { return Iterator{{}, {}, {}, pos_list_it}; }
 
    public:
     explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
@@ -83,7 +83,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     ColumnIteratorValue<T> dereference() const {
       if (*_pos_list_it == NULL_ROW_ID) return ColumnIteratorValue<T>{T{}, true, 0u};
 
-      const auto& [chunk_id, chunk_offset] = *_pos_list_it;
+      const auto & [ chunk_id, chunk_offset ] = *_pos_list_it;
 
       auto value_column_it = _value_columns.find(chunk_id);
       if (value_column_it != _value_columns.end()) {
