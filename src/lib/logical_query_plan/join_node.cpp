@@ -132,8 +132,9 @@ void JoinNode::_update_output() const {
   const auto& right_names = right_child()->output_column_names();
 
   _output_column_names.emplace();
+  bool only_left = _join_mode == JoinMode::Semi || _join_mode == JoinMode::Anti;
 
-  auto output_size = _join_mode == JoinMode::Semi ? left_names.size() : left_names.size() + right_names.size();
+    auto output_size = only_left ? left_names.size() : left_names.size() + right_names.size();
   _output_column_names->reserve(output_size);
 
   _output_column_names->insert(_output_column_names->end(), left_names.begin(), left_names.end());
@@ -146,7 +147,7 @@ void JoinNode::_update_output() const {
   _output_column_references->insert(_output_column_references->end(), left_child()->output_column_references().begin(),
                                     left_child()->output_column_references().end());
 
-  if (_join_mode != JoinMode::Semi) {
+  if (!only_left) {
     _output_column_names->insert(_output_column_names->end(), right_names.begin(), right_names.end());
     _output_column_references->insert(_output_column_references->end(),
                                       right_child()->output_column_references().begin(),
