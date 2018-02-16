@@ -51,8 +51,7 @@ int main() {
   auto table = opossum::StorageManager::get().get_table("CUSTOMER");
   const auto& statistics = table->table_statistics()->column_statistics();
   statistics.size();
-  LOG_INFO("Table statistics (" << statistics.at(0)->distinct_count() << ", " << statistics.at(1)->distinct_count()
-                                << ", " << statistics.at(2)->distinct_count() << ",  "
+  LOG_INFO("Table statistics (" << statistics.at(1)->distinct_count() << ", "
                                 << statistics.at(3)->distinct_count() << ")");
 
   constexpr unsigned int execution_count = 5;
