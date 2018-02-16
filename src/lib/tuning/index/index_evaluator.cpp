@@ -24,6 +24,7 @@ void IndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessReco
   auto match_rows = predicate_statistics->row_count();
   auto unscanned_rows = total_rows - match_rows;
   float saved_work = unscanned_rows * record.query_frequency;
+  std::cout << "saved work for query on " << record.column_ref.table_name << "." << record.column_ref.column_ids[0] << ": " << saved_work << "\n";
   if (_saved_work.count(record.column_ref) > 0) {
     _saved_work[record.column_ref] += saved_work;
   } else {

@@ -81,10 +81,10 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   // ToDo(group01) implement for cache implementations other than GDFS cache
 
 
-  const auto& pqp_cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode> >::get();
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
-      dynamic_cast<const GDFSCache<std::string, SQLQueryPlan>* >(&(pqp_cache.cache()));
+      dynamic_cast<const GDFSCache<std::string, std::shared_ptr<AbstractLQPNode> >* >(&(lqp_cache.cache()));
   Assert(gdfs_cache_ptr, "Expected GDFS Cache");
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
@@ -96,9 +96,10 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const auto& entry = *cache_iterator;
     LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
-    for (const auto& operator_tree : entry.value.tree_roots()) {
-      _inspect_pqp_operator(operator_tree, entry.frequency);
-    }
+    _inspect_lqp_operator(entry.value, entry.frequency);
+    //for (const auto& operator_tree : entry.value.tree_roots()) {
+    //  _inspect_pqp_operator(operator_tree, entry.frequency);
+    //}
   }
 }
 
