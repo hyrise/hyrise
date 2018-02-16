@@ -11,6 +11,8 @@ namespace detail {
 template <typename T>
 class AnyColumnIteratorWrapperBase {
  public:
+  virtual ~AnyColumnIteratorWrapperBase() = default;
+
   virtual void increment() = 0;
   virtual bool equal(const AnyColumnIteratorWrapperBase<T>* other) const = 0;
   virtual ColumnIteratorValue<T> dereference() const = 0;
