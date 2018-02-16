@@ -73,7 +73,8 @@ int main() {
 
   // Let the tuner optimize tables based on the values of the cache
   LOG_INFO("Executing IndexTuner...");
-  tuner.execute();
+  tuner.schedule_tuning_process();
+  tuner.wait_for_completion();
   LOG_INFO("IndexTuner executed.\n");
 
   LOG_INFO("Executing queries a second time (with optimized indices)...");
@@ -91,7 +92,8 @@ int main() {
   }
 
   LOG_INFO("Executing IndexTuner AGAIN (sanity check)...");
-  tuner.execute();
+  tuner.schedule_tuning_process();
+  tuner.wait_for_completion();
 
   LOG_INFO("IndexTuner executed a second time.");
   return 0;
