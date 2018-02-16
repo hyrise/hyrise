@@ -90,6 +90,10 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
   LOG_DEBUG("Query plan cache (size: " << fibonacci_heap.size() << "):");
+  if(fibonacci_heap.size() == 0) {
+      LOG_WARN("There are no logical query plans in the cache. Make sure that logical query plans get cached!");
+  }
+
   auto cache_iterator = fibonacci_heap.ordered_begin();
   auto cache_end = fibonacci_heap.ordered_end();
 
