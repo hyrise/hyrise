@@ -14,7 +14,7 @@
 #include "../lib/scheduler/node_queue_scheduler.hpp"
 #include "../lib/scheduler/topology.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/deprecated_dictionary_compression.hpp"
+#include "../lib/storage/chunk_encoder.hpp"
 #include "../lib/storage/numa_placement_manager.hpp"
 #include "../lib/storage/storage_manager.hpp"
 #include "../lib/storage/table.hpp"
@@ -65,7 +65,7 @@ class NUMAPlacementTest : public BaseTest {
       chunk->add_column(value_column);
       table->emplace_chunk(std::move(chunk));
     }
-    DeprecatedDictionaryCompression::compress_table(*table);
+    ChunkEncoder::encode_all_chunks(table);
     return table;
   }
 

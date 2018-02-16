@@ -31,6 +31,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -44,7 +45,7 @@ class LQPTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_alias_name",
                                     load_table("src/test/tables/table_alias_name.tbl", Chunk::MAX_SIZE));
     StorageManager::get().add_table("table_int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
-    DeprecatedDictionaryCompression::compress_table(*StorageManager::get().get_table("table_int_float_chunked"));
+    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_int_float_chunked"));
   }
 
   const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
