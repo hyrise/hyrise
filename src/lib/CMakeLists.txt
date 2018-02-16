@@ -244,8 +244,6 @@ set(
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
-    storage/deprecated_dictionary_compression.cpp
-    storage/deprecated_dictionary_compression.hpp
     storage/encoding_type.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
