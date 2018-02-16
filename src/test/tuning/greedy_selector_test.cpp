@@ -6,121 +6,88 @@
 #include "tuning/index/index_operation.hpp"
 #include "tuning/tuning_choice.hpp"
 #include "tuning/tuning_operation.hpp"
+#include "tuning/null_operation.hpp"
 
 namespace opossum {
 
-//class MockChoice : public TuningChoice {
-//public:
-// explicit MockChoice(float desirability, float cost, bool exists)
+class MockOperation : public TuningOperation {
+     public:
+    explicit MockOperation(const std::string& name, bool _accepted)
+        : _name{name}, _accepted{_accepted} {}
+    const std::string& name() const { return _name; }
+    bool accepted() const { return _accepted; }
+    virtual void execute() override {}
+    virtual void print_on(std::ostream& output) const override { output << "MockOperation(" << _name << ", " << _accepted << ")"; }
+protected:
+    std::string _name;
+    bool _accepted;
+};
 
-//     : column_ref{column_ref}, saved_work{0.0f}, exists{exists}, type{ColumnIndexType::Invalid}, memory_cost{0.0f} {}
+class MockChoice : public TuningChoice {
+public:
+ explicit MockChoice(const std::string& name, float desirability, float cost, bool exists)
+        : _name{name}, _desirability{desirability}, _cost{cost}, _exists{exists}
+     {}
 
-// float desirability() const final;
+ float desirability() const final { return _desirability; }
+ float cost() const final { return _cost; }
+ float confidence() const final { return 1.0; }
+ bool is_currently_chosen() const final { return _exists; }
+ const std::string& name() const { return _name; }
 
-// float cost() const final;
+protected:
+ std::shared_ptr<TuningOperation> _accept_operation() const final { return std::make_shared<MockOperation>(_name, true); }
+ std::shared_ptr<TuningOperation> _reject_operation() const final { return std::make_shared<MockOperation>(_name, false); }
+ const std::set<std::shared_ptr<TuningChoice>>& invalidates() const override { return _invalidates; }
 
-// float confidence() const final;
 
-// bool is_currently_chosen() const final;
-
-// const std::set<std::shared_ptr<TuningChoice>>& invalidates() const final;
-
-// void print_on(std::ostream& output) const final;
-
-// /**
-//  * The column the this index refers to
-//  */
-// ColumnRef column_ref;
-
-// /**
-//  * An IndexEvaluator specific, signed value that indicates
-//  * how this index will affect the overall system performance
-//  *
-//  * desirability values are relative and only comparable if estimated
-//  * by the same IndexEvaluator
-//  */
-// float saved_work;
-
-// /**
-//  * Does this Evaluation refer to an already created index or one that does not exist yet
-//  */
-// bool exists;
-
-// /**
-//  * exists == true: The type of the existing index
-//  * exists == false: A proposal for an appropriate index type
-//  */
-// ColumnIndexType type;
-
-// /**
-//  * exists == true: Memory cost in MiB of the index as reported by the index implementation
-//  * exists == false: Memory cost in MiB as predicted by the index implementation
-//  *                    assuming an equal value distribution across chunks
-//  * Measured in MiB
-//  */
-// float memory_cost;
-
-//protected:
-// std::shared_ptr<TuningOperation> _accept_operation() const final;
-// std::shared_ptr<TuningOperation> _reject_operation() const final;
-
-// // ToDo(group01) currently unused and empty. Add invalidate logic.
-// std::set<std::shared_ptr<TuningChoice>> _invalidates;
-//};
-//}
+ std::string _name;
+ float _desirability;
+ float _cost;
+ bool _exists;
+ std::set<std::shared_ptr<TuningChoice>> _invalidates;
+};
 
 class GreedySelectorTest : public BaseTest {
 
 protected:
-    void add_index_choice(const std::string& table, ColumnID column_id, bool exists, float saved_work, float memory_cost) {
-        auto choice = std::make_shared<IndexChoice>(ColumnRef{table, column_id}, exists);
-        choice->saved_work = saved_work;
-        choice->memory_cost = memory_cost;
-        choices.push_back(choice);
+    void compare_operation(std::shared_ptr<TuningOperation> actual, std::shared_ptr<NullOperation> expected) {
+        EXPECT_TRUE(std::dynamic_pointer_cast<NullOperation>(actual));
     }
-
-    template<typename T>
-    void compare_operations(float budget, const std::vector<std::shared_ptr<T>>& expected_operations) {
-        auto operations = selector.select(choices, budget);
-        EXPECT_EQ(operations.size(), expected_operations.size());
-        for(auto i = 0u; i<expected_operations.size(); i++) {
-            auto expected_operation = expected_operations.at(i);
-            auto actual_operation = std::dynamic_pointer_cast<T>(operations.at(i));
-            EXPECT_TRUE(actual_operation);
-            EXPECT_EQ(actual_operation, expected_operation);
-        }
+    void compare_operation(std::shared_ptr<TuningOperation> actual, std::shared_ptr<MockOperation> expected) {
+        auto mock_actual = std::dynamic_pointer_cast<MockOperation>(actual);
+        EXPECT_TRUE(mock_actual);
+        EXPECT_EQ(mock_actual->name(), expected->name());
+        EXPECT_EQ(mock_actual->accepted(), expected->accepted());
     }
-
-    GreedySelector selector;
-    std::vector<std::shared_ptr<TuningChoice> > choices;
 };
 
 TEST_F(GreedySelectorTest, SelectsBestChoicesInCorrectOrder) {
-    auto table = std::make_shared<Table>(1);
-    table->add_column("col", DataType::Int);
-    StorageManager::get().add_table("a", table);
-    StorageManager::get().add_table("b", table);
-    StorageManager::get().add_table("c", table);
-    StorageManager::get().add_table("d", table);
-    StorageManager::get().add_table("e", table);
-    StorageManager::get().add_table("f", table);
+    GreedySelector selector;
+    std::vector<std::shared_ptr<TuningChoice> > choices;
 
-    add_index_choice("a", ColumnID{0}, false, 5.f, 1200.f);
-    add_index_choice("b", ColumnID{0}, true, 3.f, 500.f);
-    add_index_choice("c", ColumnID{0}, true, 3.f, 300.f);
-    add_index_choice("d", ColumnID{0}, true, -8.f, 600.f);
-    add_index_choice("e", ColumnID{0}, false, 7.f, 800.f);
-    add_index_choice("f", ColumnID{0}, false, 4.f, 500.f);
+    choices.push_back(std::make_shared<MockChoice>("a", 5.f, 1200.f, false));
+    choices.push_back(std::make_shared<MockChoice>("b", 3.f, 500.f, true));
+    choices.push_back(std::make_shared<MockChoice>("c", 3.f, 300.f, true));
+    choices.push_back(std::make_shared<MockChoice>("d", -8.f, 600.f, true));
+    choices.push_back(std::make_shared<MockChoice>("e", 7.f, 800.f, false));
+    choices.push_back(std::make_shared<MockChoice>("f", 4.f, 500.f, false));
 
-    std::vector<std::shared_ptr<IndexOperation>> expected_operations;
-    expected_operations.push_back(std::make_shared<IndexOperation>(ColumnRef{"d", ColumnID{0}}, ColumnIndexType::GroupKey, false));
-    expected_operations.push_back(std::make_shared<IndexOperation>(ColumnRef{"e", ColumnID{0}}, ColumnIndexType::GroupKey, true));
-    expected_operations.push_back(std::make_shared<IndexOperation>(ColumnRef{"a", ColumnID{0}}, ColumnIndexType::GroupKey, false));
-    expected_operations.push_back(std::make_shared<IndexOperation>(ColumnRef{"b", ColumnID{0}}, ColumnIndexType::GroupKey, false));
-    expected_operations.push_back(std::make_shared<IndexOperation>(ColumnRef{"f", ColumnID{0}}, ColumnIndexType::GroupKey, true));
-    expected_operations.push_back(std::make_shared<IndexOperation>(ColumnRef{"c", ColumnID{0}}, ColumnIndexType::GroupKey, true));
+    auto operations = selector.select(choices, 2000.f);
 
-    compare_operations<IndexOperation>(2000.f, expected_operations);
+    EXPECT_EQ(operations.size(), 6u);
+    // reject / ignore D
+    compare_operation(operations.at(0), std::make_shared<MockOperation>("d", false));
+    // accept / create E
+    compare_operation(operations.at(1), std::make_shared<MockOperation>("e", true));
+    // reject / ignore A
+    compare_operation(operations.at(2), std::make_shared<NullOperation>());
+    // reject / delete B
+    compare_operation(operations.at(3), std::make_shared<MockOperation>("b", false));
+    // accept / create F
+    compare_operation(operations.at(4), std::make_shared<MockOperation>("f", true));
+    // accept / keep C
+    compare_operation(operations.at(5), std::make_shared<NullOperation>());
 }
 
 }  // namespace opossum
