@@ -26,9 +26,8 @@ using std::chrono::high_resolution_clock;
 
 const std::vector<std::string> test_queries{"SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'",
                                             "SELECT NAME FROM CUSTOMER WHERE LEVEL = 5",
-                                            "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'",
-                                            "SELECT NAME FROM CUSTOMER WHERE LEVEL = 4",
-                                            "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'",
+                                            "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Yvonne Tonneson'",
+                                            "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Ethelda Granny'",
                                             "SELECT NAME FROM CUSTOMER WHERE LEVEL = 3",
                                             "SELECT INTEREST FROM CUSTOMER WHERE NAME  = 'Rosemary Picardi'",
                                             "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'"};

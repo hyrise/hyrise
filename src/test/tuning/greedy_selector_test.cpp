@@ -2,8 +2,10 @@
 
 #include "storage/table.hpp"
 #include "tuning/greedy_selector.hpp"
-#include "tuning/index/tuning_choice.hpp"
-#include "tuning/index/tuning_operation.hpp"
+#include "tuning/index/index_choice.hpp"
+#include "tuning/index/index_operation.hpp"
+#include "tuning/tuning_choice.hpp"
+#include "tuning/tuning_operation.hpp"
 
 namespace opossum {
 
@@ -84,7 +86,6 @@ protected:
         for(auto i = 0u; i<expected_operations.size(); i++) {
             auto expected_operation = expected_operations.at(i);
             auto actual_operation = std::dynamic_pointer_cast<T>(operations.at(i));
-            expected_operation
             EXPECT_TRUE(actual_operation);
             EXPECT_EQ(actual_operation, expected_operation);
         }
