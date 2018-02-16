@@ -76,11 +76,17 @@ TEST_F(GreedySelectorTest, SelectsBestChoicesInCorrectOrder) {
     auto operations = selector.select(choices, 2000.f);
 
     EXPECT_EQ(operations.size(), 6u);
+    // reject / ignore D
     compare_operation(operations.at(0), std::make_shared<MockOperation>("d", false));
+    // accept / create E
     compare_operation(operations.at(1), std::make_shared<MockOperation>("e", true));
+    // reject / ignore A
     compare_operation(operations.at(2), std::make_shared<NullOperation>());
+    // reject / delete B
     compare_operation(operations.at(3), std::make_shared<MockOperation>("b", false));
+    // accept / create F
     compare_operation(operations.at(4), std::make_shared<MockOperation>("f", true));
+    // accept / keep C
     compare_operation(operations.at(5), std::make_shared<NullOperation>());
 }
 
