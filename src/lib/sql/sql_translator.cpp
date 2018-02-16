@@ -42,11 +42,16 @@ namespace opossum {
 
 PredicateCondition translate_operator_type_to_predicate_condition(const hsql::OperatorType operator_type) {
   static const std::unordered_map<const hsql::OperatorType, const PredicateCondition> operator_to_predicate_condition =
-      {{hsql::kOpEquals, PredicateCondition::Equals},       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
-       {hsql::kOpGreater, PredicateCondition::GreaterThan}, {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
-       {hsql::kOpLess, PredicateCondition::LessThan},       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
-       {hsql::kOpBetween, PredicateCondition::Between},     {hsql::kOpLike, PredicateCondition::Like},
-       {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull},
+      {{hsql::kOpEquals, PredicateCondition::Equals},
+       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
+       {hsql::kOpGreater, PredicateCondition::GreaterThan},
+       {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
+       {hsql::kOpLess, PredicateCondition::LessThan},
+       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
+       {hsql::kOpBetween, PredicateCondition::Between},
+       {hsql::kOpLike, PredicateCondition::Like},
+       {hsql::kOpNotLike, PredicateCondition::NotLike},
+       {hsql::kOpIsNull, PredicateCondition::IsNull},
        {hsql::kOpIn, PredicateCondition::In}};
 
   auto it = operator_to_predicate_condition.find(operator_type);
@@ -747,8 +752,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
     if (select_column_hsql_expr->select) {
       auto subselect_node = _translate_select(*select_column_hsql_expr->select);
       expr = LQPExpression::create_subselect(subselect_node);
-    }
-    else {
+    } else {
       expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
     }
 
@@ -943,24 +947,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
     Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
   } else if (predicate_condition == PredicateCondition::In) {
-
     Assert(hsql_expr.select, "The IN operand only supports subqueries so far");
     // TODO(anybody): Also support lists of literals
     auto subselect_node = _translate_select(*hsql_expr.select);
-    auto subselect_expression = LQPExpression::create_subselect(subselect_node);
-
-    const auto subselect_columns = LQPExpression::create_columns(subselect_node->output_column_references());
-    auto projection_node = std::make_shared<ProjectionNode>(subselect_columns);
-    projection_node->set_left_child(subselect_node);
 
     const auto left_column = resolve_column(*column_ref_hsql_expr);
-    Assert(subselect_node->output_column_references().size() == 1, "You can only join on one column");
+    Assert(subselect_node->output_column_references().size() == 1, "You can only check IN on one column");
     auto right_column = subselect_node->output_column_references()[0];
     const auto column_references = std::make_pair(left_column, right_column);
 
     auto join_node = std::make_shared<JoinNode>(JoinMode::Semi, column_references, PredicateCondition::Equals);
     join_node->set_left_child(input_node);
-    join_node->set_right_child(projection_node);
+    join_node->set_right_child(subselect_node);
 
     return join_node;
   } else if (predicate_condition != PredicateCondition::IsNull &&
@@ -980,8 +978,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
 
     value_ref_hsql_expr = operands_switched ? hsql_expr.expr : hsql_expr.expr2;
     column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
-
-
   }
 
   /**
@@ -997,26 +993,27 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
   } else if (value_ref_hsql_expr->select) {
-          const auto column_references = input_node->output_column_references();
-          const auto original_column_expressions = LQPExpression::create_columns(column_references);
+    const auto column_references = input_node->output_column_references();
+    const auto original_column_expressions = LQPExpression::create_columns(column_references);
 
-          auto subselect_node = _translate_select(*value_ref_hsql_expr->select);
-          auto subselect_expression = LQPExpression::create_subselect(subselect_node);
+    auto subselect_node = _translate_select(*value_ref_hsql_expr->select);
+    auto subselect_expression = LQPExpression::create_subselect(subselect_node);
 
-          auto column_expressions = original_column_expressions;
-          column_expressions.push_back(subselect_expression);
+    auto column_expressions = original_column_expressions;
+    column_expressions.push_back(subselect_expression);
 
-          auto expand_projection_node = std::make_shared<ProjectionNode>(column_expressions);
-          expand_projection_node->set_left_child(input_node);
+    auto expand_projection_node = std::make_shared<ProjectionNode>(column_expressions);
+    expand_projection_node->set_left_child(input_node);
 
-          auto subselect_column_id = ColumnID(column_expressions.size() - 1);
-          auto predicate_node = std::make_shared<PredicateNode>(column_id, predicate_condition, subselect_column_id, std::nullopt);
-          predicate_node->set_left_child(expand_projection_node);
+    auto subselect_column_id = ColumnID(column_expressions.size() - 1);
+    auto predicate_node =
+        std::make_shared<PredicateNode>(column_id, predicate_condition, subselect_column_id, std::nullopt);
+    predicate_node->set_left_child(expand_projection_node);
 
-          auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
-          reduce_projection_node->set_left_child(predicate_node);
+    auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
+    reduce_projection_node->set_left_child(predicate_node);
 
-          return reduce_projection_node;
+    return reduce_projection_node;
   } else {
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }
