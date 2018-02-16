@@ -64,7 +64,7 @@ class ColumnIterable {
    * @param f is a generic lambda accepting two iterators as parameters
    */
   template <typename Functor>
-  void with_iterators(const Functor& f) {
+  void with_iterators(const Functor& f) const {
     _self()._on_with_iterators(f);
   }
 
@@ -72,7 +72,7 @@ class ColumnIterable {
    * @param f is a generic lambda accepting a column value (i.e. use const auto&)
    */
   template <typename Functor>
-  void for_each(const Functor& f) {
+  void for_each(const Functor& f) const {
     with_iterators([&f](auto it, auto end) {
       for (; it != end; ++it) {
         f(*it);
@@ -112,7 +112,7 @@ class PointAccessibleColumnIterable : public ColumnIterable<Derived> {
   using ColumnIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
-  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) {
+  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
     with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);
