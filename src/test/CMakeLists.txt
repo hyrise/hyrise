@@ -116,6 +116,7 @@ set(
     testing_assert.hpp
     tuning/index/index_evaluator_test.cpp
     tuning/index/column_ref.cpp
+    tuning/greedy_selector_test.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
     utils/format_bytes_test.cpp
