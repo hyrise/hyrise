@@ -46,8 +46,8 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    _iterable._on_with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
+  void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& functor) const {
+    _iterable._on_with_iterators(plan, [&functor](auto it, auto end) {
       using ColumnIteratorValueT = typename std::iterator_traits<decltype(it)>::value_type;
       using DataTypeT = typename ColumnIteratorValueT::Type;
 

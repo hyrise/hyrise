@@ -29,9 +29,25 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const auto is_not_empty = !pos_list.empty();
 
     if (references_single_chunk && is_not_empty) {
-      const auto chunk_id = pos_list.front().chunk_id;
-      const auto chunk_offsets_list = to_chunk_offsets_list(pos_list);
-      _referenced_with_iterators(chunk_id, chunk_offsets_list, functor);
+      _referenced_with_iterators({pos_list.cbegin(), pos_list.cend(), ChunkOffset{0u}}, functor);
+    } else if (this->allows_reordering() && is_not_empty) {
+      auto current_chunk_id = pos_list.front().chunk_id;
+
+      auto begin_pos_list_it = pos_list.cbegin();
+      auto end_pos_list_it = pos_list.cbegin();
+      auto begin_chunk_offset = ChunkOffset{0u};
+
+      while (begin_pos_list_it != pos_list.cend()) {
+        ++end_pos_list_it;
+
+        if (end_pos_list_it->chunk_id != current_chunk_id || end_pos_list_it == pos_list.cend()) {
+          _referenced_with_iterators({begin_pos_list_it, end_pos_list_it, begin_chunk_offset}, functor);
+
+          begin_chunk_offset += static_cast<ChunkOffset>(std::distance(begin_pos_list_it, end_pos_list_it));
+          begin_pos_list_it = end_pos_list_it;
+          current_chunk_id = begin_pos_list_it->chunk_id;
+        }
+      }
     } else {
       auto begin_it = Iterator{table, column_id, pos_list, ChunkOffset{0u}};
       auto end_it = Iterator{table, column_id, pos_list, static_cast<ChunkOffset>(pos_list.size())};
@@ -42,19 +58,20 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
  private:
   template <typename Functor>
-  void _referenced_with_iterators(const ChunkID chunk_id, const ChunkOffsetsList& chunk_offsets_list, const Functor& functor) const {
+  void _referenced_with_iterators(const ColumnPointAccessPlan& access_plan, const Functor& functor) const {
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
+    const auto chunk_id = access_plan.begin->chunk_id;
     const auto base_column = table->get_chunk(chunk_id)->get_column(column_id);
 
-    resolve_column_type<T>(*base_column, [&functor, &chunk_offsets_list](const auto& referenced_column) {
+    resolve_column_type<T>(*base_column, [&functor, &access_plan](const auto& referenced_column) {
       using ColumnT = std::decay_t<decltype(referenced_column)>;
       constexpr auto is_reference_column = std::is_same_v<ColumnT, ReferenceColumn>;
 
       // clang-format off
       if constexpr (!is_reference_column) {
         auto iterable = create_iterable_from_column<T>(referenced_column);
-        iterable.with_iterators(&chunk_offsets_list, [&](auto it, auto end) { functor(it, end); });
+        iterable.with_iterators(access_plan, [&](auto it, auto end) { functor(it, end); });
       } else {
         Fail("Reference column must not reference another reference column.");
       }

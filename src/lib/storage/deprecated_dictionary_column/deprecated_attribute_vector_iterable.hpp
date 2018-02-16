@@ -23,9 +23,9 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
-    auto begin = PointAccessIterator{_attribute_vector, mapped_chunk_offsets.cbegin()};
-    auto end = PointAccessIterator{_attribute_vector, mapped_chunk_offsets.cend()};
+  void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& f) const {
+    auto begin = PointAccessIterator{_attribute_vector, plan.begin, plan.begin_chunk_offset};
+    auto end = PointAccessIterator{_attribute_vector, plan.end, ChunkOffset{}};
     f(begin, end);
   }
 
@@ -59,8 +59,8 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
   class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>> {
    public:
     explicit PointAccessIterator(const BaseAttributeVector& attribute_vector,
-                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>>{chunk_offsets_it},
+                                 PosListIterator pos_list_it, ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>>{pos_list_it, chunk_offset},
           _attribute_vector{attribute_vector} {}
 
    private:

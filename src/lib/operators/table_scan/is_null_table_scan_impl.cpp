@@ -17,12 +17,12 @@ namespace opossum {
 
 IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                                          const PredicateCondition& predicate_condition)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition, false} {}
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition} {}
 
 void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                         std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
   auto& left_column = static_cast<const BaseValueColumn&>(base_column);
 
   if (_matches_all(left_column)) {
@@ -39,36 +39,36 @@ void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
 
   auto left_column_iterable = NullValueVectorIterable{left_column.null_values()};
 
-  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+  left_column_iterable.with_iterators(access_plan,
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& left_column,
                                         std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
 
   auto left_column_iterable = _create_attribute_vector_iterable(left_column);
 
-  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+  left_column_iterable.with_iterators(access_plan,
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
                                         std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
 
   auto left_column_iterable = _create_attribute_vector_iterable(left_column);
 
-  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+  left_column_iterable.with_iterators(access_plan,
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                         std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
 
@@ -79,7 +79,7 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
       auto left_column_iterable = create_iterable_from_column(typed_column);
 
       left_column_iterable.with_iterators(
-          mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+          access_plan, [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
     });
   });
 }
@@ -113,11 +113,14 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
 void IsNullTableScanImpl::_add_all(Context& context, size_t column_size) {
   auto& matches_out = context._matches_out;
   const auto chunk_id = context._chunk_id;
-  const auto& mapped_chunk_offsets = context._mapped_chunk_offsets;
+  const auto access_plan = context._access_plan;
 
-  if (mapped_chunk_offsets) {
-    for (const auto& chunk_offsets : *mapped_chunk_offsets) {
-      matches_out.push_back(RowID{chunk_id, chunk_offsets.into_referencing});
+  if (access_plan) {
+    auto it = access_plan->begin;
+    auto end = access_plan->end;
+    auto chunk_offset = access_plan->begin_chunk_offset;
+    for (; it != end; ++it, ++chunk_offset) {
+      matches_out.push_back(RowID{chunk_id, chunk_offset});
     }
   } else {
     for (auto chunk_offset = 0u; chunk_offset < column_size; ++chunk_offset) {

@@ -24,11 +24,11 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& functor) const {
     auto begin = PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(),
-                                     mapped_chunk_offsets.cbegin()};
+                                     plan.begin, plan.begin_chunk_offset};
     auto end = PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(),
-                                   mapped_chunk_offsets.cend()};
+                                   plan.end, ChunkOffset{}};
 
     functor(begin, end);
   }
@@ -95,8 +95,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
    public:
     explicit PointAccessIterator(const pmr_vector<T>& values, const pmr_vector<bool>& null_values,
                                  const pmr_vector<ChunkOffset>& end_positions,
-                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
+                                 PosListIterator pos_list_it, ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{pos_list_it, chunk_offset},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},

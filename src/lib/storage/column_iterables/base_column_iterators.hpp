@@ -66,22 +66,24 @@ using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward
 template <typename Derived, typename Value>
 class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> {
  public:
-  explicit BasePointAccessColumnIterator(const ChunkOffsetsIterator& chunk_offsets_it)
-      : _chunk_offsets_it{chunk_offsets_it} {}
+  explicit BasePointAccessColumnIterator(PosListIterator pos_list_it, ChunkOffset chunk_offset)
+      : _pos_list_it{std::move(pos_list_it)}, _chunk_offset{std::move(chunk_offset)} {}
 
  protected:
-  const ChunkOffsetMapping& chunk_offsets() const { return *_chunk_offsets_it; }
+  ChunkOffsetMapping chunk_offsets() const { return {_chunk_offset, _pos_list_it->chunk_offset}; }
 
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_chunk_offsets_it; }
+  void increment() { ++_pos_list_it; ++_chunk_offset; }
+
   bool equal(const BasePointAccessColumnIterator& other) const {
-    return (_chunk_offsets_it == other._chunk_offsets_it);
+    return (_pos_list_it == other._pos_list_it);
   }
 
  private:
-  ChunkOffsetsIterator _chunk_offsets_it;
+  PosListIterator _pos_list_it;
+  ChunkOffset _chunk_offset;
 };
 
 }  // namespace opossum

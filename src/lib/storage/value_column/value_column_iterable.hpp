@@ -28,14 +28,14 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& functor) const {
     if (_column.is_nullable()) {
-      auto begin = PointAccessIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cend()};
+      auto begin = PointAccessIterator{_column.values(), _column.null_values(), plan.begin, plan.begin_chunk_offset};
+      auto end = PointAccessIterator{_column.values(), _column.null_values(), plan.end, ChunkOffset{}};
       functor(begin, end);
     } else {
-      auto begin = NonNullPointAccessIterator{_column.values(), mapped_chunk_offsets.cbegin()};
-      auto end = NonNullPointAccessIterator{_column.values(), mapped_chunk_offsets.cend()};
+      auto begin = NonNullPointAccessIterator{_column.values(), plan.begin, plan.begin_chunk_offset};
+      auto end = NonNullPointAccessIterator{_column.values(), plan.end, ChunkOffset{}};
       functor(begin, end);
     }
   }
@@ -109,8 +109,8 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     using ValueVector = pmr_concurrent_vector<T>;
 
    public:
-    explicit NonNullPointAccessIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
+    explicit NonNullPointAccessIterator(const ValueVector& values, PosListIterator pos_list_it, ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>>{pos_list_it, chunk_offset},
           _values{values} {}
 
    private:
@@ -136,8 +136,8 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
 
    public:
     explicit PointAccessIterator(const ValueVector& values, const NullValueVector& null_values,
-                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
+                                 PosListIterator pos_list_it, ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{pos_list_it, chunk_offset},
           _values{values},
           _null_values{null_values} {}
 

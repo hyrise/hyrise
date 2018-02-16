@@ -1,6 +1,8 @@
 #pragma once
 
 #include <type_traits>
+#include <array>
+#include <optional>
 
 #include "storage/column_iterables/base_column_iterators.hpp"
 #include "types.hpp"
@@ -80,8 +82,20 @@ class ColumnIterable {
     });
   }
 
+  void set_allow_reordering(bool allow) { _allow_reordering = allow; }
+  bool allows_reordering() const { return _allow_reordering; }
+
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
+
+ private:
+  bool _allow_reordering = false;
+};
+
+struct ColumnPointAccessPlan {
+  PosListIterator begin;
+  PosListIterator end;
+  ChunkOffset begin_chunk_offset;
 };
 
 /**
@@ -101,19 +115,19 @@ class PointAccessibleColumnIterable : public ColumnIterable<Derived> {
   using ColumnIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
-  void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
-    if (mapped_chunk_offsets == nullptr) {
+  void with_iterators(std::optional<ColumnPointAccessPlan> plan, const Functor& functor) const {
+    if (!plan) {
       _self()._on_with_iterators(functor);
     } else {
-      _self()._on_with_iterators(*mapped_chunk_offsets, functor);
+      _self()._on_with_iterators(*plan, functor);
     }
   }
 
   using ColumnIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
-  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
-    with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
+  void for_each(std::optional<ColumnPointAccessPlan> plan, const Functor& functor) const {
+    with_iterators(plan, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);
       }

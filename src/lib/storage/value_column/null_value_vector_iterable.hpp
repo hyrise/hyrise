@@ -24,9 +24,9 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = PointAccessIterator{_null_values, mapped_chunk_offsets.cbegin()};
-    auto end = PointAccessIterator{_null_values, mapped_chunk_offsets.cend()};
+  void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& functor) const {
+    auto begin = PointAccessIterator{_null_values, plan.begin, plan.begin_chunk_offset};
+    auto end = PointAccessIterator{_null_values, plan.end, ChunkOffset{}};
     functor(begin, end);
   }
 
@@ -63,8 +63,8 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{chunk_offsets_it},
+    explicit PointAccessIterator(const NullValueVector& null_values, PosListIterator pos_list_it, ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{pos_list_it, chunk_offset},
           _null_values{null_values} {}
 
    private:

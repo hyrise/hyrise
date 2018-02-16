@@ -42,7 +42,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
   const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
@@ -55,7 +55,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
     auto left_column_iterable = create_iterable_from_column(left_column);
     auto right_value_iterable = ConstantValueIterable<ColumnDataType>{_right_value};
 
-    left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    left_column_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         with_comparator(_predicate_condition, [&](auto comparator) {
           _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
@@ -79,7 +79,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
   const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
@@ -91,7 +91,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
       auto left_column_iterable = create_iterable_from_column(typed_column);
       auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-      left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+      left_column_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
         right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
           with_comparator(_predicate_condition, [&](auto comparator) {
             _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
@@ -108,7 +108,7 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
 
   /**
    * ValueID value_id; // left value id
@@ -142,7 +142,7 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
   auto left_iterable = _create_attribute_vector_iterable(left_column);
 
   if (_right_value_matches_all(left_column, search_value_id)) {
-    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    left_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
@@ -156,7 +156,7 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
 
   auto right_iterable = ConstantValueIterable<ValueID>{search_value_id};
 
-  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+  left_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
       this->_with_operator_for_dict_column_scan(_predicate_condition, [&](auto comparator) {
         this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);

@@ -3,11 +3,13 @@
 #include <memory>
 #include <unordered_map>
 #include <utility>
+#include <optional>
 
 #include "base_table_scan_impl.hpp"
 
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/column_visitable.hpp"
+#include "storage/column_iterables.hpp"
 
 #include "types.hpp"
 
@@ -27,7 +29,7 @@ class DeprecatedAttributeVectorIterable;
 class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVisitable {
  public:
   BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                const PredicateCondition predicate_condition, const bool skip_null_row_ids = true);
+                                const PredicateCondition predicate_condition);
 
   PosList scan_chunk(ChunkID chunk_id) override;
 
@@ -38,22 +40,22 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
    * @brief the context used for the columns’ visitor pattern
    */
   struct Context : public ColumnVisitableContext {
-    Context(const ChunkID chunk_id, PosList& matches_out, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
+    Context(const ChunkID chunk_id, PosList& matches_out, std::optional<ColumnPointAccessPlan> access_plan)
         : _chunk_id{chunk_id},
           _matches_out{matches_out},
-          _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
+          _access_plan{std::move(access_plan)} {}
 
     Context(const ChunkID chunk_id, PosList& matches_out)
-        : Context{chunk_id, matches_out, nullptr} {}
+        : Context{chunk_id, matches_out, std::nullopt} {}
 
     // Copy everything from other except mapped_chunk_offsets
-    Context(Context& other, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
-        : Context{other._chunk_id, other._matches_out, std::move(mapped_chunk_offsets)} {}
+    Context(Context& other, const ColumnPointAccessPlan& access_plan)
+        : Context{other._chunk_id, other._matches_out, std::move(access_plan)} {}
 
     const ChunkID _chunk_id;
     PosList& _matches_out;
 
-    std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
+    std::optional<ColumnPointAccessPlan> _access_plan;
   };
 
   /**
@@ -72,10 +74,7 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
   /**@}*/
 
   void _visit_referenced(const ReferenceColumn& left_column, const ChunkID referenced_chunk_id, Context& context,
-                         ChunkOffsetsList chunk_offsets_list);
-
- private:
-  const bool _skip_null_row_ids;  // see chunk_offset_mapping.hpp for explanation
+                         ColumnPointAccessPlan access_plan);
 };
 
 }  // namespace opossum

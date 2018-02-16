@@ -28,15 +28,15 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& functor) const {
     resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
       auto begin = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
-                                                      mapped_chunk_offsets.cbegin()};
+                                                      plan.begin, plan.begin_chunk_offset};
       auto end = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
-                                                    mapped_chunk_offsets.cend()};
+                                                    plan.end, ChunkOffset{}};
       functor(begin, end);
     });
   }
@@ -86,8 +86,8 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
       : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>> {
    public:
     PointAccessIterator(const pmr_vector<T>& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
-                        ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it},
+                        PosListIterator pos_list_it, ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{pos_list_it, chunk_offset},
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}

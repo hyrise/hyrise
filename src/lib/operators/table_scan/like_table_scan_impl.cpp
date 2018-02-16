@@ -37,7 +37,7 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                       std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
   const auto chunk_id = context->_chunk_id;
 
   auto& left_column = static_cast<const ValueColumn<std::string>&>(base_column);
@@ -47,7 +47,7 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
 
   const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
 
-  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+  left_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
     this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
   });
 }
@@ -68,7 +68,7 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                       std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
   const auto chunk_id = context->_chunk_id;
 
   resolve_encoded_column_type<std::string>(base_column, [&](const auto& typed_column) {
@@ -77,7 +77,7 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 
     const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
 
-    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    left_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
       this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
     });
   });
@@ -88,7 +88,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
                                                   std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto access_plan = context->_access_plan;
   const auto chunk_id = context->_chunk_id;
 
   const auto result = _find_matches_in_dictionary(*left_column.dictionary());
@@ -99,7 +99,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
 
   // Regex matches all
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    attribute_vector_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
@@ -114,7 +114,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
 
   const auto dictionary_lookup = [&dictionary_matches](const ValueID& value) { return dictionary_matches[value]; };
 
-  attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+  attribute_vector_iterable.with_iterators(access_plan, [&](auto left_it, auto left_end) {
     this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
   });
 }
