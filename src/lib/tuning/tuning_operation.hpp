@@ -22,7 +22,7 @@ class TuningOperation {
    *
    * The default implementation prints "TuningOperation{}"
    */
-  virtual void print_on(std::ostream& output) const = 0;
+  virtual void print_on(std::ostream& output) const;
 
   friend std::ostream& operator<<(std::ostream& output, const TuningOperation& operation) {
     operation.print_on(output);
