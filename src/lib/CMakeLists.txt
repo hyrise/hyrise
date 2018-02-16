@@ -288,6 +288,8 @@ set(
     tuning/index/index_choice.hpp
     tuning/index/index_operation.cpp
     tuning/index/index_operation.hpp
+    tuning/null_operation.cpp
+    tuning/null_operation.hpp
     tuning/tuner.cpp
     tuning/tuner.hpp
     tuning/tuning_choice.hpp

@@ -15,14 +15,14 @@ class TuningOperation {
    *
    * The default implementation does nothing.
    */
-  virtual void execute();
+  virtual void execute() = 0;
 
   /**
    * Print detailed information on the concrete TuningOperation.
    *
    * The default implementation prints "TuningOperation{}"
    */
-  virtual void print_on(std::ostream& output) const;
+  virtual void print_on(std::ostream& output) const = 0;
 
   friend std::ostream& operator<<(std::ostream& output, const TuningOperation& operation) {
     operation.print_on(output);

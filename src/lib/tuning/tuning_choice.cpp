@@ -1,5 +1,7 @@
 #include "tuning_choice.hpp"
 
+#include "null_operation.hpp"
+
 namespace opossum {
 
 float TuningChoice::accept_desirability() const {
@@ -40,7 +42,7 @@ float TuningChoice::reject_cost() const {
 std::shared_ptr<TuningOperation> TuningChoice::accept() const {
   if (is_currently_chosen()) {
     // No Operation
-    return std::make_shared<TuningOperation>();
+    return std::make_shared<NullOperation>();
   } else {
     return _accept_operation();
   }
@@ -51,7 +53,7 @@ std::shared_ptr<TuningOperation> TuningChoice::reject() const {
     return _reject_operation();
   } else {
     // No Operation
-    return std::make_shared<TuningOperation>();
+    return std::make_shared<NullOperation>();
   }
 }
 
