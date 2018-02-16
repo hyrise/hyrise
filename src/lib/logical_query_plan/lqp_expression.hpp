@@ -27,6 +27,8 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
 
   const LQPColumnReference& column_reference() const;
 
+  std::shared_ptr<AbstractLQPNode> subselect_node() const;
+
   void set_column_reference(const LQPColumnReference& column_reference);
 
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
@@ -36,6 +38,8 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
 
  protected:
   void _deep_copy_impl(const std::shared_ptr<LQPExpression>& copy) const override;
+
+  std::optional<std::shared_ptr<AbstractLQPNode>> _subselect_node;
 
  private:
   std::optional<LQPColumnReference> _column_references;

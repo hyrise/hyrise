@@ -238,12 +238,6 @@ ValuePlaceholder AbstractExpression<DerivedExpression>::value_placeholder() cons
 }
 
 template <typename DerivedExpression>
-std::shared_ptr<AbstractLQPNode> AbstractExpression<DerivedExpression>::subselect_node() {
-  DebugAssert(_subselect_node != std::nullopt, "LPQNode does not contain a subselect node.");
-  return *_subselect_node;
-}
-
-template <typename DerivedExpression>
 std::string AbstractExpression<DerivedExpression>::to_string(
     const std::optional<std::vector<std::string>>& input_column_names, bool is_root) const {
   switch (_type) {
@@ -263,6 +257,8 @@ std::string AbstractExpression<DerivedExpression>::to_string(
              _aggregate_function_arguments[0]->to_string(input_column_names, true) + ")";
     case ExpressionType::Star:
       return std::string("*");
+    case ExpressionType::Select:
+      return "subquery";
     default:
       // Handled further down.
       break;
