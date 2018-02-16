@@ -353,4 +353,14 @@ TEST_F(OperatorsProjectionTest, ExecuteSubquery) {
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
 }
 
+TEST_F(OperatorsProjectionTest, ExecuteSubqueryFail) {
+  auto multiple_value_table = std::make_shared<TableWrapper>(load_table("src/test/tables/int3.tbl", 1));
+  auto subselect_expr = Projection::ColumnExpressions{PQPExpression::create_subselect(multiple_value_table)};
+
+  auto projection = std::make_shared<opossum::Projection>(_table_wrapper, subselect_expr);
+
+  // will fail, since subqueries executed in projection can only return one row
+  EXPECT_ANY_THROW(projection->execute());
+}
+
 }  // namespace opossum
