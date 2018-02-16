@@ -14,6 +14,7 @@
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "sql/gdfs_cache.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
@@ -21,8 +22,7 @@
 
 namespace opossum {
 
-BaseIndexEvaluator::BaseIndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> query_cache)
-    : _query_cache{query_cache} {}
+BaseIndexEvaluator::BaseIndexEvaluator() {}
 
 void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
   // Allow concrete implementation to initialize
@@ -80,9 +80,11 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   //   const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
   // ToDo(group01) implement for cache implementations other than GDFS cache
 
+
+  const auto& pqp_cache = SQLQueryCache<SQLQueryPlan>::get();
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
-      dynamic_cast<const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>*>(&(_query_cache->cache()));
+      dynamic_cast<const GDFSCache<std::string, SQLQueryPlan>* >(&(pqp_cache.cache()));
   Assert(gdfs_cache_ptr, "Expected GDFS Cache");
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
@@ -94,7 +96,7 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const auto& entry = *cache_iterator;
     LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
-    for (const auto& operator_tree : entry.value->tree_roots()) {
+    for (const auto& operator_tree : entry.value.tree_roots()) {
       _inspect_pqp_operator(operator_tree, entry.frequency);
     }
   }

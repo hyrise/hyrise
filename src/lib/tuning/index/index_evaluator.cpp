@@ -11,8 +11,7 @@
 
 namespace opossum {
 
-IndexEvaluator::IndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan> > > query_cache)
-    : BaseIndexEvaluator{query_cache} {}
+IndexEvaluator::IndexEvaluator() {}
 
 void IndexEvaluator::_setup() { _saved_work.clear(); }
 

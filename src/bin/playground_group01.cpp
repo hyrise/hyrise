@@ -34,15 +34,12 @@ const std::vector<std::string> test_queries{"SELECT BALANCE FROM CUSTOMER WHERE 
                                             "SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'"};
 
 // Forward declarations
-std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
-    const std::string& query, opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache);
-int _execute_query(const std::string& query, unsigned int execution_count,
-                   opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache);
+std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::string& query);
+int _execute_query(const std::string& query, unsigned int execution_count);
 
 int main() {
-  auto cache = std::make_shared<opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>>(1024);
   opossum::Tuner tuner;
-  tuner.add_evaluator(std::make_unique<opossum::IndexEvaluator>(cache));
+  tuner.add_evaluator(std::make_unique<opossum::IndexEvaluator>());
   tuner.set_selector(std::make_unique<opossum::GreedySelector>());
 
   LOG_INFO("Loading binary table...");
@@ -67,7 +64,7 @@ int main() {
   // Fire SQL query and cache it
   for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
     LOG_DEBUG("  -> " << query_index + 1 << "/" << test_queries.size() << ": " << test_queries[query_index]);
-    first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, *cache);
+    first_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count);
   }
   LOG_INFO("Queries executed.\n");
 
@@ -82,7 +79,7 @@ int main() {
 
   // Execute the same queries a second time and measure the speedup
   for (auto query_index = 0u; query_index < test_queries.size(); ++query_index) {
-    second_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count, *cache);
+    second_execution_times[query_index] = _execute_query(test_queries[query_index], execution_count);
 
     float percentage = (static_cast<float>(second_execution_times[query_index]) /
                         static_cast<float>(first_execution_times[query_index])) *
@@ -101,25 +98,23 @@ int main() {
 
 // Creates a Pipeline based on the supplied query and puts its query plan in the supplied cache
 std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(
-    const std::string& query, opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache) {
-  auto pipeline = std::make_shared<opossum::SQLPipeline>(query, false);
+    const std::string& query) {
+  auto pipeline = std::make_shared<opossum::SQLPipeline>(query, opossum::UseMvcc::No);
 
   auto query_plans = pipeline->get_query_plans();
 
   // ToDo(group01): What is the semantics of multiple entries per query? Handle cases accordingly.
   opossum::Assert(query_plans.size() == 1, "Expected only one query plan per pipeline");
-  cache.set(query, query_plans[0]);
   return pipeline;
 }
 
 // Executes a query repeatedly and measures the execution time
-int _execute_query(const std::string& query, unsigned int execution_count,
-                   opossum::SQLQueryCache<std::shared_ptr<opossum::SQLQueryPlan>>& cache) {
+int _execute_query(const std::string& query, unsigned int execution_count) {
   int accumulated_duration = 0;
 
   // Execute queries multiple times to get more stable timing results
   for (auto counter = 0u; counter < execution_count; counter++) {
-    auto pipeline = _create_and_cache_pipeline(query, cache);
+    auto pipeline = _create_and_cache_pipeline(query);
     pipeline->get_result_table();
     accumulated_duration += pipeline->execution_time_microseconds().count();
   }

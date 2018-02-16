@@ -20,7 +20,7 @@ class IndexEvaluator : public BaseIndexEvaluator {
   friend class IndexEvaluatorTest;
 
  public:
-  explicit IndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan> > > query_cache);
+  explicit IndexEvaluator();
 
  protected:
   void _setup() final;
