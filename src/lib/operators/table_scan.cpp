@@ -113,7 +113,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (_in_table->get_type() == TableType::References) {
         const auto chunk_in = _in_table->get_chunk(chunk_id);
 
-        auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
+        auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::pair<std::shared_ptr<PosList>, PosListType>>{};
 
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
           auto column_in = chunk_in->get_column(column_id);
@@ -126,24 +126,30 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           const auto table_out = ref_column_in->referenced_table();
           const auto column_id_out = ref_column_in->referenced_column_id();
 
-          auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+          auto& [filtered_pos_list, pos_list_type] = filtered_pos_lists[pos_list_in];
 
           if (!filtered_pos_list) {
             filtered_pos_list = std::make_shared<PosList>();
             filtered_pos_list->reserve(matches_out->size());
 
+            auto references_single_chunk = true;
+            const auto first_chunk_id = matches_out->front().chunk_id;
+
             for (const auto& match : *matches_out) {
               const auto row_id = (*pos_list_in)[match.chunk_offset];
+              references_single_chunk = (row_id.chunk_id == first_chunk_id);
               filtered_pos_list->push_back(row_id);
             }
+
+            pos_list_type = references_single_chunk ? PosListType::SingleChunk : PosListType::MultiChunk;
           }
 
-          auto ref_column_out = std::make_shared<ReferenceColumn>(table_out, column_id_out, filtered_pos_list);
+          auto ref_column_out = std::make_shared<ReferenceColumn>(table_out, column_id_out, filtered_pos_list, pos_list_type);
           chunk_out->add_column(ref_column_out);
         }
       } else {
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
-          auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
+          auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out, PosListType::SingleChunk);
           chunk_out->add_column(ref_column_out);
         }
       }

@@ -37,23 +37,24 @@ PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
 void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_column,
                                                   std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const ChunkID chunk_id = context->_chunk_id;
-  auto& matches_out = context->_matches_out;
 
-  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
+  if (left_column.type() == ReferenceColumnType::SingleChunk) {
+    const auto referenced_chunk_id = left_column.pos_list()->front().chunk_id;
+    auto chunk_offsets_list = to_chunk_offsets_list(*left_column.pos_list, _skip_null_row_ids);
 
-  // Visit each referenced column
-  for (auto& pair : chunk_offsets_by_chunk_id) {
-    const auto& referenced_chunk_id = pair.first;
-    auto& mapped_chunk_offsets = pair.second;
+    _visit_referenced(left_column, referenced_chunk_id, *context, std::move(chunk_offsets_list));
+  } else {
+    context->_references_single_chunk = false;
 
-    const auto chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
-    auto referenced_column = chunk->get_column(left_column.referenced_column_id());
+    auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
 
-    auto mapped_chunk_offsets_ptr = std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));
+    // Visit each referenced column
+    for (auto& pair : chunk_offsets_by_chunk_id) {
+      const auto& referenced_chunk_id = pair.first;
+      auto& chunk_offsets_list = pair.second;
 
-    auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
-    referenced_column->visit(*this, new_context);
+      _visit_referenced(left_column, referenced_chunk_id, *context, std::move(chunk_offsets_list));
+    }
   }
 }
 
@@ -65,6 +66,19 @@ AttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribute_vector_
 DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribute_vector_iterable(
     const BaseDeprecatedDictionaryColumn& column) {
   return DeprecatedAttributeVectorIterable{*column.attribute_vector()};
+}
+
+void BaseSingleColumnTableScanImpl::_visit_referenced(const ReferenceColumn& left_column,
+                                                      const ChunkID referenced_chunk_id,
+                                                      Context& context
+                                                      ChunkOffsetsList chunk_offsets_list) {
+  const auto chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
+  auto referenced_column = chunk->get_column(left_column.referenced_column_id());
+
+  auto chunk_offsets_list_ptr = std::make_unique<ChunkOffsetsList>(std::move(chunk_offsets_list));
+
+  auto new_context = std::make_shared<Context>(context, std::move(chunk_offsets_list_ptr));
+  referenced_column->visit(*this, new_context);
 }
 
 }  // namespace opossum

@@ -12,9 +12,9 @@
 namespace opossum {
 
 ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_table,
-                                 const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos,
-                                 ReferenceColumnType type)
-    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos), _type(type) {
+                                 const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos_list,
+                                 PosListType pos_list_type)
+    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos), _pos_list_type(pos_list_type) {
   DebugAssert(_referenced_table->get_type() == TableType::Data, "Referenced table must be a data table.");
   DebugAssert(
       [&]() {
@@ -44,7 +44,7 @@ void ReferenceColumn::append(const AllTypeVariant&) { Fail("ReferenceColumn is i
 const std::shared_ptr<const PosList> ReferenceColumn::pos_list() const { return _pos_list; }
 const std::shared_ptr<const Table> ReferenceColumn::referenced_table() const { return _referenced_table; }
 ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_column_id; }
-ReferenceColumnType ReferenceColumn::type() const { return _type; }
+PosListType ReferenceColumn::pos_list_type() const { return _pos_list_type; }
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
