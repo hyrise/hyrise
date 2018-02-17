@@ -10,7 +10,7 @@
 namespace opossum {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& alias)
-    : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(column_definitions) {
+    : Base(LQPNodeType::Mock), _constructor_arguments(column_definitions) {
   for (const auto& column_definition : column_definitions) {
     _output_column_names.emplace_back(column_definition.second);
   }
@@ -19,7 +19,7 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
 }
 
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std::optional<std::string>& alias)
-    : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {
+    : Base(LQPNodeType::Mock), _constructor_arguments(statistics) {
   set_statistics(statistics);
 
   for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();

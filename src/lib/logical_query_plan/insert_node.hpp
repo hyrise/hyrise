@@ -11,9 +11,9 @@ namespace opossum {
 /**
  * Node type to represent insertion of rows into a table.
  */
-class InsertNode : public AbstractLQPNode {
+class InsertNode : public AbstractLQPNodeCRT<InsertNode> {
  public:
-  explicit InsertNode(const std::string table_name, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+  explicit InsertNode(const std::string table_name);
 
   std::string description() const override;
   bool subtree_is_read_only() const override;

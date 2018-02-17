@@ -22,11 +22,10 @@ namespace opossum {
  *
  *  The order of the output columns is groupby columns followed by aggregate columns
  */
-class AggregateNode : public AbstractLQPNode {
+class AggregateNode : public AbstractLQPNodeCRT<AggregateNode> {
  public:
   explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
-                         const std::vector<LQPColumnReference>& groupby_column_references,
-                         const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+                         const std::vector<LQPColumnReference>& groupby_column_references);
 
   const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;

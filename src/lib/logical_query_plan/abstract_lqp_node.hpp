@@ -73,8 +73,7 @@ struct QualifiedColumnName {
  */
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, private Noncopyable {
  public:
-  explicit AbstractLQPNode(LQPNodeType node_type, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
-                           const std::shared_ptr<AbstractLQPNode>& right_child = nullptr);
+  explicit AbstractLQPNode(LQPNodeType node_type);
 
   // Creates a deep copy
   virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
@@ -366,5 +365,44 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   void _add_parent_pointer(const std::shared_ptr<AbstractLQPNode>& parent);
   // @}
 };
+
+template<typename DerivedNode>
+class AbstractLQPNodeCRT : public AbstractLQPNode {
+ public:
+  using AbstractLQPNode::AbstractLQPNode;
+
+  using Base = AbstractLQPNodeCRT<DerivedNode>;
+
+  template<int N, typename... Ts> using NthTypeOf = typename std::tuple_element<N, std::tuple<Ts...>>::type;
+
+  template<class NodeType, typename... Args>
+  static std::shared_ptr<NodeType> make(Args ... args) {
+    if constexpr(sizeof...(Args) > 0 && std::is_convertible_v<NthTypeOf<sizeof...(Args) - 1, Args...>, std::shared_ptr<AbstractLQPNode>>) {
+      auto args_tuple = std::forward_as_tuple(args...);
+      if constexpr(sizeof...(Args) > 1 && std::is_convertible_v<NthTypeOf<sizeof...(Args) - 2, Args...>, std::shared_ptr<AbstractLQPNode>>) {
+        // last two arguments are shared_ptr<AbstractLQPNode>
+        auto node = make_impl<NodeType>(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
+        node->set_left_child(std::get<sizeof...(Args) - 2>(args_tuple));
+        node->set_right_child(std::get<sizeof...(Args) - 1>(args_tuple));
+        return node;
+      } else {
+        // last argument is shared_ptr<AbstractLQPNode>
+        auto node = make_impl<NodeType>(args_tuple, std::make_index_sequence<sizeof...(Args) - 1>());
+        node->set_left_child(std::get<sizeof...(Args) - 1>(args_tuple));
+        return node;
+      }
+    }
+    // no shared_ptr<AbstractLQPNode> was passed at the end
+    return make_impl<NodeType>(std::forward_as_tuple(args...), std::make_index_sequence<sizeof...(Args) - 0>());
+  }
+
+ private:
+  template<class NodeType, class Tuple, size_t... I>
+  static std::shared_ptr<NodeType> make_impl(const Tuple& constructor_arguments, std::index_sequence<I...> num_constructor_args)
+  {
+    return std::make_shared<NodeType>(std::get<I>(constructor_arguments)...);
+  }
+};
+
 
 }  // namespace opossum

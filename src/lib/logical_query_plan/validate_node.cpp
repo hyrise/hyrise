@@ -4,8 +4,8 @@
 
 namespace opossum {
 
-ValidateNode::ValidateNode(const std::shared_ptr<AbstractLQPNode>& left_child)
-    : AbstractLQPNode(LQPNodeType::Validate, left_child) {}
+ValidateNode::ValidateNode()
+    : Base(LQPNodeType::Validate) {}
 
 std::shared_ptr<AbstractLQPNode> ValidateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

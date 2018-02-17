@@ -10,7 +10,7 @@ namespace opossum {
 /**
  * Node type to represent deletion (more specifically, invalidation) in a table.
  */
-class DeleteNode : public AbstractLQPNode {
+class DeleteNode : public AbstractLQPNodeCRT<DeleteNode> {
  public:
   explicit DeleteNode(const std::string& table_name);
 

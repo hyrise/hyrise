@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-DeleteNode::DeleteNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Delete), _table_name(table_name) {}
+DeleteNode::DeleteNode(const std::string& table_name) : Base(LQPNodeType::Delete), _table_name(table_name) {}
 
 std::shared_ptr<AbstractLQPNode> DeleteNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

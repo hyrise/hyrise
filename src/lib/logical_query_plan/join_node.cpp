@@ -16,17 +16,15 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractLQPNode>& left_child,
-                   const std::shared_ptr<AbstractLQPNode>& right_child)
-    : AbstractLQPNode(LQPNodeType::Join, left_child, right_child), _join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode join_mode)
+    : Base(LQPNodeType::Join), _join_mode(join_mode) {
   DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
               "Specified JoinMode must also specify column ids and predicate condition.");
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-                   const PredicateCondition predicate_condition, const std::shared_ptr<AbstractLQPNode>& left_child,
-                   const std::shared_ptr<AbstractLQPNode>& right_child)
-    : AbstractLQPNode(LQPNodeType::Join, left_child, right_child),
+                   const PredicateCondition predicate_condition)
+    : Base(LQPNodeType::Join),
       _join_mode(join_mode),
       _join_column_references(join_column_references),
       _predicate_condition(predicate_condition) {

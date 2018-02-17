@@ -9,9 +9,9 @@ namespace opossum {
 /**
  * This node type represents limiting a result to a certain number of rows (LIMIT operator).
  */
-class LimitNode : public AbstractLQPNode {
+class LimitNode : public AbstractLQPNodeCRT<LimitNode> {
  public:
-  explicit LimitNode(const size_t num_rows, const std::shared_ptr<AbstractLQPNode>& left_child = nullptr);
+  explicit LimitNode(const size_t num_rows);
 
   std::string description() const override;
 
