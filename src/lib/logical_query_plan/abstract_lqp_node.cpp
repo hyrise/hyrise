@@ -20,9 +20,7 @@ class TableStatistics;
 QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
     : column_name(column_name), table_name(table_name) {}
 
-AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type)
-    : _type(node_type) {
-}
+AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   auto copied_left_child = left_child() ? left_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();

@@ -17,8 +17,7 @@ class JoinNodeTest : public BaseTest {
   void SetUp() override {
     _mock_node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
-    _mock_node_b =
-        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
+    _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
 
     _t_a_a = {_mock_node_a, ColumnID{0}};
     _t_a_b = {_mock_node_a, ColumnID{1}};
@@ -30,8 +29,7 @@ class JoinNodeTest : public BaseTest {
     _join_node->set_left_child(_mock_node_a);
     _join_node->set_right_child(_mock_node_b);
 
-    _inner_join_node =
-        JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
+    _inner_join_node = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
     _inner_join_node->set_left_child(_mock_node_a);
     _inner_join_node->set_right_child(_mock_node_b);
   }
@@ -82,20 +80,20 @@ TEST_F(JoinNodeTest, OutputColumnReferences) {
 }
 
 TEST_F(JoinNodeTest, ShallowEquals) {
-//  EXPECT_TRUE(_inner_join_node->shallow_equals(*_inner_join_node));
+    EXPECT_TRUE(_inner_join_node->shallow_equals(*_inner_join_node));
 
-//  const auto other_join_node_a = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_x),
-//                                                            PredicateCondition::Equals, _mock_node_a, _mock_node_b);
-//  const auto other_join_node_b = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y),
-//                                                            PredicateCondition::NotLike, _mock_node_a, _mock_node_b);
-//  const auto other_join_node_c = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-//  const auto other_join_node_d = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y),
-//                                                            PredicateCondition::Equals, _mock_node_a, _mock_node_b);
+    const auto other_join_node_a = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_x),
+                                                              PredicateCondition::Equals, _mock_node_a, _mock_node_b);
+    const auto other_join_node_b = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y),
+                                                              PredicateCondition::NotLike, _mock_node_a, _mock_node_b);
+    const auto other_join_node_c = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+    const auto other_join_node_d = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y),
+                                                              PredicateCondition::Equals, _mock_node_a, _mock_node_b);
 
-//  EXPECT_FALSE(other_join_node_a->shallow_equals(*_inner_join_node));
-//  EXPECT_FALSE(other_join_node_b->shallow_equals(*_inner_join_node));
-//  EXPECT_FALSE(other_join_node_c->shallow_equals(*_inner_join_node));
-//  EXPECT_TRUE(other_join_node_d->shallow_equals(*_inner_join_node));
+    EXPECT_FALSE(other_join_node_a->shallow_equals(*_inner_join_node));
+    EXPECT_FALSE(other_join_node_b->shallow_equals(*_inner_join_node));
+    EXPECT_FALSE(other_join_node_c->shallow_equals(*_inner_join_node));
+    EXPECT_TRUE(other_join_node_d->shallow_equals(*_inner_join_node));
 }
 
 }  // namespace opossum

@@ -248,8 +248,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    * isn't manipulated.
    */
 
-  const auto join_node =
-      JoinNode::make(JoinMode::Inner, std::make_pair(_a_b, _b_b), PredicateCondition::Equals);
+  const auto join_node = JoinNode::make(JoinMode::Inner, std::make_pair(_a_b, _b_b), PredicateCondition::Equals);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 

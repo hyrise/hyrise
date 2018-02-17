@@ -436,8 +436,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   for (const auto& join_column_name : join_column_names) {
     auto left_column_reference = left_node->get_column({join_column_name});
     auto right_column_reference = right_node->get_column({join_column_name});
-    auto predicate =
-        PredicateNode::make(left_column_reference, PredicateCondition::Equals, right_column_reference);
+    auto predicate = PredicateNode::make(left_column_reference, PredicateCondition::Equals, right_column_reference);
     predicate->set_left_child(return_node);
     return_node = predicate;
   }

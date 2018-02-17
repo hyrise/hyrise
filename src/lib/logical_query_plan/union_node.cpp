@@ -10,8 +10,7 @@
 
 namespace opossum {
 
-UnionNode::UnionNode(UnionMode union_mode)
-    : Base(LQPNodeType::Union), _union_mode(union_mode) {}
+UnionNode::UnionNode(UnionMode union_mode) : Base(LQPNodeType::Union), _union_mode(union_mode) {}
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

@@ -21,8 +21,8 @@ class SortNodeTest : public BaseTest {
     _a_b = LQPColumnReference{_table_node, ColumnID{1}};
     _a_c = LQPColumnReference{_table_node, ColumnID{2}};
 
-    _sort_node = SortNode::make(
-        std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
+    _sort_node =
+        SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
   }
 
   std::shared_ptr<StoredTableNode> _table_node;
@@ -33,14 +33,13 @@ class SortNodeTest : public BaseTest {
 TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(_sort_node->description(), "[Sort] table_a.i (Ascending)");
 
-  auto sort_b =
-      SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Descending}});
+  auto sort_b = SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Descending}});
   sort_b->set_left_child(_table_node);
   EXPECT_EQ(sort_b->description(), "[Sort] table_a.i (Descending)");
 
-  auto sort_c = SortNode::make(std::vector<OrderByDefinition>{
-      OrderByDefinition{_a_c, OrderByMode::Descending}, OrderByDefinition{_a_b, OrderByMode::Ascending},
-      OrderByDefinition{_a_a, OrderByMode::Descending}});
+  auto sort_c = SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_c, OrderByMode::Descending},
+                                                              OrderByDefinition{_a_b, OrderByMode::Ascending},
+                                                              OrderByDefinition{_a_a, OrderByMode::Descending}});
   sort_c->set_left_child(_table_node);
   EXPECT_EQ(sort_c->description(), "[Sort] table_a.d (Descending), table_a.f (Ascending), table_a.i (Descending)");
 }
@@ -63,14 +62,14 @@ TEST_F(SortNodeTest, OutputColumnIDs) {
 TEST_F(SortNodeTest, ShallowEquals) {
   EXPECT_TRUE(_sort_node->shallow_equals(*_sort_node));
 
-  const auto other_sort_node_a = SortNode::make(
-      std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
+  const auto other_sort_node_a =
+      SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
   const auto other_sort_node_b =
       SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending},
-                                                                OrderByDefinition{_a_b, OrderByMode::Ascending}},
-                                 _table_node);
-  const auto other_sort_node_c = SortNode::make(
-      std::vector<OrderByDefinition>{OrderByDefinition{_a_b, OrderByMode::Ascending}}, _table_node);
+                                                    OrderByDefinition{_a_b, OrderByMode::Ascending}},
+                     _table_node);
+  const auto other_sort_node_c =
+      SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_b, OrderByMode::Ascending}}, _table_node);
 
   EXPECT_TRUE(other_sort_node_a->shallow_equals(*_sort_node));
   EXPECT_FALSE(other_sort_node_b->shallow_equals(*_sort_node));

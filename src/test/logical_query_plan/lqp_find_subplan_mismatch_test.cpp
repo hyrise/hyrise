@@ -64,31 +64,27 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     query_nodes.stored_table_node_a = StoredTableNode::make("table_a");
     query_nodes.validate_node = ValidateNode::make();
     query_nodes.mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-    query_nodes.mock_node_b =
-        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});
+    query_nodes.mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});
 
     query_nodes.table_a_a = LQPColumnReference{query_nodes.stored_table_node_a, ColumnID{0}};
     query_nodes.table_b_a = LQPColumnReference{query_nodes.mock_node_a, ColumnID{0}};
     query_nodes.table_c_a = LQPColumnReference{query_nodes.mock_node_b, ColumnID{0}};
     query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, ColumnID{1}};
 
-    query_nodes.predicate_node_a =
-        PredicateNode::make(query_nodes.table_a_a, PredicateCondition::LessThan, 41);
-    query_nodes.predicate_node_b =
-        PredicateNode::make(query_nodes.table_a_a, PredicateCondition::Between, 42, 45);
+    query_nodes.predicate_node_a = PredicateNode::make(query_nodes.table_a_a, PredicateCondition::LessThan, 41);
+    query_nodes.predicate_node_b = PredicateNode::make(query_nodes.table_a_a, PredicateCondition::Between, 42, 45);
     query_nodes.union_node = UnionNode::make(UnionMode::Positions);
     query_nodes.limit_node = LimitNode::make(10);
-    query_nodes.join_node = JoinNode::make(
-        JoinMode::Inner, LQPColumnReferencePair{query_nodes.table_a_a, query_nodes.table_c_b},
-        PredicateCondition::Equals);
+    query_nodes.join_node =
+        JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{query_nodes.table_a_a, query_nodes.table_c_b},
+                       PredicateCondition::Equals);
 
     std::vector<std::shared_ptr<LQPExpression>> aggregates{LQPExpression::create_aggregate_function(
         AggregateFunction::Sum, LQPExpression::create_columns({query_nodes.table_c_a}))};
     std::vector<LQPColumnReference> groupby_column_references{query_nodes.table_c_b};
     query_nodes.aggregate_node = AggregateNode::make(aggregates, groupby_column_references);
 
-    query_nodes.sort_node =
-        SortNode::make(OrderByDefinitions{{query_nodes.table_c_b, OrderByMode::Ascending}});
+    query_nodes.sort_node = SortNode::make(OrderByDefinitions{{query_nodes.table_c_b, OrderByMode::Ascending}});
     query_nodes.projection_node = ProjectionNode::make(
         std::vector<std::shared_ptr<LQPExpression>>{LQPExpression::create_column(query_nodes.table_a_a)});
   }
