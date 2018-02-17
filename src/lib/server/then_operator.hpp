@@ -45,7 +45,7 @@ template<class F,
 auto invoke( boost::future<void>&& lhs, then_t, F&& f )
 -> typename std::enable_if<is_future<R>::value, R>::type
 {
-  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut)mutable->R  {
+  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut)mutable->R {
     fut.get();
     return std::move(f)();
   }).unwrap();
@@ -58,8 +58,8 @@ template<class T, class F,
 auto invoke( boost::future<T>&& lhs, then_t, F&& f )
 -> typename std::enable_if<is_future<R>::value, R>::type
 {
-  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut)mutable->R  {
-    return std::move(f)(fut.get());
+  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut)mutable->R {
+    return std::move(f)(std::forward<T>(fut.get()));
   }).unwrap();
 };
 
@@ -71,7 +71,7 @@ template<class F,
 auto invoke( boost::future<void>&& lhs, then_t, F&& f )
 -> typename std::enable_if<!is_future<R>::value, boost::future<R>>::type
 {
-  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut)mutable->R  {
+  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut)mutable->R {
     fut.get();
     return std::move(f)();
   });
@@ -84,8 +84,8 @@ template<class T, class F,
 auto invoke( boost::future<T>&& lhs, then_t, F&& f )
 -> typename std::enable_if<!is_future<R>::value, boost::future<R>>::type
 {
-  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut)mutable->R  {
-    return std::move(f)(fut.get());
+  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut)mutable->R {
+    return std::move(f)(std::forward<T>(fut.get()));
   });
 };
 

@@ -9,12 +9,11 @@ void LoadServerFileTask::_on_execute() {
   try {
     const auto table = load_table(_file_name, Chunk::MAX_SIZE);
     StorageManager::get().add_table(_table_name, table);
+    //  _session->pipeline_info("Successfully loaded " + _table_name);
+    _promise.set_value();
   } catch (const std::exception& exception) {
-    return _session->pipeline_error(exception.what());
+    _promise.set_exception(exception);
   }
-
-  _session->pipeline_info("Successfully loaded " + _table_name);
-  _session->query_response_sent();
 }
 
 }  // namespace opossum

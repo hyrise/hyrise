@@ -6,6 +6,7 @@
 namespace opossum {
 
 class ServerTask : public AbstractTask {
+ // TODO: Re-purpose this abstract class to manage the result promise
  public:
   explicit ServerTask(std::shared_ptr<HyriseSession> session) : _session(std::move(session)) {}
 

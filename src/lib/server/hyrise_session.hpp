@@ -32,8 +32,6 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
 
   void start();
 
-  void async_send_packet(OutputPacket& output_packet);
-
   // Interface used by Tasks
   void pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline);
   void query_executed();
@@ -48,32 +46,17 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   SessionState state() const;
 
  protected:
-  boost::future<void> perform_session_startup();
-    
-  void _async_receive_header(size_t size = HEADER_LENGTH);
-  void _async_receive_content(size_t size);
-  void _async_receive_packet(size_t size, bool is_header);
+  boost::future<void> _perform_session_startup();
+  boost::future<void> _handle_client_requests();
 
-  void _send_ssl_denied();
-  void _send_auth();
-  void _send_ready_for_query();
-  void _send_error(const std::string& error_msg);
-
-  void _accept_query();
+  boost::future<void> _handle_simple_query_command(const std::string& sql);
   void _accept_parse();
   void _accept_bind();
   void _accept_execute();
   void _accept_sync();
   void _accept_flush();
   void _accept_describe();
-
-  void _handle_header_received(const boost::system::error_code& error, size_t bytes_transferred);
-  void _handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred);
-
-  void _handle_packet_sent(const boost::system::error_code& error);
-
-  void _async_flush();
-
+  
   void _terminate_session();
 
   boost::asio::io_service& _io_service;

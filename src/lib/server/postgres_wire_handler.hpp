@@ -20,7 +20,7 @@ static const uint32_t MAX_BUFFER_SIZE = 1024u;
 // This is the struct that we store our incoming network bytes in and that we then read from
 struct InputPacket {
   // The vector needs to have a fixed size for boost::asio to work with it
-  ByteBuffer data = ByteBuffer(MAX_BUFFER_SIZE);
+  ByteBuffer data;
 
   // Stores the current position in the data buffer
   mutable ByteBuffer::const_iterator offset = data.begin();
@@ -51,7 +51,7 @@ class PostgresWireHandler {
 
   static RequestHeader handle_header(const InputPacket& packet);
 
-  static std::string handle_query_packet(const InputPacket& packet, size_t length);
+  static std::string handle_query_packet(const InputPacket& packet);
   static PreparedStatementInfo handle_parse_packet(const InputPacket& packet, size_t length);
   static std::vector<AllParameterVariant> handle_bind_packet(const InputPacket& packet, size_t length);
   static std::string handle_describe_packet(const InputPacket& packet, size_t length);

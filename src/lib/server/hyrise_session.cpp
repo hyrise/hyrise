@@ -25,6 +25,7 @@
 #include "utils/load_table.hpp"
 #include "client_connection.hpp"
 #include "then_operator.hpp"
+#include "use_boost_future.hpp"
 
 namespace opossum {
 
@@ -34,7 +35,7 @@ void HyriseSession::start() {
   // Keep a pointer to itself that will be released once the connection is closed
   _self = shared_from_this();
   
-  perform_session_startup()
+  (_perform_session_startup() >> then >> [=] () { return _handle_client_requests(); })
     .then(boost::launch::sync, [=](boost::future<void> f) {
       try {
         f.get();
@@ -48,100 +49,87 @@ void HyriseSession::start() {
   );
 }
 
-boost::future<void> HyriseSession::perform_session_startup() {
-  return (
-    _connection->receive_startup_package_header()
-      >> then >> [=](uint32_t startup_package_length) {
-        if (startup_package_length == 0) {
-          // This is a request for SSL
-          return _connection->send_ssl_denied()
-            >> then >> [=]() { return this->perform_session_startup(); };
-        }
-  
-        return _connection->receive_startup_package_contents(startup_package_length)
-          >> then >> [=]() { return _connection->send_auth(); }
-          >> then >> [=]() { return _connection->send_ready_for_query(); };
-      }
-  );
-}
-
-void HyriseSession::async_send_packet(OutputPacket& output_packet) {
-  // If the packet is SslNo (size == 1), it has a special format and does not require a size
-  if (output_packet.data.size() > 1) {
-    PostgresWireHandler::write_output_packet_size(output_packet);
-  }
-
-  if (_response_buffer.size() + output_packet.data.size() > _max_response_size) {
-    _async_flush();
-  }
-
-  _response_buffer.insert(_response_buffer.end(), output_packet.data.begin(), output_packet.data.end());
-}
-
-void HyriseSession::_handle_header_received(const boost::system::error_code& error, size_t bytes_transferred) {
-  if (error) {
-    std::cout << error.category().name() << ':' << error.value() << std::endl;
-    Fail("An error occurred while reading from the connection.");
-  }
-
-  Assert(bytes_transferred == _expected_input_packet_length, "Client sent less data than expected.");
-
-  if (_state == SessionState::Setup) {
-    auto startup_packet_length = PostgresWireHandler::handle_startup_package(_input_packet);
+boost::future<void> HyriseSession::_perform_session_startup() {
+  return _connection->receive_startup_packet_header() >> then >> [=](uint32_t startup_packet_length) {
     if (startup_packet_length == 0) {
-      // Handle SSL packet
-      return _send_ssl_denied();
+      // This is a request for SSL, deny it and wait for the next startup packet
+      return _connection->send_ssl_denied()
+        >> then >> [=]() { return _perform_session_startup(); };
     }
-    // Read content of this packet
-    return _async_receive_content(startup_packet_length);
-  }
 
-  // We're currently idling, so read a new incoming message header
-  auto command_header = PostgresWireHandler::handle_header(_input_packet);
-  _input_packet_type = command_header.message_type;
-  if (command_header.message_type == NetworkMessageType::TerminateCommand) {
-    // This immediately releases the session object
-    return _terminate_session();
-  }
-
-  return _async_receive_content(command_header.payload_length);
+    return _connection->receive_startup_packet_contents(startup_packet_length)
+      >> then >> [=]() { return _connection->send_auth(); }
+      >> then >> [=]() { return _connection->send_ready_for_query(); };
+  };
 }
 
-void HyriseSession::_handle_packet_received(const boost::system::error_code& error, size_t bytes_transferred) {
-  if (error) {
-    std::cout << error.category().name() << ':' << error.value() << std::endl;
-    Fail("An error occurred while reading from the connection.");
-  }
+boost::future<void> HyriseSession::_handle_client_requests() {
+  // TODO: Split this up into multiple methods
+  
+  return _connection->receive_packet_header() >> then >> [=](RequestHeader request) {
+    // Process the request header
+    
+    if (request.message_type == NetworkMessageType::TerminateCommand)
+      // Not really unexpected, but this is a way to escape the infinite recursion
+      throw std::logic_error("Session was terminated by client");
+      
+    // Proceed by reading the packet contents
+    return _connection->receive_packet_contents(request.payload_length)
+      >> then >> [=](InputPacket packet_contents) { return std::make_pair(request, packet_contents); };
+    
+  } >> then >> [=](std::pair<RequestHeader, InputPacket> packet) {
+    // Process the received command
+    
+    try {
+      switch (packet.first.message_type) {
+        case NetworkMessageType::SimpleQueryCommand: {
+          const auto sql = PostgresWireHandler::handle_query_packet(packet.second);
+          return _handle_simple_query_command(sql)
+            >> then >> [=]() { _connection->send_ready_for_query(); };
+        }
+        case NetworkMessageType::ParseCommand:
+          // TODO
+          // return _accept_parse();
+          return boost::make_ready_future();
 
-  Assert(bytes_transferred == _expected_input_packet_length, "Client sent less data than expected.");
+        case NetworkMessageType::BindCommand:
+          // TODO
+          // return _accept_bind();
+          return boost::make_ready_future();
 
-  if (_state == SessionState::Setup) {
-    // Read these values and ignore them
-    PostgresWireHandler::handle_startup_package_content(_input_packet, bytes_transferred);
-    return _send_auth();
-  }
+        case NetworkMessageType::DescribeCommand:
+          // TODO
+          // return _accept_describe();
+          return boost::make_ready_future();
 
-  // We're currently waiting for a query, so accept the incoming one
-  switch (_input_packet_type) {
-    case NetworkMessageType::SimpleQueryCommand:
-      return _accept_query();
-    case NetworkMessageType::ParseCommand:
-      return _accept_parse();
-    case NetworkMessageType::BindCommand:
-      return _accept_bind();
-    case NetworkMessageType::DescribeCommand:
-      return _accept_describe();
-    case NetworkMessageType::SyncCommand:
-      return _accept_sync();
-    case NetworkMessageType::FlushCommand:
-      return _accept_flush();
-    case NetworkMessageType::ExecuteCommand:
-      return _accept_execute();
-    default: {
-      _send_error("Unsupported message type");
-      _send_ready_for_query();
+        case NetworkMessageType::SyncCommand:
+          // TODO
+          // return _accept_sync();
+          return boost::make_ready_future();
+
+        case NetworkMessageType::FlushCommand:
+          // TODO
+          // return _accept_flush();
+          return boost::make_ready_future();
+
+        case NetworkMessageType::ExecuteCommand:
+          // TODO
+          // return _accept_execute();
+          return boost::make_ready_future();
+
+        default: {
+          throw std::logic_error("Unsupported message type");
+        }
+      }
+    } catch (std::exception e) {
+      // TODO: This doesn't catch exceptions thrown inside the command handlers
+      // To achieve this, we have to move the try {} catch {} to the next continuation
+      // and then call try { future<void>.get() } manually (i.e. by not using '>> then >>')
+      std::string message = e.what();
+      return _connection->send_error(message)
+        >> then >> [=]() { _connection->send_ready_for_query(); };
     }
-  }
+  } >> then >> [=]() { _handle_client_requests(); }; // Proceed with the next incoming message
 }
 
 void HyriseSession::_terminate_session() {
@@ -149,73 +137,58 @@ void HyriseSession::_terminate_session() {
   _self.reset();
 }
 
-void HyriseSession::_handle_packet_sent(const boost::system::error_code& error) {
-  if (error) {
-    std::cout << error.category().name() << ':' << error.value() << std::endl;
-    Fail("An error occurred when writing to the connection");
-  }
-
-  _response_buffer.clear();
-}
-
-void HyriseSession::_async_receive_header(size_t size) { return _async_receive_packet(size, /* is_header = */ true); }
-
-void HyriseSession::_async_receive_content(size_t size) { return _async_receive_packet(size, /* is_header = */ false); }
-
-void HyriseSession::_async_receive_packet(size_t size, bool is_header) {
-  _expected_input_packet_length = size;
-  _input_packet.offset = _input_packet.data.begin();
-
-//  auto next_handler = is_header ? &HyriseSession::_handle_header_received : &HyriseSession::_handle_packet_received;
-//  _socket.async_read_some(
-//      boost::asio::buffer(_input_packet.data, size),
-//      boost::bind(next_handler, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
-}
-
-void HyriseSession::_send_ssl_denied() {
-  // Don't use new_output_packet here, because this packet has special size requirements (only contains N, no size)
-  OutputPacket output_packet;
-  PostgresWireHandler::write_value(output_packet, NetworkMessageType::SslNo);
-  async_send_packet(output_packet);
-  _async_flush();
-
-  _async_receive_header(STARTUP_HEADER_LENGTH);
-}
-
-void HyriseSession::_send_auth() {
-  // This packet is our AuthenticationOK, which means we do not require any auth.
-  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
-  PostgresWireHandler::write_value(*output_packet, htonl(0u));
-  async_send_packet(*output_packet);
-
-  _send_ready_for_query();
-}
-
-void HyriseSession::_send_ready_for_query() {
-  _state = SessionState::WaitingForQuery;
-  // ReadyForQuery packet 'Z' with transaction status Idle 'I'
-  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ReadyForQuery);
-  PostgresWireHandler::write_value(*output_packet, TransactionStatusIndicator::Idle);
-  async_send_packet(*output_packet);
-  _async_flush();
-
-  // Now we wait for the next query to come
-  _async_receive_header();
-}
-
-void HyriseSession::_accept_query() {
-  _state = SessionState::SimpleQuery;
-  const auto sql = PostgresWireHandler::handle_query_packet(_input_packet, _expected_input_packet_length);
-  const std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<CreatePipelineTask>(_self, sql)};
-  CurrentScheduler::schedule_tasks(tasks);
+boost::future<void> HyriseSession::_handle_simple_query_command(const std::string& sql) {
+  using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
+  
+  auto create_sql_pipeline = [=] () {
+    auto task = std::make_shared<CreatePipelineTask>(sql);
+    CurrentScheduler::schedule_tasks(TaskList({task}));
+    return task->get_future() >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
+      // This result comes in on the scheduler thread, so we want to dispatch it back to the io_manager
+      return _io_service.post(boost::asio::use_boost_future)
+        >> then >> [=]() { return result; };
+    };
+  };
+  
+  auto load_table_file = [=](std::string& file_name, std::string& table_name) {
+    auto task = std::make_shared<LoadServerFileTask>(file_name, table_name);
+    CurrentScheduler::schedule_tasks(TaskList({task}));
+    return task->get_future() 
+      >> then >> [=] () { return _io_service.post(boost::asio::use_boost_future); }
+      >> then >> []() { /* TODO: Send notice */ };
+  };
+  
+  auto execute_sql_pipeline = [=] (std::unique_ptr<SQLPipeline> sql_pipeline) {
+    auto task = std::make_shared<ExecuteServerQueryTask>(*_sql_pipeline);
+    CurrentScheduler::schedule_tasks(TaskList({task}));
+    return task->get_future()
+      >> then >> [=] () { return _io_service.post(boost::asio::use_boost_future); }
+      >> then >> [pipeline = std::move(sql_pipeline)] () mutable { return std::move(pipeline); };
+  };
+  
+  auto send_query_response = [=](std::unique_ptr<SQLPipeline> sql_pipeline) {
+    auto task = std::make_shared<SendQueryResponseTask>(*_sql_pipeline, _sql_pipeline->get_result_table());
+    CurrentScheduler::schedule_tasks(TaskList({task}));
+    return task->get_future() 
+      >> then >> [=] () { return _io_service.post(boost::asio::use_boost_future); };
+  };
+    
+  return create_sql_pipeline() >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
+    return result->is_load_table
+      ? load_table_file(result->load_table.value().first, result->load_table.value().second)
+      : execute_sql_pipeline(std::move(result->sql_pipeline))
+          >> then >> [=] (std::unique_ptr<SQLPipeline> sql_pipeline) {
+            return send_query_response(std::move(sql_pipeline));
+        };
+  };
 }
 
 void HyriseSession::_accept_parse() {
   _state = SessionState::ExtendedQuery;
   _parse_info = std::make_unique<PreparedStatementInfo>(
       PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length));
-  const std::vector<std::shared_ptr<ServerTask>> tasks = {
-      std::make_shared<CreatePipelineTask>(_self, _parse_info->query)};
+  const std::vector<std::shared_ptr<AbstractTask>> tasks = {
+      std::make_shared<CreatePipelineTask>(_parse_info->query)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
@@ -237,32 +210,17 @@ void HyriseSession::_accept_execute() {
 
 void HyriseSession::_accept_sync() {
   PostgresWireHandler::read_values<char>(_input_packet, _expected_input_packet_length);
-  return _async_receive_header();
+//  return _async_receive_header();
 }
 
 void HyriseSession::_accept_flush() {
   PostgresWireHandler::read_values<char>(_input_packet, _expected_input_packet_length);
-  return _async_receive_header();
+//  return _async_receive_header();
 }
 
 void HyriseSession::_accept_describe() {
   PostgresWireHandler::handle_describe_packet(_input_packet, _expected_input_packet_length);
-  return _async_receive_header();
-}
-
-void HyriseSession::_send_error(const std::string& message) {
-  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
-
-  // An error response has to include at least one identified field
-
-  // Send the error message
-  PostgresWireHandler::write_value(*output_packet, 'M');
-  PostgresWireHandler::write_string(*output_packet, message);
-
-  // Terminate the error response
-  PostgresWireHandler::write_value(*output_packet, '\0');
-  async_send_packet(*output_packet);
-  _async_flush();
+//  return _async_receive_header();
 }
 
 void HyriseSession::pipeline_info(const std::string& notice) {
@@ -273,7 +231,7 @@ void HyriseSession::pipeline_info(const std::string& notice) {
 
   // Terminate the notice response
   PostgresWireHandler::write_value(*output_packet, '\0');
-  async_send_packet(*output_packet);
+//  async_send_packet(*output_packet);
 }
 
 void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) {
@@ -281,17 +239,17 @@ void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) 
 
   if (_state == SessionState::ExtendedQuery) {
     auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
-    async_send_packet(*output_packet);
-    return _async_receive_header();
+//    async_send_packet(*output_packet);
+//    return _async_receive_header();
   }
 
-  std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<ExecuteServerQueryTask>(_self, *_sql_pipeline)};
+  std::vector<std::shared_ptr<AbstractTask>> tasks = {std::make_shared<ExecuteServerQueryTask>(*_sql_pipeline)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::query_executed() {
   const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
-      std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline, _sql_pipeline->get_result_table())};
+      std::make_shared<SendQueryResponseTask>(*_sql_pipeline, _sql_pipeline->get_result_table())};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
@@ -300,34 +258,31 @@ void HyriseSession::prepared_bound(std::unique_ptr<SQLQueryPlan> query_plan,
   _prepared_query_plan = std::move(query_plan);
   _prepared_transaction_context = std::move(transaction_context);
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
-  async_send_packet(*output_packet);
-  return _async_receive_header();
+//  async_send_packet(*output_packet);
+//  return _async_receive_header();
 }
 
 void HyriseSession::prepared_executed(std::shared_ptr<const Table> result_table) {
   const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
-      std::make_shared<SendQueryResponseTask>(_self, *_sql_pipeline, std::move(result_table))};
+      std::make_shared<SendQueryResponseTask>(*_sql_pipeline, std::move(result_table))};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
-void HyriseSession::query_response_sent() { _send_ready_for_query(); }
+void HyriseSession::query_response_sent() { 
+//  _send_ready_for_query(); 
+}
 
 void HyriseSession::load_table_file(const std::string& file_name, const std::string& table_name) {
   const std::vector<std::shared_ptr<LoadServerFileTask>> tasks = {
-      std::make_shared<LoadServerFileTask>(_self, file_name, table_name)};
+      std::make_shared<LoadServerFileTask>(file_name, table_name)};
   CurrentScheduler::schedule_tasks(tasks);
 }
 
 void HyriseSession::pipeline_error(const std::string& error_msg) {
-  _send_error(error_msg);
-  _send_ready_for_query();
+//  _send_error(error_msg);
+//  _send_ready_for_query();
 }
 
 SessionState HyriseSession::state() const { return _state; }
-
-void HyriseSession::_async_flush() {
-//  boost::asio::async_write(_socket, boost::asio::buffer(_response_buffer),
-//                           boost::bind(&HyriseSession::_handle_packet_sent, this, boost::asio::placeholders::error));
-}
 
 }  // namespace opossum

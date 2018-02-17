@@ -7,19 +7,24 @@
 namespace opossum {
 
 void CreatePipelineTask::_on_execute() {
+  auto result = std::make_shared<CreatePipelineResult>();
+  
   std::unique_ptr<SQLPipeline> sql_pipeline;
   try {
     sql_pipeline = std::make_unique<SQLPipeline>(_sql);
   } catch (const std::exception& exception) {
     // Try LOAD file_name table_name
     if (_is_load_table()) {
-      return _session->load_table_file(_file_name, _table_name);
+      result->load_table = std::make_pair(_file_name, _table_name);
+      result->is_load_table = true;
+      
+    } else {
+      return _promise.set_exception(exception);
     }
-
-    return _session->pipeline_error(exception.what());
   }
-
-  _session->pipeline_created(std::move(sql_pipeline));
+  
+  result->sql_pipeline = std::move(sql_pipeline);
+  _promise.set_value(result);
 }
 
 bool CreatePipelineTask::_is_load_table() {

@@ -32,6 +32,7 @@ uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) 
 }
 
 void PostgresWireHandler::handle_startup_package_content(const InputPacket& packet, size_t length) {
+  // TODO: We don't actually need length here, can take size of packet.data
   // Ignore the content for now
   read_values<char>(packet, length);
 }
@@ -48,8 +49,9 @@ RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
   return {/* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
 }
 
-std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet, size_t length) {
-  auto buffer = read_values<char>(packet, length);
+std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) {
+  // TODO: We might be able to skip this extra copying step
+  auto buffer = read_values<char>(packet, packet.data.size());
 
   // Convert the content to a string for now
   return std::string(buffer.data(), buffer.size());

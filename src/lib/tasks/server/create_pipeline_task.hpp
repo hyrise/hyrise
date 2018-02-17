@@ -1,13 +1,22 @@
 #pragma once
 
+#include <boost/thread/future.hpp>
+
 #include "server_task.hpp"
 
 namespace opossum {
 
-class CreatePipelineTask : public ServerTask {
+struct CreatePipelineResult {
+  std::unique_ptr<SQLPipeline> sql_pipeline;
+  std::optional<std::pair<std::string, std::string>> load_table;
+  bool is_load_table;
+};
+
+class CreatePipelineTask : public AbstractTask  {
  public:
-  CreatePipelineTask(std::shared_ptr<HyriseSession> session, std::string sql)
-      : ServerTask(std::move(session)), _sql(std::move(sql)) {}
+  CreatePipelineTask(std::string sql) : _sql(std::move(sql)) {}
+  
+  boost::future<std::shared_ptr<CreatePipelineResult>> get_future() { return _promise.get_future(); }
 
  protected:
   void _on_execute() override;
@@ -21,6 +30,8 @@ class CreatePipelineTask : public ServerTask {
 
   std::string _file_name;
   std::string _table_name;
+  
+  boost::promise<std::shared_ptr<CreatePipelineResult>> _promise;
 };
 
 }  // namespace opossum
