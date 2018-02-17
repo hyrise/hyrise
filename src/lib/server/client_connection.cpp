@@ -71,28 +71,16 @@ boost::future<unsigned long> ClientConnection::send_bytes_async(std::shared_ptr<
   if (packet_size > 1) {
     PostgresWireHandler::write_output_packet_size(*packet);
   }
-  
-  auto perform_flush = [=]() {
-    return flush_async()
-      >> then >> [=](unsigned long sent_bytes) {
-        Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
-        _response_buffer.clear();
-        return sent_bytes;
-      };
-  };
 
   if (_response_buffer.size() + packet->data.size() > _max_response_size) {
     // We have to flush before we can actually process the data 
-    return (perform_flush()
-      >> then >> [=](unsigned long) {
-        return send_bytes_async(packet, flush);
-    }).unwrap();
+    return flush_async() >> then >> [=](unsigned long) { return send_bytes_async(packet, flush); };
   }
 
   _response_buffer.insert(_response_buffer.end(), packet->data.begin(), packet->data.end());
   
   if (flush) {
-    return perform_flush() >> then >> [=](unsigned long) { return packet_size; };
+    return flush_async() >> then >> [=](unsigned long) { return packet_size; };
   } else {
     // Return an already resolved future (we have just written data to the buffer)
     return boost::make_ready_future<unsigned long>(packet_size);
@@ -100,7 +88,12 @@ boost::future<unsigned long> ClientConnection::send_bytes_async(std::shared_ptr<
 }
 
 boost::future<unsigned long> ClientConnection::flush_async() {
-  return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future);
+  return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future)
+    >> then >> [=](unsigned long sent_bytes) {
+      Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
+      _response_buffer.clear();
+      return sent_bytes;
+    };
 }
 
 

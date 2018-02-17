@@ -49,26 +49,20 @@ void HyriseSession::start() {
 }
 
 boost::future<void> HyriseSession::perform_session_startup() {
-  // TODO: I think we can even get rid of the remaining unwraps
   return (
     _connection->receive_startup_package_header()
       >> then >> [=](uint32_t startup_package_length) {
         if (startup_package_length == 0) {
           // This is a request for SSL
-          return (
-            _connection->send_ssl_denied()
-              >> then >> [=]() { return this->perform_session_startup(); }
-          ).unwrap();
+          return _connection->send_ssl_denied()
+            >> then >> [=]() { return this->perform_session_startup(); };
         }
   
-        return (
-          _connection->receive_startup_package_contents(startup_package_length)
-            >> then >> [=]() { return _connection->send_auth(); }
-            // Auto-unwrapping in progress...
-            >> then >> [=]() { return _connection->send_ready_for_query(); }
-        ).unwrap();
+        return _connection->receive_startup_package_contents(startup_package_length)
+          >> then >> [=]() { return _connection->send_auth(); }
+          >> then >> [=]() { return _connection->send_ready_for_query(); };
       }
-  ).unwrap();
+  );
 }
 
 void HyriseSession::async_send_packet(OutputPacket& output_packet) {
