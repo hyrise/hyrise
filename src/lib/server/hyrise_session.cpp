@@ -33,10 +33,12 @@ void HyriseSession::start() {
   _self = shared_from_this();
   
   perform_session_startup()
-    .then([=](boost::future<void> f) {
+    .then(boost::launch::sync, [=](boost::future<void> f) {
       try {
         f.get();
       } catch (std::exception e) {
+        std::cerr << e.what();
+        
         // Something went wrong
         _self.reset();
       }
@@ -46,18 +48,18 @@ void HyriseSession::start() {
 
 boost::future<void> HyriseSession::perform_session_startup() {
   return _connection->receive_startup_package_header()
-    .then([=](boost::future<uint32_t> f) {
+    .then(boost::launch::sync, [=](boost::future<uint32_t> f) {
       auto startup_package_length = f.get();
 
       if (startup_package_length == 0) {
         // This is a request for SSL
         return _connection->send_ssl_denied()
-          .then([=](boost::future<void> f) {f.get(); return this->perform_session_startup(); }).unwrap();
+          .then(boost::launch::sync, [=](boost::future<void> f) {f.get(); return this->perform_session_startup(); }).unwrap();
       }
 
       return _connection->receive_startup_package_contents(startup_package_length)
-        .then([=](boost::future<void> f) { f.get(); return _connection->send_auth(); }).unwrap()
-        .then([=](boost::future<void> f) { f.get(); return _connection->send_ready_for_query(); }).unwrap();
+        .then(boost::launch::sync, [=](boost::future<void> f) { f.get(); return _connection->send_auth(); }).unwrap()
+        .then(boost::launch::sync, [=](boost::future<void> f) { f.get(); return _connection->send_ready_for_query(); }).unwrap();
     }).unwrap();
 }
 
@@ -180,9 +182,9 @@ void HyriseSession::_send_ssl_denied() {
 
 void HyriseSession::_send_auth() {
   // This packet is our AuthenticationOK, which means we do not require any auth.
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
-  PostgresWireHandler::write_value(output_packet, htonl(0u));
-  async_send_packet(output_packet);
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
+  PostgresWireHandler::write_value(*output_packet, htonl(0u));
+  async_send_packet(*output_packet);
 
   _send_ready_for_query();
 }
@@ -190,9 +192,9 @@ void HyriseSession::_send_auth() {
 void HyriseSession::_send_ready_for_query() {
   _state = SessionState::WaitingForQuery;
   // ReadyForQuery packet 'Z' with transaction status Idle 'I'
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ReadyForQuery);
-  PostgresWireHandler::write_value(output_packet, TransactionStatusIndicator::Idle);
-  async_send_packet(output_packet);
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ReadyForQuery);
+  PostgresWireHandler::write_value(*output_packet, TransactionStatusIndicator::Idle);
+  async_send_packet(*output_packet);
   _async_flush();
 
   // Now we wait for the next query to come
@@ -247,29 +249,29 @@ void HyriseSession::_accept_describe() {
 }
 
 void HyriseSession::_send_error(const std::string& message) {
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
 
   // An error response has to include at least one identified field
 
   // Send the error message
-  PostgresWireHandler::write_value(output_packet, 'M');
-  PostgresWireHandler::write_string(output_packet, message);
+  PostgresWireHandler::write_value(*output_packet, 'M');
+  PostgresWireHandler::write_string(*output_packet, message);
 
   // Terminate the error response
-  PostgresWireHandler::write_value(output_packet, '\0');
-  async_send_packet(output_packet);
+  PostgresWireHandler::write_value(*output_packet, '\0');
+  async_send_packet(*output_packet);
   _async_flush();
 }
 
 void HyriseSession::pipeline_info(const std::string& notice) {
-  OutputPacket output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
 
-  PostgresWireHandler::write_value(output_packet, 'M');
-  PostgresWireHandler::write_string(output_packet, notice);
+  PostgresWireHandler::write_value(*output_packet, 'M');
+  PostgresWireHandler::write_string(*output_packet, notice);
 
   // Terminate the notice response
-  PostgresWireHandler::write_value(output_packet, '\0');
-  async_send_packet(output_packet);
+  PostgresWireHandler::write_value(*output_packet, '\0');
+  async_send_packet(*output_packet);
 }
 
 void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) {
@@ -277,7 +279,7 @@ void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) 
 
   if (_state == SessionState::ExtendedQuery) {
     auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
-    async_send_packet(output_packet);
+    async_send_packet(*output_packet);
     return _async_receive_header();
   }
 
@@ -296,7 +298,7 @@ void HyriseSession::prepared_bound(std::unique_ptr<SQLQueryPlan> query_plan,
   _prepared_query_plan = std::move(query_plan);
   _prepared_transaction_context = std::move(transaction_context);
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
-  async_send_packet(output_packet);
+  async_send_packet(*output_packet);
   return _async_receive_header();
 }
 

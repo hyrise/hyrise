@@ -75,7 +75,6 @@ find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
 add_definitions(-DBOOST_THREAD_VERSION=5)
-add_definitions(-DBOOST_THREAD_PROVIDES_EXECUTORS)
 
 
 # Include sub-CMakeLists.txt

@@ -9,7 +9,7 @@ void SendQueryResponseTask::_send_row_description() {
   const auto& column_names = _result_table->column_names();
 
   // Int16 Specifies the number of fields in a row (can be zero).
-  PostgresWireHandler::write_value(output_packet, htons(column_names.size()));
+  PostgresWireHandler::write_value(*output_packet, htons(column_names.size()));
 
   /* FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
    *
@@ -32,9 +32,9 @@ void SendQueryResponseTask::_send_row_description() {
    */
   const auto& column_types = _result_table->column_types();
   for (auto column_id = 0u; column_id < _result_table->column_count(); ++column_id) {
-    PostgresWireHandler::write_string(output_packet, column_names[column_id]);
-    PostgresWireHandler::write_value(output_packet, htonl(0u));  // no object id
-    PostgresWireHandler::write_value(output_packet, htons(0u));  // no attribute number
+    PostgresWireHandler::write_string(*output_packet, column_names[column_id]);
+    PostgresWireHandler::write_value(*output_packet, htonl(0u));  // no object id
+    PostgresWireHandler::write_value(*output_packet, htons(0u));  // no attribute number
 
     auto object_id = 0u;
     auto type_width = 0;
@@ -63,13 +63,13 @@ void SendQueryResponseTask::_send_row_description() {
         Fail("Bad DataType");
     }
 
-    PostgresWireHandler::write_value(output_packet, htonl(object_id));   // object id of type
-    PostgresWireHandler::write_value(output_packet, htons(type_width));  // regular int
-    PostgresWireHandler::write_value(output_packet, htonl(-1));          // no modifier
-    PostgresWireHandler::write_value(output_packet, htons(0u));          // text format
+    PostgresWireHandler::write_value(*output_packet, htonl(object_id));   // object id of type
+    PostgresWireHandler::write_value(*output_packet, htons(type_width));  // regular int
+    PostgresWireHandler::write_value(*output_packet, htonl(-1));          // no modifier
+    PostgresWireHandler::write_value(*output_packet, htons(0u));          // text format
   }
 
-  _session->async_send_packet(output_packet);
+  _session->async_send_packet(*output_packet);
 }
 
 void SendQueryResponseTask::_send_row_data() {
@@ -102,7 +102,7 @@ void SendQueryResponseTask::_send_row_data() {
       auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::DataRow);
 
       // Number of columns in row
-      PostgresWireHandler::write_value(output_packet, htons(num_columns));
+      PostgresWireHandler::write_value(*output_packet, htons(num_columns));
 
       for (ColumnID column_id{0}; column_id < num_columns; ++column_id) {
         const auto& column = chunk->get_column(column_id);
@@ -110,14 +110,14 @@ void SendQueryResponseTask::_send_row_data() {
         const auto value_string = type_cast<std::string>((*column)[chunk_offset]);
 
         // Size of string representation of value, NOT of value type's size
-        PostgresWireHandler::write_value(output_packet, htonl(value_string.length()));
+        PostgresWireHandler::write_value(*output_packet, htonl(value_string.length()));
 
         // Text mode means that all values are sent as non-terminated strings
-        PostgresWireHandler::write_string(output_packet, value_string, false);
+        PostgresWireHandler::write_string(*output_packet, value_string, false);
       }
 
       ++_row_count;
-      _session->async_send_packet(output_packet);
+      _session->async_send_packet(*output_packet);
     }
   }
 }
@@ -154,8 +154,8 @@ void SendQueryResponseTask::_send_command_complete() {
   }
 
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
-  PostgresWireHandler::write_string(output_packet, completed_msg);
-  _session->async_send_packet(output_packet);
+  PostgresWireHandler::write_string(*output_packet, completed_msg);
+  _session->async_send_packet(*output_packet);
 }
 
 void SendQueryResponseTask::_send_execution_info() {

@@ -126,10 +126,10 @@ void PostgresWireHandler::write_string(OutputPacket& packet, const std::string& 
   }
 }
 
-OutputPacket PostgresWireHandler::new_output_packet(NetworkMessageType type) {
-  OutputPacket output_packet;
-  write_value(output_packet, type);
-  write_value(output_packet, htonl(0u));
+std::shared_ptr<OutputPacket> PostgresWireHandler::new_output_packet(NetworkMessageType type) {
+  auto output_packet = std::make_shared<OutputPacket>();
+  write_value(*output_packet, type);
+  write_value(*output_packet, htonl(0u));
   return output_packet;
 }
 
