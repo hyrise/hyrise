@@ -129,7 +129,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 
 #define EXPECT_LQP_EQ(lhs, rhs)                            \
   {                                                        \
-    const auto mismatch = lhs->find_subplan_mismatch(rhs); \
+    const auto mismatch = lhs->find_first_subplan_mismatch(rhs); \
     if (mismatch) {                                        \
       std::cout << "Differing subtrees" << std::endl;      \
       mismatch->first->print();                            \

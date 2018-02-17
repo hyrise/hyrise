@@ -269,7 +269,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /**
    * @defgroup Comparing two LQPs
-   * shallow_equals() compares only the nodes without considering the children, find_subplan_mismatch() will compare the entire
+   * shallow_equals() compares only the nodes without considering the children, find_first_subplan_mismatch() will compare the entire
    * sub plan
    * @{
    */
