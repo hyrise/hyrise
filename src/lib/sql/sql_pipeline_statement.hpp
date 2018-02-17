@@ -5,6 +5,7 @@
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "optimizer/optimizer.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
@@ -29,13 +30,16 @@ namespace opossum {
 class SQLPipelineStatement : public Noncopyable {
  public:
   // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, bool use_mvcc = true);
-  SQLPipelineStatement(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
+  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes,
+                                const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
+                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                       std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc);
+                       const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
+                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -70,6 +74,15 @@ class SQLPipelineStatement : public Noncopyable {
 
  private:
   const std::string _sql_string;
+  const UseMvcc _use_mvcc;
+
+  // Perform MVCC commit right after the Statement was executed
+  const bool _auto_commit;
+
+  // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
+  std::shared_ptr<TransactionContext> _transaction_context;
+
+  std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
@@ -84,11 +97,6 @@ class SQLPipelineStatement : public Noncopyable {
   // Execution times
   std::chrono::microseconds _compile_time_micros;
   std::chrono::microseconds _execution_time_micros;
-
-  // Transaction related
-  const bool _use_mvcc;
-  const bool _auto_commit;
-  std::shared_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum

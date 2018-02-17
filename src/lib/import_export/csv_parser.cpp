@@ -49,7 +49,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
-    chunks.emplace_back(std::make_shared<Chunk>(ChunkUseMvcc::Yes));
+    chunks.emplace_back(std::make_shared<Chunk>(UseMvcc::Yes));
     auto& chunk = chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task

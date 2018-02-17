@@ -27,7 +27,7 @@
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
-  return opossum::SQLPipeline{query, false}.get_unoptimized_logical_plans().at(0);
+  return opossum::SQLPipeline{query, opossum::UseMvcc::No}.get_unoptimized_logical_plans().at(0);
 }
 
 void load_test_tables() {
@@ -60,25 +60,45 @@ TEST_F(SQLTranslatorTest, SelectStarAllTest) {
   EXPECT_EQ(result_node->output_column_references()[1], LQPColumnReference(result_node->left_child(), ColumnID{1}));
 }
 
-/*
- * Disabled because: Opossums's Expressions are able to handle this kind of expression. However, a PredicateNode needs
- * the parsed expression as input. And it does not support nested Expressions, such as '1234 + 1'.
- * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
- * in the translator.
- */
-TEST_F(SQLTranslatorTest, DISABLED_ExpressionTest /* #494 */) {
-  const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
+TEST_F(SQLTranslatorTest, ExpressionTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1233 + 1";
   const auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  ASSERT_EQ(result_node->left_child()->type(), LQPNodeType::Predicate);
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
+  ASSERT_EQ(result_node->left_child()->left_child()->type(), LQPNodeType::Predicate);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child()->left_child());
   EXPECT_FALSE(predicate_node->right_child());
-  EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(predicate_node->left_child(), ColumnID{0}));
   EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
-  // TODO(anybody): once this is implemented, the value side has to be checked.
+
+  ASSERT_EQ(predicate_node->left_child()->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
+  EXPECT_TRUE(projection_node->column_expressions().back()->is_arithmetic_operator());
+
+  const auto original_node = projection_node->left_child();
+
+  // The value() of the PredicateNode is the LQPColumnReference to the (added) projection node column
+  // containing the nested expression
+  ASSERT_TRUE(is_lqp_column_reference(predicate_node->value()));
+  EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(original_node, ColumnID{0}));
+  EXPECT_EQ(boost::get<LQPColumnReference>(predicate_node->value()), LQPColumnReference(projection_node, ColumnID{2}));
+}
+
+TEST_F(SQLTranslatorTest, ExpressionWithColumnTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1231 + b";
+  const auto result_node = compile_query(query);
+
+  ASSERT_EQ(result_node->left_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
+  const auto projection_node =
+      std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child()->left_child()->left_child());
+
+  const auto expression = projection_node->column_expressions().back();
+  EXPECT_TRUE(expression->is_arithmetic_operator());
+  EXPECT_EQ(expression->type(), ExpressionType::Addition);
+  EXPECT_EQ(expression->left_child()->type(), ExpressionType::Literal);
+  EXPECT_EQ(expression->right_child()->type(), ExpressionType::Column);
 }
 
 TEST_F(SQLTranslatorTest, TwoColumnFilter) {
