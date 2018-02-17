@@ -14,7 +14,7 @@ class UpdateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     std::vector<std::shared_ptr<LQPExpression>> update_expressions;
-    _mock_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
+    _mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
     _update_node = UpdateNode::make("table_a", update_expressions, _mock_node);
   }
 
@@ -30,13 +30,13 @@ TEST_F(UpdateNodeTest, ShallowEquals) {
   EXPECT_TRUE(_update_node->shallow_equals(*_update_node));
 
   const auto other_update_node_a =
-      std::make_shared<UpdateNode>("table_a", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
+      UpdateNode::make("table_a", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
   const auto other_update_node_b =
-      std::make_shared<UpdateNode>("table_b", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
+      UpdateNode::make("table_b", std::vector<std::shared_ptr<LQPExpression>>{}, _mock_node);
 
   std::vector<std::shared_ptr<LQPExpression>> update_expressions;
   update_expressions.emplace_back(LQPExpression::create_literal(5));
-  const auto other_update_node_c = std::make_shared<UpdateNode>("table_a", update_expressions, _mock_node);
+  const auto other_update_node_c = UpdateNode::make("table_a", update_expressions, _mock_node);
 
   EXPECT_TRUE(other_update_node_a->shallow_equals(*_update_node));
   EXPECT_FALSE(other_update_node_b->shallow_equals(*_update_node));

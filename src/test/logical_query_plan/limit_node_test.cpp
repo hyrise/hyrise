@@ -10,7 +10,7 @@ namespace opossum {
 
 class LimitNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _limit_node = std::make_shared<LimitNode>(10); }
+  void SetUp() override { _limit_node = LimitNode::make(10); }
 
   std::shared_ptr<LimitNode> _limit_node;
 };
@@ -22,7 +22,7 @@ TEST_F(LimitNodeTest, NumberOfRows) { EXPECT_EQ(_limit_node->num_rows(), 10u); }
 TEST_F(LimitNodeTest, ShallowEquals) {
   EXPECT_TRUE(_limit_node->shallow_equals(*_limit_node));
 
-  const auto other_limit_node = std::make_shared<LimitNode>(11);
+  const auto other_limit_node = LimitNode::make(11);
   EXPECT_FALSE(_limit_node->shallow_equals(*other_limit_node));
 }
 

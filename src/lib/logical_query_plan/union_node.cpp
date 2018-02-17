@@ -16,7 +16,7 @@ UnionNode::UnionNode(UnionMode union_mode)
 std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<UnionNode>(_union_mode);
+  return UnionNode::make(_union_mode);
 }
 
 UnionMode UnionNode::union_mode() const { return _union_mode; }

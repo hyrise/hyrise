@@ -8,7 +8,7 @@ namespace opossum {
 class CreateViewNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
-    _view_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
+    _view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
     _create_view_node = std::make_shared<CreateViewNode>("some_view", _view_node);
   }
 

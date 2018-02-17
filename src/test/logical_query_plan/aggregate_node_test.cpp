@@ -17,7 +17,7 @@ namespace opossum {
 class AggregateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = std::make_shared<MockNode>(
+    _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = {_mock_node, ColumnID{0}};
@@ -40,7 +40,7 @@ class AggregateNodeTest : public BaseTest {
 
     _groupby_columns = std::vector<LQPColumnReference>{_a, _c};
 
-    _aggregate_node = std::make_shared<AggregateNode>(_aggregates, _groupby_columns);
+    _aggregate_node = AggregateNode::make(_aggregates, _groupby_columns);
     _aggregate_node->set_left_child(_mock_node);
   }
 
@@ -139,13 +139,13 @@ TEST_F(AggregateNodeTest, ShallowEquals) {
 
   const auto groupby_columns_a = std::vector<LQPColumnReference>{_a, _c};
 
-  const auto other_aggregate_node_a = std::make_shared<AggregateNode>(aggregates_a, _groupby_columns);
+  const auto other_aggregate_node_a = AggregateNode::make(aggregates_a, _groupby_columns);
   other_aggregate_node_a->set_left_child(_mock_node);
   EXPECT_FALSE(_aggregate_node->shallow_equals(*other_aggregate_node_a));
   EXPECT_FALSE(other_aggregate_node_a->shallow_equals(*_aggregate_node));
 
   const auto groupby_columns_b = std::vector<LQPColumnReference>{_a, _c, _b};
-  const auto other_aggregate_node_b = std::make_shared<AggregateNode>(_aggregates, groupby_columns_b);
+  const auto other_aggregate_node_b = AggregateNode::make(_aggregates, groupby_columns_b);
   other_aggregate_node_b->set_left_child(_mock_node);
   EXPECT_FALSE(_aggregate_node->shallow_equals(*other_aggregate_node_b));
   EXPECT_FALSE(other_aggregate_node_b->shallow_equals(*_aggregate_node));

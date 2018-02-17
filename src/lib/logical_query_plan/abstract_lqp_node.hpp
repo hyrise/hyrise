@@ -377,19 +377,25 @@ class AbstractLQPNodeCRT : public AbstractLQPNode {
 
   template<typename... Args>
   static std::shared_ptr<DerivedNode> make(Args ... args) {
-    if constexpr(sizeof...(Args) > 0 && std::is_convertible_v<NthTypeOf<sizeof...(Args) - 1, Args...>, std::shared_ptr<AbstractLQPNode>>) {
-      auto args_tuple = std::forward_as_tuple(args...);
-      if constexpr(sizeof...(Args) > 1 && std::is_convertible_v<NthTypeOf<sizeof...(Args) - 2, Args...>, std::shared_ptr<AbstractLQPNode>>) {
-        // last two arguments are shared_ptr<AbstractLQPNode>
-        auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
-        node->set_left_child(std::get<sizeof...(Args) - 2>(args_tuple));
-        node->set_right_child(std::get<sizeof...(Args) - 1>(args_tuple));
-        return node;
+    if constexpr (sizeof...(Args) > 0) {
+      if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args) - 1, Args...>, std::shared_ptr<AbstractLQPNode>>) {
+        auto args_tuple = std::forward_as_tuple(args...);
+        if constexpr(sizeof...(Args) > 1 &&
+                     std::is_convertible_v<NthTypeOf<sizeof...(Args) - 2, Args...>, std::shared_ptr<AbstractLQPNode>>) {
+          // last two arguments are shared_ptr<AbstractLQPNode>
+          auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
+          node->set_left_child(std::get<sizeof...(Args) - 2>(args_tuple));
+          node->set_right_child(std::get<sizeof...(Args) - 1>(args_tuple));
+          return node;
+        } else {
+          // last argument is shared_ptr<AbstractLQPNode>
+          auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 1>());
+          node->set_left_child(std::get<sizeof...(Args) - 1>(args_tuple));
+          return node;
+        }
       } else {
-        // last argument is shared_ptr<AbstractLQPNode>
-        auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 1>());
-        node->set_left_child(std::get<sizeof...(Args) - 1>(args_tuple));
-        return node;
+        // no shared_ptr<AbstractLQPNode> was passed at the end
+        return make_impl(std::forward_as_tuple(args...), std::make_index_sequence<sizeof...(Args) - 0>());
       }
     } else {
       // no shared_ptr<AbstractLQPNode> was passed at the end

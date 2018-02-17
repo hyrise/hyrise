@@ -30,7 +30,7 @@ std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
     value =
         adapt_column_reference_to_different_lqp(boost::get<LQPColumnReference>(value), left_child(), copied_left_child);
   }
-  return std::make_shared<PredicateNode>(
+  return PredicateNode::make(
       adapt_column_reference_to_different_lqp(_column_reference, left_child(), copied_left_child), _predicate_condition,
       value, _value2);
 }

@@ -27,7 +27,7 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
         adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
   }
 
-  return std::make_shared<UpdateNode>(_table_name, column_expressions);
+  return UpdateNode::make(_table_name, column_expressions);
 }
 
 std::string UpdateNode::description() const {

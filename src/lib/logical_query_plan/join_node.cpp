@@ -36,7 +36,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   if (_join_mode == JoinMode::Cross || _join_mode == JoinMode::Natural) {
-    return std::make_shared<JoinNode>(_join_mode);
+    return JoinNode::make(_join_mode);
   } else {
     Assert(left_child(), "Can't clone without child");
 
@@ -44,7 +44,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
         adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
         adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
     };
-    return std::make_shared<JoinNode>(_join_mode, join_column_references, *_predicate_condition);
+    return JoinNode::make(_join_mode, join_column_references, *_predicate_condition);
   }
 }
 

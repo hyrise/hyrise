@@ -16,7 +16,7 @@ class StoredTableNodeTest : public BaseTest {
     StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
     StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
 
-    _stored_table_node = std::make_shared<StoredTableNode>("t_a");
+    _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});
     _b = LQPColumnReference(_stored_table_node, ColumnID{1});
   }
@@ -69,8 +69,8 @@ TEST_F(StoredTableNodeTest, VerboseColumnNamesWithAlias) {
 TEST_F(StoredTableNodeTest, ShallowEquals) {
   EXPECT_TRUE(_stored_table_node->shallow_equals(*_stored_table_node));
 
-  const auto other_stored_table_node_a = std::make_shared<StoredTableNode>("t_a");
-  const auto other_stored_table_node_b = std::make_shared<StoredTableNode>("t_b");
+  const auto other_stored_table_node_a = StoredTableNode::make("t_a");
+  const auto other_stored_table_node_b = StoredTableNode::make("t_b");
 
   EXPECT_TRUE(other_stored_table_node_a->shallow_equals(*_stored_table_node));
   EXPECT_FALSE(other_stored_table_node_b->shallow_equals(*_stored_table_node));

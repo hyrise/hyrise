@@ -42,7 +42,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
         adapt_column_reference_to_different_lqp(groupby_column_reference, left_child(), copied_left_child));
   }
 
-  return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_references);
+  return AggregateNode::make(aggregate_expressions, groupby_column_references);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {

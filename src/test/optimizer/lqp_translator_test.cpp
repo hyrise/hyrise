@@ -60,7 +60,7 @@ TEST_F(LQPTranslatorTest, StoredTableNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto node = StoredTableNode::make("table_int_float");
   const auto op = LQPTranslator{}.translate_node(node);
 
   /**
@@ -75,8 +75,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
+  auto predicate_node = PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}),
                                                         PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -95,9 +95,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
   auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::Between,
+      PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{0}), PredicateCondition::Between,
                                       AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -122,7 +122,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make("table_int_float_chunked");
 
   const auto table = StorageManager::get().get_table("table_int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
@@ -130,7 +130,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+  auto predicate_node = PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}),
                                                         PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
   predicate_node->set_scan_type(ScanType::IndexScan);
@@ -158,7 +158,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make("table_int_float_chunked");
 
   const auto table = StorageManager::get().get_table("table_int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
@@ -167,7 +167,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Between,
+      PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Between,
                                       AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   predicate_node->set_scan_type(ScanType::IndexScan);
@@ -203,7 +203,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make("table_int_float_chunked");
 
   const auto table = StorageManager::get().get_table("table_int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
@@ -211,10 +211,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+  auto predicate_node = PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}),
                                                         PredicateCondition::Equals, 42);
   predicate_node->set_left_child(stored_table_node);
-  auto predicate_node2 = std::make_shared<PredicateNode>(LQPColumnReference(predicate_node, ColumnID{0}),
+  auto predicate_node2 = PredicateNode::make(LQPColumnReference(predicate_node, ColumnID{0}),
                                                          PredicateCondition::LessThanEquals, 42);
   predicate_node2->set_left_child(predicate_node);
 
@@ -227,10 +227,10 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
   const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{
       LQPExpression::create_column(LQPColumnReference(stored_table_node, ColumnID{0}), {"a"})};
-  auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  auto projection_node = ProjectionNode::make(expressions);
   projection_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
 
@@ -248,8 +248,8 @@ TEST_F(LQPTranslatorTest, SortNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>(
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
+  auto sort_node = SortNode::make(
       std::vector<OrderByDefinition>{{LQPColumnReference(stored_table_node, ColumnID{0}), OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(sort_node);
@@ -264,9 +264,9 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
-  const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
-  auto join_node = std::make_shared<JoinNode>(JoinMode::Outer,
+  const auto stored_table_node_left = StoredTableNode::make("table_int_float");
+  const auto stored_table_node_right = StoredTableNode::make("table_int_float2");
+  auto join_node = JoinNode::make(JoinMode::Outer,
                                               std::make_pair(LQPColumnReference(stored_table_node_left, ColumnID{1}),
                                                              LQPColumnReference(stored_table_node_right, ColumnID{0})),
                                               PredicateCondition::Equals);
@@ -288,7 +288,7 @@ TEST_F(LQPTranslatorTest, ShowTablesNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto show_tables_node = std::make_shared<ShowTablesNode>();
+  const auto show_tables_node = ShowTablesNode::make();
   const auto op = LQPTranslator{}.translate_node(show_tables_node);
 
   /**
@@ -303,7 +303,7 @@ TEST_F(LQPTranslatorTest, ShowColumnsNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto show_column_node = std::make_shared<ShowColumnsNode>("table_a");
+  const auto show_column_node = ShowColumnsNode::make("table_a");
   const auto op = LQPTranslator{}.translate_node(show_column_node);
 
   /**
@@ -318,13 +318,13 @@ TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
 
   auto sum_expression = LQPExpression::create_aggregate_function(
       AggregateFunction::Sum, {LQPExpression::create_column(LQPColumnReference(stored_table_node, ColumnID{0}))},
       {"sum_of_a"});
 
-  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+  auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
                                                         std::vector<LQPColumnReference>{});
   aggregate_node->set_left_child(stored_table_node);
 
@@ -348,7 +348,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
 
   // Create expression "b * 2".
   const auto expr_col_b = LQPExpression::create_column(LQPColumnReference{stored_table_node, ColumnID{1}});
@@ -362,7 +362,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   // Create issue with failing test.
   auto sum_expression =
       LQPExpression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
-  auto aggregate_node = std::make_shared<AggregateNode>(
+  auto aggregate_node = AggregateNode::make(
       std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
       std::vector<LQPColumnReference>{LQPColumnReference(stored_table_node, ColumnID{0})});
   aggregate_node->set_left_child(stored_table_node);
@@ -409,18 +409,18 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node_left = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_left, ColumnID{0}),
+  const auto stored_table_node_left = StoredTableNode::make("table_int_float");
+  auto predicate_node_left = PredicateNode::make(LQPColumnReference(stored_table_node_left, ColumnID{0}),
                                                              PredicateCondition::Equals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
 
-  const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
+  const auto stored_table_node_right = StoredTableNode::make("table_int_float2");
   auto predicate_node_right =
-      std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node_right, ColumnID{1}),
+      PredicateNode::make(LQPColumnReference(stored_table_node_right, ColumnID{1}),
                                       PredicateCondition::GreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
-  auto join_node = std::make_shared<JoinNode>(
+  auto join_node = JoinNode::make(
       JoinMode::Inner, LQPColumnReferencePair(LQPColumnReference(stored_table_node_left, ColumnID{0}),
                                               LQPColumnReference(stored_table_node_right, ColumnID{0})),
       PredicateCondition::Equals);
@@ -456,10 +456,10 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+  const auto stored_table_node = StoredTableNode::make("table_int_float");
 
   const auto num_rows = 2u;
-  auto limit_node = std::make_shared<LimitNode>(num_rows);
+  auto limit_node = LimitNode::make(num_rows);
   limit_node->set_left_child(stored_table_node);
 
   /**
@@ -496,14 +496,14 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
    * which is still semantically correct, but would mean predicate_c gets executed twice
    */
 
-  auto table_node = std::make_shared<StoredTableNode>("table_int_float2");
+  auto table_node = StoredTableNode::make("table_int_float2");
   auto predicate_node_a =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::Equals, 3);
+      PredicateNode::make(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::Equals, 3);
   auto predicate_node_b =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::Equals, 4);
+      PredicateNode::make(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::Equals, 4);
   auto predicate_node_c =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{1}}, PredicateCondition::Equals, 5.0);
-  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+      PredicateNode::make(LQPColumnReference{table_node, ColumnID{1}}, PredicateCondition::Equals, 5.0);
+  auto union_node = UnionNode::make(UnionMode::Positions);
   const auto& lqp = union_node;
 
   union_node->set_left_child(predicate_node_a);

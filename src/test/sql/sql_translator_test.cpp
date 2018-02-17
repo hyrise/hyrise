@@ -47,9 +47,9 @@ class SQLTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     load_test_tables();
-    _stored_table_node_a = std::make_shared<StoredTableNode>("table_a");
-    _stored_table_node_b = std::make_shared<StoredTableNode>("table_b");
-    _stored_table_node_c = std::make_shared<StoredTableNode>("table_c");
+    _stored_table_node_a = StoredTableNode::make("table_a");
+    _stored_table_node_b = StoredTableNode::make("table_b");
+    _stored_table_node_c = StoredTableNode::make("table_c");
     _table_a_a = _stored_table_node_a->get_column("a"s);
     _table_a_b = _stored_table_node_a->get_column("b"s);
     _table_b_a = _stored_table_node_b->get_column("a"s);
@@ -267,8 +267,8 @@ TEST_P(SQLTranslatorJoinTest, SelectLeftRightOuterJoins) {
   const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
   const auto result_node = compile_query(query);
 
-  const auto stored_table_node_a = std::make_shared<StoredTableNode>("table_a", "a");
-  const auto stored_table_node_b = std::make_shared<StoredTableNode>("table_b", "b");
+  const auto stored_table_node_a = StoredTableNode::make("table_a", "a");
+  const auto stored_table_node_b = StoredTableNode::make("table_b", "b");
   const auto table_a_a = stored_table_node_a->get_column("a"s);
   const auto table_b_a = stored_table_node_b->get_column("a"s);
 
@@ -290,8 +290,8 @@ TEST_F(SQLTranslatorTest, SelectSelfJoin) {
   const auto query = "SELECT * FROM table_a AS t1 JOIN table_a AS t2 ON t1.a = t2.b;";
   auto result_node = compile_query(query);
 
-  const auto stored_table_node_t1 = std::make_shared<StoredTableNode>("table_a", "t1");
-  const auto stored_table_node_t2 = std::make_shared<StoredTableNode>("table_a", "t2");
+  const auto stored_table_node_t1 = StoredTableNode::make("table_a", "t1");
+  const auto stored_table_node_t2 = StoredTableNode::make("table_a", "t2");
   const auto t1_a = stored_table_node_t1->get_column("a"s);
   const auto t2_b = stored_table_node_t2->get_column("b"s);
 
@@ -346,7 +346,7 @@ TEST_F(SQLTranslatorTest, SelectLimit) {
   const auto query = "SELECT * FROM table_a LIMIT 2;";
   auto result_node = compile_query(query);
 
-  const auto lqp = std::make_shared<LimitNode>(2, ProjectionNode::make_pass_through(_stored_table_node_a));
+  const auto lqp = LimitNode::make(2, ProjectionNode::make_pass_through(_stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -360,7 +360,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 
   const auto lqp = InsertNode::make(
       "table_a", ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b},
-                                                  std::make_shared<DummyTableNode>()));
+                                                  DummyTableNode::make()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -374,7 +374,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 
   const auto lqp = InsertNode::make(
       "table_a", ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b},
-                                                  std::make_shared<DummyTableNode>()));
+                                                  DummyTableNode::make()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -388,7 +388,7 @@ TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
 
   const auto lqp = InsertNode::make(
       "table_a", ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b},
-                                                  std::make_shared<DummyTableNode>()));
+                                                  DummyTableNode::make()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -534,7 +534,7 @@ TEST_F(SQLTranslatorTest, DropView) {
   const auto query = "DROP VIEW my_third_view";
   auto result_node = compile_query(query);
 
-  const auto lqp = std::make_shared<DropViewNode>("my_third_view");
+  const auto lqp = DropViewNode::make("my_third_view");
 
   EXPECT_LQP_EQ(lqp, result_node);
 }

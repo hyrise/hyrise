@@ -14,7 +14,7 @@ class PredicateNodeTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float_double_string.tbl", 2));
 
-    _table_node = std::make_shared<StoredTableNode>("table_a");
+    _table_node = StoredTableNode::make("table_a");
     _predicate_node =
         PredicateNode::make(LQPColumnReference{_table_node, ColumnID{0}}, PredicateCondition::Equals, 5);
     _predicate_node->set_left_child(_table_node);

@@ -9,7 +9,7 @@ ShowTablesNode::ShowTablesNode() : Base(LQPNodeType::ShowTables) {}
 std::shared_ptr<AbstractLQPNode> ShowTablesNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<ShowTablesNode>();
+  return ShowTablesNode::make();
 }
 
 std::string ShowTablesNode::description() const { return "[ShowTables]"; }

@@ -65,7 +65,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
 
     auto table_statistics = std::make_shared<TableStatistics>(100, column_statistics);
 
-    _mock_node = std::make_shared<MockNode>(table_statistics);
+    _mock_node = MockNode::make(table_statistics);
 
     _mock_node_a = LQPColumnReference{_mock_node, ColumnID{0}};
     _mock_node_b = LQPColumnReference{_mock_node, ColumnID{1}};
@@ -85,7 +85,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
       _mock_node));
   // clang-format on
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
@@ -106,7 +106,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
@@ -157,7 +157,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, TwoReorderings) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
@@ -170,7 +170,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
                                                           PredicateCondition::GreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto sort_node = std::make_shared<SortNode>(
+  auto sort_node = SortNode::make(
       std::vector<OrderByDefinition>{{LQPColumnReference{stored_table_node, ColumnID{0}}, OrderByMode::Ascending}});
   sort_node->set_left_child(predicate_node_1);
 
@@ -184,7 +184,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
 
   const auto& expressions = LQPExpression::create_columns(
       {LQPColumnReference{stored_table_node, ColumnID{0}}, LQPColumnReference{stored_table_node, ColumnID{1}}});
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  const auto projection_node = ProjectionNode::make(expressions);
   projection_node->set_left_child(predicate_node_3);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -203,7 +203,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float4.tbl", 2);
   StorageManager::get().add_table("table_a", std::move(table_a));
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  auto stored_table_node = StoredTableNode::make("table_a");
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
@@ -262,9 +262,9 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   auto table_statistics =
       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
-  auto table_0 = std::make_shared<MockNode>(table_statistics);
-  auto table_1 = std::make_shared<MockNode>(table_statistics);
-  auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  auto table_0 = MockNode::make(table_statistics);
+  auto table_1 = MockNode::make(table_statistics);
+  auto cross_node = JoinNode::make(JoinMode::Cross);
   auto predicate_0 =
       PredicateNode::make(LQPColumnReference{table_0, ColumnID{0}}, PredicateCondition::GreaterThan, 80);
   auto predicate_1 =
@@ -318,8 +318,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
   auto table_statistics =
       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
-  auto table_node = std::make_shared<MockNode>(table_statistics);
-  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+  auto table_node = MockNode::make(table_statistics);
+  auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node =
       PredicateNode::make(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 90);
   auto predicate_b_node =

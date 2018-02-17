@@ -15,7 +15,7 @@ class SortNodeTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float_double_string.tbl", 2));
 
-    _table_node = std::make_shared<StoredTableNode>("table_a");
+    _table_node = StoredTableNode::make("table_a");
 
     _a_a = LQPColumnReference{_table_node, ColumnID{0}};
     _a_b = LQPColumnReference{_table_node, ColumnID{1}};
@@ -34,11 +34,11 @@ TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(_sort_node->description(), "[Sort] table_a.i (Ascending)");
 
   auto sort_b =
-      std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Descending}});
+      SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Descending}});
   sort_b->set_left_child(_table_node);
   EXPECT_EQ(sort_b->description(), "[Sort] table_a.i (Descending)");
 
-  auto sort_c = std::make_shared<SortNode>(std::vector<OrderByDefinition>{
+  auto sort_c = SortNode::make(std::vector<OrderByDefinition>{
       OrderByDefinition{_a_c, OrderByMode::Descending}, OrderByDefinition{_a_b, OrderByMode::Ascending},
       OrderByDefinition{_a_a, OrderByMode::Descending}});
   sort_c->set_left_child(_table_node);
@@ -63,13 +63,13 @@ TEST_F(SortNodeTest, OutputColumnIDs) {
 TEST_F(SortNodeTest, ShallowEquals) {
   EXPECT_TRUE(_sort_node->shallow_equals(*_sort_node));
 
-  const auto other_sort_node_a = std::make_shared<SortNode>(
+  const auto other_sort_node_a = SortNode::make(
       std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
   const auto other_sort_node_b =
-      std::make_shared<SortNode>(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending},
+      SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending},
                                                                 OrderByDefinition{_a_b, OrderByMode::Ascending}},
                                  _table_node);
-  const auto other_sort_node_c = std::make_shared<SortNode>(
+  const auto other_sort_node_c = SortNode::make(
       std::vector<OrderByDefinition>{OrderByDefinition{_a_b, OrderByMode::Ascending}}, _table_node);
 
   EXPECT_TRUE(other_sort_node_a->shallow_equals(*_sort_node));

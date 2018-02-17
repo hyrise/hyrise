@@ -27,7 +27,7 @@ std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(
     order_by_definitions.emplace_back(column_reference, order_by_definition.order_by_mode);
   }
 
-  return std::make_shared<SortNode>(order_by_definitions);
+  return SortNode::make(order_by_definitions);
 }
 
 std::string SortNode::description() const {

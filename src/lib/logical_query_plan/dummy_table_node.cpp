@@ -14,7 +14,7 @@ DummyTableNode::DummyTableNode() : Base(LQPNodeType::DummyTable) { _output_colum
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<DummyTableNode>();
+  return DummyTableNode::make();
 }
 
 std::string DummyTableNode::description() const { return "[DummyTable]"; }

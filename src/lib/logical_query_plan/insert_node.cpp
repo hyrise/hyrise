@@ -16,7 +16,7 @@ InsertNode::InsertNode(const std::string table_name)
 std::shared_ptr<AbstractLQPNode> InsertNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<InsertNode>(_table_name);
+  return InsertNode::make(_table_name);
 }
 
 std::string InsertNode::description() const {

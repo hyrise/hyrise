@@ -15,10 +15,10 @@ namespace opossum {
 class JoinNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node_a = std::make_shared<MockNode>(
+    _mock_node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node_b =
-        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
 
     _t_a_a = {_mock_node_a, ColumnID{0}};
     _t_a_b = {_mock_node_a, ColumnID{1}};

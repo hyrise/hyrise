@@ -17,7 +17,7 @@ namespace opossum {
 class ProjectionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = std::make_shared<MockNode>(
+    _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = {_mock_node, ColumnID{0}};

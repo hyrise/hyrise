@@ -26,7 +26,7 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const std::optio
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<StoredTableNode>(_table_name);
+  return StoredTableNode::make(_table_name);
 }
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }

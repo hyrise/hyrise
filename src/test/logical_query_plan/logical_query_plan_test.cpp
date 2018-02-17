@@ -27,20 +27,20 @@ class LogicalQueryPlanTest : public BaseTest {
      * Init some nodes for the tests to use
      */
     _mock_node_a =
-        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
     _mock_node_b =
-        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
 
     _t_a_a = LQPColumnReference{_mock_node_a, ColumnID{0}};
     _t_a_b = LQPColumnReference{_mock_node_a, ColumnID{1}};
     _t_b_a = LQPColumnReference{_mock_node_b, ColumnID{0}};
     _t_b_b = LQPColumnReference{_mock_node_b, ColumnID{1}};
 
-    _predicate_node_a = std::make_shared<PredicateNode>(_t_a_a, PredicateCondition::Equals, 42);
-    _predicate_node_b = std::make_shared<PredicateNode>(_t_a_b, PredicateCondition::Equals, 1337);
-    _projection_node = std::make_shared<ProjectionNode>(LQPExpression::create_columns({_t_a_a, _t_a_b}));
+    _predicate_node_a = PredicateNode::make(_t_a_a, PredicateCondition::Equals, 42);
+    _predicate_node_b = PredicateNode::make(_t_a_b, PredicateCondition::Equals, 1337);
+    _projection_node = ProjectionNode::make(LQPExpression::create_columns({_t_a_a, _t_a_b}));
     _join_node =
-        std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{_t_a_a, _t_b_a}, PredicateCondition::Equals);
+        JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_t_a_a, _t_b_a}, PredicateCondition::Equals);
 
     /**
      * Init complex graph.
@@ -57,15 +57,15 @@ class LogicalQueryPlanTest : public BaseTest {
      *     \_Recurring Node --> [3]
      *     \_Recurring Node --> [5]
      */
-    _nodes[6] = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "a"}}});
-    _nodes[7] = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
-    _nodes[0] = std::make_shared<JoinNode>(JoinMode::Cross);
-    _nodes[1] = std::make_shared<JoinNode>(JoinMode::Cross);
+    _nodes[6] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}}});
+    _nodes[7] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
+    _nodes[0] = JoinNode::make(JoinMode::Cross);
+    _nodes[1] = JoinNode::make(JoinMode::Cross);
     _nodes[2] =
-        std::make_shared<PredicateNode>(LQPColumnReference{_nodes[6], ColumnID{0}}, PredicateCondition::Equals, 42);
-    _nodes[3] = std::make_shared<JoinNode>(JoinMode::Cross);
-    _nodes[4] = std::make_shared<JoinNode>(JoinMode::Cross);
-    _nodes[5] = std::make_shared<JoinNode>(JoinMode::Cross);
+        PredicateNode::make(LQPColumnReference{_nodes[6], ColumnID{0}}, PredicateCondition::Equals, 42);
+    _nodes[3] = JoinNode::make(JoinMode::Cross);
+    _nodes[4] = JoinNode::make(JoinMode::Cross);
+    _nodes[5] = JoinNode::make(JoinMode::Cross);
 
     _nodes[5]->set_right_child(_nodes[7]);
     _nodes[0]->set_right_child(_nodes[4]);
@@ -256,7 +256,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
   _nodes[5]->replace_with(new_node);
 
@@ -282,8 +282,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
-  auto new_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
-  auto new_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
   _nodes[6]->replace_with(new_node_a);
   _nodes[7]->replace_with(new_node_b);
@@ -308,18 +308,18 @@ TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
    * Test AbstractLQPNode::deep_copy_column_reference()
    */
 
-  auto mock_node_a = std::make_shared<MockNode>(
+  auto mock_node_a = MockNode::make(
       MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
   auto mock_node_b =
-      std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-  auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+  auto join_node = JoinNode::make(JoinMode::Cross);
   auto predicate_node =
-      std::make_shared<PredicateNode>(LQPColumnReference{mock_node_b, ColumnID{0}}, PredicateCondition::Equals, 3);
+      PredicateNode::make(LQPColumnReference{mock_node_b, ColumnID{0}}, PredicateCondition::Equals, 3);
 
   const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{1}};
   const auto column_reference_b = LQPColumnReference{mock_node_b, ColumnID{0}};
 
-  auto aggregate_node = std::make_shared<AggregateNode>(
+  auto aggregate_node = AggregateNode::make(
       std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
           AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
       std::vector<LQPColumnReference>{{column_reference_b}});
@@ -379,13 +379,13 @@ TEST_F(LogicalQueryPlanTest, ColumnIDByColumnReference) {
    * Test AbstractLQPNode::{get, find}_output_column_id_by_column_reference
    */
 
-  auto mock_node_a = std::make_shared<MockNode>(
+  auto mock_node_a = MockNode::make(
       MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
   auto mock_node_b =
-      std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
   const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{0}};
   const auto column_reference_b = LQPColumnReference{mock_node_a, ColumnID{1}};
-  auto aggregate_node = std::make_shared<AggregateNode>(
+  auto aggregate_node = AggregateNode::make(
       std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
           AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
       std::vector<LQPColumnReference>{{column_reference_b}});

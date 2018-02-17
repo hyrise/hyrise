@@ -34,7 +34,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 
         auto predicate_node = join_condition->predicate_node;
         const auto new_join_node =
-            std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, predicate_node->predicate_condition());
+            JoinNode::make(JoinMode::Inner, join_column_ids, predicate_node->predicate_condition());
 
         /**
          * Place the conditional join where the cross join was and remove the predicate node
