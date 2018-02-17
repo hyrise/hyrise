@@ -16,6 +16,9 @@ namespace opossum {
  * as any continuous subsequence from the beginning must not exceed.
  * The operation sequence is prioritized by expected performance impact on the system,
  * so that the most beneficial operations come before less useful operations.
+ *
+ * For more information on the underlying problem, see e.g. Wikipedia:
+ *   https://en.wikipedia.org/wiki/Knapsack_problem
  */
 class AbstractSelector {
  public:
