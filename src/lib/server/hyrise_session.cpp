@@ -24,9 +24,11 @@
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 #include "client_connection.hpp"
+#include "then_operator.hpp"
 
 namespace opossum {
 
+using opossum::then_operator::then;
 
 void HyriseSession::start() {
   // Keep a pointer to itself that will be released once the connection is closed
@@ -47,20 +49,26 @@ void HyriseSession::start() {
 }
 
 boost::future<void> HyriseSession::perform_session_startup() {
-  return _connection->receive_startup_package_header()
-    .then(boost::launch::sync, [=](boost::future<uint32_t> f) {
-      auto startup_package_length = f.get();
-
-      if (startup_package_length == 0) {
-        // This is a request for SSL
-        return _connection->send_ssl_denied()
-          .then(boost::launch::sync, [=](boost::future<void> f) {f.get(); return this->perform_session_startup(); }).unwrap();
+  // TODO: I think we can even get rid of the remaining unwraps
+  return (
+    _connection->receive_startup_package_header()
+      >> then >> [=](uint32_t startup_package_length) {
+        if (startup_package_length == 0) {
+          // This is a request for SSL
+          return (
+            _connection->send_ssl_denied()
+              >> then >> [=]() { return this->perform_session_startup(); }
+          ).unwrap();
+        }
+  
+        return (
+          _connection->receive_startup_package_contents(startup_package_length)
+            >> then >> [=]() { return _connection->send_auth(); }
+            // Auto-unwrapping in progress...
+            >> then >> [=]() { return _connection->send_ready_for_query(); }
+        ).unwrap();
       }
-
-      return _connection->receive_startup_package_contents(startup_package_length)
-        .then(boost::launch::sync, [=](boost::future<void> f) { f.get(); return _connection->send_auth(); }).unwrap()
-        .then(boost::launch::sync, [=](boost::future<void> f) { f.get(); return _connection->send_ready_for_query(); }).unwrap();
-    }).unwrap();
+  ).unwrap();
 }
 
 void HyriseSession::async_send_packet(OutputPacket& output_packet) {

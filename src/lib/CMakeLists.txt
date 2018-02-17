@@ -192,6 +192,7 @@ set(
     server/hyrise_session.hpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
+    server/then_operator.hpp
     server/types.hpp
     server/client_connection.cpp
     server/client_connection.hpp

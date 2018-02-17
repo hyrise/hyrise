@@ -2,25 +2,25 @@
 
 #include "use_boost_future.hpp"
 #include "postgres_wire_handler.hpp"
+#include "then_operator.hpp"
 
 namespace opossum {
 
+using opossum::then_operator::then;
+
 boost::future<uint32_t> ClientConnection::receive_startup_package_header() {
   static const uint32_t STARTUP_HEADER_LENGTH = 8u;
-
+  
   return receive_bytes_async(STARTUP_HEADER_LENGTH)
-    .then(boost::launch::sync, [](boost::future<InputPacket> packet) {
-      return PostgresWireHandler::handle_startup_package(packet.get());
-    });
+    >> then >> PostgresWireHandler::handle_startup_package;
 }
 
 boost::future<void> ClientConnection::receive_startup_package_contents(uint32_t size) {
   return receive_bytes_async(size)
-    .then(boost::launch::sync, [=](boost::future<InputPacket> packet) {
-      auto p = packet.get();
+    >> then >> [=](InputPacket p) {
       // Read these values and ignore them
       PostgresWireHandler::handle_startup_package_content(p, size);
-    });
+    };
 }
 
 boost::future<void> ClientConnection::send_ssl_denied() {
@@ -29,14 +29,15 @@ boost::future<void> ClientConnection::send_ssl_denied() {
   PostgresWireHandler::write_value(*output_packet, NetworkMessageType::SslNo);
   
   return send_bytes_async(output_packet, true)
-    .then(boost::launch::sync, [](boost::future<unsigned long> f){ f.get(); });
+    >> then >> [](unsigned long) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_auth() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
   PostgresWireHandler::write_value(*output_packet, htonl(0u));
 
-  return send_bytes_async(output_packet).then(boost::launch::sync, [](boost::future<unsigned long> f){ f.get(); });
+  return send_bytes_async(output_packet)
+    >> then >> [](unsigned long) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_ready_for_query() {
@@ -45,21 +46,22 @@ boost::future<void> ClientConnection::send_ready_for_query() {
   PostgresWireHandler::write_value(*output_packet, TransactionStatusIndicator::Idle);
 
   return send_bytes_async(output_packet, true)
-    .then(boost::launch::sync, [](boost::future<unsigned long> f){ f.get(); });
+    >> then >> [](unsigned long) { /* ignore the result */ };
 }
 
 boost::future<InputPacket> ClientConnection::receive_bytes_async(size_t size) {
   auto result = std::make_shared<InputPacket>();
   result->data.reserve(size);
-  return _socket.async_read_some(boost::asio::buffer(result->data, size), boost::asio::use_boost_future)
-    .then(boost::launch::sync, [=](boost::future<unsigned long> f) {
-      auto received_size = f.get();  // Throws any errors
-      
-      Assert(received_size == size, "Client sent less data than expected.");
-      
-      result->offset = result->data.begin();
-      return std::move(*result);
-    });
+  
+  return _socket.async_read_some(
+    boost::asio::buffer(result->data, size), 
+    boost::asio::use_boost_future
+  ) >> then >> [=](unsigned long received_size) {
+    Assert(received_size == size, "Client sent less data than expected.");
+    
+    result->offset = result->data.begin();
+    return std::move(*result);
+  };
 }
 
 boost::future<unsigned long> ClientConnection::send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush) {
@@ -71,29 +73,26 @@ boost::future<unsigned long> ClientConnection::send_bytes_async(std::shared_ptr<
   }
   
   auto perform_flush = [=]() {
-    return flush_async().then(boost::launch::sync, [=](boost::future<unsigned long> f) {
-      auto sent_bytes = f.get();
-      Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
-      _response_buffer.clear();
-      return sent_bytes;
-    });
+    return flush_async()
+      >> then >> [=](unsigned long sent_bytes) {
+        Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
+        _response_buffer.clear();
+        return sent_bytes;
+      };
   };
 
   if (_response_buffer.size() + packet->data.size() > _max_response_size) {
     // We have to flush before we can actually process the data 
-    return perform_flush().then(boost::launch::sync, [=](boost::future<unsigned long> f) {
-      f.get();
-      return send_bytes_async(packet, flush);
+    return (perform_flush()
+      >> then >> [=](unsigned long) {
+        return send_bytes_async(packet, flush);
     }).unwrap();
   }
 
   _response_buffer.insert(_response_buffer.end(), packet->data.begin(), packet->data.end());
   
   if (flush) {
-    return perform_flush().then(boost::launch::sync, [=](boost::future<unsigned long> f) {
-      f.get();
-      return packet_size;
-    });
+    return perform_flush() >> then >> [=](unsigned long) { return packet_size; };
   } else {
     // Return an already resolved future (we have just written data to the buffer)
     return boost::make_ready_future<unsigned long>(packet_size);
