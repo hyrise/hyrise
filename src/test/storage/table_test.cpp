@@ -10,6 +10,7 @@
 #include "../lib/resolve_type.hpp"
 #include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
 
@@ -187,8 +188,40 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
   t.append({4, "Hello"});
   t.append({5, "Hello"});
 
-  EXPECT_GT(t.estimate_memory_usage(),
-            empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
+  EXPECT_GT(t.estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
+}
+
+TEST_F(StorageTableTest, CreateRemoveIndex) {
+  // because the group key index only works on dictionary columns, we create a separate table and compress it
+  Table table{2};
+  table.add_column("col_1", DataType::Int);
+  table.append({0});
+  table.append({1});
+  auto chunk = table.get_chunk(ChunkID{0});
+  DictionaryCompression::compress_chunk(table.column_types(), chunk);
+
+  EXPECT_EQ(table.get_indexes().size(), 0u);
+
+  table.create_index<GroupKeyIndex>(std::vector{ColumnID{0}}, "index_name");
+
+  // Expect a IndexInfo entry for the index
+  auto indexes = table.get_indexes();
+  EXPECT_EQ(indexes.size(), 1u);
+  EXPECT_EQ(indexes[0].name, "index_name");
+  EXPECT_EQ(indexes[0].column_ids, std::vector{ColumnID{0}});
+  EXPECT_EQ(indexes[0].type, ColumnIndexType::GroupKey);
+
+  // And actually on the chunk
+  chunk = table.get_chunk(ChunkID{0});
+  auto chunk_indexes = chunk->get_indices(std::vector{ColumnID{0}});
+  EXPECT_EQ(chunk_indexes.size(), 1u);
+
+  table.remove_index(indexes[0]);
+
+  indexes = table.get_indexes();
+  EXPECT_EQ(indexes.size(), 0u);
+  chunk_indexes = chunk->get_indices(std::vector{ColumnID{0}});
+  EXPECT_EQ(chunk_indexes.size(), 0u);
 }
 
 }  // namespace opossum

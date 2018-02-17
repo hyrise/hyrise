@@ -148,6 +148,20 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
+  void remove_index(IndexInfo& index_info) {
+    auto iterator = std::find(_indexes.cbegin(), _indexes.cend(), index_info);
+    if (iterator == _indexes.cend()) {
+      Fail("Index to be deleted was not found");
+    }
+
+    for (auto& chunk : _chunks) {
+      auto index_ptr = chunk->get_index(index_info.type, index_info.column_ids);
+      chunk->remove_index(index_ptr);
+    }
+
+    _indexes.erase(iterator);
+  }
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
    */
