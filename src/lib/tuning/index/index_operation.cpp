@@ -40,20 +40,23 @@ void IndexOperation::_create_index() {
 
 void IndexOperation::_delete_index() {
   auto table = StorageManager::get().get_table(_column.table_name);
-  auto chunk_count = table->chunk_count();
-  // ToDo(group01): index removal on chunks is inconsistent with index creation on tables...
 
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
-    auto index = chunk->get_index(_type, _column.column_ids);
-    if (!index) {
-      LOG_WARN("Couldn't find specified index for deletion");
-      continue;
+  IndexInfo chosen_index_info{std::vector<ColumnID>{}, "", ColumnIndexType::Invalid};
+  for (auto index_info : table->get_indexes()) {
+    // The index name is ignored in comparison, as it seems not to be used anywhere
+    if (index_info.type == _type && index_info.column_ids == _column.column_ids) {
+      chosen_index_info = index_info;
+      break;
     }
-    chunk->remove_index(index);
   }
 
-  // ToDo(group01) invalidate cache
+  if (chosen_index_info.type == ColumnIndexType::Invalid) {
+    Fail("Index to be deleted was not found");
+  }
+
+  table->remove_index(chosen_index_info);
+
+  // ToDo(group01): invalidate cache
 }
 
 const ColumnRef& IndexOperation::column() const { return _column; }
