@@ -9,7 +9,10 @@ namespace opossum {
 
 class AbstractJoinPlanPredicate;
 
-class JoinEdge final {
+/**
+ * Represents a (hyper)edge between the vertices in vertex_set and a set of predicates. These predicates must all
+ * operate precisely on all of the vertices in vertex_set.
+ */
  public:
   explicit JoinEdge(const boost::dynamic_bitset<>& vertex_set);
 
