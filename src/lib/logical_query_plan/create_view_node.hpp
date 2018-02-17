@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents the CREATE VIEW management command.
  */
-class CreateViewNode : public AbstractLQPNodeEnableMake<CreateViewNode> {
+class CreateViewNode : public AbstractLQPNode {
  public:
   explicit CreateViewNode(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp);
 
@@ -27,8 +27,6 @@ class CreateViewNode : public AbstractLQPNodeEnableMake<CreateViewNode> {
       const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
   const std::string _view_name;
   const std::shared_ptr<const AbstractLQPNode> _lqp;
-
- private:
 };
 
 }  // namespace opossum

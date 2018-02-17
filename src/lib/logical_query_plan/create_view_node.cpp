@@ -6,7 +6,7 @@
 namespace opossum {
 
 CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp)
-    : Base(LQPNodeType::CreateView), _view_name(view_name), _lqp(lqp) {}
+    : AbstractLQPNode(LQPNodeType::CreateView), _view_name(view_name), _lqp(lqp) {}
 
 std::string CreateViewNode::view_name() const { return _view_name; }
 
