@@ -61,7 +61,7 @@ boost::future<void> ClientConnection::send_ready_for_query() {
     >> then >> [](unsigned long) { /* ignore the result */ };
 }
 
-boost::future<void> ClientConnection::send_error(std::string& message) {
+boost::future<void> ClientConnection::send_error(const std::string& message) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
 
   // An error response has to include at least one identified field
@@ -74,6 +74,18 @@ boost::future<void> ClientConnection::send_error(std::string& message) {
   PostgresWireHandler::write_value(*output_packet, '\0');
   return _send_bytes_async(output_packet, true)
     >> then >> [](unsigned long) { /* ignore the result */ };
+}
+
+boost::future<void> ClientConnection::send_notice(const std::string& notice) {
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
+
+  PostgresWireHandler::write_value(*output_packet, 'M');
+  PostgresWireHandler::write_string(*output_packet, notice);
+
+  // Terminate the notice response
+  PostgresWireHandler::write_value(*output_packet, '\0');
+  return _send_bytes_async(output_packet, true)
+    >> then >> [](unsigned long) { /* ignore the result */ }; 
 }
 
 boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {

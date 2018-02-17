@@ -49,7 +49,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   boost::future<void> _perform_session_startup();
   boost::future<void> _handle_client_requests();
 
-  boost::future<void> _handle_simple_query_command(const std::string& sql);
+  boost::future<void> _handle_simple_query_command(const std::string sql);
   void _accept_parse();
   void _accept_bind();
   void _accept_execute();

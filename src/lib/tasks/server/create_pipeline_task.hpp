@@ -7,14 +7,14 @@
 namespace opossum {
 
 struct CreatePipelineResult {
-  std::unique_ptr<SQLPipeline> sql_pipeline;
+  std::shared_ptr<SQLPipeline> sql_pipeline;
   std::optional<std::pair<std::string, std::string>> load_table;
   bool is_load_table;
 };
 
 class CreatePipelineTask : public AbstractTask  {
  public:
-  CreatePipelineTask(std::string sql) : _sql(std::move(sql)) {}
+  CreatePipelineTask(std::string sql) : _sql(sql) {}
   
   boost::future<std::shared_ptr<CreatePipelineResult>> get_future() { return _promise.get_future(); }
 

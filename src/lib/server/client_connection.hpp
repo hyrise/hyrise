@@ -15,9 +15,10 @@ struct OutputPacket;
 struct RequestHeader;
 
 class ClientConnection {
+  friend class SendQueryResponseTask;
+  
  public:
   explicit ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {}
-  // TODO: Close socket on destruction
 
   boost::future<uint32_t> receive_startup_packet_header();
   boost::future<void> receive_startup_packet_contents(uint32_t size);
@@ -25,14 +26,15 @@ class ClientConnection {
   boost::future<RequestHeader> receive_packet_header();
   boost::future<InputPacket> receive_packet_contents(uint32_t size);
   
-
   boost::future<void> send_ssl_denied();
   boost::future<void> send_auth();
   boost::future<void> send_ready_for_query();
-  boost::future<void> send_error(std::string& message);
+  boost::future<void> send_error(const std::string& message);
+  boost::future<void> send_notice(const std::string& notice);
 
  protected:
   boost::future<InputPacket> _receive_bytes_async(size_t size);
+  
   boost::future<unsigned long> _send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush = false);
   boost::future<unsigned long> _flush_async();
 

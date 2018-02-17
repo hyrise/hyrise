@@ -50,7 +50,6 @@ RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
 }
 
 std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) {
-  // TODO: We might be able to skip this extra copying step
   auto buffer = read_values<char>(packet, packet.data.size());
 
   // Convert the content to a string for now

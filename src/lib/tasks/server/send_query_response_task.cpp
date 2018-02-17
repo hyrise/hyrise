@@ -1,5 +1,7 @@
 #include "send_query_response_task.hpp"
 
+#include "server/client_connection.hpp"
+
 #include "SQLParserResult.h"
 
 namespace opossum {
@@ -69,7 +71,7 @@ void SendQueryResponseTask::_send_row_description() {
     PostgresWireHandler::write_value(*output_packet, htons(0u));          // text format
   }
 
-//  _session->async_send_packet(*output_packet);
+  _connection->_send_bytes_async(output_packet, false);
 }
 
 void SendQueryResponseTask::_send_row_data() {
@@ -117,7 +119,9 @@ void SendQueryResponseTask::_send_row_data() {
       }
 
       ++_row_count;
-//      _session->async_send_packet(*output_packet);
+      
+      // The result of this call (and thus possible exceptions) are ignored
+      _connection->_send_bytes_async(output_packet, false);
     }
   }
 }
@@ -151,41 +155,36 @@ void SendQueryResponseTask::_send_command_complete() {
       break;
     }
     default: { 
-//      return _session->pipeline_error("Unknown statement type. Server doesn't know how to complete query."); 
+      throw std::logic_error("Unknown statement type. Server doesn't know how to complete query."); 
     }
   }
 
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
   PostgresWireHandler::write_string(*output_packet, completed_msg);
-//  _session->async_send_packet(*output_packet);
+  
+  _connection->_send_bytes_async(output_packet, false);
 }
 
 void SendQueryResponseTask::_send_execution_info() {
-//  _session->pipeline_info(
-//      "Compilation time (µs): " + std::to_string(_sql_pipeline.compile_time_microseconds().count()) +
-//      "\nExecution time (µs): " + std::to_string(_sql_pipeline.execution_time_microseconds().count()));
+  _connection->send_notice(
+      "Compilation time (µs): " + std::to_string(_sql_pipeline.compile_time_microseconds().count()) +
+      "\nExecution time (µs): " + std::to_string(_sql_pipeline.execution_time_microseconds().count()));
 }
 
 void SendQueryResponseTask::_on_execute() {
   
-  // TODO: This isn't updated yet. I think we should rather pass a pointer to the session's client connection
-  // in here, if we really need to operate the network socket from the scheduler thread in this case.
-  
-  
   // If there is no result table, e.g. after an INSERT command, we cannot send this data
-//  if (_result_table) {
-//    _send_row_description();
-//    _send_row_data();
-//  }
+  if (_result_table) {
+    _send_row_description();
+    _send_row_data();
+  }
 
   
-  // _send_command_complete();
+   _send_command_complete();
 
+  // TODO:
   // This information is currently not available in the extended protocol because it doesn't use the SQLPipeline
-  // TODO: Maybe return as promise's return value
-//  if (_session->state() == SessionState::SimpleQuery) {
-//    _send_execution_info();
-//  }
+  _send_execution_info();
 
   _promise.set_value();
 }
