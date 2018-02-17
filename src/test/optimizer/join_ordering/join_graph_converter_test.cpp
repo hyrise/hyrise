@@ -1,10 +1,10 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/join_edge.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
@@ -14,29 +14,31 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class JoinGraphConverterTest: public ::testing::Test {
+class JoinGraphConverterTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    //[0] [Projection] z1, y1
-    // \_[1] [Predicate] x2 <= z1
-    //    \_[2] [Cross Join]
-    //       \_[3] [Predicate] sum_a <= y1
-    //       |  \_[4] [Predicate] y1 > 32
-    //       |     \_[5] [Inner Join] x2 = y2
-    //       |        \_[6] [Predicate] sum_a = 5
-    //       |        |  \_[7] [Aggregate] SUM(x1) AS "sum_a" GROUP BY [x2]
-    //       |        |     \_[8] [MockTable]
-    //       |        \_[9] [Predicate] y2 < 200
-    //       |           \_[10] [UnionNode] Mode: UnionPositions
-    //       |              \_[11] [Predicate] y2 = 7
-    //       |              |  \_[12] [Predicate] y1 = 6
-    //       |              |     \_[13] [MockTable]
-    //       |              \_[14] [Predicate] y1 >= 8
-    //       |                 \_Recurring Node --> [13]
-    //       \_[15] [MockTable]
+    //  [0] [Projection] z1, y1
+    //   \_[1] [Predicate] x2 <= z1
+    //      \_[2] [Cross Join]
+    //         \_[3] [Predicate] sum_a <= y1
+    //         |  \_[4] [Predicate] y1 > 32
+    //         |     \_[5] [Inner Join] x2 = y2
+    //         |        \_[6] [Predicate] sum_a = 5
+    //         |        |  \_[7] [Aggregate] SUM(x1) AS "sum_a" GROUP BY [x2]
+    //         |        |     \_[8] [MockTable]
+    //         |        \_[9] [Predicate] y2 < 200
+    //         |           \_[10] [UnionNode] Mode: UnionPositions
+    //         |              \_[11] [Predicate] y2 = 7
+    //         |              |  \_[12] [Predicate] y1 = 6
+    //         |              |     \_[13] [MockTable]
+    //         |              \_[14] [Predicate] y1 >= 8
+    //         |                 \_Recurring Node --> [13]
+    //         \_[15] [MockTable]
 
-    _mock_node_a = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x1"}, {DataType::Int, "x2"}});
-    _mock_node_b = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "y1"}, {DataType::Int, "y2"}});
+    _mock_node_a =
+        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x1"}, {DataType::Int, "x2"}});
+    _mock_node_b =
+        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "y1"}, {DataType::Int, "y2"}});
     _mock_node_c = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "z1"}});
 
     _mock_node_a_x1 = _mock_node_a->get_column("x1"s);
@@ -45,9 +47,11 @@ class JoinGraphConverterTest: public ::testing::Test {
     _mock_node_b_y2 = _mock_node_b->get_column("y2"s);
     _mock_node_c_z1 = _mock_node_c->get_column("z1"s);
 
-    const auto sum_expression = LQPExpression::create_aggregate_function(AggregateFunction::Sum, {LQPExpression::create_column(_mock_node_a_x1)}, "sum_a");
+    const auto sum_expression = LQPExpression::create_aggregate_function(
+        AggregateFunction::Sum, {LQPExpression::create_column(_mock_node_a_x1)}, "sum_a");
 
-    _aggregate_node_a = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression}, std::vector<LQPColumnReference>{_mock_node_a_x2});
+    _aggregate_node_a = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+                                                        std::vector<LQPColumnReference>{_mock_node_a_x2});
 
     _aggregate_node_a->set_left_child(_mock_node_a);
 
@@ -59,15 +63,19 @@ class JoinGraphConverterTest: public ::testing::Test {
     _predicate_node_d = std::make_shared<PredicateNode>(_mock_node_b_y1, PredicateCondition::GreaterThanEquals, 8);
     _predicate_node_e = std::make_shared<PredicateNode>(_mock_node_b_y2, PredicateCondition::LessThan, 200);
     _predicate_node_f = std::make_shared<PredicateNode>(_mock_node_b_y1, PredicateCondition::GreaterThan, 32);
-    _predicate_node_g = std::make_shared<PredicateNode>(_sum_mock_node_a_x1, PredicateCondition::LessThanEquals, _mock_node_b_y1);
-    _predicate_node_h = std::make_shared<PredicateNode>(_mock_node_a_x2, PredicateCondition::LessThanEquals, _mock_node_c_z1);
+    _predicate_node_g =
+        std::make_shared<PredicateNode>(_sum_mock_node_a_x1, PredicateCondition::LessThanEquals, _mock_node_b_y1);
+    _predicate_node_h =
+        std::make_shared<PredicateNode>(_mock_node_a_x2, PredicateCondition::LessThanEquals, _mock_node_c_z1);
 
-    _inner_join_node_a = std::make_shared<JoinNode>(JoinMode::Inner, LQPColumnReferencePair{_mock_node_a_x2, _mock_node_b_y2}, PredicateCondition::Equals);
+    _inner_join_node_a = std::make_shared<JoinNode>(
+        JoinMode::Inner, LQPColumnReferencePair{_mock_node_a_x2, _mock_node_b_y2}, PredicateCondition::Equals);
     _cross_join_node_a = std::make_shared<JoinNode>(JoinMode::Cross);
 
     _union_node_a = std::make_shared<UnionNode>(UnionMode::Positions);
 
-    _projection_node_a = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{LQPExpression::create_column(_mock_node_c_z1), LQPExpression::create_column(_mock_node_b_y1)});
+    _projection_node_a = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{
+        LQPExpression::create_column(_mock_node_c_z1), LQPExpression::create_column(_mock_node_b_y1)});
 
     _lqp = _projection_node_a;
 
@@ -92,7 +100,7 @@ class JoinGraphConverterTest: public ::testing::Test {
 
     _lqp->print();
 
-    _join_graph = JoinGraphConverter{}(_lqp);
+    _join_graph = JoinGraphConverter{}(_lqp);  // NOLINT
   }
 
   std::string to_string(const std::shared_ptr<const AbstractJoinPlanPredicate>& predicate) {
@@ -112,7 +120,8 @@ class JoinGraphConverterTest: public ::testing::Test {
   std::shared_ptr<ProjectionNode> _projection_node_a;
   std::shared_ptr<AbstractLQPNode> _lqp;
 
-  LQPColumnReference _mock_node_a_x1, _mock_node_a_x2, _sum_mock_node_a_x1, _mock_node_b_y1, _mock_node_b_y2, _mock_node_c_z1;
+  LQPColumnReference _mock_node_a_x1, _mock_node_a_x2, _sum_mock_node_a_x1, _mock_node_b_y1, _mock_node_b_y2,
+      _mock_node_c_z1;
 
   JoinGraph _join_graph;
 };
@@ -172,6 +181,5 @@ TEST_F(JoinGraphConverterTest, ComplexLQP) {
   EXPECT_EQ(_join_graph.vertices.at(2)->parent_count(), 0u);
   EXPECT_EQ(_join_graph.parent_relations.at(0).parent->left_child(), nullptr);
 }
-
 
 }  // namespace opossum

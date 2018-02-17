@@ -29,7 +29,7 @@ JoinGraph JoinGraphConverter::operator()(const std::shared_ptr<AbstractLQPNode>&
    * into JoinPlanPredicates
    */
   const auto parent_relations = current_node->parent_relations();
-  for (const auto &parent_relation : parent_relations) {
+  for (const auto& parent_relation : parent_relations) {
     parent_relation.parent->set_child(parent_relation.child_side, nullptr);
   }
 
@@ -61,9 +61,9 @@ void JoinGraphConverter::_traverse(const std::shared_ptr<AbstractLQPNode>& node)
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
       if (join_node->join_mode() == JoinMode::Inner) {
-        _predicates.emplace_back(std::make_shared<JoinPlanAtomicPredicate>(join_node->join_column_references()->first,
-                                                                           *join_node->predicate_condition(),
-                                                                           join_node->join_column_references()->second));
+        _predicates.emplace_back(std::make_shared<JoinPlanAtomicPredicate>(
+            join_node->join_column_references()->first, *join_node->predicate_condition(),
+            join_node->join_column_references()->second));
       }
 
       if (join_node->join_mode() == JoinMode::Inner || join_node->join_mode() == JoinMode::Cross) {
@@ -86,13 +86,13 @@ void JoinGraphConverter::_traverse(const std::shared_ptr<AbstractLQPNode>& node)
         DebugAssert(predicate_node->predicate_condition() == PredicateCondition::Between, "Expected between");
 
         _predicates.emplace_back(std::make_shared<JoinPlanAtomicPredicate>(
-        predicate_node->column_reference(), PredicateCondition::GreaterThanEquals, predicate_node->value()));
+            predicate_node->column_reference(), PredicateCondition::GreaterThanEquals, predicate_node->value()));
 
         _predicates.emplace_back(std::make_shared<JoinPlanAtomicPredicate>(
-        predicate_node->column_reference(), PredicateCondition::LessThanEquals, *predicate_node->value2()));
+            predicate_node->column_reference(), PredicateCondition::LessThanEquals, *predicate_node->value2()));
       } else {
         _predicates.emplace_back(std::make_shared<JoinPlanAtomicPredicate>(
-        predicate_node->column_reference(), predicate_node->predicate_condition(), predicate_node->value()));
+            predicate_node->column_reference(), predicate_node->predicate_condition(), predicate_node->value()));
       }
 
       _traverse(node->left_child());
@@ -116,9 +116,7 @@ void JoinGraphConverter::_traverse(const std::shared_ptr<AbstractLQPNode>& node)
       }
     } break;
 
-    default: {
-      Fail("Node type not suited for JoinGraph");
-    }
+    default: { Fail("Node type not suited for JoinGraph"); }
   }
 }
 
@@ -191,4 +189,4 @@ bool JoinGraphConverter::_is_vertex_type(const LQPNodeType node_type) const {
       return false;
   }
 }
-}
+}  // namespace opossum

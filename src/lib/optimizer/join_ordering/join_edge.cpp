@@ -13,4 +13,4 @@ void JoinEdge::print(std::ostream& stream) const {
     stream << std::endl;
   }
 }
-}
+}  // namespace opossum

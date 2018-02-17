@@ -36,7 +36,8 @@ class JoinGraph final {
                                    const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
 
   JoinGraph() = default;
-  JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations, std::vector<std::shared_ptr<JoinEdge>> edges);
+  JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
+            std::vector<std::shared_ptr<JoinEdge>> edges);
 
   /**
    * Find all predicates that use exactly the nodes in vertex set

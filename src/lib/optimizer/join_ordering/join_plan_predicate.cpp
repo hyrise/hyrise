@@ -33,8 +33,9 @@ void JoinPlanLogicalPredicate::print(std::ostream& stream, const bool enclosing_
   if (enclosing_braces) stream << ")";
 }
 
-bool JoinPlanLogicalPredicate::operator==(const JoinPlanLogicalPredicate& rhs) const  {
-  return left_operand == rhs.left_operand && logical_operator == rhs.logical_operator && right_operand == rhs.right_operand;
+bool JoinPlanLogicalPredicate::operator==(const JoinPlanLogicalPredicate& rhs) const {
+  return left_operand == rhs.left_operand && logical_operator == rhs.logical_operator &&
+         right_operand == rhs.right_operand;
 }
 
 JoinPlanAtomicPredicate::JoinPlanAtomicPredicate(const LQPColumnReference& left_operand,
@@ -44,7 +45,8 @@ JoinPlanAtomicPredicate::JoinPlanAtomicPredicate(const LQPColumnReference& left_
       left_operand(left_operand),
       predicate_condition(predicate_condition),
       right_operand(right_operand) {
-  DebugAssert(predicate_condition != PredicateCondition::Between, "Between not supported in JoinPlanPredicate, should be split up into two predicates");
+  DebugAssert(predicate_condition != PredicateCondition::Between,
+              "Between not supported in JoinPlanPredicate, should be split up into two predicates");
 }
 
 void JoinPlanAtomicPredicate::print(std::ostream& stream, const bool enclosing_braces) const {
@@ -53,8 +55,9 @@ void JoinPlanAtomicPredicate::print(std::ostream& stream, const bool enclosing_b
   stream << right_operand;
 }
 
-bool JoinPlanAtomicPredicate::operator==(const JoinPlanAtomicPredicate& rhs) const  {
-  return left_operand == rhs.left_operand && predicate_condition == rhs.predicate_condition && right_operand == rhs.right_operand;
+bool JoinPlanAtomicPredicate::operator==(const JoinPlanAtomicPredicate& rhs) const {
+  return left_operand == rhs.left_operand && predicate_condition == rhs.predicate_condition &&
+         right_operand == rhs.right_operand;
 }
 
 }  // namespace opossum

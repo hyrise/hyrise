@@ -36,8 +36,8 @@ class AbstractJoinPlanPredicate {
 class JoinPlanLogicalPredicate : public AbstractJoinPlanPredicate {
  public:
   JoinPlanLogicalPredicate(const std::shared_ptr<const AbstractJoinPlanPredicate>& left_operand,
-                                   JoinPlanPredicateLogicalOperator logical_operator,
-                                   const std::shared_ptr<const AbstractJoinPlanPredicate>& right_operand);
+                           JoinPlanPredicateLogicalOperator logical_operator,
+                           const std::shared_ptr<const AbstractJoinPlanPredicate>& right_operand);
 
   void print(std::ostream& stream = std::cout, const bool enclosing_braces = false) const override;
 

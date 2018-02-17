@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "join_plan_predicate.hpp"
 #include "constant_mappings.hpp"
 #include "join_edge.hpp"
+#include "join_plan_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -37,15 +37,14 @@ boost::dynamic_bitset<> get_predicate_vertices(const std::vector<std::shared_ptr
       return vertex_set;
     }
     case JoinPlanPredicateType::LogicalOperator: {
-      const auto logical_operand_predicate =
-          std::static_pointer_cast<const JoinPlanLogicalPredicate>(predicate);
+      const auto logical_operand_predicate = std::static_pointer_cast<const JoinPlanLogicalPredicate>(predicate);
       return get_predicate_vertices(vertices, logical_operand_predicate->left_operand) |
              get_predicate_vertices(vertices, logical_operand_predicate->right_operand);
     }
   }
   return boost::dynamic_bitset<>{0, 0};
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -75,8 +74,7 @@ JoinGraph JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode
 }
 
 JoinGraph::JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
-                     std::vector<LQPParentRelation> parent_relations,
-                     std::vector<std::shared_ptr<JoinEdge>> edges)
+                     std::vector<LQPParentRelation> parent_relations, std::vector<std::shared_ptr<JoinEdge>> edges)
     : vertices(std::move(vertices)), parent_relations(std::move(parent_relations)), edges(std::move(edges)) {}
 
 std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_predicates(
@@ -113,7 +111,8 @@ std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_pr
 }
 
 std::shared_ptr<JoinEdge> JoinGraph::find_edge(const boost::dynamic_bitset<>& vertex_set) const {
-  const auto iter = std::find_if(edges.begin(), edges.end(), [&](const auto& edge) { return edge->vertex_set == vertex_set; });
+  const auto iter =
+      std::find_if(edges.begin(), edges.end(), [&](const auto& edge) { return edge->vertex_set == vertex_set; });
   return iter == edges.end() ? nullptr : *iter;
 }
 

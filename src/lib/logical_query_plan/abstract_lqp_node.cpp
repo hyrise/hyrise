@@ -17,10 +17,8 @@ namespace opossum {
 
 class TableStatistics;
 
-
 QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
-: column_name(column_name), table_name(table_name) {
-}
+    : column_name(column_name), table_name(table_name) {}
 std::string QualifiedColumnName::as_string() const {
   std::stringstream ss;
   if (table_name) ss << *table_name << ".";
@@ -69,9 +67,7 @@ std::vector<LQPParentRelation> AbstractLQPNode::parent_relations() const {
   return parent_relations;
 }
 
-size_t AbstractLQPNode::parent_count() const {
-  return _parents.size();
-}
+size_t AbstractLQPNode::parent_count() const { return _parents.size(); }
 
 void AbstractLQPNode::remove_parent(const std::shared_ptr<AbstractLQPNode>& parent) {
   const auto child_side = get_child_side(parent);

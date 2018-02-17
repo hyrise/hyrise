@@ -48,7 +48,8 @@ struct LQPParentRelation {
 };
 
 struct QualifiedColumnName {
-  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name = std::nullopt); // NOLINT - Implicit conversion is intended
+  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name =
+                                                          std::nullopt);  // NOLINT - Implicit conversion is intended
 
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;

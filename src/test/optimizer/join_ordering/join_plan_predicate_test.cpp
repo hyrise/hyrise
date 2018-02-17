@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <string>
+
+#include "gtest/gtest.h"
 
 #include "logical_query_plan/mock_node.hpp"
 #include "optimizer/join_ordering/join_plan_predicate.hpp"
@@ -25,11 +25,9 @@ class JoinPlanPredicateTest : public ::testing::Test {
       std::make_shared<JoinPlanLogicalPredicate>(
         std::make_shared<JoinPlanAtomicPredicate>(_column_a, PredicateCondition::GreaterThan, _column_b),
         JoinPlanPredicateLogicalOperator::Or,
-        std::make_shared<JoinPlanAtomicPredicate>(_column_a, PredicateCondition::GreaterThan, 5)
-      ),
+        std::make_shared<JoinPlanAtomicPredicate>(_column_a, PredicateCondition::GreaterThan, 5)),
       JoinPlanPredicateLogicalOperator::And,
-      std::make_shared<JoinPlanAtomicPredicate>(_column_b, PredicateCondition::LessThan, 8)
-    );
+      std::make_shared<JoinPlanAtomicPredicate>(_column_b, PredicateCondition::LessThan, 8));
     // clang-format on
   }
 
@@ -52,7 +50,6 @@ TEST_F(JoinPlanPredicateTest, Print) {
   EXPECT_EQ(to_string(*_predicate_a), "a = 5");
   EXPECT_EQ(to_string(*_predicate_b), "a <= b");
   EXPECT_EQ(to_string(*_predicate_c), "(a > b OR a > 5) AND b < 8");
-
 }
 
 }  // namespace opossum

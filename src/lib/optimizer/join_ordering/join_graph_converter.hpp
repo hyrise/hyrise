@@ -76,4 +76,4 @@ class JoinGraphConverter final {
   std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> _predicates;
 };
-}
+}  // namespace opossum
