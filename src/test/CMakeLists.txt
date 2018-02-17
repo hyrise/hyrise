@@ -99,6 +99,7 @@ set(
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
     storage/group_key_index_test.cpp
+    storage/index_info_test.cpp
     storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
     storage/numa_placement_test.cpp
