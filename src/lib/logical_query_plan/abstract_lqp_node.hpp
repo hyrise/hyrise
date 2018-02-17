@@ -375,32 +375,33 @@ class AbstractLQPNodeCRT : public AbstractLQPNode {
 
   template<int N, typename... Ts> using NthTypeOf = typename std::tuple_element<N, std::tuple<Ts...>>::type;
 
-  template<class NodeType, typename... Args>
-  static std::shared_ptr<NodeType> make(Args ... args) {
+  template<typename... Args>
+  static std::shared_ptr<DerivedNode> make(Args ... args) {
     if constexpr(sizeof...(Args) > 0 && std::is_convertible_v<NthTypeOf<sizeof...(Args) - 1, Args...>, std::shared_ptr<AbstractLQPNode>>) {
       auto args_tuple = std::forward_as_tuple(args...);
       if constexpr(sizeof...(Args) > 1 && std::is_convertible_v<NthTypeOf<sizeof...(Args) - 2, Args...>, std::shared_ptr<AbstractLQPNode>>) {
         // last two arguments are shared_ptr<AbstractLQPNode>
-        auto node = make_impl<NodeType>(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
+        auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
         node->set_left_child(std::get<sizeof...(Args) - 2>(args_tuple));
         node->set_right_child(std::get<sizeof...(Args) - 1>(args_tuple));
         return node;
       } else {
         // last argument is shared_ptr<AbstractLQPNode>
-        auto node = make_impl<NodeType>(args_tuple, std::make_index_sequence<sizeof...(Args) - 1>());
+        auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 1>());
         node->set_left_child(std::get<sizeof...(Args) - 1>(args_tuple));
         return node;
       }
+    } else {
+      // no shared_ptr<AbstractLQPNode> was passed at the end
+      return make_impl(std::forward_as_tuple(args...), std::make_index_sequence<sizeof...(Args) - 0>());
     }
-    // no shared_ptr<AbstractLQPNode> was passed at the end
-    return make_impl<NodeType>(std::forward_as_tuple(args...), std::make_index_sequence<sizeof...(Args) - 0>());
   }
 
  private:
-  template<class NodeType, class Tuple, size_t... I>
-  static std::shared_ptr<NodeType> make_impl(const Tuple& constructor_arguments, std::index_sequence<I...> num_constructor_args)
+  template<class Tuple, size_t... I>
+  static std::shared_ptr<DerivedNode> make_impl(const Tuple& constructor_arguments, std::index_sequence<I...> num_constructor_args)
   {
-    return std::make_shared<NodeType>(std::get<I>(constructor_arguments)...);
+    return std::make_shared<DerivedNode>(std::get<I>(constructor_arguments)...);
   }
 };
 

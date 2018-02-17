@@ -15,7 +15,7 @@ class UpdateNodeTest : public BaseTest {
   void SetUp() override {
     std::vector<std::shared_ptr<LQPExpression>> update_expressions;
     _mock_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
-    _update_node = std::make_shared<UpdateNode>("table_a", update_expressions, _mock_node);
+    _update_node = UpdateNode::make("table_a", update_expressions, _mock_node);
   }
 
   std::shared_ptr<UpdateNode> _update_node;
