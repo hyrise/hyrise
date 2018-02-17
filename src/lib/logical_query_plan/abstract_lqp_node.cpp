@@ -17,6 +17,17 @@ namespace opossum {
 
 class TableStatistics;
 
+
+QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
+: column_name(column_name), table_name(table_name) {
+}
+std::string QualifiedColumnName::as_string() const {
+  std::stringstream ss;
+  if (table_name) ss << *table_name << ".";
+  ss << column_name;
+  return ss.str();
+}
+
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
@@ -43,6 +54,23 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
   }
 
   return parents;
+}
+
+std::vector<LQPParentRelation> AbstractLQPNode::parent_relations() const {
+  std::vector<LQPParentRelation> parent_relations(parent_count());
+
+  const auto parents = this->parents();
+  const auto child_sides = get_child_sides();
+
+  for (size_t parent_idx = 0; parent_idx < parent_relations.size(); ++parent_idx) {
+    parent_relations[parent_idx] = LQPParentRelation{parents[parent_idx], child_sides[parent_idx]};
+  }
+
+  return parent_relations;
+}
+
+size_t AbstractLQPNode::parent_count() const {
+  return _parents.size();
 }
 
 void AbstractLQPNode::remove_parent(const std::shared_ptr<AbstractLQPNode>& parent) {
@@ -511,13 +539,6 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lq
   adapt_expression_to_different_lqp(expression->right_child(), original_lqp, copied_lqp);
 
   return expression;
-}
-
-std::string QualifiedColumnName::as_string() const {
-  std::stringstream ss;
-  if (table_name) ss << *table_name << ".";
-  ss << column_name;
-  return ss.str();
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {

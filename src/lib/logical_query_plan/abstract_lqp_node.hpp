@@ -41,7 +41,15 @@ enum class LQPNodeType {
 
 enum class LQPChildSide { Left, Right };
 
+// Describes the parent of a Node and which of the parent's children a node is
+struct LQPParentRelation {
+  std::shared_ptr<AbstractLQPNode> parent;
+  LQPChildSide child_side{LQPChildSide::Left};
+};
+
 struct QualifiedColumnName {
+  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name = std::nullopt); // NOLINT - Implicit conversion is intended
+
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
 
@@ -89,6 +97,16 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * Locks all parents and returns them as shared_ptrs
    */
   std::vector<std::shared_ptr<AbstractLQPNode>> parents() const;
+
+  /**
+   * @return {{parents()[0], get_child_sides()[0]}, ..., {parents()[n-1], get_child_sides()[n-1]}}
+   */
+  std::vector<LQPParentRelation> parent_relations() const;
+
+  /**
+   * Same as parents().size(), but avoids locking all parent pointers
+   */
+  size_t parent_count() const;
 
   void remove_parent(const std::shared_ptr<AbstractLQPNode>& parent);
   void clear_parents();
