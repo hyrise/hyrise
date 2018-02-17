@@ -7,7 +7,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_encoded_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
@@ -122,7 +122,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     start_index = last_chunk->size();
 
     // If last chunk is compressed, add a new uncompressed chunk
-    if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
+    if (std::dynamic_pointer_cast<const BaseEncodedColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
       _target_table->create_new_chunk();
       total_chunks_inserted++;
     }
@@ -227,6 +227,10 @@ void Insert::_on_rollback_records() {
 
     chunk->mvcc_columns()->tids[row_id.chunk_offset] = 0u;
   }
+}
+
+std::shared_ptr<AbstractOperator> Insert::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Insert>(_target_table_name, _input_left->recreate(args));
 }
 
 }  // namespace opossum

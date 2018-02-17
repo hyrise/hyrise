@@ -45,7 +45,7 @@ class BaseIndexEvaluator : public AbstractEvaluator {
   };
 
  public:
-  explicit BaseIndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> query_cache);
+  BaseIndexEvaluator();
 
   void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final;
 
@@ -94,9 +94,6 @@ class BaseIndexEvaluator : public AbstractEvaluator {
   void _aggregate_access_records();
   void _add_existing_indices();
   void _add_new_indices();
-
-  // ToDo(group01) remove once query cache is globally accessible
-  std::shared_ptr<const SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> _query_cache;
 
   std::vector<AccessRecord> _access_records;
   std::set<ColumnRef> _new_indices;

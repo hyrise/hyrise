@@ -1,4 +1,4 @@
-#include "tuning/index/index_choice.hpp"
+#include "index_choice.hpp"
 
 #include <memory>
 

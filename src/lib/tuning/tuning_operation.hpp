@@ -15,7 +15,7 @@ class TuningOperation {
    *
    * The default implementation does nothing.
    */
-  virtual void execute();
+  virtual void execute() = 0;
 
   /**
    * Print detailed information on the concrete TuningOperation.

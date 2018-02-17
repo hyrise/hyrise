@@ -1,8 +1,7 @@
-#include "../../base_test.hpp"
-
 #include <memory>
 #include <vector>
 
+#include "../../base_test.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
@@ -15,9 +14,7 @@ namespace opossum {
 class IndexEvaluatorTest : public BaseTest {
  protected:
   void SetUp() override {
-    // TODO(group01) get query cache from pipeline
-    auto query_cache = std::make_shared<SQLQueryCache<std::shared_ptr<SQLQueryPlan>>>(1024);
-    _evaluator = std::make_shared<IndexEvaluator>(query_cache);
+    _evaluator = std::make_shared<IndexEvaluator>();
 
     auto t = std::make_shared<Table>(10);
     t->add_column("col_1", DataType::Int);
@@ -48,7 +45,7 @@ class IndexEvaluatorTest : public BaseTest {
 };
 
 TEST_F(IndexEvaluatorTest, InspectLQPOperator) {
-  SQLPipeline pipeline("select * from t where col_1 = 4", false);
+  SQLPipeline pipeline("select * from t where col_1 = 4", UseMvcc::No);
 
   auto lqp = pipeline.get_optimized_logical_plans();
 
@@ -65,7 +62,7 @@ TEST_F(IndexEvaluatorTest, InspectLQPOperator) {
 }
 
 TEST_F(IndexEvaluatorTest, InspectPQPOperator) {
-  SQLPipeline pipeline("select * from t where col_1 = 4", false);
+  SQLPipeline pipeline("select * from t where col_1 = 4", UseMvcc::No);
 
   auto query_plans = pipeline.get_query_plans();
 

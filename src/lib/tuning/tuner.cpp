@@ -12,7 +12,8 @@ Tuner::Tuner()
       _evaluate_time_budget{NoBudget},
       _select_time_budget{NoBudget},
       _execute_time_budget{NoBudget},
-      _cost_budget{NoBudget} {}
+      _cost_budget{NoBudget},
+      _status{Status::Unknown} {}
 
 void Tuner::add_evaluator(std::unique_ptr<AbstractEvaluator>&& evaluator) {
   Assert(evaluator, "Tried to add an invalid evaluator.");
@@ -65,6 +66,7 @@ void Tuner::schedule_tuning_process() {
   _evaluate_task->set_as_predecessor_of(_select_task);
   _select_task->set_as_predecessor_of(_execute_task);
 
+  _status = Status::Running;
   _remaining_time_budget = _time_budget;
   _time_budget_exceeded = false;
 
@@ -77,6 +79,8 @@ bool Tuner::is_running() {
   return (_evaluate_task && !_evaluate_task->is_done()) || (_select_task && !_select_task->is_done()) ||
          (_execute_task && !_execute_task->is_done());
 }
+
+Tuner::Status Tuner::status() { return _status; }
 
 void Tuner::wait_for_completion() {
   if (_evaluate_task) {
@@ -100,9 +104,14 @@ void Tuner::_evaluate() {
     evaluator->evaluate(_choices);
 
     auto runtime = RuntimeClock::now() - begin;
-    if (runtime > _evaluate_time_budget || runtime > _remaining_time_budget) {
+    if (runtime > _remaining_time_budget) {
       LOG_INFO("Interrupt evaluation phase: Time budget exceeded.");
-      _time_budget_exceeded = true;
+      _status = Status::Timeout;
+      return;
+    }
+    if (runtime > _evaluate_time_budget) {
+      LOG_INFO("Interrupt evaluation phase: Evaluate time budget exceeded.");
+      _status = Status::EvaluationTimeout;
       return;
     }
   }
@@ -113,7 +122,7 @@ void Tuner::_evaluate() {
 }
 
 void Tuner::_select() {
-  if (_time_budget_exceeded) {
+  if (_status != Status::Running) {
     LOG_INFO("Skip tuning selection phase because previous step exceeded the time budget.");
     return;
   }
@@ -124,9 +133,14 @@ void Tuner::_select() {
   _operations = _selector->select(_choices, _cost_budget);
 
   auto runtime = RuntimeClock::now() - begin;
-  if (runtime > _select_time_budget || runtime > _remaining_time_budget) {
+  if (runtime > _remaining_time_budget) {
     LOG_INFO("Interrupt selection phase: Time budget exceeded.");
-    _time_budget_exceeded = true;
+    _status = Status::Timeout;
+    return;
+  }
+  if (runtime > _select_time_budget) {
+    LOG_INFO("Interrupt selection phase: Select time budget exceeded.");
+    _status = Status::SelectionTimeout;
     return;
   }
   _remaining_time_budget -= runtime;
@@ -136,7 +150,7 @@ void Tuner::_select() {
 }
 
 void Tuner::_execute() {
-  if (_time_budget_exceeded) {
+  if (_status != Status::Running) {
     LOG_INFO("Skip tuning execution phase because previous step exceeded the time budget.");
     return;
   }
@@ -148,13 +162,19 @@ void Tuner::_execute() {
     operation->execute();
 
     auto runtime = RuntimeClock::now() - begin;
-    if (runtime > _execute_time_budget || runtime > _remaining_time_budget) {
+    if (runtime > _remaining_time_budget) {
       LOG_INFO("Interrupt execution phase: Time budget exceeded.");
-      _time_budget_exceeded = true;
+      _status = Status::Timeout;
+      return;
+    }
+    if (runtime > _execute_time_budget) {
+      LOG_INFO("Interrupt execution phase: Execute time budget exceeded.");
+      _status = Status::ExecutionTimeout;
       return;
     }
   }
 
+  _status = Status::Completed;
   LOG_INFO("Tuning execution phase completed.");
 }
 

@@ -1,5 +1,6 @@
 #include "../../base_test.hpp"
 
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -21,7 +22,7 @@ class IndexOperationTest : public BaseTest {
     _table->append({2});
 
     auto chunk = _table->get_chunk(ChunkID{0});
-    DictionaryCompression::compress_chunk(_table->column_types(), chunk);
+    DeprecatedDictionaryCompression::compress_chunk(_table->column_types(), chunk);
 
     auto& storage_manager = StorageManager::get();
     if (storage_manager.has_table("table_name")) {

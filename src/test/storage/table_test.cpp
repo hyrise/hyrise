@@ -8,8 +8,8 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
-#include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
@@ -198,7 +198,7 @@ TEST_F(StorageTableTest, CreateRemoveIndex) {
   table.append({0});
   table.append({1});
   auto chunk = table.get_chunk(ChunkID{0});
-  DictionaryCompression::compress_chunk(table.column_types(), chunk);
+  DeprecatedDictionaryCompression::compress_chunk(table.column_types(), chunk);
 
   EXPECT_EQ(table.get_indexes().size(), 0u);
 

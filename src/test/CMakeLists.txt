@@ -71,6 +71,7 @@ set(
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
@@ -95,15 +96,20 @@ set(
     sql/sql_query_plan_test.cpp
     sql/sql_translator_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
+    storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
+    storage/deprecated_dictionary_column_test.cpp
     storage/dictionary_column_test.cpp
+    storage/encoded_column_test.cpp
     storage/group_key_index_test.cpp
     storage/index_info_test.cpp
     storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
+    storage/compressed_vector_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_column_test.cpp
+    storage/simd_bp128_test.cpp
     storage/single_column_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp
@@ -115,10 +121,12 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    tuning/greedy_selector_test.cpp
     tuning/index/column_ref.cpp
     tuning/index/index_evaluator_test.cpp
     tuning/index/index_choice.cpp
     tuning/index/index_operation.cpp
+    tuning/tuner_test.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
     utils/format_bytes_test.cpp

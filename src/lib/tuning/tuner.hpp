@@ -32,6 +32,8 @@ class Tuner {
   using Runtime = std::chrono::duration<float, std::chrono::seconds::period>;
   using RuntimeClock = std::chrono::high_resolution_clock;
 
+  enum class Status { Unknown, Running, Completed, EvaluationTimeout, SelectionTimeout, ExecutionTimeout, Timeout };
+
   static constexpr float NoBudget = std::numeric_limits<float>::infinity();
 
   Tuner();
@@ -108,6 +110,11 @@ class Tuner {
   bool is_running();
 
   /**
+   * Indicates the status of the last scheduled tuning process
+   */
+  Status status();
+
+  /**
    * Block the current thread until a running tuning process is finished.
    * Returns immediately if no tuning process is running.
    */
@@ -133,6 +140,7 @@ class Tuner {
   float _cost_budget;
 
   // members specific to one particular tuning process
+  Status _status;
   std::shared_ptr<AbstractTask> _evaluate_task;
   std::shared_ptr<AbstractTask> _select_task;
   std::shared_ptr<AbstractTask> _execute_task;

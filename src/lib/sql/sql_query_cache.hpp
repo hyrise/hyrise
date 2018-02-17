@@ -13,14 +13,22 @@
 
 namespace opossum {
 
+inline constexpr size_t DefaultCacheCapacity = 1024;
+
 // Cache that stores instances of SQLParserResult.
 // Per-default, uses the GDFS cache as underlying storage.
 template <typename Value, typename Key = std::string>
 class SQLQueryCache {
  public:
-  explicit SQLQueryCache(size_t capacity) : _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
+  explicit SQLQueryCache(size_t capacity = DefaultCacheCapacity)
+      : _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
   virtual ~SQLQueryCache() {}
+
+  static SQLQueryCache& get() {
+    static SQLQueryCache<Value> cache;
+    return cache;
+  }
 
   // Adds or refreshes the cache entry [query, value].
   void set(const Key& query, const Value& value) {

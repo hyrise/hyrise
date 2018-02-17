@@ -14,6 +14,7 @@
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "sql/gdfs_cache.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
@@ -21,8 +22,7 @@
 
 namespace opossum {
 
-BaseIndexEvaluator::BaseIndexEvaluator(std::shared_ptr<SQLQueryCache<std::shared_ptr<SQLQueryPlan>>> query_cache)
-    : _query_cache{query_cache} {}
+BaseIndexEvaluator::BaseIndexEvaluator() {}
 
 void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
   // Allow concrete implementation to initialize
@@ -80,23 +80,29 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   //   const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
   // ToDo(group01) implement for cache implementations other than GDFS cache
 
+  const auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
-      dynamic_cast<const GDFSCache<std::string, std::shared_ptr<SQLQueryPlan>>*>(&(_query_cache->cache()));
-  Assert(gdfs_cache_ptr, "Expected GDFS Cache");
+      dynamic_cast<const GDFSCache<std::string, std::shared_ptr<AbstractLQPNode>>*>(&(lqp_cache.cache()));
+  if (!gdfs_cache_ptr) {
+    LOG_WARN("BaseIndexEvaluator can only analyze GDFSCache instances! Evaluations may be useless...");
+    return;
+  }
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
   LOG_DEBUG("Query plan cache (size: " << fibonacci_heap.size() << "):");
+  if (fibonacci_heap.size() == 0) {
+    LOG_WARN("There are no logical query plans in the cache. Make sure that logical query plans get cached!");
+  }
+
   auto cache_iterator = fibonacci_heap.ordered_begin();
   auto cache_end = fibonacci_heap.ordered_end();
 
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const auto& entry = *cache_iterator;
     LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
-    for (const auto& operator_tree : entry.value->tree_roots()) {
-      _inspect_pqp_operator(operator_tree, entry.frequency);
-    }
+    _inspect_lqp_operator(entry.value, entry.frequency);
   }
 }
 
@@ -125,10 +131,10 @@ void BaseIndexEvaluator::_inspect_lqp_operator(const std::shared_ptr<const Abstr
           auto original_columnID = original_node->find_output_column_id(lqp_ref);
           if (original_node->type() == LQPNodeType::StoredTable) {
             DebugAssert(original_columnID, "Could not find column ID for LQPColumnReference");
-            auto storedTable = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
-            Assert(storedTable, "referenced node is not actually a StoredTableNode");
+            auto stored_table = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
+            Assert(stored_table, "referenced node is not actually a StoredTableNode");
 
-            AccessRecord access_record(storedTable->table_name(), *original_columnID, query_frequency);
+            AccessRecord access_record(stored_table->table_name(), *original_columnID, query_frequency);
             access_record.condition = predicate_node->predicate_condition();
             access_record.compare_value = boost::get<AllTypeVariant>(predicate_node->value());
             _access_records.push_back(access_record);
