@@ -352,7 +352,7 @@ set(
 )
 
 if (NOT DISABLE_JIT_SUPPORT)
-    include(../../cmake/EmbedLLVM.cmake)
+    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # files listed here will be embedded into the binary as LLVM IR
     )
@@ -363,7 +363,7 @@ if (NOT DISABLE_JIT_SUPPORT)
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE}
     )
-    # Prevent clang from complaining about unused defines when comiling the assembly file
+    # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
