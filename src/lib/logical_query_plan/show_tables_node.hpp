@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents the SHOW TABLES management command.
  */
-class ShowTablesNode : public AbstractLQPNodeCRT<ShowTablesNode> {
+class ShowTablesNode : public AbstractLQPNodeEnableMake<ShowTablesNode> {
  public:
   ShowTablesNode();
 

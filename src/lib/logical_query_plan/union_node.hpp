@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class UnionNode : public AbstractLQPNodeCRT<UnionNode> {
+class UnionNode : public AbstractLQPNodeEnableMake<UnionNode> {
  public:
   explicit UnionNode(UnionMode union_mode);
 

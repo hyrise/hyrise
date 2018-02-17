@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents limiting a result to a certain number of rows (LIMIT operator).
  */
-class LimitNode : public AbstractLQPNodeCRT<LimitNode> {
+class LimitNode : public AbstractLQPNodeEnableMake<LimitNode> {
  public:
   explicit LimitNode(const size_t num_rows);
 

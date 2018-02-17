@@ -23,7 +23,7 @@ enum class ScanType : uint8_t { TableScan, IndexScan };
  *
  * HAVING clauses of GROUP BY clauses will be translated to this node type as well.
  */
-class PredicateNode : public AbstractLQPNodeCRT<PredicateNode> {
+class PredicateNode : public AbstractLQPNodeEnableMake<PredicateNode> {
  public:
   PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
                 const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt);

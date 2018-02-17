@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents the SHOW COLUMNS management command.
  */
-class ShowColumnsNode : public AbstractLQPNodeCRT<ShowColumnsNode> {
+class ShowColumnsNode : public AbstractLQPNodeEnableMake<ShowColumnsNode> {
  public:
   explicit ShowColumnsNode(const std::string& table_name);
 

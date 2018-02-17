@@ -13,7 +13,7 @@ class LQPExpression;
 /**
  * Node type to represent updates (i.e., invalidation and inserts) in a table.
  */
-class UpdateNode : public AbstractLQPNodeCRT<UpdateNode> {
+class UpdateNode : public AbstractLQPNodeEnableMake<UpdateNode> {
  public:
   explicit UpdateNode(const std::string& table_name,
                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);

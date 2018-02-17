@@ -366,12 +366,26 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   // @}
 };
 
+/**
+ * LQP node types should derive from this, instead of directly from AbstractLQPNode, in order to enable the
+ * <NodeType>::make() that allows for a clean notation when building LQPs via code by allowing to pass in a nodes
+ * child(ren) as the last argument(s).
+ *
+ * const auto input_lqp =
+ * PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
+ *   PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
+ *     PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
+ *       ProjectionNode::make_pass_through(
+ *         PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+ *           PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
+ *             _mock_node))))));
+ */
 template <typename DerivedNode>
-class AbstractLQPNodeCRT : public AbstractLQPNode {
+class AbstractLQPNodeEnableMake : public AbstractLQPNode {
  public:
   using AbstractLQPNode::AbstractLQPNode;
 
-  using Base = AbstractLQPNodeCRT<DerivedNode>;
+  using Base = AbstractLQPNodeEnableMake<DerivedNode>;
 
   template <int N, typename... Ts>
   using NthTypeOf = typename std::tuple_element<N, std::tuple<Ts...>>::type;

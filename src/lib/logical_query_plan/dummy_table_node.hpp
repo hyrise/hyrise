@@ -12,7 +12,7 @@ namespace opossum {
  * This node type represents a dummy table that is used to project literals.
  * See Projection::DummyTable for more details.
  */
-class DummyTableNode : public AbstractLQPNodeCRT<DummyTableNode> {
+class DummyTableNode : public AbstractLQPNodeEnableMake<DummyTableNode> {
  public:
   DummyTableNode();
 

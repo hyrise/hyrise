@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * Node type to represent insertion of rows into a table.
  */
-class InsertNode : public AbstractLQPNodeCRT<InsertNode> {
+class InsertNode : public AbstractLQPNodeEnableMake<InsertNode> {
  public:
   explicit InsertNode(const std::string table_name);
 

@@ -25,7 +25,7 @@ using OrderByDefinitions = std::vector<OrderByDefinition>;
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
-class SortNode : public AbstractLQPNodeCRT<SortNode> {
+class SortNode : public AbstractLQPNodeEnableMake<SortNode> {
  public:
   explicit SortNode(const OrderByDefinitions& order_by_definitions);
 

@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node type represents validating tables with the Validate operator.
  */
-class ValidateNode : public AbstractLQPNodeCRT<ValidateNode> {
+class ValidateNode : public AbstractLQPNodeEnableMake<ValidateNode> {
  public:
   ValidateNode();
 
