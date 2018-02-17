@@ -89,7 +89,7 @@ class ColumnIterable {
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 
  private:
-  bool _allow_reordering = false;
+  bool _allow_reordering = true;
 };
 
 struct ColumnPointAccessPlan {
