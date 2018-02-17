@@ -516,13 +516,13 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lq
 }
 
 std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-AbstractLQPNode::find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode> &rhs) const {
+AbstractLQPNode::find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const {
   return _find_first_subplan_mismatch_impl(shared_from_this(), rhs);
 }
 
 std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-AbstractLQPNode::_find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode> &lhs,
-                                                   const std::shared_ptr<const AbstractLQPNode> &rhs) {
+AbstractLQPNode::_find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                                   const std::shared_ptr<const AbstractLQPNode>& rhs) {
   if (lhs == rhs) return std::nullopt;
   if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) return std::make_pair(lhs, rhs);
   if (lhs->type() != rhs->type()) return std::make_pair(lhs, rhs);

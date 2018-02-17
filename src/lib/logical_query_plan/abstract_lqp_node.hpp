@@ -282,7 +282,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    *         discovered to differ.
    */
   std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-  find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode> &rhs) const;
+  find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const;
   // @}
 
  protected:
@@ -364,8 +364,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
                    size_t& id_counter) const;
 
   static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-  _find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode> &lhs,
-                                    const std::shared_ptr<const AbstractLQPNode> &rhs);
+  _find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                    const std::shared_ptr<const AbstractLQPNode>& rhs);
 
   // @{
   /**
