@@ -11,7 +11,7 @@ namespace opossum {
 
 class IndexOperationTest : public BaseTest {
  protected:
-  void SetUp() { _ensure_pristine_table(); }
+  void SetUp() override { _ensure_pristine_table(); }
 
   // Drops existing table and creates one table for testing with default contents
   void _ensure_pristine_table() {
