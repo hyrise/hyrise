@@ -8,7 +8,7 @@
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -51,7 +51,7 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
       return std::max(1, std::min(5, static_cast<int>(std::round(level_dist(e2)))));
     });
 
-    opossum::DictionaryCompression::compress_table(*customer_table);
+    opossum::DeprecatedDictionaryCompression::compress_table(*customer_table);
 
     std::map<std::string, std::shared_ptr<opossum::Table>> tables;
     tables.insert(std::make_pair("CUSTOMER", customer_table));
