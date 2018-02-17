@@ -12,7 +12,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "storage/chunk.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
@@ -76,18 +76,6 @@ class Projection : public AbstractReadOnlyOperator {
   static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
       const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
       const ChunkID chunk_id);
-
-  /**
-   * Operators that all numerical types support.
-   */
-  template <typename T>
-  static std::function<T(const T&, const T&)> _get_base_operator_function(ExpressionType type);
-
-  /**
-   * Operators that integral types support.
-   */
-  template <typename T>
-  static std::function<T(const T&, const T&)> _get_operator_function(ExpressionType type);
 
   std::shared_ptr<const Table> _on_execute() override;
 };

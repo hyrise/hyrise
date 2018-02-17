@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_attribute_vector.hpp"
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/index/base_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -73,7 +73,7 @@ class GroupKeyIndex : public BaseIndex {
   std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
 
  private:
-  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDeprecatedDictionaryColumn> _index_column;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

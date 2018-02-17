@@ -16,6 +16,7 @@ struct TableColumnDefinition final {
 };
 
 struct TableLayout final {
+  TableType table_type{TableType::Data};
   std::vector<TableColumnDefinition> column_definitions;
 };
 

@@ -15,16 +15,17 @@
 
 namespace opossum {
 
-Table::Table(const TableLayout& layout, const ChunkUseMvcc use_mvcc, const uint32_t max_chunk_size)
+Table::Table(const TableLayout& layout, const UseMvcc use_mvcc, const uint32_t max_chunk_size)
     : _layout(layout), _use_mvcc(use_mvcc), _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
-  // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunks.back()->size() == _max_chunk_size) emplace_chunk();
+  Fail("Todo");
+//  // TODO(Anyone): Chunks should be preallocated for chunk size
+//  if (_chunks.back()->size() == _max_chunk_size) emplace_chunk();
 
-  _chunks.back()->append(values);
+//  _chunks.back()->append(values);
 }
 
 const TableLayout& Table::layout() const {
@@ -72,41 +73,23 @@ std::shared_ptr<Chunk> Table::emplace_chunk(const std::vector<std::shared_ptr<Ba
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
-TableType Table::get_type() const {
-  // Cannot answer this if the table has no content
-  Assert(!_chunks.empty() && column_count() > 0, "Table has no content, can't specify type");
-
-  // We assume if one column is a reference column, all are.
-  const auto column = _chunks[0]->get_column(ColumnID{0});
-  const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-
-  if (ref_column != nullptr) {
-// In debug mode we're pedantic and check whether all columns in all chunks are Reference Columns
-#if IS_DEBUG
-    for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
-      for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
-        const auto column2 = _chunks[chunk_idx]->get_column(ColumnID{column_idx});
-        const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-        DebugAssert(ref_column2 != nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
-      }
-    }
-#endif
-    return TableType::References;
-  } else {
-// In debug mode we're pedantic and check whether all columns in all chunks are Value/Dict Columns
-#if IS_DEBUG
-    for (auto chunk_idx = ChunkID{0}; chunk_idx < chunk_count(); ++chunk_idx) {
-      for (auto column_idx = ColumnID{0}; column_idx < column_count(); ++column_idx) {
-        const auto column2 = _chunks[chunk_idx]->get_column(ColumnID{column_idx});
-        const auto ref_column2 = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-        DebugAssert(ref_column2 == nullptr, "Invalid table: Contains Reference and Non-Reference Columns");
-      }
-    }
-#endif
-    return TableType::Data;
-  }
-}
-
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
+
+size_t Table::estimate_memory_usage() const {
+  auto bytes = size_t{sizeof(*this)};
+
+  for (const auto& chunk : _chunks) {
+    bytes += chunk->estimate_memory_usage();
+  }
+
+  for (const auto& column_definition : _layout.column_definitions) {
+    bytes += column_definition.name.size();
+  }
+
+  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+  // TODO(anybody) TableLayout missing
+
+  return bytes;
+}
 
 }  // namespace opossum

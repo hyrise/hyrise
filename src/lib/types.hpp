@@ -45,7 +45,7 @@ namespace opossum {
 
 /** We use vectors with custom allocators, e.g, to bind the data object to
  * specific NUMA nodes. This is mainly used in the data objects, i.e.,
- * Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+ * Chunk, ValueColumn, DeprecatedDictionaryColumn, ReferenceColumn and attribute vectors.
  * The PolymorphicAllocator provides an abstraction over several allocation
  * methods by adapting to subclasses of boost::container::pmr::memory_resource.
  */
@@ -84,9 +84,12 @@ using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+
 struct RowID {
-  ChunkID chunk_id;
-  ChunkOffset chunk_offset;
+  ChunkID chunk_id{0};
+  ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {
@@ -127,14 +130,13 @@ constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::m
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
-// Used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
-
 // ... in ReferenceColumns
 const RowID NULL_ROW_ID = RowID{ChunkID{0u}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
 // ... in DictionaryColumns
 constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
+
+constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
@@ -236,6 +238,8 @@ enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNu
 enum class TableType { References, Data };
 
 enum class DescriptionMode { SingleLine, MultiLine };
+
+enum class UseMvcc : bool { Yes = true, No = false };
 
 class Noncopyable {
  protected:

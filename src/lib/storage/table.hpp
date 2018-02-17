@@ -26,7 +26,7 @@ class Table : private Noncopyable {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default is the maximum allowed chunk size. A table holds always at least one chunk
-  explicit Table(const TableLayout& layout, ChunkUseMvcc use_mvcc = ChunkUseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
+  explicit Table(const TableLayout& layout, UseMvcc use_mvcc = UseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -91,13 +91,6 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
   std::shared_ptr<const TableStatistics> table_statistics() const { return _table_statistics; }
 
-  /**
-   * Determines whether this table consists solely of ReferenceColumns, in which case it is a TableType::References,
-   * or contains Dictionary/ValueColumns, which makes it a TableType::Data.
-   * A table containing both ReferenceColumns and Dictionary/ValueColumns is invalid.
-   */
-  TableType get_type() const;
-
   std::vector<IndexInfo> get_indexes() const;
 
   template <typename Index>
@@ -111,9 +104,14 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
+   */
+  size_t estimate_memory_usage() const;
+
  protected:
   const TableLayout _layout;
-  const ChunkUseMvcc _use_mvcc;
+  const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
   std::vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;

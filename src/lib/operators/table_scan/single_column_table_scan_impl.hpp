@@ -13,6 +13,7 @@
 
 namespace opossum {
 
+class BaseDeprecatedDictionaryColumn;
 class BaseDictionaryColumn;
 
 /**
@@ -30,11 +31,18 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   PosList scan_chunk(ChunkID) override;
 
-  void handle_value_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  void handle_column(const BaseDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  void handle_column(const BaseEncodedColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  using BaseSingleColumnTableScanImpl::handle_column;
 
  private:
   /**
@@ -42,14 +50,23 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  ValueID _get_search_value_id(const BaseDictionaryColumn& column);
+  // The following methods are templated for as long as two dictionary column implementations exist.
 
-  bool _right_value_matches_all(const BaseDictionaryColumn& column, const ValueID search_value_id);
+  template <typename BaseDictionaryColumnType>
+  void _handle_dictionary_column(const BaseDictionaryColumnType& left_column,
+                                 std::shared_ptr<ColumnVisitableContext> base_context);
 
-  bool _right_value_matches_none(const BaseDictionaryColumn& column, const ValueID search_value_id);
+  template <typename BaseDictionaryColumnType>
+  ValueID _get_search_value_id(const BaseDictionaryColumnType& column) const;
+
+  template <typename BaseDictionaryColumnType>
+  bool _right_value_matches_all(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
+
+  template <typename BaseDictionaryColumnType>
+  bool _right_value_matches_none(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
 
   template <typename Functor>
-  void _with_operator_for_dict_column_scan(const PredicateCondition predicate_condition, const Functor& func) {
+  void _with_operator_for_dict_column_scan(const PredicateCondition predicate_condition, const Functor& func) const {
     switch (predicate_condition) {
       case PredicateCondition::Equals:
         func(std::equal_to<void>{});

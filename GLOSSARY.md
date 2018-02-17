@@ -41,7 +41,7 @@ This explains high-level terms that have a specific meaning within Hyrise and th
 | Column Type                | Type of a class inheriting from BaseColumn (mostly used as template parameter name)                                                                                        |
 | Data Type                  | One of the currently five supported column data types (int, long, float, double, std::string)                                                                              |
 | Expression                 | Any type of SQL expression that is either logical or creates a new column (e.g., `col_a = 3`, `col_a + 4`).                                                                |
-| Iterable                   | A good way to iterate over different types of columns. See `base_iterators.hpp` to start.                                                                                  |
+| Iterable                   | A good way to iterate over different types of columns. See `column_iterables.hpp` to start.                                                                                  |
 | Logical Query Plan         | The logical representation of a query plan. It includes nodes like "Predicate" (a filter) or "Join" but does not describe what implementation is used for executing these. |
 | Node (LQP)                 | A node in a logical query plan.                                                                                                                                            |
 | Node (NUMA)                | A NUMA memory node (usually a CPU socket).                                                                                                                                 |

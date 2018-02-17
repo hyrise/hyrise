@@ -22,7 +22,7 @@ const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
 Chunk::Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
-      ChunkUseMvcc use_mvcc,
+      UseMvcc use_mvcc,
       const std::optional<PolymorphicAllocator<Chunk>>& alloc,
       const std::shared_ptr<AccessCounter> access_counter): _columns(columns.begin(), columns.end()), _access_counter(access_counter) {
 
@@ -34,7 +34,7 @@ Chunk::Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
 #endif
   grow_mvcc_column_size_by(chunk_size, 0);
 
-  if (use_mvcc == ChunkUseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
+  if (use_mvcc == UseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
   if (alloc) _alloc = alloc;
 }
 
@@ -135,6 +135,12 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
   return get_index(index_type, columns);
 }
 
+void Chunk::remove_index(std::shared_ptr<BaseIndex> index) {
+  auto it = std::find(_indices.cbegin(), _indices.cend(), index);
+  DebugAssert(it != _indices.cend(), "Trying to remove a non-existing index");
+  _indices.erase(it);
+}
+
 bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 
@@ -170,6 +176,26 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
 }
 
 const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
+
+size_t Chunk::estimate_memory_usage() const {
+  auto bytes = size_t{sizeof(*this)};
+
+  for (const auto& column : _columns) {
+    bytes += column->estimate_memory_usage();
+  }
+
+  // TODO(anybody) Index memory usage missing
+  // TODO(anybody) AccessCounter memory usage missing
+
+  if (_mvcc_columns) {
+    bytes += sizeof(_mvcc_columns->tids) + sizeof(_mvcc_columns->begin_cids) + sizeof(_mvcc_columns->end_cids);
+    bytes += _mvcc_columns->tids.size() * sizeof(decltype(_mvcc_columns->tids)::value_type);
+    bytes += _mvcc_columns->begin_cids.size() * sizeof(decltype(_mvcc_columns->begin_cids)::value_type);
+    bytes += _mvcc_columns->end_cids.size() * sizeof(decltype(_mvcc_columns->end_cids)::value_type);
+  }
+
+  return bytes;
+}
 
 uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
   if (_history.size() < 2 || lookback == 0) return 0;
