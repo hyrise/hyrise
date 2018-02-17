@@ -282,7 +282,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    *         discovered to differ.
    */
   std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-  find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const;
+  find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode> &rhs) const;
   // @}
 
  protected:
@@ -327,15 +327,21 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
       const QualifiedColumnName& qualified_column_name) const;
 
+  /** Utility to compare vectors of Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left,
                       const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
                       const AbstractLQPNode& lqp_right,
                       const std::vector<std::shared_ptr<LQPExpression>>& expressions_right);
+
+  /** Utility to compare two Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
                       const AbstractLQPNode& lqp_right, const std::shared_ptr<const LQPExpression>& expression_right);
 
+  /** Utility to compare vectors of LQPColumnReferences from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const std::vector<LQPColumnReference>& column_references_left,
                       const AbstractLQPNode& lqp_right, const std::vector<LQPColumnReference>& column_references_right);
+
+  /** Utility to compare two LQPColumnReferences from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const LQPColumnReference& column_reference_left,
                       const AbstractLQPNode& lqp_right, const LQPColumnReference& column_reference_right);
 
@@ -358,8 +364,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
                    size_t& id_counter) const;
 
   static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-  _find_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
-                              const std::shared_ptr<const AbstractLQPNode>& rhs);
+  _find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode> &lhs,
+                                    const std::shared_ptr<const AbstractLQPNode> &rhs);
 
   // @{
   /**

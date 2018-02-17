@@ -129,7 +129,7 @@ TEST_F(LQPFindSubplanMismatchTest, SubplanMismatch) {
 
   _build_query_lqps();
 
-  auto mismatch = _query_lqp_lhs->find_subplan_mismatch(_query_lqp_rhs);
+  auto mismatch = _query_lqp_lhs->find_first_subplan_mismatch(_query_lqp_rhs);
   ASSERT_TRUE(mismatch);
   EXPECT_EQ(mismatch->first, _query_nodes_lhs.predicate_node_b);
   EXPECT_EQ(mismatch->second, _query_nodes_rhs.predicate_node_b);
@@ -144,7 +144,7 @@ TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
   _query_nodes_rhs.predicate_node_b->set_left_child(additional_predicate_node);
   additional_predicate_node->set_left_child(_query_nodes_rhs.stored_table_node_a);
 
-  auto mismatch = _query_lqp_lhs->find_subplan_mismatch(_query_lqp_rhs);
+  auto mismatch = _query_lqp_lhs->find_first_subplan_mismatch(_query_lqp_rhs);
   ASSERT_TRUE(mismatch);
   EXPECT_EQ(mismatch->first, _query_nodes_lhs.stored_table_node_a);
   EXPECT_EQ(mismatch->second, additional_predicate_node);

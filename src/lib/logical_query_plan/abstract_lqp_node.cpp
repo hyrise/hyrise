@@ -516,24 +516,23 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lq
 }
 
 std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-AbstractLQPNode::find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const {
-  return _find_subplan_mismatch_impl(shared_from_this(), rhs);
+AbstractLQPNode::find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode> &rhs) const {
+  return _find_first_subplan_mismatch_impl(shared_from_this(), rhs);
 }
 
 std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-AbstractLQPNode::_find_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
-                                             const std::shared_ptr<const AbstractLQPNode>& rhs) {
+AbstractLQPNode::_find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode> &lhs,
+                                                   const std::shared_ptr<const AbstractLQPNode> &rhs) {
   if (lhs == rhs) return std::nullopt;
   if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) return std::make_pair(lhs, rhs);
-  if (!static_cast<bool>(lhs) && !static_cast<bool>(rhs)) return std::nullopt;
   if (lhs->type() != rhs->type()) return std::make_pair(lhs, rhs);
 
   if (!lhs->shallow_equals(*rhs)) return std::make_pair(lhs, rhs);
 
-  const auto left_child_mismatch = _find_subplan_mismatch_impl(lhs->left_child(), rhs->left_child());
+  const auto left_child_mismatch = _find_first_subplan_mismatch_impl(lhs->left_child(), rhs->left_child());
   if (left_child_mismatch) return left_child_mismatch;
 
-  const auto right_child_mismatch = _find_subplan_mismatch_impl(lhs->right_child(), rhs->right_child());
+  const auto right_child_mismatch = _find_first_subplan_mismatch_impl(lhs->right_child(), rhs->right_child());
   if (right_child_mismatch) return right_child_mismatch;
 
   return std::nullopt;
