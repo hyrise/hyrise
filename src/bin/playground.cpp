@@ -32,7 +32,7 @@ void insert_benchmark() {
   // setup partitioned and unpartitioned table
   auto table_partitioned = std::make_shared<Table>();
   HashFunction hash_function;
-  table_partitioned->create_hash_partitioning(ColumnID{0}, hash_function, 10);
+  table_partitioned->create_hash_partitioning(ColumnID{0}, hash_function, PartitionID{10});
   table_partitioned->add_column("one", DataType::String);
   table_partitioned->add_column("two", DataType::Int);
   table_partitioned->add_column("three", DataType::Float);

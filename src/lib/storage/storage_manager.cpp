@@ -37,6 +37,17 @@ void StorageManager::drop_table(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
+void StorageManager::replace_table(const std::string& name, std::shared_ptr<Table> table) {
+  Assert(_tables.find(name) != _tables.end(), "A table with the name " + name + " does not exists");
+
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    Assert(table->get_chunk(chunk_id)->has_mvcc_columns(), "Table must have MVCC columns.");
+  }
+
+  table->set_table_statistics(std::make_shared<TableStatistics>(table));
+  _tables.insert_or_assign(name, std::move(table));
+}
+
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
   const auto iter = _tables.find(name);
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
