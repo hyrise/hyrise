@@ -73,7 +73,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   explicit AbstractLQPNode(LQPNodeType node_type);
 
   // Creates a deep copy
-  virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
+  std::shared_ptr<AbstractLQPNode> deep_copy() const;
 
   // @{
   /**
@@ -265,6 +265,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
 
  protected:
+  // Holds the actual implementation of deep_copy
+  using PreviousCopiesMap =
+      std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
+  std::shared_ptr<AbstractLQPNode> _deep_copy(PreviousCopiesMap& previous_copies) const;
+
   /**
    * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
    * @param left_child and @param right_child are deep copies of the left and right child respectively, used for deep-copying
