@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+# set -e
 
 while [ $# -gt 0 ]; do
   case "$1" in
