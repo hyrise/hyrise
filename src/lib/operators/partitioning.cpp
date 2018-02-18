@@ -1,5 +1,7 @@
 #include "partitioning.hpp"
 
+#include <map>
+
 #include "insert.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"

@@ -124,11 +124,11 @@ TEST_F(OperatorsExportCsvTest, MultipleChunksPartitioned) {
   EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "1,\"Hallo\",3.5\n"
-                                   "2,\"Welt!\",3.5\n"
-                                   "4,\"Nacht\",7.5\n"
-                                   "5,\"Guten\",8.33\n"
-                                   "3,\"Gute\",-4\n"
-                                   "6,\"Tag\",3.5\n"));
+                           "2,\"Welt!\",3.5\n"
+                           "4,\"Nacht\",7.5\n"
+                           "5,\"Guten\",8.33\n"
+                           "3,\"Gute\",-4\n"
+                           "6,\"Tag\",3.5\n"));
 }
 
 TEST_F(OperatorsExportCsvTest, DeprecatedDictionaryColumn) {
