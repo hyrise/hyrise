@@ -125,7 +125,7 @@ class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
                 const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
-                const Duration max_duration, const std::optional<std::string>& output_file_path, const bool enable_mvcc)
+                const Duration max_duration, const std::optional<std::string>& output_file_path, const UseMvcc use_mvcc)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
@@ -133,7 +133,7 @@ class TpchBenchmark final {
         _max_num_query_runs(max_num_query_runs),
         _max_duration(max_duration),
         _output_file_path(output_file_path),
-        _enable_mvcc(enable_mvcc),
+        _use_mvcc(use_mvcc),
         _query_results_by_query_id() {}
 
   void run() {
@@ -175,7 +175,7 @@ class TpchBenchmark final {
   const size_t _max_num_query_runs;
   const Duration _max_duration;
   const std::optional<std::string> _output_file_path;
-  const bool _enable_mvcc;
+  const UseMvcc _use_mvcc;
 
   BenchmarkResults _query_results_by_query_id;
 
@@ -200,7 +200,7 @@ class TpchBenchmark final {
         const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
         // Execute the query, we don't care about the results
-        SQLPipeline{opossum::tpch_queries[query_id], _enable_mvcc}.get_result_table();
+        SQLPipeline{opossum::tpch_queries[query_id], _use_mvcc}.get_result_table();
 
         const auto query_benchmark_end = std::chrono::steady_clock::now();
 
@@ -221,7 +221,7 @@ class TpchBenchmark final {
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
         // Execute the query, we don't care about the results
-        SQLPipeline{sql, _enable_mvcc}.get_result_table();
+        SQLPipeline{sql, _use_mvcc}.get_result_table();
       }
 
       QueryBenchmarkResult result;
@@ -380,7 +380,7 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   opossum::TpchBenchmark(benchmark_mode, query_ids, chunk_size, scale_factor, num_iterations,
                          std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}),
-                         output_file_path, enable_mvcc)
+                         output_file_path, enable_mvcc ? opossum::UseMvcc::Yes : opossum::UseMvcc::No)
       .run();
 
   return 0;

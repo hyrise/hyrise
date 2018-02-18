@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
-#include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/deprecated_dictionary_column.hpp"
 #include "../lib/storage/partitioning/round_robin_partition_schema.hpp"
 #include "../lib/storage/table.hpp"
 
@@ -208,6 +208,20 @@ TEST_F(StorageTableTest, ApplyPartitioning) {
   t.apply_partitioning(p);
   EXPECT_TRUE(t.is_partitioned());
   EXPECT_EQ(t.chunk_count(), 2u);
+}
+
+TEST_F(StorageTableTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
+  const auto empty_memory_usage = t.estimate_memory_usage();
+
+  t.append({4, "Hello"});
+  t.append({5, "Hello"});
+
+  EXPECT_GT(t.estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
 }
 
 }  // namespace opossum

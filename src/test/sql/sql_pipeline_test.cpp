@@ -55,6 +55,8 @@ class SQLPipelineTest : public BaseTest {
     _join_result->add_column("bb", DataType::Float);
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
+
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -69,7 +71,7 @@ class SQLPipelineTest : public BaseTest {
       "SELECT table_a.a, table_a.b, table_b.b AS bb FROM table_a, table_b WHERE table_a.a = table_b.a AND table_a.a "
       "> 1000";
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
-  const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
+  const std::string _multi_statement_dependent = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
   // VIEW --> VIE
   const std::string _multi_statement_invalid = "CREATE VIE foo AS SELECT * FROM table_a; SELECT * FROM foo;";
 };
@@ -78,14 +80,14 @@ TEST_F(SQLPipelineTest, SimpleCreation) {
   SQLPipeline sql_pipeline{_select_query_a};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
-  SQLPipeline sql_pipeline{_select_query_a, false};
+  SQLPipeline sql_pipeline{_select_query_a, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
@@ -93,21 +95,21 @@ TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
   SQLPipeline sql_pipeline{_select_query_a, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
-  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationMulti) {
   SQLPipeline sql_pipeline{_multi_statement_query};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
-  SQLPipeline sql_pipeline{_multi_statement_query, false};
+  SQLPipeline sql_pipeline{_multi_statement_query, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
@@ -115,7 +117,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
   SQLPipeline sql_pipeline{_multi_statement_query, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
-  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
@@ -131,7 +133,7 @@ TEST_F(SQLPipelineTest, GetParsedSQLStatements) {
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatementsExecutionRequired) {
-  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  SQLPipeline sql_pipeline{_multi_statement_dependent};
   EXPECT_NO_THROW(sql_pipeline.get_parsed_sql_statements());
 }
 
@@ -168,7 +170,7 @@ TEST_F(SQLPipelineTest, GetUnoptimizedLQPTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetUnoptimizedLQPExecutionRequired) {
-  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  SQLPipeline sql_pipeline{_multi_statement_dependent};
 
   try {
     sql_pipeline.get_unoptimized_logical_plans();
@@ -206,7 +208,7 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetOptimizedLQPExecutionRequired) {
-  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  SQLPipeline sql_pipeline{_multi_statement_dependent};
 
   try {
     sql_pipeline.get_optimized_logical_plans();
@@ -248,7 +250,7 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlansExecutionRequired) {
-  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  SQLPipeline sql_pipeline{_multi_statement_dependent};
   try {
     sql_pipeline.get_query_plans();
     // Fail if this did not throw an exception
@@ -284,7 +286,7 @@ TEST_F(SQLPipelineTest, GetTasksTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
-  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  SQLPipeline sql_pipeline{_multi_statement_dependent};
 
   try {
     sql_pipeline.get_tasks();
@@ -326,7 +328,7 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
-  SQLPipeline sql_pipeline{_multi_statement_dependant};
+  SQLPipeline sql_pipeline{_multi_statement_dependent};
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
@@ -425,7 +427,7 @@ TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
   EXPECT_FALSE(SQLPipeline{_select_query_a}.requires_execution());
   EXPECT_FALSE(SQLPipeline{_join_query}.requires_execution());
   EXPECT_FALSE(SQLPipeline{_multi_statement_query}.requires_execution());
-  EXPECT_TRUE(SQLPipeline{_multi_statement_dependant}.requires_execution());
+  EXPECT_TRUE(SQLPipeline{_multi_statement_dependent}.requires_execution());
 
   const std::string create_view_single = "CREATE VIEW blub AS SELECT * FROM foo;";
   EXPECT_FALSE(SQLPipeline{create_view_single}.requires_execution());
@@ -451,6 +453,65 @@ TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
   const std::string multi_no_exec =
       "SELECT * FROM foo; INSERT INTO foo VALUES (2); SELECT * FROM blub; DELETE FROM foo WHERE a = 2;";
   EXPECT_FALSE(SQLPipeline{multi_no_exec}.requires_execution());
+}
+
+TEST_F(SQLPipelineTest, CorrectStatementStringSplitting) {
+  // Tests that the string passed into the pipeline is correctly split into the statement substrings
+  SQLPipeline select_pipeline{_select_query_a};
+  const auto& select_strings = select_pipeline.get_sql_strings();
+  EXPECT_EQ(select_strings.size(), 1u);
+  EXPECT_EQ(select_strings.at(0), _select_query_a);
+
+  SQLPipeline dependent_pipeline{_multi_statement_query};
+  const auto& dependent_strings = dependent_pipeline.get_sql_strings();
+  EXPECT_EQ(dependent_strings.size(), 2u);
+  // "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
+  EXPECT_EQ(dependent_strings.at(0), "INSERT INTO table_a VALUES (11, 11.11);");
+  EXPECT_EQ(dependent_strings.at(1), "SELECT * FROM table_a");  // leading whitespace should be removed
+
+  // Add newlines, tabd and weird spacing
+  auto spacing_sql = "\n\t\n SELECT\na, b, c,d,e FROM\t(SELECT * FROM foo);    \t  ";
+  SQLPipeline spacing_pipeline{spacing_sql};
+  const auto& spacing_strings = spacing_pipeline.get_sql_strings();
+  EXPECT_EQ(spacing_strings.size(), 1u);
+  EXPECT_EQ(spacing_strings.at(0),
+            "SELECT\na, b, c,d,e FROM\t(SELECT * FROM foo);");  // internal formatting is not done
+
+  auto multi_line_sql = R"(
+  SELECT *
+  FROM foo, bar
+  WHERE foo.x = 17
+    AND bar.y = 25
+  ORDER BY foo.x ASC
+  )";
+  SQLPipeline multi_line_pipeline{multi_line_sql};
+  const auto& multi_line_strings = multi_line_pipeline.get_sql_strings();
+  EXPECT_EQ(multi_line_strings.size(), 1u);
+  EXPECT_EQ(multi_line_strings.at(0),
+            "SELECT *\n  FROM foo, bar\n  WHERE foo.x = 17\n    AND bar.y = 25\n  ORDER BY foo.x ASC");
+}
+
+TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
+  SQLPipeline sql_pipeline1{_select_query_a};
+  sql_pipeline1.get_result_table();
+
+  // INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a
+  SQLPipeline sql_pipeline2{_multi_statement_query};
+  sql_pipeline2.get_result_table();
+
+  // The second part of _multi_statement_query is _select_query_a, which is already cached
+  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  EXPECT_EQ(cache.size(), 2u);
+  EXPECT_TRUE(cache.has(_select_query_a));
+  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
+
+  SQLPipeline sql_pipeline3{_select_query_a};
+  sql_pipeline3.get_result_table();
+
+  // Make sure the cache hasn't changed
+  EXPECT_EQ(cache.size(), 2u);
+  EXPECT_TRUE(cache.has(_select_query_a));
+  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
 }
 
 }  // namespace opossum

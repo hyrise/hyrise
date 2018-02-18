@@ -15,7 +15,7 @@
 #include "import_export/binary.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/fitted_attribute_vector.hpp"
+#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
@@ -191,7 +191,7 @@ void ImportBinary::_import_partition(std::ifstream& file,
 
 std::shared_ptr<Chunk> ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
-  const auto chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
+  const auto chunk = std::make_shared<Chunk>(UseMvcc::Yes);
 
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     chunk->add_column(
@@ -257,13 +257,13 @@ std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream
 }
 
 template <typename T>
-std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
-                                                                             ChunkOffset row_count) {
+std::shared_ptr<DeprecatedDictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
+                                                                                       ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _read_values<T>(file, dictionary_size);
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
-  return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
+  return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
 }
 
 }  // namespace opossum

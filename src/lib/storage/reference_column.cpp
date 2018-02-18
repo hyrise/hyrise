@@ -42,13 +42,17 @@ ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_colu
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
 void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
-  visitable.handle_reference_column(*this, std::move(context));
+  visitable.handle_column(*this, std::move(context));
 }
 
 std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   // ReferenceColumns are considered as intermediate datastructures and are
   // therefore not subject to NUMA-aware chunk migrations.
   Fail("Cannot migrate a ReferenceColumn");
+}
+
+size_t ReferenceColumn::estimate_memory_usage() const {
+  return sizeof(*this) + _pos_list->size() * sizeof(decltype(_pos_list)::element_type::value_type);
 }
 
 }  // namespace opossum

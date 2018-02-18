@@ -30,6 +30,10 @@ void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostre
   Print(table_wrapper, out, flags).execute();
 }
 
+void Print::print(std::shared_ptr<const AbstractOperator> in, uint32_t flags, std::ostream& out) {
+  Print(in, out, flags).execute();
+}
+
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 

@@ -8,7 +8,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_encoded_column.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
@@ -160,7 +160,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto partition = _target_table->get_partition_schema()->get_partition(partitionID);
 
       // If last chunk is compressed, add a new uncompressed chunk
-      if (std::dynamic_pointer_cast<const BaseDictionaryColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
+      if (std::dynamic_pointer_cast<const BaseEncodedColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
         _target_table->create_new_chunk(partitionID);
         total_chunks_inserted++;
 
@@ -361,6 +361,10 @@ std::map<PartitionID, uint32_t> Insert::_count_rows_for_partitions(
     }
   }
   return rows_to_add_to_partition;
+}
+
+std::shared_ptr<AbstractOperator> Insert::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Insert>(_target_table_name, _input_left->recreate(args));
 }
 
 }  // namespace opossum

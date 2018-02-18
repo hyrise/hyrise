@@ -11,7 +11,7 @@
 #include "operators/export_csv.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -124,19 +124,19 @@ TEST_F(OperatorsExportCsvTest, MultipleChunksPartitioned) {
   EXPECT_TRUE(file_exists(meta_filename));
   EXPECT_TRUE(compare_file(filename,
                            "1,\"Hallo\",3.5\n"
-                           "2,\"Welt!\",3.5\n"
-                           "4,\"Nacht\",7.5\n"
-                           "5,\"Guten\",8.33\n"
-                           "3,\"Gute\",-4\n"
-                           "6,\"Tag\",3.5\n"));
+                                   "2,\"Welt!\",3.5\n"
+                                   "4,\"Nacht\",7.5\n"
+                                   "5,\"Guten\",8.33\n"
+                                   "3,\"Gute\",-4\n"
+                                   "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
+TEST_F(OperatorsExportCsvTest, DeprecatedDictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+  DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

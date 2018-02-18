@@ -173,6 +173,11 @@ class Table : private Noncopyable {
   std::shared_ptr<AbstractPartitionSchema> get_mutable_partition_schema();
 #endif
 
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
+   */
+  size_t estimate_memory_usage() const;
+
  protected:
   const uint32_t _max_chunk_size;
   std::vector<std::shared_ptr<Chunk>> _chunks;

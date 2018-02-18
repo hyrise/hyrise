@@ -85,7 +85,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
 
 void Table::create_new_chunk(PartitionID partition_id) {
   // Create chunk with mvcc columns
-  auto new_chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
+  auto new_chunk = std::make_shared<Chunk>(UseMvcc::Yes);
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
     const auto type = _column_types[column_id];
@@ -265,5 +265,24 @@ const std::shared_ptr<const AbstractPartitionSchema> Table::get_partition_schema
 std::shared_ptr<AbstractPartitionSchema> Table::get_mutable_partition_schema() { return _partition_schema; }
 #endif
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
+
+size_t Table::estimate_memory_usage() const {
+  auto bytes = size_t{sizeof(*this)};
+
+  for (const auto& chunk : _chunks) {
+    bytes += chunk->estimate_memory_usage();
+  }
+
+  for (const auto& column_name : _column_names) {
+    bytes += column_name.size();
+  }
+
+  bytes += _column_types.size() * sizeof(decltype(_column_types)::value_type);
+  bytes += _column_nullable.size() * sizeof(decltype(_column_nullable)::value_type);
+
+  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+
+  return bytes;
+}
 
 }  // namespace opossum

@@ -13,7 +13,6 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "storage/dictionary_compression.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
