@@ -30,6 +30,10 @@ class Partitioning : public AbstractReadWriteOperator {
   void _copy_table_content(std::shared_ptr<Table> source, std::shared_ptr<Table> target);
   void _replace_table(std::shared_ptr<Table> partitioned_table);
 
+  std::map<RowID, PartitionID> _map_content_to_add_to_partitions(std::shared_ptr<Table> source, std::shared_ptr<const AbstractPartitionSchema> target_partition_schema);
+  std::map<PartitionID, uint32_t> _count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping);
+
+
  private:
   const std::string _table_to_partition_name;
   std::shared_ptr<AbstractPartitionSchema> _target_partition_schema;
