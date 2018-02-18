@@ -1,11 +1,11 @@
 #include "partitioning.hpp"
 
 #include "insert.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/partitioning/round_robin_partition_schema.hpp"
+#include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
 
 namespace opossum {
@@ -112,7 +112,6 @@ Partitioning::Partitioning(const std::string& table_to_partition_name,
 const std::string Partitioning::name() const { return "Partitioning"; }
 
 std::shared_ptr<const Table> Partitioning::_on_execute(std::shared_ptr<TransactionContext> context) {
-
   const auto table_to_partition = _get_table_to_be_partitioned();
   _lock_table(table_to_partition);
   auto partitioned_table = _create_partitioned_table_copy(table_to_partition);
@@ -131,15 +130,16 @@ std::unique_lock<std::mutex> Partitioning::_lock_table(std::shared_ptr<Table> ta
 }
 
 std::shared_ptr<Table> Partitioning::_create_partitioned_table_copy(std::shared_ptr<Table> table_to_be_partitioned) {
-  auto partitioned_table = Table::create_with_layout_from(table_to_be_partitioned, table_to_be_partitioned->max_chunk_size());
+  auto partitioned_table =
+      Table::create_with_layout_from(table_to_be_partitioned, table_to_be_partitioned->max_chunk_size());
   partitioned_table->apply_partitioning(_target_partition_schema);
   return partitioned_table;
 }
 
 void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::shared_ptr<Table> target) {
-
   // partitioning
-  std::map<RowID, PartitionID> target_partition_mapping = _map_content_to_add_to_partitions(source, _target_partition_schema);
+  std::map<RowID, PartitionID> target_partition_mapping =
+      _map_content_to_add_to_partitions(source, _target_partition_schema);
   std::map<PartitionID, uint32_t> rows_to_add_to_partition = _count_rows_for_partitions(target_partition_mapping);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
@@ -176,8 +176,7 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
       while (remaining_rows > 0) {
         ChunkID current_chunk_id = partition->last_chunk()->id();
         auto current_chunk = target->get_mutable_chunk(current_chunk_id);
-        auto rows_to_insert_this_loop =
-            std::min(target->max_chunk_size() - current_chunk->size(), remaining_rows);
+        auto rows_to_insert_this_loop = std::min(target->max_chunk_size() - current_chunk->size(), remaining_rows);
 
         // Resize MVCC vectors.
         current_chunk->grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
@@ -233,19 +232,16 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
         auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
 
         std::vector<size_t> rows_to_copy;
-        unsigned int really_inserted = 0;
         size_t last_touched_index_source_chunk = 0;
         if (source_chunk->column_count() >= 1) {
           // doing this for one column only is enough because the rows to copy are the same in all columns
           for (size_t row = source_chunk_start_index; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
             if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID &&
-                really_inserted < num_to_insert) {
+                rows_to_copy.size() <= num_to_insert) {
               rows_to_copy.push_back(row);
-              really_inserted++;
               last_touched_index_source_chunk = row;
             }
           }
-          num_to_insert = std::min(num_to_insert, static_cast<uint32_t>(rows_to_copy.size()));
         }
 
         for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
@@ -254,6 +250,17 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
                                                         target_chunk->get_mutable_column(column_id), target_start_index,
                                                         rows_to_copy);
         }
+
+        for (auto i = target_start_index, j = 0u; i < target_start_index + num_to_insert && j < rows_to_copy.size();
+             i++, j++) {
+          target_chunk->mvcc_columns()->tids[i] =
+              source->get_chunk(source_chunk_id)->mvcc_columns()->tids[rows_to_copy[j]];
+          target_chunk->mvcc_columns()->begin_cids[i] =
+              source->get_chunk(source_chunk_id)->mvcc_columns()->begin_cids[rows_to_copy[j]];
+          target_chunk->mvcc_columns()->end_cids[i] =
+              source->get_chunk(source_chunk_id)->mvcc_columns()->end_cids[rows_to_copy[j]];
+        }
+
         still_to_insert -= num_to_insert;
         target_start_index += num_to_insert;
         source_chunk_start_index = last_touched_index_source_chunk + 1;
@@ -265,24 +272,14 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
         }
       }
 
-      // for (auto i = start_index; i < start_index + current_num_rows_to_insert; i++) {
-      //   // we do not need to check whether other operators have locked the rows, we have just created them
-      //   // and they are not visible for other operators.
-      //   // the transaction IDs are set here and not during the resize, because
-      //   // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
-      //   // deleted.
-      //   target_chunk->mvcc_columns()->tids[i] = context->transaction_id();
-      //   _inserted_rows.emplace_back(RowID{target_chunk_id, i});
-      // }
-
       input_offset += current_num_rows_to_insert;
       start_index = 0u;
     }
   }
 }
 
-std::map<RowID, PartitionID> Partitioning::_map_content_to_add_to_partitions(std::shared_ptr<Table> source,
-    std::shared_ptr<const AbstractPartitionSchema> target_partition_schema) {
+std::map<RowID, PartitionID> Partitioning::_map_content_to_add_to_partitions(
+    std::shared_ptr<Table> source, std::shared_ptr<const AbstractPartitionSchema> target_partition_schema) {
   // TODO(partitioning group): refactor!
   std::map<RowID, PartitionID> target_partition_mapping;
   if (std::dynamic_pointer_cast<const RangePartitionSchema>(target_partition_schema)) {

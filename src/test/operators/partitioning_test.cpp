@@ -64,11 +64,47 @@ TEST_F(OperatorsPartitioningTest, PartitionRoundRobin) {
   EXPECT_EQ(p->get_chunk(ChunkID{2})->get_column(ColumnID{1})->size(), 1u);
 }
 
-TEST_F(OperatorsPartitioningTest, PartitionRange) {
+TEST_F(OperatorsPartitioningTest, PartitionRoundRobinMVCC) {
   auto table_name = "test_table";
   auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(table_name, t);
 
+  auto part = std::make_shared<Partitioning>(table_name, std::make_shared<RoundRobinPartitionSchema>(PartitionID{3}));
+  auto context = TransactionManager::get().new_transaction_context();
+  part->set_transaction_context(context);
+
+  part->execute();
+  context->commit();
+
+  auto p = StorageManager::get().get_table(table_name);
+
+  EXPECT_EQ(p->get_chunk(ChunkID{0})->size(), 1u);
+  EXPECT_EQ(p->get_chunk(ChunkID{1})->size(), 1u);
+  EXPECT_EQ(p->get_chunk(ChunkID{2})->size(), 1u);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[1],
+            p->get_chunk(ChunkID{1})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[2],
+            p->get_chunk(ChunkID{2})->mvcc_columns()->begin_cids[0]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[1],
+            p->get_chunk(ChunkID{1})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[2],
+            p->get_chunk(ChunkID{2})->mvcc_columns()->end_cids[0]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0], p->get_chunk(ChunkID{0})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[1], p->get_chunk(ChunkID{1})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[2], p->get_chunk(ChunkID{2})->mvcc_columns()->tids[0]);
+}
+
+TEST_F(OperatorsPartitioningTest, PartitionRange) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
+  StorageManager::get().add_table(table_name, t);
 
   std::vector<AllTypeVariant> bounds = {457.0f, 458.0f};
   auto part = std::make_shared<Partitioning>(table_name, std::make_shared<RangePartitionSchema>(ColumnID{0}, bounds));
@@ -102,13 +138,51 @@ TEST_F(OperatorsPartitioningTest, PartitionRange) {
   EXPECT_EQ(p->get_chunk(ChunkID{2})->get_column(ColumnID{1})->size(), 1u);
 }
 
+TEST_F(OperatorsPartitioningTest, PartitionRangeMVCC) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
+  StorageManager::get().add_table(table_name, t);
+
+  std::vector<AllTypeVariant> bounds = {457.0f, 458.0f};
+  auto part = std::make_shared<Partitioning>(table_name, std::make_shared<RangePartitionSchema>(ColumnID{0}, bounds));
+  auto context = TransactionManager::get().new_transaction_context();
+  part->set_transaction_context(context);
+
+  part->execute();
+  context->commit();
+
+  auto p = StorageManager::get().get_table(table_name);
+
+  EXPECT_EQ(p->get_chunk(ChunkID{0})->size(), 1u);
+  EXPECT_EQ(p->get_chunk(ChunkID{1})->size(), 1u);
+  EXPECT_EQ(p->get_chunk(ChunkID{2})->size(), 1u);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0],
+            p->get_chunk(ChunkID{1})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[1],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[2],
+            p->get_chunk(ChunkID{2})->mvcc_columns()->begin_cids[0]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0],
+            p->get_chunk(ChunkID{1})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[1],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[2],
+            p->get_chunk(ChunkID{2})->mvcc_columns()->end_cids[0]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0], p->get_chunk(ChunkID{1})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[1], p->get_chunk(ChunkID{0})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[2], p->get_chunk(ChunkID{2})->mvcc_columns()->tids[0]);
+}
+
 TEST_F(OperatorsPartitioningTest, PartitionHash) {
   auto table_name = "test_table";
   auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(table_name, t);
 
-
-  auto part = std::make_shared<Partitioning>(table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+  auto part = std::make_shared<Partitioning>(
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
   auto context = TransactionManager::get().new_transaction_context();
   part->set_transaction_context(context);
 
@@ -139,13 +213,51 @@ TEST_F(OperatorsPartitioningTest, PartitionHash) {
   EXPECT_EQ(p->get_chunk(ChunkID{2})->get_column(ColumnID{1})->size(), 1u);
 }
 
+TEST_F(OperatorsPartitioningTest, PartitionHashMVCC) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
+  StorageManager::get().add_table(table_name, t);
+
+  auto part = std::make_shared<Partitioning>(
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+  auto context = TransactionManager::get().new_transaction_context();
+  part->set_transaction_context(context);
+
+  part->execute();
+  context->commit();
+
+  auto p = StorageManager::get().get_table(table_name);
+
+  EXPECT_EQ(p->get_chunk(ChunkID{0})->size(), 1u);
+  EXPECT_EQ(p->get_chunk(ChunkID{1})->size(), 1u);
+  EXPECT_EQ(p->get_chunk(ChunkID{2})->size(), 1u);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[1],
+            p->get_chunk(ChunkID{1})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[2],
+            p->get_chunk(ChunkID{2})->mvcc_columns()->begin_cids[0]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[1],
+            p->get_chunk(ChunkID{1})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[2],
+            p->get_chunk(ChunkID{2})->mvcc_columns()->end_cids[0]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0], p->get_chunk(ChunkID{0})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[1], p->get_chunk(ChunkID{1})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[2], p->get_chunk(ChunkID{2})->mvcc_columns()->tids[0]);
+}
+
 TEST_F(OperatorsPartitioningTest, RemovePartitioning) {
   auto table_name = "test_table";
   auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table(table_name, t);
 
-
-  auto part = std::make_shared<Partitioning>(table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+  auto part = std::make_shared<Partitioning>(
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
   auto context = TransactionManager::get().new_transaction_context();
   part->set_transaction_context(context);
 
@@ -168,6 +280,48 @@ TEST_F(OperatorsPartitioningTest, RemovePartitioning) {
   EXPECT_EQ((*p->get_chunk(ChunkID{0})->get_column(ColumnID{0}))[1], AllTypeVariant(456.7f));
   EXPECT_EQ((*p->get_chunk(ChunkID{0})->get_column(ColumnID{1}))[2], AllTypeVariant(12345));
   EXPECT_EQ((*p->get_chunk(ChunkID{0})->get_column(ColumnID{0}))[2], AllTypeVariant(458.7f));
+}
+
+TEST_F(OperatorsPartitioningTest, RemovePartitioningMVCC) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
+  StorageManager::get().add_table(table_name, t);
+
+  auto part = std::make_shared<Partitioning>(
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+  auto context = TransactionManager::get().new_transaction_context();
+  part->set_transaction_context(context);
+
+  part->execute();
+  context->commit();
+
+  auto unpart = std::make_shared<Partitioning>(table_name, std::make_shared<NullPartitionSchema>());
+  auto context_unpart = TransactionManager::get().new_transaction_context();
+  unpart->set_transaction_context(context_unpart);
+
+  unpart->execute();
+  context_unpart->commit();
+
+  auto p = StorageManager::get().get_table(table_name);
+
+  EXPECT_EQ(p->get_chunk(ChunkID{0})->size(), 3u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[1],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[1]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[2],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[2]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[1],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[1]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[2],
+            p->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[2]);
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0], p->get_chunk(ChunkID{0})->mvcc_columns()->tids[0]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[1], p->get_chunk(ChunkID{0})->mvcc_columns()->tids[1]);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->mvcc_columns()->tids[2], p->get_chunk(ChunkID{0})->mvcc_columns()->tids[2]);
 }
 
 }  // namespace opossum
