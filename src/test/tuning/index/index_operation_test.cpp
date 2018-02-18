@@ -1,5 +1,9 @@
 #include "../../base_test.hpp"
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
@@ -94,6 +98,26 @@ TEST_F(IndexOperationTest, DeleteIndex) {
 
   auto index_infos = _table->get_indexes();
   EXPECT_EQ(index_infos.size(), 0u);
+}
+
+TEST_F(IndexOperationTest, ClearCacheWhenRemovingIndex) {
+  auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
+  auto& pqp_cache = SQLQueryCache<SQLQueryPlan>::get();
+
+  lqp_cache.set("test", std::make_shared<MockNode>(nullptr));
+  pqp_cache.set("test", SQLQueryPlan{});
+
+  EXPECT_GT(lqp_cache.size(), 0u);
+  EXPECT_GT(pqp_cache.size(), 0u);
+
+  auto column_ids = std::vector{ColumnID{0}};
+  _table->create_index<GroupKeyIndex>(column_ids);
+
+  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
+  operation.execute();
+
+  EXPECT_EQ(lqp_cache.size(), 0u);
+  EXPECT_EQ(pqp_cache.size(), 0u);
 }
 
 }  // namespace opossum

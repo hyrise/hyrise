@@ -122,10 +122,10 @@ set(
     testing_assert.cpp
     testing_assert.hpp
     tuning/greedy_selector_test.cpp
-    tuning/index/column_ref.cpp
+    tuning/index/column_ref_test.cpp
     tuning/index/index_evaluator_test.cpp
-    tuning/index/index_choice.cpp
-    tuning/index/index_operation.cpp
+    tuning/index/index_choice_test.cpp
+    tuning/index/index_operation_test.cpp
     tuning/tuner_test.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp

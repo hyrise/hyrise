@@ -12,8 +12,7 @@ class TuningOperation {
  public:
   /**
    * Perform this tuning operation.
-   *
-   * The default implementation does nothing.
+   * If you need a no-op TuningOperation, look at NullOperation.
    */
   virtual void execute() = 0;
 
