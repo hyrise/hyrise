@@ -40,6 +40,7 @@ class IndexOperation : public TuningOperation {
 
   void _create_index();
   void _delete_index();
+  void _invalidate_cache();
 };
 
 }  // namespace opossum

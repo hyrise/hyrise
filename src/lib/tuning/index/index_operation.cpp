@@ -1,5 +1,8 @@
 #include "index_operation.hpp"
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -36,6 +39,8 @@ void IndexOperation::_create_index() {
     default:
       Fail("Can not create invalid/unknown index type");
   }
+
+  _invalidate_cache();
 }
 
 void IndexOperation::_delete_index() {
@@ -56,7 +61,19 @@ void IndexOperation::_delete_index() {
 
   table->remove_index(chosen_index_info);
 
-  // ToDo(group01): invalidate cache
+  _invalidate_cache();
+}
+
+void IndexOperation::_invalidate_cache() {
+  /*
+     * For now, this simply clears the cache.
+     * However, it would be more beneficial to *selectively* evict cache entries
+     * that are directly affected by this change.
+     * Maybe it makes sense to even re-create those entries with an updated
+     * query plan...
+     */
+  SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get().clear();
+  SQLQueryCache<SQLQueryPlan>::get().clear();
 }
 
 const ColumnRef& IndexOperation::column() const { return _column; }
