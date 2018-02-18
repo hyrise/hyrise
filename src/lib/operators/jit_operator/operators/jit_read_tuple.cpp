@@ -1,4 +1,4 @@
-#include "jit_read_table.hpp"
+#include "jit_read_tuple.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -6,11 +6,11 @@
 
 namespace opossum {
 
-std::string JitReadTable::description() const {
+std::string JitReadTuple::description() const {
   std::stringstream desc;
-  desc << "[GetTable] ";
+  desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.second.tuple_index() << " = Column#" << input_column.first << ", ";
+    desc << "x" << input_column.second.tuple_index() << " = Col#" << input_column.first << ", ";
   }
   for (const auto& input_literal : _input_literals) {
     desc << "x" << input_literal.second.tuple_index() << " = " << input_literal.first << ", ";
@@ -18,7 +18,7 @@ std::string JitReadTable::description() const {
   return desc.str();
 }
 
-void JitReadTable::before_query(const Table& in_table, JitRuntimeContext& ctx) {
+void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& ctx) {
   ctx.tuple.resize(_num_tuple_values);
 
   for (const auto& input_literal : _input_literals) {
@@ -52,7 +52,7 @@ void JitReadTable::before_query(const Table& in_table, JitRuntimeContext& ctx) {
   }
 }
 
-void JitReadTable::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& ctx) const {
+void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& ctx) const {
   ctx.inputs.clear();
 
   for (const auto& input_column : _input_columns) {
@@ -68,7 +68,7 @@ void JitReadTable::before_chunk(const Table& in_table, const Chunk& in_chunk, Ji
   }
 }
 
-void JitReadTable::execute(JitRuntimeContext& ctx) const {
+void JitReadTuple::execute(JitRuntimeContext& ctx) const {
   for (; ctx.chunk_offset < ctx.chunk_size; ++ctx.chunk_offset) {
     for (const auto& column_reader : _column_readers) {
       column_reader->read_value(ctx);
@@ -78,7 +78,7 @@ void JitReadTable::execute(JitRuntimeContext& ctx) const {
   }
 }
 
-JitTupleValue JitReadTable::add_input_column(const Table& table, const ColumnID column_id) {
+JitTupleValue JitReadTuple::add_input_column(const Table& table, const ColumnID column_id) {
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.first == column_id; });
   if (it != _input_columns.end()) {
@@ -92,13 +92,13 @@ JitTupleValue JitReadTable::add_input_column(const Table& table, const ColumnID 
   return tuple_value;
 }
 
-JitTupleValue JitReadTable::add_literal_value(const AllTypeVariant& value) {
+JitTupleValue JitReadTuple::add_literal_value(const AllTypeVariant& value) {
   const auto data_type = data_type_to_jit_data_type.at(data_type_from_all_type_variant(value));
   const auto tuple_value = JitTupleValue(data_type, false, _num_tuple_values++);
   _input_literals.push_back(std::make_pair(value, tuple_value));
   return tuple_value;
 }
 
-size_t JitReadTable::add_temorary_value() { return _num_tuple_values++; }
+size_t JitReadTuple::add_temorary_value() { return _num_tuple_values++; }
 
 }  // namespace opossum

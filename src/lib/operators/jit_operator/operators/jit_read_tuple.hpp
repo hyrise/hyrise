@@ -45,9 +45,9 @@ class JitColumnReader : public BaseJitColumnReader {
   const JitTupleValue _tuple_value;
 };
 
-class JitReadTable : public JitAbstractOperator {
+class JitReadTuple : public JitAbstractOperator {
  public:
-  using Ptr = std::shared_ptr<JitReadTable>;
+  using Ptr = std::shared_ptr<JitReadTuple>;
 
   std::string description() const final;
 
