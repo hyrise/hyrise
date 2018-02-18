@@ -7,7 +7,11 @@
 namespace opossum {
 
 /**
- * ToDo(group01): describe specific mechanism to generate operation sequence
+ * The GreedySelector uses the following algorithm to determine TuningOperations:
+ * 1. Sort Tuning Choices by ascending desirability, within same desirability by ascending cost.
+ *    Then repeatedly performs the following operations:
+ * 2. Tries to free up budget by rejecting choices with lowest desirabilities ("starting from the end of list")
+ * 3. Tries to fill unused budget by accepting choices with highest desirabilities ("starting from the start of the list")
  */
 class GreedySelector : public AbstractSelector {
  public:
