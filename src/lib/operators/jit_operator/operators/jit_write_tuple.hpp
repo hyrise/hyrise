@@ -37,7 +37,7 @@ class JitColumnWriter : public BaseJitColumnWriter {
   const JitTupleValue _tuple_value;
 };
 
-class JitSaveTable : public JitAbstractSink {
+class JitWriteTuple : public JitAbstractSink {
  public:
   std::string description() const final;
 

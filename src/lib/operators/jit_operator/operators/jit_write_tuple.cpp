@@ -1,4 +1,4 @@
-#include "jit_save_table.hpp"
+#include "jit_write_tuple.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -7,16 +7,16 @@
 
 namespace opossum {
 
-std::string JitSaveTable::description() const {
+std::string JitWriteTuple::description() const {
   std::stringstream desc;
-  desc << "[SaveTable] ";
+  desc << "[WriteTuple] ";
   for (const auto& output_column : _output_columns) {
     desc << output_column.first << " = x" << output_column.second.tuple_index() << ", ";
   }
   return desc.str();
 }
 
-void JitSaveTable::before_query(Table& out_table, JitRuntimeContext& ctx) {
+void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& ctx) {
   for (const auto& output_column : _output_columns) {
     const auto data_type = jit_data_type_to_data_type.at(output_column.second.data_type());
     const auto is_nullable = output_column.second.is_nullable();
@@ -37,24 +37,24 @@ void JitSaveTable::before_query(Table& out_table, JitRuntimeContext& ctx) {
   _create_output_chunk(ctx);
 }
 
-void JitSaveTable::after_chunk(Table& out_table, JitRuntimeContext& ctx) const {
+void JitWriteTuple::after_chunk(Table& out_table, JitRuntimeContext& ctx) const {
   if (ctx.out_chunk->size() > 0) {
     out_table.emplace_chunk(ctx.out_chunk);
     _create_output_chunk(ctx);
   }
 }
 
-void JitSaveTable::add_output_column(const std::string& column_name, const JitTupleValue& value) {
+void JitWriteTuple::add_output_column(const std::string& column_name, const JitTupleValue& value) {
   _output_columns.push_back(std::make_pair(column_name, value));
 }
 
-void JitSaveTable::next(JitRuntimeContext& ctx) const {
+void JitWriteTuple::next(JitRuntimeContext& ctx) const {
   for (const auto& column_writer : _column_writers) {
     column_writer->write_value(ctx);
   }
 }
 
-void JitSaveTable::_create_output_chunk(JitRuntimeContext& ctx) const {
+void JitWriteTuple::_create_output_chunk(JitRuntimeContext& ctx) const {
   ctx.out_chunk = std::make_shared<Chunk>();
   ctx.outputs.clear();
 
