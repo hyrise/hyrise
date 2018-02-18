@@ -47,7 +47,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
-    auto chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_mutable_chunk(chunk_id);
     const auto chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
 
     encode_chunk(chunk, data_types, chunk_encoding_spec);
@@ -61,7 +61,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   Assert(chunk_encoding_specs.size() == chunk_count, "Number of encoding specs must match table’s chunk count.");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_mutable_chunk(chunk_id);
     const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
 
     encode_chunk(chunk, column_types, chunk_encoding_spec);

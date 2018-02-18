@@ -45,13 +45,13 @@ void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::v
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 
-    compress_chunk(table.column_types(), table.get_chunk(chunk_id), encoding_type);
+    compress_chunk(table.column_types(), table.get_mutable_chunk(chunk_id), encoding_type);
   }
 }
 
 void DeprecatedDictionaryCompression::compress_table(Table& table, EncodingType encoding_type) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    auto chunk = table.get_chunk(chunk_id);
+    auto chunk = table.get_mutable_chunk(chunk_id);
     compress_chunk(table.column_types(), chunk, encoding_type);
   }
 }

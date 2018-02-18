@@ -60,7 +60,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto data_types = _table->column_types();
-  auto chunk = _table->get_chunk(ChunkID{0u});
+  auto chunk = _table->get_mutable_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, data_types, chunk_encoding_spec);
 
@@ -72,7 +72,7 @@ TEST_F(ChunkEncoderTest, LeaveOneColumnUnencoded) {
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto data_types = _table->column_types();
-  auto chunk = _table->get_chunk(ChunkID{0u});
+  auto chunk = _table->get_mutable_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, data_types, chunk_encoding_spec);
 
@@ -88,7 +88,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTable) {
   ChunkEncoder::encode_all_chunks(_table, chunk_encoding_specs);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto chunk = _table->get_mutable_chunk(chunk_id);
     const auto& spec = chunk_encoding_specs.at(chunk_id);
     verify_encoding(chunk, spec);
   }
@@ -104,7 +104,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   ChunkEncoder::encode_chunks(_table, chunk_ids, chunk_encoding_specs);
 
   for (auto chunk_id : chunk_ids) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto chunk = _table->get_mutable_chunk(chunk_id);
     const auto& spec = chunk_encoding_specs.at(chunk_id);
     verify_encoding(chunk, spec);
   }
@@ -112,7 +112,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   const auto unencoded_chunk_spec =
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}};
 
-  verify_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
+  verify_encoding(_table->get_mutable_chunk(ChunkID{1u}), unencoded_chunk_spec);
 }
 
 }  // namespace opossum
