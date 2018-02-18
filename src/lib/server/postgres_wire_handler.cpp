@@ -53,7 +53,7 @@ std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) 
   auto buffer = read_values<char>(packet, packet.data.size());
 
   // Convert the content to a string for now
-  return std::string(buffer.data(), buffer.size());
+  return std::string(buffer.data(), buffer.size() - 1);
 }
 
 PreparedStatementInfo PostgresWireHandler::handle_parse_packet(const InputPacket& packet, size_t length) {

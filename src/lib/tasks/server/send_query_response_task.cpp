@@ -128,7 +128,7 @@ void SendQueryResponseTask::_send_row_data() {
 
 void SendQueryResponseTask::_send_command_complete() {
   std::string completed_msg;
-  const auto* statement = _sql_pipeline.get_parsed_sql_statements().front()->getStatements().front();
+  const auto* statement = _sql_pipeline->get_parsed_sql_statements().front()->getStatements().front();
   switch (statement->type()) {
     case hsql::StatementType::kStmtSelect: {
       completed_msg = "SELECT " + std::to_string(_row_count);
@@ -167,8 +167,8 @@ void SendQueryResponseTask::_send_command_complete() {
 
 void SendQueryResponseTask::_send_execution_info() {
   _connection->send_notice(
-      "Compilation time (µs): " + std::to_string(_sql_pipeline.compile_time_microseconds().count()) +
-      "\nExecution time (µs): " + std::to_string(_sql_pipeline.execution_time_microseconds().count()));
+      "Compilation time (µs): " + std::to_string(_sql_pipeline->compile_time_microseconds().count()) +
+      "\nExecution time (µs): " + std::to_string(_sql_pipeline->execution_time_microseconds().count()));
 }
 
 void SendQueryResponseTask::_on_execute() {

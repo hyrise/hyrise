@@ -6,7 +6,7 @@ namespace opossum {
 
 class ExecuteServerQueryTask : public AbstractTask  {
  public:
-  ExecuteServerQueryTask(SQLPipeline& sql_pipeline)
+  ExecuteServerQueryTask(std::shared_ptr<SQLPipeline> sql_pipeline)
       : _sql_pipeline(sql_pipeline) {}
 
   boost::future<void> get_future() { return _promise.get_future(); }
@@ -14,7 +14,7 @@ class ExecuteServerQueryTask : public AbstractTask  {
  protected:
   void _on_execute() override;
 
-  SQLPipeline& _sql_pipeline;
+  std::shared_ptr<SQLPipeline> _sql_pipeline;
   boost::promise<void> _promise;
 };
 

@@ -26,7 +26,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   static const uint32_t HEADER_LENGTH = 5u;
 
   explicit HyriseSession(boost::asio::io_service& io_service, std::shared_ptr<ClientConnection> connection)
-      : _io_service(io_service), _connection(connection), _input_packet(), _expected_input_packet_length(0) {
+      : _io_service(io_service), _connection(connection), _input_packet() {
     _response_buffer.reserve(_max_response_size);
   }
 
@@ -43,7 +43,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void pipeline_error(const std::string& error_msg);
   void pipeline_info(const std::string& notice);
 
-  SessionState state() const;
+//  SessionState state() const;
 
  protected:
   boost::future<void> _perform_session_startup();
@@ -68,10 +68,10 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   uint32_t _max_response_size = 2048;
   ByteBuffer _response_buffer;
 
-  SessionState _state = SessionState::Setup;
-  std::size_t _expected_input_packet_length;
+//  SessionState _state = SessionState::Setup;
+//  std::size_t _expected_input_packet_length;
   std::shared_ptr<HyriseSession> _self;
-  std::unique_ptr<SQLPipeline> _sql_pipeline;
+//  std::unique_ptr<SQLPipeline> _sql_pipeline;
 
   std::unique_ptr<PreparedStatementInfo> _parse_info;
   std::unique_ptr<SQLQueryPlan> _prepared_query_plan;

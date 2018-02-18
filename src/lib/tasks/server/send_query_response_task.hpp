@@ -7,7 +7,7 @@ namespace opossum {
 
 class SendQueryResponseTask : public AbstractTask  {
  public:
-  SendQueryResponseTask(std::shared_ptr<ClientConnection> connection, SQLPipeline& sql_pipeline,
+  SendQueryResponseTask(std::shared_ptr<ClientConnection> connection, std::shared_ptr<SQLPipeline> sql_pipeline,
                         std::shared_ptr<const Table> explicit_result_table)
       : _connection(connection), _sql_pipeline(sql_pipeline), _result_table(std::move(explicit_result_table)) {}
 
@@ -23,7 +23,7 @@ class SendQueryResponseTask : public AbstractTask  {
   void _send_execution_info();
 
   std::shared_ptr<ClientConnection> _connection;
-  SQLPipeline& _sql_pipeline;
+  std::shared_ptr<SQLPipeline> _sql_pipeline;
   const std::shared_ptr<const Table> _result_table;
   uint64_t _row_count = 0;
   
