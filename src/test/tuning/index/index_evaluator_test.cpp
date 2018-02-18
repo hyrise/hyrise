@@ -31,6 +31,8 @@ class IndexEvaluatorTest : public BaseTest {
     StorageManager::get().add_table("t", t);
   }
 
+  void TearDown() override { StorageManager::get().drop_table("t"); }
+
   void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency) {
     return _evaluator->_inspect_lqp_operator(op, query_frequency);
   }
@@ -78,6 +80,34 @@ TEST_F(IndexEvaluatorTest, InspectPQPOperator) {
   EXPECT_EQ(_access_records().back().column_ref.table_name, "t");
   EXPECT_EQ(_access_records().back().column_ref.column_ids, std::vector<ColumnID>{ColumnID{0}});
   EXPECT_EQ(_access_records().back().condition, PredicateCondition::Equals);
+}
+
+TEST_F(IndexEvaluatorTest, GenerateEvaluations) {
+  std::vector<std::shared_ptr<SQLPipeline>> pipelines{
+      std::make_shared<SQLPipeline>("select * from t where col_1 = 4", UseMvcc::No),
+      std::make_shared<SQLPipeline>("select * from t where col_1 = 5", UseMvcc::No),
+      std::make_shared<SQLPipeline>("select * from t where col_1 = 6", UseMvcc::No),
+      std::make_shared<SQLPipeline>("select * from t where col_2 = '9'", UseMvcc::No)};
+
+  // Trigger query plan generation + caching(!)
+  for (auto pipeline : pipelines) {
+    pipeline->get_query_plans();
+  }
+
+  std::vector<std::shared_ptr<TuningChoice>> tuning_choices;
+  _evaluator->evaluate(tuning_choices);
+
+  EXPECT_EQ(tuning_choices.size(), 2u);
+
+  std::shared_ptr<IndexChoice> choice_col1 = std::dynamic_pointer_cast<IndexChoice>(tuning_choices[0]);
+  std::shared_ptr<IndexChoice> choice_col2 = std::dynamic_pointer_cast<IndexChoice>(tuning_choices[1]);
+
+  // Both indices aren't created yet
+  EXPECT_EQ(choice_col1->is_currently_chosen(), false);
+  EXPECT_EQ(choice_col2->is_currently_chosen(), false);
+
+  // Given that col_1 is queried more often, the desirability to create an index should be higher
+  EXPECT_GT(choice_col1->desirability(), choice_col2->desirability());
 }
 
 }  // namespace opossum
