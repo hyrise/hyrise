@@ -104,7 +104,9 @@ TEST_F(IndexOperationTest, ClearCacheWhenRemovingIndex) {
   auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
   auto& pqp_cache = SQLQueryCache<SQLQueryPlan>::get();
 
-  lqp_cache.set("test", std::make_shared<MockNode>(nullptr));
+  MockNode::ColumnDefinitions column_definitions;
+  column_definitions.push_back(std::make_pair(DataType::Int, "int_col"));
+  lqp_cache.set("test", std::make_shared<MockNode>(column_definitions));
   pqp_cache.set("test", SQLQueryPlan{});
 
   EXPECT_GT(lqp_cache.size(), 0u);
