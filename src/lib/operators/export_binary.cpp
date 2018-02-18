@@ -220,7 +220,7 @@ void ExportBinary::_write_partition(const std::shared_ptr<const Table>& table, s
   for (const auto chunk : chunks) {
     chunk_ids.emplace_back(chunk->id());
   }
-  _export_value(ofstream, ChunkID{chunk_ids.size()});
+  _export_value(ofstream, static_cast<ChunkID>(chunk_ids.size()));
   _export_values(ofstream, chunk_ids);
 }
 

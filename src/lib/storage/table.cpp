@@ -94,7 +94,7 @@ void Table::create_new_chunk(PartitionID partition_id) {
     new_chunk->add_column(make_shared_by_data_type<BaseColumn, ValueColumn>(type, nullable));
   }
 
-  new_chunk->set_id(ChunkID{_chunks.size()});
+  new_chunk->set_id(static_cast<ChunkID>(_chunks.size()));
   _chunks.push_back(new_chunk);
   _partition_schema->add_new_chunk(new_chunk, partition_id);
 }
@@ -174,7 +174,7 @@ void Table::emplace_chunk(const std::shared_ptr<Chunk>& chunk, PartitionID parti
   DebugAssert(chunk->column_count() == column_count(),
               std::string("adding chunk with ") + std::to_string(chunk->column_count()) + " columns to table with " +
                   std::to_string(column_count()) + " columns");
-  chunk->set_id(ChunkID{_chunks.size()});
+  chunk->set_id(static_cast<ChunkID>(_chunks.size()));
   _chunks.emplace_back(chunk);
   _partition_schema->add_new_chunk(chunk, partition_id);
 }

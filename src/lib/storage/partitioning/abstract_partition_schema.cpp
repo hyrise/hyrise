@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-PartitionID AbstractPartitionSchema::partition_count() const { return PartitionID{_partitions.size()}; }
+PartitionID AbstractPartitionSchema::partition_count() const { return static_cast<PartitionID>(_partitions.size()); }
 
 void AbstractPartitionSchema::clear() {
   for (auto partition : _partitions) {

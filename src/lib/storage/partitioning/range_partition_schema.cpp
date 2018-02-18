@@ -32,10 +32,10 @@ PartitionID RangePartitionSchema::get_matching_partition_for(const std::vector<A
 PartitionID RangePartitionSchema::get_matching_partition_for(const AllTypeVariant& value) const {
   for (size_t index = 0; index < _bounds.size(); ++index) {
     if (value <= _bounds.at(index)) {
-      return PartitionID{index};
+      return static_cast<PartitionID>(index);
     }
   }
-  return PartitionID{_bounds.size()};
+  return static_cast<PartitionID>(_bounds.size());
 }
 
 std::vector<ChunkID> RangePartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,

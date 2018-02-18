@@ -28,7 +28,7 @@ PartitionID HashPartitionSchema::get_matching_partition_for(const std::vector<Al
 
 PartitionID HashPartitionSchema::get_matching_partition_for(const AllTypeVariant& value) const {
   const auto hash = _hash_function(value);
-  PartitionID matching_partition{hash % _number_of_partitions};
+  PartitionID matching_partition = static_cast<PartitionID>(hash % _number_of_partitions);
   return matching_partition;
 }
 
