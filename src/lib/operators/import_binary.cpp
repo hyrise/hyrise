@@ -177,7 +177,9 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
   }
 }
 
-void ImportBinary::_import_partition(std::ifstream& file, const std::shared_ptr<AbstractPartitionSchema>& partition_schema, const PartitionID partition_id,
+void ImportBinary::_import_partition(std::ifstream& file,
+                                     const std::shared_ptr<AbstractPartitionSchema>& partition_schema,
+                                     const PartitionID partition_id,
                                      std::map<ChunkID, PartitionID>& chunk_to_partition) {
   const auto partition = partition_schema->get_partition(partition_id);
   const auto chunk_count = _read_value<ChunkID>(file);

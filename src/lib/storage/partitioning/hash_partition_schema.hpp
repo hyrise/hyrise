@@ -24,7 +24,8 @@ class HashPartitionSchema : public AbstractPartitionSchema {
 
   PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
   PartitionID get_matching_partition_for(const AllTypeVariant& value) const;
-  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition, const AllTypeVariant& value) const override;
+  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition,
+                                                const AllTypeVariant& value) const override;
 
   ColumnID get_column_id() const;
 

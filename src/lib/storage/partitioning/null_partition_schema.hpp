@@ -25,7 +25,9 @@ class NullPartitionSchema : public AbstractPartitionSchema {
   // Return false, since NullPartitioningSchema is only a list of chunks.
   bool is_partitioned() const override { return false; }
 
-  PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override { return PartitionID{0}; };
+  PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override {
+    return PartitionID{0};
+  };
 };
 
 }  // namespace opossum
