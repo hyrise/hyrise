@@ -74,11 +74,12 @@ float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice)
 void BaseIndexEvaluator::_inspect_query_cache() {
   _access_records.clear();
 
-  // ToDo(group01) add switching logic to prefer LQP over PQP if both are cached
+  // ToDo(group01): add switching logic to prefer LQP over PQP if both are cached
 
-  // ToDo(group01) introduce values() method in AbstractCache interface and implement in all subclasses
-  //   const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
-  // ToDo(group01) implement for cache implementations other than GDFS cache
+  // ToDo(anybody): The cache interface could be improved by introducing values() method in
+  // AbstractCache interfaceand implement in all subclasses
+  //  const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
+  // -> so this implementation could be independent of the actual cache implementation
 
   const auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
