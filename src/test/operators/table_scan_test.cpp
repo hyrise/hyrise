@@ -13,30 +13,41 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class OperatorsTableScanTest : public BaseTest {
+class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
-  void SetUp() override {
-    _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-    _table_wrapper->execute();
+  void SetUp() override { _encoding_type = GetParam(); }
 
-    _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
-    _table_wrapper_null->execute();
+  std::shared_ptr<TableWrapper> get_table_op() {
+    auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    table_wrapper->execute();
+    return table_wrapper;
+  }
 
+  std::shared_ptr<TableWrapper> get_table_op_even_dict() {
     std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(5);
     test_even_dict->add_column("a", DataType::Int);
     test_even_dict->add_column("b", DataType::Int);
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
-    DictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}});
+    DeprecatedDictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}}, _encoding_type);
 
-    _table_wrapper_even_dict = std::make_shared<TableWrapper>(std::move(test_even_dict));
-    _table_wrapper_even_dict->execute();
+    auto table_wrapper_even_dict = std::make_shared<TableWrapper>(std::move(test_even_dict));
+    table_wrapper_even_dict->execute();
+
+    return table_wrapper_even_dict;
+  }
+
+  std::shared_ptr<TableWrapper> get_table_op_null() {
+    auto table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
+    table_wrapper_null->execute();
+    return table_wrapper_null;
   }
 
   std::shared_ptr<TableWrapper> get_table_op_part_dict() {
@@ -48,7 +59,7 @@ class OperatorsTableScanTest : public BaseTest {
       table->append({i, 100.1 + i});
     }
 
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{2}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{2}}, _encoding_type);
 
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -98,7 +109,7 @@ class OperatorsTableScanTest : public BaseTest {
       table->append({i, 100.0f + i});
     }
 
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}}, _encoding_type);
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
     table_wrapper->execute();
@@ -136,7 +147,7 @@ class OperatorsTableScanTest : public BaseTest {
     const auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
-      DictionaryCompression::compress_table(*table);
+      DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
     }
 
     auto pos_list_a = std::make_shared<PosList>(
@@ -199,13 +210,22 @@ class OperatorsTableScanTest : public BaseTest {
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict, _table_wrapper_null;
+ protected:
+  EncodingType _encoding_type;
 };
 
-TEST_F(OperatorsTableScanTest, DoubleScan) {
+auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+  return std::to_string(static_cast<uint32_t>(info.param));
+};
+
+// As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
+INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsTableScanTest,
+                        ::testing::Values(EncodingType::DeprecatedDictionary, EncodingType::Dictionary), formatter);
+
+TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
 
-  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
 
   auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, PredicateCondition::LessThan, 457.9);
@@ -214,24 +234,24 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanTest, EmptyResultScan) {
-  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, 90000);
+TEST_P(OperatorsTableScanTest, EmptyResultScan) {
+  auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 90000);
   scan_1->execute();
 
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
     EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
 }
 
-TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
+TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -246,7 +266,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4);
+    auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 4);
 
     if (test.first == PredicateCondition::Between) {
       EXPECT_THROW(scan->execute(), std::logic_error);
@@ -259,7 +279,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -274,7 +294,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106};
 
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{1}, PredicateCondition::LessThan, 108);
+    auto scan1 = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{1}, PredicateCondition::LessThan, 108);
     scan1->execute();
 
     auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4);
@@ -290,7 +310,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanPartiallyCompressed) {
+TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered.tbl", 2);
 
   auto table_wrapper = get_table_op_part_dict();
@@ -300,7 +320,7 @@ TEST_F(OperatorsTableScanTest, ScanPartiallyCompressed) {
   EXPECT_TABLE_EQ_UNORDERED(scan_1->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanTest, ScanWeirdPosList) {
+TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
 
   auto table_wrapper = get_table_op_filtered();
@@ -310,7 +330,7 @@ TEST_F(OperatorsTableScanTest, ScanWeirdPosList) {
   EXPECT_TABLE_EQ_UNORDERED(scan_1->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValue) {
+TEST_P(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValue) {
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
@@ -323,14 +343,14 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValu
   tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 30);
+    auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 30);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) {
+TEST_P(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) {
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
@@ -343,14 +363,14 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) 
   tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0} /* "a" */, test.first, -10);
+    auto scan = std::make_shared<TableScan>(get_table_op_even_dict(), ColumnID{0} /* "a" */, test.first, -10);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -364,7 +384,7 @@ TEST_F(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -378,9 +398,9 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DictionaryCompression::compress_table(*table);
+  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -393,9 +413,9 @@ TEST_F(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues)
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DictionaryCompression::compress_table(*table);
+  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -408,7 +428,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithN
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
+TEST_P(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   // scanning for a value that is around the dictionary's bounds
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -422,16 +442,16 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 0);
+    auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0}, test.first, 0);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
+TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
   auto scan_1 =
-      std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, 12345);
+      std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 12345);
   scan_1->execute();
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(0));
 
@@ -442,7 +462,7 @@ TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
   // 2**8 + 1 values require a data type of 16bit.
   const auto table_wrapper_dict_16 = get_table_op_with_n_dict_entries((1 << 8) + 1);
   auto scan_1 =
@@ -460,14 +480,14 @@ TEST_F(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
 }
 
-TEST_F(OperatorsTableScanTest, OperatorName) {
+TEST_P(OperatorsTableScanTest, OperatorName) {
   auto scan_1 =
-      std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+      std::make_shared<opossum::TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
 
   EXPECT_EQ(scan_1->name(), "TableScan");
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4));
   table_wrapper->execute();
 
@@ -478,9 +498,9 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DictionaryCompression::compress_table(*table);
+  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -492,7 +512,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   auto table = load_table("src/test/tables/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -504,7 +524,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNulls) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNulls) {
   auto table = load_table("src/test/tables/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -516,7 +536,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNu
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -529,9 +549,9 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DictionaryCompression::compress_table(*table);
+  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -543,7 +563,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueColumn) {
   auto table = create_referencing_table_w_null_row_id(false);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -555,7 +575,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictColumn) {
   auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -567,13 +587,13 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictCol
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_F(OperatorsTableScanTest, NullSemantics) {
+TEST_P(OperatorsTableScanTest, NullSemantics) {
   const auto predicate_conditions = std::vector<PredicateCondition>(
       {PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::LessThan,
        PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals});
 
   for (auto predicate_condition : predicate_conditions) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_null, ColumnID{0}, predicate_condition, NULL_VALUE);
+    auto scan = std::make_shared<TableScan>(get_table_op_null(), ColumnID{0}, predicate_condition, NULL_VALUE);
     scan->execute();
 
     EXPECT_EQ(scan->get_output()->row_count(), 0u);
@@ -584,10 +604,10 @@ TEST_F(OperatorsTableScanTest, NullSemantics) {
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
+TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   const auto expected = std::vector<AllTypeVariant>{110, 112, 114, 116, 118, 120, 122, 124};
 
-  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0},
+  auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_dict(), ColumnID{0},
                                                    PredicateCondition::GreaterThanEquals, 0);
   scan->set_excluded_chunk_ids({ChunkID{0u}});
   scan->execute();

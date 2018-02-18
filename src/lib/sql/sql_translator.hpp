@@ -102,6 +102,9 @@ class SQLTranslator final : public Noncopyable {
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update);
 
+  std::shared_ptr<AbstractLQPNode> _translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
+                                                              const hsql::TableRef& table);
+
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */

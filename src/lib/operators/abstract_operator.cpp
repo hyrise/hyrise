@@ -74,16 +74,12 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
+bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
+
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
-  // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
-  DebugAssert(
-      [context = _transaction_context]() {
-        bool transaction_context_set = context.owner_before(std::weak_ptr<TransactionContext>{}) ||
-                                       std::weak_ptr<TransactionContext>{}.owner_before(context);
-        return !transaction_context_set || !context.expired();
-      }(),
-      "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
-  return _transaction_context.lock();
+  DebugAssert(!transaction_context_is_set() || !_transaction_context->expired(),
+              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
+  return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 
 void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
@@ -167,7 +163,11 @@ void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
   const auto output = get_output();
   if (output) {
     out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << output->column_count()
-        << " column(s)/" << _performance_data.walltime_ns << "ns)";
+        << " column(s)/";
+
+    out << format_bytes(output->estimate_memory_usage());
+    out << "/";
+    out << _performance_data.walltime_ns << "ns)";
   }
 
   out << std::endl;
