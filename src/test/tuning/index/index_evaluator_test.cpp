@@ -29,6 +29,9 @@ class IndexEvaluatorTest : public BaseTest {
     t->append({8, "8"});
     t->append({9, "9"});
     StorageManager::get().add_table("t", t);
+
+    SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get().clear();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   void TearDown() override { StorageManager::get().drop_table("t"); }
