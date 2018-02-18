@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cmath>
-
 #include <boost/preprocessor/seq/for_each_product.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
+
+#include <cmath>
 
 #include "jit_types.hpp"
 #include "operators/table_scan/like_table_scan_impl.hpp"
