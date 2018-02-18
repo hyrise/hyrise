@@ -223,6 +223,7 @@ enum class ExpressionType {
 
   /*Others*/
   IsNull,
+  IsNotNull,
   Case,
   Hint
 };

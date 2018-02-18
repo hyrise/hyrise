@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "operators/jit_operator/jit_types.hpp"
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 
@@ -34,6 +35,19 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNull, "IS NULL"},
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
+
+const std::unordered_map<PredicateCondition, ExpressionType> predicate_condition_to_expression_type = {
+    {PredicateCondition::Equals, ExpressionType::Equals},
+    {PredicateCondition::NotEquals, ExpressionType::NotEquals},
+    {PredicateCondition::LessThan, ExpressionType::LessThan},
+    {PredicateCondition::LessThanEquals, ExpressionType::LessThanEquals},
+    {PredicateCondition::GreaterThan, ExpressionType::GreaterThan},
+    {PredicateCondition::GreaterThanEquals, ExpressionType::GreaterThanEquals},
+    {PredicateCondition::Between, ExpressionType::Between},
+    {PredicateCondition::Like, ExpressionType::Like},
+    {PredicateCondition::NotLike, ExpressionType::NotLike},
+    {PredicateCondition::IsNull, ExpressionType::IsNull},
+    {PredicateCondition::IsNotNull, ExpressionType::IsNotNull}};
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
@@ -67,6 +81,7 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Exists, "Exists"},
     /*Other*/
     {ExpressionType::IsNull, "IsNull"},
+    {ExpressionType::IsNotNull, "IsNotNull"},
     {ExpressionType::Case, "Case"},
     {ExpressionType::Hint, "Hint"},
 };
@@ -138,5 +153,16 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                  map.insert({hana::first(pair), std::string{hana::second(pair)}});
                  return map;
                });
+
+const std::unordered_map<DataType, JitDataType> data_type_to_jit_data_type = {{DataType::Int, JitDataType::Int},
+                                                                              {DataType::Long, JitDataType::Long},
+                                                                              {DataType::Float, JitDataType::Float},
+                                                                              {DataType::Double, JitDataType::Double},
+                                                                              {DataType::String, JitDataType::String}};
+
+const std::unordered_map<JitDataType, DataType> jit_data_type_to_data_type = {
+    {JitDataType::Bool, DataType::Int},      {JitDataType::Int, DataType::Int},
+    {JitDataType::Long, DataType::Long},     {JitDataType::Float, DataType::Float},
+    {JitDataType::Double, DataType::Double}, {JitDataType::String, DataType::String}};
 
 }  // namespace opossum
