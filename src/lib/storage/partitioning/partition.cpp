@@ -12,7 +12,7 @@ void Partition::clear() { _chunks.clear(); }
 
 void Partition::add_new_chunk(std::shared_ptr<Chunk> chunk) { _chunks.emplace_back(chunk); }
 
-void Partition::append(std::vector<AllTypeVariant> values) { _chunks.back()->append(values); }
+void Partition::append(const std::vector<AllTypeVariant>& values) { _chunks.back()->append(values); }
 
 std::vector<std::shared_ptr<const Chunk>> Partition::get_chunks() const {
   std::vector<std::shared_ptr<const Chunk>> immutable_chunks;

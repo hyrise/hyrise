@@ -1,5 +1,7 @@
 #include "hash_function.hpp"
 
+#include <boost/functional/hash.hpp>
+
 #include "type_cast.hpp"
 
 namespace opossum {
@@ -10,7 +12,7 @@ class HashValueVisitor : public boost::static_visitor<HashValue> {
 
   template <typename T>
   HashValue operator()(T value) {
-    return HashValue{std::hash<T>{}(value)};
+    return HashValue{boost::hash_value(value)};
   }
 };
 

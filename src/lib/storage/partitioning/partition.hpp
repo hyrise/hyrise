@@ -29,7 +29,10 @@ class Partition {
 
   void clear();
   void add_new_chunk(std::shared_ptr<Chunk> chunk);
-  void append(std::vector<AllTypeVariant> values);
+
+  // adds a new row, given as a list of values, to the last chunk of the partition
+  // note this is slow and not thread-safe and should be used for testing purposes only
+  void append(const std::vector<AllTypeVariant>& values);
 
   std::vector<std::shared_ptr<const Chunk>> get_chunks() const;
   std::shared_ptr<const Chunk> last_chunk() const;

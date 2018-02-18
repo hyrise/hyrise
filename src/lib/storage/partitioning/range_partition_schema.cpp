@@ -4,9 +4,9 @@ namespace opossum {
 
 RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTypeVariant> bounds)
     : _column_id(column_id), _bounds(bounds) {
-  Assert(std::all_of(bounds.cbegin(), bounds.cend(),
-                     [&bounds](const AllTypeVariant& each) { return each.which() == bounds.front().which(); }),
-         "All bounds have to be of the same type.");
+  DebugAssert(std::all_of(bounds.cbegin(), bounds.cend(),
+                          [&bounds](const AllTypeVariant& each) { return each.which() == bounds.front().which(); }),
+              "All bounds have to be of the same type.");
 
   _bound_type = data_type_from_all_type_variant(bounds.front());
   _partitions.reserve(bounds.size() + 1);

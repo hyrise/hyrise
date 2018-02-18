@@ -16,14 +16,8 @@ namespace opossum {
  * to the PartitionSchema.
  */
 
-class AbstractPartitionSchema {
+class AbstractPartitionSchema : private Noncopyable {
  public:
-  AbstractPartitionSchema() = default;
-  virtual ~AbstractPartitionSchema() = default;
-
-  AbstractPartitionSchema(AbstractPartitionSchema&&) = default;
-  AbstractPartitionSchema& operator=(AbstractPartitionSchema&&) = default;
-
   virtual std::string name() const = 0;
   virtual PartitionSchemaType get_type() const = 0;
   PartitionID partition_count() const;
