@@ -21,7 +21,7 @@ class ColumnRefTest : public BaseTest {
   void TearDown() override { StorageManager::get().drop_table("table_name"); }
 };
 
-TEST_F(ColumnRefTest, GetPropertiesTest) {
+TEST_F(ColumnRefTest, GetProperties) {
   std::vector<ColumnID> column_ids{ColumnID{123}};
   ColumnRef column_ref{"table_name", column_ids};
 
@@ -29,7 +29,7 @@ TEST_F(ColumnRefTest, GetPropertiesTest) {
   EXPECT_EQ(column_ref.column_ids, column_ids);
 }
 
-TEST_F(ColumnRefTest, GreaterThanOperatorTest) {
+TEST_F(ColumnRefTest, GreaterThanOperator) {
   std::vector<ColumnID> column_ids_smaller{ColumnID{123}, ColumnID{456}};
   std::vector<ColumnID> column_ids_bigger{ColumnID{789}, ColumnID{901}};
 
@@ -43,7 +43,7 @@ TEST_F(ColumnRefTest, GreaterThanOperatorTest) {
   EXPECT_TRUE(cref_bigger > cref_smaller);
 }
 
-TEST_F(ColumnRefTest, LessThanOperatorTest) {
+TEST_F(ColumnRefTest, LessThanOperator) {
   std::vector<ColumnID> column_ids_smaller{ColumnID{123}, ColumnID{456}};
   std::vector<ColumnID> column_ids_bigger{ColumnID{789}, ColumnID{901}};
 
@@ -57,7 +57,7 @@ TEST_F(ColumnRefTest, LessThanOperatorTest) {
   EXPECT_TRUE(cref_smaller < cref_bigger);
 }
 
-TEST_F(ColumnRefTest, StreamingOperatorTest) {
+TEST_F(ColumnRefTest, StreamingOperator) {
   std::vector<ColumnID> column_ids{ColumnID{0}};
   ColumnRef column_ref{"table_name", column_ids};
 
@@ -68,7 +68,7 @@ TEST_F(ColumnRefTest, StreamingOperatorTest) {
   EXPECT_EQ(result, "table_name.(column_name)");
 }
 
-TEST_F(ColumnRefTest, EqualityTest) {
+TEST_F(ColumnRefTest, Equality) {
   std::vector<ColumnID> column_ids{ColumnID{0}};
   ColumnRef column_ref{"table_name", column_ids};
 

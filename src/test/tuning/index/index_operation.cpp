@@ -43,22 +43,22 @@ class IndexOperationTest : public BaseTest {
   ColumnRef _column_ref{"table_name", ColumnID{0}};
 };
 
-TEST_F(IndexOperationTest, GetColumRefTest) {
+TEST_F(IndexOperationTest, GetColumRef) {
   IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.column(), _column_ref);
 }
 
-TEST_F(IndexOperationTest, GetColumnIndexTypeTest) {
+TEST_F(IndexOperationTest, GetColumnIndexType) {
   IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.type(), ColumnIndexType::GroupKey);
 }
 
-TEST_F(IndexOperationTest, GetCreateTest) {
+TEST_F(IndexOperationTest, GetCreate) {
   IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.create(), true);
 }
 
-TEST_F(IndexOperationTest, PrintOnStreamTest) {
+TEST_F(IndexOperationTest, PrintOnStream) {
   IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
 
   std::stringstream stream;
@@ -68,7 +68,7 @@ TEST_F(IndexOperationTest, PrintOnStreamTest) {
   EXPECT_EQ(result, "IndexOperation{Create on table_name.(column_name)}");
 }
 
-TEST_F(IndexOperationTest, CreateIndexTest) {
+TEST_F(IndexOperationTest, CreateIndex) {
   auto supported_index_types = {ColumnIndexType::GroupKey, ColumnIndexType::CompositeGroupKey,
                                 ColumnIndexType::AdaptiveRadixTree};
 
@@ -85,8 +85,7 @@ TEST_F(IndexOperationTest, CreateIndexTest) {
   }
 }
 
-TEST_F(IndexOperationTest, DeleteIndexTest) {
-  _ensure_pristine_table();
+TEST_F(IndexOperationTest, DeleteIndex) {
   auto column_ids = std::vector{ColumnID{0}};
   _table->create_index<GroupKeyIndex>(column_ids);
 

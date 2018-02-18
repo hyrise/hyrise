@@ -13,7 +13,7 @@ class IndexChoiceTest : public BaseTest {
   ColumnRef column_ref{"table_name", ColumnID{0}};
 };
 
-TEST_F(IndexChoiceTest, GetDesirabilityTest) {
+TEST_F(IndexChoiceTest, GetDesirability) {
   IndexChoice choice{column_ref};
 
   // Constructor default value
@@ -24,7 +24,7 @@ TEST_F(IndexChoiceTest, GetDesirabilityTest) {
   EXPECT_FLOAT_EQ(choice.desirability(), 1.0f);
 }
 
-TEST_F(IndexChoiceTest, GetCostTest) {
+TEST_F(IndexChoiceTest, GetCost) {
   IndexChoice choice{column_ref};
 
   EXPECT_FLOAT_EQ(choice.cost(), 0.0f);
@@ -33,7 +33,7 @@ TEST_F(IndexChoiceTest, GetCostTest) {
   EXPECT_FLOAT_EQ(choice.cost(), 1.0f);
 }
 
-TEST_F(IndexChoiceTest, GetConfidenceTest) {
+TEST_F(IndexChoiceTest, GetConfidence) {
   IndexChoice choice{column_ref};
 
   EXPECT_FLOAT_EQ(choice.confidence(), 1.0f);
@@ -50,7 +50,7 @@ TEST_F(IndexChoiceTest, GetCurrentlyChosen) {
   EXPECT_EQ(choice_nonexisting.is_currently_chosen(), true);
 }
 
-TEST_F(IndexChoiceTest, AcceptTest) {
+TEST_F(IndexChoiceTest, Accept) {
   // Expect an IndexOperation that is configured to create a non-existing index
   IndexChoice choice_nonexisting{column_ref, false};
   auto accept_operation = std::dynamic_pointer_cast<IndexOperation>(choice_nonexisting.accept());
@@ -66,7 +66,7 @@ TEST_F(IndexChoiceTest, AcceptTest) {
   EXPECT_EQ(accept_noop, nullptr);
 }
 
-TEST_F(IndexChoiceTest, RejectTest) {
+TEST_F(IndexChoiceTest, Reject) {
   // Analogous to accept(), but the other way around
   IndexChoice choice_nonexisting{column_ref, false};
   auto reject_noop = std::dynamic_pointer_cast<IndexOperation>(choice_nonexisting.reject());
