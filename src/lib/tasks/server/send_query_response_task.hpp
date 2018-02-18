@@ -5,13 +5,14 @@
 
 namespace opossum {
 
-class SendQueryResponseTask : public AbstractTask  {
+class ClientConnection;
+class SQLPipeline;
+
+class SendQueryResponseTask : public ServerTask<void>  {
  public:
   SendQueryResponseTask(std::shared_ptr<ClientConnection> connection, std::shared_ptr<SQLPipeline> sql_pipeline,
                         std::shared_ptr<const Table> explicit_result_table)
       : _connection(connection), _sql_pipeline(sql_pipeline), _result_table(std::move(explicit_result_table)) {}
-
-  boost::future<void> get_future() { return _promise.get_future(); }
 
  protected:
   void _on_execute() override;
@@ -26,8 +27,6 @@ class SendQueryResponseTask : public AbstractTask  {
   std::shared_ptr<SQLPipeline> _sql_pipeline;
   const std::shared_ptr<const Table> _result_table;
   uint64_t _row_count = 0;
-  
-  boost::promise<void> _promise;
 };
 
 }  // namespace opossum

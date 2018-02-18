@@ -1,5 +1,7 @@
 #include "execute_server_query_task.hpp"
 
+#include "sql/sql_pipeline.hpp"
+
 namespace opossum {
 
 void ExecuteServerQueryTask::_on_execute() {

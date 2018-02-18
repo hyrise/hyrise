@@ -1,17 +1,22 @@
 #pragma once
 
+#include <boost/thread/future.hpp>
+
 #include "scheduler/abstract_task.hpp"
-#include "server/hyrise_session.hpp"
 
 namespace opossum {
 
+template<typename T>
 class ServerTask : public AbstractTask {
- // TODO: Re-purpose this abstract class to manage the result promise
  public:
-  explicit ServerTask(std::shared_ptr<HyriseSession> session) : _session(std::move(session)) {}
+  explicit ServerTask(){}
+  
+  using result_type = T;
+  
+  boost::future<T> get_future() { return _promise.get_future(); }
 
  protected:
-  std::shared_ptr<HyriseSession> _session;
+  boost::promise<T> _promise;
 };
 
 }  // namespace opossum

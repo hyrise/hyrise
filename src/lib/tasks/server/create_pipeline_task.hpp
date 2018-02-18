@@ -6,18 +6,19 @@
 
 namespace opossum {
 
+class SQLPipeline;
+
 struct CreatePipelineResult {
   std::shared_ptr<SQLPipeline> sql_pipeline;
   std::optional<std::pair<std::string, std::string>> load_table;
   bool is_load_table;
 };
 
-class CreatePipelineTask : public AbstractTask  {
+// TODO: I think we can make the CreatePipelineResult a unique_ptr again...
+class CreatePipelineTask : public ServerTask<std::shared_ptr<CreatePipelineResult>>  {
  public:
   CreatePipelineTask(std::string sql) : _sql(sql) {}
   
-  boost::future<std::shared_ptr<CreatePipelineResult>> get_future() { return _promise.get_future(); }
-
  protected:
   void _on_execute() override;
 
@@ -30,8 +31,6 @@ class CreatePipelineTask : public AbstractTask  {
 
   std::string _file_name;
   std::string _table_name;
-  
-  boost::promise<std::shared_ptr<CreatePipelineResult>> _promise;
 };
 
 }  // namespace opossum

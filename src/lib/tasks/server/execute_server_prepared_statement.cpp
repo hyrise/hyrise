@@ -2,6 +2,8 @@
 #include <concurrency/transaction_manager.hpp>
 
 #include "scheduler/current_scheduler.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "sql/sql_query_plan.hpp"
 
 namespace opossum {
 
@@ -11,10 +13,10 @@ void ExecuteServerPreparedStatement::_on_execute() {
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
     _transaction_context->commit();
     auto result_table = tasks.back()->get_operator()->get_output();
-    return _session->prepared_executed(std::move(result_table));
+//    return _session->prepared_executed(std::move(result_table));
   } catch (const std::exception& exception) {
     _transaction_context->rollback();
-    return _session->pipeline_error(exception.what());
+//    return _session->pipeline_error(exception.what());
   }
 }
 

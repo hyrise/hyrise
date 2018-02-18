@@ -1,6 +1,8 @@
 #include "send_query_response_task.hpp"
 
 #include "server/client_connection.hpp"
+#include "server/postgres_wire_handler.hpp"
+#include "sql/sql_pipeline.hpp"
 
 #include "SQLParserResult.h"
 

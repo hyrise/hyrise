@@ -1,6 +1,8 @@
 #include "bind_server_prepared_statement.hpp"
-#include <concurrency/transaction_manager.hpp>
+
+#include "concurrency/transaction_manager.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_pipeline.hpp"
 
 namespace opossum {
 
@@ -14,9 +16,9 @@ void BindServerPreparedStatement::_on_execute() {
     auto transaction_context = opossum::TransactionManager::get().new_transaction_context();
     query_plan->set_transaction_context(transaction_context);
 
-    return _session->prepared_bound(std::move(query_plan), std::move(transaction_context));
+//    return _session->prepared_bound(std::move(query_plan), std::move(transaction_context));
   } catch (const std::exception& exception) {
-    return _session->pipeline_error(exception.what());
+//    return _session->pipeline_error(exception.what());
   }
 }
 

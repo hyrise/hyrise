@@ -7,8 +7,9 @@
 #include <memory>
 #include <optional>
 
-#include "postgres_wire_handler.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "tasks/server/server_task.hpp"
+#include "postgres_wire_handler.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -58,6 +59,9 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   void _accept_describe();
   
   void _terminate_session();
+  
+  template<typename T>
+  auto _dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future());
 
   boost::asio::io_service& _io_service;
   std::shared_ptr<ClientConnection> _connection;

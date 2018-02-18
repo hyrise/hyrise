@@ -42,7 +42,7 @@ void HyriseSession::start() {
       } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
         
-        // Something went wrong
+        // Release self and terminate the connection
         _self.reset();
       }
     }
@@ -72,7 +72,6 @@ boost::future<void> HyriseSession::_handle_client_requests() {
       throw std::logic_error("Session was terminated by client");
 
     // Proceed by reading the packet contents
-    std::cout << "reading packet contents" << std::endl;
     return _connection->receive_packet_contents(request.payload_length)
       >> then >> [=] (InputPacket packet_contents) {
       return std::make_pair(request, std::move(packet_contents)); 
@@ -80,13 +79,9 @@ boost::future<void> HyriseSession::_handle_client_requests() {
   };
   
   auto process_command = [=](std::pair<RequestHeader, InputPacket> packet) {
-//    std::cout << "processing packet contents" << std::endl;
-//    std::cout << PostgresWireHandler::handle_query_packet(packet.second) << std::endl;
-    packet.second.offset = packet.second.data.cbegin();
     switch (packet.first.message_type) {
       case NetworkMessageType::SimpleQueryCommand: {
         const auto sql = PostgresWireHandler::handle_query_packet(packet.second);
-        std::cout << "sql" << sql << std::endl;
         return _handle_simple_query_command(sql)
           >> then >> [=]() { _connection->send_ready_for_query(); };
       }
@@ -149,45 +144,25 @@ void HyriseSession::_terminate_session() {
 }
 
 boost::future<void> HyriseSession::_handle_simple_query_command(const std::string sql) {
-  using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
-  
   auto create_sql_pipeline = [=] () {
-    auto task = std::make_shared<CreatePipelineTask>(sql);
-    CurrentScheduler::schedule_tasks(TaskList({task}));
-    return task->get_future().then(boost::launch::sync, [=] (boost::future<std::shared_ptr<CreatePipelineResult>> f) {
-      // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
-      return _io_service.post(boost::asio::use_boost_future)
-        // Make sure to be on the main thread before re-throwing the exceptions
-        .then(boost::launch::sync, [f = std::move(f)] (boost::future<void>) mutable { return f.get(); });
-    }).unwrap();
+    return _dispatch_server_task(std::make_shared<CreatePipelineTask>(sql));
   };
   
   auto load_table_file = [=](std::string& file_name, std::string& table_name) {
     auto task = std::make_shared<LoadServerFileTask>(file_name, table_name);
-    CurrentScheduler::schedule_tasks(TaskList({task}));
-    return task->get_future().then(boost::launch::sync, [=] (boost::future<void> f) {
-      return _io_service.post(boost::asio::use_boost_future)
-        .then(boost::launch::sync, [f = std::move(f)] (boost::future<void>) mutable { f.get(); })
-        .then(boost::launch::sync, [=] (boost::future<void>) { /* TODO: Send notice */ });
-    }).unwrap();
+    return _dispatch_server_task(task)
+      >> then >> [=] () { return _connection->send_notice("Successfully loaded " + table_name); };
   };
   
   auto execute_sql_pipeline = [=] (std::shared_ptr<SQLPipeline> sql_pipeline) {
     auto task = std::make_shared<ExecuteServerQueryTask>(sql_pipeline);
-    CurrentScheduler::schedule_tasks(TaskList({task}));
-    // TODO: This all looks quite terrible
-    return task->get_future().then(boost::launch::sync, [=] (boost::future<void> f) {
-      return _io_service.post(boost::asio::use_boost_future)
-        .then(boost::launch::sync, [f = std::move(f)] (boost::future<void>) mutable { f.get(); })
-        .then(boost::launch::sync, [=] (boost::future<void>) { return sql_pipeline; });
-    }).unwrap();
+    return _dispatch_server_task(task)
+      >> then >> [=] () { return sql_pipeline; };
   };
   
   auto send_query_response = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
     auto task = std::make_shared<SendQueryResponseTask>(_connection, sql_pipeline, sql_pipeline->get_result_table());
-    CurrentScheduler::schedule_tasks(TaskList({task}));
-    return task->get_future() 
-      >> then >> [=] () { return _io_service.post(boost::asio::use_boost_future); };
+    return _dispatch_server_task(task);
   };
     
   return create_sql_pipeline() >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
@@ -299,5 +274,19 @@ void HyriseSession::pipeline_error(const std::string& error_msg) {
 }
 
 //SessionState HyriseSession::state() const { return _state; }
+
+template<typename T>
+auto HyriseSession::_dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future()) {
+  using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
+
+  CurrentScheduler::schedule_tasks(TaskList({task}));
+
+  return task->get_future().then(boost::launch::sync, [=] (boost::future<typename T::result_type> result) {
+    // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
+    return _io_service.post(boost::asio::use_boost_future)
+      // Make sure to be on the main thread before re-throwing the exceptions
+      >> then >> [result = std::move(result)] () mutable { return result.get(); };
+  }).unwrap();
+}
 
 }  // namespace opossum
