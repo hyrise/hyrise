@@ -7,14 +7,25 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
+#if HYRISE_JIT_SUPPORT
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
+#else
+#include "logical_query_plan/lqp_translator.hpp"
+#endif
+
 namespace opossum {
+
+#if HYRISE_JIT_SUPPORT
+using CurrentLQPTranslator = JitAwareLQPTranslator;
+#else
+using CurrentLQPTranslator = LQPTranslator;
+#endif
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc,
                                            const std::shared_ptr<Optimizer>& optimizer)
@@ -149,7 +160,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   const auto& lqp = get_optimized_logical_plan();
 
   try {
-    _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
+    _query_plan->add_tree_by_root(CurrentLQPTranslator{}.translate_node(lqp));
     if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while translating query plan:\n  " + std::string(exception.what()));

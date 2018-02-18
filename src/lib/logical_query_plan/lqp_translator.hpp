@@ -19,9 +19,9 @@ class PQPExpression;
  * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
  * engine, which in return is represented by its root Operator.
  */
-class LQPTranslator final : private Noncopyable {
+class LQPTranslator : private Noncopyable {
  public:
-  std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  virtual std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
  private:
   std::shared_ptr<AbstractOperator> _translate_by_node_type(LQPNodeType type,
