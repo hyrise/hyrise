@@ -29,7 +29,7 @@ template <typename T>
 using MaterializedValueAllocator = PolymorphicAllocator<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedChunk = std::vector<MaterializedValue<T>>;
+using MaterializedChunk = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
 
 template <typename T>
 struct MaterializedNUMAPartition{
@@ -93,7 +93,8 @@ class ColumnMaterializer {
         // Find out whether we actually are on a NUMA System, if so, remember the numa node
         auto numa_res = dynamic_cast<NUMAMemoryResource *>(alloc.resource());
         if(numa_res != nullptr){
-            numa_node_id = NodeID{numa_res->get_node_id()};
+            // TODO(florian): NodeID vs int for node adressing
+            numa_node_id = NodeID{static_cast<uint32_t>(numa_res->get_node_id())};
         }
 
       jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, numa_node_id));
@@ -104,7 +105,7 @@ class ColumnMaterializer {
 
     CurrentScheduler::wait_for_tasks(jobs);
 
-    for(auto& partition : output){
+    for(auto& partition : (*output)){
         // removes null pointers, this is important since we currently opt against using mutexes so we have sparse vectors
         partition.fit();
     }
@@ -145,7 +146,7 @@ class ColumnMaterializer {
                                                              MaterializedValueAllocator<T> alloc) {
 
     // TODO(florian): think long and hard about allocator lifetimes
-    auto output = MaterializedChunk<T>{alloc};
+    auto output = MaterializedChunk<T>(alloc);
     output.reserve(column.size());
 
     auto iterable = create_iterable_from_column<T>(column);

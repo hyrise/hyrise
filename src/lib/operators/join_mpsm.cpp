@@ -83,14 +83,18 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _cluster_count = _determine_number_of_clusters();
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
+    for(size_t cluster = 0; cluster < _cluster_count; ++cluster){
+      _output_pos_lists_left.resize(_cluster_count);
+      _output_pos_lists_right.resize(_cluster_count);
+    }
   }
 
  protected:
   JoinMPSM& _sort_merge_join;
 
   // Contains the materialized sorted input tables
-  std::unique_ptr<MaterializedColumnList<T>> _sorted_left_table;
-  std::unique_ptr<MaterializedColumnList<T>> _sorted_right_table;
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> _sorted_left_table;
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
   std::unique_ptr<PosList> _null_rows_left;
@@ -106,8 +110,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
+  std::vector<std::vector<std::shared_ptr<PosList>>> _output_pos_lists_left;
+  std::vector<std::vector<std::shared_ptr<PosList>>> _output_pos_lists_right;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -115,16 +119,17 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() {}
-    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
+    TablePosition(NodeID partition, size_t cluster, size_t index) : partition{partition}, cluster{cluster}, index{index} {}
 
+    NodeID partition;
     size_t cluster;
     size_t index;
 
     TableRange to(TablePosition position) { return TableRange(*this, position); }
   };
 
-  TablePosition _end_of_left_table;
-  TablePosition _end_of_right_table;
+//  TablePosition _end_of_left_table;
+//  TablePosition _end_of_right_table;
 
   /**
     * The TableRange is a utility struct that is used to define ranges of rows in a sorted input table spanning from
@@ -132,20 +137,21 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
-    TableRange(size_t cluster, size_t start_index, size_t end_index)
-        : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
+    TableRange(NodeID partition, size_t cluster, size_t start_index, size_t end_index)
+        : start{TablePosition(partition, cluster, start_index)}, end{TablePosition(partition, cluster, end_index)} {}
 
     TablePosition start;
     TablePosition end;
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(std::unique_ptr<MaterializedColumnList<T>>& table, F action) {
+    void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
+      DebugAssert(start.parition == end.partition, "for_every_row_id only allowed inside of partitions")
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
+        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[end.partition]._chunk_columns[cluster]->size();
         for (size_t index = start_index; index < end_index; ++index) {
-          action((*(*table)[cluster])[index].row_id);
+          action((*(*table)[end.partition]._chunk_columns[cluster])[index].row_id);
         }
       }
     }
@@ -159,6 +165,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
+    // TODO(florian): ensure we do not blow up our numa cores or get other snafu due to bad matching of numa cores to clusters
     const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
     return static_cast<size_t>(std::pow(2, std::ceil(std::log2(numa_nodes))));
   }
@@ -166,11 +173,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
-    DebugAssert(table->size() > 0, "table has no chunks");
-    auto last_cluster = table->size() - 1;
-    return TablePosition(last_cluster, (*table)[last_cluster]->size());
-  }
+//  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
+//    DebugAssert(table->size() > 0, "table has no chunks");
+//    auto last_cluster = table->size() - 1;
+//    return TablePosition(last_cluster, (*table)[last_cluster]->size());
+//  }
 
   /**
   * Represents the result of a value comparison.
@@ -183,55 +190,57 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
     size_t cluster_number = left_run.start.cluster;
+    NodeID partition_number = left_run.start.partition;
     switch (_op) {
       case ScanType::OpEquals:
         if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run);
+          _emit_all_combinations(partition_number, cluster_number, left_run, right_run);
         } else if (compare_result == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-            _emit_right_null_combinations(cluster_number, left_run);
+            _emit_right_null_combinations(partition_number, cluster_number, left_run);
           }
         } else if (compare_result == CompareResult::Greater) {
           if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-            _emit_left_null_combinations(cluster_number, right_run);
+            _emit_left_null_combinations(partition_number, cluster_number, right_run);
           }
         }
         break;
-      case ScanType::OpNotEquals:
-        if (compare_result == CompareResult::Greater) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-        } else if (compare_result == CompareResult::Less) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        }
-        break;
-      case ScanType::OpGreaterThan:
-        if (compare_result == CompareResult::Greater) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-        }
-        break;
-      case ScanType::OpGreaterThanEquals:
-        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        }
-        break;
-      case ScanType::OpLessThan:
-        if (compare_result == CompareResult::Less) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        } else if (compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-        }
-        break;
-      case ScanType::OpLessThanEquals:
-        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        }
-        break;
+//      case ScanType::OpNotEquals:
+//        if (compare_result == CompareResult::Greater) {
+//          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+//        } else if (compare_result == CompareResult::Equal) {
+//          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+//          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+//        } else if (compare_result == CompareResult::Less) {
+//          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+//        }
+//        break;
+//      case ScanType::OpGreaterThan:
+//        if (compare_result == CompareResult::Greater) {
+//          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+//        } else if (compare_result == CompareResult::Equal) {
+//          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+//        }
+//        break;
+//      case ScanType::OpGreaterThanEquals:
+//        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
+//          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+//        }
+//        break;
+//      case ScanType::OpLessThan:
+//        if (compare_result == CompareResult::Less) {
+//          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+//        } else if (compare_result == CompareResult::Equal) {
+//          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+//        }
+//        break;
+//      case ScanType::OpLessThanEquals:
+//        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
+//          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+//        }
+//        break;
       default:
+        DebugAssert(false, "currently only Equi Join is supported by NumaMPSM Join");
         throw std::logic_error("Unknown ScanType");
     }
   }
@@ -239,19 +248,19 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a left row id and a right row id to the join output.
   **/
-  void _emit_combination(size_t output_cluster, RowID left, RowID right) {
-    _output_pos_lists_left[output_cluster]->push_back(left);
-    _output_pos_lists_right[output_cluster]->push_back(right);
+  void _emit_combination(NodeID output_partition, size_t output_cluster, RowID left, RowID right) {
+    _output_pos_lists_left[output_partition][output_cluster]->push_back(left);
+    _output_pos_lists_right[output_partition][output_cluster]->push_back(right);
   }
 
   /**
   * Emits all the combinations of row ids from the left table range and the right table range to the join output.
   * I.e. the cross product of the ranges is emitted.
   **/
-  void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
+  void _emit_all_combinations(NodeID output_partition, size_t output_cluster, TableRange left_range, TableRange right_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        _emit_combination(output_cluster, left_row_id, right_row_id);
+        _emit_combination(output_partition, output_cluster, left_row_id, right_row_id);
       });
     });
   }
@@ -259,24 +268,24 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
-  void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
+  void _emit_right_null_combinations(NodeID output_partition, size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(
-        _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
+        _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_partition, output_cluster, left_row_id, NULL_ROW_ID); });
   }
 
   /**
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
-  void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
+  void _emit_left_null_combinations(NodeID output_partition, size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(
-        _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
+        _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_partition, output_cluster, NULL_ROW_ID, right_row_id); });
   }
 
   /**
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedColumn<T>> values) {
+  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedChunk<T>> values) {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -306,216 +315,237 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_cluster(size_t cluster_number) {
-    _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-    _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+    // TODO (florian): another layer of indirection here for partitions or insert the pointers in a threadsafe way or even better:
+    // create N local PosLists, one for each right partition
+    // in the end merge those N local PosLists and insert to the correct cluster
 
-    auto& left_cluster = (*_sorted_left_table)[cluster_number];
-    auto& right_cluster = (*_sorted_right_table)[cluster_number];
+    // For MPSM join the left side is reshuffled to contain one cluster per NUMA node, it is therefor the first cluster in the corresponding data structure
+    const NodeID left_node_id = static_cast<NodeID>(cluster_number);
+    const size_t left_cluster_id = 0;
 
-    size_t left_run_start = 0;
-    size_t right_run_start = 0;
+    // The right side is not reshuffled and is worked on for each partition
+    const size_t right_cluster_id = cluster_number;
 
-    auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-    auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+    _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
-    const size_t left_size = left_cluster->size();
-    const size_t right_size = right_cluster->size();
 
-    while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = (*left_cluster)[left_run_start].value;
-      auto& right_value = (*right_cluster)[right_run_start].value;
+    std::shared_ptr<MaterializedChunk<T>> left_cluster = (*_sorted_left_table)[left_node_id]._chunk_columns[left_cluster_id];
 
-      auto compare_result = _compare(left_value, right_value);
+    // TODO (florian): parallelize this using jobs (or not, since we are already running jobbed for LHS, and jobbing will probably not add much here)
+    for(NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id){
 
-      TableRange left_run(cluster_number, left_run_start, left_run_end);
-      TableRange right_run(cluster_number, right_run_start, right_run_end);
-      _join_runs(left_run, right_run, compare_result);
+      _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
-      // Advance to the next run on the smaller side or both if equal
-      if (compare_result == CompareResult::Equal) {
-        // Advance both runs
-        left_run_start = left_run_end;
-        right_run_start = right_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
-      } else if (compare_result == CompareResult::Less) {
-        // Advance the left run
-        left_run_start = left_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
-      } else {
-        // Advance the right run
-        right_run_start = right_run_end;
-        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+      std::shared_ptr<MaterializedChunk<T>> right_cluster = (*_sorted_left_table)[right_node_id]._chunk_columns[right_cluster_id];
+
+      size_t left_run_start = 0;
+      size_t right_run_start = 0;
+
+      auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+      auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+
+      const size_t left_size = left_cluster->size();
+      const size_t right_size = right_cluster->size();
+
+      while (left_run_start < left_size && right_run_start < right_size) {
+        auto& left_value = (*left_cluster)[left_run_start].value;
+        auto& right_value = (*right_cluster)[right_run_start].value;
+
+        auto compare_result = _compare(left_value, right_value);
+
+        TableRange left_run(left_node_id, left_cluster_id, left_run_start, left_run_end);
+        TableRange right_run(right_node_id, right_cluster_id, right_run_start, right_run_end);
+        _join_runs(left_run, right_run, compare_result);
+
+        // Advance to the next run on the smaller side or both if equal
+        if (compare_result == CompareResult::Equal) {
+          // Advance both runs
+          left_run_start = left_run_end;
+          right_run_start = right_run_end;
+          left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+          right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+        } else if (compare_result == CompareResult::Less) {
+          // Advance the left run
+          left_run_start = left_run_end;
+          left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+        } else {
+          // Advance the right run
+          right_run_start = right_run_end;
+          right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
+        }
+      }
+
+      // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
+      auto left_rest = TableRange(left_node_id, left_cluster_id, left_run_start, left_size);
+      auto right_rest = TableRange(right_node_id, right_cluster_id, right_run_start, right_size);
+      if (left_run_start < left_size) {
+        _join_runs(left_rest, right_rest, CompareResult::Less);
+      } else if (right_run_start < right_size) {
+        _join_runs(left_rest, right_rest, CompareResult::Greater);
       }
     }
 
-    // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
-    auto right_rest = TableRange(cluster_number, right_run_start, right_size);
-    auto left_rest = TableRange(cluster_number, left_run_start, left_size);
-    if (left_run_start < left_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Less);
-    } else if (right_run_start < right_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Greater);
-    }
+
+
   }
 
   /**
   * Determines the smallest value in a sorted materialized table.
   **/
-  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
-                                               "available in the non-equi case");
-    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
+//  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
+//    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
+//                                               "available in the non-equi case");
+//    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
-    for (auto partition : *sorted_table) {
-      if (partition->size() > 0) {
-        return (*partition)[0].value;
-      }
-    }
+//    for (auto partition : *sorted_table) {
+//      if (partition->size() > 0) {
+//        return (*partition)[0].value;
+//      }
+//    }
 
-    throw std::logic_error("Every partition is empty");
-  }
+//    throw std::logic_error("Every partition is empty");
+//  }
 
   /**
   * Determines the largest value in a sorted materialized table.
   **/
-  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-    DebugAssert(_op != ScanType::OpEquals,
-                "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
-    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
+//  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
+//    DebugAssert(_op != ScanType::OpEquals,
+//                "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
+//    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
-    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      if ((*sorted_table)[partition_id]->size() > 0) {
-        return (*sorted_table)[partition_id]->back().value;
-      }
-    }
+//    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
+//      if ((*sorted_table)[partition_id]->size() > 0) {
+//        return (*sorted_table)[partition_id]->back().value;
+//      }
+//    }
 
-    throw std::logic_error("Every partition is empty");
-  }
+//    throw std::logic_error("Every partition is empty");
+//  }
 
   /**
   * Looks for the first value in a sorted materialized table that fulfills the specified condition.
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
-  template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
-                                                           Function condition) {
-    for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
-      auto partition = (*sorted_table)[partition_id];
-      if (partition->size() > 0 && condition(partition->back().value)) {
-        for (size_t index = 0; index < partition->size(); ++index) {
-          if (condition((*partition)[index].value)) {
-            return TablePosition(partition_id, index);
-          }
-        }
-      }
-    }
+//  template <typename Function>
+//  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
+//                                                           Function condition) {
+//    for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
+//      auto partition = (*sorted_table)[partition_id];
+//      if (partition->size() > 0 && condition(partition->back().value)) {
+//        for (size_t index = 0; index < partition->size(); ++index) {
+//          if (condition((*partition)[index].value)) {
+//            return TablePosition(partition_id, index);
+//          }
+//        }
+//      }
+//    }
 
-    return {};
-  }
+//    return {};
+//  }
 
   /**
   * Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
   * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   **/
-  template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies_reverse(
-      std::unique_ptr<MaterializedColumnList<T>>& sorted_table, Function condition) {
-    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      auto partition = (*sorted_table)[partition_id];
-      if (partition->size() > 0 && condition((*partition)[0].value)) {
-        for (size_t index = partition->size() - 1; index < partition->size(); --index) {
-          if (condition((*partition)[index].value)) {
-            return TablePosition(partition_id, index + 1);
-          }
-        }
-      }
-    }
+//  template <typename Function>
+//  std::optional<TablePosition> _first_value_that_satisfies_reverse(
+//      std::unique_ptr<MaterializedColumnList<T>>& sorted_table, Function condition) {
+//    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
+//      auto partition = (*sorted_table)[partition_id];
+//      if (partition->size() > 0 && condition((*partition)[0].value)) {
+//        for (size_t index = partition->size() - 1; index < partition->size(); --index) {
+//          if (condition((*partition)[index].value)) {
+//            return TablePosition(partition_id, index + 1);
+//          }
+//        }
+//      }
+//    }
 
-    return {};
-  }
+//    return {};
+//  }
 
-  /**
-  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
-  * This method adds those rows from the left table to the output that do not find a join partner.
-  * The outer join for the equality operator is handled in _join_runs instead.
-  **/
-  void _left_outer_non_equi_join() {
-    auto& left_min_value = _table_min_value(_sorted_left_table);
-    auto& left_max_value = _table_max_value(_sorted_left_table);
-    auto end_of_right_table = _end_of_table(_sorted_right_table);
+//  /**
+//  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+//  * This method adds those rows from the left table to the output that do not find a join partner.
+//  * The outer join for the equality operator is handled in _join_runs instead.
+//  **/
+//  void _left_outer_non_equi_join() {
+//    auto& left_min_value = _table_min_value(_sorted_left_table);
+//    auto& left_max_value = _table_max_value(_sorted_left_table);
+//    auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-    if (_op == ScanType::OpLessThan) {
-      // Look for the first right value that is bigger than the smallest left value.
-      auto result =
-          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
-      }
-    } else if (_op == ScanType::OpLessThanEquals) {
-      // Look for the first right value that is bigger or equal to the smallest left value.
-      auto result =
-          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
-      }
-    } else if (_op == ScanType::OpGreaterThan) {
-      // Look for the first right value that is smaller than the biggest left value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-                                                        [&](const T& value) { return value < left_max_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
-      }
-    } else if (_op == ScanType::OpGreaterThanEquals) {
-      // Look for the first right value that is smaller or equal to the biggest left value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-                                                        [&](const T& value) { return value <= left_max_value; });
-      if (result.has_value()) {
-        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
-      }
-    }
-  }
+//    if (_op == ScanType::OpLessThan) {
+//      // Look for the first right value that is bigger than the smallest left value.
+//      auto result =
+//          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
+//      if (result.has_value()) {
+//        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
+//      }
+//    } else if (_op == ScanType::OpLessThanEquals) {
+//      // Look for the first right value that is bigger or equal to the smallest left value.
+//      auto result =
+//          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
+//      if (result.has_value()) {
+//        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
+//      }
+//    } else if (_op == ScanType::OpGreaterThan) {
+//      // Look for the first right value that is smaller than the biggest left value.
+//      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
+//                                                        [&](const T& value) { return value < left_max_value; });
+//      if (result.has_value()) {
+//        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
+//      }
+//    } else if (_op == ScanType::OpGreaterThanEquals) {
+//      // Look for the first right value that is smaller or equal to the biggest left value.
+//      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
+//                                                        [&](const T& value) { return value <= left_max_value; });
+//      if (result.has_value()) {
+//        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
+//      }
+//    }
+//  }
 
-  /**
-    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
-    * This method adds those rows from the right table to the output that do not find a join partner.
-    * The outer join for the equality operator is handled in _join_runs instead.
-    **/
-  void _right_outer_non_equi_join() {
-    auto& right_min_value = _table_min_value(_sorted_right_table);
-    auto& right_max_value = _table_max_value(_sorted_right_table);
-    auto end_of_left_table = _end_of_table(_sorted_left_table);
+//  /**
+//    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+//    * This method adds those rows from the right table to the output that do not find a join partner.
+//    * The outer join for the equality operator is handled in _join_runs instead.
+//    **/
+//  void _right_outer_non_equi_join() {
+//    auto& right_min_value = _table_min_value(_sorted_right_table);
+//    auto& right_max_value = _table_max_value(_sorted_right_table);
+//    auto end_of_left_table = _end_of_table(_sorted_left_table);
 
-    if (_op == ScanType::OpLessThan) {
-      // Look for the last left value that is smaller than the biggest right value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value < right_max_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
-      }
-    } else if (_op == ScanType::OpLessThanEquals) {
-      // Look for the last left value that is smaller or equal than the biggest right value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value <= right_max_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
-      }
-    } else if (_op == ScanType::OpGreaterThan) {
-      // Look for the first left value that is bigger than the smallest right value.
-      auto result =
-          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
-      }
-    } else if (_op == ScanType::OpGreaterThanEquals) {
-      // Look for the first left value that is bigger or equal to the smallest right value.
-      auto result =
-          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
-      if (result.has_value()) {
-        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
-      }
-    }
-  }
+//    if (_op == ScanType::OpLessThan) {
+//      // Look for the last left value that is smaller than the biggest right value.
+//      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
+//                                                        [&](const T& value) { return value < right_max_value; });
+//      if (result.has_value()) {
+//        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
+//      }
+//    } else if (_op == ScanType::OpLessThanEquals) {
+//      // Look for the last left value that is smaller or equal than the biggest right value.
+//      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
+//                                                        [&](const T& value) { return value <= right_max_value; });
+//      if (result.has_value()) {
+//        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
+//      }
+//    } else if (_op == ScanType::OpGreaterThan) {
+//      // Look for the first left value that is bigger than the smallest right value.
+//      auto result =
+//          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
+//      if (result.has_value()) {
+//        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
+//      }
+//    } else if (_op == ScanType::OpGreaterThanEquals) {
+//      // Look for the first left value that is bigger or equal to the smallest right value.
+//      auto result =
+//          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
+//      if (result.has_value()) {
+//        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
+//      }
+//    }
+//  }
 
   /**
   * Performs the join on all clusters in parallel.
@@ -524,6 +554,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
     // Parallel join for each cluster
+    // TODO(florian): this is ideal, just make sure the jobs get scheduled on the correct nodes
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule();
@@ -533,30 +564,34 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
-      _left_outer_non_equi_join();
-    }
-    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
-      _right_outer_non_equi_join();
-    }
+//    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+//      _left_outer_non_equi_join();
+//    }
+//    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+//      _right_outer_non_equi_join();
+//    }
   }
 
   /**
   * Concatenates a vector of pos lists into a single new pos list.
   **/
-  std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
+  std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::vector<std::shared_ptr<PosList>>>& pos_lists) {
     auto output = std::make_shared<PosList>();
 
     // Determine the required space
     size_t total_size = 0;
-    for (auto& pos_list : pos_lists) {
-      total_size += pos_list->size();
+    for (const auto& partition_lists : pos_lists){
+      for (const auto& pos_list : partition_lists) {
+        total_size += pos_list->size();
+      }
     }
 
     // Move the entries over the output pos list
     output->reserve(total_size);
-    for (auto& pos_list : pos_lists) {
-      output->insert(output->end(), pos_list->begin(), pos_list->end());
+    for (const auto& partition_lists : pos_lists){
+      for (const auto& pos_list : partition_lists) {
+        output->insert(output->end(), pos_list->begin(), pos_list->end());
+      }
     }
 
     return output;
@@ -622,7 +657,6 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       // move everything in cluster n to NUMA Node N
       // resort
       // TODO (florian): eliminate double sorting (although we probably have an adaptive sort so we should not suffer too much, else implement a merge sort here?)
-      _sorted_left_table
 
   }
 
@@ -637,7 +671,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> _on_execute() {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
-    auto radix_clusterer = RadixClusterSort<T>(
+    auto radix_clusterer = RadixClusterSortNUMA<T>(
         _sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(), _sort_merge_join._column_ids,
         _op == ScanType::OpEquals, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
@@ -646,12 +680,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _sorted_right_table = std::move(sort_output.clusters_right);
     _null_rows_left = std::move(sort_output.null_rows_left);
     _null_rows_right = std::move(sort_output.null_rows_right);
-    _end_of_left_table = _end_of_table(_sorted_left_table);
-    _end_of_right_table = _end_of_table(_sorted_right_table);
 
-    _shuffle_lhs_clusters();
-
-    _sort_clusters();
+    // TODO(florian): these should be multiplicities
+    // _end_of_left_table = _end_of_table(_sorted_left_table);
+    // _end_of_right_table = _end_of_table(_sorted_right_table);
 
     _perform_join();
 
