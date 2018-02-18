@@ -221,8 +221,6 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
-  return;
-
   SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& lqp = sql_pipeline.get_optimized_logical_plan();
@@ -338,7 +336,6 @@ TEST_F(SQLPipelineStatementTest, GetTasksTwice) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetTasksNotValidated) {
-  return;
   SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& tasks = sql_pipeline.get_tasks();
@@ -413,7 +410,6 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
-  return;
   SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& table = sql_pipeline.get_result_table();
