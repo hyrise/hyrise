@@ -34,8 +34,8 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
 
     add_column<int>(customer_table, "ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
 
-    auto first_names = read_vector_from_file("firstNames.txt");
-    auto last_names = read_vector_from_file("lastNames.txt");
+    auto first_names = read_vector_from_file("src/test/names/firstNames.txt");
+    auto last_names = read_vector_from_file("src/test/names/lastNames.txt");
 
     add_column<std::string>(customer_table, "NAME", cardinalities, [&](std::vector<size_t> indices) {
       // return _random_gen.generate_string(5, 10, 'a', 26) + " " + _random_gen.generate_string(5, 10, 'a', 26);
