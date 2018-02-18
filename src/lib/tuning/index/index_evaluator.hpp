@@ -14,7 +14,18 @@
 namespace opossum {
 
 /**
- * ToDo(group01): describe specific mechanism to determine desirability and memory_cost
+ * This is the default implementation of a BaseIndexEvaluator.
+ *
+ * It only considers single-column indexes for now.
+ *
+ * Desirability is determined by the amount of "saved work" in terms on
+ * "unscanned rows", i.e. the number of rows that don't have to be read when
+ * using an index on a given column compared to a linear table scan.
+ * This assumes that columns are always scanned completely, meaning that
+ * it does not take previous operators into account.
+ *
+ * Cost is determined by the memory footprint of a specific index. It is either
+ * read directly from an existing index or estimated for a non-existing index.
  */
 class IndexEvaluator : public BaseIndexEvaluator {
   friend class IndexEvaluatorTest;

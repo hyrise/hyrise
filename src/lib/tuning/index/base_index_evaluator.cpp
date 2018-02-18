@@ -74,8 +74,6 @@ float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice)
 void BaseIndexEvaluator::_inspect_query_cache() {
   _access_records.clear();
 
-  // ToDo(group01): add switching logic to prefer LQP over PQP if both are cached
-
   // ToDo(anybody): The cache interface could be improved by introducing values() method in
   // AbstractCache interfaceand implement in all subclasses
   //  const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
