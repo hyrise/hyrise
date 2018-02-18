@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-class hash_value_visitor : public boost::static_visitor<HashValue> {
+class HashValueVisitor : public boost::static_visitor<HashValue> {
  public:
   HashValue operator()(NullValue) { return HashValue{0}; }
 
@@ -14,8 +14,8 @@ class hash_value_visitor : public boost::static_visitor<HashValue> {
   }
 };
 
-const HashValue HashFunction::operator()(const AllTypeVariant value) const {
-  hash_value_visitor visitor;
+const HashValue HashFunction::operator()(const AllTypeVariant& value) const {
+  HashValueVisitor visitor;
   return boost::apply_visitor(visitor, value);
 }
 

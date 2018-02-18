@@ -58,9 +58,9 @@ class Table : private Noncopyable {
   void create_new_chunk(PartitionID partition_id = PartitionID{0});
 
   // returns the chunk with the given id
-  std::shared_ptr<Chunk> get_modifiable_chunk(ChunkID chunk_id);
+  std::shared_ptr<Chunk> get_mutable_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_modifiable_chunk_with_access_counting(ChunkID chunk_id);
+  ProxyChunk get_mutable_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
@@ -150,31 +150,28 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
-  ChunkID get_chunk_id(const std::shared_ptr<Chunk> chunk) const;
-
   /**
    * Partitioning
    * Standard PartitionSchema is NullPartitionSchema which creates no partitioning at all.
    * On empty Tables, the PartitionSchema can be altered using the functions below.
    * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
    */
+  // this function is needed for deserialization, it does not create a set of initial chunks
   void set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
-                                const size_t number_of_partitions);
+                                const PartitionID number_of_partitions);
   void create_null_partitioning();
   void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
-  void create_round_robin_partitioning(const size_t number_of_partitions);
+  void create_round_robin_partitioning(const PartitionID number_of_partitions);
 
   bool is_partitioned() const;
-  const std::shared_ptr<AbstractPartitionSchema> get_partition_schema() const;
+  PartitionID partition_count() const;
+  const std::shared_ptr<const AbstractPartitionSchema> get_partition_schema() const;
 
 #if IS_DEBUG
-  std::shared_ptr<AbstractPartitionSchema> get_modifiable_partition_schema();
+  std::shared_ptr<AbstractPartitionSchema> get_mutable_partition_schema();
 #endif
-
-  void remove_partitioning();
-  uint16_t partition_count() const;
 
  protected:
   const uint32_t _max_chunk_size;
@@ -192,7 +189,7 @@ class Table : private Noncopyable {
 
   std::shared_ptr<AbstractPartitionSchema> _partition_schema;
 
-  void create_initial_chunks(PartitionID number_of_partitions);
+  void _create_initial_chunks(PartitionID number_of_partitions);
   std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum

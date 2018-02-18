@@ -25,6 +25,9 @@ class StorageManager : private Noncopyable {
   // removes the table from the storage manger
   void drop_table(const std::string& name);
 
+  // replaces a table in the storage manager
+  void replace_table(const std::string& name, std::shared_ptr<Table> table);
+
   // returns the table instance with the given name
   std::shared_ptr<Table> get_table(const std::string& name) const;
 

@@ -49,7 +49,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Column name lengths   | ColumnNameLength array                |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
    * Partition schema      | uint8_t                               |   1
-   * Partition count       | PartitionID                           |   4
+   * Partition count       | PartitionID                           |   2
    *
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
@@ -80,7 +80,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Partition schema      | uint8_t                               |   1
-   * Partition count       | PartitionID                           |   4
+   * Partition count       | PartitionID                           |   2
    * Partition specific    | ?                                     |   ?
    * 
    * The partition specific information consists of the following:
@@ -90,18 +90,18 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * 
    * * RangePartitioningSchema:
    * 
-   * Description           | Type                                  | Size in bytes
+   * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * ColumnID              | ColumnID                              |   4
-   * DataType of bounds    | std::string array                     |   Length of DataType string representation
-   * Bounds                | Typed array                           |   Partition count - 1 * x
+   * Column to partition by | ColumnID                              |   4
+   * DataType of bounds     | std::string array                     |   Length of DataType string representation
+   * Bounds                 | Typed array                           |   (Partition count - 1) * x
    * 
    * 
    * HashPartitioningSchema:
    * 
-   * Description           | Type                                  | Size in bytes
+   * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * ColumnID              | ColumnID                              |   4
+   * Column to partition by | ColumnID                              |   4
    * 
    *
    * @param table The table that is to be exported

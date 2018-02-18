@@ -261,7 +261,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  expected_table->create_round_robin_partitioning(3);
+  expected_table->create_round_robin_partitioning(PartitionID{3});
   expected_table->add_column("a", DataType::String);
   expected_table->add_column("b", DataType::Int);
   expected_table->add_column("c", DataType::Long);
@@ -301,7 +301,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRangePartitioned) {
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnHashPartitioned) {
   auto expected_table = std::make_shared<opossum::Table>(2);
   HashFunction hf;
-  expected_table->create_hash_partitioning(ColumnID{3}, std::move(hf), 3);
+  expected_table->create_hash_partitioning(ColumnID{3}, std::move(hf), PartitionID{3});
   expected_table->add_column("a", DataType::String);
   expected_table->add_column("b", DataType::Int);
   expected_table->add_column("c", DataType::Long);

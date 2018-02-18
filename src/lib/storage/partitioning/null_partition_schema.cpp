@@ -8,7 +8,7 @@ std::string NullPartitionSchema::name() const { return "NullPartition"; }
 
 PartitionSchemaType NullPartitionSchema::get_type() const { return PartitionSchemaType::Null; }
 
-void NullPartitionSchema::append(std::vector<AllTypeVariant> values) {
+void NullPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
   AbstractPartitionSchema::append(values, PartitionID{0});
 }
 

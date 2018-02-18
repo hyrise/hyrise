@@ -67,12 +67,11 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
     // print each chunk
     for (const auto chunk : partition->get_chunks()) {
-      const auto chunk_id = _input_table_left()->get_chunk_id(chunk);
       if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
         continue;
       }
 
-      _out << "=== Chunk " << chunk_id << " === " << std::endl;
+      _out << "=== Chunk " << chunk->id() << " === " << std::endl;
 
       if (chunk->size() == 0) {
         _out << "Empty chunk." << std::endl;

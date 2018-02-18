@@ -2,12 +2,12 @@
 
 namespace opossum {
 
-RoundRobinPartitionSchema::RoundRobinPartitionSchema(size_t number_of_partitions)
+RoundRobinPartitionSchema::RoundRobinPartitionSchema(PartitionID number_of_partitions)
     : _number_of_partitions(number_of_partitions) {
   _partitions.reserve(number_of_partitions);
 
-  for (size_t index = 0; index < number_of_partitions; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>(static_cast<PartitionID>(index)));
+  for (PartitionID index{0}; index < number_of_partitions; ++index) {
+    _partitions.emplace_back(std::make_shared<Partition>(index));
   }
 }
 
@@ -15,25 +15,22 @@ std::string RoundRobinPartitionSchema::name() const { return "RoundRobinPartitio
 
 PartitionSchemaType RoundRobinPartitionSchema::get_type() const { return PartitionSchemaType::RoundRobin; }
 
-void RoundRobinPartitionSchema::append(std::vector<AllTypeVariant> values) {
+void RoundRobinPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
   AbstractPartitionSchema::append(values, _next_partition);
   _go_to_next_partition();
 }
 
-PartitionID RoundRobinPartitionSchema::get_matching_partition_for(std::vector<AllTypeVariant> values) {
+PartitionID RoundRobinPartitionSchema::get_matching_partition_for(const std::vector<AllTypeVariant>& values) const {
   return get_next_partition();
 }
 
-PartitionID RoundRobinPartitionSchema::get_next_partition() {
+PartitionID RoundRobinPartitionSchema::get_next_partition() const {
   _go_to_next_partition();
   return _next_partition;
 }
 
-void RoundRobinPartitionSchema::_go_to_next_partition() {
-  _next_partition = static_cast<PartitionID>(_next_partition + 1);
-  if (_next_partition >= static_cast<PartitionID>(_partitions.size())) {
-    _next_partition = 0;
-  }
+void RoundRobinPartitionSchema::_go_to_next_partition() const {
+  _next_partition = ++_next_partition % _partitions.size();
 }
 
 }  // namespace opossum

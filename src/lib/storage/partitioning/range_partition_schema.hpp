@@ -25,22 +25,24 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   std::string name() const override;
   PartitionSchemaType get_type() const override;
 
-  void append(std::vector<AllTypeVariant> values) override;
+  void append(const std::vector<AllTypeVariant>& values) override;
 
-  RangePartitionSchema(RangePartitionSchema&&) = default;
-  RangePartitionSchema& operator=(RangePartitionSchema&&) = default;
+  PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
+  PartitionID get_matching_partition_for(const AllTypeVariant& value) const;
+  std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition,
+                                                const AllTypeVariant& value) const override;
 
-  PartitionID get_matching_partition_for(std::vector<AllTypeVariant> values) override;
-  PartitionID get_matching_partition_for(AllTypeVariant value);
-
-  const ColumnID get_column_id() const;
-  const std::vector<AllTypeVariant> get_bounds() const;
+  ColumnID get_column_id() const;
+  const std::vector<AllTypeVariant>& get_bounds() const;
   DataType get_bound_type() const;
 
  protected:
   ColumnID _column_id;
   std::vector<AllTypeVariant> _bounds;
   DataType _bound_type;
+
+  bool _partition_matches_condition(PartitionID partition_id, PredicateCondition condition,
+                                    PartitionID matching_partition_id);
 };
 
 }  // namespace opossum

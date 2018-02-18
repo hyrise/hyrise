@@ -7,7 +7,7 @@ class StorageRoundRobinPartitionSchemaTest : public BaseTest {
  protected:
   void SetUp() override {
     // Creating a Table with round robin partitioning using two Partitions.
-    t0.create_round_robin_partitioning(2);
+    t0.create_round_robin_partitioning(PartitionID{2});
     t0.add_column("int_column", opossum::DataType::Int, false);
     t0.add_column("string_column", opossum::DataType::String, false);
   }
@@ -39,9 +39,9 @@ TEST_F(StorageRoundRobinPartitionSchemaTest, AppendViaTable) {
 #if IS_DEBUG
 
 TEST_F(StorageRoundRobinPartitionSchemaTest, AppendDirectly) {
-  t0.get_modifiable_partition_schema()->append({1, "Foo"});
-  t0.get_modifiable_partition_schema()->append({2, "Bar"});
-  t0.get_modifiable_partition_schema()->append({3, "Baz"});
+  t0.get_mutable_partition_schema()->append({1, "Foo"});
+  t0.get_mutable_partition_schema()->append({2, "Bar"});
+  t0.get_mutable_partition_schema()->append({3, "Baz"});
 
   EXPECT_EQ(t0.row_count(), 3u);
   EXPECT_EQ(t0.chunk_count(), 2u);
@@ -50,11 +50,11 @@ TEST_F(StorageRoundRobinPartitionSchemaTest, AppendDirectly) {
 }
 
 TEST_F(StorageRoundRobinPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
-  t0.get_modifiable_partition_schema()->append({1, "Foo"});
-  t0.get_modifiable_partition_schema()->append({2, "Bar"});
-  t0.get_modifiable_partition_schema()->append({3, "Baz"});
-  t0.get_modifiable_partition_schema()->append({4, "Foo"});
-  t0.get_modifiable_partition_schema()->append({5, "Bar"});
+  t0.get_mutable_partition_schema()->append({1, "Foo"});
+  t0.get_mutable_partition_schema()->append({2, "Bar"});
+  t0.get_mutable_partition_schema()->append({3, "Baz"});
+  t0.get_mutable_partition_schema()->append({4, "Foo"});
+  t0.get_mutable_partition_schema()->append({5, "Bar"});
 
   // No new chunk is created since this is done by Table which is not involved here.
   EXPECT_EQ(t0.row_count(), 5u);
