@@ -12,13 +12,11 @@ struct IndexInfo {
   std::string name;
   ColumnIndexType type;
 
-  bool _is_eql(const IndexInfo& other) const {
+  bool operator==(const IndexInfo& other) const {
     return other.column_ids == column_ids && other.name == name && other.type == type;
   }
 
-  bool operator==(const IndexInfo& other) const { return _is_eql(other); }
-
-  bool operator!=(const IndexInfo& other) const { return !_is_eql(other); }
+  bool operator!=(const IndexInfo& other) const { return !operator==(other); }
 };
 
 }  // namespace opossum
