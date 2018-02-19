@@ -20,7 +20,7 @@ static const uint32_t MAX_BUFFER_SIZE = 1024u;
 // This is the struct that we store our incoming network bytes in and that we then read from
 struct InputPacket {
   // The vector needs to have a fixed size for boost::asio to work with it
-  ByteBuffer data;
+  ByteBuffer data = ByteBuffer(MAX_BUFFER_SIZE);
 
   // Stores the current position in the data buffer
   mutable ByteBuffer::const_iterator offset = data.begin();

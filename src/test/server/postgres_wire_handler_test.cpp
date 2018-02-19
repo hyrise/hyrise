@@ -14,17 +14,16 @@ class PostgresWireHandlerTest : public BaseTest {
 TEST_F(PostgresWireHandlerTest, HandleQueryPacketEmpty) {
   size_t length = 0;
 
-  std::string result = postgres_wire_handler.handle_query_packet(_input_packet, length);
+  std::string result = postgres_wire_handler.handle_query_packet(_input_packet);
 
   ASSERT_EQ(result.length(), length);
 }
 
 TEST_F(PostgresWireHandlerTest, HandleQueryPacket) {
   ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y'};
-  size_t length = buffer.size();
   _input_packet.data = buffer;
 
-  std::string result = postgres_wire_handler.handle_query_packet(_input_packet, length);
+  std::string result = postgres_wire_handler.handle_query_packet(_input_packet);
 
   ASSERT_GT(result.length(), 0ul);
   ASSERT_TRUE(result.find("Query") != std::string::npos);
