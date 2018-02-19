@@ -31,10 +31,9 @@ uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) 
   }
 }
 
-void PostgresWireHandler::handle_startup_package_content(const InputPacket& packet, size_t length) {
-  // TODO: We don't actually need length here, can take size of packet.data
+void PostgresWireHandler::handle_startup_package_content(const InputPacket& packet) {
   // Ignore the content for now
-  read_values<char>(packet, length);
+  read_values<char>(packet, packet.data.size());
 }
 
 RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
@@ -87,7 +86,7 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
     auto parameter_value_length = ntohl(read_value<int32_t>(packet));
     auto x = read_values<char>(packet, parameter_value_length);
     const std::string x_str(x.begin(), x.end());
-    parameter_values.emplace_back(std::stoi(x_str));
+    parameter_values.emplace_back(x_str);
   }
 
   auto n_result_column_format_codes = read_value<int16_t>(packet);

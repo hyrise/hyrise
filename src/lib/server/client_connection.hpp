@@ -15,6 +15,12 @@ struct OutputPacket;
 struct RequestHeader;
 enum class NetworkMessageType : unsigned char;
 
+struct ColumnDescription {
+  std::string column_name;
+  uint64_t object_id;
+  int64_t type_width;
+};
+
 class ClientConnection {
   friend class SendQueryResponseTask;
   
@@ -35,6 +41,8 @@ class ClientConnection {
   boost::future<void> send_error(const std::string& message);
   boost::future<void> send_notice(const std::string& notice);
   boost::future<void> send_status_message(const NetworkMessageType& type);
+  boost::future<void> send_row_description(const std::vector<ColumnDescription> row_description);
+  boost::future<void> send_command_complete(const std::string& message);
 
  protected:
   boost::future<InputPacket> _receive_bytes_async(size_t size);

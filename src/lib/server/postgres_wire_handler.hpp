@@ -53,7 +53,7 @@ class PostgresWireHandler {
   static void write_output_packet_size(OutputPacket& packet);
 
   static uint32_t handle_startup_package(const InputPacket& packet);
-  static void handle_startup_package_content(const InputPacket& packet, size_t length);
+  static void handle_startup_package_content(const InputPacket& packet);
 
   static RequestHeader handle_header(const InputPacket& packet);
 

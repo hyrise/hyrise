@@ -20,7 +20,7 @@ boost::future<uint32_t> ClientConnection::receive_startup_packet_header() {
 boost::future<void> ClientConnection::receive_startup_packet_contents(uint32_t size) {
   return _receive_bytes_async(size) >> then >> [=](InputPacket p) {
     // Read these values and ignore them
-    PostgresWireHandler::handle_startup_package_content(p, size);
+    PostgresWireHandler::handle_startup_package_content(p);
   };
 }
 
@@ -92,6 +92,55 @@ boost::future<void> ClientConnection::send_notice(const std::string& notice) {
 boost::future<void> ClientConnection::send_status_message(const NetworkMessageType& type) {
   auto output_packet = PostgresWireHandler::new_output_packet(type);
   return _send_bytes_async(output_packet)
+    >> then >> [](unsigned long) { /* ignore the result */ };
+}
+
+boost::future<void> ClientConnection::send_row_description(const std::vector<ColumnDescription> row_description) {
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
+
+  // Int16 Specifies the number of fields in a row (can be zero).
+  PostgresWireHandler::write_value(*output_packet, htons(row_description.size()));
+
+  /* FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
+   *
+   * Then, for each field, there is the following:
+   String
+   The field name.
+
+   Int32 - If the field can be identified as a column of a specific table, the object ID of the table; otherwise zero.
+
+   Int16 - If the field can be identified as a column of a specific table, the attribute number of the column; otherwise zero.
+
+   Int32 - The object ID of the field's data type.
+           Found at: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
+
+   Int16 - The data type size (see pg_type.typlen). Note that negative values denote variable-width types.
+
+   Int32 - The type modifier (see pg_attribute.atttypmod). The meaning of the modifier is type-specific.
+
+   Int16 - The format code being used for the field. Currently will be zero (text) or one (binary). In a RowDescription returned from the statement variant of Describe, the format code is not yet known and will always be zero.
+   */
+  
+  for (const auto& column_description : row_description) {
+    PostgresWireHandler::write_string(*output_packet, column_description.column_name);
+    PostgresWireHandler::write_value(*output_packet, htonl(0u));  // no object id
+    PostgresWireHandler::write_value(*output_packet, htons(0u));  // no attribute number
+
+    PostgresWireHandler::write_value(*output_packet, htonl(column_description.object_id));   // object id of type
+    PostgresWireHandler::write_value(*output_packet, htons(column_description.type_width));  // regular int
+    PostgresWireHandler::write_value(*output_packet, htonl(-1));          // no modifier
+    PostgresWireHandler::write_value(*output_packet, htons(0u));          // text format
+  }
+
+  return _send_bytes_async(output_packet)
+    >> then >> [](unsigned long) { /* ignore the result */ };
+}
+
+boost::future<void> ClientConnection::send_command_complete(const std::string& message) {
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
+  PostgresWireHandler::write_string(*output_packet, message);
+  
+  return _send_bytes_async(output_packet, true)
     >> then >> [](unsigned long) { /* ignore the result */ };
 }
 

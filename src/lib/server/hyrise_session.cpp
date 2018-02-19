@@ -154,10 +154,30 @@ boost::future<void> HyriseSession::_handle_simple_query_command(const std::strin
   };
   
   auto send_query_response = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
-    auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
-    auto task = std::make_shared<SendQueryResponseTask>(
-      _connection, statement_type, sql_pipeline, sql_pipeline->get_result_table());
-    return _dispatch_server_task(task);
+    auto result_table = sql_pipeline->get_result_table();
+    
+    auto send_row_data = [=] () {
+      // If there is no result table, e.g. after an INSERT command, we cannot send row data
+      if (!result_table)
+        return boost::make_ready_future<uint64_t>(0);
+    
+      auto row_description = SendQueryResponseTask::build_row_description(sql_pipeline->get_result_table());
+      
+      auto task = std::make_shared<SendQueryResponseTask>(_connection, result_table);
+      return _connection->send_row_description(row_description)
+        >> then >> [=] () { return _dispatch_server_task(task); };
+    };
+
+    return send_row_data()
+      >> then >> [=] (uint64_t row_count) {
+        auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
+        auto complete_message = SendQueryResponseTask::build_command_complete_message(statement_type, row_count);
+        return _connection->send_command_complete(complete_message); 
+      }
+      >> then >> [=] () {
+        auto execution_info = SendQueryResponseTask::build_execution_info_message(sql_pipeline);
+        return _connection->send_notice(execution_info); 
+      };
   };
   
   // A simple query command invalidates unnamed statements and portals
@@ -229,6 +249,9 @@ boost::future<void> HyriseSession::_handle_describe_command(std::string portal_n
 }
 
 boost::future<void> HyriseSession::_handle_sync_command() {
+  if (!_transaction)
+    return boost::make_ready_future();
+  
   return _dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction));
 }
 
@@ -244,7 +267,7 @@ boost::future<void> HyriseSession::_handle_execute_command(std::string portal_na
   
   auto statement_type = portal_it->second.first;
   auto query_plan = portal_it->second.second;
-  // TODO: Is it even possible to execute a query plan multiple times?
+  
   if (portal_name.empty())
     _portals.erase(portal_it);
   
@@ -255,8 +278,16 @@ boost::future<void> HyriseSession::_handle_execute_command(std::string portal_na
   
   return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan, _transaction))
     >> then >> [=] (std::shared_ptr<const Table> result_table) {
-      auto task = std::make_shared<SendQueryResponseTask>(_connection, statement_type, nullptr, result_table);
+      // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
+      if (!result_table)
+        return _connection->send_status_message(NetworkMessageType::NoDataResponse) 
+          >> then >> [] () { return (uint64_t)0; };
+    
+      auto task = std::make_shared<SendQueryResponseTask>(_connection, result_table);
       return _dispatch_server_task(task);
+    } >> then >> [=] (uint64_t row_count) {
+      auto complete_message = SendQueryResponseTask::build_command_complete_message(statement_type, row_count);
+      return _connection->send_command_complete(complete_message);
     };
 }
 
@@ -270,15 +301,7 @@ auto HyriseSession::_dispatch_server_task(std::shared_ptr<T> task) -> decltype(t
     // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
     return _io_service.post(boost::asio::use_boost_future)
       // Make sure to be on the main thread before re-throwing the exceptions
-      >> then >> [result = std::move(result)] () mutable { 
-//        try {
-//          throw std::logic_error("just a test");
-      return result.get();
-//          return result.get();
-//        } catch (std::exception& e) {
-//          throw e;
-//        }
-      };
+      >> then >> [result = std::move(result)] () mutable { return result.get(); };
   }).unwrap();
 }
 
