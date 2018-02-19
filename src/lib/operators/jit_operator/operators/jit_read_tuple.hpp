@@ -97,7 +97,7 @@ class JitReadTuple : public JitAbstractOperator {
   void before_query(const Table& in_table, JitRuntimeContext& ctx);
   void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& ctx) const;
 
-  JitTupleValue add_input_column(const Table& table, const ColumnID column_id);
+  JitTupleValue add_input_column(const JitDataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
   size_t add_temorary_value();
 
