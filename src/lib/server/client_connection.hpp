@@ -47,8 +47,8 @@ class ClientConnection {
  protected:
   boost::future<InputPacket> _receive_bytes_async(size_t size);
   
-  boost::future<unsigned long> _send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush = false);
-  boost::future<unsigned long> _flush_async();
+  boost::future<uint64_t> _send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush = false);
+  boost::future<uint64_t> _flush_async();
 
   tcp::socket _socket;
   

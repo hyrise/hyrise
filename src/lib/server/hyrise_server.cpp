@@ -20,6 +20,7 @@ void HyriseServer::accept_next_connection() {
 void HyriseServer::start_session(boost::system::error_code error) {
   if (!error) {
     auto connection = std::make_shared<ClientConnection>(std::move(_socket));
+    // The session will retain a shared_ptr to itself as long as it's alive
     std::make_shared<HyriseSession>(_io_service, connection)->start();
   }
 

@@ -50,7 +50,7 @@ boost::future<void> ClientConnection::send_auth() {
   PostgresWireHandler::write_value(*output_packet, htonl(0u));
 
   return _send_bytes_async(output_packet)
-    >> then >> [](unsigned long) { /* ignore the result */ };
+    >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_ready_for_query() {
@@ -59,7 +59,7 @@ boost::future<void> ClientConnection::send_ready_for_query() {
   PostgresWireHandler::write_value(*output_packet, TransactionStatusIndicator::Idle);
 
   return _send_bytes_async(output_packet, true)
-    >> then >> [](unsigned long) { /* ignore the result */ };
+    >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_error(const std::string& message) {
@@ -74,7 +74,7 @@ boost::future<void> ClientConnection::send_error(const std::string& message) {
   // Terminate the error response
   PostgresWireHandler::write_value(*output_packet, '\0');
   return _send_bytes_async(output_packet, true)
-    >> then >> [](unsigned long) { /* ignore the result */ };
+    >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_notice(const std::string& notice) {
@@ -86,13 +86,13 @@ boost::future<void> ClientConnection::send_notice(const std::string& notice) {
   // Terminate the notice response
   PostgresWireHandler::write_value(*output_packet, '\0');
   return _send_bytes_async(output_packet, true)
-    >> then >> [](unsigned long) { /* ignore the result */ }; 
+    >> then >> [](uint64_t) { /* ignore the result */ }; 
 }
 
 boost::future<void> ClientConnection::send_status_message(const NetworkMessageType& type) {
   auto output_packet = PostgresWireHandler::new_output_packet(type);
   return _send_bytes_async(output_packet)
-    >> then >> [](unsigned long) { /* ignore the result */ };
+    >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_row_description(const std::vector<ColumnDescription> row_description) {
@@ -133,7 +133,7 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
   }
 
   return _send_bytes_async(output_packet)
-    >> then >> [](unsigned long) { /* ignore the result */ };
+    >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_command_complete(const std::string& message) {
@@ -141,7 +141,7 @@ boost::future<void> ClientConnection::send_command_complete(const std::string& m
   PostgresWireHandler::write_string(*output_packet, message);
   
   return _send_bytes_async(output_packet, true)
-    >> then >> [](unsigned long) { /* ignore the result */ };
+    >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
@@ -151,7 +151,7 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
   return _socket.async_read_some(
     boost::asio::buffer(result->data, size), 
     boost::asio::use_boost_future
-  ) >> then >> [=](unsigned long received_size) {
+  ) >> then >> [=](uint64_t received_size) {
     Assert(received_size == size, "Client sent less data than expected.");
     
     result->offset = result->data.begin();
@@ -159,7 +159,7 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
   };
 }
 
-boost::future<unsigned long> ClientConnection::_send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush) {
+boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush) {
   auto packet_size = packet->data.size();
   
   // If the packet is SslNo (size == 1), it has a special format and does not require a size
@@ -169,25 +169,25 @@ boost::future<unsigned long> ClientConnection::_send_bytes_async(std::shared_ptr
 
   if (_response_buffer.size() + packet->data.size() > _max_response_size) {
     // We have to flush before we can actually process the data 
-    return _flush_async() >> then >> [=](unsigned long) { return _send_bytes_async(packet, flush); };
+    return _flush_async() >> then >> [=](uint64_t) { return _send_bytes_async(packet, flush); };
   }
 
   _response_buffer.insert(_response_buffer.end(), packet->data.begin(), packet->data.end());
   
   if (flush) {
-    return _flush_async() >> then >> [=](unsigned long) { return packet_size; };
+    return _flush_async() >> then >> [=](uint64_t) { return (uint64_t)packet_size; };
   } else {
     // Return an already resolved future (we have just written data to the buffer)
-    return boost::make_ready_future<unsigned long>(packet_size);
+    return boost::make_ready_future<uint64_t>(packet_size);
   }
 }
 
-boost::future<unsigned long> ClientConnection::_flush_async() {
+boost::future<uint64_t> ClientConnection::_flush_async() {
   return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future)
     >> then >> [=](unsigned long sent_bytes) {
       Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
       _response_buffer.clear();
-      return sent_bytes;
+      return (uint64_t)sent_bytes;
     };
 }
 

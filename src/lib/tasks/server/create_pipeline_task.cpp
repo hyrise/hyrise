@@ -7,7 +7,7 @@
 namespace opossum {
 
 void CreatePipelineTask::_on_execute() {
-  auto result = std::make_shared<CreatePipelineResult>();
+  auto result = std::make_unique<CreatePipelineResult>();
   
   try {
     result->sql_pipeline = std::make_shared<SQLPipeline>(_sql);
@@ -15,7 +15,6 @@ void CreatePipelineTask::_on_execute() {
     // Try LOAD file_name table_name
     if (_allow_load_table && _is_load_table()) {
       result->load_table = std::make_pair(_file_name, _table_name);
-      result->is_load_table = true;
     } else {
       // Setting the exception this way ensures that the details are preserved in the futures
       // Important: std::current_exception apparently does not work
@@ -24,7 +23,7 @@ void CreatePipelineTask::_on_execute() {
     }
   }
   
-  _promise.set_value(result);
+  _promise.set_value(std::move(result));
 }
 
 bool CreatePipelineTask::_is_load_table() {

@@ -47,6 +47,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   
   std::shared_ptr<TransactionContext> _transaction;
   std::unordered_map<std::string, std::shared_ptr<SQLPipeline>> _prepared_statements;
+  // TODO(lawben): The type of _portals will change when prepared statements are supported in the SQLPipeline
   std::unordered_map<std::string, std::pair<hsql::StatementType, std::shared_ptr<SQLQueryPlan>>> _portals;
 };
 

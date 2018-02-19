@@ -37,6 +37,7 @@ void HyriseSession::start() {
   _self = shared_from_this();
   
   (_perform_session_startup() >> then >> [=] () { return _handle_client_requests(); })
+    // Use .then instead of >> then >> to be able to handle exceptions
     .then(boost::launch::sync, [=](boost::future<void> f) {
       try {
         f.get();
@@ -184,8 +185,8 @@ boost::future<void> HyriseSession::_handle_simple_query_command(const std::strin
   _prepared_statements.erase("");
   _portals.erase("");
     
-  return create_sql_pipeline() >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
-    return result->is_load_table
+  return create_sql_pipeline() >> then >> [=] (std::unique_ptr<CreatePipelineResult> result) {
+    return result->load_table.has_value()
       ? load_table_file(result->load_table.value().first, result->load_table.value().second)
       : execute_sql_pipeline(result->sql_pipeline)
           >> then >> send_query_response;
@@ -205,7 +206,7 @@ boost::future<void> HyriseSession::_handle_parse_command(std::unique_ptr<ParsePa
   }
   
   return _dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info->query))
-    >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
+    >> then >> [=] (std::unique_ptr<CreatePipelineResult> result) {
       // We know that SQL Pipeline is set in the result because the load table command is not allowed in this context
       _prepared_statements.insert(std::make_pair(prepared_statement_name, result->sql_pipeline));
     } >> then >> [=] () { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
