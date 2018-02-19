@@ -122,7 +122,6 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
         cost_balance += sorted_choices.back()->accept_cost();
         desirability_balance += sorted_choices.back()->accept_desirability();
 
-        // ToDo(group01) invalidate before or after accept?
         for (auto choice = sorted_choices.begin(); choice != sorted_choices.end(); ++choice) {
           // Assumption: choice.invalidates() never contains choice itself!
           if (sorted_choices.back()->invalidates().count(*choice) > 0) {
