@@ -31,8 +31,7 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
 
  public:
   explicit AnyColumnIterable(const IterableT& iterable) : _iterable{iterable} {
-    if (_iterable.single_functor_call_required())
-      this->require_single_functor_call();
+    if (_iterable.single_functor_call_required()) this->require_single_functor_call();
   }
 
   template <typename Functor>

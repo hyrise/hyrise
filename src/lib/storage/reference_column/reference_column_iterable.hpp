@@ -96,7 +96,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     ColumnIteratorValue<T> dereference() const {
-      const auto [chunk_id, chunk_offset] = _pos_list[_chunk_offset];
+      const auto [chunk_id, chunk_offset] = _pos_list[_chunk_offset];  // NOLINT
 
       if (chunk_offset == INVALID_CHUNK_OFFSET) {
         return {T{}, true, _chunk_offset};
