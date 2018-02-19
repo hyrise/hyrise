@@ -33,11 +33,15 @@ using MaterializedChunk = std::vector<MaterializedValue<T>, MaterializedValueAll
 
 template <typename T>
 struct MaterializedNUMAPartition{
-  std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
   NodeID _node_id;
+  MaterializedValueAllocator<T> _alloc;
+  std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
 
-  explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size) : _node_id{node_id} {
-    _chunk_columns.resize(reserve_size);
+  explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
+    : _node_id{node_id}
+    , _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)}
+    , _chunk_columns(reserve_size)
+  {
   }
 
   void fit(){
