@@ -135,8 +135,8 @@ class ColumnMaterializer {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, alloc, numa_node_id] {
       auto column = input->get_chunk(chunk_id).get_column(column_id);
       resolve_column_type<T>(*column, [&](auto& typed_column) {
-        // TODO: think about how to write the chunks to multiple
-        (*output)[numa_node_id]._chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
+        //(*output)[numa_node_id]._chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
+        _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
       });
     });
   }
@@ -145,13 +145,11 @@ class ColumnMaterializer {
    * Materialization works of all types of columns
    */
   template <typename ColumnType>
-  std::shared_ptr<MaterializedChunk<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,
+  void _materialize_column(const ColumnType& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output,
-                                                             MaterializedValueAllocator<T> alloc) {
+                                                             MaterializedNUMAPartition<T>& partition) {
 
-    // TODO(florian): think long and hard about allocator lifetimes
-    auto output = MaterializedChunk<T>(alloc);
-    output.reserve(column.size());
+    auto output = partition._chunk_columns[chunk_id];
 
     auto iterable = create_iterable_from_column<T>(column);
 
@@ -162,18 +160,16 @@ class ColumnMaterializer {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, column_value.value());
+        output->emplace_back(row_id, column_value.value());
       }
     });
 
     // TODO(florian): think about whether this sorting makes sense for the NUMA case
     // probably this is a good presorting for the merge in the radix phase
     if (_sort) {
-      std::sort(output.begin(), output.end(),
+      std::sort(output->begin(), output->end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });
     }
-
-    return std::make_shared<MaterializedChunk<T>>(std::move(output));
   }
 
   /**
