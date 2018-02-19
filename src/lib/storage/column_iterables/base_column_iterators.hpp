@@ -75,11 +75,12 @@ class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> 
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_pos_list_it; ++_chunk_offset; }
-
-  bool equal(const BasePointAccessColumnIterator& other) const {
-    return (_pos_list_it == other._pos_list_it);
+  void increment() {
+    ++_pos_list_it;
+    ++_chunk_offset;
   }
+
+  bool equal(const BasePointAccessColumnIterator& other) const { return (_pos_list_it == other._pos_list_it); }
 
  private:
   PosListIterator _pos_list_it;

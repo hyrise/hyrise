@@ -65,7 +65,6 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
     _iterable.set_allow_reordering(allow);
   }
 
-
  private:
   IterableT _iterable;
 };

@@ -62,7 +62,8 @@ void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_co
     ++end_pos_list_it;
 
     if (end_pos_list_it->chunk_id != current_chunk_id || end_pos_list_it == pos_list.cend()) {
-      _visit_referenced(left_column, current_chunk_id, *context, {begin_pos_list_it, end_pos_list_it, begin_chunk_offset});
+      _visit_referenced(left_column, current_chunk_id, *context,
+                        {begin_pos_list_it, end_pos_list_it, begin_chunk_offset});
 
       begin_chunk_offset += static_cast<ChunkOffset>(std::distance(begin_pos_list_it, end_pos_list_it));
       begin_pos_list_it = end_pos_list_it;
@@ -82,8 +83,7 @@ DeprecatedAttributeVectorIterable BaseSingleColumnTableScanImpl::_create_attribu
 }
 
 void BaseSingleColumnTableScanImpl::_visit_referenced(const ReferenceColumn& left_column,
-                                                      const ChunkID referenced_chunk_id,
-                                                      Context& context,
+                                                      const ChunkID referenced_chunk_id, Context& context,
                                                       ColumnPointAccessPlan access_plan) {
   const auto chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
   auto referenced_column = chunk->get_column(left_column.referenced_column_id());

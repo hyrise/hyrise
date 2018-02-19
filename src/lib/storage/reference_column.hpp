@@ -16,8 +16,6 @@
 
 namespace opossum {
 
-
-
 // ReferenceColumn is a specific column type that stores all its values as position list of a referenced column
 class ReferenceColumn : public BaseColumn {
  public:

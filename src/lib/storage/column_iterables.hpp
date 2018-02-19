@@ -1,8 +1,8 @@
 #pragma once
 
-#include <type_traits>
 #include <array>
 #include <optional>
+#include <type_traits>
 
 #include "storage/column_iterables/base_column_iterators.hpp"
 #include "types.hpp"

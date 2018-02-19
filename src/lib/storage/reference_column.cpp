@@ -14,17 +14,19 @@ namespace opossum {
 ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_table,
                                  const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos_list,
                                  PosListType pos_list_type)
-    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos_list), _pos_list_type(pos_list_type) {
+    : _referenced_table(referenced_table),
+      _referenced_column_id(referenced_column_id),
+      _pos_list(pos_list),
+      _pos_list_type(pos_list_type) {
   DebugAssert(_referenced_table->get_type() == TableType::Data, "Referenced table must be a data table.");
   DebugAssert(
       [&]() {
         if (_pos_list_type == PosListType::MultiChunk || _pos_list->empty()) return true;
 
         const auto first_chunk_id = _pos_list->front().chunk_id;
-        return std::all_of(_pos_list->cbegin(), _pos_list->cend(),
-                           [first_chunk_id](const auto& row_id) {
-                             return (row_id.chunk_id == first_chunk_id) || row_id == NULL_ROW_ID;
-                           });
+        return std::all_of(_pos_list->cbegin(), _pos_list->cend(), [first_chunk_id](const auto& row_id) {
+          return (row_id.chunk_id == first_chunk_id) || row_id == NULL_ROW_ID;
+        });
       }(),
       "Position list must only contain positions of one chunk if type is SingleChunk.");
 }

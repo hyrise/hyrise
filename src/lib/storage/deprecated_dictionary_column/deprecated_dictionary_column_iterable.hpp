@@ -24,7 +24,8 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
 
   template <typename Functor>
   void _on_with_iterators(const ColumnPointAccessPlan& plan, const Functor& functor) const {
-    auto begin = PointAccessIterator{*_column.dictionary(), *_column.attribute_vector(), plan.begin, plan.begin_chunk_offset};
+    auto begin =
+        PointAccessIterator{*_column.dictionary(), *_column.attribute_vector(), plan.begin, plan.begin_chunk_offset};
     auto end = PointAccessIterator{*_column.dictionary(), *_column.attribute_vector(), plan.end, ChunkOffset{}};
     functor(begin, end);
   }

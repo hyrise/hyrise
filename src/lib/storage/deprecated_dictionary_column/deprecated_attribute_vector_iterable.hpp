@@ -58,8 +58,8 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
 
   class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>> {
    public:
-    explicit PointAccessIterator(const BaseAttributeVector& attribute_vector,
-                                 PosListIterator pos_list_it, ChunkOffset chunk_offset)
+    explicit PointAccessIterator(const BaseAttributeVector& attribute_vector, PosListIterator pos_list_it,
+                                 ChunkOffset chunk_offset)
         : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<ValueID>>{pos_list_it, chunk_offset},
           _attribute_vector{attribute_vector} {}
 

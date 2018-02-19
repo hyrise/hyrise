@@ -1,15 +1,15 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <utility>
-#include <optional>
 
 #include "base_table_scan_impl.hpp"
 
+#include "storage/column_iterables.hpp"
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/column_iterables.hpp"
 
 #include "types.hpp"
 
@@ -41,12 +41,9 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
    */
   struct Context : public ColumnVisitableContext {
     Context(const ChunkID chunk_id, PosList& matches_out, std::optional<ColumnPointAccessPlan> access_plan)
-        : _chunk_id{chunk_id},
-          _matches_out{matches_out},
-          _access_plan{std::move(access_plan)} {}
+        : _chunk_id{chunk_id}, _matches_out{matches_out}, _access_plan{std::move(access_plan)} {}
 
-    Context(const ChunkID chunk_id, PosList& matches_out)
-        : Context{chunk_id, matches_out, std::nullopt} {}
+    Context(const ChunkID chunk_id, PosList& matches_out) : Context{chunk_id, matches_out, std::nullopt} {}
 
     // Copy everything from other except mapped_chunk_offsets
     Context(Context& other, const ColumnPointAccessPlan& access_plan)

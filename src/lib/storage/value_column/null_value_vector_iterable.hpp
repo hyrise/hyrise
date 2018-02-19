@@ -63,7 +63,8 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values, PosListIterator pos_list_it, ChunkOffset chunk_offset)
+    explicit PointAccessIterator(const NullValueVector& null_values, PosListIterator pos_list_it,
+                                 ChunkOffset chunk_offset)
         : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{pos_list_it, chunk_offset},
           _null_values{null_values} {}
 

@@ -35,8 +35,8 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
       auto begin = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
                                                       plan.begin, plan.begin_chunk_offset};
-      auto end = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
-                                                    plan.end, ChunkOffset{}};
+      auto end = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder, plan.end,
+                                                    ChunkOffset{}};
       functor(begin, end);
     });
   }
@@ -87,7 +87,8 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
    public:
     PointAccessIterator(const pmr_vector<T>& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         PosListIterator pos_list_it, ChunkOffset chunk_offset)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{pos_list_it, chunk_offset},
+        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{pos_list_it,
+                                                                                                    chunk_offset},
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}

@@ -74,10 +74,10 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
   class PointAccessIterator
       : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<ValueID>> {
    public:
-    PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder,
-                        PosListIterator pos_list_it, ChunkOffset chunk_offset)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>,
-                                        ColumnIteratorValue<ValueID>>{pos_list_it, chunk_offset},
+    PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder, PosListIterator pos_list_it,
+                        ChunkOffset chunk_offset)
+        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<ValueID>>{pos_list_it,
+                                                                                                          chunk_offset},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
 

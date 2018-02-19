@@ -109,7 +109,8 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     using ValueVector = pmr_concurrent_vector<T>;
 
    public:
-    explicit NonNullPointAccessIterator(const ValueVector& values, PosListIterator pos_list_it, ChunkOffset chunk_offset)
+    explicit NonNullPointAccessIterator(const ValueVector& values, PosListIterator pos_list_it,
+                                        ChunkOffset chunk_offset)
         : BasePointAccessColumnIterator<NonNullPointAccessIterator, ColumnIteratorValue<T>>{pos_list_it, chunk_offset},
           _values{values} {}
 
