@@ -252,7 +252,8 @@ boost::future<void> HyriseSession::_handle_sync_command() {
   if (!_transaction)
     return boost::make_ready_future();
   
-  return _dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction));
+  return _dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction))
+    >> then >> [=] () { _transaction.reset(); };
 }
 
 boost::future<void> HyriseSession::_handle_flush_command() {
