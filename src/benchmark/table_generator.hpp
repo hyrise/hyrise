@@ -11,7 +11,6 @@ class Table;
 class TableGenerator {
  public:
   std::shared_ptr<Table> generate_table(const ChunkID chunk_size, const bool compress = false);
-  std::shared_ptr<Table> generate_skewed_table(const ChunkID chunk_size, const bool compress = false);
 
  protected:
   const size_t _num_columns = 10;
