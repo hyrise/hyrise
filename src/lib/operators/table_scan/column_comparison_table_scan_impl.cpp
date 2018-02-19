@@ -67,8 +67,8 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
         auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
         auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
-        left_column_iterable.set_allow_reordering(false);
-        right_column_iterable.set_allow_reordering(false);
+        left_column_iterable.require_single_functor_call();
+        right_column_iterable.require_single_functor_call();
 
         left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_column_iterable.with_iterators([&](auto right_it, auto right_end) {

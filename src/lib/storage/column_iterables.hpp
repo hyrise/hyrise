@@ -82,14 +82,19 @@ class ColumnIterable {
     });
   }
 
-  void set_allow_reordering(bool allow) { _allow_reordering = allow; }
-  bool allows_reordering() const { return _allow_reordering; }
+  /**
+   * By default, iterables may call functors passed to with_iterators()
+   * several times with iterators to different parts of the column.
+   * Call require_single_functor_call() if your code requires a single call.
+   */
+  void require_single_functor_call() { _single_call_required = true; }
+  bool single_functor_call_required() const { return _single_call_required; }
 
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 
  private:
-  bool _allow_reordering = true;
+  bool _single_call_required = false;
 };
 
 struct ColumnPointAccessPlan {

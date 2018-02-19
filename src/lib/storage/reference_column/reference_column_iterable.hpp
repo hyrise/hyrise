@@ -30,7 +30,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     if (references_single_chunk && is_not_empty) {
       _referenced_with_iterators({pos_list.cbegin(), pos_list.cend(), ChunkOffset{0u}}, functor);
-    } else if (this->allows_reordering() && is_not_empty) {
+    } else if (!this->single_functor_call_required() && is_not_empty) {
       auto current_chunk_id = pos_list.front().chunk_id;
 
       auto begin_pos_list_it = pos_list.cbegin();

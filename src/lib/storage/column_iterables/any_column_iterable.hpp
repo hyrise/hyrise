@@ -31,7 +31,8 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
 
  public:
   explicit AnyColumnIterable(const IterableT& iterable) : _iterable{iterable} {
-    this->set_allow_reordering(_iterable.allows_reordering());
+    if (_iterable.single_functor_call_required())
+      this->require_single_functor_call();
   }
 
   template <typename Functor>
@@ -60,9 +61,9 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
     });
   }
 
-  void set_allow_reordering(bool allow) {
-    ColumnIterable<AnyColumnIterable>::set_allow_reordering(allow);
-    _iterable.set_allow_reordering(allow);
+  void require_single_functor_call() {
+    ColumnIterable<AnyColumnIterable>::require_single_functor_call();
+    _iterable.require_single_functor_call();
   }
 
  private:
