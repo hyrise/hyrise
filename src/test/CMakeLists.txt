@@ -17,6 +17,7 @@ set(
     import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
+    lib/fixed_string_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/delete_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
@@ -116,6 +117,7 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
+    storage/value_vector_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp

@@ -6,6 +6,7 @@ set(
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.hpp
+    fixed_string.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -285,6 +286,8 @@ set(
     storage/table.hpp
     storage/value_column.cpp
     storage/value_column.hpp
+    storage/value_vector.cpp
+    storage/value_vector.hpp
     storage/value_column/null_value_vector_iterable.hpp
     storage/value_column/value_column_iterable.hpp
     storage/vector_compression/base_vector_decompressor.hpp
