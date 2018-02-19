@@ -15,9 +15,6 @@ void ExecuteServerPreparedStatementTask::_on_execute() {
     auto result_table = tasks.back()->get_operator()->get_output();
     _promise.set_value(std::move(result_table));
   } catch (const std::exception& exception) {
-    // TODO: If rolling back the transaction is correct in this case,
-    // it should also result in the transaction being reset in the session
-    _transaction_context->rollback();
     _promise.set_exception(boost::current_exception());
   }
 }

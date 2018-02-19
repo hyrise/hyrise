@@ -121,6 +121,12 @@ boost::future<void> HyriseSession::_handle_client_requests() {
                          result.get();
                          return boost::make_ready_future();
                        } catch (std::exception& e) {
+                         // Abort the current transaction
+                         if (_transaction) {
+                           _transaction->rollback();
+                           _transaction.reset();
+                         }
+                         
                          return _connection->send_error(e.what()) >> then >>
                                 [=]() { _connection->send_ready_for_query(); };
                        }
@@ -263,7 +269,7 @@ boost::future<void> HyriseSession::_handle_execute_command(std::string portal_na
 
   query_plan->set_transaction_context(_transaction);
 
-  return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan, _transaction)) >>
+  return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan)) >>
          then >>
          [=](std::shared_ptr<const Table> result_table) {
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
