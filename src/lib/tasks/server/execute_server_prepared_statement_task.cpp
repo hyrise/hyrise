@@ -11,7 +11,7 @@ void ExecuteServerPreparedStatementTask::_on_execute() {
   try {
     const auto tasks = _prepared_plan->create_tasks();
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-//    _transaction_context->commit();
+    //    _transaction_context->commit();
     auto result_table = tasks.back()->get_operator()->get_output();
     _promise.set_value(std::move(result_table));
   } catch (const std::exception& exception) {

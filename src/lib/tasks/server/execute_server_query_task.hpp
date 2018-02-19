@@ -6,10 +6,9 @@ namespace opossum {
 
 class SQLPipeline;
 
-class ExecuteServerQueryTask : public ServerTask<void>  {
+class ExecuteServerQueryTask : public ServerTask<void> {
  public:
-  ExecuteServerQueryTask(std::shared_ptr<SQLPipeline> sql_pipeline)
-      : _sql_pipeline(sql_pipeline) {}
+  ExecuteServerQueryTask(std::shared_ptr<SQLPipeline> sql_pipeline) : _sql_pipeline(sql_pipeline) {}
 
  protected:
   void _on_execute() override;

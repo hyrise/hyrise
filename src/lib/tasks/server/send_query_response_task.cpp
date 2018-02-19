@@ -12,23 +12,23 @@ std::vector<ColumnDescription> SendQueryResponseTask::build_row_description(cons
 
   const auto& column_names = table->column_names();
   const auto& column_types = table->column_types();
-  
+
   for (auto column_id = 0u; column_id < table->column_count(); ++column_id) {
     switch (column_types[column_id]) {
       case DataType::Int:
-        result.emplace_back(ColumnDescription { column_names[column_id], /* object_id */ 23, /* type id */ 4 });
+        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 23, /* type id */ 4});
         break;
       case DataType::Long:
-        result.emplace_back(ColumnDescription { column_names[column_id], /* object_id */ 20, /* type id */ 8 });
+        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 20, /* type id */ 8});
         break;
       case DataType::Float:
-        result.emplace_back(ColumnDescription { column_names[column_id], /* object_id */ 700, /* type id */ 4 });
+        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 700, /* type id */ 4});
         break;
       case DataType::Double:
-        result.emplace_back(ColumnDescription { column_names[column_id], /* object_id */ 701, /* type id */ 8 });
+        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 701, /* type id */ 8});
         break;
       case DataType::String:
-        result.emplace_back(ColumnDescription { column_names[column_id], /* object_id */ 25, /* type id */ -1 });
+        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 25, /* type id */ -1});
         break;
       default:
         Fail("Bad DataType");
@@ -38,7 +38,8 @@ std::vector<ColumnDescription> SendQueryResponseTask::build_row_description(cons
   return result;
 }
 
-std::string SendQueryResponseTask::build_command_complete_message(hsql::StatementType statement_type, uint64_t row_count) {
+std::string SendQueryResponseTask::build_command_complete_message(hsql::StatementType statement_type,
+                                                                  uint64_t row_count) {
   std::string completed_msg;
   switch (statement_type) {
     case hsql::StatementType::kStmtSelect: {
@@ -65,18 +66,15 @@ std::string SendQueryResponseTask::build_command_complete_message(hsql::Statemen
       completed_msg = "SELECT 0";
       break;
     }
-    default: {
-      throw std::logic_error("Unknown statement type. Server doesn't know how to complete query.");
-    }
+    default: { throw std::logic_error("Unknown statement type. Server doesn't know how to complete query."); }
   }
 
   return completed_msg;
 }
 
 std::string SendQueryResponseTask::build_execution_info_message(std::shared_ptr<SQLPipeline> sql_pipeline) {
-  return
-    "Compilation time (µs): " + std::to_string(sql_pipeline->compile_time_microseconds().count()) +
-    "\nExecution time (µs): " + std::to_string(sql_pipeline->execution_time_microseconds().count());
+  return "Compilation time (µs): " + std::to_string(sql_pipeline->compile_time_microseconds().count()) +
+         "\nExecution time (µs): " + std::to_string(sql_pipeline->execution_time_microseconds().count());
 }
 
 void SendQueryResponseTask::_on_execute() {

@@ -3,8 +3,8 @@
 #include <boost/asio/placeholders.hpp>
 #include <boost/bind.hpp>
 
-#include "hyrise_session.hpp"
 #include "client_connection.hpp"
+#include "hyrise_session.hpp"
 
 namespace opossum {
 

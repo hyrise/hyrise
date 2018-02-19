@@ -48,9 +48,7 @@ RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
   return {/* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
 }
 
-std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) {
-  return read_string(packet);
-}
+std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) { return read_string(packet); }
 
 ParsePacket PostgresWireHandler::handle_parse_packet(const InputPacket& packet) {
   auto statement_name = read_string(packet);
@@ -92,7 +90,7 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
   auto n_result_column_format_codes = read_value<int16_t>(packet);
   auto result_column_format_codes = read_values<int16_t>(packet, n_result_column_format_codes);
 
-  return BindPacket { statement_name, portal, std::move(parameter_values) };
+  return BindPacket{statement_name, portal, std::move(parameter_values)};
 }
 
 std::string PostgresWireHandler::handle_execute_packet(const InputPacket& packet) {

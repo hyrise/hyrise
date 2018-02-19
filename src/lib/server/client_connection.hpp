@@ -23,7 +23,7 @@ struct ColumnDescription {
 
 class ClientConnection {
   friend class SendQueryResponseTask;
-  
+
  public:
   explicit ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
     _response_buffer.reserve(_max_response_size);
@@ -34,7 +34,7 @@ class ClientConnection {
 
   boost::future<RequestHeader> receive_packet_header();
   boost::future<InputPacket> receive_packet_contents(uint32_t size);
-  
+
   boost::future<void> send_ssl_denied();
   boost::future<void> send_auth();
   boost::future<void> send_ready_for_query();
@@ -46,15 +46,15 @@ class ClientConnection {
 
  protected:
   boost::future<InputPacket> _receive_bytes_async(size_t size);
-  
+
   boost::future<uint64_t> _send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush = false);
   boost::future<uint64_t> _flush_async();
 
   tcp::socket _socket;
-  
+
   // Max 2048 bytes per IP packet sent
   uint32_t _max_response_size = 2048;
   ByteBuffer _response_buffer;
 };
 
-} // namespace opossum
+}  // namespace opossum

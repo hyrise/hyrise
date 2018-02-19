@@ -6,13 +6,13 @@
 
 namespace opossum {
 
-template<typename T>
+template <typename T>
 class ServerTask : public AbstractTask {
  public:
-  explicit ServerTask(){}
-  
+  explicit ServerTask() {}
+
   using result_type = T;
-  
+
   boost::future<T> get_future() { return _promise.get_future(); }
 
  protected:

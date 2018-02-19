@@ -24,36 +24,26 @@ namespace asio {
  * system_error and passed back to the caller via the future.
  */
 template <typename Allocator = std::allocator<void> >
-class use_boost_future_t
-{
+class use_boost_future_t {
  public:
   /// The allocator type. The allocator is used when constructing the
   /// @c std::promise object for a given asynchronous operation.
   typedef Allocator allocator_type;
 
   /// Construct using default-constructed allocator.
-  BOOST_ASIO_CONSTEXPR use_boost_future_t()
-  {
-  }
+  BOOST_ASIO_CONSTEXPR use_boost_future_t() {}
 
   /// Construct using specified allocator.
-  explicit use_boost_future_t(const Allocator& allocator)
-    : allocator_(allocator)
-  {
-  }
+  explicit use_boost_future_t(const Allocator& allocator) : allocator_(allocator) {}
 
   /// Specify an alternate allocator.
   template <typename OtherAllocator>
-  use_boost_future_t<OtherAllocator> operator[](const OtherAllocator& allocator) const
-  {
+  use_boost_future_t<OtherAllocator> operator[](const OtherAllocator& allocator) const {
     return use_boost_future_t<OtherAllocator>(allocator);
   }
 
   /// Obtain allocator.
-  allocator_type get_allocator() const
-  {
-    return allocator_;
-  }
+  allocator_type get_allocator() const { return allocator_; }
 
  private:
   Allocator allocator_;
@@ -69,8 +59,8 @@ __declspec(selectany) use_boost_future_t<> use_boost_future;
 constexpr use_boost_future_t<> use_boost_future;
 #endif
 
-} // namespace asio
-} // namespace boost
+}  // namespace asio
+}  // namespace boost
 
 #include <boost/asio/detail/pop_options.hpp>
 

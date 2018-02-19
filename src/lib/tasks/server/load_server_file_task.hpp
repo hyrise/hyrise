@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-class LoadServerFileTask : public ServerTask<void>  {
+class LoadServerFileTask : public ServerTask<void> {
  public:
   LoadServerFileTask(std::string file_name, std::string table_name)
       : _file_name(std::move(file_name)), _table_name(std::move(table_name)) {}

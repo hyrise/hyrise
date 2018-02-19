@@ -2,8 +2,8 @@
 
 #include "sql/SQLStatement.h"
 
-#include "storage/table.hpp"
 #include "server/client_connection.hpp"
+#include "storage/table.hpp"
 
 #include "server_task.hpp"
 
@@ -11,10 +11,9 @@ namespace opossum {
 
 class SQLPipeline;
 
-class SendQueryResponseTask : public ServerTask<uint64_t>  {
+class SendQueryResponseTask : public ServerTask<uint64_t> {
  public:
-  SendQueryResponseTask(std::shared_ptr<ClientConnection> connection,
-                        std::shared_ptr<const Table> result_table)
+  SendQueryResponseTask(std::shared_ptr<ClientConnection> connection, std::shared_ptr<const Table> result_table)
       : _connection(connection), _result_table(std::move(result_table)) {}
 
   static std::vector<ColumnDescription> build_row_description(const std::shared_ptr<const Table> table);

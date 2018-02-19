@@ -8,7 +8,7 @@ namespace opossum {
 
 void CreatePipelineTask::_on_execute() {
   auto result = std::make_unique<CreatePipelineResult>();
-  
+
   try {
     result->sql_pipeline = std::make_shared<SQLPipeline>(_sql);
   } catch (const std::exception& exception) {
@@ -22,7 +22,7 @@ void CreatePipelineTask::_on_execute() {
       return _promise.set_exception(boost::current_exception());
     }
   }
-  
+
   _promise.set_value(std::move(result));
 }
 
