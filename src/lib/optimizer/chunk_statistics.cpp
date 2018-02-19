@@ -14,17 +14,17 @@ bool ChunkStatistics::can_prune(const ColumnID column_id, const AllTypeVariant& 
   return _statistics[column_id]->can_prune(value, scan_type);
 }
 
-std::string ChunkStatistics::to_string() const {
-  std::stringstream s;
-  s << "ChunkStatistics:" << std::endl;
-  int i = 0;
-  for (const auto& column_stats : _statistics) {
-    const auto min = AllParameterVariant(column_stats->min());
-    const auto max = AllParameterVariant(column_stats->max());
-    s << "\t" << std::to_string(i++) << ": min: " << opossum::to_string(min) << " max: " << opossum::to_string(max)
-      << std::endl;
-  }
-  return s.str();
-}
+// std::string ChunkStatistics::to_string() const {
+//   std::stringstream s;
+//   s << "ChunkStatistics:" << std::endl;
+//   int i = 0;
+//   for (const auto& column_stats : _statistics) {
+//     const auto min = AllParameterVariant(column_stats->min());
+//     const auto max = AllParameterVariant(column_stats->max());
+//     s << "\t" << std::to_string(i++) << ": min: " << opossum::to_string(min) << " max: " << opossum::to_string(max)
+//       << std::endl;
+//   }
+//   return s.str();
+// }
 
 }  // namespace opossum

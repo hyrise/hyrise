@@ -26,7 +26,7 @@ class DictionaryCompression {
    * @param column needs to be of type ValueColumn<T>
    * @return a compressed column of type DictionaryColumn<T>
    */
-  static std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<opossum::BaseChunkColumnStatistics>> compress_column(
+  static std::tuple<std::shared_ptr<BaseColumn>, std::shared_ptr<opossum::ChunkColumnStatistics>> compress_column(
       DataType data_type, const std::shared_ptr<BaseColumn>& column);
 
   /**
