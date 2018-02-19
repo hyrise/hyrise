@@ -51,15 +51,15 @@ TEST_F(IndexChoiceTest, GetCurrentlyChosen) {
 }
 
 TEST_F(IndexChoiceTest, GetInvalidates) {
-    auto choice1 = std::make_shared<IndexChoice>(column_ref, false);
-    auto choice2 = std::make_shared<IndexChoice>(column_ref, true);
-    EXPECT_TRUE(choice1->invalidates().empty());
-    EXPECT_TRUE(choice2->invalidates().empty());
-    choice1->add_invalidate(choice2);
-    EXPECT_EQ(choice1->invalidates().size(), 1u);
-    EXPECT_TRUE(choice2->invalidates().empty());
-    auto invalidated_choice = *(choice1->invalidates().cbegin());
-    EXPECT_EQ(invalidated_choice, choice2);
+  auto choice1 = std::make_shared<IndexChoice>(column_ref, false);
+  auto choice2 = std::make_shared<IndexChoice>(column_ref, true);
+  EXPECT_TRUE(choice1->invalidates().empty());
+  EXPECT_TRUE(choice2->invalidates().empty());
+  choice1->add_invalidate(choice2);
+  EXPECT_EQ(choice1->invalidates().size(), 1u);
+  EXPECT_TRUE(choice2->invalidates().empty());
+  auto invalidated_choice = *(choice1->invalidates().cbegin());
+  EXPECT_EQ(invalidated_choice, choice2);
 }
 
 TEST_F(IndexChoiceTest, Accept) {

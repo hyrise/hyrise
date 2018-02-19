@@ -121,7 +121,7 @@ class TuningChoice {
    */
   virtual std::shared_ptr<TuningOperation> _reject_operation() const = 0;
 
-  std::set<std::shared_ptr<TuningChoice> > _invalidates;
+  std::set<std::shared_ptr<TuningChoice>> _invalidates;
 };
 
 }  // namespace opossum
