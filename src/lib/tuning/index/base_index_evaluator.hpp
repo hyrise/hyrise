@@ -15,7 +15,7 @@
 namespace opossum {
 
 /**
- * The BaseIndexEvaluator is a template for various index evaluators that differ
+ * The BaseIndexEvaluator is a base class with helper functions for various index evaluators that differ
  * in the concrete algorithms used to determine index desirability and memory cost.
  *
  * It encapsulates the common behaviour of analyzing the systems query cache for
