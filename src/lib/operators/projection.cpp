@@ -110,7 +110,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else if (column_expression->is_subselect()) {
       SQLQueryPlan query_plan;
       query_plan.add_tree_by_root(column_expression->subselect_operator());
-      query_plan.set_transaction_context(this->transaction_context());
+
+      auto transaction_context = this->transaction_context();
+      if (transaction_context) {
+        query_plan.set_transaction_context(transaction_context);
+      }
+
       std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 

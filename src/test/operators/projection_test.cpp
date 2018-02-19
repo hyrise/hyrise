@@ -337,7 +337,7 @@ TEST_F(OperatorsProjectionTest, OperatorName) {
 }
 
 TEST_F(OperatorsProjectionTest, ExecuteSubquery) {
-  auto expected_result = load_table("src/test/tables/int_repeated.tbl", 2);
+  auto expected_result = load_table("src/test/tables/int_repeated.tbl", 1);
 
   // subselect table can only have one row and one column
   auto single_value_table = std::make_shared<TableWrapper>(load_table("src/test/tables/int_single.tbl", 1));
