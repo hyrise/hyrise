@@ -1,6 +1,7 @@
 #pragma once
 
 #include <llvm/IR/Module.h>
+#include <llvm/IRReader/IRReader.h>
 
 #include <memory>
 #include <string>
@@ -27,6 +28,7 @@ class IRRepository : private Noncopyable {
  private:
   IRRepository();
 
+  std::unique_ptr<llvm::Module> _parse_module(const std::string& module_string, llvm::LLVMContext& context) const;
   void _dump(std::ostream& os) const;
 
   std::shared_ptr<llvm::LLVMContext> _llvm_context;

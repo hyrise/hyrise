@@ -5,9 +5,9 @@
 #include <llvm/ADT/SetVector.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/SourceMgr.h>
 #include <llvm/Transforms/Utils/Cloning.h>
-
-#include "utils/llvm_utils.hpp"
 
 namespace opossum {
 
@@ -33,7 +33,7 @@ std::shared_ptr<llvm::LLVMContext> IRRepository::llvm_context() const { return _
 
 IRRepository::IRRepository()
     : _llvm_context{std::make_shared<llvm::LLVMContext>()},
-      _module{llvm_utils::module_from_string(std::string(&jit_llvm_bundle, jit_llvm_bundle_size), *_llvm_context)} {
+      _module{_parse_module(std::string(&jit_llvm_bundle, jit_llvm_bundle_size), *_llvm_context)} {
   llvm::StripDebugInfo(*_module);
 
   // extract functions
@@ -61,6 +61,19 @@ IRRepository::IRRepository()
   }
 
   // _dump(std::cout);
+}
+
+std::unique_ptr<llvm::Module> IRRepository::_parse_module(const std::string& module_string,
+                                                          llvm::LLVMContext& context) const {
+  llvm::SMDiagnostic error;
+  const auto buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(module_string));
+  auto module = llvm::parseIR(*buffer, error, context);
+
+  if (error.getFilename() != "") {
+    error.print("", llvm::errs(), true);
+    Fail("an LLVM error occured while parsing the embedded LLVM-IR");
+  }
+  return module;
 }
 
 void IRRepository::_dump(std::ostream& os) const {
