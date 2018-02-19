@@ -14,8 +14,6 @@
 #include <llvm/Target/TargetMachine.h>
 #include <utils/assert.hpp>
 
-#include "utils/error_utils.hpp"
-
 namespace opossum {
 
 class JitCompiler {
@@ -34,18 +32,29 @@ class JitCompiler {
 
   template <typename T>
   std::function<T> find_symbol(const std::string& name) {
-    const auto target_address = error_utils::handle_error(_compile_layer.findSymbol(_mangle(name), true).getAddress());
+    const auto target_address = _handle_error(_compile_layer.findSymbol(_mangle(name), true).getAddress());
 
-    Assert(target_address, "symbol " + name + " could not be found");
+    DebugAssert(target_address, "symbol " + name + " could not be found");
     return reinterpret_cast<T*>(target_address);
   }
 
   llvm::TargetMachine& target_machine() const;
-
   const llvm::DataLayout& data_layout() const;
 
  private:
   const std::string _mangle(const std::string& name) const;
+
+  template <typename T>
+  T _handle_error(llvm::Expected<T> value_or_error) {
+    if (value_or_error) {
+      return value_or_error.get();
+    }
+
+    llvm::logAllUnhandledErrors(value_or_error.takeError(), llvm::errs(), "");
+    Fail("an LLVM error occured");
+  }
+
+  void _handle_error(llvm::Error error);
 
   const std::shared_ptr<llvm::LLVMContext> _context;
   const std::unique_ptr<llvm::TargetMachine> _target_machine;

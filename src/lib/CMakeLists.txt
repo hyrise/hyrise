@@ -376,6 +376,10 @@ if (NOT DISABLE_JIT_SUPPORT)
         logical_query_plan/jit_aware_lqp_translator.hpp
         operators/jit_operator.cpp
         operators/jit_operator.hpp
+        operators/jit_operator/specialization/ir_repository.cpp
+        operators/jit_operator/specialization/ir_repository.hpp
+        operators/jit_operator/specialization/jit_compiler.cpp
+        operators/jit_operator/specialization/jit_compiler.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE}

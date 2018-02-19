@@ -40,14 +40,14 @@ JitCompiler::ModuleHandle JitCompiler::add_module(const std::shared_ptr<llvm::Mo
                                llvm::JITSymbolFlags::Exported);
       });
 
-  const auto handle = error_utils::handle_error(_compile_layer.addModule(std::move(module), std::move(resolver)));
+  const auto handle = _handle_error(_compile_layer.addModule(std::move(module), std::move(resolver)));
   _modules.push_back(handle);
   return handle;
 }
 
 void JitCompiler::remove_module(const JitCompiler::ModuleHandle& handle) {
   _modules.erase(std::find(_modules.cbegin(), _modules.cend(), handle));
-  error_utils::handle_error(_compile_layer.removeModule(handle));
+  _handle_error(_compile_layer.removeModule(handle));
 }
 
 llvm::TargetMachine& JitCompiler::target_machine() const { return *_target_machine; }
@@ -59,6 +59,13 @@ const std::string JitCompiler::_mangle(const std::string& name) const {
   llvm::raw_string_ostream mangled_name_stream(mangled_name);
   llvm::Mangler::getNameWithPrefix(mangled_name_stream, name, _data_layout);
   return mangled_name;
+}
+
+void JitCompiler::_handle_error(llvm::Error error) {
+  if (error) {
+    llvm::logAllUnhandledErrors(std::move(error), llvm::errs(), "");
+    llvm_unreachable("");
+  }
 }
 
 }  // namespace opossum
