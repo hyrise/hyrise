@@ -103,19 +103,61 @@ class ColumnCompressor : public ColumnCompressorBase {
     }
 
     // only create statistics when the compressed dictionary is not empty
-    auto stats = std::make_shared<ChunkColumnStatistics>();
+    auto statistics = std::make_shared<ChunkColumnStatistics>();
     if(!dictionary.empty()) {
       auto min_max_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
-      stats->add_filter(min_max_filter);
+      statistics->add_filter(min_max_filter);
+
+      // calculate distances by taking the difference between two neighbouring elements
+      std::vector<std::pair<T, size_t>> distances;
+      auto dict_it = dictionary.cbegin();
+      auto dict_it_offset = dictionary.cbegin();
+      ++dict_it_offset;
+      while(dict_it_offset != dictionary.cend()) {
+        distances.emplace_back({*dict_it - *dict_it_offset, std::distance(dictionary.cbegin(), dict_it)});
+      }
+
+      std::sort(distances.begin(), distances.end(), [](auto pair1, auto pair2){ return pair1.first > pair2.first; });
+
+      // select how many ranges we want in the filter
+      // make this customizable?
+      size_t max_ranges_count = 10;
+
+      if(max_ranges_count - 1 < distances.size()) {
+        distances.erase(dictionary.begin() + (max_ranges_count -1));
+      }
+
+      std::sort(distances.begin(), distances.end(), [](auto pair1, auto pair2){ return pair1.second > pair2.second; });
+      distances.push_back({T{}, dictionary.size() - 1});
+
+      // derive intervals where items exists from distances
+      //
+      // start   end  next_startpoint                
+      // v       v    v                
+      // 1 2 3 4 5    10 11     15 16
+      //         ^
+      //       distance 5, index 4
+      //
+      // next_startpoint is the start of the next range
+
+      std::vector<std::tuple<T,T>> ranges;
+      size_t next_startpoint = 0u;
+      for(const auto& [distance, index] : distances) {
+        ranges.push_back({dictionary[next_startpoint], dictionary[index]});
+        next_startpoint = index + 1;
+      }
+
+      auto range_filter = std::make_shared<RangeFilter<T>>(ranges);
+      statistics->add_filter(range_filter);
     }
 
-    // auto stats = dictionary.empty()
+    // auto statistics = dictionary.empty()
     //                  ? std::shared_ptr<ChunkColumnStatistics>()
     //                  : std::dynamic_pointer_cast<ChunkColumnStatistics>(
     //                        std::make_shared<ChunkColumnStatistics<T>>(dictionary.front(), dictionary.back()));
     auto out_column = std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
 
-    return std::make_tuple(out_column, stats);
+    return std::make_tuple(out_column, statistics);
   }
 
   ValueID get_value_id(const pmr_vector<T>& dictionary, const T& value) {
@@ -135,44 +177,44 @@ std::shared_ptr<ChunkStatistics> DictionaryCompression::compress_chunk(const std
   DebugAssert((column_types.size() == chunk->column_count()),
               "Number of column types does not match the chunk’s column count.");
 
-  std::vector<std::shared_ptr<ChunkColumnStatistics>> column_stats;
+  std::vector<std::shared_ptr<ChunkColumnStatistics>> column_statistics;
 
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     auto value_column = chunk->get_mutable_column(column_id);
-    auto[dict_column, stats] = compress_column(column_types[column_id], value_column);
+    auto[dict_column, statistics] = compress_column(column_types[column_id], value_column);
     chunk->replace_column(column_id, dict_column);
-    column_stats.push_back(stats);
+    column_statistics.push_back(statistics);
   }
 
   if (chunk->has_mvcc_columns()) {
     chunk->shrink_mvcc_columns();
   }
 
-  auto stats = std::make_shared<ChunkStatistics>(column_stats);
-  chunk->set_statistics(stats);
+  auto statistics = std::make_shared<ChunkStatistics>(column_statistics);
+  chunk->set_statistics(statistics);
 
-  return stats;
+  return statistics;
 }
 
 std::vector<std::shared_ptr<ChunkStatistics>> DictionaryCompression::compress_chunks(
     Table& table, const std::vector<ChunkID>& chunk_ids) {
-  std::vector<std::shared_ptr<ChunkStatistics>> chunk_stats;
+  std::vector<std::shared_ptr<ChunkStatistics>> chunk_statistics;
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 
-    chunk_stats.push_back(compress_chunk(table.column_types(), table.get_chunk(chunk_id)));
+    chunk_statistics.push_back(compress_chunk(table.column_types(), table.get_chunk(chunk_id)));
   }
 
-  return chunk_stats;
+  return chunk_statistics;
 }
 
 std::vector<std::shared_ptr<ChunkStatistics>> DictionaryCompression::compress_table(Table& table) {
-  std::vector<std::shared_ptr<ChunkStatistics>> chunk_stats;
+  std::vector<std::shared_ptr<ChunkStatistics>> chunk_statistics;
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
-    chunk_stats.push_back(compress_chunk(table.column_types(), chunk));
+    chunk_statistics.push_back(compress_chunk(table.column_types(), chunk));
   }
-  return chunk_stats;
+  return chunk_statistics;
 }
 
 }  // namespace opossum
