@@ -12,8 +12,8 @@ namespace opossum {
  * An AbstractSelector transforms an unordered list of TuningChoices into
  * a concrete sequence of TuningOperations.
  *
- * It thereby considers a cost budget that the entire operation sequence as well
- * as any continuous subsequence from the beginning must not exceed.
+ * It considers a cost budget that the entire operation sequence as well as any
+ * continuous subsequence from the beginning must not exceed.
  * The operation sequence is prioritized by expected performance impact on the system,
  * so that the most beneficial operations come before less useful operations.
  *
