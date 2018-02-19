@@ -131,7 +131,7 @@ void BaseIndexEvaluator::_inspect_lqp_operator(const std::shared_ptr<const Abstr
           if (original_node->type() == LQPNodeType::StoredTable) {
             DebugAssert(original_columnID, "Could not find column ID for LQPColumnReference");
             auto stored_table = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
-            Assert(stored_table, "referenced node is not actually a StoredTableNode");
+            DebugAssert(stored_table, "referenced node is not actually a StoredTableNode");
 
             AccessRecord access_record(stored_table->table_name(), *original_columnID, query_frequency);
             access_record.condition = predicate_node->predicate_condition();
