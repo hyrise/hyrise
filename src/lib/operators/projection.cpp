@@ -65,13 +65,23 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   }
   else if (expression->type() == ExpressionType::Select) {
-    // the subquery result table can only contain exactly one column with one row
     auto chunk = expression->table()->get_chunk(ChunkID{0});
     auto base_column = chunk->get_column(ColumnID{0});
-    auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(base_column);
-    DebugAssert(value_column, "Expected subselect table to contain value columns.");
 
-    auto subselect_value = value_column->get(ChunkOffset{0});
+    // the subquery result table can only contain exactly one column with one row
+    // since we checked for this at subquery execution time we can make some assumptions here
+    T subselect_value{};
+    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(base_column)) {
+      subselect_value = value_column->get(ChunkOffset{0});
+    }
+    else if (auto dictionary_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(base_column)) {
+      subselect_value = dictionary_column->dictionary()->at(0);
+    }
+    else {
+      // fall back on slow access
+      subselect_value = type_cast<T>((*base_column)[ChunkOffset{0}]);
+    }
+
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
 
     // materialize the result of the subquery for every row in the input table
