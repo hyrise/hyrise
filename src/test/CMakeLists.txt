@@ -127,7 +127,8 @@ set(
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
     server/postgres_wire_handler_test.cpp
-)
+    server/session_test.cpp
+    server/mock_connection.hpp)
 
 set (
     SYSTEM_TEST_SOURCES
@@ -143,6 +144,7 @@ set (
 set(
     LIBRARIES
     gtest
+    gmock
     sqlite3
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
