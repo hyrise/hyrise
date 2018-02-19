@@ -54,7 +54,7 @@ void JitExpression::compute(JitRuntimeContext& ctx) const {
         break;
 
       default:
-        Fail("expression type is not supprted");
+        Fail("expression type is not supported yet");
     }
     return;
   }
