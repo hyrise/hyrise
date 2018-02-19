@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-void ExecuteServerPreparedStatement::_on_execute() {
+void ExecuteServerPreparedStatementTask::_on_execute() {
   try {
     const auto tasks = _prepared_plan->create_tasks();
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);

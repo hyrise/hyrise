@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-void BindServerPreparedStatement::_on_execute() {
+void BindServerPreparedStatementTask::_on_execute() {
   try {
     const auto placeholder_plan = _sql_pipeline->get_query_plans().front();
     placeholder_plan->set_num_parameters(_params.size());

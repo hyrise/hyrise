@@ -8,9 +8,9 @@ class SQLQueryPlan;
 class TransactionContext;
 class Table;
 
-class ExecuteServerPreparedStatement : public ServerTask<std::shared_ptr<const Table>> {
+class ExecuteServerPreparedStatementTask : public ServerTask<std::shared_ptr<const Table>> {
  public:
-  ExecuteServerPreparedStatement(std::shared_ptr<SQLQueryPlan> prepared_plan,
+  ExecuteServerPreparedStatementTask(std::shared_ptr<SQLQueryPlan> prepared_plan,
                                  std::shared_ptr<TransactionContext> transaction_context)
       : _prepared_plan(std::move(prepared_plan)),
         _transaction_context(std::move(transaction_context)) {}

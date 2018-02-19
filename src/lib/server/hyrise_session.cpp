@@ -214,7 +214,7 @@ boost::future<void> HyriseSession::_handle_bind_command(BindPacket packet) {
   
   auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
 
-  auto task = std::make_shared<BindServerPreparedStatement>(sql_pipeline, std::move(packet.params));
+  auto task = std::make_shared<BindServerPreparedStatementTask>(sql_pipeline, std::move(packet.params));
   return _dispatch_server_task(task)
     >> then >> [=] (std::unique_ptr<SQLQueryPlan> query_plan) {
       std::shared_ptr<SQLQueryPlan> shared_query_plan = std::move(query_plan);
@@ -244,7 +244,7 @@ boost::future<void> HyriseSession::_handle_execute_command(std::string portal_na
   
   auto statement_type = portal_it->second.first;
   auto query_plan = portal_it->second.second;
-  // TODO: Can we even execute a query plan multiple times?
+  // TODO: Is it even possible to execute a query plan multiple times?
   if (portal_name.empty())
     _portals.erase(portal_it);
   
@@ -253,7 +253,7 @@ boost::future<void> HyriseSession::_handle_execute_command(std::string portal_na
 
   query_plan->set_transaction_context(_transaction);
   
-  return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatement>(query_plan, _transaction))
+  return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan, _transaction))
     >> then >> [=] (std::shared_ptr<const Table> result_table) {
       auto task = std::make_shared<SendQueryResponseTask>(_connection, statement_type, nullptr, result_table);
       return _dispatch_server_task(task);
