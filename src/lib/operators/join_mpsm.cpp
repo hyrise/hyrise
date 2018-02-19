@@ -15,66 +15,55 @@
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
+#include "storage/numa_placement_manager.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
-#include "storage/numa_placement_manager.hpp"
-
 
 namespace opossum {
-JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right, const JoinMode mode, const std::pair<ColumnID, ColumnID> &column_ids, const ScanType op)
-    : AbstractJoinOperator(left, right, mode, column_ids, op)
-{
-    // Validate the parameters
-    DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-    DebugAssert(left != nullptr, "The left input operator is null.");
-    DebugAssert(right != nullptr, "The right input operator is null.");
-    DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
-                    op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals ||
-                    op == ScanType::OpNotEquals,
-                "Unsupported scan type");
-    // TODO(florian): this check makes no sense, also fix in join_sort_merge
-    DebugAssert(op != ScanType::OpNotEquals || mode == JoinMode::Inner,
-                "Outer joins are not implemented for not-equals joins.");
-
+JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
+                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                   const std::pair<ColumnID, ColumnID>& column_ids, const ScanType op)
+    : AbstractJoinOperator(left, right, mode, column_ids, op) {
+  // Validate the parameters
+  DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
+  DebugAssert(left != nullptr, "The left input operator is null.");
+  DebugAssert(right != nullptr, "The right input operator is null.");
+  DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
+                  op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals ||
+                  op == ScanType::OpNotEquals,
+              "Unsupported scan type");
+  // TODO(florian): this check makes no sense, also fix in join_sort_merge
+  DebugAssert(op != ScanType::OpNotEquals || mode == JoinMode::Inner,
+              "Outer joins are not implemented for not-equals joins.");
 }
 
-std::shared_ptr<const Table> JoinMPSM::_on_execute()
-{
-    // Check column types
-    const auto& left_column_type = _input_table_left()->column_type(_column_ids.first);
-    DebugAssert(left_column_type == _input_table_right()->column_type(_column_ids.second),
-                "Left and right column types do not match. The sort merge join requires matching column types");
+std::shared_ptr<const Table> JoinMPSM::_on_execute() {
+  // Check column types
+  const auto& left_column_type = _input_table_left()->column_type(_column_ids.first);
+  DebugAssert(left_column_type == _input_table_right()->column_type(_column_ids.second),
+              "Left and right column types do not match. The sort merge join requires matching column types");
 
-    // Create implementation to compute the join result
-    _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
-        left_column_type, *this, _column_ids.first, _column_ids.second, _scan_type, _mode);
+  // Create implementation to compute the join result
+  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(left_column_type, *this, _column_ids.first,
+                                                                           _column_ids.second, _scan_type, _mode);
 
-    return _impl->_on_execute();
+  return _impl->_on_execute();
 }
 
-void JoinMPSM::_on_cleanup()
-{
-    _impl.reset();
+void JoinMPSM::_on_cleanup() { _impl.reset(); }
 
+std::shared_ptr<AbstractOperator> JoinMPSM::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<JoinMPSM>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+                                    _scan_type);
 }
 
-std::shared_ptr<AbstractOperator> JoinMPSM::recreate(const std::vector<AllParameterVariant> &args) const
-{
-    return std::make_shared<JoinMPSM>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                           _scan_type);
-}
-
-const std::string JoinMPSM::name() const
-{
-    return "Join MPSM";
-}
-
+const std::string JoinMPSM::name() const { return "Join MPSM"; }
 
 template <typename T>
 class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinMPSMImpl<T>(JoinMPSM& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
-                       const ScanType op, JoinMode mode)
+  JoinMPSMImpl<T>(JoinMPSM& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id, const ScanType op,
+                  JoinMode mode)
       : _sort_merge_join{sort_merge_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
@@ -83,7 +72,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _cluster_count = _determine_number_of_clusters();
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
-    for(size_t cluster = 0; cluster < _cluster_count; ++cluster){
+    for (size_t cluster = 0; cluster < _cluster_count; ++cluster) {
       _output_pos_lists_left.resize(_cluster_count);
       _output_pos_lists_right.resize(_cluster_count);
     }
@@ -119,7 +108,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() {}
-    TablePosition(NodeID partition, size_t cluster, size_t index) : partition{partition}, cluster{cluster}, index{index} {}
+    TablePosition(NodeID partition, size_t cluster, size_t index)
+        : partition{partition}, cluster{cluster}, index{index} {}
 
     NodeID partition;
     size_t cluster;
@@ -128,8 +118,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     TableRange to(TablePosition position) { return TableRange(*this, position); }
   };
 
-//  TablePosition _end_of_left_table;
-//  TablePosition _end_of_right_table;
+  //  TablePosition _end_of_left_table;
+  //  TablePosition _end_of_right_table;
 
   /**
     * The TableRange is a utility struct that is used to define ranges of rows in a sorted input table spanning from
@@ -146,10 +136,12 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
-      DebugAssert(start.parition == end.partition, "for_every_row_id only allowed inside of partitions")
-      for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
+      DebugAssert(start.parition == end.partition,
+                  "for_every_row_id only allowed inside of partitions") for (size_t cluster = start.cluster;
+                                                                             cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[end.partition]._chunk_columns[cluster]->size();
+        size_t end_index =
+            (cluster == end.cluster) ? end.index : (*table)[end.partition]._chunk_columns[cluster]->size();
         for (size_t index = start_index; index < end_index; ++index) {
           action((*(*table)[end.partition]._chunk_columns[cluster])[index].row_id);
         }
@@ -173,11 +165,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-//  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
-//    DebugAssert(table->size() > 0, "table has no chunks");
-//    auto last_cluster = table->size() - 1;
-//    return TablePosition(last_cluster, (*table)[last_cluster]->size());
-//  }
+  //  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
+  //    DebugAssert(table->size() > 0, "table has no chunks");
+  //    auto last_cluster = table->size() - 1;
+  //    return TablePosition(last_cluster, (*table)[last_cluster]->size());
+  //  }
 
   /**
   * Represents the result of a value comparison.
@@ -205,40 +197,40 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
           }
         }
         break;
-//      case ScanType::OpNotEquals:
-//        if (compare_result == CompareResult::Greater) {
-//          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-//        } else if (compare_result == CompareResult::Equal) {
-//          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-//          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-//        } else if (compare_result == CompareResult::Less) {
-//          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-//        }
-//        break;
-//      case ScanType::OpGreaterThan:
-//        if (compare_result == CompareResult::Greater) {
-//          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-//        } else if (compare_result == CompareResult::Equal) {
-//          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-//        }
-//        break;
-//      case ScanType::OpGreaterThanEquals:
-//        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-//          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-//        }
-//        break;
-//      case ScanType::OpLessThan:
-//        if (compare_result == CompareResult::Less) {
-//          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-//        } else if (compare_result == CompareResult::Equal) {
-//          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-//        }
-//        break;
-//      case ScanType::OpLessThanEquals:
-//        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-//          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-//        }
-//        break;
+        //      case ScanType::OpNotEquals:
+        //        if (compare_result == CompareResult::Greater) {
+        //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+        //        } else if (compare_result == CompareResult::Equal) {
+        //          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+        //          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+        //        } else if (compare_result == CompareResult::Less) {
+        //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+        //        }
+        //        break;
+        //      case ScanType::OpGreaterThan:
+        //        if (compare_result == CompareResult::Greater) {
+        //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+        //        } else if (compare_result == CompareResult::Equal) {
+        //          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+        //        }
+        //        break;
+        //      case ScanType::OpGreaterThanEquals:
+        //        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
+        //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+        //        }
+        //        break;
+        //      case ScanType::OpLessThan:
+        //        if (compare_result == CompareResult::Less) {
+        //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+        //        } else if (compare_result == CompareResult::Equal) {
+        //          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+        //        }
+        //        break;
+        //      case ScanType::OpLessThanEquals:
+        //        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
+        //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+        //        }
+        //        break;
       default:
         DebugAssert(false, "currently only Equi Join is supported by NumaMPSM Join");
         throw std::logic_error("Unknown ScanType");
@@ -257,7 +249,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Emits all the combinations of row ids from the left table range and the right table range to the join output.
   * I.e. the cross product of the ranges is emitted.
   **/
-  void _emit_all_combinations(NodeID output_partition, size_t output_cluster, TableRange left_range, TableRange right_range) {
+  void _emit_all_combinations(NodeID output_partition, size_t output_cluster, TableRange left_range,
+                              TableRange right_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         _emit_combination(output_partition, output_cluster, left_row_id, right_row_id);
@@ -269,16 +262,18 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(NodeID output_partition, size_t output_cluster, TableRange left_range) {
-    left_range.for_every_row_id(
-        _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_partition, output_cluster, left_row_id, NULL_ROW_ID); });
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      _emit_combination(output_partition, output_cluster, left_row_id, NULL_ROW_ID);
+    });
   }
 
   /**
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
   void _emit_left_null_combinations(NodeID output_partition, size_t output_cluster, TableRange right_range) {
-    right_range.for_every_row_id(
-        _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_partition, output_cluster, NULL_ROW_ID, right_row_id); });
+    right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+      _emit_combination(output_partition, output_cluster, NULL_ROW_ID, right_row_id);
+    });
   }
 
   /**
@@ -328,15 +323,15 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
-
-    std::shared_ptr<MaterializedChunk<T>> left_cluster = (*_sorted_left_table)[left_node_id]._chunk_columns[left_cluster_id];
+    std::shared_ptr<MaterializedChunk<T>> left_cluster =
+        (*_sorted_left_table)[left_node_id]._chunk_columns[left_cluster_id];
 
     // TODO (florian): parallelize this using jobs (or not, since we are already running jobbed for LHS, and jobbing will probably not add much here)
-    for(NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id){
-
+    for (NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
-      std::shared_ptr<MaterializedChunk<T>> right_cluster = (*_sorted_left_table)[right_node_id]._chunk_columns[right_cluster_id];
+      std::shared_ptr<MaterializedChunk<T>> right_cluster =
+          (*_sorted_left_table)[right_node_id]._chunk_columns[right_cluster_id];
 
       size_t left_run_start = 0;
       size_t right_run_start = 0;
@@ -384,168 +379,165 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         _join_runs(left_rest, right_rest, CompareResult::Greater);
       }
     }
-
-
-
   }
 
   /**
   * Determines the smallest value in a sorted materialized table.
   **/
-//  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-//    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
-//                                               "available in the non-equi case");
-//    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
+  //  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
+  //    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
+  //                                               "available in the non-equi case");
+  //    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
-//    for (auto partition : *sorted_table) {
-//      if (partition->size() > 0) {
-//        return (*partition)[0].value;
-//      }
-//    }
+  //    for (auto partition : *sorted_table) {
+  //      if (partition->size() > 0) {
+  //        return (*partition)[0].value;
+  //      }
+  //    }
 
-//    throw std::logic_error("Every partition is empty");
-//  }
+  //    throw std::logic_error("Every partition is empty");
+  //  }
 
   /**
   * Determines the largest value in a sorted materialized table.
   **/
-//  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-//    DebugAssert(_op != ScanType::OpEquals,
-//                "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
-//    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
+  //  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
+  //    DebugAssert(_op != ScanType::OpEquals,
+  //                "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
+  //    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
-//    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-//      if ((*sorted_table)[partition_id]->size() > 0) {
-//        return (*sorted_table)[partition_id]->back().value;
-//      }
-//    }
+  //    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
+  //      if ((*sorted_table)[partition_id]->size() > 0) {
+  //        return (*sorted_table)[partition_id]->back().value;
+  //      }
+  //    }
 
-//    throw std::logic_error("Every partition is empty");
-//  }
+  //    throw std::logic_error("Every partition is empty");
+  //  }
 
   /**
   * Looks for the first value in a sorted materialized table that fulfills the specified condition.
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
-//  template <typename Function>
-//  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
-//                                                           Function condition) {
-//    for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
-//      auto partition = (*sorted_table)[partition_id];
-//      if (partition->size() > 0 && condition(partition->back().value)) {
-//        for (size_t index = 0; index < partition->size(); ++index) {
-//          if (condition((*partition)[index].value)) {
-//            return TablePosition(partition_id, index);
-//          }
-//        }
-//      }
-//    }
+  //  template <typename Function>
+  //  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
+  //                                                           Function condition) {
+  //    for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
+  //      auto partition = (*sorted_table)[partition_id];
+  //      if (partition->size() > 0 && condition(partition->back().value)) {
+  //        for (size_t index = 0; index < partition->size(); ++index) {
+  //          if (condition((*partition)[index].value)) {
+  //            return TablePosition(partition_id, index);
+  //          }
+  //        }
+  //      }
+  //    }
 
-//    return {};
-//  }
+  //    return {};
+  //  }
 
   /**
   * Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
   * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   **/
-//  template <typename Function>
-//  std::optional<TablePosition> _first_value_that_satisfies_reverse(
-//      std::unique_ptr<MaterializedColumnList<T>>& sorted_table, Function condition) {
-//    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-//      auto partition = (*sorted_table)[partition_id];
-//      if (partition->size() > 0 && condition((*partition)[0].value)) {
-//        for (size_t index = partition->size() - 1; index < partition->size(); --index) {
-//          if (condition((*partition)[index].value)) {
-//            return TablePosition(partition_id, index + 1);
-//          }
-//        }
-//      }
-//    }
+  //  template <typename Function>
+  //  std::optional<TablePosition> _first_value_that_satisfies_reverse(
+  //      std::unique_ptr<MaterializedColumnList<T>>& sorted_table, Function condition) {
+  //    for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
+  //      auto partition = (*sorted_table)[partition_id];
+  //      if (partition->size() > 0 && condition((*partition)[0].value)) {
+  //        for (size_t index = partition->size() - 1; index < partition->size(); --index) {
+  //          if (condition((*partition)[index].value)) {
+  //            return TablePosition(partition_id, index + 1);
+  //          }
+  //        }
+  //      }
+  //    }
 
-//    return {};
-//  }
+  //    return {};
+  //  }
 
-//  /**
-//  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
-//  * This method adds those rows from the left table to the output that do not find a join partner.
-//  * The outer join for the equality operator is handled in _join_runs instead.
-//  **/
-//  void _left_outer_non_equi_join() {
-//    auto& left_min_value = _table_min_value(_sorted_left_table);
-//    auto& left_max_value = _table_max_value(_sorted_left_table);
-//    auto end_of_right_table = _end_of_table(_sorted_right_table);
+  //  /**
+  //  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=).
+  //  * This method adds those rows from the left table to the output that do not find a join partner.
+  //  * The outer join for the equality operator is handled in _join_runs instead.
+  //  **/
+  //  void _left_outer_non_equi_join() {
+  //    auto& left_min_value = _table_min_value(_sorted_left_table);
+  //    auto& left_max_value = _table_max_value(_sorted_left_table);
+  //    auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-//    if (_op == ScanType::OpLessThan) {
-//      // Look for the first right value that is bigger than the smallest left value.
-//      auto result =
-//          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
-//      if (result.has_value()) {
-//        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
-//      }
-//    } else if (_op == ScanType::OpLessThanEquals) {
-//      // Look for the first right value that is bigger or equal to the smallest left value.
-//      auto result =
-//          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
-//      if (result.has_value()) {
-//        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
-//      }
-//    } else if (_op == ScanType::OpGreaterThan) {
-//      // Look for the first right value that is smaller than the biggest left value.
-//      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-//                                                        [&](const T& value) { return value < left_max_value; });
-//      if (result.has_value()) {
-//        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
-//      }
-//    } else if (_op == ScanType::OpGreaterThanEquals) {
-//      // Look for the first right value that is smaller or equal to the biggest left value.
-//      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-//                                                        [&](const T& value) { return value <= left_max_value; });
-//      if (result.has_value()) {
-//        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
-//      }
-//    }
-//  }
+  //    if (_op == ScanType::OpLessThan) {
+  //      // Look for the first right value that is bigger than the smallest left value.
+  //      auto result =
+  //          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
+  //      if (result.has_value()) {
+  //        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
+  //      }
+  //    } else if (_op == ScanType::OpLessThanEquals) {
+  //      // Look for the first right value that is bigger or equal to the smallest left value.
+  //      auto result =
+  //          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
+  //      if (result.has_value()) {
+  //        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
+  //      }
+  //    } else if (_op == ScanType::OpGreaterThan) {
+  //      // Look for the first right value that is smaller than the biggest left value.
+  //      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
+  //                                                        [&](const T& value) { return value < left_max_value; });
+  //      if (result.has_value()) {
+  //        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
+  //      }
+  //    } else if (_op == ScanType::OpGreaterThanEquals) {
+  //      // Look for the first right value that is smaller or equal to the biggest left value.
+  //      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
+  //                                                        [&](const T& value) { return value <= left_max_value; });
+  //      if (result.has_value()) {
+  //        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
+  //      }
+  //    }
+  //  }
 
-//  /**
-//    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
-//    * This method adds those rows from the right table to the output that do not find a join partner.
-//    * The outer join for the equality operator is handled in _join_runs instead.
-//    **/
-//  void _right_outer_non_equi_join() {
-//    auto& right_min_value = _table_min_value(_sorted_right_table);
-//    auto& right_max_value = _table_max_value(_sorted_right_table);
-//    auto end_of_left_table = _end_of_table(_sorted_left_table);
+  //  /**
+  //    * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
+  //    * This method adds those rows from the right table to the output that do not find a join partner.
+  //    * The outer join for the equality operator is handled in _join_runs instead.
+  //    **/
+  //  void _right_outer_non_equi_join() {
+  //    auto& right_min_value = _table_min_value(_sorted_right_table);
+  //    auto& right_max_value = _table_max_value(_sorted_right_table);
+  //    auto end_of_left_table = _end_of_table(_sorted_left_table);
 
-//    if (_op == ScanType::OpLessThan) {
-//      // Look for the last left value that is smaller than the biggest right value.
-//      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-//                                                        [&](const T& value) { return value < right_max_value; });
-//      if (result.has_value()) {
-//        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
-//      }
-//    } else if (_op == ScanType::OpLessThanEquals) {
-//      // Look for the last left value that is smaller or equal than the biggest right value.
-//      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-//                                                        [&](const T& value) { return value <= right_max_value; });
-//      if (result.has_value()) {
-//        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
-//      }
-//    } else if (_op == ScanType::OpGreaterThan) {
-//      // Look for the first left value that is bigger than the smallest right value.
-//      auto result =
-//          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
-//      if (result.has_value()) {
-//        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
-//      }
-//    } else if (_op == ScanType::OpGreaterThanEquals) {
-//      // Look for the first left value that is bigger or equal to the smallest right value.
-//      auto result =
-//          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
-//      if (result.has_value()) {
-//        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
-//      }
-//    }
-//  }
+  //    if (_op == ScanType::OpLessThan) {
+  //      // Look for the last left value that is smaller than the biggest right value.
+  //      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
+  //                                                        [&](const T& value) { return value < right_max_value; });
+  //      if (result.has_value()) {
+  //        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
+  //      }
+  //    } else if (_op == ScanType::OpLessThanEquals) {
+  //      // Look for the last left value that is smaller or equal than the biggest right value.
+  //      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
+  //                                                        [&](const T& value) { return value <= right_max_value; });
+  //      if (result.has_value()) {
+  //        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
+  //      }
+  //    } else if (_op == ScanType::OpGreaterThan) {
+  //      // Look for the first left value that is bigger than the smallest right value.
+  //      auto result =
+  //          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
+  //      if (result.has_value()) {
+  //        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
+  //      }
+  //    } else if (_op == ScanType::OpGreaterThanEquals) {
+  //      // Look for the first left value that is bigger or equal to the smallest right value.
+  //      auto result =
+  //          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
+  //      if (result.has_value()) {
+  //        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
+  //      }
+  //    }
+  //  }
 
   /**
   * Performs the join on all clusters in parallel.
@@ -564,12 +556,12 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-//    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
-//      _left_outer_non_equi_join();
-//    }
-//    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
-//      _right_outer_non_equi_join();
-//    }
+    //    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+    //      _left_outer_non_equi_join();
+    //    }
+    //    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+    //      _right_outer_non_equi_join();
+    //    }
   }
 
   /**
@@ -580,7 +572,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Determine the required space
     size_t total_size = 0;
-    for (const auto& partition_lists : pos_lists){
+    for (const auto& partition_lists : pos_lists) {
       for (const auto& pos_list : partition_lists) {
         total_size += pos_list->size();
       }
@@ -588,7 +580,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Move the entries over the output pos list
     output->reserve(total_size);
-    for (const auto& partition_lists : pos_lists){
+    for (const auto& partition_lists : pos_lists) {
       for (const auto& pos_list : partition_lists) {
         output->insert(output->end(), pos_list->begin(), pos_list->end());
       }
@@ -653,16 +645,13 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     return new_pos_list;
   }
 
-  void _shuffle_lhs_clusters(){
-      // move everything in cluster n to NUMA Node N
-      // resort
-      // TODO (florian): eliminate double sorting (although we probably have an adaptive sort so we should not suffer too much, else implement a merge sort here?)
-
+  void _shuffle_lhs_clusters() {
+    // move everything in cluster n to NUMA Node N
+    // resort
+    // TODO (florian): eliminate double sorting (although we probably have an adaptive sort so we should not suffer too much, else implement a merge sort here?)
   }
 
-  void _sort_clusters(){
-
-  }
+  void _sort_clusters() {}
 
  public:
   /**
@@ -715,7 +704,4 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   }
 };
 
-
-}
-
-
+}  // namespace opossum

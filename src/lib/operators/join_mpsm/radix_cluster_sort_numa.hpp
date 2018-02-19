@@ -8,8 +8,8 @@
 
 #include "column_materializer_numa.hpp"
 #include "resolve_type.hpp"
-#include "utils/numa_memory_resource.hpp"
 #include "storage/numa_placement_manager.hpp"
+#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 
@@ -50,8 +50,8 @@ template <typename T>
 class RadixClusterSortNUMA {
  public:
   RadixClusterSortNUMA(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                   const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, const bool materialize_null_left,
-                   const bool materialize_null_right, size_t cluster_count)
+                       const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case,
+                       const bool materialize_null_left, const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
@@ -95,7 +95,6 @@ class RadixClusterSortNUMA {
   **/
   struct NUMAPartitionInformation {
     NUMAPartitionInformation(size_t chunk_count, size_t cluster_count) {
-
       cluster_histogram.reserve(cluster_count);
       chunk_information.reserve(chunk_count);
       for (size_t i = 0; i < chunk_count; ++i) {
@@ -140,32 +139,32 @@ class RadixClusterSortNUMA {
   /**
   * Determines the total size of a materialized column list.
   **/
-//  static size_t _materialized_table_size(std::unique_ptr<MaterializedNUMAPartition<T>>& table) {
-//    size_t total_size = 0;
-//    for (auto chunk : table->_chunk_columns ) {
-//      total_size += chunk->size();
-//    }
+  //  static size_t _materialized_table_size(std::unique_ptr<MaterializedNUMAPartition<T>>& table) {
+  //    size_t total_size = 0;
+  //    for (auto chunk : table->_chunk_columns ) {
+  //      total_size += chunk->size();
+  //    }
 
-//    return total_size;
-//  }
+  //    return total_size;
+  //  }
 
   /**
   * Concatenates multiple materialized columns to a single materialized column.
   **/
-//  static std::unique_ptr<MaterializedNUMAPartitionList<T>> _concatenate_chunks(
-//      std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
-//    auto output_table = std::make_unique<MaterializedColumnList<T>>(1);
-//    (*output_table)[0] = std::make_shared<MaterializedColumn<T>>();
+  //  static std::unique_ptr<MaterializedNUMAPartitionList<T>> _concatenate_chunks(
+  //      std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
+  //    auto output_table = std::make_unique<MaterializedColumnList<T>>(1);
+  //    (*output_table)[0] = std::make_shared<MaterializedColumn<T>>();
 
-//    // Reserve the required space and move the data to the output
-//    auto output_chunk = (*output_table)[0];
-//    output_chunk->reserve(_materialized_table_size(input_chunks));
-//    for (auto& chunk : *input_chunks) {
-//      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
-//    }
+  //    // Reserve the required space and move the data to the output
+  //    auto output_chunk = (*output_table)[0];
+  //    output_chunk->reserve(_materialized_table_size(input_chunks));
+  //    for (auto& chunk : *input_chunks) {
+  //      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
+  //    }
 
-//    return output_table;
-//  }
+  //    return output_table;
+  //  }
 
   /**
   * Performs the clustering on a materialized table using a clustering function that determines for each
@@ -177,9 +176,7 @@ class RadixClusterSortNUMA {
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
   MaterializedNUMAPartition<T> _cluster(MaterializedNUMAPartition<T>& input_chunks,
-                                                      std::function<size_t(const T&)> clusterer,
-                                                      NodeID node_id) {
-
+                                        std::function<size_t(const T&)> clusterer, NodeID node_id) {
     auto num_chunks = input_chunks._chunk_columns.size();
     auto output_table = MaterializedNUMAPartition<T>(node_id, _cluster_count);
     NUMAPartitionInformation numa_part_info(num_chunks, _cluster_count);
@@ -222,18 +219,17 @@ class RadixClusterSortNUMA {
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < num_chunks; ++chunk_number) {
-      auto job =
-          std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &numa_part_info, &clusterer] {
-            auto& chunk_information = numa_part_info.chunk_information[chunk_number];
-            for (auto& entry : (*input_chunks._chunk_columns[chunk_number])) {
-              auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = output_table._chunk_columns[cluster_id];
-              auto& insert_position = chunk_information.insert_position[cluster_id];
-              (*output_cluster)[insert_position] = entry;
-              //TODO(florian): THIS is actually thread unsafe and evil and should be destroyed with fire
-              ++insert_position;
-            }
-          });
+      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &numa_part_info, &clusterer] {
+        auto& chunk_information = numa_part_info.chunk_information[chunk_number];
+        for (auto& entry : (*input_chunks._chunk_columns[chunk_number])) {
+          auto cluster_id = clusterer(entry.value);
+          auto& output_cluster = output_table._chunk_columns[cluster_id];
+          auto& insert_position = chunk_information.insert_position[cluster_id];
+          (*output_cluster)[insert_position] = entry;
+          //TODO(florian): THIS is actually thread unsafe and evil and should be destroyed with fire
+          ++insert_position;
+        }
+      });
       cluster_jobs.push_back(job);
       job->schedule();
     }
@@ -252,56 +248,55 @@ class RadixClusterSortNUMA {
   * - hand select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa(std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa(
+      std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
     // TODO(florian): do this for all NUMA partitions
     // make them all run on their respective nodes using jobs so we can assume to be on a single node from here on
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
 
     auto radix_bitmask = _cluster_count - 1;
 
-    for(NodeID node_id{0}; node_id < _cluster_count; node_id++){
-      output->push_back(
-            _cluster( (*input_chunks)[node_id],
-          [=](const T& value) { return get_radix<T>(value, radix_bitmask); },
-          node_id));
+    for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
+      output->push_back(_cluster((*input_chunks)[node_id],
+                                 [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id));
     }
 
     return output;
   }
 
-
-
-  std::unique_ptr<MaterializedNUMAPartitionList<T>> _repartition_clusters(std::unique_ptr<MaterializedNUMAPartitionList<T>>& private_partitions){
+  std::unique_ptr<MaterializedNUMAPartitionList<T>> _repartition_clusters(
+      std::unique_ptr<MaterializedNUMAPartitionList<T>>& private_partitions) {
     // This takes a list of partitions and reshuffles their values so that each cluster resides on exaclty one numa parition
     std::unique_ptr<MaterializedNUMAPartitionList<T>> homogenous_partitions;
 
     std::vector<size_t> cluster_sizes{_cluster_count, 0};
 
-    for(const auto& partition : (*private_partitions)){
-      DebugAssert(partition.chunk_columns.size() == _cluster_count, "Number of clusters does not match the number of NUMA partitions.");
-      for(size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id){
+    for (const auto& partition : (*private_partitions)) {
+      DebugAssert(partition.chunk_columns.size() == _cluster_count,
+                  "Number of clusters does not match the number of NUMA partitions.");
+      for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
         cluster_sizes[cluster_id] += partition._chunk_columns[cluster_id]->size();
       }
     }
 
-    for(NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node){
-        homogenous_partitions->emplace_back(MaterializedNUMAPartition<T>(numa_node, 1));
+    for (NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node) {
+      homogenous_partitions->emplace_back(MaterializedNUMAPartition<T>(numa_node, 1));
     }
 
-    for(NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node){
-        auto homogenous_partition = (*homogenous_partitions)[_cluster_count];
+    for (NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node) {
+      auto homogenous_partition = (*homogenous_partitions)[_cluster_count];
 
-        auto chunk_column = homogenous_partition._chunk_columns[0];
+      auto chunk_column = homogenous_partition._chunk_columns[0];
 
-        chunk_column->reserve(cluster_sizes[numa_node]);
+      chunk_column->reserve(cluster_sizes[numa_node]);
 
-        // TODO(florian): make this multi threaded
-        for(const auto& partition : (*private_partitions)){
-          const auto& src = partition._chunk_columns[numa_node];
+      // TODO(florian): make this multi threaded
+      for (const auto& partition : (*private_partitions)) {
+        const auto& src = partition._chunk_columns[numa_node];
 
-          // TODO(florian): when everything is parallel then this probably needs to overwrite instead of back-inserting
-          std::copy(src->begin(), src->end(), std::back_inserter(*chunk_column));
-        }
+        // TODO(florian): when everything is parallel then this probably needs to overwrite instead of back-inserting
+        std::copy(src->begin(), src->end(), std::back_inserter(*chunk_column));
+      }
     }
 
     return homogenous_partitions;
@@ -310,78 +305,78 @@ class RadixClusterSortNUMA {
   /**
   * Picks sample values from a materialized table that are used to determine cluster range bounds.
   **/
-//  void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values,
-//                           std::unique_ptr<MaterializedColumnList<T>>& materialized_columns) {
-//    // Note:
-//    // - The materialized chunks are sorted.
-//    // - In between the chunks there is no order
-//    // - Every chunk can contain values for every cluster
-//    // - To sample for range border values we look at the position where the values for each cluster
-//    //   would start if every chunk had an even values distribution for every cluster.
-//    // - Later, these values are aggregated to determine the actual cluster borders
-//    for (size_t chunk_number = 0; chunk_number < materialized_columns->size(); ++chunk_number) {
-//      auto chunk_values = (*materialized_columns)[chunk_number];
-//      for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
-//        auto pos = chunk_values->size() * (cluster_id + 1) / static_cast<float>(_cluster_count);
-//        auto index = static_cast<size_t>(pos);
-//        ++sample_values[cluster_id][(*chunk_values)[index].value];
-//      }
-//    }
-//  }
+  //  void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values,
+  //                           std::unique_ptr<MaterializedColumnList<T>>& materialized_columns) {
+  //    // Note:
+  //    // - The materialized chunks are sorted.
+  //    // - In between the chunks there is no order
+  //    // - Every chunk can contain values for every cluster
+  //    // - To sample for range border values we look at the position where the values for each cluster
+  //    //   would start if every chunk had an even values distribution for every cluster.
+  //    // - Later, these values are aggregated to determine the actual cluster borders
+  //    for (size_t chunk_number = 0; chunk_number < materialized_columns->size(); ++chunk_number) {
+  //      auto chunk_values = (*materialized_columns)[chunk_number];
+  //      for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
+  //        auto pos = chunk_values->size() * (cluster_id + 1) / static_cast<float>(_cluster_count);
+  //        auto index = static_cast<size_t>(pos);
+  //        ++sample_values[cluster_id][(*chunk_values)[index].value];
+  //      }
+  //    }
+  //  }
 
   /**
   * Performs the range cluster sort for the non-equi case (>, >=, <, <=, !=) which requires the complete table to
   * be sorted and not only the clusters in themselves. Returns the clustered data from the left table and the
   * right table in a pair.
   **/
-//  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> _range_cluster(
-//      std::unique_ptr<MaterializedColumnList<T>>& input_left, std::unique_ptr<MaterializedColumnList<T>>& input_right) {
-//    std::vector<std::map<T, size_t>> sample_values(_cluster_count - 1);
+  //  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> _range_cluster(
+  //      std::unique_ptr<MaterializedColumnList<T>>& input_left, std::unique_ptr<MaterializedColumnList<T>>& input_right) {
+  //    std::vector<std::map<T, size_t>> sample_values(_cluster_count - 1);
 
-//    _pick_sample_values(sample_values, input_left);
-//    _pick_sample_values(sample_values, input_right);
+  //    _pick_sample_values(sample_values, input_left);
+  //    _pick_sample_values(sample_values, input_right);
 
-//    // Pick the most common sample values for each cluster for the split values.
-//    // The last cluster does not need a split value because it covers all values that are bigger than all split values
-//    // Note: the split values mark the ranges of the clusters.
-//    // A split value is the end of a range and the start of the next one.
-//    std::vector<T> split_values(_cluster_count - 1);
-//    for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
-//      // Pick the values with the highest count
-//      split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
-//                                                  // second is the count of the value
-//                                                  [](auto& a, auto& b) { return a.second < b.second; })
-//                                     ->second;
-//    }
+  //    // Pick the most common sample values for each cluster for the split values.
+  //    // The last cluster does not need a split value because it covers all values that are bigger than all split values
+  //    // Note: the split values mark the ranges of the clusters.
+  //    // A split value is the end of a range and the start of the next one.
+  //    std::vector<T> split_values(_cluster_count - 1);
+  //    for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
+  //      // Pick the values with the highest count
+  //      split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
+  //                                                  // second is the count of the value
+  //                                                  [](auto& a, auto& b) { return a.second < b.second; })
+  //                                     ->second;
+  //    }
 
-//    // Implements range clustering
-//    auto cluster_count = _cluster_count;
-//    auto clusterer = [cluster_count, &split_values](const T& value) {
-//      // Find the first split value that is greater or equal to the entry.
-//      // The split values are sorted in ascending order.
-//      // Note: can we do this faster? (binary search?)
-//      for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
-//        if (value <= split_values[cluster_id]) {
-//          return cluster_id;
-//        }
-//      }
+  //    // Implements range clustering
+  //    auto cluster_count = _cluster_count;
+  //    auto clusterer = [cluster_count, &split_values](const T& value) {
+  //      // Find the first split value that is greater or equal to the entry.
+  //      // The split values are sorted in ascending order.
+  //      // Note: can we do this faster? (binary search?)
+  //      for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
+  //        if (value <= split_values[cluster_id]) {
+  //          return cluster_id;
+  //        }
+  //      }
 
-//      // The value is greater than all split values, which means it belongs in the last cluster.
-//      return cluster_count - 1;
-//    };
+  //      // The value is greater than all split values, which means it belongs in the last cluster.
+  //      return cluster_count - 1;
+  //    };
 
-//    auto output_left = _cluster(input_left, clusterer);
-//    auto output_right = _cluster(input_right, clusterer);
+  //    auto output_left = _cluster(input_left, clusterer);
+  //    auto output_right = _cluster(input_right, clusterer);
 
-//    return {std::move(output_left), std::move(output_right)};
-//  }
+  //    return {std::move(output_left), std::move(output_right)};
+  //  }
 
   /**
   * Sorts all clusters of a materialized table.
   **/
   void _sort_clusters(std::unique_ptr<MaterializedNUMAPartitionList<T>>& partitions) {
     //TODO(florian) colocate sorting with the actual cluster
-    for(auto & partition : (*partitions)){
+    for (auto& partition : (*partitions)) {
       for (auto cluster : partition._chunk_columns) {
         std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
       }
@@ -403,22 +398,21 @@ class RadixClusterSortNUMA {
     auto materialized_left_columns = std::move(materialization_left.first);
     auto materialized_right_columns = std::move(materialization_right.first);
 
-
     output.null_rows_left = std::move(materialization_left.second);
     output.null_rows_right = std::move(materialization_right.second);
 
     if (_cluster_count == 1) {
       DebugAssert(false, "single cluster case not supported by numa_join")
-//      output.clusters_left = _concatenate_chunks(materialized_left_columns);
-//      output.clusters_right = _concatenate_chunks(materialized_right_columns);
+      //      output.clusters_left = _concatenate_chunks(materialized_left_columns);
+      //      output.clusters_right = _concatenate_chunks(materialized_right_columns);
     } else if (_equi_case) {
       output.clusters_left = _radix_cluster_numa(materialized_left_columns);
       output.clusters_right = _radix_cluster_numa(materialized_right_columns);
     } else {
       DebugAssert(false, "non equi case not currently supported by numa join")
-//      auto result = _range_cluster(materialized_left_columns, materialized_right_columns);
-//      output.clusters_left = std::move(result.first);
-//      output.clusters_right = std::move(result.second);
+      //      auto result = _range_cluster(materialized_left_columns, materialized_right_columns);
+      //      output.clusters_left = std::move(result.first);
+      //      output.clusters_right = std::move(result.second);
     }
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with

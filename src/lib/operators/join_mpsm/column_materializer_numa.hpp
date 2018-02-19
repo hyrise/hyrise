@@ -10,9 +10,9 @@
 #include "storage/base_attribute_vector.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/numa_placement_manager.hpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
-#include "storage/numa_placement_manager.hpp"
 
 namespace opossum {
 
@@ -32,21 +32,17 @@ template <typename T>
 using MaterializedChunk = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
 
 template <typename T>
-struct MaterializedNUMAPartition{
+struct MaterializedNUMAPartition {
   NodeID _node_id;
   MaterializedValueAllocator<T> _alloc;
   std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
-    : _node_id{node_id}
-    , _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)}
-    , _chunk_columns(reserve_size)
-  {
-  }
+      : _node_id{node_id},
+        _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)},
+        _chunk_columns(reserve_size) {}
 
-  void fit(){
-      _chunk_columns.erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), nullptr));
-  }
+  void fit() { _chunk_columns.erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), nullptr)); }
 };
 
 /*template <typename T>
@@ -54,8 +50,6 @@ using MaterializedColumn = std::vector<MaterializedValue<T>, MaterializedValueAl
 
 template <typename T>
 using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
-
-
 
 /**
  * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
@@ -79,27 +73,25 @@ class ColumnMaterializer {
     const auto topology = NUMAPlacementManager::get().topology();
     output->reserve(topology->nodes().size());
 
-    for(NodeID node_id{0}; node_id < topology->nodes().size(); node_id++){
-        // The vectors only contain pointers so the higher bound estimate won't really hurt us here
-        // Also we shrink this in the end
-        output->emplace_back(MaterializedNUMAPartition<T>{node_id, input->row_count()});
+    for (NodeID node_id{0}; node_id < topology->nodes().size(); node_id++) {
+      // The vectors only contain pointers so the higher bound estimate won't really hurt us here
+      // Also we shrink this in the end
+      output->emplace_back(MaterializedNUMAPartition<T>{node_id, input->row_count()});
     }
     auto null_rows = std::make_unique<PosList>();
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+      // This allocator is used to ensure that materialized chunks are colocated with the original chunks
+      MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id).get_allocator()};
 
-        // This allocator is used to ensure that materialized chunks are colocated with the original chunks
-        MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id).get_allocator()};
+      NodeID numa_node_id{0};  // default NUMA Node, everything is on the same node for non numa systems
 
-        NodeID numa_node_id{0}; // default NUMA Node, everything is on the same node for non numa systems
-
-        // Find out whether we actually are on a NUMA System, if so, remember the numa node
-        auto numa_res = dynamic_cast<NUMAMemoryResource *>(alloc.resource());
-        if(numa_res != nullptr){
-            // TODO(florian): NodeID vs int for node adressing
-            numa_node_id = NodeID{static_cast<uint32_t>(numa_res->get_node_id())};
-        }
+      // Find out whether we actually are on a NUMA System, if so, remember the numa node
+      auto numa_res = dynamic_cast<NUMAMemoryResource*>(alloc.resource());
+      if (numa_res != nullptr) {
+        numa_node_id = NodeID{static_cast<uint32_t>(numa_res->get_node_id())};
+      }
 
       jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, numa_node_id));
       // we schedule each job on the same node as the chunk it operates on
@@ -109,9 +101,9 @@ class ColumnMaterializer {
 
     CurrentScheduler::wait_for_tasks(jobs);
 
-    for(auto& partition : (*output)){
-        // removes null pointers, this is important since we currently opt against using mutexes so we have sparse vectors
-        partition.fit();
+    for (auto& partition : (*output)) {
+      // removes null pointers, this is important since we currently opt against using mutexes so we have sparse vectors
+      partition.fit();
     }
 
     return std::make_pair(std::move(output), std::move(null_rows));
@@ -125,30 +117,27 @@ class ColumnMaterializer {
                                                              std::unique_ptr<PosList>& null_rows_output,
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id, NodeID numa_node_id) {
-
-    // TODO(florian): pass this in from the outside
     // This allocator ensures that materialized values are colocated with the actual values.
-    // This colocation is important on NUMA systems, since there it is important to have control over the location of memory
+    // The colocation is important on NUMA systems, since there it is important to have control over the location of memory
     // This introduces runtime overhead that is not amortized for non-NUMA systems, so maybe this should be a compile time switch.
     MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id).get_allocator()};
 
-    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id, alloc, numa_node_id] {
-      auto column = input->get_chunk(chunk_id).get_column(column_id);
-      resolve_column_type<T>(*column, [&](auto& typed_column) {
-        //(*output)[numa_node_id]._chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
-        _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
-      });
-    });
+    return std::make_shared<JobTask>(
+        [this, &output, &null_rows_output, input, column_id, chunk_id, alloc, numa_node_id] {
+          auto column = input->get_chunk(chunk_id).get_column(column_id);
+          resolve_column_type<T>(*column, [&](auto& typed_column) {
+            //(*output)[numa_node_id]._chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
+            _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
+          });
+        });
   }
 
   /**
    * Materialization works of all types of columns
    */
   template <typename ColumnType>
-  void _materialize_column(const ColumnType& column, ChunkID chunk_id,
-                                                             std::unique_ptr<PosList>& null_rows_output,
-                                                             MaterializedNUMAPartition<T>& partition) {
-
+  void _materialize_column(const ColumnType& column, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
+                           MaterializedNUMAPartition<T>& partition) {
     auto output = partition._chunk_columns[chunk_id];
 
     auto iterable = create_iterable_from_column<T>(column);
@@ -176,8 +165,8 @@ class ColumnMaterializer {
    * Specialization for dictionary columns
    */
   std::shared_ptr<MaterializedChunk<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
-                                                             std::unique_ptr<PosList>& null_rows_output,
-                                                             MaterializedValueAllocator<T> alloc) {
+                                                            std::unique_ptr<PosList>& null_rows_output,
+                                                            MaterializedValueAllocator<T> alloc) {
     auto output = MaterializedChunk<T>{alloc};
     output.reserve(column.size());
 
@@ -188,8 +177,7 @@ class ColumnMaterializer {
       // Works like Bucket Sort
       // Collect for every value id, the set of rows that this value appeared in
       // value_count is used as an inverted index
-      // TODO(florian): think about NUMA implications, probably make this NUMA aware
-      //    Since the jobs are scheduled on Nodes already we do not expect this to be problematic
+
       auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
 
       // Reserve correct size of the vectors by assuming a uniform distribution
