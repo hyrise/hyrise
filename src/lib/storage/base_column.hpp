@@ -5,6 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "utils/format_bytes.hpp"
 
 namespace opossum {
 
@@ -35,14 +36,11 @@ class BaseColumn : private Noncopyable {
   // calls the column-specific handler in an operator (visitor pattern)
   virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const = 0;
 
-  // writes the length and value at the chunk_offset to the end of row_string
-  virtual void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const = 0;
-
-  // copies one of its own values to a different ValueColumn - mainly used for materialization
-  // we cannot always use the materialize method below because sort results might come from different BaseColumns
-  virtual void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const = 0;
-
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
   virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+
+  // Estimate how much memory the Column is using. Might be inaccurate, especially if the column contains non-primitive
+  // data, such as strings who memory usage is implementation defined
+  virtual size_t estimate_memory_usage() const = 0;
 };
 }  // namespace opossum

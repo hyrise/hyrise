@@ -1,27 +1,48 @@
 #pragma once
 
-#include <limits>
 #include <memory>
 
-#include "base_column.hpp"
+#include "base_encoded_column.hpp"
 
 namespace opossum {
 
-class BaseAttributeVector;
+class BaseCompressedVector;
 
-// TODO(anyone): Right now, INVALID_VALUE_ID and NULL_VALUE_ID are the same
-// Even though ValueIDs do not have to use the full width of ValueID (uint32_t), this will also work for smaller ValueID
-// types (uint8_t, uint16_t) since after a down-cast INVALID_VALUE_ID will look like their numeric_limit::max()
-constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
-
-// BaseDictionaryColumn is implemented by DictionaryColumn and offers methods from the DictionaryColumn
-// that are needed for creating indices but that do not depend on the template parameter of the DictionaryColumn,
-// thus allowing the single indexes relying on these methods to be untemplated.
-class BaseDictionaryColumn : public BaseColumn {
+/**
+ * @brief Base class of DictionaryColumn<T> exposing type-independent interface
+ */
+class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
+  EncodingType encoding_type() const final;
+
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+
+  /**
+   * @brief Returns index (i.e. ValueID) of first dictionary entry >= search value
+   *
+   * @param value the search value
+   * @return INVALID_VALUE_ID if entries are smaller than value
+   */
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
+
+  /**
+   * @brief Returns index (i.e. ValueID) of first dictionary entry > search value
+   *
+   * @param value the search value
+   * @return INVALID_VALUE_ID if entries are smaller than or equal to value
+   */
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;
+
+  /**
+   * @brief The size of the dictionary
+   */
   virtual size_t unique_values_count() const = 0;
-  virtual std::shared_ptr<const BaseAttributeVector> attribute_vector() const = 0;
+
+  virtual std::shared_ptr<const BaseCompressedVector> attribute_vector() const = 0;
+
+  /**
+   * @brief Returns encoding specific null value ID
+   */
+  virtual const ValueID null_value_id() const = 0;
 };
 }  // namespace opossum

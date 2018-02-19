@@ -19,15 +19,19 @@ class JobTask;
  * Note: Scans only the set of chunks passed to the constructor
  */
 class IndexScan : public AbstractReadOnlyOperator {
+  friend class LQPTranslatorTest;
+
  public:
-  IndexScan(std::shared_ptr<AbstractOperator> in, const ColumnIndexType index_type,
-            std::vector<ColumnID> left_column_ids, const ScanType scan_type, std::vector<AllTypeVariant> right_values,
-            std::vector<AllTypeVariant> right_values2 = {});
+  IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
+            const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
+            const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2 = {});
 
   const std::string name() const final;
 
   /**
-   * If set, only the specified chunks will be scanned.
+   * @brief If set, only the specified chunks will be scanned.
+   *
+   * @see TableScan::set_excluded_chunk_ids for usage
    */
   void set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
@@ -41,7 +45,7 @@ class IndexScan : public AbstractReadOnlyOperator {
  private:
   const ColumnIndexType _index_type;
   const std::vector<ColumnID> _left_column_ids;
-  const ScanType _scan_type;
+  const PredicateCondition _predicate_condition;
   const std::vector<AllTypeVariant> _right_values;
   const std::vector<AllTypeVariant> _right_values2;
 

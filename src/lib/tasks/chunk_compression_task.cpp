@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "storage/chunk.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -27,19 +27,19 @@ void ChunkCompressionTask::_on_execute() {
   for (auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
-    auto& chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_chunk(chunk_id);
 
     DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
 
-    DictionaryCompression::compress_chunk(table->column_types(), chunk);
+    DeprecatedDictionaryCompression::compress_chunk(table->column_types(), chunk);
   }
 }
 
-bool ChunkCompressionTask::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
-  if (chunk.size() != max_chunk_size) return false;
+bool ChunkCompressionTask::chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size) {
+  if (chunk->size() != max_chunk_size) return false;
 
-  auto mvcc_columns = chunk.mvcc_columns();
+  auto mvcc_columns = chunk->mvcc_columns();
 
   for (const auto begin_cid : mvcc_columns->begin_cids) {
     if (begin_cid == Chunk::MAX_COMMIT_ID) return false;

@@ -15,7 +15,7 @@
 #include "import_export/binary.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/fitted_attribute_vector.hpp"
+#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
@@ -117,12 +117,12 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   return std::make_pair(table, chunk_count);
 }
 
-Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
+std::shared_ptr<Chunk> ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
-  Chunk chunk{ChunkUseMvcc::Yes};
+  const auto chunk = std::make_shared<Chunk>(UseMvcc::Yes);
 
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    chunk.add_column(
+    chunk->add_column(
         _import_column(file, row_count, table->column_type(column_id), table->column_is_nullable(column_id)));
   }
   return chunk;
@@ -132,8 +132,8 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
                                                          bool is_nullable) {
   std::shared_ptr<BaseColumn> result;
   resolve_data_type(data_type, [&](auto type) {
-    using ColumnType = typename decltype(type)::type;
-    result = _import_column<ColumnType>(file, row_count, is_nullable);
+    using ColumnDataType = typename decltype(type)::type;
+    result = _import_column<ColumnDataType>(file, row_count, is_nullable);
   });
 
   return result;
@@ -151,7 +151,6 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
     default:
       // This case happens if the read column type is not a valid BinaryColumnType.
       Fail("Cannot import column: invalid column type");
-      return {};
   }
 }
 
@@ -166,7 +165,6 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
       return std::make_shared<FittedAttributeVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
-      return {};
   }
 }
 
@@ -187,13 +185,13 @@ std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream
 }
 
 template <typename T>
-std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
-                                                                             ChunkOffset row_count) {
+std::shared_ptr<DeprecatedDictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
+                                                                                       ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _read_values<T>(file, dictionary_size);
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
-  return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
+  return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
 }
 
 }  // namespace opossum

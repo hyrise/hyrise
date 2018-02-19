@@ -8,12 +8,13 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lqp_column_reference.hpp"
+#include "lqp_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 struct ColumnID;
-class Expression;
 class TableStatistics;
 
 enum class LQPNodeType {
@@ -40,7 +41,7 @@ enum class LQPNodeType {
 
 enum class LQPChildSide { Left, Right };
 
-struct NamedColumnReference {
+struct QualifiedColumnName {
   std::string column_name;
   std::optional<std::string> table_name = std::nullopt;
 
@@ -72,14 +73,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   explicit AbstractLQPNode(LQPNodeType node_type);
 
   // Creates a deep copy
-  virtual std::shared_ptr<AbstractLQPNode> deep_copy() const;
+  std::shared_ptr<AbstractLQPNode> deep_copy() const;
 
   // @{
   /**
    * Set and get the parents/children of this node.
    *
    * The _parents are implicitly set in set_left_child/set_right_child.
-   * For removing parents use remove_parent() or clear_parent().
+   * For removing parents use remove_parent() or clear_parents().
    *
    * set_child() is a shorthand for set_left_child() or set_right_child(), useful if the side is a runtime value
    */
@@ -116,7 +117,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   LQPNodeType type() const;
 
-  // Returns whether this subtree is read only. Defaults to true - if a node makes modications, it has to override this
+  // Returns whether this subtree is read only. Defaults to true - if a node makes modifications, it has to override
+  // this
   virtual bool subtree_is_read_only() const;
 
   // Returns whether all tables in this subtree were validated
@@ -147,77 +149,49 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual const std::vector<std::string>& output_column_names() const;
 
   /**
-   * This function is public for testing purposes only, otherwise should only be used internally
-   *
-   * Every node will output a list of column and all nodes except StoredTableNode take a list of columns as input from
-   * their predecessor.
+   * @returns the ColumnReferences of the columns this node outputs
    */
-  virtual const std::vector<ColumnID>& output_column_ids_to_input_column_ids() const;
+  virtual const std::vector<LQPColumnReference>& output_column_references() const;
 
+  /**
+   * @return the number of Columns this node outputs. Same as output_column_names().size()
+   */
   size_t output_column_count() const;
 
   // @{
   /**
-   * These functions are part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general
-   * discussion
-   * on this.
-   *
-   * AbstractLQPNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
-   * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise std::nullopt
-   * is returned.
-   *
-   * AbstractLQPNode::get_column_id_by_named_column_reference() is more strict and will fail if the
-   * @param named_column_reference cannot be found.
-   *
-   * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
-   * ColumnIdentifier{"y", std::nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
-   * ColumnIdentifier{"y", "table_name"}
-   *
-   * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
-   *
-   * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
+   * Name resolution for Columns and TableNames.
    */
-  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
-  virtual std::optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference& named_column_reference) const;
+
+  /**
+   * @param qualified_column_name Must not be ambiguous in this subtree
+   * @return The ColumnReference of the qualified_column_name if it can be resolved in this subtree,
+   *         std::nullopt otherwise.
+   */
+  std::optional<LQPColumnReference> find_column(const QualifiedColumnName& qualified_column_name) const;
+
+  /**
+   * Convenience method for (*find_column_reference_by_qualified_column_name()), DebugAssert()s that the
+   * qualified_column_name could be resolved
+   */
+  LQPColumnReference get_column(const QualifiedColumnName& qualified_column_name) const;
+
+  /**
+   * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
+   *         nullptr if the no such node exists.
+   */
+  virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
   // @}
 
   /**
-   * Checks whether this node or any of its ancestors retrieve the table @param table_name from the StorageManager
-   * or as an alias of a subquery.
-   *
-   * Used especially to figure out which of the children of a Join is referenced.
-   *
-   * The standard requires subqueries (known as derived tables) to have an alias. The original name(s) of the table(s)
-   * that became part of that subselect are not accessible anymore once an alias is given.
-   *
-   *        <table reference> ::=
-   *            <table name> [ [ AS ] <correlation name>
-   *                [ <left paren> <derived column list> <right paren> ] ]
-   *          | <derived table> [ AS ] <correlation name>
-   *                [ <left paren> <derived column list> <right paren> ]
-   *          | <joined table>
+   * @return The leftmost output ColumnID that stems from column_reference, or std::nullopt if none does
    */
-  virtual bool knows_table(const std::string& table_name) const;
+  std::optional<ColumnID> find_output_column_id(const LQPColumnReference& column_reference) const;
 
   /**
-   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
-   * on this.
-   *
-   * Returns all ColumnIDs of this node, i.e., a vector with [0, output_column_count)
+   * Convenience for *find_output_column_id(), DebugAssert()s that the column_reference could be resolved
    */
-  virtual std::vector<ColumnID> get_output_column_ids() const;
-
-  /**
-   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
-   * on this.
-   *
-   * Returns all ColumnIDs of this node that belong to a table. Used for resolving wildcards in queries like
-   * `SELECT T1.*, T2.a FROM T1, T2`
-   *
-   * @param table_name can be an alias.
-   */
-  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const;
+  ColumnID get_output_column_id(const LQPColumnReference& column_reference) const;
 
   /**
    * Makes this nodes parents point to this node's left child
@@ -266,9 +240,44 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::vector<std::string> get_verbose_column_names() const;
   // @}
 
+  /**
+   * @defgroup Utilities for deep_copy()
+   * @{
+   */
+  /**
+   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnReferences pointing
+   * to their equivalent in a deep_copy()ed LQP
+   */
+  static std::shared_ptr<LQPExpression> adapt_expression_to_different_lqp(
+      const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+
+  /**
+   * @param copied_lqp must be a deep copy of original_lqp
+   * @param column_reference must be a ColumnReference original_lqp node outputs
+   * @return the ColumnReference equivalent to column_reference within the copied_lqp subtree
+   */
+  static LQPColumnReference adapt_column_reference_to_different_lqp(
+      const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
+      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+  /**
+   * @}
+   */
+
  protected:
-  // creates a DEEP copy of the other LQP node. Used for reusing LQPs, e.g., in views.
-  virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const = 0;
+  // Holds the actual implementation of deep_copy
+  using PreviousCopiesMap =
+      std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
+  std::shared_ptr<AbstractLQPNode> _deep_copy(PreviousCopiesMap& previous_copies) const;
+
+  /**
+   * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
+   * @param left_child and @param right_child are deep copies of the left and right child respectively, used for deep-copying
+   * ColumnReferences
+   */
+  virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
+      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const = 0;
 
   /**
    * In derived nodes, clear all data that depends on children and only set it lazily on request (see, e.g.
@@ -286,26 +295,20 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   std::optional<std::string> _table_alias;
 
-  /**
-   * For each column in the input node holds
-   *    - the ColumnID of this column in the output of this node
-   *    - INVALID_COLUMN_ID, if the column was created by this node.
-   *
-   * mutable, so it can be lazily initialized in output_column_ids_to_input_column_ids() overrides
-   */
-  mutable std::optional<std::vector<ColumnID>> _output_column_ids_to_input_column_ids;
+  // mutable, so it can be lazily initialized in output_column_references() overrides
+  mutable std::optional<std::vector<LQPColumnReference>> _output_column_references;
 
   /**
-   * If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
-   * only operate on the column name. If an alias for this subtree is set, but this reference does not match
-   * it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
+   * If qualified_column_name.table_name is the alias set for this subtree, remove the table_name so that we
+   * only operate on the column name. If an alias for this subtree is set, but qualified_column_name.table_name does not
+   * match it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
    */
-  std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
+  virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
+      const QualifiedColumnName& qualified_column_name) const;
 
  private:
   std::vector<std::weak_ptr<AbstractLQPNode>> _parents;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _children;
-
   std::shared_ptr<TableStatistics> _statistics;
 
   /**

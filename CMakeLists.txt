@@ -3,16 +3,31 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
+option(ENABLE_UNSUPPORTED_COMPILER "Set to ON to build Hyrise even if the compiler is not supported. Default: OFF" OFF)
+function(compiler_not_supported message)
+    if (${ENABLE_UNSUPPORTED_COMPILER})
+        message(WARNING ${message})
+    else()
+        message(FATAL_ERROR "${message} You can ignore this error by setting -DENABLE_UNSUPPORTED_COMPILER=ON.")
+    endif()
+endfunction(compiler_not_supported)
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.2)
-        message(FATAL_ERROR "Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+        compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.0)
-        message(FATAL_ERROR "Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+    if (APPLE)
+        # https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/749200
+        compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+        compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+    endif()
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please use the official llvm/clang version.")
 else()
-    message(WARNING "You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang and GCC.")
+    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
 endif()
 
 # Enable sanitization if requested
@@ -37,9 +52,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -march=native")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
 
 # Link Time Optimization (LTO)
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
         cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
         include(CheckIPOSupported)
@@ -53,6 +70,7 @@ endif()
 set(CURSES_NEED_NCURSES TRUE)
 
 # Dependencies
+find_package(FS REQUIRED)
 find_package(Numa)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)

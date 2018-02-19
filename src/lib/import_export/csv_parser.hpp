@@ -58,7 +58,7 @@ class CsvParser {
    * @param[out] chunk      Empty chunk, to be filled with fields found in \p csv_chunk.
    */
   void _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                         Chunk& chunk);
+                         const std::shared_ptr<Chunk>& chunk);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.

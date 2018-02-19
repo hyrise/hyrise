@@ -97,24 +97,24 @@ value_greater(L l, R r) {
 
 // Function that calls a given functor with the correct std comparator
 template <typename Functor>
-void with_comparator(const ScanType scan_type, const Functor& func) {
-  switch (scan_type) {
-    case ScanType::OpEquals:
+void with_comparator(const PredicateCondition predicate_condition, const Functor& func) {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals:
       return func(std::equal_to<void>{});
 
-    case ScanType::OpNotEquals:
+    case PredicateCondition::NotEquals:
       return func(std::not_equal_to<void>{});
 
-    case ScanType::OpLessThan:
+    case PredicateCondition::LessThan:
       return func(std::less<void>{});
 
-    case ScanType::OpLessThanEquals:
+    case PredicateCondition::LessThanEquals:
       return func(std::less_equal<void>{});
 
-    case ScanType::OpGreaterThan:
+    case PredicateCondition::GreaterThan:
       return func(std::greater<void>{});
 
-    case ScanType::OpGreaterThanEquals:
+    case PredicateCondition::GreaterThanEquals:
       return func(std::greater_equal<void>{});
 
     default:

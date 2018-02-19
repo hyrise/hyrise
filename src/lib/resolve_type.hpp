@@ -10,8 +10,9 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
@@ -148,8 +149,8 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
  *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
  *   resolve_data_type(data_type, [&](auto type) {
- *     using Type = typename decltype(type)::type;
- *     const auto var = type_cast<Type>(variant_from_elsewhere);
+ *     using ColumnDataType = typename decltype(type)::type;
+ *     const auto var = type_cast<ColumnDataType>(variant_from_elsewhere);
  *     process_variant(var);
  *
  *     process_type(type);
@@ -197,15 +198,15 @@ template <typename ColumnDataType, typename BaseColumnType, typename Functor>
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
     /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
   using ValueColumnPtr = ConstOutIfConstIn<BaseColumnType, ValueColumn<ColumnDataType>>*;
-  using DictionaryColumnPtr = ConstOutIfConstIn<BaseColumnType, DictionaryColumn<ColumnDataType>>*;
   using ReferenceColumnPtr = ConstOutIfConstIn<BaseColumnType, ReferenceColumn>*;
+  using EncodedColumnPtr = ConstOutIfConstIn<BaseColumnType, BaseEncodedColumn>*;
 
   if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
     func(*value_column);
-  } else if (auto dict_column = dynamic_cast<DictionaryColumnPtr>(&column)) {
-    func(*dict_column);
   } else if (auto ref_column = dynamic_cast<ReferenceColumnPtr>(&column)) {
     func(*ref_column);
+  } else if (auto encoded_column = dynamic_cast<EncodedColumnPtr>(&column)) {
+    resolve_encoded_column_type<ColumnDataType>(*encoded_column, func);
   } else {
     Fail("Unrecognized column type encountered.");
   }

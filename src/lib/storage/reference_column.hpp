@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "base_column.hpp"
-#include "dictionary_column.hpp"
+#include "deprecated_dictionary_column.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -35,8 +35,8 @@ class ReferenceColumn : public BaseColumn {
     values.reserve(_pos_list->size());
 
     for (const RowID& row : *_pos_list) {
-      auto& chunk = _referenced_table->get_chunk(row.chunk_id);
-      std::shared_ptr<const BaseColumn> column = chunk.get_column(_referenced_column_id);
+      auto chunk = _referenced_table->get_chunk(row.chunk_id);
+      std::shared_ptr<const BaseColumn> column = chunk->get_column(_referenced_column_id);
 
       if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
         values.push_back(std::nullopt);
@@ -54,7 +54,7 @@ class ReferenceColumn : public BaseColumn {
         continue;
       }
 
-      if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+      if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
         if (dict_column->is_null(row.chunk_offset)) {
           values.push_back(std::nullopt);
         } else {
@@ -69,7 +69,7 @@ class ReferenceColumn : public BaseColumn {
     return values;
   }
 
-  size_t size() const override;
+  size_t size() const final;
 
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;
@@ -78,9 +78,6 @@ class ReferenceColumn : public BaseColumn {
 
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
-
-  // writes the length and value at the chunk_offset to the end off row_string
-  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
 
   template <typename ContextClass>
   void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
@@ -106,19 +103,17 @@ class ReferenceColumn : public BaseColumn {
       auto& chunk_id = pair.first;
       auto& chunk_offsets = pair.second;
 
-      auto& chunk = _referenced_table->get_chunk(chunk_id);
-      auto referenced_column = chunk.get_column(_referenced_column_id);
+      auto chunk = _referenced_table->get_chunk(chunk_id);
+      auto referenced_column = chunk->get_column(_referenced_column_id);
 
       auto context = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
       referenced_column->visit(visitable, context);
     }
   }
 
-  // copies one of its own values to a different ValueColumn - mainly used for materialization
-  // we cannot always use the materialize method below because sort results might come from different BaseColumns
-  void copy_value_to_value_column(BaseColumn&, ChunkOffset) const override;
-
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+
+  size_t estimate_memory_usage() const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need

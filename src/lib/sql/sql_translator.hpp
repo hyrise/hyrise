@@ -9,12 +9,13 @@
 
 #include "all_parameter_variant.hpp"
 
+#include "abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "optimizer/expression.hpp"
 
 namespace opossum {
 
 class AggregateNode;
+class LQPExpression;
 
 /**
 * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
@@ -22,8 +23,7 @@ class AggregateNode;
  * The elements of the vector returned by SQLTranslator::translate_parse_result(const hsql::SQLParserResult&)
  * point to the root/result nodes of the LQPs.
  *
- * An LQP can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
- * the LQPTranslator.
+ * An LQP can either be handed to the Optimizer, or it can be directly turned into Operators by the LQPTranslator.
  *
  *
  * ## ColumnID Resolution
@@ -32,7 +32,7 @@ class AggregateNode;
  * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
  * Most of the lifting for this is done in the overrides of
- * AbstractLQPNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
+ * AbstractLQPNode::{get, find}_column_id_by_qualified_column_name() which Nodes that add, remove or rearrange columns
  * have to have an implementation of (Projection, Join, ...).
  * The handling of ColumnIdentifierName::table_name is also done in these overrides. StoredTableNode handles table
  * ALIASes and names (`SELECT t1.a, alias_t2.b FROM t1, t2 AS alias_t2`), ProjectionNode ALIASes for Expressions
@@ -56,15 +56,12 @@ class SQLTranslator final : public Noncopyable {
   /**
    * @param validate If set to false, does not add validate nodes to the resulting tree.
    */
-  constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
+  explicit constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_parse_result(const hsql::SQLParserResult& result);
 
   std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement& statement);
-
-  static AllParameterVariant translate_hsql_operand(
-      const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node = std::nullopt);
 
  protected:
   std::shared_ptr<AbstractLQPNode> _translate_select(const hsql::SelectStatement& select);
@@ -105,19 +102,22 @@ class SQLTranslator final : public Noncopyable {
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update);
 
+  std::shared_ptr<AbstractLQPNode> _translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
+                                                              const hsql::TableRef& table);
+
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */
   std::shared_ptr<AbstractLQPNode> _translate_predicate(
       const hsql::Expr& hsql_expr, bool allow_function_columns,
-      const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
+      const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::vector<std::shared_ptr<Expression>> _retrieve_having_aggregates(
+  std::vector<std::shared_ptr<LQPExpression>> _retrieve_having_aggregates(
       const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node);
 
  private:

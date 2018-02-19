@@ -12,19 +12,19 @@
 #include <string>
 #include <vector>
 
-#include "copyable_atomic.hpp"
 #include "index/column_index_type.hpp"
-#include "scoped_locking_ptr.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "utils/copyable_atomic.hpp"
+#include "utils/format_bytes.hpp"
+#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 
 class BaseIndex;
 class BaseColumn;
 
-enum class ChunkUseMvcc { Yes, No };
 enum class ChunkUseAccessCounter { Yes, No };
 
 /**
@@ -98,12 +98,11 @@ class Chunk : private Noncopyable {
   };
 
  public:
-  explicit Chunk(ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No, ChunkUseAccessCounter = ChunkUseAccessCounter::No);
+  explicit Chunk(UseMvcc mvcc_mode = UseMvcc::No, ChunkUseAccessCounter = ChunkUseAccessCounter::No);
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
   Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter);
-  Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
-        const ChunkUseAccessCounter counter_mode);
+  Chunk(const PolymorphicAllocator<Chunk>& alloc, const UseMvcc mvcc_mode, const ChunkUseAccessCounter counter_mode);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -168,14 +167,6 @@ class Chunk : private Noncopyable {
    */
   void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
 
-  /**
-   * Reuses mvcc from another chunk.
-   * Copies the shared pointer of the mvcc columns
-   * so that they are effectively shared between the two
-   * chunks. This is used in the Projection class.
-   */
-  void use_mvcc_columns_from(const Chunk& chunk);
-
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
   std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID> column_ids) const;
@@ -206,6 +197,8 @@ class Chunk : private Noncopyable {
     return create_index<Index>(columns);
   }
 
+  void remove_index(std::shared_ptr<BaseIndex> index);
+
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
@@ -213,6 +206,11 @@ class Chunk : private Noncopyable {
   bool references_exactly_one_table() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
+
+  /**
+   * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
+   */
+  size_t estimate_memory_usage() const;
 
  private:
   std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;

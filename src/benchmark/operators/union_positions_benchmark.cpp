@@ -89,7 +89,7 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
     for (size_t row_idx = 0; row_idx < num_rows;) {
       const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
-      Chunk chunk;
+      auto chunk = std::make_shared<Chunk>();
       for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
         /**
          * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table
@@ -97,7 +97,7 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
          * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
          */
         auto pos_list = generate_pos_list(_random_engine, num_rows * 0.2f, num_rows_per_chunk);
-        chunk.add_column(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
+        chunk->add_column(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
       }
       table->emplace_chunk(std::move(chunk));
 

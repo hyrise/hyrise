@@ -1,68 +1,139 @@
-#include <utility>
+#include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
-#include "concurrency/transaction_manager.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "optimizer/optimizer.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql_pipeline.hpp"
-#include "sql_translator.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context)
-    : _sql_string(sql), _use_mvcc(true), _auto_commit(false), _transaction_context(std::move(transaction_context)) {
-  DebugAssert(_transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
+SQLPipeline::SQLPipeline(const std::string& sql, const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer)
+    : SQLPipeline(sql, nullptr, use_mvcc, optimizer) {}
+
+SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context,
+                         const std::shared_ptr<Optimizer>& optimizer)
+    : SQLPipeline(sql, transaction_context, UseMvcc::Yes, optimizer) {
+  DebugAssert(transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
+  DebugAssert(transaction_context->phase() == TransactionPhase::Active,
+              "The transaction context cannot have been committed already.");
 }
 
-SQLPipeline::SQLPipeline(const std::string& sql, const bool use_mvcc)
-    : _sql_string(sql), _use_mvcc(use_mvcc), _auto_commit(_use_mvcc) {
-  if (_use_mvcc) {
-    // We want to use MVCC but didn't pass an explicit context
-    _transaction_context = TransactionManager::get().new_transaction_context();
-  } else {
-    // We don't want to use MVCC
-    _transaction_context = nullptr;
-  }
-}
-
-const hsql::SQLParserResult& SQLPipeline::get_parsed_sql() {
-  if (_parsed_sql) {
-    // Returned cached result
-    return *(_parsed_sql.get());
-  }
-
-  auto parse_result = std::make_unique<hsql::SQLParserResult>();
-
-  const auto started = std::chrono::high_resolution_clock::now();
+// Private constructor
+SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer)
+    : _transaction_context(transaction_context), _optimizer(optimizer) {
+  hsql::SQLParserResult parse_result;
   try {
-    hsql::SQLParser::parse(_sql_string, parse_result.get());
+    hsql::SQLParser::parse(sql, &parse_result);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while parsing SQL query:\n  " + std::string(exception.what()));
   }
 
-  if (!parse_result->isValid()) {
-    throw std::logic_error("SQL query not valid.");
+  if (!parse_result.isValid()) {
+    throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
   }
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _parse_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+  DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
+  _sql_pipeline_statements.reserve(parse_result.size());
 
-  _parsed_sql = std::move(parse_result);
-  return *(_parsed_sql.get());
+  std::vector<std::shared_ptr<hsql::SQLParserResult>> parsed_statements;
+  for (auto* statement : parse_result.releaseStatements()) {
+    parsed_statements.emplace_back(std::make_shared<hsql::SQLParserResult>(statement));
+  }
+
+  auto seen_altering_statement = false;
+
+  // We want to split the (multi-) statement SQL string into the strings for each statement. We can then use those
+  // statement strings to cache query plans.
+  // The sql parser only offers us the length of the string, so we need to split it manually.
+  auto sql_string_offset = 0u;
+
+  for (auto& parsed_statement : parsed_statements) {
+    parsed_statement->setIsValid(true);
+
+    // We will always have one at 0 because we set it ourselves
+    const auto* statement = parsed_statement->getStatement(0);
+
+    switch (statement->type()) {
+      // Check if statement alters the structure of the database in a way that following statements might depend upon.
+      case hsql::StatementType::kStmtImport:
+      case hsql::StatementType::kStmtCreate:
+      case hsql::StatementType::kStmtDrop:
+      case hsql::StatementType::kStmtAlter:
+      case hsql::StatementType::kStmtRename: {
+        seen_altering_statement = true;
+        break;
+      }
+      default: { /* do nothing */
+      }
+    }
+
+    // Get the statement string from the original query string, so we can pass it to the SQLPipelineStatement
+    const auto statement_string_length = statement->stringLength;
+    const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
+    sql_string_offset += statement_string_length;
+
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
+                                                                     use_mvcc, transaction_context, optimizer);
+    _sql_pipeline_statements.push_back(std::move(pipeline_statement));
+  }
+
+  // If we see at least one structure altering statement and we have more than one statement, we require execution of a
+  // statement before the next one can be translated (so the next statement sees the previous structural changes).
+  _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
+const std::vector<std::string>& SQLPipeline::get_sql_strings() {
+  if (!_sql_strings.empty()) {
+    return _sql_strings;
+  }
+
+  _sql_strings.reserve(statement_count());
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    _sql_strings.push_back(pipeline_statement->get_sql_string());
+  }
+
+  return _sql_strings;
+}
+
+const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_parsed_sql_statements() {
+  if (!_parsed_sql_statements.empty()) {
+    return _parsed_sql_statements;
+  }
+
+  _parsed_sql_statements.reserve(statement_count());
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    try {
+      _parsed_sql_statements.push_back(pipeline_statement->get_parsed_sql_statement());
+    } catch (const std::exception& exception) {
+      _failed_pipeline_statement = pipeline_statement;
+
+      // Don't keep bad values
+      _parsed_sql_statements.clear();
+      throw;
+    }
+  }
+
+  return _parsed_sql_statements;
+}
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
   if (!_unoptimized_logical_plans.empty()) {
     return _unoptimized_logical_plans;
   }
 
-  const auto& parsed_sql = get_parsed_sql();
-  try {
-    _unoptimized_logical_plans = SQLTranslator{_use_mvcc}.translate_parse_result(parsed_sql);
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while compiling query plan:\n  " + std::string(exception.what()));
+  Assert(!_requires_execution || _pipeline_was_executed,
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot translate all statements without executing, i.e. calling get_result_table()");
+
+  _unoptimized_logical_plans.reserve(statement_count());
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    try {
+      _unoptimized_logical_plans.push_back(pipeline_statement->get_unoptimized_logical_plan());
+    } catch (const std::exception& exception) {
+      _failed_pipeline_statement = pipeline_statement;
+
+      // Don't keep bad values
+      _unoptimized_logical_plans.clear();
+      throw;
+    }
   }
 
   return _unoptimized_logical_plans;
@@ -73,125 +144,137 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
     return _optimized_logical_plans;
   }
 
-  const auto& unoptimized_lqp = get_unoptimized_logical_plans();
-  _optimized_logical_plans.reserve(unoptimized_lqp.size());
+  Assert(!_requires_execution || _pipeline_was_executed,
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
-  try {
-    for (const auto& node : unoptimized_lqp) {
-      _optimized_logical_plans.push_back(Optimizer::get().optimize(node));
+  _optimized_logical_plans.reserve(statement_count());
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    try {
+      _optimized_logical_plans.push_back(pipeline_statement->get_optimized_logical_plan());
+    } catch (const std::exception& exception) {
+      _failed_pipeline_statement = pipeline_statement;
+
+      // Don't keep bad values
+      _optimized_logical_plans.clear();
+      throw;
     }
-  } catch (const std::exception& exception) {
-    // Don't keep bad values
-    _optimized_logical_plans.clear();
-    throw std::runtime_error("Error while optimizing query plan:\n  " + std::string(exception.what()));
   }
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
-  // optimized, which could lead to subtle bugs. optimized_logical_plans then holds hold the original values now.
+  // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plans.clear();
 
   return _optimized_logical_plans;
 }
 
-const SQLQueryPlan& SQLPipeline::get_query_plan() {
-  if (_query_plan) {
-    return *(_query_plan.get());
+const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans() {
+  if (!_query_plans.empty()) {
+    return _query_plans;
   }
 
-  const auto& lqp_roots = get_optimized_logical_plans();
-  auto plan = std::make_unique<SQLQueryPlan>();
+  Assert(!_requires_execution || _pipeline_was_executed,
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  _query_plans.reserve(statement_count());
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    try {
+      _query_plans.push_back(pipeline_statement->get_query_plan());
+    } catch (const std::exception& exception) {
+      _failed_pipeline_statement = pipeline_statement;
 
-  try {
-    for (const auto& node : lqp_roots) {
-      auto op = LQPTranslator{}.translate_node(node);
-      plan->add_tree_by_root(op);
+      // Don't keep bad values
+      _query_plans.clear();
+      throw;
     }
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while translating query plan:\n  " + std::string(exception.what()));
   }
 
-  if (_use_mvcc) {
-    plan->set_transaction_context(_transaction_context);
-  }
-
-  const auto done = std::chrono::high_resolution_clock::now();
-  _compile_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
-
-  _query_plan = std::move(plan);
-  return *(_query_plan.get());
+  return _query_plans;
 }
 
-const std::vector<TaskSet>& SQLPipeline::get_task_sets() {
-  if (!_op_task_sets.empty()) {
-    return _op_task_sets;
+const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
+  if (!_tasks.empty()) {
+    return _tasks;
   }
 
-  const auto& query_plan = get_query_plan();
-  _op_task_sets.reserve(query_plan.tree_roots().size());
+  Assert(!_requires_execution || _pipeline_was_executed,
+         "One or more SQL statement is dependent on the execution of a previous one. "
+         "Cannot generate tasks for all statements without executing, i.e. calling get_result_table()");
 
-  try {
-    for (const auto& root : query_plan.tree_roots()) {
-      _op_task_sets.emplace_back(OperatorTask::make_tasks_from_operator(root));
+  _tasks.reserve(statement_count());
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    try {
+      _tasks.push_back(pipeline_statement->get_tasks());
+    } catch (const std::exception& exception) {
+      _failed_pipeline_statement = pipeline_statement;
+
+      // Don't keep bad values
+      _tasks.clear();
+      throw;
     }
-  } catch (const std::exception& exception) {
-    // Don't keep bad values
-    _op_task_sets.clear();
-    throw std::runtime_error("Error while creating tasks:\n  " + std::string(exception.what()));
   }
 
-  return _op_task_sets;
+  return _tasks;
 }
 
 const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
-  if (_result_table || !_query_has_output) {
+  if (_pipeline_was_executed) {
     return _result_table;
   }
 
-  const auto& op_tasks = get_task_sets();
-
-  const auto started = std::chrono::high_resolution_clock::now();
-
-  try {
-    for (const auto& task_set : op_tasks) {
-      CurrentScheduler::schedule_and_wait_for_tasks(task_set);
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    try {
+      pipeline_statement->get_result_table();
+    } catch (const std::exception& exception) {
+      _failed_pipeline_statement = pipeline_statement;
+      throw;
     }
-  } catch (const std::exception& exception) {
-    if (_use_mvcc) _transaction_context->rollback();
-    throw std::runtime_error("Error while executing tasks:\n  " + std::string(exception.what()));
   }
 
-  if (_auto_commit) {
-    _transaction_context->commit();
-  }
-
-  const auto done = std::chrono::high_resolution_clock::now();
-  _execution_time_sec = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
-
-  // Get output from last task in last task set
-  _result_table = op_tasks.back().back()->get_operator()->get_output();
-  if (_result_table == nullptr) _query_has_output = false;
+  _result_table = _sql_pipeline_statements.back()->get_result_table();
+  _pipeline_was_executed = true;
 
   return _result_table;
 }
 
-const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() { return _transaction_context; }
+const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const { return _transaction_context; }
 
-std::chrono::microseconds SQLPipeline::parse_time_microseconds() {
-  Assert(_parsed_sql != nullptr, "Cannot return parse duration without having parsed.");
-  return _parse_time_sec;
+const std::shared_ptr<SQLPipelineStatement>& SQLPipeline::failed_pipeline_statement() const {
+  return _failed_pipeline_statement;
 }
+
+size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.size(); }
+
+bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
 std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
-  Assert(_query_plan != nullptr, "Cannot return compile duration without having created the query plan.");
-  return _compile_time_sec;
-}
+  if (_compile_time_microseconds.count() > 0) {
+    return _compile_time_microseconds;
+  }
 
+  if (_requires_execution || _query_plans.empty()) {
+    Assert(_pipeline_was_executed,
+           "Cannot get compile time without having compiled or having executed a multi-statement query");
+  }
+
+  for (const auto& pipeline_statement : _sql_pipeline_statements) {
+    _compile_time_microseconds += pipeline_statement->compile_time_microseconds();
+  }
+
+  return _compile_time_microseconds;
+}
 std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
-  Assert(_result_table != nullptr || !_query_has_output, "Cannot return execution duration without having executed.");
-  return _execution_time_sec;
+  Assert(_pipeline_was_executed, "Cannot return execution duration without having executed.");
+
+  if (_execution_time_microseconds.count() == 0) {
+    for (const auto& pipeline_statement : _sql_pipeline_statements) {
+      _execution_time_microseconds += pipeline_statement->execution_time_microseconds();
+    }
+  }
+
+  return _execution_time_microseconds;
 }
 
 }  // namespace opossum

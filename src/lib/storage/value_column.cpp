@@ -141,51 +141,7 @@ size_t ValueColumn<T>::size() const {
 
 template <typename T>
 void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
-  visitable.handle_value_column(*this, std::move(context));
-}
-
-template <typename T>
-void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
-  std::stringstream buffer;
-
-  bool is_null = is_nullable() && (*_null_values)[chunk_offset];
-  Assert(!is_null, "This operation does not support NULL values.");
-
-  // buffering value at chunk_offset
-  buffer << _values[chunk_offset];
-  uint32_t length = buffer.str().length();
-  // writing byte representation of length
-  buffer.write(reinterpret_cast<const char*>(&length), sizeof(length));
-
-  // appending the new string to the already present string
-  row_string += buffer.str();
-}
-
-template <typename T>
-void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
-  auto& output_column = static_cast<ValueColumn<T>&>(value_column);
-
-  auto& values_out = output_column.values();
-
-  if (is_nullable()) {
-    bool is_null = (*_null_values)[chunk_offset];
-
-    DebugAssert(!is_null || output_column.is_nullable(), "Target ValueColumn needs to be nullable as well");
-
-    if (output_column.is_nullable()) {
-      auto& null_values_out = output_column.null_values();
-      null_values_out.push_back(is_null);
-    }
-
-    values_out.push_back(is_null ? T{} : _values[chunk_offset]);
-
-  } else {
-    values_out.push_back(_values[chunk_offset]);
-
-    if (output_column.is_nullable()) {
-      output_column.null_values().push_back(false);
-    }
-  }
+  visitable.handle_column(*this, std::move(context));
 }
 
 template <typename T>
@@ -197,6 +153,11 @@ std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const Polymorph
   } else {
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));
   }
+}
+
+template <typename T>
+size_t ValueColumn<T>::estimate_memory_usage() const {
+  return sizeof(*this) + _values.size() * sizeof(T) + (_null_values ? _null_values->size() * sizeof(bool) : 0u);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);

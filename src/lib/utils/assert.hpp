@@ -44,7 +44,7 @@ inline void Assert(const T& value, const std::string& msg) {
   throw std::logic_error(msg);
 }
 
-inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
+[[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
 }  // namespace opossum
 

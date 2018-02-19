@@ -16,7 +16,7 @@ endif()
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
-    add_compile_options(-fprofile-arcs -ftest-coverage)
+    add_compile_options(-O0 -fprofile-arcs -ftest-coverage)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
@@ -31,7 +31,7 @@ endif()
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 # Global flags and include directories
-add_compile_options(-std=c++1z -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter)
+add_compile_options(-std=c++17 -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include

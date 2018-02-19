@@ -33,7 +33,7 @@ class ValueColumn : public BaseValueColumn {
   const T get(const ChunkOffset chunk_offset) const;
 
   // Add a value to the end of the column.
-  void append(const AllTypeVariant& val) override;
+  void append(const AllTypeVariant& val) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.
@@ -55,26 +55,22 @@ class ValueColumn : public BaseValueColumn {
   pmr_concurrent_vector<bool>& null_values() final;
 
   // Return the number of entries in the column.
-  size_t size() const override;
+  size_t size() const final;
 
   // Visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
-  // Write the length and value at the chunk_offset to the end of row_string.
-  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override;
-
-  // Copy own value to a different ValueColumn - mainly used for materialization.
-  // We cannot always use the materialize method below because sort results might come from different BaseColumns.
-  void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
-
   // Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+
+  size_t estimate_memory_usage() const override;
 
  protected:
   pmr_concurrent_vector<T> _values;
 
-  // While a ValueColumn knows if it is nullable or not by looking at this optional, a DictionaryColumn does not.
-  // For this reason, we need to store the nullable information separately in the table's definition.
+  // While a ValueColumn knows if it is nullable or not by looking at this optional, most other column types
+  // (e.g. DictionaryColumn) does not. For this reason, we need to store the nullable information separately
+  // in the table's definition.
   std::optional<pmr_concurrent_vector<bool>> _null_values;
 };
 

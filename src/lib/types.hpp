@@ -8,11 +8,13 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "strong_typedef.hpp"
+#include "utils/assert.hpp"
 
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
@@ -43,7 +45,7 @@ namespace opossum {
 
 /** We use vectors with custom allocators, e.g, to bind the data object to
  * specific NUMA nodes. This is mainly used in the data objects, i.e.,
- * Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+ * Chunk, ValueColumn, DeprecatedDictionaryColumn, ReferenceColumn and attribute vectors.
  * The PolymorphicAllocator provides an abstraction over several allocation
  * methods by adapting to subclasses of boost::container::pmr::memory_resource.
  */
@@ -82,9 +84,12 @@ using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+
 struct RowID {
-  ChunkID chunk_id;
-  ChunkOffset chunk_offset;
+  ChunkID chunk_id{0};
+  ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {
@@ -115,6 +120,7 @@ using ColumnNameLength = uint8_t;  // The length of column names must fit in thi
 using AttributeVectorWidth = uint8_t;
 
 using PosList = pmr_vector<RowID>;
+using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
@@ -124,14 +130,13 @@ constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::m
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
-// Used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
-
 // ... in ReferenceColumns
 const RowID NULL_ROW_ID = RowID{ChunkID{0u}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
 // ... in DictionaryColumns
 constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
+
+constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
@@ -161,18 +166,18 @@ class ValuePlaceholder {
 };
 
 // TODO(anyone): integrate and replace with ExpressionType
-enum class ScanType {
-  OpEquals,
-  OpNotEquals,
-  OpLessThan,
-  OpLessThanEquals,
-  OpGreaterThan,
-  OpGreaterThanEquals,
-  OpBetween,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
-  OpLike,
-  OpNotLike,
-  OpIsNull,
-  OpIsNotNull
+enum class PredicateCondition {
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  Like,
+  NotLike,
+  IsNull,
+  IsNotNull
 };
 
 enum class ExpressionType {
@@ -231,6 +236,10 @@ enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
+
+enum class DescriptionMode { SingleLine, MultiLine };
+
+enum class UseMvcc : bool { Yes = true, No = false };
 
 class Noncopyable {
  protected:

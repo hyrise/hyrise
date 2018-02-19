@@ -8,6 +8,9 @@
 #include "SQLParserResult.h"
 #include "cxxopts.hpp"
 #include "json.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
@@ -122,7 +125,7 @@ class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
                 const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
-                const Duration max_duration, const std::optional<std::string>& output_file_path)
+                const Duration max_duration, const std::optional<std::string>& output_file_path, const UseMvcc use_mvcc)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
@@ -130,6 +133,7 @@ class TpchBenchmark final {
         _max_num_query_runs(max_num_query_runs),
         _max_duration(max_duration),
         _output_file_path(output_file_path),
+        _use_mvcc(use_mvcc),
         _query_results_by_query_id() {}
 
   void run() {
@@ -171,6 +175,7 @@ class TpchBenchmark final {
   const size_t _max_num_query_runs;
   const Duration _max_duration;
   const std::optional<std::string> _output_file_path;
+  const UseMvcc _use_mvcc;
 
   BenchmarkResults _query_results_by_query_id;
 
@@ -193,8 +198,10 @@ class TpchBenchmark final {
 
       for (const auto query_id : mutable_query_ids) {
         const auto query_benchmark_begin = std::chrono::steady_clock::now();
+
         // Execute the query, we don't care about the results
-        SQLPipeline{opossum::tpch_queries[query_id]}.get_result_table();
+        SQLPipeline{opossum::tpch_queries[query_id], _use_mvcc}.get_result_table();
+
         const auto query_benchmark_end = std::chrono::steady_clock::now();
 
         auto& query_benchmark_result = _query_results_by_query_id.at(query_id);
@@ -214,7 +221,7 @@ class TpchBenchmark final {
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
         // Execute the query, we don't care about the results
-        SQLPipeline{sql}.get_result_table();
+        SQLPipeline{sql, _use_mvcc}.get_result_table();
       }
 
       QueryBenchmarkResult result;
@@ -279,6 +286,8 @@ int main(int argc, char* argv[]) {
   auto scale_factor = 1.0f;
   auto chunk_size = opossum::ChunkOffset(opossum::INVALID_CHUNK_OFFSET);
   auto benchmark_mode_str = std::string{"IndividualQueries"};
+  auto enable_mvcc = false;
+  auto enable_scheduler = false;
 
   cxxopts::Options cli_options_description{"TPCH Benchmark", ""};
 
@@ -292,6 +301,8 @@ int main(int argc, char* argv[]) {
     ("t,time", "Maximum seconds within which a new query(set) is initiated", cxxopts::value<size_t>(timeout_duration)->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str)) // NOLINT
+    ("mvcc", "Enable or disable MVCC", cxxopts::value<bool>(enable_mvcc)->default_value("false")) // NOLINT
+    ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>(enable_scheduler)->default_value("false")) // NOLINT
     ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
   // clang-format on
 
@@ -317,6 +328,23 @@ int main(int argc, char* argv[]) {
     opossum::out() << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
   } else {
     opossum::out() << "- Writing benchmark results to stdout" << std::endl;
+  }
+
+  // Display info about MVCC being enabled or not
+  opossum::out() << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
+
+  /**
+   * Initialise the Scheduler if the Benchmark was requested to run multithreaded
+   */
+  if (enable_scheduler) {
+    const auto topology = opossum::Topology::create_numa_topology();
+    opossum::out() << "- Running in multi-threaded mode, with the following Topology:" << std::endl;
+    topology->print(opossum::out());
+
+    const auto scheduler = std::make_shared<opossum::NodeQueueScheduler>(topology);
+    opossum::CurrentScheduler::set(scheduler);
+  } else {
+    opossum::out() << "- Running in single-threaded mode" << std::endl;
   }
 
   // Build list of query ids to be benchmarked and display it
@@ -352,7 +380,7 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   opossum::TpchBenchmark(benchmark_mode, query_ids, chunk_size, scale_factor, num_iterations,
                          std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}),
-                         output_file_path)
+                         output_file_path, enable_mvcc ? opossum::UseMvcc::Yes : opossum::UseMvcc::No)
       .run();
 
   return 0;

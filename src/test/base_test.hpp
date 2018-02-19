@@ -9,8 +9,8 @@
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -24,18 +24,20 @@ namespace opossum {
 class AbstractLQPNode;
 class Table;
 
+static std::string test_data_path;  // NOLINT
+
 template <typename ParamType>
 class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
                                                   ::testing::TestWithParam<ParamType>>::type {
  protected:
   // creates a dictionary column with the given type and values
   template <class T>
-  static std::shared_ptr<DictionaryColumn<T>> create_dict_column_by_type(DataType data_type,
-                                                                         const std::vector<T>& values) {
+  static std::shared_ptr<DeprecatedDictionaryColumn<T>> create_dict_column_by_type(DataType data_type,
+                                                                                   const std::vector<T>& values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
-    auto compressed_column = DictionaryCompression::compress_column(data_type, value_column);
-    return std::static_pointer_cast<DictionaryColumn<T>>(compressed_column);
+    auto compressed_column = DeprecatedDictionaryCompression::compress_column(data_type, value_column);
+    return std::static_pointer_cast<DeprecatedDictionaryColumn<T>>(compressed_column);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {

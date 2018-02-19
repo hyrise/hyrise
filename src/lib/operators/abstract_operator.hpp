@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "all_parameter_variant.hpp"
@@ -46,7 +47,10 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> get_output() const;
 
   virtual const std::string name() const = 0;
-  virtual const std::string description() const;
+  virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+
+  // This only checks if the operator has/had a transaction context without having to convert the weak_ptr
+  bool transaction_context_is_set() const;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
@@ -78,6 +82,8 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<OperatorTask> operator_task();
   void set_operator_task(const std::shared_ptr<OperatorTask>&);
 
+  void print(std::ostream& stream = std::cout) const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -88,6 +94,9 @@ class AbstractOperator : private Noncopyable {
   // separate from _on_execute for readability and as a reminder to
   // clean up after execution (if it makes sense)
   virtual void _on_cleanup();
+
+  void _print_impl(std::ostream& out, std::vector<bool>& levels,
+                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;
@@ -100,7 +109,7 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> _output;
 
   // Weak pointer breaks cyclical dependency between operators and context
-  std::weak_ptr<TransactionContext> _transaction_context;
+  std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   PerformanceData _performance_data;
 

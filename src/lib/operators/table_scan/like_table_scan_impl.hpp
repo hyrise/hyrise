@@ -26,20 +26,31 @@ class Table;
  */
 class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type,
-                    const std::string& right_wildcard);
+  LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                    const PredicateCondition predicate_condition, const std::string& right_wildcard);
 
-  void handle_value_column(const BaseValueColumn& base_column,
-                           std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
-                                std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  void handle_column(const BaseDictionaryColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  void handle_column(const BaseEncodedColumn& base_column,
+                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+
+  using BaseSingleColumnTableScanImpl::handle_column;
 
  private:
   /**
    * @defgroup Methods used for handling dictionary columns
    * @{
    */
+
+  template <typename DictionaryColumnType>
+  void _handle_dictionary_column(const DictionaryColumnType& left_column,
+                                 std::shared_ptr<ColumnVisitableContext> base_context);
 
   /**
    * @returns number of matches and the result of each dictionary entry

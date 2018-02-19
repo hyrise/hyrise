@@ -20,6 +20,7 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_planner.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -59,6 +60,8 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
     opossum::CurrentScheduler::set(
         std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
   std::unique_ptr<SQLiteWrapper> _sqlite;
@@ -94,9 +97,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto order_sensitivity = OrderSensitivity::No;
 
-  const auto& parse_result = sql_pipeline.get_parsed_sql();
-  if (parse_result.getStatements().back()->is(hsql::kStmtSelect)) {
-    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatements().back());
+  const auto& parse_result = sql_pipeline.get_parsed_sql_statements().back();
+  if (parse_result->getStatements().front()->is(hsql::kStmtSelect)) {
+    auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result->getStatements().back());
     if (select_statement->order != nullptr) {
       order_sensitivity = OrderSensitivity::Yes;
     }

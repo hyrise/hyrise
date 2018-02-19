@@ -9,8 +9,10 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
+#include "utils/arithmetic_operator_expression.hpp"
 
 namespace opossum {
 
@@ -19,6 +21,18 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const C
 
 const std::string Projection::name() const { return "Projection"; }
 
+const std::string Projection::description(DescriptionMode description_mode) const {
+  std::stringstream desc;
+  desc << "[Projection] ";
+  for (size_t expression_idx = 0; expression_idx < _column_expressions.size(); ++expression_idx) {
+    desc << _column_expressions[expression_idx]->description();
+    if (expression_idx + 1 < _column_expressions.size()) {
+      desc << ", ";
+    }
+  }
+  return desc.str();
+}
+
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
@@ -26,21 +40,21 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 }
 
 template <typename T>
-void Projection::_create_column(boost::hana::basic_type<T> type, Chunk& chunk, const ChunkID chunk_id,
-                                const std::shared_ptr<Expression>& expression,
-                                std::shared_ptr<const Table> input_table_left) {
+void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
+                                const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
+                                std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
-  if (expression->type() == ExpressionType::Column) {
+  if (reuse_column_from_input) {
     // we have to use get_mutable_column here because we cannot add a const column to the chunk
-    auto bypassed_column = input_table_left->get_chunk(chunk_id).get_mutable_column(expression->column_id());
-    return chunk.add_column(bypassed_column);
+    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
+    return chunk->add_column(bypassed_column);
   }
 
   std::shared_ptr<BaseColumn> column;
 
   if (expression->is_null_literal()) {
     // fill a nullable column with NULLs
-    auto row_count = input_table_left->get_chunk(chunk_id).size();
+    auto row_count = input_table_left->get_chunk(chunk_id)->size();
     auto null_values = pmr_concurrent_vector<bool>(row_count, true);
     // Explicitly pass T{} because in some cases it won't initialize otherwise
     auto values = pmr_concurrent_vector<T>(row_count, T{});
@@ -63,11 +77,12 @@ void Projection::_create_column(boost::hana::basic_type<T> type, Chunk& chunk, c
     column = std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
   }
 
-  chunk.add_column(column);
+  chunk->add_column(column);
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   auto output = std::make_shared<Table>();
+  auto reuse_column_from_input = true;
 
   // Prepare terms and output table for each column to project
   for (const auto& column_expression : _column_expressions) {
@@ -83,6 +98,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       Fail("Expression type is not supported.");
     }
 
+    if (column_expression->type() != ExpressionType::Column) {
+      reuse_column_from_input = false;
+    }
+
     const auto type = _get_type_of_expression(column_expression, _input_table_left());
     if (type == DataType::Null) {
       // in case of a NULL literal, simply add a nullable int column
@@ -94,16 +113,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
     // fill the new table
-    Chunk chunk_out;
-
-    // if there is mvcc information, we have to link it
-    if (_input_table_left()->get_chunk(chunk_id).has_mvcc_columns()) {
-      chunk_out.use_mvcc_columns_from(_input_table_left()->get_chunk(chunk_id));
-    }
+    auto chunk_out = std::make_shared<Chunk>();
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
-        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left());
+        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
+                       reuse_column_from_input);
       });
     }
 
@@ -113,7 +128,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   return output;
 }
 
-DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& expression,
+DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                              const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
@@ -143,14 +158,15 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<Expression>& 
 
 template <typename T>
 const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
-    const std::shared_ptr<Expression>& expression, const std::shared_ptr<const Table> table, const ChunkID chunk_id) {
+    const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
+    const ChunkID chunk_id) {
   /**
    * Handle Literal
    * This is only used if the Literal represents a constant column, e.g. in 'SELECT 5 FROM table_a'.
    * On the other hand this is not used for nested arithmetic Expressions, such as 'SELECT a + 5 FROM table_a'.
    */
   if (expression->type() == ExpressionType::Literal) {
-    return pmr_concurrent_vector<std::optional<T>>(table->get_chunk(chunk_id).size(),
+    return pmr_concurrent_vector<std::optional<T>>(table->get_chunk(chunk_id)->size(),
                                                    boost::get<T>(expression->value()));
   }
 
@@ -158,13 +174,13 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    * Handle column reference
    */
   if (expression->type() == ExpressionType::Column) {
-    auto column = table->get_chunk(chunk_id).get_column(expression->column_id());
+    auto column = table->get_chunk(chunk_id)->get_column(expression->column_id());
 
     if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
       // values are copied
       return value_column->materialize_values();
     }
-    if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+    if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
       return dict_column->materialize_values();
     }
     if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
@@ -179,10 +195,10 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    */
   Assert(expression->is_arithmetic_operator(), "Projection only supports literals, column refs and arithmetics");
 
-  const auto& arithmetic_operator_function = _get_operator_function<T>(expression->type());
+  const auto& arithmetic_operator_function = function_for_arithmetic_expression<T>(expression->type());
 
   pmr_concurrent_vector<std::optional<T>> values;
-  values.resize(table->get_chunk(chunk_id).size());
+  values.resize(table->get_chunk(chunk_id)->size());
 
   const auto& left = expression->left_child();
   const auto& right = expression->right_child();
@@ -228,61 +244,6 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
   }
 
   return values;
-}
-
-template <typename T>
-std::function<T(const T&, const T&)> Projection::_get_base_operator_function(ExpressionType type) {
-  switch (type) {
-    case ExpressionType::Addition:
-      return std::plus<T>();
-    case ExpressionType::Subtraction:
-      return std::minus<T>();
-    case ExpressionType::Multiplication:
-      return std::multiplies<T>();
-    case ExpressionType::Division:
-      return std::divides<T>();
-
-    default:
-      Fail("Unknown arithmetic operator");
-      return {};
-  }
-}
-
-template <typename T>
-std::function<T(const T&, const T&)> Projection::_get_operator_function(ExpressionType type) {
-  if (type == ExpressionType::Modulo) return std::modulus<T>();
-  return _get_base_operator_function<T>(type);
-}
-
-/**
- * Specialized arithmetic operator implementation for std::string.
- * Two string terms can be added. Anything else is undefined.
- *
- * @returns a lambda function to solve arithmetic string terms
- *
- */
-template <>
-inline std::function<std::string(const std::string&, const std::string&)> Projection::_get_operator_function(
-    ExpressionType type) {
-  Assert(type == ExpressionType::Addition, "Arithmetic operator except for addition not defined for std::string");
-  return std::plus<std::string>();
-}
-
-/**
- * Specialized arithmetic operator implementation for float/double
- * Modulo on float isn't defined.
- *
- * @returns a lambda function to solve arithmetic float/double terms
- *
- */
-template <>
-inline std::function<float(const float&, const float&)> Projection::_get_operator_function(ExpressionType type) {
-  return _get_base_operator_function<float>(type);
-}
-
-template <>
-inline std::function<double(const double&, const double&)> Projection::_get_operator_function(ExpressionType type) {
-  return _get_base_operator_function<double>(type);
 }
 
 // returns the singleton dummy table used for literal projections

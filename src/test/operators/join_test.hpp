@@ -10,7 +10,7 @@
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -44,25 +44,25 @@ class JoinTest : public BaseTest {
     _table_wrapper_n = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
 
-    // load and create DictionaryColumn tables
+    // load and create DeprecatedDictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float2.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
     _table_wrapper_m_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
-    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
     _table_wrapper_n_dict = std::make_shared<TableWrapper>(std::move(table));
 
     // execute all TableWrapper operators in advance
@@ -90,15 +90,15 @@ class JoinTest : public BaseTest {
   // builds and executes the given Join and checks correctness of the output
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator> left,
-                        const std::shared_ptr<const AbstractOperator> right,
-                        const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type, const JoinMode mode,
-                        const std::string& file_name, size_t chunk_size) {
+                        const std::shared_ptr<const AbstractOperator> right, const ColumnIDPair& column_ids,
+                        const PredicateCondition predicate_condition, const JoinMode mode, const std::string& file_name,
+                        size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinType>(left, right, mode, column_ids, scan_type);
+    auto join = std::make_shared<JoinType>(left, right, mode, column_ids, predicate_condition);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 
