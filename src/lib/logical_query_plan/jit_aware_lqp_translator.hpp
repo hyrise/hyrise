@@ -39,13 +39,17 @@ class JitAwareLQPTranslator final : protected LQPTranslator {
 
  private:
   JitExpression::Ptr _translate_to_jit_expression(const std::shared_ptr<AbstractLQPNode>& node,
-                                                  JitReadTuple& jit_source) const;
-  JitExpression::Ptr _translate_to_jit_expression(const std::shared_ptr<PredicateNode>& node,
-                                                  JitReadTuple& jit_source) const;
-  JitExpression::Ptr _translate_to_jit_expression(const LQPExpression& lqp_expression, JitReadTuple& jit_source) const;
+                                                  JitReadTuple& jit_source,
+                                                  const std::shared_ptr<AbstractLQPNode>& input_node) const;
+  JitExpression::Ptr _translate_to_jit_expression(const std::shared_ptr<PredicateNode>& node, JitReadTuple& jit_source,
+                                                  const std::shared_ptr<AbstractLQPNode>& input_node) const;
+  JitExpression::Ptr _translate_to_jit_expression(const LQPExpression& lqp_expression, JitReadTuple& jit_source,
+                                                  const std::shared_ptr<AbstractLQPNode>& input_node) const;
   JitExpression::Ptr _translate_to_jit_expression(const LQPColumnReference& lqp_column_reference,
-                                                  JitReadTuple& jit_source) const;
-  JitExpression::Ptr _translate_to_jit_expression(const AllParameterVariant& value, JitReadTuple& jit_source) const;
+                                                  JitReadTuple& jit_source,
+                                                  const std::shared_ptr<AbstractLQPNode>& input_node) const;
+  JitExpression::Ptr _translate_to_jit_expression(const AllParameterVariant& value, JitReadTuple& jit_source,
+                                                  const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   bool _has_another_condition(const std::shared_ptr<AbstractLQPNode>& node) const;
 
