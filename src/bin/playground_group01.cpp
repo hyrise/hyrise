@@ -20,8 +20,6 @@
 using std::chrono::high_resolution_clock;
 
 // Test set of queries - for development.
-// ToDo(group01): as soon as caching is integrated into the SQLPipeline, we should run a bigger and more standardized
-//                workload, e.g. the TPC-C benchmark
 // Idea behind the current queries: have three indexable columns, but one only used once, one twice, and one thrice.
 
 const std::vector<std::string> test_queries{"SELECT BALANCE FROM CUSTOMER WHERE NAME = 'Danni Cohdwell'",

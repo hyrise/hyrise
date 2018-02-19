@@ -19,7 +19,7 @@ namespace opossum {
 
 float AdaptiveRadixTreeIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
                                                          uint32_t value_bytes) {
-  // ToDo(group01): learn how ART works and provide proper implementation
+  // ToDo(anyone): If you use this index in combination with the Tuning subsystem, you need to properly implement this.
   return std::numeric_limits<float>::quiet_NaN();
 }
 
@@ -64,7 +64,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
 float AdaptiveRadixTreeIndex::_memory_consumption() const {
-  // ToDo(group01): learn how ART works and provide proper implementation
+  // ToDo(anyone): If you use this index in combination with the Tuning subsystem, you need to properly implement this.
   return std::numeric_limits<float>::quiet_NaN();
 }
 
