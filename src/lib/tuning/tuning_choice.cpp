@@ -39,6 +39,16 @@ float TuningChoice::reject_cost() const {
   return 0.0f;
 }
 
+const std::set<std::shared_ptr<TuningChoice> > &TuningChoice::invalidates() const
+{
+    return _invalidates;
+}
+
+void TuningChoice::add_invalidate(std::shared_ptr<TuningChoice> choice)
+{
+    _invalidates.insert(choice);
+}
+
 std::shared_ptr<TuningOperation> TuningChoice::accept() const {
   if (is_currently_chosen()) {
     // No Operation

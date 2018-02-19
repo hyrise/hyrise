@@ -14,8 +14,6 @@ float IndexChoice::confidence() const { return 1.0f; }
 
 bool IndexChoice::is_currently_chosen() const { return exists; }
 
-const std::set<std::shared_ptr<TuningChoice> >& IndexChoice::invalidates() const { return _invalidates; }
-
 void IndexChoice::print_on(std::ostream& output) const {
   output << "IndexChoice{on: " << column_ref << ", exists: " << exists << ", saved_work: " << saved_work
          << " RowScans, memory_cost: " << memory_cost << " MiB}";

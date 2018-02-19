@@ -25,8 +25,6 @@ class IndexChoice : public TuningChoice {
 
   bool is_currently_chosen() const final;
 
-  const std::set<std::shared_ptr<TuningChoice>>& invalidates() const final;
-
   void print_on(std::ostream& output) const final;
 
   /**
@@ -70,9 +68,6 @@ class IndexChoice : public TuningChoice {
  protected:
   std::shared_ptr<TuningOperation> _accept_operation() const final;
   std::shared_ptr<TuningOperation> _reject_operation() const final;
-
-  // ToDo(group01) currently unused and empty. Add invalidate logic.
-  std::set<std::shared_ptr<TuningChoice>> _invalidates;
 };
 
 }  // namespace opossum

@@ -71,7 +71,13 @@ class TuningChoice {
    * A list of other TuningChoices that should/can not be chosen if this
    * TuningChoice is accepted.
    */
-  virtual const std::set<std::shared_ptr<TuningChoice>>& invalidates() const = 0;
+  const std::set<std::shared_ptr<TuningChoice>>& invalidates() const;
+
+  /**
+   * Add a TuningChoice that should/can not be chosen if this TuningChoice
+   * is accepted.
+   */
+  void add_invalidate(std::shared_ptr<TuningChoice> choice);
 
   /**
    * Get a TuningOperation that causes this modification to be present
@@ -114,6 +120,8 @@ class TuningChoice {
    * Create a TuningOperation that reverts this modification of the system state.
    */
   virtual std::shared_ptr<TuningOperation> _reject_operation() const = 0;
+
+  std::set<std::shared_ptr<TuningChoice> > _invalidates;
 };
 
 }  // namespace opossum

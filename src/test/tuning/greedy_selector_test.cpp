@@ -43,13 +43,11 @@ class MockChoice : public TuningChoice {
   std::shared_ptr<TuningOperation> _reject_operation() const final {
     return std::make_shared<MockOperation>(_name, false);
   }
-  const std::set<std::shared_ptr<TuningChoice>>& invalidates() const override { return _invalidates; }
 
   std::string _name;
   float _desirability;
   float _cost;
   bool _exists;
-  std::set<std::shared_ptr<TuningChoice>> _invalidates;
 };
 
 }  // namespace
