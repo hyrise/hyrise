@@ -30,7 +30,9 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
   static_assert(!is_any_column_iterable_v<IterableT>, "Iterables should not be wrapped twice.");
 
  public:
-  explicit AnyColumnIterable(const IterableT& iterable) : _iterable{iterable} {}
+  explicit AnyColumnIterable(const IterableT& iterable) : _iterable{iterable} {
+    this->set_allow_reordering(_iterable.allows_reordering());
+  }
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -58,6 +60,12 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
     });
   }
 
+  void set_allow_reordering(bool allow) {
+    ColumnIterable<AnyColumnIterable>::set_allow_reordering(allow);
+    _iterable.set_allow_reordering(allow);
+  }
+
+
  private:
   IterableT _iterable;
 };
@@ -70,7 +78,7 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
 template <typename IterableT>
 auto erase_type_from_iterable(const IterableT& iterable) {
   // clang-format off
-  if constexpr(is_any_column_iterable_v<IterableT>) {
+  if constexpr (is_any_column_iterable_v<IterableT>) {
     return iterable;
   } else {
     return AnyColumnIterable{iterable};
