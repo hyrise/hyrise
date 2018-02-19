@@ -281,15 +281,21 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
-    tasks/server/send_query_response_task.cpp
-    tasks/server/send_query_response_task.hpp
-    tasks/server/server_task.hpp
+    tasks/server/bind_server_prepared_statement_task.cpp
+    tasks/server/bind_server_prepared_statement_task.hpp
+    tasks/server/commit_transaction_task.cpp
+    tasks/server/commit_transaction_task.hpp
     tasks/server/create_pipeline_task.cpp
     tasks/server/create_pipeline_task.hpp
+    tasks/server/execute_server_prepared_statement_task.cpp
+    tasks/server/execute_server_prepared_statement_task.hpp
     tasks/server/execute_server_query_task.cpp
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
+    tasks/server/send_query_response_task.cpp
+    tasks/server/send_query_response_task.hpp
+    tasks/server/server_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
@@ -307,7 +313,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-        tasks/server/execute_server_prepared_statement.cpp tasks/server/execute_server_prepared_statement.hpp tasks/server/bind_server_prepared_statement.cpp tasks/server/bind_server_prepared_statement.hpp)
+    )
 
 set(
     LIBRARIES

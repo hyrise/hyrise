@@ -17,7 +17,8 @@ struct CreatePipelineResult {
 // TODO: I think we can make the CreatePipelineResult a unique_ptr again...
 class CreatePipelineTask : public ServerTask<std::shared_ptr<CreatePipelineResult>>  {
  public:
-  CreatePipelineTask(std::string sql) : _sql(sql) {}
+  CreatePipelineTask(std::string sql, bool allow_load_table = false) 
+    : _sql(sql), _allow_load_table(allow_load_table) {}
   
  protected:
   void _on_execute() override;
@@ -28,6 +29,7 @@ class CreatePipelineTask : public ServerTask<std::shared_ptr<CreatePipelineResul
   bool _is_load_table();
 
   const std::string _sql;
+  const bool _allow_load_table;
 
   std::string _file_name;
   std::string _table_name;

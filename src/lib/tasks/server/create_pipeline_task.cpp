@@ -13,12 +13,14 @@ void CreatePipelineTask::_on_execute() {
     result->sql_pipeline = std::make_shared<SQLPipeline>(_sql);
   } catch (const std::exception& exception) {
     // Try LOAD file_name table_name
-    if (_is_load_table()) {
+    if (_allow_load_table && _is_load_table()) {
       result->load_table = std::make_pair(_file_name, _table_name);
       result->is_load_table = true;
-      
     } else {
-      return _promise.set_exception(exception);
+      // Setting the exception this way ensures that the details are preserved in the futures
+      // Important: std::current_exception apparently does not work
+      // (exceptions are not correctly being re-thrown when 'get'ing the future)
+      return _promise.set_exception(boost::current_exception());
     }
   }
   

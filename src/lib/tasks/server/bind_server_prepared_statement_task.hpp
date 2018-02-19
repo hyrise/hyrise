@@ -7,17 +7,18 @@
 namespace opossum {
 
 class SQLPipeline;
+class SQLQueryPlan;
 
-class BindServerPreparedStatement : public ServerTask<void> {
+class BindServerPreparedStatement : public ServerTask<std::unique_ptr<SQLQueryPlan>> {
  public:
-  BindServerPreparedStatement(const std::unique_ptr<SQLPipeline>& sql_pipeline,
+  BindServerPreparedStatement(const std::shared_ptr<SQLPipeline> sql_pipeline,
                               std::vector<AllParameterVariant> params)
       : _sql_pipeline(sql_pipeline), _params(std::move(params)) {}
 
  protected:
   void _on_execute() override;
 
-  const std::unique_ptr<SQLPipeline>& _sql_pipeline;
+  const std::shared_ptr<SQLPipeline> _sql_pipeline;
   std::vector<AllParameterVariant> _params;
 };
 

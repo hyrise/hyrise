@@ -8,8 +8,8 @@
 #include <chrono>
 #include <iostream>
 #include <sql/sql_translator.hpp>
-#include <tasks/server/bind_server_prepared_statement.hpp>
-#include <tasks/server/execute_server_prepared_statement.hpp>
+#include <tasks/server/bind_server_prepared_statement_task.hpp>
+#include <tasks/server/execute_server_prepared_statement_task.hpp>
 #include <thread>
 
 #include "SQLParserResult.h"
@@ -20,6 +20,7 @@
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
 #include "tasks/server/send_query_response_task.hpp"
+#include "tasks/server/commit_transaction_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -41,10 +42,10 @@ void HyriseSession::start() {
         f.get();
       } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
-        
-        // Release self and terminate the connection
-        _self.reset();
       }
+
+      // Release self and close the socket
+      _self.reset();
     }
   );
 }
@@ -64,14 +65,7 @@ boost::future<void> HyriseSession::_perform_session_startup() {
 }
 
 boost::future<void> HyriseSession::_handle_client_requests() {
-  auto process_request_header = [=](RequestHeader request) {
-    // Process the request header
-
-    if (request.message_type == NetworkMessageType::TerminateCommand)
-      // Not really unexpected, but this is a way to escape the infinite recursion
-      throw std::logic_error("Session was terminated by client");
-
-    // Proceed by reading the packet contents
+  auto receive_packet_contents = [=](RequestHeader request) {
     return _connection->receive_packet_contents(request.payload_length)
       >> then >> [=] (InputPacket packet_contents) {
       return std::make_pair(request, std::move(packet_contents)); 
@@ -85,67 +79,66 @@ boost::future<void> HyriseSession::_handle_client_requests() {
         return _handle_simple_query_command(sql)
           >> then >> [=]() { _connection->send_ready_for_query(); };
       }
-      case NetworkMessageType::ParseCommand:
-        // TODO
-        // return _accept_parse();
-        return boost::make_ready_future();
+      case NetworkMessageType::ParseCommand: {
+        auto parse_info = std::make_unique<ParsePacket>(
+          PostgresWireHandler::handle_parse_packet(packet.second));
+        return _handle_parse_command(std::move(parse_info));
+      }
 
-      case NetworkMessageType::BindCommand:
-        // TODO
-        // return _accept_bind();
-        return boost::make_ready_future();
+      case NetworkMessageType::BindCommand: {
+        auto bind_packet = PostgresWireHandler::handle_bind_packet(packet.second);
+        return _handle_bind_command(std::move(bind_packet));
+      }
 
-      case NetworkMessageType::DescribeCommand:
-        // TODO
-        // return _accept_describe();
-        return boost::make_ready_future();
+      case NetworkMessageType::DescribeCommand: {
+        auto portal = PostgresWireHandler::handle_describe_packet(packet.second);
+        return _handle_describe_command(portal);
+      }
 
-      case NetworkMessageType::SyncCommand:
-        // TODO
-        // return _accept_sync();
-        return boost::make_ready_future();
+      case NetworkMessageType::SyncCommand: {
+        // Packet does not contain any contents
+        return _handle_sync_command()
+          >> then >> [=]() { _connection->send_ready_for_query(); };
+      }
 
-      case NetworkMessageType::FlushCommand:
-        // TODO
-        // return _accept_flush();
-        return boost::make_ready_future();
+      case NetworkMessageType::FlushCommand: {
+        return _handle_flush_command();
+      }
 
-      case NetworkMessageType::ExecuteCommand:
-        // TODO
-        // return _accept_execute();
-        return boost::make_ready_future();
+      case NetworkMessageType::ExecuteCommand: {
+        auto portal = PostgresWireHandler::handle_execute_packet(packet.second);
+        return _handle_execute_command(std::move(portal));
+      }
 
       default:
         throw std::logic_error("Unsupported message type");
     }
   };
   
-  auto command_result = 
-    _connection->receive_packet_header() 
-      >> then >> process_request_header
-      >> then >> process_command;
-  
-  return command_result.then(boost::launch::sync, [=] (boost::future<void> result) {
-    // Handle any exceptions that have occurred during process_comand
-    try {
-      result.get();
+  return _connection->receive_packet_header() >> then >> [=](RequestHeader request) {
+    if (request.message_type == NetworkMessageType::TerminateCommand)
       return boost::make_ready_future();
-    } catch (std::exception& e) {
-      return _connection->send_error(e.what())
-        >> then >> [=]() { _connection->send_ready_for_query(); };
-    }
-  }).unwrap()
-    // Proceed with the next incoming message
-    >> then >> [=]() { _handle_client_requests(); }; 
-}
 
-void HyriseSession::_terminate_session() {
-  _self.reset();
+    auto command_result = receive_packet_contents(request) >> then >> process_command;
+
+    // Handle any exceptions that have occurred during process_command
+    return command_result.then(boost::launch::sync, [=] (boost::future<void> result) {
+      try {
+        result.get();
+        return boost::make_ready_future();
+      } catch (std::exception& e) {
+        return _connection->send_error(e.what())
+          >> then >> [=]() { _connection->send_ready_for_query(); };
+      }
+    }).unwrap()
+      // Proceed with the next incoming message
+      >> then >> boost::bind(&HyriseSession::_handle_client_requests, this);
+  };
 }
 
 boost::future<void> HyriseSession::_handle_simple_query_command(const std::string sql) {
   auto create_sql_pipeline = [=] () {
-    return _dispatch_server_task(std::make_shared<CreatePipelineTask>(sql));
+    return _dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
   };
   
   auto load_table_file = [=](std::string& file_name, std::string& table_name) {
@@ -161,9 +154,15 @@ boost::future<void> HyriseSession::_handle_simple_query_command(const std::strin
   };
   
   auto send_query_response = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
-    auto task = std::make_shared<SendQueryResponseTask>(_connection, sql_pipeline, sql_pipeline->get_result_table());
+    auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
+    auto task = std::make_shared<SendQueryResponseTask>(
+      _connection, statement_type, sql_pipeline, sql_pipeline->get_result_table());
     return _dispatch_server_task(task);
   };
+  
+  // A simple query command invalidates unnamed statements and portals
+  _prepared_statements.erase("");
+  _portals.erase("");
     
   return create_sql_pipeline() >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
     return result->is_load_table
@@ -173,107 +172,93 @@ boost::future<void> HyriseSession::_handle_simple_query_command(const std::strin
   };
 }
 
-void HyriseSession::_accept_parse() {
-//  _state = SessionState::ExtendedQuery;
-//  _parse_info = std::make_unique<PreparedStatementInfo>(
-//      PostgresWireHandler::handle_parse_packet(_input_packet, _expected_input_packet_length));
-//  const std::vector<std::shared_ptr<AbstractTask>> tasks = {
-//      std::make_shared<CreatePipelineTask>(_parse_info->query)};
-//  CurrentScheduler::schedule_tasks(tasks);
+boost::future<void> HyriseSession::_handle_parse_command(std::unique_ptr<ParsePacket> parse_info) {
+  auto prepared_statement_name = parse_info->statement_name;
+
+  // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
+  // https://www.postgresql.org/docs/10/static/protocol-flow.html
+  auto statement_it = _prepared_statements.find(prepared_statement_name);
+  if (statement_it != _prepared_statements.end()) {
+    if (!prepared_statement_name.empty())
+      throw std::logic_error("Named prepared statements must be explicitly closed before they can be redefined");
+    _prepared_statements.erase(statement_it);
+  }
+  
+  return _dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info->query))
+    >> then >> [=] (std::shared_ptr<CreatePipelineResult> result) {
+      // We know that SQL Pipeline is set in the result because the load table command is not allowed in this context
+      _prepared_statements.insert(std::make_pair(prepared_statement_name, result->sql_pipeline));
+    } >> then >> [=] () { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
 
-void HyriseSession::_accept_bind() {
-//  auto params = PostgresWireHandler::handle_bind_packet(_input_packet, _expected_input_packet_length);
-//
-//  const std::vector<std::shared_ptr<ServerTask>> tasks = {
-//      std::make_shared<BindServerPreparedStatement>(_self, _sql_pipeline, std::move(params))};
-//  CurrentScheduler::schedule_tasks(tasks);
+boost::future<void> HyriseSession::_handle_bind_command(BindPacket packet) {
+  auto statement_it = _prepared_statements.find(packet.statement_name);
+  if (statement_it == _prepared_statements.end())
+    throw std::logic_error("Unknown statement");
+
+  auto sql_pipeline = statement_it->second;
+  if (packet.statement_name.empty())
+    _prepared_statements.erase(statement_it);
+  
+  auto portal_name = packet.destination_portal;
+  
+  // Named portals must be explicitly closed before they can be redefined by another Bind message, 
+  // but this is not required for the unnamed portal.
+  // https://www.postgresql.org/docs/10/static/protocol-flow.html
+  auto portal_it = _portals.find(portal_name);
+  if (portal_it != _portals.end()) {
+    if (!portal_name.empty())
+      throw std::logic_error("Named portals must be explicitly closed before they can be redefined");
+    _portals.erase(portal_it);
+  }
+  
+  auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
+
+  auto task = std::make_shared<BindServerPreparedStatement>(sql_pipeline, std::move(packet.params));
+  return _dispatch_server_task(task)
+    >> then >> [=] (std::unique_ptr<SQLQueryPlan> query_plan) {
+      std::shared_ptr<SQLQueryPlan> shared_query_plan = std::move(query_plan);
+      auto portal = std::make_pair(statement_type, shared_query_plan);
+      _portals.insert(std::make_pair(portal_name, portal));
+    } >> then >> [=] () { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
-void HyriseSession::_accept_execute() {
-//  const auto portal = PostgresWireHandler::handle_execute_packet(_input_packet, _expected_input_packet_length);
-//
-//  const std::vector<std::shared_ptr<ServerTask>> tasks = {std::make_shared<ExecuteServerPreparedStatement>(
-//      _self, std::move(_prepared_query_plan), std::move(_prepared_transaction_context))};
-//  CurrentScheduler::schedule_tasks(tasks);
+boost::future<void> HyriseSession::_handle_describe_command(std::string portal_name) {
+  // Ignore this for now
+  return boost::make_ready_future();
 }
 
-void HyriseSession::_accept_sync() {
-//  PostgresWireHandler::read_values<char>(_input_packet, _expected_input_packet_length);
-//  return _async_receive_header();
+boost::future<void> HyriseSession::_handle_sync_command() {
+  return _dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction));
 }
 
-void HyriseSession::_accept_flush() {
-//  PostgresWireHandler::read_values<char>(_input_packet, _expected_input_packet_length);
-//  return _async_receive_header();
+boost::future<void> HyriseSession::_handle_flush_command() {
+  // Ignore this for now
+  return boost::make_ready_future();
 }
 
-void HyriseSession::_accept_describe() {
-//  PostgresWireHandler::handle_describe_packet(_input_packet, _expected_input_packet_length);
-//  return _async_receive_header();
+boost::future<void> HyriseSession::_handle_execute_command(std::string portal_name) {
+  auto portal_it = _portals.find(portal_name);
+  if (portal_it == _portals.end())
+    throw std::logic_error("Unknown portal");
+  
+  auto statement_type = portal_it->second.first;
+  auto query_plan = portal_it->second.second;
+  // TODO: Can we even execute a query plan multiple times?
+  if (portal_name.empty())
+    _portals.erase(portal_it);
+  
+  if (!_transaction)
+    _transaction = TransactionManager::get().new_transaction_context();
+
+  query_plan->set_transaction_context(_transaction);
+  
+  return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatement>(query_plan, _transaction))
+    >> then >> [=] (std::shared_ptr<const Table> result_table) {
+      auto task = std::make_shared<SendQueryResponseTask>(_connection, statement_type, nullptr, result_table);
+      return _dispatch_server_task(task);
+    };
 }
-
-void HyriseSession::pipeline_info(const std::string& notice) {
-  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
-
-  PostgresWireHandler::write_value(*output_packet, 'M');
-  PostgresWireHandler::write_string(*output_packet, notice);
-
-  // Terminate the notice response
-  PostgresWireHandler::write_value(*output_packet, '\0');
-//  async_send_packet(*output_packet);
-}
-
-void HyriseSession::pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline) {
-//  _sql_pipeline = std::move(sql_pipeline);
-
-//  if (_state == SessionState::ExtendedQuery) {
-//    auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParseComplete);
-//    async_send_packet(*output_packet);
-//    return _async_receive_header();
-//  }
-
-//  std::vector<std::shared_ptr<AbstractTask>> tasks = {std::make_shared<ExecuteServerQueryTask>(*_sql_pipeline)};
-//  CurrentScheduler::schedule_tasks(tasks);
-}
-
-void HyriseSession::query_executed() {
-//  const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
-//      std::make_shared<SendQueryResponseTask>(_connection, *_sql_pipeline, _sql_pipeline->get_result_table())};
-//  CurrentScheduler::schedule_tasks(tasks);
-}
-
-void HyriseSession::prepared_bound(std::unique_ptr<SQLQueryPlan> query_plan,
-                                   std::shared_ptr<TransactionContext> transaction_context) {
-  _prepared_query_plan = std::move(query_plan);
-  _prepared_transaction_context = std::move(transaction_context);
-  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::BindComplete);
-//  async_send_packet(*output_packet);
-//  return _async_receive_header();
-}
-
-void HyriseSession::prepared_executed(std::shared_ptr<const Table> result_table) {
-//  const std::vector<std::shared_ptr<SendQueryResponseTask>> tasks = {
-//      std::make_shared<SendQueryResponseTask>(_connection, *_sql_pipeline, std::move(result_table))};
-//  CurrentScheduler::schedule_tasks(tasks);
-}
-
-void HyriseSession::query_response_sent() { 
-//  _send_ready_for_query(); 
-}
-
-void HyriseSession::load_table_file(const std::string& file_name, const std::string& table_name) {
-//  const std::vector<std::shared_ptr<LoadServerFileTask>> tasks = {
-//      std::make_shared<LoadServerFileTask>(file_name, table_name)};
-//  CurrentScheduler::schedule_tasks(tasks);
-}
-
-void HyriseSession::pipeline_error(const std::string& error_msg) {
-//  _send_error(error_msg);
-//  _send_ready_for_query();
-}
-
-//SessionState HyriseSession::state() const { return _state; }
 
 template<typename T>
 auto HyriseSession::_dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future()) {
@@ -285,7 +270,15 @@ auto HyriseSession::_dispatch_server_task(std::shared_ptr<T> task) -> decltype(t
     // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
     return _io_service.post(boost::asio::use_boost_future)
       // Make sure to be on the main thread before re-throwing the exceptions
-      >> then >> [result = std::move(result)] () mutable { return result.get(); };
+      >> then >> [result = std::move(result)] () mutable { 
+//        try {
+//          throw std::logic_error("just a test");
+      return result.get();
+//          return result.get();
+//        } catch (std::exception& e) {
+//          throw e;
+//        }
+      };
   }).unwrap();
 }
 

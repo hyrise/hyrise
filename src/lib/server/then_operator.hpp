@@ -1,7 +1,8 @@
 #include <boost/thread/future.hpp>
 
 // This code is inspired by the code examples of user Yakk on StackExchange
-// https://codereview.stackexchange.com/questions/23179/named-operators-in-c
+// https://codereview.stackexchange.com/q/23179
+// https://stackoverflow.com/a/32320053
 
 // It helps us to avoid boilerplate code in three ways:
 // 1. It automatically 'get's the incoming future's result, 
@@ -10,6 +11,23 @@
 //    which avoids additional threads to be spawned to execute the continuations
 // 3. It automatically unwraps future<future<*>> objects in case that the continuation
 //    returns another future
+
+// Example:
+// Given the following methods:
+//  - boost::future<std::vector<char>> receive_bytes();
+//  - boost::future<void> send_bytes(std::vector<char>);
+// 
+// Usage with plain boost::future<>::then
+//   boost::future<void> future =
+//     receive_bytes()
+//       .then(boost::launch::sync, [] (boost::future<std::vector<char>> result) {
+//         auto bytes = result.get(); // Throws exceptions that occurred in receive_bytes
+//         return send_bytes(bytes);
+//       ).unwrap();  // The lambda returns another future, so without unwrap(),
+//                    // we'd have a boost::future<boost::future<void>>
+//
+// Equivalent using then 'operator':
+//   boost::future<void> future = receive_bytes() >> then >> send_bytes;
 
 namespace opossum {
 namespace then_operator {

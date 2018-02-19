@@ -130,8 +130,7 @@ void SendQueryResponseTask::_send_row_data() {
 
 void SendQueryResponseTask::_send_command_complete() {
   std::string completed_msg;
-  const auto* statement = _sql_pipeline->get_parsed_sql_statements().front()->getStatements().front();
-  switch (statement->type()) {
+  switch (_statement_type) {
     case hsql::StatementType::kStmtSelect: {
       completed_msg = "SELECT " + std::to_string(_row_count);
       break;
@@ -174,21 +173,23 @@ void SendQueryResponseTask::_send_execution_info() {
 }
 
 void SendQueryResponseTask::_on_execute() {
-  
-  // If there is no result table, e.g. after an INSERT command, we cannot send this data
-  if (_result_table) {
-    _send_row_description();
-    _send_row_data();
+  try {
+    // If there is no result table, e.g. after an INSERT command, we cannot send this data
+    if (_result_table) {
+      _send_row_description();
+      _send_row_data();
+    }
+
+    _send_command_complete();
+
+    // This information is currently not available in the extended protocol because it doesn't use the SQLPipeline
+    if (_sql_pipeline)
+      _send_execution_info();
+
+    _promise.set_value();
+  } catch (std::exception& exception) {
+    _promise.set_exception(boost::current_exception());
   }
-
-  
-   _send_command_complete();
-
-  // TODO:
-  // This information is currently not available in the extended protocol because it doesn't use the SQLPipeline
-  _send_execution_info();
-
-  _promise.set_value();
 }
 
 }  // namespace opossum

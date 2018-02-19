@@ -50,13 +50,10 @@ RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
 }
 
 std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) {
-  auto buffer = read_values<char>(packet, packet.data.size());
-
-  // Convert the content to a string for now
-  return std::string(buffer.data(), buffer.size() - 1);
+  return read_string(packet);
 }
 
-PreparedStatementInfo PostgresWireHandler::handle_parse_packet(const InputPacket& packet, size_t length) {
+ParsePacket PostgresWireHandler::handle_parse_packet(const InputPacket& packet) {
   auto statement_name = read_string(packet);
 
   auto query = read_string(packet);
@@ -71,10 +68,10 @@ PreparedStatementInfo PostgresWireHandler::handle_parse_packet(const InputPacket
   //    throw std::runtime_error("Only exactly 1 statement supported.");
   //  }
 
-  return PreparedStatementInfo{std::move(statement_name), std::move(query)};  //, std::move(sql_pipeline)};
+  return ParsePacket{std::move(statement_name), std::move(query)};  //, std::move(sql_pipeline)};
 }
 
-std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const InputPacket& packet, size_t length) {
+BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
   auto portal = read_string(packet);
 
   auto statement_name = read_string(packet);
@@ -96,16 +93,16 @@ std::vector<AllParameterVariant> PostgresWireHandler::handle_bind_packet(const I
   auto n_result_column_format_codes = read_value<int16_t>(packet);
   auto result_column_format_codes = read_values<int16_t>(packet, n_result_column_format_codes);
 
-  return parameter_values;
+  return BindPacket { statement_name, portal, std::move(parameter_values) };
 }
 
-std::string PostgresWireHandler::handle_execute_packet(const InputPacket& packet, size_t length) {
+std::string PostgresWireHandler::handle_execute_packet(const InputPacket& packet) {
   const auto portal = read_string(packet);
   /*const auto max_rows = */ read_value<int32_t>(packet);
   return portal;
 }
 
-std::string PostgresWireHandler::handle_describe_packet(const InputPacket& packet, size_t length) {
+std::string PostgresWireHandler::handle_describe_packet(const InputPacket& packet) {
   read_value<char>(packet);
   const auto portal = read_string(packet);
   return portal;

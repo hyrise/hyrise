@@ -14,72 +14,40 @@
 
 namespace opossum {
 
-enum SessionState { Setup = 100, WaitingForQuery, SimpleQuery, ExtendedQuery };
-
 using boost::asio::ip::tcp;
 
-class AbstractCommand;
 class ClientConnection;
 
 class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
  public:
-  static const uint32_t STARTUP_HEADER_LENGTH = 8u;
-  static const uint32_t HEADER_LENGTH = 5u;
-
   explicit HyriseSession(boost::asio::io_service& io_service, std::shared_ptr<ClientConnection> connection)
-      : _io_service(io_service), _connection(connection), _input_packet() {
-    _response_buffer.reserve(_max_response_size);
-  }
+      : _io_service(io_service), _connection(connection) {}
 
   void start();
 
-  // Interface used by Tasks
-  void pipeline_created(std::unique_ptr<SQLPipeline> sql_pipeline);
-  void query_executed();
-  void query_response_sent();
-  void load_table_file(const std::string& file_name, const std::string& table_name);
-  void prepared_bound(std::unique_ptr<SQLQueryPlan> query_plan,
-                      std::shared_ptr<TransactionContext> transaction_context);
-  void prepared_executed(std::shared_ptr<const Table> result_table);
-  void pipeline_error(const std::string& error_msg);
-  void pipeline_info(const std::string& notice);
-
-//  SessionState state() const;
-
  protected:
   boost::future<void> _perform_session_startup();
-  boost::future<void> _handle_client_requests();
-
-  boost::future<void> _handle_simple_query_command(const std::string sql);
-  void _accept_parse();
-  void _accept_bind();
-  void _accept_execute();
-  void _accept_sync();
-  void _accept_flush();
-  void _accept_describe();
   
-  void _terminate_session();
+  boost::future<void> _handle_client_requests();
+  boost::future<void> _handle_simple_query_command(const std::string sql);
+  boost::future<void> _handle_parse_command(std::unique_ptr<ParsePacket> parse_info);
+  boost::future<void> _handle_bind_command(BindPacket packet);
+  boost::future<void> _handle_describe_command(std::string portal_name);
+  boost::future<void> _handle_execute_command(std::string portal_name);
+  boost::future<void> _handle_sync_command();
+  boost::future<void> _handle_flush_command();
   
   template<typename T>
   auto _dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future());
 
+  std::shared_ptr<HyriseSession> _self;
+  
   boost::asio::io_service& _io_service;
   std::shared_ptr<ClientConnection> _connection;
-  InputPacket _input_packet;
-  NetworkMessageType _input_packet_type;
-
-  // Max 2048 bytes per IP packet sent
-  uint32_t _max_response_size = 2048;
-  ByteBuffer _response_buffer;
-
-//  SessionState _state = SessionState::Setup;
-//  std::size_t _expected_input_packet_length;
-  std::shared_ptr<HyriseSession> _self;
-//  std::unique_ptr<SQLPipeline> _sql_pipeline;
-
-  std::unique_ptr<PreparedStatementInfo> _parse_info;
-  std::unique_ptr<SQLQueryPlan> _prepared_query_plan;
-  std::shared_ptr<TransactionContext> _prepared_transaction_context;
+  
+  std::shared_ptr<TransactionContext> _transaction;
+  std::unordered_map<std::string, std::shared_ptr<SQLPipeline>> _prepared_statements;
+  std::unordered_map<std::string, std::pair<hsql::StatementType, std::shared_ptr<SQLQueryPlan>>> _portals;
 };
 
 }  // namespace opossum

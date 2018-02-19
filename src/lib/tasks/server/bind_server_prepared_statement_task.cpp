@@ -1,4 +1,4 @@
-#include "bind_server_prepared_statement.hpp"
+#include "bind_server_prepared_statement_task.hpp"
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -13,12 +13,9 @@ void BindServerPreparedStatement::_on_execute() {
 
     auto query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate(_params));
 
-    auto transaction_context = opossum::TransactionManager::get().new_transaction_context();
-    query_plan->set_transaction_context(transaction_context);
-
-//    return _session->prepared_bound(std::move(query_plan), std::move(transaction_context));
+    _promise.set_value(std::move(query_plan));
   } catch (const std::exception& exception) {
-//    return _session->pipeline_error(exception.what());
+    _promise.set_exception(boost::current_exception());
   }
 }
 

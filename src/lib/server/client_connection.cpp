@@ -1,5 +1,6 @@
 #include "client_connection.hpp"
 
+
 #include "use_boost_future.hpp"
 #include "postgres_wire_handler.hpp"
 #include "then_operator.hpp"
@@ -86,6 +87,12 @@ boost::future<void> ClientConnection::send_notice(const std::string& notice) {
   PostgresWireHandler::write_value(*output_packet, '\0');
   return _send_bytes_async(output_packet, true)
     >> then >> [](unsigned long) { /* ignore the result */ }; 
+}
+
+boost::future<void> ClientConnection::send_status_message(const NetworkMessageType& type) {
+  auto output_packet = PostgresWireHandler::new_output_packet(type);
+  return _send_bytes_async(output_packet)
+    >> then >> [](unsigned long) { /* ignore the result */ };
 }
 
 boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {

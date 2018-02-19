@@ -12,7 +12,7 @@ void LoadServerFileTask::_on_execute() {
     StorageManager::get().add_table(_table_name, table);
     _promise.set_value();
   } catch (const std::exception& exception) {
-    _promise.set_exception(exception);
+    _promise.set_exception(boost::current_exception());
   }
 }
 

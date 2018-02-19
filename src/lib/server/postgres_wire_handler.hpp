@@ -36,9 +36,15 @@ struct RequestHeader {
   uint32_t payload_length;
 };
 
-struct PreparedStatementInfo {
+struct ParsePacket {
   std::string statement_name;
   std::string query;
+};
+
+struct BindPacket {
+  std::string statement_name;
+  std::string destination_portal;
+  std::vector<AllParameterVariant> params;
 };
 
 class PostgresWireHandler {
@@ -52,9 +58,10 @@ class PostgresWireHandler {
   static RequestHeader handle_header(const InputPacket& packet);
 
   static std::string handle_query_packet(const InputPacket& packet);
-  static PreparedStatementInfo handle_parse_packet(const InputPacket& packet, size_t length);
-  static std::vector<AllParameterVariant> handle_bind_packet(const InputPacket& packet, size_t length);
-  static std::string handle_describe_packet(const InputPacket& packet, size_t length);
+  static ParsePacket handle_parse_packet(const InputPacket& packet);
+  static BindPacket handle_bind_packet(const InputPacket& packet);
+  static std::string handle_describe_packet(const InputPacket& packet);
+  static std::string handle_execute_packet(const InputPacket& packet);
 
   template <typename T>
   static T read_value(const InputPacket& packet);
@@ -68,7 +75,6 @@ class PostgresWireHandler {
   static void write_value(OutputPacket& packet, T value);
 
   static void write_string(OutputPacket& packet, const std::string& value, bool terminate = true);
-  static std::string handle_execute_packet(const InputPacket& packet, size_t length);
 };
 
 template <typename T>
