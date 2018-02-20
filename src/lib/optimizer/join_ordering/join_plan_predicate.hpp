@@ -3,6 +3,7 @@
 #include <ostream>
 
 #include "all_parameter_variant.hpp"
+#include "join_vertex_set.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
@@ -24,6 +25,15 @@ class AbstractJoinPlanPredicate {
 
   JoinPlanPredicateType type() const;
 
+  /**
+   * Find all vertices in @param vertices that are accessed by the predicate and return their indices as a JoinVertexSet
+   */
+  virtual JoinVertexSet get_accessed_vertex_set(
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const = 0;
+
+  /**
+   * @param enclosing_braces whether the predicate should be printed with enclosing braces as in "(a == b)"
+   */
   virtual void print(std::ostream& stream = std::cout, const bool enclosing_braces = false) const = 0;
 
  private:
@@ -38,6 +48,8 @@ class JoinPlanLogicalPredicate : public AbstractJoinPlanPredicate {
   JoinPlanLogicalPredicate(const std::shared_ptr<const AbstractJoinPlanPredicate>& left_operand,
                            JoinPlanPredicateLogicalOperator logical_operator,
                            const std::shared_ptr<const AbstractJoinPlanPredicate>& right_operand);
+
+  JoinVertexSet get_accessed_vertex_set(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const override;
 
   void print(std::ostream& stream = std::cout, const bool enclosing_braces = false) const override;
 
@@ -55,6 +67,8 @@ class JoinPlanAtomicPredicate : public AbstractJoinPlanPredicate {
  public:
   JoinPlanAtomicPredicate(const LQPColumnReference& left_operand, const PredicateCondition predicate_condition,
                           const AllParameterVariant& right_operand);
+
+  JoinVertexSet get_accessed_vertex_set(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const override;
 
   void print(std::ostream& stream = std::cout, const bool enclosing_braces = false) const override;
 

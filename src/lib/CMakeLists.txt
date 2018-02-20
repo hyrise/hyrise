@@ -160,8 +160,6 @@ set(
     optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_plan_predicate.cpp
-    optimizer/join_ordering/join_plan_predicate_estimate.cpp
-    optimizer/join_ordering/join_plan_predicate_estimate.hpp
     optimizer/join_ordering/join_plan_predicate.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp

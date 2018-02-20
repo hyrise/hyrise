@@ -143,25 +143,25 @@ TEST_F(JoinGraphConverterTest, ComplexLQP) {
   /**
    * Test edges
    */
-  const auto edge_a = _join_graph.find_edge(boost::dynamic_bitset<>{3, 0b001});
+  const auto edge_a = _join_graph.find_edge(JoinVertexSet{3, 0b001});
   ASSERT_NE(edge_a, nullptr);
   ASSERT_EQ(edge_a->predicates.size(), 1u);
   EXPECT_EQ(to_string(edge_a->predicates.at(0)), "sum_a = 5");
 
-  const auto edge_b = _join_graph.find_edge(boost::dynamic_bitset<>{3, 0b010});
+  const auto edge_b = _join_graph.find_edge(JoinVertexSet{3, 0b010});
   ASSERT_NE(edge_b, nullptr);
   ASSERT_EQ(edge_b->predicates.size(), 3u);
   EXPECT_EQ(to_string(edge_b->predicates.at(0)), "y1 > 32");
   EXPECT_EQ(to_string(edge_b->predicates.at(1)), "y2 < 200");
   EXPECT_EQ(to_string(edge_b->predicates.at(2)), "(y2 = 7 AND y1 = 6) OR y1 >= 8");
 
-  const auto edge_ab = _join_graph.find_edge(boost::dynamic_bitset<>{3, 0b011});
+  const auto edge_ab = _join_graph.find_edge(JoinVertexSet{3, 0b011});
   ASSERT_NE(edge_ab, nullptr);
   ASSERT_EQ(edge_ab->predicates.size(), 2u);
   EXPECT_EQ(to_string(edge_ab->predicates.at(0)), "sum_a <= y1");
   EXPECT_EQ(to_string(edge_ab->predicates.at(1)), "x2 = y2");
 
-  const auto edge_ac = _join_graph.find_edge(boost::dynamic_bitset<>{3, 0b101});
+  const auto edge_ac = _join_graph.find_edge(JoinVertexSet{3, 0b101});
   ASSERT_NE(edge_ac, nullptr);
   ASSERT_EQ(edge_ac->predicates.size(), 1u);
   EXPECT_EQ(to_string(edge_ac->predicates.at(0)), "x2 <= z1");

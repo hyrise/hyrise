@@ -7,8 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "boost/dynamic_bitset.hpp"
-
+#include "join_vertex_set.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -46,19 +45,18 @@ class JoinGraph final {
   /**
    * Find all predicates that use exactly the nodes in vertex set
    */
-  std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(
-      const boost::dynamic_bitset<>& vertex_set) const;
+  std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(const JoinVertexSet& vertex_set) const;
 
   /**
    * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them
    */
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(
-      const boost::dynamic_bitset<>& vertex_set_a, const boost::dynamic_bitset<>& vertex_set_b) const;
+      const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const;
 
   /**
    * Find the edge that exactly connects the vertices in vertex_set. Returns nullptr if no such edge exists.
    */
-  std::shared_ptr<JoinEdge> find_edge(const boost::dynamic_bitset<>& vertex_set) const;
+  std::shared_ptr<JoinEdge> find_edge(const JoinVertexSet& vertex_set) const;
 
   void print(std::ostream& stream = std::cout) const;
 

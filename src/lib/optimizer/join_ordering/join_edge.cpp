@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-JoinEdge::JoinEdge(const boost::dynamic_bitset<>& vertex_set) : vertex_set(vertex_set) {}
+JoinEdge::JoinEdge(const JoinVertexSet& vertex_set) : vertex_set(vertex_set) {}
 
 void JoinEdge::print(std::ostream& stream) const {
   stream << "Edge between " << vertex_set << ", " << predicates.size() << " predicates" << std::endl;

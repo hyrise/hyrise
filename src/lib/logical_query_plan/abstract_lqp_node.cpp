@@ -19,6 +19,7 @@ class TableStatistics;
 
 QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
     : column_name(column_name), table_name(table_name) {}
+
 std::string QualifiedColumnName::as_string() const {
   std::stringstream ss;
   if (table_name) ss << *table_name << ".";

@@ -11,48 +11,13 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace {
-
-using namespace opossum;  // NOLINT
-
-size_t get_vertex_idx(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-                      const LQPColumnReference& column_reference) {
-  for (size_t vertex_idx = 0; vertex_idx < vertices.size(); ++vertex_idx) {
-    if (vertices[vertex_idx]->find_output_column_id(column_reference)) return vertex_idx;
-  }
-  Fail("Couldn't find column " + column_reference.description() + " among vertices");
-  return 0;
-}
-
-boost::dynamic_bitset<> get_predicate_vertices(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-                                               const std::shared_ptr<const AbstractJoinPlanPredicate>& predicate) {
-  switch (predicate->type()) {
-    case JoinPlanPredicateType::Atomic: {
-      const auto atomic_predicate = std::static_pointer_cast<const JoinPlanAtomicPredicate>(predicate);
-      boost::dynamic_bitset<> vertex_set{vertices.size()};
-      vertex_set.set(get_vertex_idx(vertices, atomic_predicate->left_operand));
-      if (is_lqp_column_reference(atomic_predicate->right_operand)) {
-        vertex_set.set(get_vertex_idx(vertices, boost::get<LQPColumnReference>(atomic_predicate->right_operand)));
-      }
-      return vertex_set;
-    }
-    case JoinPlanPredicateType::LogicalOperator: {
-      const auto logical_operand_predicate = std::static_pointer_cast<const JoinPlanLogicalPredicate>(predicate);
-      return get_predicate_vertices(vertices, logical_operand_predicate->left_operand) |
-             get_predicate_vertices(vertices, logical_operand_predicate->right_operand);
-    }
-  }
-  return boost::dynamic_bitset<>{0, 0};
-}
-}  // namespace
-
 namespace opossum {
 
 JoinGraph JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
                                      std::vector<LQPParentRelation> parent_relations,
                                      const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates) {
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> vertex_to_index;
-  std::map<boost::dynamic_bitset<>, std::shared_ptr<JoinEdge>> vertices_to_edge;
+  std::map<JoinVertexSet, std::shared_ptr<JoinEdge>> vertices_to_edge;
   std::vector<std::shared_ptr<JoinEdge>> edges;
 
   for (size_t vertex_idx = 0; vertex_idx < vertices.size(); ++vertex_idx) {
@@ -60,7 +25,7 @@ JoinGraph JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode
   }
 
   for (const auto& predicate : predicates) {
-    const auto vertex_set = get_predicate_vertices(vertices, predicate);
+    const auto vertex_set = predicate->get_accessed_vertex_set(vertices);
     auto iter = vertices_to_edge.find(vertex_set);
     if (iter == vertices_to_edge.end()) {
       auto edge = std::make_shared<JoinEdge>(vertex_set);
@@ -78,7 +43,7 @@ JoinGraph::JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
     : vertices(std::move(vertices)), parent_relations(std::move(parent_relations)), edges(std::move(edges)) {}
 
 std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_predicates(
-    const boost::dynamic_bitset<>& vertex_set) const {
+    const JoinVertexSet& vertex_set) const {
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> predicates;
 
   for (const auto& edge : edges) {
@@ -93,7 +58,7 @@ std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_pr
 }
 
 std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_predicates(
-    const boost::dynamic_bitset<>& vertex_set_a, const boost::dynamic_bitset<>& vertex_set_b) const {
+    const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const {
   DebugAssert((vertex_set_a & vertex_set_b).none(), "Vertex sets are not distinct");
 
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> predicates;
@@ -110,7 +75,7 @@ std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_pr
   return predicates;
 }
 
-std::shared_ptr<JoinEdge> JoinGraph::find_edge(const boost::dynamic_bitset<>& vertex_set) const {
+std::shared_ptr<JoinEdge> JoinGraph::find_edge(const JoinVertexSet& vertex_set) const {
   const auto iter =
       std::find_if(edges.begin(), edges.end(), [&](const auto& edge) { return edge->vertex_set == vertex_set; });
   return iter == edges.end() ? nullptr : *iter;

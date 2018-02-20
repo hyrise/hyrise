@@ -40,6 +40,9 @@ class JoinGraphConverter final {
   JoinGraph operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
 
  private:
+  /**
+   * Traverse the LQP recursively identifying predicates and vertices along the way
+   */
   void _traverse(const std::shared_ptr<AbstractLQPNode>& node);
 
   /**
@@ -71,7 +74,11 @@ class JoinGraphConverter final {
   PredicateParseResult _parse_predicate(const std::shared_ptr<AbstractLQPNode>& node) const;
   PredicateParseResult _parse_union(const std::shared_ptr<UnionNode>& union_node) const;
 
-  bool _is_vertex_type(const LQPNodeType node_type) const;
+  /**
+   * Returns whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that
+   * aren't Predicates, Joins or Unions.
+   */
+  bool _lqp_node_type_is_vertex(const LQPNodeType node_type) const;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> _predicates;

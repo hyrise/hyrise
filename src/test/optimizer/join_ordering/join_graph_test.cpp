@@ -43,7 +43,7 @@ TEST_F(JoinGraphTest, SingleVertexNoPredicates) {
 
   const auto join_graph = JoinGraph::from_predicates({vertex}, {}, {});
 
-  boost::dynamic_bitset<> vertex_set{1};
+  JoinVertexSet vertex_set{1};
   vertex_set.set(0);
 
   const auto found_predicates = join_graph.find_predicates(vertex_set);
@@ -67,7 +67,7 @@ TEST_F(JoinGraphTest, SingleVertexMultiplePredicates) {
 
   const auto join_graph = JoinGraph::from_predicates({vertex}, {}, {predicate_a, predicate_b, predicate_c});
 
-  const auto vertex_set = boost::dynamic_bitset<>{1, 1};
+  const auto vertex_set = JoinVertexSet{1, 1};
   const auto found_predicates = join_graph.find_predicates(vertex_set);
 
   EXPECT_EQ(found_predicates.size(), 3u);
@@ -101,9 +101,9 @@ TEST_F(JoinGraphTest, MultipleVerticesMultiplePredicates) {
   const auto join_graph = JoinGraph::from_predicates({vertex_a, vertex_b, vertex_c}, {},
                                                      {predicate_a, predicate_b, predicate_c, predicate_d});
 
-  const auto vertex_set_a = boost::dynamic_bitset<>{3, 0b001};
-  const auto vertex_set_b = boost::dynamic_bitset<>{3, 0b010};
-  const auto vertex_set_c = boost::dynamic_bitset<>{3, 0b100};
+  const auto vertex_set_a = JoinVertexSet{3, 0b001};
+  const auto vertex_set_b = JoinVertexSet{3, 0b010};
+  const auto vertex_set_c = JoinVertexSet{3, 0b100};
 
   const auto found_predicates_a = join_graph.find_predicates(vertex_set_a);
   const auto found_predicates_b = join_graph.find_predicates(vertex_set_b);

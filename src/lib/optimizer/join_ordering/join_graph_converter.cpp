@@ -13,7 +13,7 @@ JoinGraph JoinGraphConverter::operator()(const std::shared_ptr<AbstractLQPNode>&
    * one child. This way, we traverse past Sort/Aggregate etc. nodes that later form the "parents" of the JoinGraph
    */
   auto current_node = lqp;
-  while (_is_vertex_type(current_node->type())) {
+  while (_lqp_node_type_is_vertex(current_node->type())) {
     if (!current_node->left_child() || current_node->right_child()) {
       break;
     }
@@ -46,7 +46,7 @@ void JoinGraphConverter::_traverse(const std::shared_ptr<AbstractLQPNode>& node)
     return;
   }
 
-  if (_is_vertex_type(node->type())) {
+  if (_lqp_node_type_is_vertex(node->type())) {
     _vertices.emplace_back(node);
     return;
   }
@@ -174,19 +174,7 @@ JoinGraphConverter::PredicateParseResult JoinGraphConverter::_parse_union(
   return {parse_result_left.base_node, or_predicate};
 }
 
-bool JoinGraphConverter::_is_vertex_type(const LQPNodeType node_type) const {
-  switch (node_type) {
-    case LQPNodeType::Aggregate:
-    case LQPNodeType::Mock:
-    case LQPNodeType::Limit:
-    case LQPNodeType::Validate:
-    case LQPNodeType::Root:
-    case LQPNodeType::Projection:
-    case LQPNodeType::Sort:
-    case LQPNodeType::StoredTable:
-      return true;
-    default:
-      return false;
-  }
+bool JoinGraphConverter::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
+  return node_type != LQPNodeType::Join && node_type != LQPNodeType::Union && node_type != LQPNodeType::Predicate;
 }
 }  // namespace opossum
