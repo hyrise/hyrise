@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
-#include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/deprecated_dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {
@@ -175,5 +175,19 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logic_error); }
+
+TEST_F(StorageTableTest, MemoryUsageEstimation) {
+  /**
+   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
+   * memory usage estimations
+   */
+
+  const auto empty_memory_usage = t.estimate_memory_usage();
+
+  t.append({4, "Hello"});
+  t.append({5, "Hello"});
+
+  EXPECT_GT(t.estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
+}
 
 }  // namespace opossum

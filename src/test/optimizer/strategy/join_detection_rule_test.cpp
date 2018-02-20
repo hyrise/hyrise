@@ -34,9 +34,9 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float.tbl", 2));
     StorageManager::get().add_table("c", load_table("src/test/tables/int_float.tbl", 2));
 
-    _table_node_a = std::make_shared<StoredTableNode>("a");
-    _table_node_b = std::make_shared<StoredTableNode>("b");
-    _table_node_c = std::make_shared<StoredTableNode>("c");
+    _table_node_a = StoredTableNode::make("a");
+    _table_node_b = StoredTableNode::make("b");
+    _table_node_c = StoredTableNode::make("c");
 
     _a_a = LQPColumnReference{_table_node_a, ColumnID{0}};
     _a_b = LQPColumnReference{_table_node_a, ColumnID{1}};
@@ -93,11 +93,11 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
    */
 
   // Generate LQP
-  const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto cross_join_node = JoinNode::make(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(cross_join_node);
 
   // Apply rule
@@ -137,15 +137,15 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
    */
 
   // Generate LQP
-  const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto cross_join_node = JoinNode::make(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(cross_join_node);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -174,12 +174,12 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
    */
 
   // Generate LQP
-  const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto cross_join_node = JoinNode::make(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(cross_join_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -210,15 +210,15 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
    */
 
   // Generate LQP
-  const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto cross_join_node = JoinNode::make(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _a_b);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _a_b);
   predicate_node->set_left_child(cross_join_node);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -248,16 +248,15 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    * isn't manipulated.
    */
 
-  const auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_b), PredicateCondition::Equals);
+  const auto join_node = JoinNode::make(JoinMode::Inner, std::make_pair(_a_b, _b_b), PredicateCondition::Equals);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(join_node);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -298,19 +297,19 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
    *   a       b
    *
    */
-  const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node1 = JoinNode::make(JoinMode::Cross);
   join_node1->set_left_child(_table_node_a);
   join_node1->set_right_child(_table_node_b);
 
-  const auto join_node2 = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node2 = JoinNode::make(JoinMode::Cross);
   join_node2->set_left_child(join_node1);
   join_node2->set_right_child(_table_node_c);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(join_node2);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -350,9 +349,9 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
    *         b                       c
    *
    */
-  const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
-  const auto join_node2 = std::make_shared<JoinNode>(JoinMode::Cross);
-  const auto predicate_node = std::make_shared<PredicateNode>(_b_a, PredicateCondition::Equals, _c_b);
+  const auto join_node1 = JoinNode::make(JoinMode::Cross);
+  const auto join_node2 = JoinNode::make(JoinMode::Cross);
+  const auto predicate_node = PredicateNode::make(_b_a, PredicateCondition::Equals, _c_b);
 
   predicate_node->set_left_child(join_node1);
   join_node1->set_left_child(_table_node_a);
@@ -398,19 +397,19 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
    *   a       b
    *
    */
-  const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node1 = JoinNode::make(JoinMode::Cross);
   join_node1->set_left_child(_table_node_a);
   join_node1->set_right_child(_table_node_b);
 
-  const auto join_node2 = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node2 = JoinNode::make(JoinMode::Cross);
   join_node2->set_left_child(join_node1);
   join_node2->set_right_child(_table_node_c);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_c_a, PredicateCondition::Equals, _a_a);
+  const auto predicate_node = PredicateNode::make(_c_a, PredicateCondition::Equals, _a_a);
   predicate_node->set_left_child(join_node2);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(predicate_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
@@ -447,16 +446,16 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
    * (This would be Predicate Pushdown and will be covered by a different Optimizer Rule in the future)
    *
    */
-  const auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node = JoinNode::make(JoinMode::Cross);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a),
                                                                LQPExpression::create_column(_b_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(join_node);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(projection_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -487,16 +486,16 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
    * (This would be Predicate Pushdown and will be covered by a different Optimizer Rule in the future)
    *
    */
-  const auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  const auto join_node = JoinNode::make(JoinMode::Cross);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
   const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a),
                                                                LQPExpression::create_column(_b_a)};
-  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_child(join_node);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::Equals, _b_a);
+  const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_child(projection_node);
 
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);

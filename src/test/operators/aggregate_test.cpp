@@ -17,7 +17,7 @@
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -74,13 +74,13 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_3_2->execute();
 
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
-    DictionaryCompression::compress_table(*test_table);
+    ChunkEncoder::encode_all_chunks(test_table);
 
     _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_dict->execute();
 
     test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2);
-    DictionaryCompression::compress_table(*test_table);
+    ChunkEncoder::encode_all_chunks(test_table);
 
     _table_wrapper_1_1_null_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_null_dict->execute();
@@ -101,7 +101,7 @@ class OperatorsAggregateTest : public BaseTest {
 
     if (test_references) {
       for (const auto& agg : aggregates) {
-        ref_columns.insert(agg.column.value());
+        ref_columns.insert(*agg.column);
       }
 
       for (const auto column_id : groupby_column_ids) {

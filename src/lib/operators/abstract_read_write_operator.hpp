@@ -26,13 +26,10 @@ enum class ReadWriteOperatorState {
  * It mainly provides the commit_records and rollback_records methods,
  * which are used to commit and rollback changes respectively.
  */
-class AbstractReadWriteOperator : public AbstractOperator,
-                                  public std::enable_shared_from_this<AbstractReadWriteOperator> {
+class AbstractReadWriteOperator : public AbstractOperator {
  public:
   explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                                      const std::shared_ptr<const AbstractOperator> right = nullptr);
-
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const final;
 
   void execute() override;
 

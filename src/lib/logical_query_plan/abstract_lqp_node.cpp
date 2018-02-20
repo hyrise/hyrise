@@ -12,24 +12,16 @@
 #include "lqp_column_reference.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 
 namespace opossum {
 
 class TableStatistics;
 
+QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
+    : column_name(column_name), table_name(table_name) {}
+
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
-
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
-  auto copied_left_child = left_child() ? left_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
-  auto copied_right_child = this->right_child() ? this->right_child()->deep_copy() : std::shared_ptr<AbstractLQPNode>();
-
-  // We cannot use the copy constructor here, because it does not work with shared_from_this()
-  auto deep_copy = _deep_copy_impl(copied_left_child, copied_right_child);
-  deep_copy->set_left_child(copied_left_child);
-  deep_copy->set_right_child(copied_right_child);
-
-  return deep_copy;
-}
 
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
     const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
@@ -39,7 +31,6 @@ LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
    * (1) Figuring out the ColumnID it has in the original node
    * (2) Returning the ColumnReference at that ColumnID in the copied node
    */
-
   const auto output_column_id = original_lqp->get_output_column_id(column_reference);
   return copied_lqp->output_column_references()[output_column_id];
 }
@@ -381,10 +372,21 @@ void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& repla
 void AbstractLQPNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
 void AbstractLQPNode::print(std::ostream& out) const {
-  std::vector<bool> levels;
-  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> id_by_node;
-  size_t id_counter = 0;
-  _print_impl(out, levels, id_by_node, id_counter);
+  const auto get_children_fn = [](const auto& node) {
+    std::vector<std::shared_ptr<const AbstractLQPNode>> children;
+    if (node->left_child()) children.emplace_back(node->left_child());
+    if (node->right_child()) children.emplace_back(node->right_child());
+    return children;
+  };
+  const auto node_print_fn = [](const auto& node, auto& stream) {
+    stream << node->description();
+
+    if (node->_table_alias) {
+      stream << " -- ALIAS: '" << *node->_table_alias << "'";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_children_fn, node_print_fn, out);
 }
 
 std::string AbstractLQPNode::get_verbose_column_name(ColumnID column_id) const {
@@ -435,58 +437,6 @@ std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
   return qualified_column_name;
 }
 
-void AbstractLQPNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
-                                  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
-                                  size_t& id_counter) const {
-  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
-  for (size_t level = 0; level < max_level; ++level) {
-    if (levels[level]) {
-      out << " | ";
-    } else {
-      out << "   ";
-    }
-  }
-
-  if (!levels.empty()) {
-    out << " \\_";
-  }
-
-  /**
-   * Check whether the node has been printed before
-   */
-  const auto iter = id_by_node.find(shared_from_this());
-  if (iter != id_by_node.end()) {
-    out << "Recurring Node --> [" << iter->second << "]" << std::endl;
-    return;
-  }
-
-  const auto this_node_id = id_counter;
-  id_counter++;
-  id_by_node.emplace(shared_from_this(), this_node_id);
-
-  /**
-   *
-   */
-  out << "[" << this_node_id << "] " << description();
-
-  if (_table_alias) {
-    out << " -- ALIAS: '" << *_table_alias << "'";
-  }
-  out << std::endl;
-
-  levels.emplace_back(right_child() != nullptr);
-
-  if (left_child()) {
-    left_child()->_print_impl(out, levels, id_by_node, id_counter);
-  }
-  if (right_child()) {
-    levels.back() = false;
-    right_child()->_print_impl(out, levels, id_by_node, id_counter);
-  }
-
-  levels.pop_back();
-}
-
 void AbstractLQPNode::_child_changed() {
   _statistics.reset();
   _output_column_references.reset();
@@ -534,11 +484,130 @@ std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lq
   return expression;
 }
 
+std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
+AbstractLQPNode::find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const {
+  return _find_first_subplan_mismatch_impl(shared_from_this(), rhs);
+}
+
+std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
+AbstractLQPNode::_find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                                   const std::shared_ptr<const AbstractLQPNode>& rhs) {
+  if (lhs == rhs) return std::nullopt;
+  if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) return std::make_pair(lhs, rhs);
+  if (lhs->type() != rhs->type()) return std::make_pair(lhs, rhs);
+
+  if (!lhs->shallow_equals(*rhs)) return std::make_pair(lhs, rhs);
+
+  const auto left_child_mismatch = _find_first_subplan_mismatch_impl(lhs->left_child(), rhs->left_child());
+  if (left_child_mismatch) return left_child_mismatch;
+
+  const auto right_child_mismatch = _find_first_subplan_mismatch_impl(lhs->right_child(), rhs->right_child());
+  if (right_child_mismatch) return right_child_mismatch;
+
+  return std::nullopt;
+}
+
+bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
+                              const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
+                              const AbstractLQPNode& lqp_right,
+                              const std::vector<std::shared_ptr<LQPExpression>>& expressions_right) {
+  if (expressions_left.size() != expressions_right.size()) return false;
+
+  for (size_t expression_idx = 0; expression_idx < expressions_left.size(); ++expression_idx) {
+    if (!_equals(lqp_left, expressions_left[expression_idx], lqp_right, expressions_right[expression_idx]))
+      return false;
+  }
+
+  return true;
+}
+
+bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
+                              const std::shared_ptr<const LQPExpression>& expression_left,
+                              const AbstractLQPNode& lqp_right,
+                              const std::shared_ptr<const LQPExpression>& expression_right) {
+  if (!expression_left && !expression_right) return true;
+  if (!expression_left || !expression_right) return false;
+  if (*expression_left == *expression_right) return true;
+  if (expression_left->type() != expression_right->type()) return false;
+  if (expression_left->aggregate_function_arguments().size() != expression_right->aggregate_function_arguments().size())
+    return false;
+
+  const auto type = expression_left->type();
+
+  if (expression_left->alias() != expression_right->alias()) return false;
+
+  if (type == ExpressionType::Column) {
+    return _equals(lqp_left, expression_left->column_reference(), lqp_right, expression_right->column_reference());
+  }
+
+  if (type == ExpressionType::Function) {
+    if (expression_left->aggregate_function() != expression_right->aggregate_function()) return false;
+
+    for (size_t arg_idx = 0; arg_idx < expression_left->aggregate_function_arguments().size(); ++arg_idx) {
+      if (!_equals(lqp_left, expression_left->aggregate_function_arguments()[arg_idx], lqp_right,
+                   expression_right->aggregate_function_arguments()[arg_idx]))
+        return false;
+    }
+  }
+
+  if (!_equals(lqp_left, expression_left->left_child(), lqp_right, expression_right->left_child())) return false;
+  if (!_equals(lqp_left, expression_left->right_child(), lqp_right, expression_right->right_child())) return false;
+
+  return true;
+}
+
+bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
+                              const std::vector<LQPColumnReference>& column_references_left,
+                              const AbstractLQPNode& lqp_right,
+                              const std::vector<LQPColumnReference>& column_references_right) {
+  if (column_references_left.size() != column_references_right.size()) return false;
+  for (size_t column_reference_idx = 0; column_reference_idx < column_references_left.size(); ++column_reference_idx) {
+    if (!_equals(lqp_left, column_references_left[column_reference_idx], lqp_right,
+                 column_references_right[column_reference_idx]))
+      return false;
+  }
+  return true;
+}
+
+bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left, const LQPColumnReference& column_reference_left,
+                              const AbstractLQPNode& lqp_right, const LQPColumnReference& column_reference_right) {
+  // We just need a temporary ColumnReference which won't be used to manipulate nodes, promised.
+  auto& mutable_lqp_left = const_cast<AbstractLQPNode&>(lqp_left);
+  auto& mutable_lqp_right = const_cast<AbstractLQPNode&>(lqp_right);
+  const auto column_reference_left_adapted_to_right = AbstractLQPNode::adapt_column_reference_to_different_lqp(
+      column_reference_left, mutable_lqp_left.shared_from_this(), mutable_lqp_right.shared_from_this());
+
+  return column_reference_left_adapted_to_right == column_reference_right;
+}
+
 std::string QualifiedColumnName::as_string() const {
   std::stringstream ss;
   if (table_name) ss << *table_name << ".";
   ss << column_name;
   return ss.str();
+}
+
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
+  PreviousCopiesMap previous_copies;
+  return _deep_copy(previous_copies);
+}
+
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy(PreviousCopiesMap& previous_copies) const {
+  if (auto it = previous_copies.find(shared_from_this()); it != previous_copies.cend()) {
+    return it->second;
+  }
+
+  auto copied_left_child = left_child() ? left_child()->_deep_copy(previous_copies) : nullptr;
+  auto copied_right_child = right_child() ? right_child()->_deep_copy(previous_copies) : nullptr;
+
+  // We cannot use the copy constructor here, because it does not work with shared_from_this()
+  auto deep_copy = _deep_copy_impl(copied_left_child, copied_right_child);
+  if (copied_left_child) deep_copy->set_left_child(copied_left_child);
+  if (copied_right_child) deep_copy->set_right_child(copied_right_child);
+
+  previous_copies.emplace(shared_from_this(), deep_copy);
+
+  return deep_copy;
 }
 
 }  // namespace opossum
