@@ -38,7 +38,7 @@ class JoinNullTest : public JoinTest {
 
     // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float_with_null.tbl", 2);
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_a_null_dict = std::make_shared<TableWrapper>(std::move(table));
     _table_wrapper_a_null_dict->execute();

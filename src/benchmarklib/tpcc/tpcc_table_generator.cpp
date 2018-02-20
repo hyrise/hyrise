@@ -13,7 +13,7 @@
 
 #include "constants.hpp"
 #include "storage/chunk.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -56,7 +56,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
     return data;
   });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
 
   return table;
 }
@@ -89,7 +89,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_warehouse_table() {
     return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT * NUM_DISTRICTS_PER_WAREHOUSE;
   });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
 
   return table;
 }
@@ -131,7 +131,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
     return data;
   });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -166,7 +166,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
                     [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
   add_column<int>(table, "D_NEXT_O_ID", cardinalities, [&](std::vector<size_t>) { return NUM_ORDERS + 1; });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -218,7 +218,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
   add_column<std::string>(table, "C_DATA", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(300, 500); });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -243,7 +243,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_history_table() {
   add_column<std::string>(table, "H_DATA", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(12, 24); });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -279,7 +279,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
                   [&](std::vector<size_t> indices) { return order_line_counts[indices[0]][indices[1]][indices[2]]; });
   add_column<int>(table, "O_ALL_LOCAL", cardinalities, [&](std::vector<size_t>) { return 1; });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -375,7 +375,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
   add_order_line_column<std::string>(table, "OL_DIST_INFO", cardinalities, order_line_counts,
                                      [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -395,7 +395,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
   add_column<int>(table, "NO_D_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[1]; });
   add_column<int>(table, "NO_W_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
 
-  opossum::DeprecatedDictionaryCompression::compress_table(*table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
