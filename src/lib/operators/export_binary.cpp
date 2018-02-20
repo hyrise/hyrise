@@ -77,12 +77,6 @@ void _export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
   const auto writable_bools = std::vector<opossum::BoolAsByteType>(values.begin(), values.end());
   _export_values(ofstream, writable_bools);
 }
-template <>
-void _export_values(std::ofstream& ofstream, const std::vector<bool, opossum::PolymorphicAllocator<bool>>& values) {
-  // Cast to fixed-size format used in binary file
-  const auto writable_bools = std::vector<opossum::BoolAsByteType>(values.begin(), values.end());
-  _export_values(ofstream, writable_bools);
-}
 
 template <typename T>
 void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<T>& values) {
