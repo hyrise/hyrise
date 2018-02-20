@@ -19,7 +19,7 @@ std::string JitWriteTuple::description() const {
 void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& ctx) {
   for (const auto& output_column : _output_columns) {
     // Add a column definition for each output column
-    const auto data_type = jit_data_type_to_data_type.at(output_column.tuple_value.data_type());
+    const auto data_type = output_column.tuple_value.data_type();
     const auto is_nullable = output_column.tuple_value.is_nullable();
     out_table.add_column_definition(output_column.column_name, data_type, is_nullable);
 
@@ -62,7 +62,7 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& ctx) const {
 
   // Create new value columns and add them to the runtime context to make them accessible by the column writers
   for (const auto& output_column : _output_columns) {
-    const auto data_type = jit_data_type_to_data_type.at(output_column.tuple_value.data_type());
+    const auto data_type = output_column.tuple_value.data_type();
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto column = std::make_shared<ValueColumn<ColumnDataType>>(output_column.tuple_value.is_nullable());
