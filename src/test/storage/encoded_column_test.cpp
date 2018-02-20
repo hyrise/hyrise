@@ -56,23 +56,23 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     return std::make_shared<ValueColumn<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  PosList create_sequential_pos_list() {
-    auto list = PosList{};
+  ChunkOffsetsList create_sequential_chunk_offsets_list() {
+    auto list = ChunkOffsetsList{};
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
+    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
       if (bernoulli_dist(engine)) {
-        list.push_back({ChunkID{0u}, into_referenced});
+        list.push_back({into_referencing++, into_referenced});
       }
     }
 
     return list;
   }
 
-  PosList create_random_access_pos_list() {
-    auto list = create_sequential_pos_list();
+  ChunkOffsetsList create_random_access_chunk_offsets_list() {
+    auto list = create_sequential_chunk_offsets_list();
 
     std::default_random_engine engine{};
     std::shuffle(list.begin(), list.end(), engine);
@@ -161,15 +161,14 @@ TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList)
 
   EXPECT_EQ(value_column->size(), base_encoded_column->size());
 
-  auto pos_list = this->create_sequential_pos_list();
-  auto access_plan = ColumnPointAccessPlan{pos_list.cbegin(), pos_list.cend(), ChunkOffset{0u}};
+  auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
 
   resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
     auto value_column_iterable = create_iterable_from_column(*value_column);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
-    value_column_iterable.with_iterators(access_plan, [&](auto value_column_it, auto value_column_end) {
-      encoded_column_iterable.with_iterators(access_plan, [&](auto encoded_column_it, auto encoded_column_end) {
+    value_column_iterable.with_iterators(&chunk_offsets_list, [&](auto value_column_it, auto value_column_end) {
+      encoded_column_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_column_it, auto encoded_column_end) {
         for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
           EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
@@ -188,15 +187,14 @@ TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithShuffledChunkOffs
 
   EXPECT_EQ(value_column->size(), base_encoded_column->size());
 
-  auto pos_list = this->create_random_access_pos_list();
-  auto access_plan = ColumnPointAccessPlan{pos_list.cbegin(), pos_list.cend(), ChunkOffset{0u}};
+  auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
 
   resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
     auto value_column_iterable = create_iterable_from_column(*value_column);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
-    value_column_iterable.with_iterators(access_plan, [&](auto value_column_it, auto value_column_end) {
-      encoded_column_iterable.with_iterators(access_plan, [&](auto encoded_column_it, auto encoded_column_end) {
+    value_column_iterable.with_iterators(&chunk_offsets_list, [&](auto value_column_it, auto value_column_end) {
+      encoded_column_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_column_it, auto encoded_column_end) {
         for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
           EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
