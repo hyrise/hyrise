@@ -158,7 +158,8 @@ void BaseIndexEvaluator::_inspect_pqp_operator(const std::shared_ptr<const Abstr
     auto node = queue.front();
     queue.pop_front();
     if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(node)) {
-      DebugAssert(std::dynamic_pointer_cast<const Validate>(table_scan->input_left()) == nullptr, "Validation nodes are not supported. Please run the pipeline without MVCC columns.");
+      DebugAssert(std::dynamic_pointer_cast<const Validate>(table_scan->input_left()) == nullptr,
+                  "Validation nodes are not supported. Please run the pipeline without MVCC columns.");
       if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(table_scan->input_left())) {
         const auto& table_name = get_table->table_name();
         ColumnID column_id = table_scan->left_column_id();
@@ -166,7 +167,6 @@ void BaseIndexEvaluator::_inspect_pqp_operator(const std::shared_ptr<const Abstr
         _access_records.back().condition = table_scan->predicate_condition();
         _access_records.back().compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
       }
-      //      }
     } else {
       if (node->input_left()) {
         queue.push_back(node->input_left());
