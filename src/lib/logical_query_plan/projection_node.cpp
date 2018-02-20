@@ -22,7 +22,7 @@ std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::sha
 }
 
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
-    : Base(LQPNodeType::Projection), _column_expressions(column_expressions) {}
+    : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
   std::ostringstream desc;

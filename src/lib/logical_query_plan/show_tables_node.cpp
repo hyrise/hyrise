@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-ShowTablesNode::ShowTablesNode() : Base(LQPNodeType::ShowTables) {}
+ShowTablesNode::ShowTablesNode() : AbstractLQPNode(LQPNodeType::ShowTables) {}
 
 std::shared_ptr<AbstractLQPNode> ShowTablesNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

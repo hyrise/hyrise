@@ -13,7 +13,7 @@ OrderByDefinition::OrderByDefinition(const LQPColumnReference& column_reference,
     : column_reference(column_reference), order_by_mode(order_by_mode) {}
 
 SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
-    : Base(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
+    : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
 std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

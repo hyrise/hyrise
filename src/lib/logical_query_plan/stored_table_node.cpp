@@ -13,7 +13,7 @@
 namespace opossum {
 
 StoredTableNode::StoredTableNode(const std::string& table_name, const std::optional<std::string>& alias)
-    : Base(LQPNodeType::StoredTable), _table_name(table_name) {
+    : AbstractLQPNode(LQPNodeType::StoredTable), _table_name(table_name) {
   /**
    * Initialize output information.
    */

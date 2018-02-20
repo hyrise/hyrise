@@ -19,7 +19,7 @@ using LQPColumnReferencePair = std::pair<LQPColumnReference, LQPColumnReference>
  * This node type is used to represent any type of Join, including cross products.
  * The idea is that the optimizer is able to decide on the physical join implementation.
  */
-class JoinNode : public AbstractLQPNodeEnableMake<JoinNode> {
+class JoinNode: public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
  public:
   // Constructor for Natural and Cross Joins
   explicit JoinNode(const JoinMode join_mode);

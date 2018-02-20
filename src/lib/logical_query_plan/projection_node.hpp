@@ -16,7 +16,7 @@ struct ColumnID;
  * Node type to represent common projections, i.e. without any aggregate functionality.
  * It is, however, responsible to calculate arithmetic expressions.
  */
-class ProjectionNode : public AbstractLQPNodeEnableMake<ProjectionNode> {
+class ProjectionNode: public EnableMakeForLQPNode<ProjectionNode>, public AbstractLQPNode {
  public:
   static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& child);
 

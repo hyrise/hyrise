@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-LogicalPlanRootNode::LogicalPlanRootNode() : Base(LQPNodeType::Root) {}
+LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLQPNode(LQPNodeType::Root) {}
 
 std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,

@@ -14,7 +14,7 @@ namespace opossum {
 
 PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
                              const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2)
-    : Base(LQPNodeType::Predicate),
+    : AbstractLQPNode(LQPNodeType::Predicate),
       _column_reference(column_reference),
       _predicate_condition(predicate_condition),
       _value(value),
