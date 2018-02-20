@@ -34,11 +34,23 @@ class JoinNodeTest : public BaseTest {
         std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
     _inner_join_node->set_left_child(_mock_node_a);
     _inner_join_node->set_right_child(_mock_node_b);
+
+    _semi_join_node =
+        std::make_shared<JoinNode>(JoinMode::Semi, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
+    _semi_join_node->set_left_child(_mock_node_a);
+    _semi_join_node->set_right_child(_mock_node_b);
+
+    _anti_join_node =
+        std::make_shared<JoinNode>(JoinMode::Anti, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
+    _anti_join_node->set_left_child(_mock_node_a);
+    _anti_join_node->set_right_child(_mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
   std::shared_ptr<MockNode> _mock_node_b;
   std::shared_ptr<JoinNode> _inner_join_node;
+  std::shared_ptr<JoinNode> _semi_join_node;
+  std::shared_ptr<JoinNode> _anti_join_node;
   std::shared_ptr<JoinNode> _join_node;
   LQPColumnReference _t_a_a;
   LQPColumnReference _t_a_b;
@@ -50,6 +62,10 @@ class JoinNodeTest : public BaseTest {
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Cross Join]"); }
 
 TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Inner Join] t_a.a = t_b.y"); }
+
+TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Semi Join] t_a.a = t_b.y"); }
+
+TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->description(), "[Anti Join] t_a.a = t_b.y"); }
 
 TEST_F(JoinNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
@@ -79,6 +95,20 @@ TEST_F(JoinNodeTest, OutputColumnReferences) {
   EXPECT_EQ(_join_node->output_column_references().at(2), _t_a_c);
   EXPECT_EQ(_join_node->output_column_references().at(3), _t_b_x);
   EXPECT_EQ(_join_node->output_column_references().at(4), _t_b_y);
+}
+
+TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
+  ASSERT_EQ(_semi_join_node->output_column_references().size(), 3u);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(2), _t_a_c);
+}
+
+TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
+  ASSERT_EQ(_anti_join_node->output_column_references().size(), 3u);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(2), _t_a_c);
 }
 
 }  // namespace opossum
