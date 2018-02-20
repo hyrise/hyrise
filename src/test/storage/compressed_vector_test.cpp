@@ -8,6 +8,7 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
+#include "constant_mappings.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -26,7 +27,7 @@ namespace {
 
 }  // namespace
 
-class CompressedVectorTest : public BaseTest, public ::testing::WithParamInterface<VectorCompressionType> {
+class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
   void SetUp() override {}
 
@@ -70,6 +71,16 @@ class CompressedVectorTest : public BaseTest, public ::testing::WithParamInterfa
 
 auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
+};
+
+auto formatter = [](const ::testing::TestParamInfo<CompressedVectorTest> info) {
+  const auto type = info.param;
+  auto string = vector_compression_type_to_string.left.at(*spec.vector_compression_type);
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
 };
 
 INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, CompressedVectorTest,

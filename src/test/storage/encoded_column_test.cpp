@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <random>
+#include <sstream>
+#include <cctype>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -10,39 +12,26 @@
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/value_column.hpp"
+#include "constant_mappings.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
 namespace opossum {
 
-namespace hana = boost::hana;
-
-using EncodingTypes = ::testing::Types<enum_constant<EncodingType, EncodingType::Dictionary>,
-                                       enum_constant<EncodingType, EncodingType::DeprecatedDictionary>,
-                                       enum_constant<EncodingType, EncodingType::RunLength>>;
-
-template <typename EncodingTypeT>
-class EncodedColumnTest : public BaseTest {
+class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
  protected:
-  static constexpr auto encoding_type_t = EncodingTypeT{};
-  static constexpr auto column_template_t = hana::at_key(encoded_column_for_type, encoding_type_t);
-
-  using ColumnTemplateType = typename decltype(column_template_t)::type;
-
-  template <typename T>
-  using EncodedColumnType = typename ColumnTemplateType::template _template<T>;
-
- protected:
-  static constexpr auto row_count = 200u;
+  static constexpr auto row_count = 16'384u;
+  static constexpr auto max_value = 1'024;
 
  protected:
   std::shared_ptr<ValueColumn<int32_t>> create_int_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count);
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, 10u};
+    std::uniform_int_distribution<int32_t> dist{0u, max_value};
 
     for (auto& elem : values) {
       elem = dist(engine);
@@ -56,7 +45,7 @@ class EncodedColumnTest : public BaseTest {
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, 10u};
+    std::uniform_int_distribution<int32_t> dist{0u, max_value};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
     for (auto i = 0u; i < row_count; ++i) {
@@ -67,23 +56,23 @@ class EncodedColumnTest : public BaseTest {
     return std::make_shared<ValueColumn<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  ChunkOffsetsList create_sequential_chunk_offsets_list() {
-    auto list = ChunkOffsetsList{};
+  PosList create_sequential_pos_list() {
+    auto list = PosList{};
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
+    for (auto into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
       if (bernoulli_dist(engine)) {
-        list.push_back({into_referencing++, into_referenced});
+        list.push_back({ChunkID{0u}, into_referenced});
       }
     }
 
     return list;
   }
 
-  ChunkOffsetsList create_random_access_chunk_offsets_list() {
-    auto list = create_sequential_chunk_offsets_list();
+  PosList create_random_access_pos_list() {
+    auto list = create_sequential_pos_list();
 
     std::default_random_engine engine{};
     std::shuffle(list.begin(), list.end(), engine);
@@ -92,98 +81,130 @@ class EncodedColumnTest : public BaseTest {
   }
 
   template <typename T>
-  std::shared_ptr<EncodedColumnType<T>> encode_value_column(DataType data_type,
+  std::shared_ptr<BaseEncodedColumn> encode_value_column(DataType data_type,
                                                             const std::shared_ptr<ValueColumn<T>>& value_column) {
-    return std::dynamic_pointer_cast<EncodedColumnType<T>>(encode_column(encoding_type_t(), data_type, value_column));
+    const auto column_encoding_spec = GetParam();
+    return encode_column(column_encoding_spec.encoding_type, data_type, value_column,
+                         column_encoding_spec.vector_compression_type);
   }
 };
 
-TYPED_TEST_CASE(EncodedColumnTest, EncodingTypes);
+auto formatter = [](const ::testing::TestParamInfo<ColumnEncodingSpec> info) {
+  const auto spec = info.param;
 
-TYPED_TEST(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
+  auto stream = std::stringstream{};
+  stream << encoding_type_to_string.left.at(spec.encoding_type);
+  if (spec.vector_compression_type) {
+    stream << "-" << vector_compression_type_to_string.left.at(*spec.vector_compression_type);
+  }
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_CASE_P(ColumnEncodingSpecs, EncodedColumnTest,
+                        ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                          ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                                          ColumnEncodingSpec{EncodingType::RunLength},
+                                          ColumnEncodingSpec{EncodingType::DeprecatedDictionary}),
+                        formatter);
+
+TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
   auto value_column = this->create_int_value_column();
-  auto encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_column->size());
 
-  auto value_column_iterable = create_iterable_from_column(*value_column);
-  auto encoded_column_iterable = create_iterable_from_column(*encoded_column);
+  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+    auto value_column_iterable = create_iterable_from_column(*value_column);
+    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
-  value_column_iterable.with_iterators([&](auto value_column_it, auto value_column_end) {
-    encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
-      for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
-        EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
-      }
+    value_column_iterable.with_iterators([&](auto value_column_it, auto value_column_end) {
+      encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
+        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
+          EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+        }
+      });
     });
   });
 }
 
-TYPED_TEST(EncodedColumnTest, SequenciallyReadNullableIntColumn) {
+TEST_P(EncodedColumnTest, SequenciallyReadNullableIntColumn) {
   auto value_column = this->create_int_w_null_value_column();
-  auto encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_column->size());
 
-  auto value_column_iterable = create_iterable_from_column(*value_column);
-  auto encoded_column_iterable = create_iterable_from_column(*encoded_column);
+  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+    auto value_column_iterable = create_iterable_from_column(*value_column);
+    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
-  value_column_iterable.with_iterators([&](auto value_column_it, auto value_column_end) {
-    encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
-      for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
-        EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
+    value_column_iterable.with_iterators([&](auto value_column_it, auto value_column_end) {
+      encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
+        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
+          EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
-        if (!value_column_it->is_null()) {
-          EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+          if (!value_column_it->is_null()) {
+            EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+          }
         }
-      }
+      });
     });
   });
 }
 
-TYPED_TEST(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList) {
+TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
-  auto encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_column->size());
 
-  auto value_column_iterable = create_iterable_from_column(*value_column);
-  auto encoded_column_iterable = create_iterable_from_column(*encoded_column);
+  auto pos_list = this->create_sequential_pos_list();
+  auto access_plan = ColumnPointAccessPlan{pos_list.cbegin(), pos_list.cend(), ChunkOffset{0u}};
 
-  auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
+  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+    auto value_column_iterable = create_iterable_from_column(*value_column);
+    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
-  value_column_iterable.with_iterators(&chunk_offsets_list, [&](auto value_column_it, auto value_column_end) {
-    encoded_column_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_column_it, auto encoded_column_end) {
-      for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
-        EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
+    value_column_iterable.with_iterators(access_plan, [&](auto value_column_it, auto value_column_end) {
+      encoded_column_iterable.with_iterators(access_plan, [&](auto encoded_column_it, auto encoded_column_end) {
+        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
+          EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
-        if (!value_column_it->is_null()) {
-          EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+          if (!value_column_it->is_null()) {
+            EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+          }
         }
-      }
+      });
     });
   });
 }
 
-TYPED_TEST(EncodedColumnTest, SequanciallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
+TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
-  auto encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_column->size());
 
-  auto value_column_iterable = create_iterable_from_column(*value_column);
-  auto encoded_column_iterable = create_iterable_from_column(*encoded_column);
+  auto pos_list = this->create_random_access_pos_list();
+  auto access_plan = ColumnPointAccessPlan{pos_list.cbegin(), pos_list.cend(), ChunkOffset{0u}};
 
-  auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
+  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+    auto value_column_iterable = create_iterable_from_column(*value_column);
+    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
-  value_column_iterable.with_iterators(&chunk_offsets_list, [&](auto value_column_it, auto value_column_end) {
-    encoded_column_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_column_it, auto encoded_column_end) {
-      for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
-        EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
+    value_column_iterable.with_iterators(access_plan, [&](auto value_column_it, auto value_column_end) {
+      encoded_column_iterable.with_iterators(access_plan, [&](auto encoded_column_it, auto encoded_column_end) {
+        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
+          EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
-        if (!value_column_it->is_null()) {
-          EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+          if (!value_column_it->is_null()) {
+            EXPECT_EQ(value_column_it->value(), encoded_column_it->value());
+          }
         }
-      }
+      });
     });
   });
 }
