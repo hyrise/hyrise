@@ -34,7 +34,7 @@ class JitColumnWriter : public BaseJitColumnWriter {
       : _output_index{output_index}, _tuple_value{tuple_value} {}
 
   void write_value(JitRuntimeContext& ctx) const {
-    const auto value = _tuple_value.materialize(ctx).template as<DataType>();
+    const auto value = _tuple_value.materialize(ctx).template get<DataType>();
     _value_column(ctx).values().push_back(value);
     // clang-format off
     if constexpr (Nullable) {
