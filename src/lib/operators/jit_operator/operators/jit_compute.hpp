@@ -31,7 +31,7 @@ class JitExpression {
   void compute(JitRuntimeContext& ctx) const;
 
  private:
-  std::pair<const JitDataType, const bool> _compute_result_type();
+  std::pair<const DataType, const bool> _compute_result_type();
 
   bool _is_binary_operator() const;
 

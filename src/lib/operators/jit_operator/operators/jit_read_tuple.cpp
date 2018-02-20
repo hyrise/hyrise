@@ -24,10 +24,10 @@ void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& ctx) {
 
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
-    auto data_type = jit_data_type_to_data_type.at(input_literal.tuple_value.data_type());
+    auto data_type = input_literal.tuple_value.data_type();
     resolve_data_type(data_type, [&](auto type) {
       using DataType = typename decltype(type)::type;
-      input_literal.tuple_value.materialize(ctx).as<DataType>() = boost::get<DataType>(input_literal.value);
+      input_literal.tuple_value.materialize(ctx).set<DataType>(boost::get<DataType>(input_literal.value));
     });
   }
 
@@ -92,7 +92,7 @@ JitTupleValue JitReadTuple::add_input_column(const Table& table, const ColumnID 
     return it->tuple_value;
   }
 
-  const auto data_type = data_type_to_jit_data_type.at(table.column_type(column_id));
+  const auto data_type = table.column_type(column_id);
   const auto is_nullable = table.column_is_nullable(column_id);
   const auto tuple_value = JitTupleValue(data_type, is_nullable, _num_tuple_values++);
   _input_columns.push_back({column_id, tuple_value});
@@ -102,7 +102,7 @@ JitTupleValue JitReadTuple::add_input_column(const Table& table, const ColumnID 
 JitTupleValue JitReadTuple::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple value to the correct literal value later.
-  const auto data_type = data_type_to_jit_data_type.at(data_type_from_all_type_variant(value));
+  const auto data_type = data_type_from_all_type_variant(value);
   const auto tuple_value = JitTupleValue(data_type, false, _num_tuple_values++);
   _input_literals.push_back({value, tuple_value});
   return tuple_value;
