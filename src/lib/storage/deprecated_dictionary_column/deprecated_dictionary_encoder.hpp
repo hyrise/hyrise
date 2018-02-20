@@ -7,6 +7,7 @@
 #include "storage/base_column_encoder.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/value_vector.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -26,7 +27,7 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+    auto dictionary = ValueVector<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -85,7 +86,7 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
 
  private:
   template <typename T>
-  static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
+  static ValueID _get_value_id(const ValueVector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }

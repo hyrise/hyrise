@@ -15,12 +15,12 @@
 namespace opossum {
 
 template <typename T>
-DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
+DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(ValueVector<T>&& dictionary,
                                                           const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-    : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
+    : _dictionary(std::make_shared<ValueVector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
-DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(const std::shared_ptr<ValueVector<T>>& dictionary,
                                                           const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
 
@@ -56,7 +56,7 @@ const T DeprecatedDictionaryColumn<T>::get(const ChunkOffset chunk_offset) const
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> DeprecatedDictionaryColumn<T>::dictionary() const {
+std::shared_ptr<const ValueVector<T>> DeprecatedDictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
 
@@ -134,9 +134,9 @@ template <typename T>
 std::shared_ptr<BaseColumn> DeprecatedDictionaryColumn<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
-  const pmr_vector<T> new_dictionary(*_dictionary, alloc);
+  const ValueVector<T> new_dictionary(*_dictionary, alloc);
   return std::allocate_shared<DeprecatedDictionaryColumn<T>>(
-      alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
+      alloc, std::allocate_shared<ValueVector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
 template <typename T>

@@ -8,6 +8,7 @@
 
 #include "all_type_variant.hpp"
 #include "base_deprecated_dictionary_column.hpp"
+#include "storage/value_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -31,10 +32,10 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
    * Creates a Dictionary column from a given dictionary and attribute vector.
    * See deprecated_dictionary_compression.cpp for more.
    */
-  explicit DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
+  explicit DeprecatedDictionaryColumn(ValueVector<T>&& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
-  explicit DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+  explicit DeprecatedDictionaryColumn(const std::shared_ptr<ValueVector<T>>& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
@@ -48,7 +49,7 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
   const T get(const ChunkOffset chunk_offset) const;
 
   // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<T>> dictionary() const;
+  std::shared_ptr<const ValueVector<T>> dictionary() const;
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final;
@@ -88,7 +89,7 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
   size_t estimate_memory_usage() const override;
 
  protected:
-  std::shared_ptr<pmr_vector<T>> _dictionary;
+  std::shared_ptr<ValueVector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };
 

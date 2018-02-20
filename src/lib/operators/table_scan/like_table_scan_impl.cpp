@@ -19,8 +19,8 @@
 #include "storage/dictionary_column/attribute_vector_iterable.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
-#include "storage/value_vector.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
+#include "storage/value_vector.hpp"
 
 namespace opossum {
 
