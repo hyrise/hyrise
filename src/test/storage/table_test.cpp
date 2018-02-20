@@ -8,9 +8,9 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
+#include "../lib/storage/chunk_encoder.hpp"
+#include "../lib/storage/index/group_key/group_key_index.hpp"
 #include "../lib/storage/table.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 
 namespace opossum {
 
@@ -198,7 +198,8 @@ TEST_F(StorageTableTest, CreateRemoveIndex) {
   table.append({0});
   table.append({1});
   auto chunk = table.get_chunk(ChunkID{0});
-  DeprecatedDictionaryCompression::compress_chunk(table.column_types(), chunk);
+
+  ChunkEncoder::encode_chunk(chunk, table.column_types());
 
   EXPECT_EQ(table.get_indexes().size(), 0u);
 
