@@ -17,6 +17,7 @@
 #include "storage/chunk.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/value_vector.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -190,8 +191,9 @@ std::shared_ptr<DeprecatedDictionaryColumn<T>> ImportBinary::_import_dictionary_
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _read_values<T>(file, dictionary_size);
+  auto value_vector = ValueVector<T>(dictionary.begin(), dictionary.end());
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
-  return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
+  return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(value_vector), std::move(attribute_vector));
 }
 
 }  // namespace opossum

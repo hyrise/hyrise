@@ -61,10 +61,10 @@ void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values
 }
 
 // specialized implementation for string values
-template <>
-void _export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
-  _export_string_values(ofstream, values);
-}
+// template <>
+// void _export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
+//   _export_string_values(ofstream, values);
+// }
 template <>
 void _export_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
   _export_string_values(ofstream, values);
@@ -76,6 +76,11 @@ void _export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
   // Cast to fixed-size format used in binary file
   const auto writable_bools = std::vector<opossum::BoolAsByteType>(values.begin(), values.end());
   _export_values(ofstream, writable_bools);
+}
+
+template <typename T>
+void _export_values(std::ofstream& ofstream, const opossum::ValueVector<T>& values) {
+  // TODO(strings): implement
 }
 
 template <typename T>
