@@ -1,4 +1,5 @@
 #include <storage/partitioning/hash_partition_schema.hpp>
+#include <storage/table.hpp>
 
 namespace opossum {
 
@@ -30,6 +31,18 @@ PartitionID HashPartitionSchema::get_matching_partition_for(const AllTypeVariant
   const auto hash = _hash_function(value);
   PartitionID matching_partition = static_cast<PartitionID>(hash % _number_of_partitions);
   return matching_partition;
+}
+
+std::map<RowID, PartitionID> HashPartitionSchema::get_mapping_to_partitions(std::shared_ptr<const Table> table) const {
+  std::map<RowID, PartitionID> partition_mapping;
+  for (ChunkID chunkID = ChunkID{0}; chunkID < table->chunk_count(); ++chunkID) {
+    const auto source_chunk = table->get_chunk(chunkID);
+    auto column_with_partitioning_values = source_chunk->get_column(get_column_id());
+    for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
+      partition_mapping[{chunkID, rowID}] = get_matching_partition_for((*column_with_partitioning_values)[rowID]);
+    }
+  }
+  return partition_mapping;
 }
 
 std::vector<ChunkID> HashPartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,

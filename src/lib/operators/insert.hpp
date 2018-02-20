@@ -31,8 +31,7 @@ class Insert : public AbstractReadWriteOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   void _on_commit_records(const CommitID cid) override;
   void _on_rollback_records() override;
-  std::map<RowID, PartitionID> _map_content_to_add_to_partitions(
-      std::shared_ptr<const AbstractPartitionSchema> target_partition_schema);
+
   std::map<PartitionID, uint32_t> _count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping);
 
  private:

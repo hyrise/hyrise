@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
@@ -29,6 +31,7 @@ class RangePartitionSchema : public AbstractPartitionSchema {
 
   PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
   PartitionID get_matching_partition_for(const AllTypeVariant& value) const;
+  std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const override;
   std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition,
                                                 const AllTypeVariant& value) const override;
 

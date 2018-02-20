@@ -1,4 +1,6 @@
-#include <storage/partitioning/round_robin_partition_schema.hpp>
+#include "storage/partitioning/round_robin_partition_schema.hpp"
+
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -22,6 +24,18 @@ void RoundRobinPartitionSchema::append(const std::vector<AllTypeVariant>& values
 
 PartitionID RoundRobinPartitionSchema::get_matching_partition_for(const std::vector<AllTypeVariant>& values) const {
   return get_next_partition();
+}
+
+std::map<RowID, PartitionID> RoundRobinPartitionSchema::get_mapping_to_partitions(
+    std::shared_ptr<const Table> table) const {
+  std::map<RowID, PartitionID> partition_mapping;
+  for (ChunkID chunkID = ChunkID{0}; chunkID < table->chunk_count(); ++chunkID) {
+    const auto source_chunk = table->get_chunk(chunkID);
+    for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
+      partition_mapping[{chunkID, rowID}] = get_next_partition();
+    }
+  }
+  return partition_mapping;
 }
 
 PartitionID RoundRobinPartitionSchema::get_next_partition() const {

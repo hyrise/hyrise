@@ -38,6 +38,18 @@ PartitionID RangePartitionSchema::get_matching_partition_for(const AllTypeVarian
   return static_cast<PartitionID>(_bounds.size());
 }
 
+std::map<RowID, PartitionID> RangePartitionSchema::get_mapping_to_partitions(std::shared_ptr<const Table> table) const {
+  std::map<RowID, PartitionID> partition_mapping;
+  for (ChunkID chunkID = ChunkID{0}; chunkID < table->chunk_count(); ++chunkID) {
+    const auto source_chunk = table->get_chunk(chunkID);
+    auto column_with_partitioning_values = source_chunk->get_column(get_column_id());
+    for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
+      partition_mapping[{chunkID, rowID}] = get_matching_partition_for((*column_with_partitioning_values)[rowID]);
+    }
+  }
+  return partition_mapping;
+}
+
 std::vector<ChunkID> RangePartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,
                                                                     const AllTypeVariant& value) const {
   PartitionID matching_partition = get_matching_partition_for(value);

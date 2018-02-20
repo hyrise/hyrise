@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
 #include "storage/partitioning/partition.hpp"
@@ -7,6 +9,8 @@
 #include "types.hpp"
 
 namespace opossum {
+
+class Table;
 
 /*
  * PartitionSchema determine how to partition a table logically.
@@ -27,6 +31,7 @@ class AbstractPartitionSchema : private Noncopyable {
   void append(const std::vector<AllTypeVariant>& values, PartitionID partition_id);
 
   virtual PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const = 0;
+  virtual std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const = 0;
   virtual std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition,
                                                         const AllTypeVariant& value) const;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
@@ -28,6 +30,7 @@ class NullPartitionSchema : public AbstractPartitionSchema {
   PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override {
     return PartitionID{0};
   };
+  std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const override;
 };
 
 }  // namespace opossum
