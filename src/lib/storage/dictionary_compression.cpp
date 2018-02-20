@@ -114,7 +114,7 @@ class ColumnCompressor : public ColumnCompressorBase {
       auto dict_it_offset = dictionary.cbegin();
       ++dict_it_offset;
       while(dict_it_offset != dictionary.cend()) {
-        distances.emplace_back({*dict_it - *dict_it_offset, std::distance(dictionary.cbegin(), dict_it)});
+        distances.emplace_back(std::make_pair(*dict_it - *dict_it_offset, std::distance(dictionary.cbegin(), dict_it)));
       }
 
       std::sort(distances.begin(), distances.end(), [](auto pair1, auto pair2){ return pair1.first > pair2.first; });
@@ -124,7 +124,7 @@ class ColumnCompressor : public ColumnCompressorBase {
       size_t max_ranges_count = 10;
 
       if(max_ranges_count - 1 < distances.size()) {
-        distances.erase(dictionary.begin() + (max_ranges_count -1));
+        distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
       }
 
       std::sort(distances.begin(), distances.end(), [](auto pair1, auto pair2){ return pair1.second > pair2.second; });
@@ -140,10 +140,10 @@ class ColumnCompressor : public ColumnCompressorBase {
       //
       // next_startpoint is the start of the next range
 
-      std::vector<std::tuple<T,T>> ranges;
+      std::vector<std::pair<T,T>> ranges;
       size_t next_startpoint = 0u;
       for(const auto& [distance, index] : distances) {
-        ranges.push_back({dictionary[next_startpoint], dictionary[index]});
+        ranges.push_back(std::make_pair(dictionary[next_startpoint], dictionary[index]));
         next_startpoint = index + 1;
       }
 

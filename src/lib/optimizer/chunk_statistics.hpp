@@ -71,7 +71,7 @@ class MinMaxFilter : public BaseFilter {
 template <typename T>
 class RangeFilter : public BaseFilter {
  public:
-  RangeFilter(std::vector<std::tuple<T,T>> ranges) : _ranges(ranges) {};
+  RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(ranges) {};
   virtual ~RangeFilter() = default;
   
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
@@ -79,20 +79,38 @@ class RangeFilter : public BaseFilter {
     // Operators work as follows: value_from_table <operator> t_value
     // e.g. OpGreaterThan: value_from_table > t_value
     // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
-    bool prunable = false;
-    for(const auto& bounds : _ranges) {
-      auto& [min,max] = bounds;
-      switch (predicate_type) {
-        case PredicateCondition::Equals:
-          prunable |= t_value < min || t_value > max;
-          break;
+    switch (predicate_type) {
+      case PredicateCondition::GreaterThan: {
+        auto & max = _ranges.back().second;
+        return t_value >= max;
       }
+      case PredicateCondition::GreaterThanEquals: {
+        auto & max = _ranges.back().second;
+        return t_value > max;
+      }
+      case PredicateCondition::LessThan: {
+        auto & min = _ranges.front().first;
+        return t_value <= min;
+      }
+      case PredicateCondition::LessThanEquals: {
+        auto & min = _ranges.front().first;
+        return t_value < min;
+      }
+      case PredicateCondition::Equals: {
+        bool prunable = false;
+        for(const auto& bounds : _ranges) {
+          auto& [min,max] = bounds;
+          prunable |= t_value < min || t_value > max;
+        }
+        return prunable;
+      }
+      default:
+        return false;
     }
-    return prunable;
   }
 
  protected:
-  std::vector<std::tuple<T,T>> _ranges; 
+  std::vector<std::pair<T,T>> _ranges; 
 };
 
 class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
