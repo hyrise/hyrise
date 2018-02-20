@@ -7,20 +7,20 @@
 
 #include "constant_mappings.hpp"
 #include "join_edge.hpp"
-#include "join_plan_predicate.hpp"
 #include "join_graph_builder.hpp"
+#include "join_plan_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 std::shared_ptr<JoinGraph> JoinGraph::from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  return JoinGraphBuilder{}(lqp);
+  return JoinGraphBuilder{}(lqp);  // NOLINT - doesn't like {} followed by ()
 }
 
-std::shared_ptr<JoinGraph> JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
-                                     std::vector<LQPParentRelation> parent_relations,
-                                     const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates) {
+std::shared_ptr<JoinGraph> JoinGraph::from_predicates(
+    std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
+    const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates) {
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> vertex_to_index;
   std::map<JoinVertexSet, std::shared_ptr<JoinEdge>> vertices_to_edge;
   std::vector<std::shared_ptr<JoinEdge>> edges;

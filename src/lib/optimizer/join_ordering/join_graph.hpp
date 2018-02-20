@@ -39,9 +39,9 @@ class JoinGraph final {
   /**
    * Converts the predicates into edges and creates a JoinGraph from them.
    */
-  static std::shared_ptr<JoinGraph> from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
-                                   std::vector<LQPParentRelation> parent_relations,
-                                   const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
+  static std::shared_ptr<JoinGraph> from_predicates(
+      std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
+      const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
 
   JoinGraph() = default;
   JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
