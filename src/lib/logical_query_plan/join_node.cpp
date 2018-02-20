@@ -132,10 +132,13 @@ void JoinNode::_update_output() const {
   const auto& right_names = right_child()->output_column_names();
 
   _output_column_names.emplace();
-  _output_column_names->reserve(left_names.size() + right_names.size());
+  const auto only_output_left_columns = _join_mode == JoinMode::Semi || _join_mode == JoinMode::Anti;
+
+  const auto output_column_count =
+      only_output_left_columns ? left_names.size() : left_names.size() + right_names.size();
+  _output_column_names->reserve(output_column_count);
 
   _output_column_names->insert(_output_column_names->end(), left_names.begin(), left_names.end());
-  _output_column_names->insert(_output_column_names->end(), right_names.begin(), right_names.end());
 
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
@@ -144,8 +147,13 @@ void JoinNode::_update_output() const {
 
   _output_column_references->insert(_output_column_references->end(), left_child()->output_column_references().begin(),
                                     left_child()->output_column_references().end());
-  _output_column_references->insert(_output_column_references->end(), right_child()->output_column_references().begin(),
-                                    right_child()->output_column_references().end());
+
+  if (!only_output_left_columns) {
+    _output_column_names->insert(_output_column_names->end(), right_names.begin(), right_names.end());
+    _output_column_references->insert(_output_column_references->end(),
+                                      right_child()->output_column_references().begin(),
+                                      right_child()->output_column_references().end());
+  }
 }
 
 }  // namespace opossum

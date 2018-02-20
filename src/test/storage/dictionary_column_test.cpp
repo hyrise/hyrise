@@ -5,7 +5,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
@@ -27,7 +28,7 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnInt) {
   vc_int->append(5);
   vc_int->append(3);
 
-  auto col = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test attribute_vector size
@@ -51,7 +52,7 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
-  auto col = DeprecatedDictionaryCompression::compress_column(DataType::String, vc_str, EncodingType::Dictionary);
+  auto col = encode_column(EncodingType::Dictionary, DataType::String, vc_str);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
 
   // Test attribute_vector size
@@ -76,7 +77,7 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
   vc_double->append(0.9);
   vc_double->append(1.1);
 
-  auto col = DeprecatedDictionaryCompression::compress_column(DataType::Double, vc_double, EncodingType::Dictionary);
+  auto col = encode_column(EncodingType::Dictionary, DataType::Double, vc_double);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<double>>(col);
 
   // Test attribute_vector size
@@ -102,7 +103,7 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
   vc_int->append(NULL_VALUE);
   vc_int->append(3);
 
-  auto col = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test attribute_vector size
@@ -123,7 +124,7 @@ TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
 TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
 
-  auto col = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test for AllTypeVariant as parameter
@@ -142,7 +143,7 @@ TEST_F(StorageDictionaryColumnTest, FixedSizeByteAlignedVectorSize) {
   vc_int->append(1);
   vc_int->append(2);
 
-  auto col = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   auto attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
@@ -156,7 +157,7 @@ TEST_F(StorageDictionaryColumnTest, FixedSizeByteAlignedVectorSize) {
     vc_int->append(i);
   }
 
-  col = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
@@ -174,14 +175,12 @@ TEST_F(StorageDictionaryColumnTest, MemoryUsageEstimation) {
    */
 
   const auto empty_memory_usage =
-      DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary)
-          ->estimate_memory_usage();
+      encode_column(EncodingType::Dictionary, DataType::Int, vc_int)->estimate_memory_usage();
 
   vc_int->append(0);
   vc_int->append(1);
   vc_int->append(2);
-  const auto compressed_column =
-      DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int, EncodingType::Dictionary);
+  const auto compressed_column = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
   const auto dictionary_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(compressed_column);
 
   static constexpr auto size_of_attribute = 1u;
