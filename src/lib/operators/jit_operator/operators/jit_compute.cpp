@@ -119,23 +119,23 @@ void JitExpression::compute(JitRuntimeContext& ctx) const {
   }
 }
 
-std::pair<const JitDataType, const bool> JitExpression::_compute_result_type() {
+std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
   const auto left_result = _left_child->result();
 
   if (!_is_binary_operator()) {
     switch (_expression_type) {
       case ExpressionType::Not:
-        return std::make_pair(JitDataType::Bool, left_result.is_nullable());
+        return std::make_pair(DataType::Bool, left_result.is_nullable());
       case ExpressionType::IsNull:
       case ExpressionType::IsNotNull:
-        return std::make_pair(JitDataType::Bool, false);
+        return std::make_pair(DataType::Bool, false);
       default:
         Fail("expression type not supported");
     }
   }
 
   const auto right_result = _right_child->result();
-  JitDataType result_data_type;
+  DataType result_data_type;
 
   switch (_expression_type) {
     case ExpressionType::Addition:
@@ -166,7 +166,7 @@ std::pair<const JitDataType, const bool> JitExpression::_compute_result_type() {
     case ExpressionType::NotLike:
     case ExpressionType::And:
     case ExpressionType::Or:
-      result_data_type = JitDataType::Bool;
+      result_data_type = DataType::Bool;
       break;
     default:
       Fail("expression type not supported");

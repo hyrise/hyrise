@@ -48,12 +48,12 @@ class JitColumnReader : public BaseJitColumnReader {
     const auto& value = *_iterator(ctx);
     // clang-format off
     if constexpr (Nullable) {
-      _tuple_value.materialize(ctx).is_null() = value.is_null();
+      _tuple_value.materialize(ctx).set_is_null(value.is_null());
       if (!value.is_null()) {
-        _tuple_value.materialize(ctx).template as<DataType>() = value.value();
+        _tuple_value.materialize(ctx).template set<DataType>(value.value());
       }
     } else {
-      _tuple_value.materialize(ctx).template as<DataType>() = value.value();
+      _tuple_value.materialize(ctx).template set<DataType>(value.value());
     }
     // clang-format on
   }
