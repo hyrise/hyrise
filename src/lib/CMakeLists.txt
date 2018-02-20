@@ -255,8 +255,6 @@ set(
     storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
     storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
     storage/deprecated_dictionary_column.hpp
-    storage/deprecated_dictionary_compression.cpp
-    storage/deprecated_dictionary_compression.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp
@@ -357,6 +355,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
 )
@@ -367,6 +366,23 @@ set(
     sqlparser
     ${TBB_LIBRARY}
 )
+
+if (NOT DISABLE_JIT_SUPPORT)
+    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
+    set(JIT_EMBEDDED_SOURCES
+        # files listed here will be embedded into the binary as LLVM IR
+    )
+    embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
+    set(
+        SOURCES
+        ${SOURCES}
+        ${JIT_EMBEDDED_SOURCES}
+        ${LLVM_BUNDLE_FILE}
+    )
+    # Prevent clang from complaining about unused defines when compiling the assembly file
+    set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
+    set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
+endif()
 
 if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)

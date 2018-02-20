@@ -13,7 +13,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -111,7 +111,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   // 3 Rows
   auto t = load_table("src/test/tables/int.tbl", 2u);
   StorageManager::get().add_table(t_name, t);
-  opossum::DeprecatedDictionaryCompression::compress_table(*t);
+  opossum::ChunkEncoder::encode_all_chunks(t);
 
   // 10 Rows
   auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);

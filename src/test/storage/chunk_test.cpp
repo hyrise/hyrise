@@ -6,7 +6,7 @@
 #include "../lib/resolve_type.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/deprecated_dictionary_compression.hpp"
+#include "../lib/storage/column_encoding_utils.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/storage/index/group_key/group_key_index.hpp"
 #include "../lib/types.hpp"
@@ -16,25 +16,25 @@ namespace opossum {
 class StorageChunkTest : public BaseTest {
  protected:
   void SetUp() override {
-    vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+    vc_int = make_shared_by_data_type<BaseValueColumn, ValueColumn>(DataType::Int);
     vc_int->append(4);
     vc_int->append(6);
     vc_int->append(3);
 
-    vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+    vc_str = make_shared_by_data_type<BaseValueColumn, ValueColumn>(DataType::String);
     vc_str->append("Hello,");
     vc_str->append("world");
     vc_str->append("!");
 
-    dc_int = DeprecatedDictionaryCompression::compress_column(DataType::Int, vc_int);
-    dc_str = DeprecatedDictionaryCompression::compress_column(DataType::String, vc_str);
+    dc_int = encode_column(EncodingType::DeprecatedDictionary, DataType::Int, vc_int);
+    dc_str = encode_column(EncodingType::DeprecatedDictionary, DataType::String, vc_str);
 
     c = std::make_shared<Chunk>();
   }
 
   std::shared_ptr<Chunk> c;
-  std::shared_ptr<BaseColumn> vc_int = nullptr;
-  std::shared_ptr<BaseColumn> vc_str = nullptr;
+  std::shared_ptr<BaseValueColumn> vc_int = nullptr;
+  std::shared_ptr<BaseValueColumn> vc_str = nullptr;
   std::shared_ptr<BaseColumn> dc_int = nullptr;
   std::shared_ptr<BaseColumn> dc_str = nullptr;
 };
