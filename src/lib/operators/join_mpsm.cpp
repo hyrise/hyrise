@@ -22,18 +22,18 @@
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, const ScanType op)
+                   const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(left, right, mode, column_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
-                  op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals ||
-                  op == ScanType::OpNotEquals,
+  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
+                  op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
+                  op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
               "Unsupported scan type");
   // TODO(florian): this check makes no sense, also fix in join_sort_merge
-  DebugAssert(op != ScanType::OpNotEquals || mode == JoinMode::Inner,
+  DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
               "Outer joins are not implemented for not-equals joins.");
 }
 
@@ -44,8 +44,8 @@ std::shared_ptr<const Table> JoinMPSM::_on_execute() {
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
-  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(left_column_type, *this, _column_ids.first,
-                                                                           _column_ids.second, _scan_type, _mode);
+  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
+      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -54,7 +54,7 @@ void JoinMPSM::_on_cleanup() { _impl.reset(); }
 
 std::shared_ptr<AbstractOperator> JoinMPSM::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinMPSM>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                    _scan_type);
+                                    _predicate_condition);
 }
 
 const std::string JoinMPSM::name() const { return "Join MPSM"; }
@@ -62,8 +62,8 @@ const std::string JoinMPSM::name() const { return "Join MPSM"; }
 template <typename T>
 class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinMPSMImpl<T>(JoinMPSM& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id, const ScanType op,
-                  JoinMode mode)
+  JoinMPSMImpl<T>(JoinMPSM& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
+                  const PredicateCondition op, JoinMode mode)
       : _sort_merge_join{sort_merge_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
@@ -73,8 +73,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
     for (size_t cluster = 0; cluster < _cluster_count; ++cluster) {
-      _output_pos_lists_left.resize(_cluster_count);
-      _output_pos_lists_right.resize(_cluster_count);
+      _output_pos_lists_left[cluster].resize(1);
+      _output_pos_lists_right[cluster].resize(_cluster_count);
     }
   }
 
@@ -92,7 +92,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
 
-  const ScanType _op;
+  const PredicateCondition _op;
   const JoinMode _mode;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
@@ -136,9 +136,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
-      DebugAssert(start.parition == end.partition,
-                  "for_every_row_id only allowed inside of partitions") for (size_t cluster = start.cluster;
-                                                                             cluster <= end.cluster; ++cluster) {
+      DebugAssert(start.partition == end.partition, "for_every_row_id only allowed inside of partitions");
+      for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
         size_t end_index =
             (cluster == end.cluster) ? end.index : (*table)[end.partition]._chunk_columns[cluster]->size();
@@ -184,7 +183,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     size_t cluster_number = left_run.start.cluster;
     NodeID partition_number = left_run.start.partition;
     switch (_op) {
-      case ScanType::OpEquals:
+      case PredicateCondition::Equals:
         if (compare_result == CompareResult::Equal) {
           _emit_all_combinations(partition_number, cluster_number, left_run, right_run);
         } else if (compare_result == CompareResult::Less) {
@@ -197,7 +196,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
           }
         }
         break;
-        //      case ScanType::OpNotEquals:
+        //      case PredicateCondition::OpNotEquals:
         //        if (compare_result == CompareResult::Greater) {
         //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         //        } else if (compare_result == CompareResult::Equal) {
@@ -207,33 +206,33 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         //        }
         //        break;
-        //      case ScanType::OpGreaterThan:
+        //      case PredicateCondition::OpGreaterThan:
         //        if (compare_result == CompareResult::Greater) {
         //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         //        } else if (compare_result == CompareResult::Equal) {
         //          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
         //        }
         //        break;
-        //      case ScanType::OpGreaterThanEquals:
+        //      case PredicateCondition::OpGreaterThanEquals:
         //        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
         //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         //        }
         //        break;
-        //      case ScanType::OpLessThan:
+        //      case PredicateCondition::OpLessThan:
         //        if (compare_result == CompareResult::Less) {
         //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         //        } else if (compare_result == CompareResult::Equal) {
         //          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         //        }
         //        break;
-        //      case ScanType::OpLessThanEquals:
+        //      case PredicateCondition::OpLessThanEquals:
         //        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
         //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         //        }
         //        break;
       default:
         DebugAssert(false, "currently only Equi Join is supported by NumaMPSM Join");
-        throw std::logic_error("Unknown ScanType");
+        throw std::logic_error("Unknown PredicateCondition");
     }
   }
 
@@ -314,7 +313,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     // create N local PosLists, one for each right partition
     // in the end merge those N local PosLists and insert to the correct cluster
 
-    // For MPSM join the left side is reshuffled to contain one cluster per NUMA node, it is therefor the first cluster in the corresponding data structure
+    // For MPSM join the left side is reshuffled to contain one cluster per NUMA node,
+    // it is therefore the first (and only) cluster in the corresponding data structure
     const NodeID left_node_id = static_cast<NodeID>(cluster_number);
     const size_t left_cluster_id = 0;
 
@@ -326,12 +326,12 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     std::shared_ptr<MaterializedChunk<T>> left_cluster =
         (*_sorted_left_table)[left_node_id]._chunk_columns[left_cluster_id];
 
-    // TODO (florian): parallelize this using jobs (or not, since we are already running jobbed for LHS, and jobbing will probably not add much here)
+    // TODO (florian): parallelize this using jobs (or not, since we are already running jobbed for LHS, and jobbing may not add much here)
     for (NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
       std::shared_ptr<MaterializedChunk<T>> right_cluster =
-          (*_sorted_left_table)[right_node_id]._chunk_columns[right_cluster_id];
+          (*_sorted_right_table)[right_node_id]._chunk_columns[right_cluster_id];
 
       size_t left_run_start = 0;
       size_t right_run_start = 0;
@@ -385,7 +385,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Determines the smallest value in a sorted materialized table.
   **/
   //  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-  //    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
+  //    DebugAssert(_op != PredicateCondition::OpEquals, "Complete table order is required for _table_min_value which is only " +
   //                                               "available in the non-equi case");
   //    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
@@ -402,7 +402,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Determines the largest value in a sorted materialized table.
   **/
   //  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
-  //    DebugAssert(_op != ScanType::OpEquals,
+  //    DebugAssert(_op != PredicateCondition::OpEquals,
   //                "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
   //    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
@@ -467,28 +467,28 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   //    auto& left_max_value = _table_max_value(_sorted_left_table);
   //    auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-  //    if (_op == ScanType::OpLessThan) {
+  //    if (_op == PredicateCondition::OpLessThan) {
   //      // Look for the first right value that is bigger than the smallest left value.
   //      auto result =
   //          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
   //      if (result.has_value()) {
   //        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
   //      }
-  //    } else if (_op == ScanType::OpLessThanEquals) {
+  //    } else if (_op == PredicateCondition::OpLessThanEquals) {
   //      // Look for the first right value that is bigger or equal to the smallest left value.
   //      auto result =
   //          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
   //      if (result.has_value()) {
   //        _emit_left_null_combinations(0, TablePosition(0, 0).to(*result));
   //      }
-  //    } else if (_op == ScanType::OpGreaterThan) {
+  //    } else if (_op == PredicateCondition::OpGreaterThan) {
   //      // Look for the first right value that is smaller than the biggest left value.
   //      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
   //                                                        [&](const T& value) { return value < left_max_value; });
   //      if (result.has_value()) {
   //        _emit_left_null_combinations(0, (*result).to(end_of_right_table));
   //      }
-  //    } else if (_op == ScanType::OpGreaterThanEquals) {
+  //    } else if (_op == PredicateCondition::OpGreaterThanEquals) {
   //      // Look for the first right value that is smaller or equal to the biggest left value.
   //      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
   //                                                        [&](const T& value) { return value <= left_max_value; });
@@ -508,28 +508,28 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   //    auto& right_max_value = _table_max_value(_sorted_right_table);
   //    auto end_of_left_table = _end_of_table(_sorted_left_table);
 
-  //    if (_op == ScanType::OpLessThan) {
+  //    if (_op == PredicateCondition::OpLessThan) {
   //      // Look for the last left value that is smaller than the biggest right value.
   //      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
   //                                                        [&](const T& value) { return value < right_max_value; });
   //      if (result.has_value()) {
   //        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
   //      }
-  //    } else if (_op == ScanType::OpLessThanEquals) {
+  //    } else if (_op == PredicateCondition::OpLessThanEquals) {
   //      // Look for the last left value that is smaller or equal than the biggest right value.
   //      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
   //                                                        [&](const T& value) { return value <= right_max_value; });
   //      if (result.has_value()) {
   //        _emit_right_null_combinations(0, (*result).to(end_of_left_table));
   //      }
-  //    } else if (_op == ScanType::OpGreaterThan) {
+  //    } else if (_op == PredicateCondition::OpGreaterThan) {
   //      // Look for the first left value that is bigger than the smallest right value.
   //      auto result =
   //          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
   //      if (result.has_value()) {
   //        _emit_right_null_combinations(0, TablePosition(0, 0).to(*result));
   //      }
-  //    } else if (_op == ScanType::OpGreaterThanEquals) {
+  //    } else if (_op == PredicateCondition::OpGreaterThanEquals) {
   //      // Look for the first left value that is bigger or equal to the smallest right value.
   //      auto result =
   //          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
@@ -556,10 +556,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
-    //    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+    //    if ((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != PredicateCondition::OpEquals) {
     //      _left_outer_non_equi_join();
     //    }
-    //    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+    //    if ((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != PredicateCondition::OpEquals) {
     //      _right_outer_non_equi_join();
     //    }
   }
@@ -603,17 +603,17 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
       // Add the column data (in the form of a poslist)
       // Check whether the referenced column is already a reference column
-      const auto base_column = input_table->get_chunk(ChunkID{0}).get_column(column_id);
+      const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(column_id);
       const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(base_column);
       if (ref_column) {
         // Create a pos_list referencing the original column instead of the reference column
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
         auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
                                                                 ref_column->referenced_column_id(), new_pos_list);
-        output_table->get_chunk(ChunkID{0}).add_column(new_ref_column);
+        output_table->get_chunk(ChunkID{0})->add_column(new_ref_column);
       } else {
         auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
-        output_table->get_chunk(ChunkID{0}).add_column(new_ref_column);
+        output_table->get_chunk(ChunkID{0})->add_column(new_ref_column);
       }
     }
   }
@@ -627,7 +627,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto b_column = input_table->get_chunk(chunk_id).get_column(column_id);
+      auto b_column = input_table->get_chunk(chunk_id)->get_column(column_id);
       auto r_column = std::dynamic_pointer_cast<const ReferenceColumn>(b_column);
       input_pos_lists.push_back(r_column->pos_list());
     }
@@ -645,14 +645,6 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     return new_pos_list;
   }
 
-  void _shuffle_lhs_clusters() {
-    // move everything in cluster n to NUMA Node N
-    // resort
-    // TODO (florian): eliminate double sorting (although we probably have an adaptive sort so we should not suffer too much, else implement a merge sort here?)
-  }
-
-  void _sort_clusters() {}
-
  public:
   /**
   * Executes the SortMergeJoin operator.
@@ -662,7 +654,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSortNUMA<T>(
         _sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(), _sort_merge_join._column_ids,
-        _op == ScanType::OpEquals, include_null_left, include_null_right, _cluster_count);
+        _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
