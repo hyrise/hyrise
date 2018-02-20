@@ -43,6 +43,10 @@ class ValueVector {
 
   iterator end() noexcept;
 
+  iterator begin() const noexcept;
+
+  iterator end() const noexcept;
+
   reverse_iterator rbegin() noexcept;
 
   reverse_iterator rend() noexcept;
@@ -124,6 +128,10 @@ class ValueVector<FixedString> {
   iterator begin() noexcept;
 
   iterator end() noexcept;
+
+  iterator begin() const noexcept;
+
+  iterator end() const noexcept;
 
   iterator cbegin() const noexcept;
 
