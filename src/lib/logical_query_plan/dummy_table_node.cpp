@@ -14,11 +14,16 @@ DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) { _o
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<DummyTableNode>();
+  return DummyTableNode::make();
 }
 
 std::string DummyTableNode::description() const { return "[DummyTable]"; }
 
 const std::vector<std::string>& DummyTableNode::output_column_names() const { return _output_column_names; }
+
+bool DummyTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  return true;
+}
 
 }  // namespace opossum

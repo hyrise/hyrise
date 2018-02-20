@@ -10,7 +10,7 @@ namespace opossum {
 std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnReference& column_reference,
                                                             const std::optional<std::string>& alias) {
   auto expression = std::make_shared<LQPExpression>(ExpressionType::Column);
-  expression->_column_references = column_reference;
+  expression->_column_reference = column_reference;
   expression->_alias = alias;
 
   return expression;
@@ -37,20 +37,20 @@ std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
 }
 
 const LQPColumnReference& LQPExpression::column_reference() const {
-  DebugAssert(_column_references,
+  DebugAssert(_column_reference,
               "Expression " + expression_type_to_string.at(_type) + " does not have a LQPColumnReference");
-  return *_column_references;
+  return *_column_reference;
 }
 
 void LQPExpression::set_column_reference(const LQPColumnReference& column_reference) {
   Assert(_type == ExpressionType::Column, "Can't set an LQPColumnReference on a non-column");
-  _column_references = column_reference;
+  _column_reference = column_reference;
 }
 
 std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                      bool is_root) const {
   if (type() == ExpressionType::Column) {
-    return column_reference().description();
+    return column_reference().description() + (_alias ? " AS " + *_alias : std::string{});
   }
   return AbstractExpression<LQPExpression>::to_string(input_column_names, is_root);
 }
@@ -59,10 +59,10 @@ bool LQPExpression::operator==(const LQPExpression& other) const {
   if (!AbstractExpression<LQPExpression>::operator==(other)) {
     return false;
   }
-  return _column_references == other._column_references;
+  return _column_reference == other._column_reference;
 }
 
 void LQPExpression::_deep_copy_impl(const std::shared_ptr<LQPExpression>& copy) const {
-  copy->_column_references = _column_references;
+  copy->_column_reference = _column_reference;
 }
 }  // namespace opossum

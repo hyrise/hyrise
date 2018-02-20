@@ -5,6 +5,7 @@ set(
     abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
+    all_type_variant.cpp
     all_type_variant.hpp
     fixed_string.hpp
     concurrency/commit_context.cpp
@@ -352,6 +353,23 @@ set(
     sqlparser
     ${TBB_LIBRARY}
 )
+
+if (NOT DISABLE_JIT_SUPPORT)
+    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
+    set(JIT_EMBEDDED_SOURCES
+        # files listed here will be embedded into the binary as LLVM IR
+    )
+    embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
+    set(
+        SOURCES
+        ${SOURCES}
+        ${JIT_EMBEDDED_SOURCES}
+        ${LLVM_BUNDLE_FILE}
+    )
+    # Prevent clang from complaining about unused defines when compiling the assembly file
+    set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
+    set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
+endif()
 
 if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)

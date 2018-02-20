@@ -39,7 +39,7 @@ TEST_F(OptimizerTest, RuleBatches) {
   optimizer.add_rule_batch(iterative_batch);
   optimizer.add_rule_batch(once_batch);
 
-  auto lqp = std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
 
   optimizer.optimize(lqp);
 
