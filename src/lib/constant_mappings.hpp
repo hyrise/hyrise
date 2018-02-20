@@ -22,7 +22,5 @@ extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
-extern const std::unordered_map<DataType, JitDataType> data_type_to_jit_data_type;
-extern const std::unordered_map<JitDataType, DataType> jit_data_type_to_data_type;
 
 }  // namespace opossum

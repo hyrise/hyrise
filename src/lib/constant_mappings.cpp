@@ -154,15 +154,4 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                  return map;
                });
 
-const std::unordered_map<DataType, JitDataType> data_type_to_jit_data_type = {{DataType::Int, JitDataType::Int},
-                                                                              {DataType::Long, JitDataType::Long},
-                                                                              {DataType::Float, JitDataType::Float},
-                                                                              {DataType::Double, JitDataType::Double},
-                                                                              {DataType::String, JitDataType::String}};
-
-const std::unordered_map<JitDataType, DataType> jit_data_type_to_data_type = {
-    {JitDataType::Bool, DataType::Int},      {JitDataType::Int, DataType::Int},
-    {JitDataType::Long, DataType::Long},     {JitDataType::Float, DataType::Float},
-    {JitDataType::Double, DataType::Double}, {JitDataType::String, DataType::String}};
-
 }  // namespace opossum
