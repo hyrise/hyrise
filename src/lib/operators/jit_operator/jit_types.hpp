@@ -36,21 +36,6 @@ namespace opossum {
  * This materialized value finally allows the operator to access a data value.
  */
 
-/* Since we handle arithmetic and logical operations in the same way inside the JitOperator,
- * we need an additional boolean type. Booleans are stored as uint8_t, since std::vector<bool>
- * is implemented in space-efficient manner in most standard library implementations and does not support
- * all necessary operations (e.g. accessing elements as non-const references).
- * Null, on the other hand, is not a valid data type. Instead, each value must have a (potential) concrete data type.
- * Nullable values have an additional boolean value indicating their NULL status.
- */
-#define JIT_DATA_TYPE_INFO ((uint8_t, Bool, "bool")) DATA_TYPE_INFO
-
-enum class JitDataType : uint8_t { Bool, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES) };
-
-// This templated method returns the JitDataType for a given type.
-template <typename T>
-JitDataType jit_data_type();
-
 // A vector of variant values.
 // In order to store N variant values, one vector of size N is created per data type.
 // Each of the N variant values is then represented by the elements at some index I in each vector.
@@ -67,11 +52,14 @@ class JitVariantVector {
   }
 
   template <typename T>
-  T& as(const size_t index);
-  uint8_t& is_null(const size_t index) { return _is_null[index]; }
+  T get(const size_t index) const;
+  template <typename T>
+  void set(const size_t index, const T value);
+  bool is_null(const size_t index) { return _is_null[index]; }
+  bool set_is_null(const size_t index, const bool is_null) { return _is_null[index]; }
 
  private:
-  std::vector<uint8_t> _bool;
+  std::vector<bool> _bool;
   std::vector<int32_t> _int;
   std::vector<int64_t> _long;
   std::vector<float> _float;
@@ -92,26 +80,26 @@ struct JitRuntimeContext {
 };
 
 struct JitMaterializedValue {
-  JitMaterializedValue(const JitDataType data_type, const bool is_nullable, const size_t vector_index,
+  JitMaterializedValue(const DataType data_type, const bool is_nullable, const size_t vector_index,
                        JitVariantVector& vector)
       : _data_type{data_type}, _is_nullable{is_nullable}, _vector_index{vector_index}, _vector{vector} {}
 
-  JitDataType data_type() const { return _data_type; }
+  DataType data_type() const { return _data_type; }
   bool is_nullable() const { return _is_nullable; }
 
   template <typename T>
-  T& as() {
-    return _vector.as<T>(_vector_index);
+  const T get() const {
+    return _vector.get<T>(_vector_index);
   }
   template <typename T>
-  const T& as() const {
-    return _vector.as<T>(_vector_index);
+  void set(const T value) {
+    _vector.set<T>(_vector_index, value);
   }
-  uint8_t& is_null() { return _vector.is_null(_vector_index); }
-  uint8_t is_null() const { return _is_nullable && _vector.is_null(_vector_index); }
+  bool is_null() const { return _is_nullable && _vector.is_null(_vector_index); }
+  void set_is_null(const bool is_null) const { _vector.set_is_null(_vector_index, is_null); }
 
  private:
-  const JitDataType _data_type;
+  const DataType _data_type;
   const bool _is_nullable;
   const size_t _vector_index;
   JitVariantVector& _vector;
@@ -119,12 +107,12 @@ struct JitMaterializedValue {
 
 class JitTupleValue {
  public:
-  JitTupleValue(const JitDataType data_type, const bool is_nullable, const size_t tuple_index)
+  JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
       : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}
-  JitTupleValue(const std::pair<const JitDataType, const bool> data_type, const size_t tuple_index)
+  JitTupleValue(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
       : _data_type{data_type.first}, _is_nullable{data_type.second}, _tuple_index{tuple_index} {}
 
-  JitDataType data_type() const { return _data_type; }
+  DataType data_type() const { return _data_type; }
   bool is_nullable() const { return _is_nullable; }
   size_t tuple_index() const { return _tuple_index; }
 
@@ -134,7 +122,7 @@ class JitTupleValue {
   }
 
  private:
-  const JitDataType _data_type;
+  const DataType _data_type;
   const bool _is_nullable;
   const size_t _tuple_index;
 };
