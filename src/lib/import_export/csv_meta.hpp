@@ -35,7 +35,7 @@ struct ParseConfig {
  * Meta information for a CSV table:
  *
  * chunk_size    desired chunk size of the table
- * auto_compress if true, use DeprecatedDictionaryCompression on each chunk after it is parsed.
+ * auto_compress if true, encodes each chunk using dictionary encoding after it is parsed.
  * config        characters and options that specify how the CSV should be parsed (delimiter, separator, etc.)
  * columns       column meta information (name, type, nullable) for each column
  */

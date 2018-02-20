@@ -25,7 +25,7 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
         adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
   }
 
-  return std::make_shared<UpdateNode>(_table_name, column_expressions);
+  return UpdateNode::make(_table_name, column_expressions);
 }
 
 std::string UpdateNode::description() const {
@@ -59,4 +59,12 @@ const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expression
 
 const std::string& UpdateNode::table_name() const { return _table_name; }
 
+bool UpdateNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& update_node = static_cast<const UpdateNode&>(rhs);
+
+  Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
+  return _table_name == update_node._table_name &&
+         _equals(*left_child(), _column_expressions, *update_node.left_child(), update_node._column_expressions);
+}
 }  // namespace opossum

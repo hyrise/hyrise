@@ -15,7 +15,7 @@ UnionNode::UnionNode(UnionMode union_mode) : AbstractLQPNode(LQPNodeType::Union)
 std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<UnionNode>(_union_mode);
+  return UnionNode::make(_union_mode);
 }
 
 UnionMode UnionNode::union_mode() const { return _union_mode; }
@@ -58,4 +58,12 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
   Fail("Statistics for UNION not yet implemented");
 }
+
+bool UnionNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& union_node = static_cast<const UnionNode&>(rhs);
+
+  return _union_mode == union_node._union_mode;
+}
+
 }  // namespace opossum
