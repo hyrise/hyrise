@@ -65,6 +65,11 @@ class ValueVector {
 
   const_iterator cend() const noexcept;
 
+  template <class Iter>
+  void erase(Iter start, Iter end) {
+    _values.erase(start, end);
+  }
+
   T& operator[](const size_t n);
 
   const T& operator[](const size_t n) const;

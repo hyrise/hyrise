@@ -101,7 +101,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
 
  private:
   template <typename T>
-  static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
+  static ValueID _get_value_id(const ValueVector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
