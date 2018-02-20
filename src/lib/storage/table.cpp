@@ -15,9 +15,31 @@
 
 namespace opossum {
 
-Table::Table(const TableLayout& layout, const UseMvcc use_mvcc, const uint32_t max_chunk_size)
-    : _layout(layout), _use_mvcc(use_mvcc), _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable):
+  name(name), data_type(data_type), nullable(nullable) {}
+
+Table::Table(const TableColumnDefinitions& column_definitions,
+             const TableType type,
+             const UseMvcc use_mvcc,
+             const uint32_t max_chunk_size)
+    : _column_definitions(column_definitions),
+      _type(type),
+      _use_mvcc(use_mvcc),
+      _max_chunk_size(max_chunk_size),
+      _append_mutex(std::make_unique<std::mutex>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
+}
+
+const TableColumnDefinitions& Table::column_definitions() const {
+  return _column_definitions;
+}
+
+TableType Table::type() const {
+  return _type;
+}
+
+size_t Table::column_count() const {
+  return _column_definitions.size();
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
@@ -64,10 +86,10 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-std::shared_ptr<Chunk> Table::emplace_chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+std::shared_ptr<Chunk> Table::add_chunk_new(const std::vector<std::shared_ptr<BaseColumn>>& columns,
                                             const std::optional<PolymorphicAllocator<Chunk>>& alloc,
                                             const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
-  _chunks.emplace_back(std::make_shared<Chunk>(_layout, _use_mvcc, alloc, access_counter));
+  _chunks.emplace_back(std::make_shared<Chunk>(_column_definitions, _use_mvcc, alloc, access_counter));
   return _chunks.back();
 }
 
@@ -82,7 +104,7 @@ size_t Table::estimate_memory_usage() const {
     bytes += chunk->estimate_memory_usage();
   }
 
-  for (const auto& column_definition : _layout.column_definitions) {
+  for (const auto& column_definition : _column_definitions) {
     bytes += column_definition.name.size();
   }
 

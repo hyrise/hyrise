@@ -10,7 +10,7 @@
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
-#include "storage/table_layout.hpp"
+#include "storage/table_column_defintion.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -23,20 +23,17 @@ class TableStatistics;
 // A table is partitioned horizontally into a number of chunks
 class Table : private Noncopyable {
  public:
-  // creates a table
-  // the parameter specifies the maximum chunk size, i.e., partition size
-  // default is the maximum allowed chunk size. A table holds always at least one chunk
-  explicit Table(const TableLayout& layout, UseMvcc use_mvcc = UseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
+  explicit Table(const TableColumnDefinitions& column_definitions,
+                 const TableType type = TableType::Data,
+                 const UseMvcc use_mvcc = UseMvcc::No,
+                 const uint32_t max_chunk_size = Chunk::MAX_SIZE);
 
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  Table(Table&&) = default;
-  Table& operator=(Table&&) = default;
+  const TableColumnDefinitions& column_definitions() const;
 
-  const TableLayout& layout() const;
+  TableType type() const;
 
-  // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t column_count() const;
+  // Returns the number of columns
+  size_t column_count() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -52,7 +49,7 @@ class Table : private Noncopyable {
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
-  std::shared_ptr<Chunk> emplace_chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+  std::shared_ptr<Chunk> add_chunk_new(const std::vector<std::shared_ptr<BaseColumn>>& columns,
                                        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                                        const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
 
@@ -110,7 +107,8 @@ class Table : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  protected:
-  const TableLayout _layout;
+  const TableColumnDefinitions _column_definitions;
+  const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
   std::vector<std::shared_ptr<Chunk>> _chunks;

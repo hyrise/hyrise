@@ -17,13 +17,10 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
-<<<<<<< HEAD
-#include "table_layout.hpp"
-=======
+#include "table_column_definition.hpp"
 #include "utils/copyable_atomic.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/scoped_locking_ptr.hpp"
->>>>>>> 0d25c7e2ab467ee54e99dc2cd06dcd3316357b8e
 
 namespace opossum {
 
@@ -107,8 +104,8 @@ class Chunk : private Noncopyable {
   // As such, it cannot have MVCC information.
   Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
         UseMvcc mvcc_mode = UseMvcc::No,
-                 const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                 const std::shared_ptr<AccessCounter> access_counter = nullptr);
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+        const std::shared_ptr<AccessCounter> access_counter = nullptr);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

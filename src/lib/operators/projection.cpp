@@ -40,17 +40,14 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 }
 
 template <typename T>
-void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
+std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T> type,
                                 const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
                                 std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
   if (reuse_column_from_input) {
     // we have to use get_mutable_column here because we cannot add a const column to the chunk
-    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
-    return chunk->add_column(bypassed_column);
+    return input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
   }
-
-  std::shared_ptr<BaseColumn> column;
 
   if (expression->is_null_literal()) {
     // fill a nullable column with NULLs
@@ -59,7 +56,7 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     // Explicitly pass T{} because in some cases it won't initialize otherwise
     auto values = pmr_concurrent_vector<T>(row_count, T{});
 
-    column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+    return std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   } else {
     // fill a value column with the specified expression
     auto values = _evaluate_expression<T>(expression, input_table_left, chunk_id);
@@ -74,26 +71,28 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
       null_values.push_back(value == std::nullopt);
     }
 
-    column = std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
+    return std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
   }
-
-  chunk->add_column(column);
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   auto output = std::make_shared<Table>();
   auto reuse_column_from_input = true;
 
-  // Prepare terms and output table for each column to project
+  /**
+   * Determine the TableColumnDefinitions and create empty output table from them
+   */
+  TableColumnDefinitions column_definitions;
   for (const auto& column_expression : _column_expressions) {
-    std::string name;
+    TableColumnDefinition column_definition;
 
+    // Determine column name
     if (column_expression->alias()) {
-      name = *column_expression->alias();
+      column_definition.name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::Column) {
-      name = _input_table_left()->column_name(column_expression->column_id());
+      column_definition.name = _input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
-      name = column_expression->to_string(_input_table_left()->column_names());
+      column_definition.name = column_expression->to_string(_input_table_left()->column_names());
     } else {
       Fail("Expression type is not supported.");
     }
@@ -105,24 +104,29 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto type = _get_type_of_expression(column_expression, _input_table_left());
     if (type == DataType::Null) {
       // in case of a NULL literal, simply add a nullable int column
-      output->add_column_definition(name, DataType::Int, true);
+      column_definition.data_type = DataType::Int;
+      column_definition.nullable = true;
     } else {
-      output->add_column_definition(name, type);
+      column_definition.data_type = type;
     }
   }
+  auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, _input_table_left()->max_chunk_size());
 
+  /**
+   * Perform the projection
+   */
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
-    // fill the new table
-    auto chunk_out = std::make_shared<Chunk>();
+    std::vector<std::shared_ptr<BaseColumn>> output_columns;
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
-      resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
-        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
+      resolve_data_type(output_table->column_type(ColumnID{expression_index}), [&](auto type) {
+        const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], _input_table_left(),
                        reuse_column_from_input);
+        output_columns.emplace_back(column);
       });
     }
 
-    output->emplace_chunk(std::move(chunk_out));
+    output->add_chunk_new(output_columns);
   }
 
   return output;
