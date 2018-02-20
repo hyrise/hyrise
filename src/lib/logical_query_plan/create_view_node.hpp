@@ -11,9 +11,12 @@ namespace opossum {
  */
 class CreateViewNode : public AbstractLQPNode {
  public:
-  explicit CreateViewNode(const std::string& view_name, std::shared_ptr<const AbstractLQPNode> lqp);
+  explicit CreateViewNode(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp);
 
   std::string description() const override;
+  const std::vector<std::string>& output_column_names() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
   std::string view_name() const;
   std::shared_ptr<const AbstractLQPNode> lqp() const;

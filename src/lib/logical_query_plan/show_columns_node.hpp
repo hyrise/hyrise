@@ -9,13 +9,16 @@ namespace opossum {
 /**
  * This node type represents the SHOW COLUMNS management command.
  */
-class ShowColumnsNode : public AbstractLQPNode {
+class ShowColumnsNode : public EnableMakeForLQPNode<ShowColumnsNode>, public AbstractLQPNode {
  public:
   explicit ShowColumnsNode(const std::string& table_name);
 
   std::string description() const override;
 
   const std::string& table_name() const;
+
+  const std::vector<std::string>& output_column_names() const override;
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

@@ -16,7 +16,7 @@ class MockNodeTest : public BaseTest {
     auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     _statistics = std::make_shared<TableStatistics>(table);
 
-    _mock_node = std::make_shared<MockNode>(_statistics);
+    _mock_node = MockNode::make(_statistics);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -37,13 +37,20 @@ TEST_F(MockNodeTest, OutputColumnNames) {
 }
 
 TEST_F(MockNodeTest, ColumnNamesWithAlias) {
-  auto aliased_node = std::make_shared<MockNode>(_statistics);
+  auto aliased_node = MockNode::make(_statistics);
   aliased_node->set_alias("foo");
 
   for (ColumnID column_index{0}; column_index < ColumnID{4}; ++column_index) {
     auto expected_name = "foo.MockCol" + std::to_string(column_index);
     EXPECT_EQ(aliased_node->get_verbose_column_name(column_index), expected_name);
   }
+}
+
+TEST_F(MockNodeTest, ShallowEquals) {
+  EXPECT_ANY_THROW(_mock_node->shallow_equals(*_mock_node));
+
+  const auto other_mock_node = MockNode::make(_statistics);
+  EXPECT_ANY_THROW(other_mock_node->shallow_equals(*_mock_node));
 }
 
 }  // namespace opossum
