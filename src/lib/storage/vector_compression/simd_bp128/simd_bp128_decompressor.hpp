@@ -46,7 +46,6 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
     if (_is_index_after_or_within_cached_meta_block(i)) {
       const auto relative_index = _index_relative_to_cached_meta_block(i);
       const auto relative_meta_block_index = relative_index / Packing::meta_block_size;
-      DebugAssert(relative_meta_block_index > 0u, "");
 
       _read_meta_info_from_offset(relative_meta_block_index);
       return _get_within_cached_meta_block(i);
