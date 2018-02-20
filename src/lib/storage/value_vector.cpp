@@ -104,7 +104,7 @@ void ValueVector<T>::reserve(const size_t n) {
 
 template <typename T>
 size_t ValueVector<T>::data_size() const {
-  return sizeof(this*) + _values.size() * sizeof(typename decltype(_dictionary)::element_type::value_type);
+  return sizeof(*this) + _values.size() * sizeof(typename decltype(_values)::value_type);
 }
 
 // Implementation of ValueVector<FixedString> starts here
