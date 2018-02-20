@@ -1,20 +1,20 @@
 #include <boost/hana/at_key.hpp>
 
+#include <cctype>
 #include <memory>
 #include <random>
 #include <sstream>
-#include <cctype>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/column_encoding_utils.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/value_column.hpp"
-#include "constant_mappings.hpp"
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -82,7 +82,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> encode_value_column(DataType data_type,
-                                                            const std::shared_ptr<ValueColumn<T>>& value_column) {
+                                                         const std::shared_ptr<ValueColumn<T>>& value_column) {
     const auto column_encoding_spec = GetParam();
     return encode_column(column_encoding_spec.encoding_type, data_type, value_column,
                          column_encoding_spec.vector_compression_type);
@@ -104,12 +104,13 @@ auto formatter = [](const ::testing::TestParamInfo<ColumnEncodingSpec> info) {
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(ColumnEncodingSpecs, EncodedColumnTest,
-                        ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                                          ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                                          ColumnEncodingSpec{EncodingType::RunLength},
-                                          ColumnEncodingSpec{EncodingType::DeprecatedDictionary}),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(
+    ColumnEncodingSpecs, EncodedColumnTest,
+    ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                      ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                      ColumnEncodingSpec{EncodingType::RunLength},
+                      ColumnEncodingSpec{EncodingType::DeprecatedDictionary}),
+    formatter);
 
 TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
   auto value_column = this->create_int_value_column();

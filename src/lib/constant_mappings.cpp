@@ -142,12 +142,11 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                  return map;
                });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string =
-    make_bimap<EncodingType, std::string>({
-        {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
-        {EncodingType::Dictionary, "Dictionary"},
-        {EncodingType::RunLength, "RunLength"},
-    });
+const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
+    {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
+    {EncodingType::Dictionary, "Dictionary"},
+    {EncodingType::RunLength, "RunLength"},
+});
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
