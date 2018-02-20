@@ -98,8 +98,6 @@ class JoinGraphBuilderTest : public ::testing::Test {
     _predicate_node_d->set_left_child(_mock_node_b);
     _predicate_node_a->set_left_child(_aggregate_node_a);
 
-    _lqp->print();
-
     _join_graph = JoinGraphBuilder{}(_lqp);  // NOLINT
   }
 
