@@ -32,6 +32,7 @@ namespace detail {
 
 // clang-format off
 #define DATA_TYPE_INFO                  \
+  ((bool,        Bool,       "bool"))   \
   ((int32_t,     Int,        "int"))    \
   ((int64_t,     Long,       "long"))   \
   ((float,       Float,      "float"))  \
@@ -80,6 +81,10 @@ static constexpr auto data_type_enum_string_pairs = detail::data_type_enum_strin
 
 using DataType = detail::DataType;
 using AllTypeVariant = detail::AllTypeVariant;
+
+// Templated function that returns the DataType for a given type
+template <typename T>
+DataType data_type();
 
 // Function to check if AllTypeVariant is null
 inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
