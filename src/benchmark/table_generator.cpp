@@ -10,7 +10,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -66,7 +66,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   }
 
   if (encoding_type.has_value()) {
-    DeprecatedDictionaryCompression::compress_table(*table, encoding_type.value());
+    ChunkEncoder::encode_all_chunks(table, {encoding_type.value()});
   }
 
   return table;

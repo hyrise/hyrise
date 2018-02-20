@@ -37,14 +37,12 @@ class DictionaryColumn : public BaseDictionaryColumn {
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t estimate_memory_usage() const final;
-
   /**@}*/
 
   /**
    * @defgroup BaseDictionaryColumn interface
    * @{
    */
-
   ValueID lower_bound(const AllTypeVariant& value) const final;
   ValueID upper_bound(const AllTypeVariant& value) const final;
 

@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/import_binary.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -62,7 +62,7 @@ TEST_F(OperatorsImportBinaryTest, StringDictionaryColumn) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  DeprecatedDictionaryCompression::compress_table(*expected_table);
+  ChunkEncoder::encode_all_chunks(expected_table);
 
   StorageManager::get().add_table("table_a", expected_table);
 
@@ -102,7 +102,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  DeprecatedDictionaryCompression::compress_table(*expected_table);
+  ChunkEncoder::encode_all_chunks(expected_table);
 
   StorageManager::get().add_table("expected_table", expected_table);
 
@@ -124,7 +124,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  DeprecatedDictionaryCompression::compress_chunks(*expected_table, {ChunkID{0}});
+  ChunkEncoder::encode_chunks(expected_table, {ChunkID{0}});
 
   StorageManager::get().add_table("expected_table", expected_table);
 
