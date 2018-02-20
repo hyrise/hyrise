@@ -1,8 +1,8 @@
 #include <sstream>
 
 #include "gtest/gtest.h"
-
 #include "base_test.hpp"
+
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
