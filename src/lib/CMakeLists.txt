@@ -99,6 +99,7 @@ set(
     operators/insert.cpp
     operators/insert.hpp
     operators/join_hash.cpp
+    operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
@@ -161,6 +162,7 @@ set(
     optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_plan_predicate.cpp
     optimizer/join_ordering/join_plan_predicate.hpp
+    optimizer/join_ordering/join_vertex_set.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
