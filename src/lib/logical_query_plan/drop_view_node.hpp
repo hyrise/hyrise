@@ -10,7 +10,7 @@ namespace opossum {
 /**
  * Node type to represent deleting a view from the StorageManager
  */
-class DropViewNode: public EnableMakeForLQPNode<DropViewNode>, public AbstractLQPNode {
+class DropViewNode : public EnableMakeForLQPNode<DropViewNode>, public AbstractLQPNode {
  public:
   explicit DropViewNode(const std::string& view_name);
 

@@ -14,6 +14,7 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
@@ -55,7 +56,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
-    DeprecatedDictionaryCompression::compress_table(*StorageManager::get().get_table("a"));
+    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("a"));
 
     _rule = std::make_shared<IndexScanRule>();
   }

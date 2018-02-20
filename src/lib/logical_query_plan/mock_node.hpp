@@ -17,7 +17,7 @@ namespace opossum {
  * It is useful in tests (e.g. general LQP tests, optimizer tests that just rely on statistics and not actual data) and
  * the playground
  */
-class MockNode: public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
+class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 

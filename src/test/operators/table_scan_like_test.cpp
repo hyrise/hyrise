@@ -11,7 +11,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -34,7 +34,7 @@ class OperatorsTableScanLikeTest : public BaseTest {
 
     // load and compress string table
     auto test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
-    DeprecatedDictionaryCompression::compress_chunks(*test_table_string_dict, {ChunkID{0}});
+    ChunkEncoder::encode_chunks(test_table_string_dict, {ChunkID{0}});
 
     StorageManager::get().add_table("table_string_dict", test_table_string_dict);
 

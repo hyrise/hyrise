@@ -12,6 +12,7 @@
 #include "lqp_column_reference.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 
 namespace opossum {
 
@@ -362,10 +363,21 @@ void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& repla
 void AbstractLQPNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
 void AbstractLQPNode::print(std::ostream& out) const {
-  std::vector<bool> levels;
-  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> id_by_node;
-  size_t id_counter = 0;
-  _print_impl(out, levels, id_by_node, id_counter);
+  const auto get_children_fn = [](const auto& node) {
+    std::vector<std::shared_ptr<const AbstractLQPNode>> children;
+    if (node->left_child()) children.emplace_back(node->left_child());
+    if (node->right_child()) children.emplace_back(node->right_child());
+    return children;
+  };
+  const auto node_print_fn = [](const auto& node, auto& stream) {
+    stream << node->description();
+
+    if (node->_table_alias) {
+      stream << " -- ALIAS: '" << *node->_table_alias << "'";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_children_fn, node_print_fn, out);
 }
 
 std::string AbstractLQPNode::get_verbose_column_name(ColumnID column_id) const {
@@ -414,58 +426,6 @@ std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
     }
   }
   return qualified_column_name;
-}
-
-void AbstractLQPNode::_print_impl(std::ostream& out, std::vector<bool>& levels,
-                                  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
-                                  size_t& id_counter) const {
-  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
-  for (size_t level = 0; level < max_level; ++level) {
-    if (levels[level]) {
-      out << " | ";
-    } else {
-      out << "   ";
-    }
-  }
-
-  if (!levels.empty()) {
-    out << " \\_";
-  }
-
-  /**
-   * Check whether the node has been printed before
-   */
-  const auto iter = id_by_node.find(shared_from_this());
-  if (iter != id_by_node.end()) {
-    out << "Recurring Node --> [" << iter->second << "]" << std::endl;
-    return;
-  }
-
-  const auto this_node_id = id_counter;
-  id_counter++;
-  id_by_node.emplace(shared_from_this(), this_node_id);
-
-  /**
-   *
-   */
-  out << "[" << this_node_id << "] " << description();
-
-  if (_table_alias) {
-    out << " -- ALIAS: '" << *_table_alias << "'";
-  }
-  out << std::endl;
-
-  levels.emplace_back(right_child() != nullptr);
-
-  if (left_child()) {
-    left_child()->_print_impl(out, levels, id_by_node, id_counter);
-  }
-  if (right_child()) {
-    levels.back() = false;
-    right_child()->_print_impl(out, levels, id_by_node, id_counter);
-  }
-
-  levels.pop_back();
 }
 
 void AbstractLQPNode::_child_changed() {

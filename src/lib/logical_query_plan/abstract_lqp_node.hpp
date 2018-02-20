@@ -355,14 +355,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   void _child_changed();
 
-  /**
-   * Actual impl of AbstractLQPNode::print(). AbstractLQPNode::print() just creates the `levels` and `id_by_node`
-   * instances used during the recursion.
-   */
-  void _print_impl(std::ostream& out, std::vector<bool>& levels,
-                   std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
-                   size_t& id_counter) const;
-
   static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
   _find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
                                     const std::shared_ptr<const AbstractLQPNode>& rhs);
@@ -398,7 +390,7 @@ class EnableMakeForLQPNode {
   using NthTypeOf = typename std::tuple_element<N, std::tuple<Ts...>>::type;
 
   template <typename... Args>
-  static std::shared_ptr<DerivedNode> make(Args... args) {
+  static std::shared_ptr<DerivedNode> make(Args&&... args) {
     // clang-format off
 
     // - using nesting instead of && because both sides of the && would need to be valid
@@ -407,7 +399,7 @@ class EnableMakeForLQPNode {
       if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-1, Args...>, std::shared_ptr<AbstractLQPNode>>) {
         auto args_tuple = std::forward_as_tuple(args...);
         if constexpr (sizeof...(Args) > 1) {
-          if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-2, Args...>, std::shared_ptr<AbstractLQPNode>>) {
+          if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-2, Args...>, std::shared_ptr<AbstractLQPNode>>) {  // NOLINT - too long, but better than breaking
             // last two arguments are shared_ptr<AbstractLQPNode>
             auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
             node->set_left_child(std::get<sizeof...(Args) - 2>(args_tuple));
