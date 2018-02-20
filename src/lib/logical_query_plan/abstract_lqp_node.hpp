@@ -370,9 +370,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 };
 
 /**
- * LQP node types should derive from this, instead of directly from AbstractLQPNode, in order to enable the
- * <NodeType>::make() that allows for a clean notation when building LQPs via code by allowing to pass in a nodes
- * child(ren) as the last argument(s).
+ * LQP node types should derive from this in order to enable the <NodeType>::make() function that allows for a clean
+ * notation when building LQPs via code by allowing to pass in a nodes child(ren) as the last argument(s).
  *
  * const auto input_lqp =
  * PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
