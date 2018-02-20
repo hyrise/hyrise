@@ -43,9 +43,28 @@ namespace opossum {
  * This materialized value finally allows the operator to access a data value.
  */
 
-// A vector of variant values.
-// In order to store N variant values, one vector of size N is created per data type.
-// Each of the N variant values is then represented by the elements at some index I in each vector.
+/* The JitVariantVector can be used in two ways:
+ * 1) As a vector of variant values.
+ *    Imagine you want to store a database row (aka tuple) of some table. Since each column of the table could have a
+ *    different type, a std::vector<Variant> seems like a good choice. To store N values, the vector is resized to
+ *    contain N slots and each value (representing one column) can be accessed by its index from [0, N).
+ *    We do something slightly different here: Instead of one vector (where each vector element can hold any of a number
+ *    of types), we create one strongly typed vector per data type. All of these vectors have size N, so each value
+ *    (representing one column of the tuple) has a slot in each vector.
+ *    Accessing the value at position P as an "int" will return the element at position P in the integer vector.
+ *    There is no automatic type conversions happening here. Soring a value as "int" and reading it later as "double"
+ *    won't work, since this accesses different memory locations in different vectors.
+ *    This is not a problem, however, since the type of each value does not change throughout query execution.
+ *
+ * 2) As a variant vector.
+ *    This data structure can also be used to store a vector of values of some unknown, but fixed type.
+ *    Say you want to build an aggregate operator and need to store a column of aggregate values. All values
+ *    produced will have the same type, but there is no way of knowing that type in advance.
+ *    By adding a templated "push" function to the implementation below, we can add an arbitrary number of elements to
+ *    the std::vector of that type. All other vectors will remain empty.
+ *    This interpretation of the variant vector is not used in the code currently, but will be helpful when implementing
+ *    further operators.
+ */
 class JitVariantVector {
  public:
   void resize(const size_t new_size) {
