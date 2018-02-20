@@ -8,12 +8,17 @@
 #include "constant_mappings.hpp"
 #include "join_edge.hpp"
 #include "join_plan_predicate.hpp"
+#include "join_graph_builder.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-JoinGraph JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
+std::shared_ptr<JoinGraph> JoinGraph::from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  return JoinGraphBuilder{}(lqp);
+}
+
+std::shared_ptr<JoinGraph> JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
                                      std::vector<LQPParentRelation> parent_relations,
                                      const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates) {
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> vertex_to_index;
@@ -35,7 +40,7 @@ JoinGraph JoinGraph::from_predicates(std::vector<std::shared_ptr<AbstractLQPNode
     iter->second->predicates.emplace_back(predicate);
   }
 
-  return JoinGraph{std::move(vertices), std::move(parent_relations), std::move(edges)};
+  return std::make_shared<JoinGraph>(std::move(vertices), std::move(parent_relations), std::move(edges));
 }
 
 JoinGraph::JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
