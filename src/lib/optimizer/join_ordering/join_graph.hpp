@@ -32,9 +32,14 @@ class JoinEdge;
 class JoinGraph final {
  public:
   /**
+   * Return the first JoinGraph found when recursively traversing the @param lqp
+   */
+  static std::shared_ptr<JoinGraph> from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+  /**
    * Converts the predicates into edges and creates a JoinGraph from them.
    */
-  static JoinGraph from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
+  static std::shared_ptr<JoinGraph> from_predicates(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
                                    std::vector<LQPParentRelation> parent_relations,
                                    const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
 

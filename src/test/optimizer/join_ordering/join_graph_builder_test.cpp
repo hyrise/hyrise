@@ -8,13 +8,13 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/join_edge.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "optimizer/join_ordering/join_graph_converter.hpp"
+#include "optimizer/join_ordering/join_graph_builder.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class JoinGraphConverterTest : public ::testing::Test {
+class JoinGraphBuilderTest : public ::testing::Test {
  protected:
   void SetUp() override {
     //  [0] [Projection] z1, y1
@@ -100,7 +100,7 @@ class JoinGraphConverterTest : public ::testing::Test {
 
     _lqp->print();
 
-    _join_graph = JoinGraphConverter{}(_lqp);  // NOLINT
+    _join_graph = JoinGraphBuilder{}(_lqp);  // NOLINT
   }
 
   std::string to_string(const std::shared_ptr<const AbstractJoinPlanPredicate>& predicate) {
@@ -123,10 +123,10 @@ class JoinGraphConverterTest : public ::testing::Test {
   LQPColumnReference _mock_node_a_x1, _mock_node_a_x2, _sum_mock_node_a_x1, _mock_node_b_y1, _mock_node_b_y2,
       _mock_node_c_z1;
 
-  JoinGraph _join_graph;
+  std::shared_ptr<JoinGraph> _join_graph;
 };
 
-TEST_F(JoinGraphConverterTest, ComplexLQP) {
+TEST_F(JoinGraphBuilderTest, ComplexLQP) {
   /**
    * Test that the expected JoinGraph has been generated
    */
@@ -134,34 +134,34 @@ TEST_F(JoinGraphConverterTest, ComplexLQP) {
   /**
    * Test vertices
    */
-  ASSERT_EQ(_join_graph.vertices.size(), 3u);
+  ASSERT_EQ(_join_graph->vertices.size(), 3u);
 
-  EXPECT_EQ(_join_graph.vertices.at(0), _aggregate_node_a);
-  EXPECT_EQ(_join_graph.vertices.at(1), _mock_node_b);
-  EXPECT_EQ(_join_graph.vertices.at(2), _mock_node_c);
+  EXPECT_EQ(_join_graph->vertices.at(0), _aggregate_node_a);
+  EXPECT_EQ(_join_graph->vertices.at(1), _mock_node_b);
+  EXPECT_EQ(_join_graph->vertices.at(2), _mock_node_c);
 
   /**
    * Test edges
    */
-  const auto edge_a = _join_graph.find_edge(JoinVertexSet{3, 0b001});
+  const auto edge_a = _join_graph->find_edge(JoinVertexSet{3, 0b001});
   ASSERT_NE(edge_a, nullptr);
   ASSERT_EQ(edge_a->predicates.size(), 1u);
   EXPECT_EQ(to_string(edge_a->predicates.at(0)), "sum_a = 5");
 
-  const auto edge_b = _join_graph.find_edge(JoinVertexSet{3, 0b010});
+  const auto edge_b = _join_graph->find_edge(JoinVertexSet{3, 0b010});
   ASSERT_NE(edge_b, nullptr);
   ASSERT_EQ(edge_b->predicates.size(), 3u);
   EXPECT_EQ(to_string(edge_b->predicates.at(0)), "y1 > 32");
   EXPECT_EQ(to_string(edge_b->predicates.at(1)), "y2 < 200");
   EXPECT_EQ(to_string(edge_b->predicates.at(2)), "(y2 = 7 AND y1 = 6) OR y1 >= 8");
 
-  const auto edge_ab = _join_graph.find_edge(JoinVertexSet{3, 0b011});
+  const auto edge_ab = _join_graph->find_edge(JoinVertexSet{3, 0b011});
   ASSERT_NE(edge_ab, nullptr);
   ASSERT_EQ(edge_ab->predicates.size(), 2u);
   EXPECT_EQ(to_string(edge_ab->predicates.at(0)), "sum_a <= y1");
   EXPECT_EQ(to_string(edge_ab->predicates.at(1)), "x2 = y2");
 
-  const auto edge_ac = _join_graph.find_edge(JoinVertexSet{3, 0b101});
+  const auto edge_ac = _join_graph->find_edge(JoinVertexSet{3, 0b101});
   ASSERT_NE(edge_ac, nullptr);
   ASSERT_EQ(edge_ac->predicates.size(), 1u);
   EXPECT_EQ(to_string(edge_ac->predicates.at(0)), "x2 <= z1");
@@ -169,17 +169,9 @@ TEST_F(JoinGraphConverterTest, ComplexLQP) {
   /**
    * Test parent relations
    */
-  ASSERT_EQ(_join_graph.parent_relations.size(), 1u);
-  EXPECT_EQ(_join_graph.parent_relations.at(0).parent, _projection_node_a);
-  EXPECT_EQ(_join_graph.parent_relations.at(0).child_side, LQPChildSide::Left);
-
-  /**
-   * Test that the Vertices and Parents were properly dissected from the nodes that were turned into the JoinGraph
-   */
-  EXPECT_EQ(_join_graph.vertices.at(0)->parent_count(), 0u);
-  EXPECT_EQ(_join_graph.vertices.at(1)->parent_count(), 0u);
-  EXPECT_EQ(_join_graph.vertices.at(2)->parent_count(), 0u);
-  EXPECT_EQ(_join_graph.parent_relations.at(0).parent->left_child(), nullptr);
+  ASSERT_EQ(_join_graph->parent_relations.size(), 1u);
+  EXPECT_EQ(_join_graph->parent_relations.at(0).parent, _projection_node_a);
+  EXPECT_EQ(_join_graph->parent_relations.at(0).child_side, LQPChildSide::Left);
 }
 
 }  // namespace opossum

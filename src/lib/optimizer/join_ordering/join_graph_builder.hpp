@@ -25,11 +25,8 @@ class AbstractLQPNode;
  *
  * The JoinGraph created from it would contain two vertices (x and y), one edge (between x and y, with the predicate
  * x2 <= y1) and one parent_relation (Projection, left child side)
- *
- * The name "Converter" stems from the fact that nodes representing predicates and joins are physically removed from the
- * LQP. To turn a JoinGraph back into a LQP, use a JoinOrdering algorithm such as DpCcp.
  */
-class JoinGraphConverter final {
+class JoinGraphBuilder final {
  public:
   /**
    * From the subtree of root, build a JoinGraph.
@@ -37,7 +34,7 @@ class JoinGraphConverter final {
    *
    * Need an instance of the shared_ptr to keep the ref count > 0
    */
-  JoinGraph operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
+  std::shared_ptr<JoinGraph> operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
 
  private:
   /**

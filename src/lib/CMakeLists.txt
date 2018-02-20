@@ -156,8 +156,8 @@ set(
     optimizer/column_statistics.hpp
     optimizer/join_ordering/join_edge.cpp
     optimizer/join_ordering/join_edge.hpp
-    optimizer/join_ordering/join_graph_converter.cpp
-    optimizer/join_ordering/join_graph_converter.hpp
+    optimizer/join_ordering/join_graph_builder.cpp
+    optimizer/join_ordering/join_graph_builder.hpp
     optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_plan_predicate.cpp

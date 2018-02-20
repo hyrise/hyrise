@@ -1,4 +1,4 @@
-#include "join_graph_converter.hpp"
+#include "join_graph_builder.hpp"
 
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-JoinGraph JoinGraphConverter::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
+std::shared_ptr<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
   /**
    * Traverse the LQP until the first non-vertex type (e.g. a UnionNode) is found or a node doesn't have precisely
    * one child. This way, we traverse past Sort/Aggregate etc. nodes that later form the "parents" of the JoinGraph
@@ -20,27 +20,15 @@ JoinGraph JoinGraphConverter::operator()(const std::shared_ptr<AbstractLQPNode>&
 
     current_node = current_node->left_child();
   }
+  const auto parent_relations = current_node->parent_relations();
 
   // Traverse the LQP, identifying JoinPlanPredicates and Vertices
   _traverse(current_node);
 
-  /**
-   * Dissect the JoinGraph vertices and parents, effectively deleting the Join/Union/PredicateNodes that were turned
-   * into JoinPlanPredicates
-   */
-  const auto parent_relations = current_node->parent_relations();
-  for (const auto& parent_relation : parent_relations) {
-    parent_relation.parent->set_child(parent_relation.child_side, nullptr);
-  }
-
-  for (const auto& vertex : _vertices) {
-    vertex->clear_parents();
-  }
-
   return JoinGraph::from_predicates(std::move(_vertices), std::move(parent_relations), _predicates);
 }
 
-void JoinGraphConverter::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
+void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
   // Makes it possible to call _traverse() on children without checking whether they exist first.
   if (!node) {
     return;
@@ -120,7 +108,7 @@ void JoinGraphConverter::_traverse(const std::shared_ptr<AbstractLQPNode>& node)
   }
 }
 
-JoinGraphConverter::PredicateParseResult JoinGraphConverter::_parse_predicate(
+JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type() == LQPNodeType::Predicate) {
     const auto predicate_node = std::static_pointer_cast<const PredicateNode>(node);
@@ -161,7 +149,7 @@ JoinGraphConverter::PredicateParseResult JoinGraphConverter::_parse_predicate(
   }
 }
 
-JoinGraphConverter::PredicateParseResult JoinGraphConverter::_parse_union(
+JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
     const std::shared_ptr<UnionNode>& union_node) const {
   const auto parse_result_left = _parse_predicate(union_node->left_child());
   const auto parse_result_right = _parse_predicate(union_node->right_child());
@@ -174,7 +162,7 @@ JoinGraphConverter::PredicateParseResult JoinGraphConverter::_parse_union(
   return {parse_result_left.base_node, or_predicate};
 }
 
-bool JoinGraphConverter::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
+bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
   return node_type != LQPNodeType::Join && node_type != LQPNodeType::Union && node_type != LQPNodeType::Predicate;
 }
 }  // namespace opossum

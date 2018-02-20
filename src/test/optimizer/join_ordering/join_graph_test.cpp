@@ -46,7 +46,7 @@ TEST_F(JoinGraphTest, SingleVertexNoPredicates) {
   JoinVertexSet vertex_set{1};
   vertex_set.set(0);
 
-  const auto found_predicates = join_graph.find_predicates(vertex_set);
+  const auto found_predicates = join_graph->find_predicates(vertex_set);
 
   EXPECT_EQ(found_predicates.size(), 0u);
 }
@@ -68,7 +68,7 @@ TEST_F(JoinGraphTest, SingleVertexMultiplePredicates) {
   const auto join_graph = JoinGraph::from_predicates({vertex}, {}, {predicate_a, predicate_b, predicate_c});
 
   const auto vertex_set = JoinVertexSet{1, 1};
-  const auto found_predicates = join_graph.find_predicates(vertex_set);
+  const auto found_predicates = join_graph->find_predicates(vertex_set);
 
   EXPECT_EQ(found_predicates.size(), 3u);
   EXPECT_TRUE(contains_predicate(found_predicates, predicate_a));
@@ -105,16 +105,16 @@ TEST_F(JoinGraphTest, MultipleVerticesMultiplePredicates) {
   const auto vertex_set_b = JoinVertexSet{3, 0b010};
   const auto vertex_set_c = JoinVertexSet{3, 0b100};
 
-  const auto found_predicates_a = join_graph.find_predicates(vertex_set_a);
-  const auto found_predicates_b = join_graph.find_predicates(vertex_set_b);
-  const auto found_predicates_c = join_graph.find_predicates(vertex_set_c);
-  const auto found_predicates_abc_1 = join_graph.find_predicates(vertex_set_a, vertex_set_b | vertex_set_c);
-  const auto found_predicates_abc_2 = join_graph.find_predicates(vertex_set_a | vertex_set_b, vertex_set_c);
-  const auto found_predicates_abc_3 = join_graph.find_predicates(vertex_set_a | vertex_set_b | vertex_set_c);
-  const auto found_predicates_bc_1 = join_graph.find_predicates(vertex_set_b | vertex_set_c);
-  const auto found_predicates_bc_2 = join_graph.find_predicates(vertex_set_b, vertex_set_c);
-  const auto found_predicates_ab_1 = join_graph.find_predicates(vertex_set_a | vertex_set_b);
-  const auto found_predicates_ab_2 = join_graph.find_predicates(vertex_set_a, vertex_set_b);
+  const auto found_predicates_a = join_graph->find_predicates(vertex_set_a);
+  const auto found_predicates_b = join_graph->find_predicates(vertex_set_b);
+  const auto found_predicates_c = join_graph->find_predicates(vertex_set_c);
+  const auto found_predicates_abc_1 = join_graph->find_predicates(vertex_set_a, vertex_set_b | vertex_set_c);
+  const auto found_predicates_abc_2 = join_graph->find_predicates(vertex_set_a | vertex_set_b, vertex_set_c);
+  const auto found_predicates_abc_3 = join_graph->find_predicates(vertex_set_a | vertex_set_b | vertex_set_c);
+  const auto found_predicates_bc_1 = join_graph->find_predicates(vertex_set_b | vertex_set_c);
+  const auto found_predicates_bc_2 = join_graph->find_predicates(vertex_set_b, vertex_set_c);
+  const auto found_predicates_ab_1 = join_graph->find_predicates(vertex_set_a | vertex_set_b);
+  const auto found_predicates_ab_2 = join_graph->find_predicates(vertex_set_a, vertex_set_b);
 
   EXPECT_EQ(found_predicates_a.size(), 1u);
   EXPECT_TRUE(contains_predicate(found_predicates_a, predicate_a));
@@ -166,7 +166,7 @@ TEST_F(JoinGraphTest, Print) {
       JoinGraph::from_predicates({vertex_a, vertex_b, vertex_c}, {}, {predicate_a, predicate_b, predicate_c});
 
   std::stringstream stream;
-  join_graph.print(stream);
+  join_graph->print(stream);
 
   EXPECT_EQ(stream.str(), R"(==== Vertices ====
 [MockTable]
