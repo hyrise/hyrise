@@ -43,12 +43,12 @@ typename ValueVector<T>::iterator ValueVector<T>::end() noexcept {
 }
 
 template <typename T>
-typename ValueVector<T>::iterator ValueVector<T>::begin() const noexcept {
+typename ValueVector<T>::const_iterator ValueVector<T>::begin() const noexcept {
   return _values.begin();
 }
 
 template <typename T>
-typename ValueVector<T>::iterator ValueVector<T>::end() const noexcept {
+typename ValueVector<T>::const_iterator ValueVector<T>::end() const noexcept {
   return _values.end();
 }
 
@@ -63,12 +63,12 @@ typename ValueVector<T>::reverse_iterator ValueVector<T>::rend() noexcept {
 }
 
 template <typename T>
-typename ValueVector<T>::const_iterator ValueVector<T>::cbegin() noexcept {
+typename ValueVector<T>::const_iterator ValueVector<T>::cbegin() const noexcept {
   return _values.cbegin();
 }
 
 template <typename T>
-typename ValueVector<T>::const_iterator ValueVector<T>::cend() noexcept {
+typename ValueVector<T>::const_iterator ValueVector<T>::cend() const noexcept {
   return _values.cend();
 }
 

@@ -29,9 +29,11 @@ class ValueVector {
     }
   }
 
-  ValueVector(const ValueVector&& other) : _values(other._values) {}
+  ValueVector(const ValueVector<T>&& other) : _values(other._values) {}
 
-  ValueVector(const ValueVector& other) : _values(other._values) {}
+  ValueVector(const ValueVector<T>& other) : _values(other._values) {}
+
+  ValueVector(const ValueVector<T>& other, const PolymorphicAllocator<size_t>& alloc) : _values(other._values, alloc) {}
 
   void push_back(const T& value);
 
@@ -43,17 +45,17 @@ class ValueVector {
 
   iterator end() noexcept;
 
-  iterator begin() const noexcept;
+  const_iterator begin() const noexcept;
 
-  iterator end() const noexcept;
+  const_iterator end() const noexcept;
 
   reverse_iterator rbegin() noexcept;
 
   reverse_iterator rend() noexcept;
 
-  const_iterator cbegin() noexcept;
+  const_iterator cbegin() const noexcept;
 
-  const_iterator cend() noexcept;
+  const_iterator cend() const noexcept;
 
   T& operator[](const size_t n);
 
@@ -88,9 +90,12 @@ class ValueVector<FixedString> {
     _iterator_push_back(first, last);
   }
 
-  ValueVector(const ValueVector&& other) : _string_length(other._string_length), _chars(other._chars) {}
+  ValueVector(const ValueVector<FixedString>&& other) : _string_length(other._string_length), _chars(other._chars) {}
 
-  ValueVector(const ValueVector& other) : _string_length(other._string_length), _chars(other._chars) {}
+  ValueVector(const ValueVector<FixedString>& other) : _string_length(other._string_length), _chars(other._chars) {}
+
+  ValueVector(const ValueVector<FixedString>& other, const PolymorphicAllocator<size_t>& alloc)
+      : _string_length(other._string_length), _chars(other._chars, alloc) {}
 
   void push_back(const std::string& string);
 
