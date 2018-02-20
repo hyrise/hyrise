@@ -102,6 +102,11 @@ void ValueVector<T>::reserve(const size_t n) {
   _values.reserve(n);
 }
 
+template <typename T>
+size_t ValueVector<T>::data_size() const {
+  return sizeof(this*) + _values.size() * sizeof(typename decltype(_dictionary)::element_type::value_type);
+}
+
 // Implementation of ValueVector<FixedString> starts here
 
 void ValueVector<FixedString>::push_back(const std::string& string) {
@@ -167,6 +172,10 @@ void ValueVector<FixedString>::shrink_to_fit() { _chars.shrink_to_fit(); }
 PolymorphicAllocator<FixedString> ValueVector<FixedString>::get_allocator() { return _chars.get_allocator(); }
 
 void ValueVector<FixedString>::reserve(const size_t n) { _chars.reserve(n * _string_length); }
+
+size_t ValueVector<FixedString>::data_size() const {
+  return sizeof(*this) + _chars.size();
+}
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueVector);
 

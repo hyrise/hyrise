@@ -54,8 +54,7 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const Poly
 
 template <typename T>
 size_t DictionaryColumn<T>::estimate_memory_usage() const {
-  return sizeof(*this) + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
-         _attribute_vector->data_size();
+  return sizeof(*this) + _dictionary->data_size() + _attribute_vector->data_size();
 }
 
 template <typename T>

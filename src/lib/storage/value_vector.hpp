@@ -69,6 +69,8 @@ class ValueVector {
 
   PolymorphicAllocator<T> get_allocator();
 
+  size_t data_size() const;
+
  protected:
   pmr_vector<T> _values;
 };
@@ -160,6 +162,8 @@ class ValueVector<FixedString> {
   void reserve(const size_t n);
 
   PolymorphicAllocator<FixedString> get_allocator();
+
+  size_t data_size() const;
 
  private:
   const size_t _string_length;
