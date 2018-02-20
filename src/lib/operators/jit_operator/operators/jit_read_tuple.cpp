@@ -84,17 +84,15 @@ void JitReadTuple::execute(JitRuntimeContext& ctx) const {
   }
 }
 
-JitTupleValue JitReadTuple::add_input_column(const JitDataType data_type, const bool is_nullable,
+JitTupleValue JitReadTuple::add_input_column(const DataType data_type, const bool is_nullable,
                                              const ColumnID column_id) {
-  // There is no need to add an input column twice
+  // There is no need to add the same input column twice.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
     return it->tuple_value;
   }
 
-  const auto data_type = table.column_type(column_id);
-  const auto is_nullable = table.column_is_nullable(column_id);
   const auto tuple_value = JitTupleValue(data_type, is_nullable, _num_tuple_values++);
   _input_columns.push_back({column_id, tuple_value});
   return tuple_value;

@@ -195,7 +195,7 @@ JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
     const auto original_column_id = lqp_column_reference.original_column_id();
     const auto table_name = stored_table_node->table_name();
     const auto table = StorageManager::get().get_table(table_name);
-    const auto data_type = data_type_to_jit_data_type.at(table->column_type(original_column_id));
+    const auto data_type = table->column_type(original_column_id);
     const auto is_nullable = table->column_is_nullable(original_column_id);
     const auto tuple_value = jit_source.add_input_column(data_type, is_nullable, column_id.value());
     return std::make_shared<JitExpression>(tuple_value);
@@ -203,8 +203,7 @@ JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
     // if the LQPColumnReference references a computed column, we need to compute that expression as well
     const auto lqp_expression = projection_node->column_expressions()[lqp_column_reference.original_column_id()];
     return _translate_to_jit_expression(*lqp_expression, jit_source, input_node);
-  }
-  else {
+  } else {
     Fail("could not get column from anywhere");
   }
 }
