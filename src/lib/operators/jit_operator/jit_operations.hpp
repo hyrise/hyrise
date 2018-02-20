@@ -7,14 +7,15 @@
 
 #include "jit_types.hpp"
 #include "operators/table_scan/like_table_scan_impl.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
 /* This file contains the type dispatching mechanisms that allow generic operations on JitMaterializedValues.
  *
- * Each binary operation requires three JitMaterializedValues - a left input (lhs), a right input (rhs) and an
- * output (result). Each value has one of 6 data types (bool, int, long, float, double, std::string) and can be
- * nullable or non-nullable. This leaves us with (6 * 2) * (6 * 2) = 144 combinations for each operation.
+ * Each binary operation takes three JitMaterializedValues as parameters: a left input (lhs), a right input (rhs) and an
+ * output (result). Each value has one of the supported data types and can be
+ * nullable or non-nullable. This leaves us with (number_of_datatypes * 2) ^ 2 combinations for each operation.
  *
  * To make things easier, all arithmetic and comparison operations can be handled the same way:
  * A set of generic lambdas defines type-independent versions of these operations. These lambdas can be passed to the
@@ -38,13 +39,12 @@ namespace opossum {
  * different (i.e. a NULL as either input does not result in the output being NULL as well).
  */
 
-#define JIT_APPEND_ENUM_NAMESPACE(enum_value) DataType::enum_value
-#define JIT_GET_ENUM_VALUE(index, s) JIT_APPEND_ENUM_NAMESPACE(BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
+#define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(), rhs.get<JIT_GET_DATA_TYPE(1, types)>(), result);             \
+    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(), rhs.get<JIT_GET_DATA_TYPE(1, types)>(), result);           \
     break;
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
@@ -52,28 +52,28 @@ namespace opossum {
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
 /* Arithmetic operators */
-const auto jit_addition = [](const auto& a, const auto& b) -> decltype(a + b) { return a + b; };
-const auto jit_subtraction = [](const auto& a, const auto& b) -> decltype(a - b) { return a - b; };
-const auto jit_multiplication = [](const auto& a, const auto& b) -> decltype(a * b) { return a * b; };
-const auto jit_division = [](const auto& a, const auto& b) -> decltype(a / b) { return a / b; };
-const auto jit_modulo = [](const auto& a, const auto& b) -> decltype(a % b) { return a % b; };
-const auto jit_power = [](const auto& a, const auto& b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
+const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
+const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
+const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b) { return a * b; };
+const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
+const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
+const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
 
 /* Comparison operators */
-const auto jit_equals = [](const auto& a, const auto& b) -> decltype(a == b) { return a == b; };
-const auto jit_not_equals = [](const auto& a, const auto& b) -> decltype(a != b) { return a != b; };
-const auto jit_less_than = [](const auto& a, const auto& b) -> decltype(a < b) { return a < b; };
-const auto jit_less_than_equals = [](const auto& a, const auto& b) -> decltype(a <= b) { return a <= b; };
-const auto jit_greater_than = [](const auto& a, const auto& b) -> decltype(a > b) { return a > b; };
-const auto jit_greater_than_equals = [](const auto& a, const auto& b) -> decltype(a >= b) { return a >= b; };
+const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
+const auto jit_not_equals = [](const auto a, const auto b) -> decltype(a != b) { return a != b; };
+const auto jit_less_than = [](const auto a, const auto b) -> decltype(a < b) { return a < b; };
+const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <= b) { return a <= b; };
+const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
+const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
 
-const auto jit_like = [](const std::string& a, const std::string& b) -> bool {
+const auto jit_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
   const auto regex = std::regex{regex_string, std::regex_constants::icase};
   return std::regex_match(a, regex);
 };
 
-const auto jit_not_like = [](const std::string& a, const std::string& b) -> bool {
+const auto jit_not_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
   const auto regex = std::regex{regex_string, std::regex_constants::icase};
   return !std::regex_match(a, regex);
@@ -81,18 +81,22 @@ const auto jit_not_like = [](const std::string& a, const std::string& b) -> bool
 
 // The InvalidTypeCatcher acts as a fallback implementation, if template specialization
 // fails for a type combination.
-template <typename F, typename R>
-struct InvalidTypeCatcher : F {
-  explicit InvalidTypeCatcher(F f) : F(std::move(f)) {}
+template <typename Functor, typename Result>
+struct InvalidTypeCatcher : Functor {
+  explicit InvalidTypeCatcher(Functor f) : Functor(std::move(f)) {}
 
-  using F::operator();
+  using Functor::operator();
 
   template <typename... Ts>
-  R operator()(const Ts...) const {
+  Result operator()(const Ts...) const {
     Fail("invalid combination of types for operation");
   }
 };
 
+// We do not want to inline here, because:
+// These function tend to get quite complex due to the large switch statement. If we inline this function, this means a
+// lot of work for the JIT compiler. If we let the JIT compiler do the inlining instead, it is able to prune the
+// function to the relevant case during inlining. This allows for faster jitting.
 template <typename T>
 __attribute__((noinline)) void jit_compute(const T& op_func, const JitMaterializedValue& lhs,
                                            const JitMaterializedValue& rhs, JitMaterializedValue& result) {
@@ -102,13 +106,15 @@ __attribute__((noinline)) void jit_compute(const T& op_func, const JitMaterializ
     return;
   }
 
-  const auto func = [&](const auto& typed_lhs, const auto& typed_rhs, auto& result) -> decltype(
+  // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
+  // the result.
+  const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs, auto& result) -> decltype(
       op_func(typed_lhs, typed_rhs), void()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
-    result.template as<ResultType>() = op_func(typed_lhs, typed_rhs);
+    result.template set<ResultType>(op_func(typed_lhs, typed_rhs));
   };
 
-  const auto catching_func = InvalidTypeCatcher<decltype(func), void>(func);
+  const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
@@ -120,15 +126,18 @@ __attribute__((noinline)) void jit_compute(const T& op_func, const JitMaterializ
 }
 
 template <typename T>
-__attribute__((noinline)) DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType rhs) {
-  const auto func = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs),
-                                                                                  DataType()) {
+DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType rhs) {
+  // This lambda calls the op_func (a lambda that could performs the actual computation) and determines the return type
+  // of that lambda.
+  const auto determine_retrun_type_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(
+      op_func(typed_lhs, typed_rhs), DataType()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
     // This templated function returns the DataType enum value for a given ResultType.
-    return data_type<ResultType>();
+    return data_type_from_type<ResultType>();
   };
 
-  const auto catching_func = InvalidTypeCatcher<decltype(func), DataType>(func);
+  const auto catching_func =
+      InvalidTypeCatcher<decltype(determine_retrun_type_wrapper), DataType>(determine_retrun_type_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
@@ -139,18 +148,16 @@ __attribute__((noinline)) DataType jit_compute_type(const T& op_func, const Data
   }
 }
 
-__attribute__((noinline)) void jit_not(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
-  DebugAssert(lhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
-              "invalid type for operation");
+void jit_not(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
+  DebugAssert(lhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool, "invalid type for operation");
   result.set<bool>(!lhs.get<bool>());
   result.set_is_null(lhs.is_null());
 }
 
-__attribute__((noinline)) void jit_and(const JitMaterializedValue& lhs, const JitMaterializedValue& rhs,
-                                       JitMaterializedValue& result) {
-  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool &&
-                  result.data_type() == DataType::Bool,
-              "invalid type for operation");
+void jit_and(const JitMaterializedValue& lhs, const JitMaterializedValue& rhs, JitMaterializedValue& result) {
+  DebugAssert(
+      lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
+      "invalid type for operation");
 
   // three-valued logic AND
   if (lhs.is_null()) {
@@ -162,11 +169,10 @@ __attribute__((noinline)) void jit_and(const JitMaterializedValue& lhs, const Ji
   }
 }
 
-__attribute__((noinline)) void jit_or(const JitMaterializedValue& lhs, const JitMaterializedValue& rhs,
-                                      JitMaterializedValue& result) {
-  DebugAssert(lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool &&
-                  result.data_type() == DataType::Bool,
-              "invalid type for operation");
+void jit_or(const JitMaterializedValue& lhs, const JitMaterializedValue& rhs, JitMaterializedValue& result) {
+  DebugAssert(
+      lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
+      "invalid type for operation");
 
   // three-valued logic OR
   if (lhs.is_null()) {
@@ -178,18 +184,24 @@ __attribute__((noinline)) void jit_or(const JitMaterializedValue& lhs, const Jit
   }
 }
 
-__attribute__((noinline)) void jit_is_null(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
+void jit_is_null(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
   DebugAssert(result.data_type() == DataType::Bool, "invalid type for operation");
 
   result.set_is_null(false);
   result.set<bool>(lhs.is_null());
 }
 
-__attribute__((noinline)) void jit_is_not_null(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
+void jit_is_not_null(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
   DebugAssert(result.data_type() == DataType::Bool, "invalid type for operation");
 
   result.set_is_null(false);
   result.set<bool>(!lhs.is_null());
 }
+
+// cleanup
+#undef JIT_GET_ENUM_VALUE
+#undef JIT_GET_DATA_TYPE
+#undef JIT_COMPUTE_CASE
+#undef JIT_COMPUTE_TYPE_CASE
 
 }  // namespace opossum
