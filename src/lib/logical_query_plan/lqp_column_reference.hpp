@@ -24,6 +24,7 @@ class LQPColumnReference final {
   std::string description() const;
 
   bool operator==(const LQPColumnReference& rhs) const;
+  bool operator<(const LQPColumnReference& rhs) const;
 
  private:
   // Needs to be weak since Nodes can hold ColumnReferences referring to themselves
