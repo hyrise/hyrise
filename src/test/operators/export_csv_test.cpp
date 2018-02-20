@@ -11,7 +11,7 @@
 #include "operators/export_csv.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -112,7 +112,7 @@ TEST_F(OperatorsExportCsvTest, DeprecatedDictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

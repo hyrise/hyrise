@@ -96,7 +96,7 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<Abstr
 const std::string Insert::name() const { return "Insert"; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  context->register_read_write_operator(shared_from_this());
+  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   _target_table = StorageManager::get().get_table(_target_table_name);
 
