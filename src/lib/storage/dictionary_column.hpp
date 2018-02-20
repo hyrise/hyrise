@@ -4,6 +4,7 @@
 #include <string>
 
 #include "base_dictionary_column.hpp"
+#include "storage/value_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -18,12 +19,12 @@ class BaseCompressedVector;
 template <typename T>
 class DictionaryColumn : public BaseDictionaryColumn {
  public:
-  explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+  explicit DictionaryColumn(const std::shared_ptr<const ValueVector<T>>& dictionary,
                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                             const ValueID null_value_id);
 
   // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<T>> dictionary() const;
+  std::shared_ptr<const ValueVector<T>> dictionary() const;
 
   /**
    * @defgroup BaseColumn interface
@@ -55,7 +56,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
+  const std::shared_ptr<const ValueVector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
 };

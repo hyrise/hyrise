@@ -13,7 +13,7 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const ValueVector<T>>& dictionary,
                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
     : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
@@ -35,7 +35,7 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
+std::shared_ptr<const ValueVector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
 
@@ -47,8 +47,8 @@ size_t DictionaryColumn<T>::size() const {
 template <typename T>
 std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
-  auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
-  auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
+  auto new_dictionary = ValueVector<T>{*_dictionary, alloc};
+  auto new_dictionary_ptr = std::allocate_shared<ValueVector<T>>(alloc, std::move(new_dictionary));
   return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr, _null_value_id);
 }
 
