@@ -58,6 +58,7 @@ class SQLPipelineStatementTest : public BaseTest {
     _multi_statement_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
+    SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get().clear();
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
