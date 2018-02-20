@@ -108,53 +108,12 @@ class ColumnCompressor : public ColumnCompressorBase {
       auto min_max_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
       statistics->add_filter(min_max_filter);
 
-      // calculate distances by taking the difference between two neighbouring elements
-      std::vector<std::pair<T, size_t>> distances;
-      auto dict_it = dictionary.cbegin();
-      auto dict_it_offset = dictionary.cbegin();
-      ++dict_it_offset;
-      while(dict_it_offset != dictionary.cend()) {
-        distances.emplace_back(std::make_pair(*dict_it - *dict_it_offset, std::distance(dictionary.cbegin(), dict_it)));
+      auto range_filter = RangeFilter<T>::buildFilter(dictionary);
+      if (range_filter) { // no range filter for strings
+          statistics->add_filter(range_filter);
       }
-
-      std::sort(distances.begin(), distances.end(), [](auto pair1, auto pair2){ return pair1.first > pair2.first; });
-
-      // select how many ranges we want in the filter
-      // make this customizable?
-      size_t max_ranges_count = 10;
-
-      if(max_ranges_count - 1 < distances.size()) {
-        distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
-      }
-
-      std::sort(distances.begin(), distances.end(), [](auto pair1, auto pair2){ return pair1.second > pair2.second; });
-      distances.push_back({T{}, dictionary.size() - 1});
-
-      // derive intervals where items exists from distances
-      //
-      // start   end  next_startpoint                
-      // v       v    v                
-      // 1 2 3 4 5    10 11     15 16
-      //         ^
-      //       distance 5, index 4
-      //
-      // next_startpoint is the start of the next range
-
-      std::vector<std::pair<T,T>> ranges;
-      size_t next_startpoint = 0u;
-      for(const auto& [distance, index] : distances) {
-        ranges.push_back(std::make_pair(dictionary[next_startpoint], dictionary[index]));
-        next_startpoint = index + 1;
-      }
-
-      auto range_filter = std::make_shared<RangeFilter<T>>(ranges);
-      statistics->add_filter(range_filter);
     }
 
-    // auto statistics = dictionary.empty()
-    //                  ? std::shared_ptr<ChunkColumnStatistics>()
-    //                  : std::dynamic_pointer_cast<ChunkColumnStatistics>(
-    //                        std::make_shared<ChunkColumnStatistics<T>>(dictionary.front(), dictionary.back()));
     auto out_column = std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
 
     return std::make_tuple(out_column, statistics);

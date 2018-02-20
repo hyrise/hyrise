@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -73,6 +74,8 @@ class RangeFilter : public BaseFilter {
  public:
   RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(ranges) {};
   virtual ~RangeFilter() = default;
+
+  static std::shared_ptr<RangeFilter<T>> buildFilter(const pmr_vector<T>& dictionary);
   
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
     T t_value = type_cast<T>(value);
@@ -80,27 +83,11 @@ class RangeFilter : public BaseFilter {
     // e.g. OpGreaterThan: value_from_table > t_value
     // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
     switch (predicate_type) {
-      case PredicateCondition::GreaterThan: {
-        auto & max = _ranges.back().second;
-        return t_value >= max;
-      }
-      case PredicateCondition::GreaterThanEquals: {
-        auto & max = _ranges.back().second;
-        return t_value > max;
-      }
-      case PredicateCondition::LessThan: {
-        auto & min = _ranges.front().first;
-        return t_value <= min;
-      }
-      case PredicateCondition::LessThanEquals: {
-        auto & min = _ranges.front().first;
-        return t_value < min;
-      }
       case PredicateCondition::Equals: {
         bool prunable = false;
         for(const auto& bounds : _ranges) {
-          auto& [min,max] = bounds;
-          prunable |= t_value < min || t_value > max;
+          auto& [min, max] = bounds;
+          prunable |= t_value > min && t_value < max;
         }
         return prunable;
       }
@@ -112,6 +99,52 @@ class RangeFilter : public BaseFilter {
  protected:
   std::vector<std::pair<T,T>> _ranges; 
 };
+
+template<typename T>
+std::shared_ptr<RangeFilter<T>> RangeFilter<T>::buildFilter(const pmr_vector<T>& dictionary) {
+  if constexpr (std::is_same<T, std::string>::value) {
+      return nullptr;
+  } else {
+      // calculate distances by taking the difference between two neighbouring elements
+      std::vector<std::pair<T, size_t>> distances;
+      for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
+        auto dict_it_next = dict_it + 1;
+        distances.emplace_back(std::make_pair(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it)));
+      }
+
+      std::sort(distances.begin(), distances.end(),
+                [](const auto& pair1, const auto& pair2){ return pair1.first > pair2.first; });
+
+      // select how many ranges we want in the filter
+      // make this customizable?
+      const size_t max_ranges_count = 10;
+
+      if(max_ranges_count - 1 < distances.size()) {
+        distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
+      }
+
+      std::sort(distances.begin(), distances.end(),
+                [](const auto& pair1, const auto& pair2){ return pair1.second < pair2.second; });
+
+      // derive intervals where items exists from distances
+      //
+      // start   end  next_startpoint
+      // v       v    v
+      // 1 2 3 4 5    10 11     15 16
+      //         ^
+      //       distance 5, index 4
+      //
+      // next_startpoint is the start of the next range
+
+      std::vector<std::pair<T,T>> ranges;
+      for(const auto& [_distance, index] : distances) {
+        // `index + 1` is ok because we check `dict_it + 1 != dictionary.cend()` above
+        ranges.push_back(std::make_pair(dictionary[index], dictionary[index + 1]));
+      }
+
+      return std::make_shared<RangeFilter<T>>(ranges);
+  }
+}
 
 class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
  public:
