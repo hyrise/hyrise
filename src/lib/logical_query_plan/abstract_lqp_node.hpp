@@ -316,14 +316,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   void _child_changed();
 
-  /**
-   * Actual impl of AbstractLQPNode::print(). AbstractLQPNode::print() just creates the `levels` and `id_by_node`
-   * instances used during the recursion.
-   */
-  void _print_impl(std::ostream& out, std::vector<bool>& levels,
-                   std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t>& id_by_node,
-                   size_t& id_counter) const;
-
   // @{
   /**
    * Add or remove a parent without manipulating this parents child ptr. For internal usage in set_left_child(),
