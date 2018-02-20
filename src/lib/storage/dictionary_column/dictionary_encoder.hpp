@@ -34,7 +34,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+    auto dictionary = ValueVector<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {

@@ -20,9 +20,17 @@ class ValueVector {
 
   ValueVector();
 
-  // TODO(team_btm): move to cpp
+  // TODO(team_btm): move to cpp and add private function
   template <class Iter>
   ValueVector(Iter first, Iter last) {
+    while (first != last) {
+      push_back(*first);
+      ++first;
+    }
+  }
+
+  template <class Iter>
+  ValueVector(Iter first, Iter last, const PolymorphicAllocator<size_t>& alloc) : _values(alloc) {
     while (first != last) {
       push_back(*first);
       ++first;
