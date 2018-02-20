@@ -74,7 +74,8 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
   ChunkOffsetsList create_random_access_chunk_offsets_list() {
     auto list = create_sequential_chunk_offsets_list();
 
-    std::default_random_engine engine{std::random_device{}()};
+    auto random_device = std::random_device{};
+    std::default_random_engine engine{random_device()};
     std::shuffle(list.begin(), list.end(), engine);
 
     return list;
