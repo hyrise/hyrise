@@ -1,11 +1,18 @@
 #pragma once
 
+#include <boost/preprocessor/seq/for_each.hpp>
+
 #include "all_type_variant.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/column_iterables/base_column_iterators.hpp"
 
 namespace opossum {
+
+#define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
+  std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
+
+#define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
 
 /* A brief overview of the type system and the way values are handled in the JitOperator:
  *
@@ -42,12 +49,7 @@ namespace opossum {
 class JitVariantVector {
  public:
   void resize(const size_t new_size) {
-    _bool.resize(new_size);
-    _int.resize(new_size);
-    _long.resize(new_size);
-    _float.resize(new_size);
-    _double.resize(new_size);
-    _string.resize(new_size);
+    BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, DATA_TYPE_INFO)
     _is_null.resize(new_size);
   }
 
@@ -59,12 +61,7 @@ class JitVariantVector {
   bool set_is_null(const size_t index, const bool is_null) { return _is_null[index]; }
 
  private:
-  std::vector<bool> _bool;
-  std::vector<int32_t> _int;
-  std::vector<int64_t> _long;
-  std::vector<float> _float;
-  std::vector<double> _double;
-  std::vector<std::string> _string;
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, DATA_TYPE_INFO)
   std::vector<uint8_t> _is_null;
 };
 
@@ -126,5 +123,9 @@ class JitTupleValue {
   const bool _is_nullable;
   const size_t _tuple_index;
 };
+
+// cleanup
+#undef JIT_VARIANT_VECTOR_MEMBER
+#undef JIT_VARIANT_VECTOR_RESIZE
 
 }  // namespace opossum

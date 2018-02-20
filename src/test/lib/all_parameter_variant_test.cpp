@@ -23,6 +23,11 @@ TEST_F(AllParameterVariantTest, GetCurrentType) {
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
+    AllParameterVariant parameter(true);
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
+    EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
+  }
+  {
     AllParameterVariant parameter(static_cast<int32_t>(123));
     EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
@@ -53,6 +58,11 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
     AllParameterVariant parameter("string");
     auto value = type_cast<std::string>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, "string");
+  }
+  {
+    AllParameterVariant parameter(static_cast<uint8_t>(123));
+    auto value = type_cast<uint8_t>(boost::get<AllTypeVariant>(parameter));
+    EXPECT_EQ(value, static_cast<uint8_t>(123));
   }
   {
     AllParameterVariant parameter(static_cast<int32_t>(123));
