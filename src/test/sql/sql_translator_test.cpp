@@ -490,6 +490,11 @@ TEST_F(SQLTranslatorTest, InSubquery) {
   ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
 }
 
+TEST_F(SQLTranslatorTest, InSubquerySeveralColumns) {
+  const auto query = "SELECT * FROM table_a WHERE a IN (SELECT * FROM table_b);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
 TEST_F(SQLTranslatorTest, SelectSubquery) {
   const auto query = "SELECT a, (SELECT MAX(b) FROM table_b) FROM table_a;";
   auto result_node = compile_query(query);
