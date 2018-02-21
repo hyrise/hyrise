@@ -40,8 +40,9 @@ struct MaterializedNUMAPartition {
         _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)},
         _chunk_columns(reserve_size) {}
 
+  // TODO(florian): either fix this or find a workaround
   void fit() {
-    //_chunk_columns.erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), nullptr));
+    _chunk_columns.erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), std::shared_ptr<MaterializedChunk<T>>{}), _chunk_columns.end());
   }
 };
 

@@ -139,32 +139,35 @@ class RadixClusterSortNUMA {
   /**
   * Determines the total size of a materialized column list.
   **/
-  //  static size_t _materialized_table_size(std::unique_ptr<MaterializedNUMAPartition<T>>& table) {
-  //    size_t total_size = 0;
-  //    for (auto chunk : table->_chunk_columns ) {
-  //      total_size += chunk->size();
-  //    }
+  static size_t _materialized_table_size(MaterializedNUMAPartition<T>& table) {
+    size_t total_size = 0;
+    for (auto chunk : table._chunk_columns ) {
+      total_size += chunk->size();
+    }
 
-  //    return total_size;
-  //  }
+    return total_size;
+  }
 
   /**
   * Concatenates multiple materialized columns to a single materialized column.
   **/
-  //  static std::unique_ptr<MaterializedNUMAPartitionList<T>> _concatenate_chunks(
-  //      std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
-  //    auto output_table = std::make_unique<MaterializedColumnList<T>>(1);
-  //    (*output_table)[0] = std::make_shared<MaterializedColumn<T>>();
+  static std::unique_ptr<MaterializedNUMAPartitionList<T>> _concatenate_chunks(
+      std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_table) {
+    // We know input chunks has only one numa_node
+    auto output_table = std::make_unique<MaterializedNUMAPartitionList<T>>();
+    output_table->push_back(MaterializedNUMAPartition<T>(NodeID{0}, 1));
 
-  //    // Reserve the required space and move the data to the output
-  //    auto output_chunk = (*output_table)[0];
-  //    output_chunk->reserve(_materialized_table_size(input_chunks));
-  //    for (auto& chunk : *input_chunks) {
-  //      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
-  //    }
+    // Reserve the required space and move the data to the output
+    auto output_chunk = std::make_shared<MaterializedChunk<T>>();
+    _materialized_table_size((*input_table)[0]);
+    for (auto& chunk : (*input_table)[0]._chunk_columns) {
+      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
+    }
 
-  //    return output_table;
-  //  }
+    (*output_table)[0]._chunk_columns[0] = output_chunk;
+
+    return output_table;
+  }
 
   /**
   * Performs the clustering on a materialized table using a clustering function that determines for each
@@ -399,11 +402,10 @@ class RadixClusterSortNUMA {
     output.null_rows_left = std::move(materialization_left.second);
     output.null_rows_right = std::move(materialization_right.second);
 
-//    if (_cluster_count == 1) {
-//      DebugAssert(false, "single cluster case not supported by numa_join");
-//      //      output.clusters_left = _concatenate_chunks(materialized_left_columns);
-//      //      output.clusters_right = _concatenate_chunks(materialized_right_columns);
-//    } else
+    if (_cluster_count == 1) {
+      output.clusters_left = _concatenate_chunks(materialized_left_columns);
+      output.clusters_right = _concatenate_chunks(materialized_right_columns);
+    } else
       if (_equi_case) {
       output.clusters_left = _radix_cluster_numa(materialized_left_columns);
       output.clusters_right = _radix_cluster_numa(materialized_right_columns);

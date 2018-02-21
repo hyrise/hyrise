@@ -118,8 +118,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     TableRange to(TablePosition position) { return TableRange(*this, position); }
   };
 
-  //  TablePosition _end_of_left_table;
-  //  TablePosition _end_of_right_table;
+  std::vector<TablePosition> _end_of_left_table;
+  std::vector<TablePosition> _end_of_right_table;
 
   /**
     * The TableRange is a utility struct that is used to define ranges of rows in a sorted input table spanning from
@@ -164,11 +164,17 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-  //  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
-  //    DebugAssert(table->size() > 0, "table has no chunks");
-  //    auto last_cluster = table->size() - 1;
-  //    return TablePosition(last_cluster, (*table)[last_cluster]->size());
-  //  }
+    static std::vector<TablePosition> _end_of_table(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table) {
+      DebugAssert(table->size() > 0, "table has no chunks");
+      auto end_positions = std::vector<TablePosition>{table->size()};
+      for(auto& partition : (*table)){
+        auto last_cluster = partition._chunk_columns.size() - 1;
+        auto node_id = partition._node_id;
+        end_positions[node_id] = TablePosition(node_id, last_cluster, partition._chunk_columns[last_cluster]->size());
+      }
+
+      return end_positions;
+    }
 
   /**
   * Represents the result of a value comparison.
@@ -196,40 +202,40 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
           }
         }
         break;
-        //      case PredicateCondition::OpNotEquals:
-        //        if (compare_result == CompareResult::Greater) {
-        //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        //        } else if (compare_result == CompareResult::Equal) {
-        //          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-        //          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-        //        } else if (compare_result == CompareResult::Less) {
-        //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        //        }
-        //        break;
-        //      case PredicateCondition::OpGreaterThan:
-        //        if (compare_result == CompareResult::Greater) {
-        //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        //        } else if (compare_result == CompareResult::Equal) {
-        //          _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-        //        }
-        //        break;
-        //      case PredicateCondition::OpGreaterThanEquals:
-        //        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-        //          _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        //        }
-        //        break;
-        //      case PredicateCondition::OpLessThan:
-        //        if (compare_result == CompareResult::Less) {
-        //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        //        } else if (compare_result == CompareResult::Equal) {
-        //          _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-        //        }
-        //        break;
-        //      case PredicateCondition::OpLessThanEquals:
-        //        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-        //          _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        //        }
-        //        break;
+      case PredicateCondition::NotEquals:
+        if (compare_result == CompareResult::Greater) {
+          _emit_all_combinations(partition_number, cluster_number, left_run.start.to(_end_of_left_table[partition_number]), right_run);
+        } else if (compare_result == CompareResult::Equal) {
+          _emit_all_combinations(partition_number, cluster_number, left_run.end.to(_end_of_left_table[partition_number]), right_run);
+          _emit_all_combinations(partition_number, cluster_number, left_run, right_run.end.to(_end_of_right_table[partition_number]));
+        } else if (compare_result == CompareResult::Less) {
+          _emit_all_combinations(partition_number, cluster_number, left_run, right_run.start.to(_end_of_right_table[partition_number]));
+        }
+        break;
+      case PredicateCondition::GreaterThan:
+        if (compare_result == CompareResult::Greater) {
+          _emit_all_combinations(partition_number, cluster_number, left_run.start.to(_end_of_left_table[partition_number]), right_run);
+        } else if (compare_result == CompareResult::Equal) {
+          _emit_all_combinations(partition_number, cluster_number, left_run.end.to(_end_of_left_table[partition_number]), right_run);
+        }
+        break;
+      case PredicateCondition::GreaterThanEquals:
+        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
+          _emit_all_combinations(partition_number, cluster_number, left_run.start.to(_end_of_left_table[partition_number]), right_run);
+        }
+        break;
+      case PredicateCondition::LessThan:
+        if (compare_result == CompareResult::Less) {
+          _emit_all_combinations(partition_number, cluster_number, left_run, right_run.start.to(_end_of_right_table[partition_number]));
+        } else if (compare_result == CompareResult::Equal) {
+          _emit_all_combinations(partition_number, cluster_number, left_run, right_run.end.to(_end_of_right_table[partition_number]));
+        }
+        break;
+      case PredicateCondition::LessThanEquals:
+        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
+          _emit_all_combinations(partition_number, cluster_number, left_run, right_run.start.to(_end_of_right_table[partition_number]));
+        }
+        break;
       default:
         DebugAssert(false, "currently only Equi Join is supported by NumaMPSM Join");
         throw std::logic_error("Unknown PredicateCondition");
@@ -663,8 +669,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _null_rows_right = std::move(sort_output.null_rows_right);
 
     // TODO(florian): these should be multiplicities
-    // _end_of_left_table = _end_of_table(_sorted_left_table);
-    // _end_of_right_table = _end_of_table(_sorted_right_table);
+    _end_of_left_table = _end_of_table(_sorted_left_table);
+    _end_of_right_table = _end_of_table(_sorted_right_table);
 
     _perform_join();
 
