@@ -13,6 +13,15 @@ class ValueVectorTest : public BaseTest {
   void SetUp() override {}
 };
 
+TEST_F(ValueVectorTest, PushString) {
+  auto valuevector = ValueVector<FixedString>(3u);
+  valuevector.push_back("abc");
+  const auto const_fs = "cde";
+  valuevector.push_back(const_fs);
+
+  EXPECT_EQ(valuevector[0].string(), "abc");
+}
+
 TEST_F(ValueVectorTest, SubscriptOperator) {
   auto valuevector = ValueVector<std::string>();
   valuevector.push_back("abc");
@@ -28,6 +37,13 @@ TEST_F(ValueVectorTest, SubscriptOperatorConst) {
   EXPECT_EQ(const_value_vector[0], "const");
 }
 
+TEST_F(ValueVectorTest, AtOperator) {
+  auto valuevector = ValueVector<std::string>();
+  valuevector.push_back("string");
+
+  EXPECT_EQ(valuevector.at(0), "string");
+}
+
 TEST_F(ValueVectorTest, PushBack) {
   auto valuevector = ValueVector<int>();
   valuevector.push_back(0);
@@ -41,7 +57,7 @@ TEST_F(ValueVectorTest, PushBack) {
 TEST_F(ValueVectorTest, Iterator) {
   auto valuevector = ValueVector<std::string>();
   valuevector.push_back("str1");
-  valuevector.push_back("str1");
+  valuevector.push_back("str2");
 
   for (auto it = valuevector.begin(); it != valuevector.end(); ++it) {
     *it = "abc";
@@ -50,27 +66,53 @@ TEST_F(ValueVectorTest, Iterator) {
   EXPECT_EQ(valuevector[0], "abc");
 }
 
-TEST_F(ValueVectorTest, PushString) {
-  auto valuevector = ValueVector<FixedString>(3u);
-  valuevector.push_back("abc");
-  const auto const_fs = "cde";
-  valuevector.push_back(const_fs);
+TEST_F(ValueVectorTest, ConstIterator) {
+  auto valuevector = ValueVector<std::string>();
+  valuevector.push_back("str1");
+  valuevector.push_back("str2");
 
-  EXPECT_EQ(valuevector[0].string(), "abc");
+  auto const_it_begin = valuevector.cbegin();
+  auto const_it_end = valuevector.cend();
+  const_it_end--;
+
+  EXPECT_EQ(*const_it_begin, "str1");
+  EXPECT_EQ(*const_it_end, "str2");
 }
 
+TEST_F(ValueVectorTest, ReverseIterator) {
+  auto valuevector = ValueVector<std::string>();
+  valuevector.push_back("str1");
+  valuevector.push_back("str2");
+
+  auto it_rbegin = valuevector.rbegin();
+  auto it_rend = valuevector.rend();
+  it_rend--;
+
+  EXPECT_EQ(*it_rbegin, "str2");
+  EXPECT_EQ(*it_rend, "str1");
+}
+
+
 TEST_F(ValueVectorTest, SubscriptOperatorFixedString) {
-  auto valuevector = ValueVector<FixedString>(3u);
+  auto valuevector = ValueVector<FixedString>(6u);
   valuevector.push_back("abc");
+  valuevector.push_back("string");
+  valuevector.push_back("opossum");
 
   EXPECT_EQ(valuevector[0].string(), "abc");
+  EXPECT_EQ(valuevector[1].string(), "string");
+  EXPECT_EQ(valuevector[2].string(), "opossu");
 }
 
 TEST_F(ValueVectorTest, AtOperatorFixedString) {
-  auto valuevector = ValueVector<FixedString>(3u);
+  auto valuevector = ValueVector<FixedString>(6u);
   valuevector.push_back("abc");
+  valuevector.push_back("string");
+  valuevector.push_back("opossum");
 
   EXPECT_EQ(valuevector.at(0).string(), "abc");
+  EXPECT_EQ(valuevector.at(1).string(), "string");
+  EXPECT_EQ(valuevector.at(2).string(), "opossu");
 }
 
 TEST_F(ValueVectorTest, IteratorFixedString) {
@@ -83,6 +125,28 @@ TEST_F(ValueVectorTest, IteratorFixedString) {
   }
 
   EXPECT_EQ(valuevector[0].string(), "abcde");
+}
+
+TEST_F(ValueVectorTest, IteratorConstFixedString) {
+  auto valuevector = ValueVector<FixedString>(4u);
+  valuevector.push_back("str1");
+  valuevector.push_back("str2");
+  const auto& valuevector_const = valuevector;
+
+  auto it_begin = valuevector_const.begin();
+  auto it_end = valuevector_const.end();
+  it_end--;
+
+  EXPECT_EQ(it_begin->string(), "str1");
+  EXPECT_EQ(it_end->string(), "str2");
+
+
+  auto const_it_begin = valuevector_const.cbegin();
+  auto const_it_end = valuevector_const.cend();
+  const_it_end--;
+
+  EXPECT_EQ(const_it_begin->string(), "str1");
+  EXPECT_EQ(const_it_end->string(), "str2");
 }
 
 TEST_F(ValueVectorTest, ReverseIteratorFixedString) {
@@ -178,6 +242,14 @@ TEST_F(ValueVectorTest, ConstIteratorConstructor) {
 
   EXPECT_EQ(v2[0], "abc");
   EXPECT_EQ(v2.size(), 3u);
+}
+
+TEST_F(ValueVectorTest, DataSize) {
+  auto valuevector = ValueVector<FixedString>(4u);
+  valuevector.push_back("str1");
+  valuevector.push_back("str2");
+
+  EXPECT_EQ(valuevector.data_size(), 48u);
 }
 
 }  // namespace opossum
