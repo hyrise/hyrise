@@ -6,8 +6,8 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 #include "gtest/gtest.h"
-#include "logical_query_plan/join_node.hpp"
 
+#include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/validate.hpp"
@@ -243,7 +243,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) 
   sql_pipeline.get_optimized_logical_plan();
   const auto& unoptimized_lqp_new = sql_pipeline.get_unoptimized_logical_plan();
 
-  EXPECT_TRUE(subtree_types_are_equal(unoptimized_lqp_new, unoptimized_copy));
+  EXPECT_LQP_EQ(unoptimized_copy, unoptimized_lqp_new);
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlan) {

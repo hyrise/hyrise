@@ -10,7 +10,7 @@ namespace opossum {
 
 class DummyTableNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _dummy_table_node = std::make_shared<DummyTableNode>(); }
+  void SetUp() override { _dummy_table_node = DummyTableNode::make(); }
 
   std::shared_ptr<DummyTableNode> _dummy_table_node;
 };

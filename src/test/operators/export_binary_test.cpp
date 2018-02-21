@@ -12,7 +12,7 @@
 #include "operators/export_binary.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -122,7 +122,7 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   table->append({"a"});
   table->append({"test"});
 
-  DeprecatedDictionaryCompression::compress_table(*table);
+  ChunkEncoder::encode_all_chunks(table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -165,7 +165,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  DeprecatedDictionaryCompression::compress_table(*table);
+  ChunkEncoder::encode_all_chunks(table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -188,7 +188,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -255,7 +255,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   table->append({""});
   table->append({""});
 
-  DeprecatedDictionaryCompression::compress_table(*table);
+  ChunkEncoder::encode_all_chunks(table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -305,7 +305,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
   table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
 
-  DeprecatedDictionaryCompression::compress_table(*table);
+  ChunkEncoder::encode_all_chunks(table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

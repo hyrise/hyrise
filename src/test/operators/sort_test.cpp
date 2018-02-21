@@ -10,7 +10,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -26,10 +26,10 @@ class OperatorsSortTest : public BaseTest, public ::testing::WithParamInterface<
     _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
 
     auto table = load_table("src/test/tables/int_float.tbl", 2);
-    DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
+    ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
     auto table_dict = load_table("src/test/tables/int_float_with_null.tbl", 2);
-    DeprecatedDictionaryCompression::compress_table(*table_dict, _encoding_type);
+    ChunkEncoder::encode_all_chunks(table_dict, {_encoding_type});
 
     _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(table));
     _table_wrapper_dict->execute();

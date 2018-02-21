@@ -16,9 +16,9 @@ class TableStatistics;
  * This node type represents a table stored by the table manager.
  * They are the leafs of every meaningful LQP tree.
  */
-class StoredTableNode : public AbstractLQPNode {
+class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
-  explicit StoredTableNode(const std::string& table_name);
+  explicit StoredTableNode(const std::string& table_name, const std::optional<std::string>& alias = std::nullopt);
 
   const std::string& table_name() const;
 
@@ -31,6 +31,8 @@ class StoredTableNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

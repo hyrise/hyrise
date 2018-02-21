@@ -9,6 +9,9 @@
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 
+#include "storage/encoding_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+
 namespace opossum {
 
 /*
@@ -138,5 +141,17 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                  map.insert({hana::first(pair), std::string{hana::second(pair)}});
                  return map;
                });
+
+const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
+    {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
+    {EncodingType::Dictionary, "Dictionary"},
+    {EncodingType::RunLength, "RunLength"},
+});
+
+const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
+    make_bimap<VectorCompressionType, std::string>({
+        {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
+        {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+    });
 
 }  // namespace opossum

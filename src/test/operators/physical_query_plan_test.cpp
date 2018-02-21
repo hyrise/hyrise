@@ -1,8 +1,8 @@
 #include <sstream>
 
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
@@ -28,7 +28,7 @@ TEST_F(PhysicalQueryPlanTest, Print) {
  \_[1] TableScan (Col #0 > 20)
  |  \_[2] GetTable (int_int_int_100)
  \_[3] TableScan (Col #1 > 30)
-    \_Recurring Operator --> [2]
+    \_Recurring Node --> [2]
 )");
 }
 }  // namespace opossum
