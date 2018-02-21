@@ -156,8 +156,11 @@ void ProjectionNode::_update_output() const {
     } else if (expression->type() == ExpressionType::Select) {
       auto node = expression->subselect_node();
 
-      // TODO: add support for aliased subselects
       _output_column_references->emplace_back(node, ColumnID(0));
+
+      if (!expression->alias()) {
+        _output_column_names->emplace_back(expression->to_string());
+      }
     } else {
       Fail("Only column references, arithmetic expressions, subqueries and literals supported for now.");
     }
