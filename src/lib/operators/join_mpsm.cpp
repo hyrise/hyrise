@@ -28,13 +28,8 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals || op == PredicateCondition::LessThan ||
-                  op == PredicateCondition::GreaterThan || op == PredicateCondition::LessThanEquals ||
-                  op == PredicateCondition::GreaterThanEquals || op == PredicateCondition::NotEquals,
-              "Unsupported scan type");
-  // TODO(florian): this check makes no sense, also fix in join_sort_merge
-  DebugAssert(op != PredicateCondition::NotEquals || mode == JoinMode::Inner,
-              "Outer joins are not implemented for not-equals joins.");
+  DebugAssert(op == PredicateCondition::Equals,
+              "Only Equi joins are supported by MPSM join.");
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
