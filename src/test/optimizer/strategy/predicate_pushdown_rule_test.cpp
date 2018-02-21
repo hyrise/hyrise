@@ -103,9 +103,11 @@ TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
-  auto join_node_ab = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
-  auto join_node_bc = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_b_a, _c_a), PredicateCondition::Equals);
-  
+  auto join_node_ab =
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
+  auto join_node_bc =
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_b_a, _c_a), PredicateCondition::Equals);
+
   join_node_bc->set_left_child(_table_b);
   join_node_bc->set_right_child(_table_c);
   join_node_ab->set_left_child(join_node_bc);

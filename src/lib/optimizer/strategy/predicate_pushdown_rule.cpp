@@ -25,7 +25,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     while (child->type() == LQPNodeType::Predicate) {
       child = child->left_child();
     }
-    
+
     // can be demoted?
     if (child->type() == LQPNodeType::Join) {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(child);
