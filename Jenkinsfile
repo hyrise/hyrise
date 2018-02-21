@@ -25,54 +25,41 @@ node {
         wait"
       }
 
-      stage("Linting") {
-        sh '''
-          scripts/lint.sh pre
-        '''
-      }
-
       parallel clangRelease: {
         stage("clang-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./clang-release/hyriseTest"
+          sh "./clang-release/hyriseTest clang-release"
         }
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
         }
-      }, moreLint: {
-        stage("Stricter Linting") {
-          script {
-            lintFails = sh script: "./scripts/lint.sh post || true", returnStdout: true
-            if (lintFails?.trim()) {
-              echo lintFails
-              writeFile file: "post_lint.txt", text: lintFails
-              archive "post_lint.txt"
-              githubNotify context: 'Strict Lint', status: 'ERROR', description: "Click Details", targetUrl: "${env.BUILD_URL}/artifact/post_lint.txt"
-            } else {
-              githubNotify context: 'Strict Lint', status: 'SUCCESS'
-            }
-          }
+      }, lint: {
+        stage("Linting") {
+          sh '''
+            scripts/lint.sh
+          '''
         }
       }
 
       parallel clangDebugRun: {
         stage("clang-debug:test") {
-          sh "./clang-debug/hyriseTest"
+          sh "./clang-debug/hyriseTest clang-debug"
         }
       }, clangDebugRunShuffled: {
         stage("clang-debug:test-shuffle") {
-          sh "./clang-debug/hyriseTest --gtest_repeat=5 --gtest_shuffle"
+          sh "mkdir ./clang-debug/run-shuffled"
+          sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
         }
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
         sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
         }
       }, gccRelease: {
         stage("gcc-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./gcc-release/hyriseTest"
+          sh "./gcc-release/hyriseTest gcc-release"
         }
       }, systemTest: {
         stage("System Test") {
@@ -81,16 +68,16 @@ node {
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
         }
       }, clangReleaseSanitizersNoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest"
+          sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh gcc-debug-coverage true"
+          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --build_directory=gcc-debug-coverage --generate_badge=true --test_data_folder=gcc-debug-coverage"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
           archive 'coverage.xml'
@@ -111,7 +98,8 @@ node {
         }
       }, memcheck: {
         stage("valgrind-memcheck") {
-          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          sh "mkdir ./clang-release-memcheck"
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
         }
       }
 

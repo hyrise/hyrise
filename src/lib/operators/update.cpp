@@ -57,7 +57,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    auto chunk = std::make_shared<Chunk>(ChunkUseMvcc::No);
+    auto chunk = std::make_shared<Chunk>(UseMvcc::No);
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
       chunk->add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
@@ -126,6 +126,10 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   }
 
   return true;
+}
+
+std::shared_ptr<AbstractOperator> Update::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Update>(_table_to_update_name, _input_left->recreate(args), _input_right->recreate(args));
 }
 
 }  // namespace opossum

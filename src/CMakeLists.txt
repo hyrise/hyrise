@@ -4,6 +4,18 @@ else()
     add_definitions(-DIS_DEBUG=0)
 endif()
 
+option(DISABLE_JIT_SUPPORT "Build without JIT support" OFF)
+if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+    set(DISABLE_JIT_SUPPORT ON)
+endif()
+
+if (NOT DISABLE_JIT_SUPPORT)
+    add_definitions(-DHYRISE_JIT_SUPPORT=1)
+else()
+    add_definitions(-DHYRISE_JIT_SUPPORT=0)
+    MESSAGE(STATUS "Building without JIT support")
+endif()
+
 option(DISABLE_NUMA_SUPPORT "Build without NUMA support" OFF)
 if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
@@ -16,7 +28,7 @@ endif()
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
-    add_compile_options(-fprofile-arcs -ftest-coverage)
+    add_compile_options(-O0 -fprofile-arcs -ftest-coverage)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
@@ -31,7 +43,7 @@ endif()
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 # Global flags and include directories
-add_compile_options(-std=c++1z -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter)
+add_compile_options(-std=c++17 -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
@@ -47,7 +59,11 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
-if (${NUMA_FOUND})
+if (NOT DISABLE_JIT_SUPPORT)
+    include_directories(${LLVM_INCLUDE_DIR})
+endif()
+
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()

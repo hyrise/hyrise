@@ -12,7 +12,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -41,12 +41,12 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_float->execute();
 
     std::shared_ptr<Table> test_table_dict = load_table("src/test/tables/int_int_int.tbl", 2);
-    DictionaryCompression::compress_table(*test_table_dict);
+    ChunkEncoder::encode_all_chunks(test_table_dict);
     _table_wrapper_int_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
     _table_wrapper_int_dict->execute();
 
     std::shared_ptr<Table> test_table_dict_null = load_table("src/test/tables/int_int_int.tbl", 2);
-    DictionaryCompression::compress_table(*test_table_dict_null);
+    ChunkEncoder::encode_all_chunks(test_table_dict_null);
     _table_wrapper_int_dict_null = std::make_shared<TableWrapper>(std::move(test_table_dict_null));
     _table_wrapper_int_dict_null->execute();
 
@@ -273,7 +273,8 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition.tbl", 2);
 
   // creates ref_columns
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper_int_dict, ColumnID{0}, ScanType::GreaterThan, "0");
+  auto table_scan =
+      std::make_shared<TableScan>(_table_wrapper_int_dict, ColumnID{0}, PredicateCondition::GreaterThan, "0");
   table_scan->execute();
 
   auto projection = std::make_shared<Projection>(table_scan, _sum_a_b_c_expr);
@@ -301,7 +302,7 @@ TEST_F(OperatorsProjectionTest, ValueColumnCount) {
 
 // TODO(anyone): refactor test
 TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
-  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::Equals, 1234);
+  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::Equals, 1234);
   scan->execute();
 
   auto projection_1 = std::make_shared<opossum::Projection>(scan, _a_b_expr);

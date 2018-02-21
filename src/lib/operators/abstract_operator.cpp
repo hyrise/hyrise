@@ -10,6 +10,7 @@
 #include "sql/sql_query_operator.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 
 namespace opossum {
 
@@ -64,7 +65,7 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
   return _output;
 }
 
-const std::string AbstractOperator::description() const { return name(); }
+const std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
   Fail("Operator " + name() + " does not implement recreation.");
@@ -74,16 +75,12 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
+bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
+
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
-  // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
-  DebugAssert(
-      [context = _transaction_context]() {
-        bool transaction_context_set = context.owner_before(std::weak_ptr<TransactionContext>{}) ||
-                                       std::weak_ptr<TransactionContext>{}.owner_before(context);
-        return !transaction_context_set || !context.expired();
-      }(),
-      "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
-  return _transaction_context.lock();
+  DebugAssert(!transaction_context_is_set() || !_transaction_context->expired(),
+              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
+  return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 
 void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
@@ -116,6 +113,31 @@ std::shared_ptr<OperatorTask> AbstractOperator::operator_task() { return _operat
 void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
   DebugAssert(!_operator_task.lock(), "_operator_task was already set");
   _operator_task = operator_task;
+}
+
+void AbstractOperator::print(std::ostream& stream) const {
+  const auto get_children_fn = [](const auto& op) {
+    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    if (op->input_left()) children.emplace_back(op->input_left());
+    if (op->input_right()) children.emplace_back(op->input_right());
+    return children;
+  };
+  const auto node_print_fn = [](const auto& op, auto& stream) {
+    stream << op->description();
+
+    // If the operator was already executed, print some info about data and performance
+    const auto output = op->get_output();
+    if (output) {
+      stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+             << output->column_count() << " column(s)/";
+
+      stream << format_bytes(output->estimate_memory_usage());
+      stream << "/";
+      stream << op->performance_data().walltime_ns << "ns)";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
 }
 
 void AbstractOperator::_on_cleanup() {}

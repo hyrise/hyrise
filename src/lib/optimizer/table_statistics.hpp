@@ -78,7 +78,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Generate table statistics for the operator table scan table scan.
    */
   virtual std::shared_ptr<TableStatistics> predicate_statistics(
-      const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
+      const ColumnID column_id, const PredicateCondition predicate_condition, const AllParameterVariant& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   /**
@@ -92,15 +92,15 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    */
   virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
       const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
-      const ScanType scan_type);
+      const PredicateCondition predicate_condition);
 
   // Increases the (approximate) count of invalid rows in the table (caused by deletes).
   void increment_invalid_row_count(uint64_t count);
 
  protected:
-  std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);
+  std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id) const;
 
-  void _create_all_column_statistics();
+  void _create_all_column_statistics() const;
 
   /**
    * Resets the pointer variable _table after checking that the table is no longer needed. If the pointer is null, all
@@ -151,7 +151,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
   uint64_t _approx_invalid_row_count{0};
 
-  std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
+  mutable std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
 
   friend std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 };

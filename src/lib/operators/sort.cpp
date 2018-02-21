@@ -6,11 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_attribute_vector.hpp"
-#include "storage/column_visitable.hpp"
-#include "storage/iterables/chunk_offset_mapping.hpp"
-#include "storage/iterables/dictionary_column_iterable.hpp"
-#include "storage/iterables/value_column_iterable.hpp"
+#include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 

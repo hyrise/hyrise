@@ -14,6 +14,8 @@ namespace opossum {
 
 class TableStatistics;
 
+enum class ScanType : uint8_t { TableScan, IndexScan };
+
 /**
  * This node type represents a filter.
  * The most common use case is to represent a regular TableScan,
@@ -21,21 +23,26 @@ class TableStatistics;
  *
  * HAVING clauses of GROUP BY clauses will be translated to this node type as well.
  */
-class PredicateNode : public AbstractLQPNode {
+class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public AbstractLQPNode {
  public:
-  PredicateNode(const LQPColumnReference& column_reference, const ScanType scan_type, const AllParameterVariant& value,
-                const std::optional<AllTypeVariant>& value2 = std::nullopt);
+  PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
+                const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 
   const LQPColumnReference& column_reference() const;
-  ScanType scan_type() const;
+  PredicateCondition predicate_condition() const;
   const AllParameterVariant& value() const;
   const std::optional<AllTypeVariant>& value2() const;
+
+  ScanType scan_type() const;
+  void set_scan_type(ScanType scan_type);
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_child,
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
@@ -44,9 +51,11 @@ class PredicateNode : public AbstractLQPNode {
 
  private:
   const LQPColumnReference _column_reference;
-  const ScanType _scan_type;
+  const PredicateCondition _predicate_condition;
   const AllParameterVariant _value;
   const std::optional<AllTypeVariant> _value2;
+
+  ScanType _scan_type = ScanType::TableScan;
 };
 
 }  // namespace opossum

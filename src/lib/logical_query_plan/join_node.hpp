@@ -19,16 +19,17 @@ using LQPColumnReferencePair = std::pair<LQPColumnReference, LQPColumnReference>
  * This node type is used to represent any type of Join, including cross products.
  * The idea is that the optimizer is able to decide on the physical join implementation.
  */
-class JoinNode : public AbstractLQPNode {
+class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
  public:
   // Constructor for Natural and Cross Joins
   explicit JoinNode(const JoinMode join_mode);
 
   // Constructor for predicated Joins
-  JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references, const ScanType scan_type);
+  JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
+           const PredicateCondition predicate_condition);
 
   const std::optional<LQPColumnReferencePair>& join_column_references() const;
-  const std::optional<ScanType>& scan_type() const;
+  const std::optional<PredicateCondition>& predicate_condition() const;
   JoinMode join_mode() const;
 
   std::string description() const override;
@@ -41,6 +42,8 @@ class JoinNode : public AbstractLQPNode {
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
   void _on_child_changed() override;
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
@@ -50,7 +53,7 @@ class JoinNode : public AbstractLQPNode {
  private:
   JoinMode _join_mode;
   std::optional<LQPColumnReferencePair> _join_column_references;
-  std::optional<ScanType> _scan_type;
+  std::optional<PredicateCondition> _predicate_condition;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

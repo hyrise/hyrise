@@ -12,7 +12,10 @@ GetTable::GetTable(const std::string& name) : _name(name) {}
 
 const std::string GetTable::name() const { return "GetTable"; }
 
-const std::string GetTable::description() const { return name() + "\\n(" + table_name() + ")"; }
+const std::string GetTable::description(DescriptionMode description_mode) const {
+  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  return name() + separator + "(" + table_name() + ")";
+}
 
 const std::string& GetTable::table_name() const { return _name; }
 

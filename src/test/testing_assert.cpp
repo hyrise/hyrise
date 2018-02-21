@@ -256,13 +256,13 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   return true;
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, ScanType scan_type,
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
                             const LQPColumnReference& left_column_reference,
                             const LQPColumnReference& right_column_reference) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
-  EXPECT_EQ(join_node->scan_type(), scan_type);
+  EXPECT_EQ(join_node->predicate_condition(), predicate_condition);
   EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
 }
 
@@ -281,17 +281,6 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChil
   }
 
   return false;
-}
-
-bool subtree_types_are_equal(const std::shared_ptr<AbstractLQPNode>& got,
-                             const std::shared_ptr<AbstractLQPNode>& expected) {
-  if (got == nullptr && expected == nullptr) return true;
-  if (got == nullptr) return false;
-  if (expected == nullptr) return false;
-
-  if (got->type() != expected->type()) return false;
-  return subtree_types_are_equal(got->left_child(), expected->left_child()) &&
-         subtree_types_are_equal(got->right_child(), expected->right_child());
 }
 
 }  // namespace opossum

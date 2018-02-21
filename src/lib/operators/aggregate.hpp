@@ -12,9 +12,9 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -86,7 +86,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   const std::string name() const override;
-  const std::string description() const override;
+  const std::string description(DescriptionMode description_mode) const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   // write the aggregated output for a given aggregate column

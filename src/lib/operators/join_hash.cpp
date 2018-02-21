@@ -1,20 +1,24 @@
 #include "join_hash.hpp"
 
+#include <boost/lexical_cast.hpp>
 #include <memory>
 #include <numeric>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/iterables/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+#include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/cuckoo_hashtable.hpp"
@@ -24,16 +28,16 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const ScanType scan_type)
-    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
-  DebugAssert(scan_type == ScanType::Equals, "Operator not supported by Hash Join.");
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {
+  DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
 std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
-                                    _scan_type);
+                                    _predicate_condition);
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
@@ -73,7 +77,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }
 
@@ -87,12 +91,13 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const ColumnIDPair& column_ids, const ScanType scan_type, const bool inputs_swapped)
+               const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+               const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
-        _scan_type(scan_type),
+        _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _output_table(std::make_shared<Table>()) {}
 
@@ -102,13 +107,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
-  const ScanType _scan_type;
+  const PredicateCondition _predicate_condition;
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;
 
   const unsigned int _partitioning_seed = 13;
   const size_t _radix_bits = 9;
+
+  // Determine correct type for hashing
+  using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
   /*
   This is how elements of the input relations are saved after materialization.
@@ -137,6 +145,19 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<size_t> partition_offsets;
   };
 
+  /*
+  Hashes the given value into the HashedType that is defined by the current Hash Traits.
+  Performs a lexical cast first, if necessary.
+  */
+  template <typename T>
+  constexpr uint32_t hash_value(T& value) {
+    if constexpr (!std::is_same_v<T, HashedType>) {
+      return murmur2<HashedType>(type_cast<HashedType>(value), _partitioning_seed);
+    } else {
+      return murmur2<HashedType>(value, _partitioning_seed);
+    }
+  }
+
   template <typename T>
   std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
                                                    std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
@@ -144,9 +165,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // list of all elements that will be partitioned
     auto elements = std::make_shared<Partition<T>>();
     elements->resize(in_table->row_count());
-
-    // arbitrary seed for the first hash iteration
-    unsigned int seed = _partitioning_seed;
 
     // fan-out
     const size_t num_partitions = 1 << _radix_bits;
@@ -214,8 +232,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           ChunkOffset offset = 0;
           for (auto&& elem : materialized_chunk) {
             if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
-              output[row_id] =
-                  PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
+              uint32_t hashed_value = hash_value<T>(elem.second);
+              output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, hashed_value, elem.second};
 
               const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
               histogram[radix]++;
@@ -230,7 +248,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           for (auto&& elem : materialized_chunk) {
             if (elem.first.chunk_offset == INVALID_CHUNK_OFFSET) continue;
 
-            output[row_id] = PartitionedElement<T>{elem.first, murmur2<T>(elem.second, seed), elem.second};
+            uint32_t hashed_value = hash_value<T>(elem.second);
+            output[row_id] = PartitionedElement<T>{elem.first, hashed_value, elem.second};
 
             const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
             histogram[radix]++;
@@ -305,13 +324,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         // add up the output offsets for chunks before this one
         for (ChunkID i{0}; i < chunk_id; ++i) {
+          const auto& histogram = *histograms[i];
           for (size_t j = 0; j < num_partitions; ++j) {
-            output_offsets[j] += histograms[i]->operator[](j);
+            output_offsets[j] += histogram[j];
           }
         }
         for (auto i = chunk_id; i < offsets.size(); ++i) {
+          const auto& histogram = *histograms[i];
           for (size_t j = 1; j < num_partitions; ++j) {
-            output_offsets[j] += histograms[i]->operator[](j - 1);
+            output_offsets[j] += histogram[j - 1];
           }
         }
 
@@ -349,7 +370,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
   */
   void _build(const RadixContainer<LeftType>& radix_container,
-              std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables) {
+              std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -366,12 +387,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           return;
         }
 
-        auto hashtable = std::make_shared<HashTable<LeftType>>(partition_size);
+        auto hashtable = std::make_shared<HashTable<HashedType>>(partition_size);
 
         for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end;
              ++partition_offset) {
           auto& element = partition_left[partition_offset];
-          hashtable->put(element.value, element.row_id);
+
+          hashtable->put(type_cast<HashedType>(element.value), element.row_id);
         }
 
         hashtables[current_partition_id] = hashtable;
@@ -388,8 +410,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   number of hash tables that need to be looked into to just 1.
   */
   void _probe(const RadixContainer<RightType>& radix_container,
-              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables, std::vector<PosList>& pos_list_left,
-              std::vector<PosList>& pos_list_right) {
+              const std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables,
+              std::vector<PosList>& pos_list_left, std::vector<PosList>& pos_list_right) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -474,7 +496,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   void _probe_semi_anti(const RadixContainer<RightType>& radix_container,
-                        const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables,
+                        const std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables,
                         std::vector<PosList>& pos_lists) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -623,7 +645,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right, keep_nulls);
 
     // Build phase
-    std::vector<std::shared_ptr<HashTable<LeftType>>> hashtables;
+    std::vector<std::shared_ptr<HashTable<HashedType>>> hashtables;
     hashtables.resize(radix_left.partition_offsets.size() - 1);
     /*
     NUMA notes:
