@@ -12,6 +12,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/deprecated_dictionary_compression.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -25,20 +26,20 @@ class JoinIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     // load and create the indexed tables
-    _table_wrapper_a = load_table_index("src/test/tables/int_float.tbl", 2);
-    _table_wrapper_b = load_table_index("src/test/tables/int_float2.tbl", 2);
-    _table_wrapper_c = load_table_index("src/test/tables/int_string.tbl", 4);
-    _table_wrapper_d = load_table_index("src/test/tables/string_int.tbl", 3);
-    _table_wrapper_e = load_table_index("src/test/tables/int_int.tbl", 4);
-    _table_wrapper_f = load_table_index("src/test/tables/int_int2.tbl", 4);
-    _table_wrapper_g = load_table_index("src/test/tables/int_int3.tbl", 4);
-    _table_wrapper_h = load_table_index("src/test/tables/int_int4.tbl", 4);
-    _table_wrapper_i = load_table_index("src/test/tables/int5.tbl", 1);
-    _table_wrapper_j = load_table_index("src/test/tables/int3.tbl", 1);
-    _table_wrapper_k = load_table_index("src/test/tables/int4.tbl", 1);
-    _table_wrapper_l = load_table_index("src/test/tables/int.tbl", 1);
-    _table_wrapper_m = load_table_index("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
-    _table_wrapper_n = load_table_index("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+    _table_wrapper_a = load_table_with_index_deprecated_compression("src/test/tables/int_float.tbl", 2);
+    _table_wrapper_b = load_table_with_index_deprecated_compression("src/test/tables/int_float2.tbl", 2);
+    _table_wrapper_c = load_table_with_index_deprecated_compression("src/test/tables/int_string.tbl", 4);
+    _table_wrapper_d = load_table_with_index_deprecated_compression("src/test/tables/string_int.tbl", 3);
+    _table_wrapper_e = load_table_with_index_deprecated_compression("src/test/tables/int_int.tbl", 4);
+    _table_wrapper_f = load_table_with_index_deprecated_compression("src/test/tables/int_int2.tbl", 4);
+    _table_wrapper_g = load_table_with_index_deprecated_compression("src/test/tables/int_int3.tbl", 4);
+    _table_wrapper_h = load_table_with_index_deprecated_compression("src/test/tables/int_int4.tbl", 4);
+    _table_wrapper_i = load_table_with_index_deprecated_compression("src/test/tables/int5.tbl", 1);
+    _table_wrapper_j = load_table_with_index_deprecated_compression("src/test/tables/int3.tbl", 1);
+    _table_wrapper_k = load_table_with_index_deprecated_compression("src/test/tables/int4.tbl", 1);
+    _table_wrapper_l = load_table_with_index_deprecated_compression("src/test/tables/int.tbl", 1);
+    _table_wrapper_m = load_table_with_index_deprecated_compression("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
+    _table_wrapper_n = load_table_with_index_deprecated_compression("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
@@ -57,7 +58,27 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_n->execute();
   }
 
-  std::shared_ptr<TableWrapper> load_table_index(const std::string& filename, size_t chunk_size) {
+    // some indices only support deprecated compression at the moment
+  std::shared_ptr<TableWrapper> load_table_with_index_deprecated_compression(const std::string& filename, const size_t chunk_size) {
+    auto table = load_table(filename, chunk_size);
+
+    DeprecatedDictionaryCompression::compress_table(*table);
+
+    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      auto chunk = table->get_chunk(chunk_id);
+
+      std::vector<ColumnID> columns{1};
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+        columns[0] = column_id;
+        chunk->create_index<DerivedIndex>(columns);
+      }
+    }
+
+    return std::make_shared<TableWrapper>(table);
+  }
+
+    // uses chunk encoder, not supported by all indices at the moment
+  std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
     auto chunk_encoding_specs = std::vector<ChunkEncodingSpec>{};
