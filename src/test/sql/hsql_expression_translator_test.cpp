@@ -20,7 +20,7 @@ class HSQLExpressionTranslatorTest : public BaseTest {
   void SetUp() override {
     // We need a base table to be able to lookup column names for ColumnIDs.
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
-    _stored_table_node = std::make_shared<StoredTableNode>("table_a");
+    _stored_table_node = StoredTableNode::make("table_a");
   }
 
   /*

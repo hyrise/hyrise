@@ -151,6 +151,9 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
 
 JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
     const std::shared_ptr<UnionNode>& union_node) const {
+  DebugAssert(union_node->left_child() && union_node->right_child(),
+              "UnionNode needs both children set in order to be parsed");
+
   const auto parse_result_left = _parse_predicate(union_node->left_child());
   const auto parse_result_right = _parse_predicate(union_node->right_child());
 

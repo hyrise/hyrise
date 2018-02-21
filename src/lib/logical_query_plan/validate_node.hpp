@@ -9,11 +9,13 @@ namespace opossum {
 /**
  * This node type represents validating tables with the Validate operator.
  */
-class ValidateNode : public AbstractLQPNode {
+class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractLQPNode {
  public:
   ValidateNode();
 
   std::string description() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

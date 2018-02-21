@@ -20,7 +20,8 @@ class JoinEdge;
 
 /**
  * Represents a connected subgraph of an LQP, with the LQPNodes "above" contained in the parent_relations and the
- * nodes "below" it contained in the vertices.
+ * subplans "below" it being the vertices.
+ * The JoinGraph clusters Predicates operating on the same set of vertices into JoinEdges.
  *
  * In opposition to the LQP, the `JoinGraph` has no notion of the order in which Predicates and Joins (which are really
  * just Predicates as well, as far as the `JoinGraph` is concerned) are performed. Instead, it provides facilities

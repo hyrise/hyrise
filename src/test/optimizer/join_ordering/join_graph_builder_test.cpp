@@ -67,12 +67,15 @@ class JoinGraphBuilderTest : public ::testing::Test {
         std::make_shared<PredicateNode>(_sum_mock_node_a_x1, PredicateCondition::LessThanEquals, _mock_node_b_y1);
     _predicate_node_h =
         std::make_shared<PredicateNode>(_mock_node_a_x2, PredicateCondition::LessThanEquals, _mock_node_c_z1);
+    _predicate_node_i = std::make_shared<PredicateNode>(_mock_node_b_y2, PredicateCondition::Equals, 9);
+    _predicate_node_j = std::make_shared<PredicateNode>(_mock_node_b_y2, PredicateCondition::Between, 1, 42);
 
     _inner_join_node_a = std::make_shared<JoinNode>(
         JoinMode::Inner, LQPColumnReferencePair{_mock_node_a_x2, _mock_node_b_y2}, PredicateCondition::Equals);
     _cross_join_node_a = std::make_shared<JoinNode>(JoinMode::Cross);
 
     _union_node_a = std::make_shared<UnionNode>(UnionMode::Positions);
+    _union_node_b = std::make_shared<UnionNode>(UnionMode::Positions);
 
     _projection_node_a = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{
         LQPExpression::create_column(_mock_node_c_z1), LQPExpression::create_column(_mock_node_b_y1)});
@@ -82,7 +85,8 @@ class JoinGraphBuilderTest : public ::testing::Test {
     /**
      * Wire up LQP
      */
-    _projection_node_a->set_left_child(_predicate_node_h);
+    _projection_node_a->set_left_child(_predicate_node_j);
+    _predicate_node_j->set_left_child(_predicate_node_h);
     _predicate_node_h->set_left_child(_cross_join_node_a);
     _cross_join_node_a->set_left_child(_predicate_node_g);
     _cross_join_node_a->set_right_child(_mock_node_c);
@@ -92,10 +96,13 @@ class JoinGraphBuilderTest : public ::testing::Test {
     _inner_join_node_a->set_right_child(_predicate_node_e);
     _predicate_node_e->set_left_child(_union_node_a);
     _union_node_a->set_left_child(_predicate_node_c);
-    _union_node_a->set_right_child(_predicate_node_d);
+    _union_node_a->set_right_child(_union_node_b);
     _predicate_node_c->set_left_child(_predicate_node_b);
     _predicate_node_b->set_left_child(_mock_node_b);
+    _union_node_b->set_left_child(_predicate_node_d);
+    _union_node_b->set_right_child(_predicate_node_i);
     _predicate_node_d->set_left_child(_mock_node_b);
+    _predicate_node_i->set_left_child(_mock_node_b);
     _predicate_node_a->set_left_child(_aggregate_node_a);
 
     _join_graph = JoinGraphBuilder{}(_lqp);  // NOLINT
@@ -112,7 +119,8 @@ class JoinGraphBuilderTest : public ::testing::Test {
   std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
   std::shared_ptr<PredicateNode> _predicate_node_a, _predicate_node_b, _predicate_node_c, _predicate_node_d;
   std::shared_ptr<PredicateNode> _predicate_node_e, _predicate_node_f, _predicate_node_g, _predicate_node_h;
-  std::shared_ptr<UnionNode> _union_node_a;
+  std::shared_ptr<PredicateNode> _predicate_node_i, _predicate_node_j;
+  std::shared_ptr<UnionNode> _union_node_a, _union_node_b;
   std::shared_ptr<JoinNode> _inner_join_node_a;
   std::shared_ptr<JoinNode> _cross_join_node_a;
   std::shared_ptr<ProjectionNode> _projection_node_a;
@@ -148,10 +156,12 @@ TEST_F(JoinGraphBuilderTest, ComplexLQP) {
 
   const auto edge_b = _join_graph->find_edge(JoinVertexSet{3, 0b010});
   ASSERT_NE(edge_b, nullptr);
-  ASSERT_EQ(edge_b->predicates.size(), 3u);
-  EXPECT_EQ(to_string(edge_b->predicates.at(0)), "y1 > 32");
-  EXPECT_EQ(to_string(edge_b->predicates.at(1)), "y2 < 200");
-  EXPECT_EQ(to_string(edge_b->predicates.at(2)), "(y2 = 7 AND y1 = 6) OR y1 >= 8");
+  ASSERT_EQ(edge_b->predicates.size(), 5u);
+  EXPECT_EQ(to_string(edge_b->predicates.at(0)), "y2 >= 1");
+  EXPECT_EQ(to_string(edge_b->predicates.at(1)), "y2 <= 42");
+  EXPECT_EQ(to_string(edge_b->predicates.at(2)), "y1 > 32");
+  EXPECT_EQ(to_string(edge_b->predicates.at(3)), "y2 < 200");
+  EXPECT_EQ(to_string(edge_b->predicates.at(4)), "(y2 = 7 AND y1 = 6) OR (y1 >= 8 OR y2 = 9)");
 
   const auto edge_ab = _join_graph->find_edge(JoinVertexSet{3, 0b011});
   ASSERT_NE(edge_ab, nullptr);
