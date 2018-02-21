@@ -10,7 +10,7 @@
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
-#include "storage/table_column_defintion.hpp"
+#include "storage/table_column_definition.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -34,6 +34,10 @@ class Table : private Noncopyable {
 
   // Returns the number of columns
   size_t column_count() const;
+
+  const std::string& column_name(const ColumnID column_id) const;
+  DataType column_data_type(const ColumnID column_id) const;
+  bool column_nullable(const ColumnID column_id) const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.

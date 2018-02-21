@@ -17,13 +17,13 @@ UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
 const std::string UnionAll::name() const { return "UnionAll"; }
 
 std::shared_ptr<const Table> UnionAll::_on_execute() {
-  DebugAssert(Table::layouts_equal(_input_table_left(), _input_table_right()),
+  DebugAssert(Table::layouts_equal(input_table_left(), input_table_right()),
               "Input tables must have same number of columns");
 
-  auto output = Table::create_with_layout_from(_input_table_left());
+  auto output = Table::create_with_layout_from(input_table_left());
 
   // add positions to output by iterating over both input tables
-  for (const auto& input : {_input_table_left(), _input_table_right()}) {
+  for (const auto& input : {input_table_left(), input_table_right()}) {
     // iterating over all chunks of table input
     for (ChunkID in_chunk_id{0}; in_chunk_id < input->chunk_count(); in_chunk_id++) {
       // creating empty chunk to add columns with positions

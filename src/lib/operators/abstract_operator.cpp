@@ -70,9 +70,9 @@ std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<A
   Fail("Operator " + name() + " does not implement recreation.");
 }
 
-std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return _input_left->get_output(); }
 
-std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::input_table_right() const { return _input_right->get_output(); }
 
 bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
 

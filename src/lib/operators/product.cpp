@@ -19,21 +19,21 @@ std::shared_ptr<const Table> Product::_on_execute() {
   TableColumnDefinitions column_definitions;
 
   // add columns from left table to output
-  for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    column_definitions.emplace_back(_input_table_left()->column_name(column_id),
-                                  _input_table_left()->column_type(column_id));
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    column_definitions.emplace_back(input_table_left()->column_name(column_id),
+                                    input_table_left()->column_type(column_id));
   }
 
   // add columns from right table to output
-  for (ColumnID column_id{0}; column_id < _input_table_right()->column_count(); ++column_id) {
-    column_definitions.emplace_back(_input_table_right()->column_name(column_id),
-                                  _input_table_right()->column_type(column_id));
+  for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); ++column_id) {
+    column_definitions.emplace_back(input_table_right()->column_name(column_id),
+                                    input_table_right()->column_type(column_id));
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References, UseMvcc::No);
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _input_table_left()->chunk_count(); ++chunk_id_left) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _input_table_right()->chunk_count(); ++chunk_id_right) {
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
       add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
   }
@@ -42,8 +42,8 @@ std::shared_ptr<const Table> Product::_on_execute() {
 }
 
 void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right) {
-  const auto chunk_left = _input_table_left()->get_chunk(chunk_id_left);
-  const auto chunk_right = _input_table_right()->get_chunk(chunk_id_right);
+  const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
+  const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
 
   auto output_chunk = std::make_shared<Chunk>();
 
@@ -67,7 +67,7 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
     // reusing the same code for left and right side - using a reference_wrapper is ugly, but better than code
     // duplication
     bool is_left_side = chunk_in == chunk_left;
-    auto table = is_left_side ? _input_table_left() : _input_table_right();
+    auto table = is_left_side ? input_table_left() : input_table_right();
 
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
       std::shared_ptr<const Table> referenced_table;
@@ -79,7 +79,7 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
         referenced_column = ref_col_in->referenced_column_id();
         pos_list_in = ref_col_in->pos_list();
       } else {
-        referenced_table = is_left_side ? _input_table_left() : _input_table_right();
+        referenced_table = is_left_side ? input_table_left() : input_table_right();
         referenced_column = column_id;
       }
 

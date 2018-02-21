@@ -42,16 +42,28 @@ size_t Table::column_count() const {
   return _column_definitions.size();
 }
 
+const std::string& Table::column_name(const ColumnID column_id) const {
+  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
+  return _column_definitions[column_id].name;
+}
+
+DataType Table::column_data_type(const ColumnID column_id) const {
+  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
+  return _column_definitions[column_id].data_type;
+
+}
+
+bool Table::column_nullable(const ColumnID column_id) const {
+  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
+  return _column_definitions[column_id].nullable;
+}
+
 void Table::append(std::vector<AllTypeVariant> values) {
   Fail("Todo");
 //  // TODO(Anyone): Chunks should be preallocated for chunk size
 //  if (_chunks.back()->size() == _max_chunk_size) emplace_chunk();
 
 //  _chunks.back()->append(values);
-}
-
-const TableLayout& Table::layout() const {
-  return _layout;
 }
 
 uint64_t Table::row_count() const {

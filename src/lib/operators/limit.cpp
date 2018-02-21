@@ -23,7 +23,7 @@ std::shared_ptr<AbstractOperator> Limit::recreate(const std::vector<AllParameter
 size_t Limit::num_rows() const { return _num_rows; }
 
 std::shared_ptr<const Table> Limit::_on_execute() {
-  const auto input_table = _input_table_left();
+  const auto input_table = input_table_left();
 
   auto output_table = Table::create_with_layout_from(input_table);
 

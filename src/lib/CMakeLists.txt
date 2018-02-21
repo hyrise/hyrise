@@ -283,8 +283,7 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
-    storage/table_layout.cpp
-    storage/table_layout.hpp
+    storage/table_column_definition.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp

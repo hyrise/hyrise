@@ -57,8 +57,8 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllP
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
-  const auto& left_column_type = _input_table_left()->column_type(_column_ids.first);
-  DebugAssert(left_column_type == _input_table_right()->column_type(_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
@@ -164,8 +164,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    size_t chunk_count_left = _sort_merge_join._input_table_left()->chunk_count();
-    size_t chunk_count_right = _sort_merge_join._input_table_right()->chunk_count();
+    size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
+    size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
     return static_cast<size_t>(std::pow(2, std::floor(std::log2(std::max(chunk_count_left, chunk_count_right)))));
   }
 
@@ -572,15 +572,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(std::shared_ptr<Table> output_table, std::shared_ptr<const Table> input_table,
+  void _add_output_columns(std::vector<std::shared_ptr<BaseColumn>>& output_columns, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-      // Add the column definition
-      auto column_name = input_table->column_name(column_id);
-      auto column_type = input_table->column_type(column_id);
-      output_table->add_column_definition(column_name, column_type);
-
       // Add the column data (in the form of a poslist)
       // Check whether the referenced column is already a reference column
       const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(column_id);
@@ -590,10 +585,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
         auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
                                                                 ref_column->referenced_column_id(), new_pos_list);
-        output_table->get_chunk(ChunkID{0})->add_column(new_ref_column);
+        output_columns.emplace_back(new_ref_column);
       } else {
         auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
-        output_table->get_chunk(ChunkID{0})->add_column(new_ref_column);
+        output_columns.emplace_back(new_ref_column);
       }
     }
   }
@@ -633,7 +628,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSort<T>(
-        _sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(), _sort_merge_join._column_ids,
+    _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(), _sort_merge_join._column_ids,
         _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
@@ -646,7 +641,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     _perform_join();
 
-    auto output_table = std::make_shared<Table>();
 
     // merge the pos lists into single pos lists
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
@@ -667,8 +661,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Add the columns from both input tables to the output
-    _add_output_columns(output_table, _sort_merge_join._input_table_left(), output_left);
-    _add_output_columns(output_table, _sort_merge_join._input_table_right(), output_right);
+    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    _add_output_columns(output_columns, _sort_merge_join.input_table_left(), output_left);
+    _add_output_columns(output_columns, _sort_merge_join.input_table_right(), output_right);
+
+    // Build the output_table with one Chunk
+    auto output_column_definitions = concatenated(_sort_merge_join.input_table_left()->column_definitions(),
+                                                  _sort_merge_join.input_table_right()->column_definitions());
+    auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References, UseMvcc::No);
+
+    output_table->add_chunk_new(output_columns);
 
     return output_table;
   }

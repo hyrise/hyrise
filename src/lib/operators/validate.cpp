@@ -45,7 +45,7 @@ std::shared_ptr<const Table> Validate::_on_execute() {
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
 
-  const auto _in_table = _input_table_left();
+  const auto _in_table = input_table_left();
   auto output = Table::create_with_layout_from(_in_table);
 
   const auto our_tid = transaction_context->transaction_id();

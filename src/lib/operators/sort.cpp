@@ -30,8 +30,8 @@ std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterV
 }
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(_input_table_left()->column_type(_column_id),
-                                                                           _input_table_left(), _column_id,
+  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(input_table_left()->column_type(_column_id),
+                                                                           input_table_left(), _column_id,
                                                                            _order_by_mode, _output_chunk_size);
   return _impl->_on_execute();
 }

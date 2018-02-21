@@ -90,9 +90,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (column_expression->alias()) {
       column_definition.name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::Column) {
-      column_definition.name = _input_table_left()->column_name(column_expression->column_id());
+      column_definition.name = input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
-      column_definition.name = column_expression->to_string(_input_table_left()->column_names());
+      column_definition.name = column_expression->to_string(input_table_left()->column_names());
     } else {
       Fail("Expression type is not supported.");
     }
@@ -101,7 +101,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       reuse_column_from_input = false;
     }
 
-    const auto type = _get_type_of_expression(column_expression, _input_table_left());
+    const auto type = _get_type_of_expression(column_expression, input_table_left());
     if (type == DataType::Null) {
       // in case of a NULL literal, simply add a nullable int column
       column_definition.data_type = DataType::Int;
@@ -110,17 +110,17 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       column_definition.data_type = type;
     }
   }
-  auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, _input_table_left()->max_chunk_size());
+  auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection
    */
-  for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     std::vector<std::shared_ptr<BaseColumn>> output_columns;
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output_table->column_type(ColumnID{expression_index}), [&](auto type) {
-        const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], _input_table_left(),
+        const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], input_table_left(),
                        reuse_column_from_input);
         output_columns.emplace_back(column);
       });

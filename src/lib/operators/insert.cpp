@@ -107,7 +107,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
   }
 
-  auto total_rows_to_insert = static_cast<uint32_t>(_input_table_left()->row_count());
+  auto total_rows_to_insert = static_cast<uint32_t>(input_table_left()->row_count());
 
   // First, allocate space for all the rows to insert. Do so while locking the table to prevent multiple threads
   // modifying the table's size simultaneously.
@@ -170,7 +170,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     // while target chunk is not full
     while (target_start_index != target_chunk->size()) {
-      const auto source_chunk = _input_table_left()->get_chunk(source_chunk_id);
+      const auto source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto& source_column = source_chunk->get_column(column_id);

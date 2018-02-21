@@ -94,8 +94,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped),
-        _output_table(std::make_shared<Table>()) {}
+        _inputs_swapped(inputs_swapped) {
+  }
 
   virtual ~JoinHashImpl() = default;
 
@@ -106,7 +106,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const PredicateCondition _predicate_condition;
 
   const bool _inputs_swapped;
-  const std::shared_ptr<Table> _output_table;
+  std::shared_ptr<Table> _output_table;
 
   const unsigned int _partitioning_seed = 13;
   const size_t _radix_bits = 9;
@@ -533,36 +533,27 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     CurrentScheduler::wait_for_tasks(jobs);
   }
 
-  /*
-  Copy the column meta-data from input to output table.
-  */
-  static void _copy_table_metadata(const std::shared_ptr<const Table> in_table,
-                                   const std::shared_ptr<Table> out_table) {
-    for (ColumnID column_id{0}; column_id < in_table->column_count(); ++column_id) {
-      // TODO(anyone): Refine since not all column are nullable
-      out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id), true);
-    }
-  }
-
   std::shared_ptr<const Table> _on_execute() override {
     /*
     Preparing output table by adding columns from left table.
     */
+    TableColumnDefinitions output_column_definitions;
 
     auto _right_in_table = _right->get_output();
     auto _left_in_table = _left->get_output();
 
     if (_inputs_swapped) {
-      _copy_table_metadata(_right_in_table, _output_table);
-
       // Semi/Anti joins are always swapped but do not need the outer relation
-      if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
-        _copy_table_metadata(_left_in_table, _output_table);
+      if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
+        output_column_definitions = _right_in_table->column_definitions();
+      } else {
+        output_column_definitions = concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
       }
     } else {
-      _copy_table_metadata(_left_in_table, _output_table);
-      _copy_table_metadata(_right_in_table, _output_table);
+      output_column_definitions = concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
     }
+
+    _output_table = std::make_shared<Table>(output_column_definitions, TableType::References, UseMvcc::No);
 
     /*
      * This flag is used in the materialization and probing phases.
@@ -671,36 +662,34 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (left.empty() && right.empty()) {
         continue;
       }
+      DebugAssert(left.size() == right.size(), "Invalid PosList sizes");
 
-      auto output_chunk = std::make_shared<Chunk>();
+      std::vector<std::shared_ptr<BaseColumn>> output_columns;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
-        write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
+        write_output_columns(output_columns, _right_in_table, right, ref_col_right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
         if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
-          write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
+          write_output_columns(output_columns, _left_in_table, left, ref_col_left);
         }
       } else {
-        write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
-        write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
+        write_output_columns(output_columns, _left_in_table, left, ref_col_left);
+        write_output_columns(output_columns, _right_in_table, right, ref_col_right);
       }
-      _output_table->emplace_chunk(std::move(output_chunk));
+
+      _output_table->add_chunk_new(output_columns);
     }
 
     return _output_table;
   }
 
-  static void write_output_chunks(const std::shared_ptr<Chunk>& output_chunk,
+  static void write_output_columns(std::vector<std::shared_ptr<BaseColumn>>& output_columns,
                                   const std::shared_ptr<const Table> input_table, PosList& pos_list,
                                   bool is_ref_column) {
-    if (pos_list.empty()) return;
-
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-      std::shared_ptr<BaseColumn> column;
-
       if (is_ref_column) {
         auto ref_col =
             std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
@@ -723,13 +712,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
           }
         }
-        column = std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
-                                                   new_pos_list);
+        output_columns.emplace_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
+                                                   new_pos_list));
       } else {
-        column = std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list));
+        output_columns.emplace_back(std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
       }
-
-      output_chunk->add_column(column);
     }
   }
 };
