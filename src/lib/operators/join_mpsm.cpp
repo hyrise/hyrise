@@ -177,17 +177,25 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
   **/
-  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
+  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result, std::vector<bool>& left_joined) {
     size_t cluster_number = left_run.start.cluster;
     NodeID partition_number = left_run.start.partition;
     switch(compare_result) {
       case CompareResult::Equal:
         _emit_all_combinations(partition_number, cluster_number, left_run, right_run);
+
+        // Since we step multiple times over the left chunk
+        // we need to memorize the joined rows for the left and outer case
+        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+            for(size_t joined_id = left_run.start.index; joined_id < left_run.end.index; ++joined_id){
+              left_joined[joined_id] = true;
+            }
+        }
+
         break;
       case CompareResult::Less:
-        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-          _emit_right_null_combinations(partition_number, cluster_number, left_run);
-        }
+        // This usually does something for the left join case
+        // but we could hit an equal when stepping again over the left side
         break;
       case CompareResult::Greater:
         if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
@@ -221,10 +229,12 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
-  void _emit_right_null_combinations(NodeID output_partition, size_t output_cluster, TableRange left_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-      _emit_combination(output_partition, output_cluster, left_row_id, NULL_ROW_ID);
-    });
+  void _emit_right_null_combinations(NodeID output_partition, size_t output_cluster, std::shared_ptr<MaterializedChunk<T>> left_chunk, std::vector<bool> left_joined) {
+    for(size_t entry_id = 0; entry_id < left_joined.size(); ++entry_id){
+        if(!left_joined[entry_id]){
+          _emit_combination(output_partition, output_cluster, (*left_chunk)[entry_id].row_id, NULL_ROW_ID);
+        }
+    }
   }
 
   /**
@@ -287,6 +297,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     std::shared_ptr<MaterializedChunk<T>> left_cluster =
         (*_sorted_left_table)[left_node_id]._chunk_columns[left_cluster_id];
 
+    std::vector<bool> left_joined(left_cluster->size(), false);
+
     // TODO (florian): parallelize this using jobs (or not, since we are already running jobbed for LHS, and jobbing may not add much here)
     for (NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
@@ -311,7 +323,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
         TableRange left_run(left_node_id, left_cluster_id, left_run_start, left_run_end);
         TableRange right_run(right_node_id, right_cluster_id, right_run_start, right_run_end);
-        _join_runs(left_run, right_run, compare_result);
+        _join_runs(left_run, right_run, compare_result, left_joined);
 
         // Advance to the next run on the smaller side or both if equal
         if (compare_result == CompareResult::Equal) {
@@ -334,11 +346,13 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
       auto left_rest = TableRange(left_node_id, left_cluster_id, left_run_start, left_size);
       auto right_rest = TableRange(right_node_id, right_cluster_id, right_run_start, right_size);
-      if (left_run_start < left_size) {
-        _join_runs(left_rest, right_rest, CompareResult::Less);
-      } else if (right_run_start < right_size) {
-        _join_runs(left_rest, right_rest, CompareResult::Greater);
+      if (right_run_start < right_size) {
+        _join_runs(left_rest, right_rest, CompareResult::Greater, left_joined);
       }
+    }
+
+    if (_mode == JoinMode::Left || _mode == JoinMode::Outer){
+      _emit_right_null_combinations(left_node_id, left_cluster_id, left_cluster, left_joined);
     }
   }
 
