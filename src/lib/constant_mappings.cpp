@@ -142,16 +142,15 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                  return map;
                });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
+const std::unordered_map<EncodingType, std::string> encoding_type_to_string = {
     {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
-});
+};
 
-const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
-    make_bimap<VectorCompressionType, std::string>({
-        {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
-        {VectorCompressionType::SimdBp128, "SIMD-BP128"},
-    });
+const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string = {
+    {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
+    {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+};
 
 }  // namespace opossum
