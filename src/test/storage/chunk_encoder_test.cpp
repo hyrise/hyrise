@@ -101,7 +101,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTableUsingSameEncoding) {
   ChunkEncoder::encode_all_chunks(_table, column_encoding_spec);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto chunk = _table->get_mutable_chunk(chunk_id);
     verify_encoding(chunk, chunk_encoding_spec);
   }
 }
@@ -136,13 +136,13 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
   ChunkEncoder::encode_chunks(_table, chunk_ids, column_encoding_spec);
 
   for (auto chunk_id : chunk_ids) {
-    const auto chunk = _table->get_chunk(chunk_id);
+    const auto chunk = _table->get_mutable_chunk(chunk_id);
     verify_encoding(chunk, chunk_encoding_spec);
   }
 
   const auto unencoded_chunk_spec = ChunkEncodingSpec{3u, ColumnEncodingSpec{EncodingType::Unencoded}};
 
-  verify_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
+  verify_encoding(_table->get_mutable_chunk(ChunkID{1u}), unencoded_chunk_spec);
 }
 
 }  // namespace opossum

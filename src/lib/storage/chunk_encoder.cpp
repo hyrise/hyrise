@@ -66,7 +66,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
-    auto chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_mutable_chunk(chunk_id);
 
     encode_chunk(chunk, data_types, column_encoding_spec);
   }
@@ -91,7 +91,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   const auto column_types = table->column_types();
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+    auto chunk = table->get_mutable_chunk(chunk_id);
 
     encode_chunk(chunk, column_types, column_encoding_spec);
   }
