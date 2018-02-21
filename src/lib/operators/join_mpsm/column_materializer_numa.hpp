@@ -40,14 +40,14 @@ struct MaterializedNUMAPartition {
         _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)},
         _chunk_columns(reserve_size) {}
 
-  // TODO(florian): either fix this or find a workaround
+  MaterializedNUMAPartition() {}
+
   void fit() {
-    _chunk_columns.erase(std::remove(_chunk_columns.begin(), _chunk_columns.end(), std::shared_ptr<MaterializedChunk<T>>{}), _chunk_columns.end());
+    _chunk_columns.erase(
+        std::remove(_chunk_columns.begin(), _chunk_columns.end(), std::shared_ptr<MaterializedChunk<T>>{}),
+        _chunk_columns.end());
   }
 };
-
-/*template <typename T>
-using MaterializedColumn = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;*/
 
 template <typename T>
 using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
@@ -119,15 +119,12 @@ class ColumnMaterializer {
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id, NodeID numa_node_id) {
     // This allocator ensures that materialized values are colocated with the actual values.
-    // The colocation is important on NUMA systems, since there it is important to have control over the location of memory
-    // This introduces runtime overhead that is not amortized for non-NUMA systems, so maybe this should be a compile time switch.
     MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id)->get_allocator()};
 
     return std::make_shared<JobTask>(
         [this, &output, &null_rows_output, input, column_id, chunk_id, alloc, numa_node_id] {
           auto column = input->get_chunk(chunk_id)->get_column(column_id);
           resolve_column_type<T>(*column, [&](auto& typed_column) {
-            //(*output)[numa_node_id]._chunk_columns[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output, alloc);
             _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
           });
         });
@@ -156,8 +153,6 @@ class ColumnMaterializer {
       }
     });
 
-    // TODO(florian): think about whether this sorting makes sense for the NUMA case
-    // probably this is a good presorting for the merge in the radix phase
     if (_sort) {
       std::sort(output->begin(), output->end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });
@@ -203,7 +198,7 @@ class ColumnMaterializer {
         }
       }
 
-      // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
+      // Output the Materialized Values
       ChunkOffset chunk_offset{0};
       for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
         for (auto& row_id : rows_with_value[value_id]) {

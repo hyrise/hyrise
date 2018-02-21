@@ -28,8 +28,7 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals,
-              "Only Equi joins are supported by MPSM join.");
+  DebugAssert(op == PredicateCondition::Equals, "Only Equi joins are supported by MPSM join.");
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
@@ -148,7 +147,6 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
-    // TODO(florian): ensure we do not blow up our numa cores or get other snafu due to bad matching of numa cores to clusters
     const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
     return static_cast<size_t>(std::pow(2, std::ceil(std::log2(numa_nodes))));
   }
@@ -156,17 +154,17 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-    static std::vector<TablePosition> _end_of_table(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table) {
-      DebugAssert(table->size() > 0, "table has no chunks");
-      auto end_positions = std::vector<TablePosition>{table->size()};
-      for(auto& partition : (*table)){
-        auto last_cluster = partition._chunk_columns.size() - 1;
-        auto node_id = partition._node_id;
-        end_positions[node_id] = TablePosition(node_id, last_cluster, partition._chunk_columns[last_cluster]->size());
-      }
-
-      return end_positions;
+  static std::vector<TablePosition> _end_of_table(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table) {
+    DebugAssert(table->size() > 0, "table has no chunks");
+    auto end_positions = std::vector<TablePosition>{table->size()};
+    for (auto& partition : (*table)) {
+      auto last_cluster = partition._chunk_columns.size() - 1;
+      auto node_id = partition._node_id;
+      end_positions[node_id] = TablePosition(node_id, last_cluster, partition._chunk_columns[last_cluster]->size());
     }
+
+    return end_positions;
+  }
 
   /**
   * Represents the result of a value comparison.
@@ -177,19 +175,20 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
   **/
-  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result, std::vector<bool>& left_joined) {
+  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result,
+                  std::vector<bool>& left_joined) {
     size_t cluster_number = left_run.start.cluster;
     NodeID partition_number = left_run.start.partition;
-    switch(compare_result) {
+    switch (compare_result) {
       case CompareResult::Equal:
         _emit_all_combinations(partition_number, cluster_number, left_run, right_run);
 
         // Since we step multiple times over the left chunk
         // we need to memorize the joined rows for the left and outer case
         if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-            for(size_t joined_id = left_run.start.index; joined_id < left_run.end.index; ++joined_id){
-              left_joined[joined_id] = true;
-            }
+          for (size_t joined_id = left_run.start.index; joined_id < left_run.end.index; ++joined_id) {
+            left_joined[joined_id] = true;
+          }
         }
 
         break;
@@ -229,11 +228,12 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
-  void _emit_right_null_combinations(NodeID output_partition, size_t output_cluster, std::shared_ptr<MaterializedChunk<T>> left_chunk, std::vector<bool> left_joined) {
-    for(size_t entry_id = 0; entry_id < left_joined.size(); ++entry_id){
-        if(!left_joined[entry_id]){
-          _emit_combination(output_partition, output_cluster, (*left_chunk)[entry_id].row_id, NULL_ROW_ID);
-        }
+  void _emit_right_null_combinations(NodeID output_partition, size_t output_cluster,
+                                     std::shared_ptr<MaterializedChunk<T>> left_chunk, std::vector<bool> left_joined) {
+    for (size_t entry_id = 0; entry_id < left_joined.size(); ++entry_id) {
+      if (!left_joined[entry_id]) {
+        _emit_combination(output_partition, output_cluster, (*left_chunk)[entry_id].row_id, NULL_ROW_ID);
+      }
     }
   }
 
@@ -280,10 +280,6 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_cluster(size_t cluster_number) {
-    // TODO (florian): another layer of indirection here for partitions or insert the pointers in a threadsafe way or even better:
-    // create N local PosLists, one for each right partition
-    // in the end merge those N local PosLists and insert to the correct cluster
-
     // For MPSM join the left side is reshuffled to contain one cluster per NUMA node,
     // it is therefore the first (and only) cluster in the corresponding data structure
     const NodeID left_node_id = static_cast<NodeID>(cluster_number);
@@ -299,7 +295,6 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     std::vector<bool> left_joined(left_cluster->size(), false);
 
-    // TODO (florian): parallelize this using jobs (or not, since we are already running jobbed for LHS, and jobbing may not add much here)
     for (NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
@@ -351,7 +346,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    if (_mode == JoinMode::Left || _mode == JoinMode::Outer){
+    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
       _emit_right_null_combinations(left_node_id, left_cluster_id, left_cluster, left_joined);
     }
   }
