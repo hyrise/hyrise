@@ -26,9 +26,14 @@ class ConstantCalculationRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  void _calculate_expressions_in_tree(const std::shared_ptr<AbstractLQPNode>& node, std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
-  bool _replace_column_references_in_tree(const std::shared_ptr<AbstractLQPNode>& node, const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
-  bool _remove_columns_from_projections(const std::shared_ptr<AbstractLQPNode>& node, const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  void _calculate_expressions_in_tree(const std::shared_ptr<AbstractLQPNode>& node,
+                                      std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  bool _replace_column_references_in_tree(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  bool _remove_columns_from_projections(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
 
   std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 

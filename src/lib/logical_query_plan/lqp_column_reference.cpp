@@ -25,7 +25,8 @@ bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
 }
 
 bool LQPColumnReference::operator<(const LQPColumnReference& rhs) const {
-  return original_node() < rhs.original_node() || (original_node() == rhs.original_node() && _original_column_id < rhs._original_column_id);
+  return original_node() < rhs.original_node() ||
+         (original_node() == rhs.original_node() && _original_column_id < rhs._original_column_id);
 }
 
 std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
