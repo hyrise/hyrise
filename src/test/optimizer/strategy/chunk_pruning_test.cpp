@@ -19,7 +19,7 @@
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
-#include "storage/dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
@@ -33,9 +33,10 @@ class ChunkPruningTest : public StrategyBaseTest {
   void SetUp() override {
     auto& man = StorageManager::get();
     man.add_table("compressed", load_table("src/test/tables/int_float2.tbl", 2u));
-    DictionaryCompression::compress_table(*man.get_table("compressed"));
     man.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
-    DictionaryCompression::compress_table(*man.get_table("long_compressed"));
+
+    ChunkEncoder::encode_all_chunks(man.get_table("compressed"), EncodingType::Dictionary);
+    ChunkEncoder::encode_all_chunks(man.get_table("long_compressed"), EncodingType::Dictionary);
     _rule = std::make_shared<ChunkPruningRule>();
 
     man.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));

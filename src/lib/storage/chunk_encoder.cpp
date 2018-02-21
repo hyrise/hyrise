@@ -8,6 +8,7 @@
 #include "table.hpp"
 #include "types.hpp"
 
+#include "optimizer/chunk_statistics.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/column_encoding_utils.hpp"
 #include "utils/assert.hpp"
@@ -20,6 +21,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   Assert((chunk_encoding_spec.size() == chunk->column_count()),
          "Number of column encoding specs must match the chunk’s column count.");
 
+  std::vector<std::shared_ptr<ChunkColumnStatistics>> column_statistics;
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
@@ -33,7 +35,11 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
     auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.vector_compression_type);
     chunk->replace_column(column_id, encoded_column);
+
+    column_statistics.push_back(ChunkColumnStatistics::build_statistics(data_type, encoded_column));
   }
+
+  chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_columns()) {
     chunk->shrink_mvcc_columns();

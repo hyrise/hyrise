@@ -9,6 +9,8 @@
 #include "type_cast.hpp"
 #include "types.hpp"
 
+#include "storage/base_encoded_column.hpp"
+
 namespace opossum {
 
 class BaseFilter : public std::enable_shared_from_this<BaseFilter> {
@@ -20,6 +22,8 @@ class BaseFilter : public std::enable_shared_from_this<BaseFilter> {
 
 class ChunkColumnStatistics {
  public:
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type, std::shared_ptr<BaseColumn> column);
+
   void add_filter(std::shared_ptr<BaseFilter> filter) {
     _filters.emplace_back(filter);
   }
@@ -75,7 +79,7 @@ class RangeFilter : public BaseFilter {
   RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(ranges) {};
   virtual ~RangeFilter() = default;
 
-  static std::shared_ptr<RangeFilter<T>> buildFilter(const pmr_vector<T>& dictionary);
+  static std::shared_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
   
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
     T t_value = type_cast<T>(value);
@@ -101,7 +105,7 @@ class RangeFilter : public BaseFilter {
 };
 
 template<typename T>
-std::shared_ptr<RangeFilter<T>> RangeFilter<T>::buildFilter(const pmr_vector<T>& dictionary) {
+std::shared_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary) {
   if constexpr (std::is_same<T, std::string>::value) {
       return nullptr;
   } else {
@@ -148,7 +152,7 @@ std::shared_ptr<RangeFilter<T>> RangeFilter<T>::buildFilter(const pmr_vector<T>&
 
 class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
  public:
-  explicit ChunkStatistics(std::vector<std::shared_ptr<ChunkColumnStatistics>> stats) : _statistics(stats) {}
+  explicit ChunkStatistics(std::vector<std::shared_ptr<ChunkColumnStatistics>> statistics) : _statistics(statistics) {}
 
   const std::vector<std::shared_ptr<ChunkColumnStatistics>>& statistics() const { return _statistics; }
 
