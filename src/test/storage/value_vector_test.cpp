@@ -19,7 +19,7 @@ TEST_F(ValueVectorTest, PushString) {
   const auto const_fs = "cde";
   valuevector.push_back(const_fs);
 
-  EXPECT_EQ(valuevector[0].string(), "abc");
+  EXPECT_EQ(valuevector[0], "abc");
 }
 
 TEST_F(ValueVectorTest, SubscriptOperator) {
@@ -127,9 +127,9 @@ TEST_F(ValueVectorTest, SubscriptOperatorFixedString) {
   valuevector.push_back("string");
   valuevector.push_back("opossum");
 
-  EXPECT_EQ(valuevector[0].string(), "abc");
-  EXPECT_EQ(valuevector[1].string(), "string");
-  EXPECT_EQ(valuevector[2].string(), "opossu");
+  EXPECT_EQ(valuevector[0], "abc");
+  EXPECT_EQ(valuevector[1], "string");
+  EXPECT_EQ(valuevector[2], "opossu");
 }
 
 TEST_F(ValueVectorTest, AtOperatorFixedString) {
@@ -152,7 +152,7 @@ TEST_F(ValueVectorTest, IteratorFixedString) {
     *it = FixedString("abcde");
   }
 
-  EXPECT_EQ(valuevector[0].string(), "abcde");
+  EXPECT_EQ(valuevector[0], "abcde");
 }
 
 TEST_F(ValueVectorTest, IteratorConstFixedString) {
@@ -193,9 +193,9 @@ TEST_F(ValueVectorTest, ReverseIteratorFixedString) {
     *it = FixedString("abcde");
   }
 
-  EXPECT_EQ(valuevector[0].string(), "abcd");
-  EXPECT_EQ(valuevector[1].string(), "abcd");
-  EXPECT_EQ(valuevector[2].string(), "abcd");
+  EXPECT_EQ(valuevector[0], "abcd");
+  EXPECT_EQ(valuevector[1], "abcd");
+  EXPECT_EQ(valuevector[2], "abcd");
 }
 
 TEST_F(ValueVectorTest, SizeFixedString) {
@@ -221,7 +221,7 @@ TEST_F(ValueVectorTest, EraseFixedString) {
   valuevector.erase(it, valuevector.end());
 
   EXPECT_EQ(valuevector.size(), 1u);
-  EXPECT_EQ(valuevector[0].string(), "str1");
+  EXPECT_EQ(valuevector[0], "str1");
 }
 
 TEST_F(ValueVectorTest, ShrinkFixedString) {
@@ -249,7 +249,7 @@ TEST_F(ValueVectorTest, ConstValueVectorFixedString) {
   valuevector.push_back("str1");
   const auto& valuevector2 = ValueVector<FixedString>(std::move(valuevector));
   const auto fixed = valuevector2[0];
-  EXPECT_EQ(fixed.string(), "str1");
+  EXPECT_EQ(fixed, "str1");
 }
 
 TEST_F(ValueVectorTest, IteratorConstructor) {

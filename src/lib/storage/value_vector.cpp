@@ -113,10 +113,14 @@ void ValueVector<T>::reserve(const size_t n) {
 }
 
 template <typename T>
-const pmr_vector<T>& ValueVector<T>::values() const { return _values; }
+const pmr_vector<T>& ValueVector<T>::values() const {
+  return _values;
+}
 
 template <typename T>
-const T* ValueVector<T>::data() const { return &_values[0]; }
+const T* ValueVector<T>::data() const {
+  return &_values[0];
+}
 
 template <typename T>
 size_t ValueVector<T>::data_size() const {
@@ -167,12 +171,15 @@ reverse_iterator ValueVector<FixedString>::rbegin() noexcept { return reverse_it
 
 reverse_iterator ValueVector<FixedString>::rend() noexcept { return reverse_iterator(begin()); }
 
-FixedString ValueVector<FixedString>::operator[](const size_t n) {
-  return FixedString(&_chars[n * _string_length], _string_length);
-}
+const std::string ValueVector<FixedString>::operator[](const size_t n) const {
+  const auto string_value = std::string(&_chars[n * _string_length], _string_length);
+  const auto pos = string_value.find('\0');
 
-const FixedString ValueVector<FixedString>::operator[](const size_t n) const {
-  return FixedString(const_cast<char*>(&_chars[n * _string_length]), _string_length);
+  if (pos == std::string::npos) {
+    return string_value;
+  } else {
+    return string_value.substr(0, pos);
+  }
 }
 
 size_t ValueVector<FixedString>::size() const { return _chars.size() / _string_length; }

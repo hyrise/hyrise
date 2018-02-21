@@ -124,8 +124,7 @@ class ValueVector<FixedString> {
   void push_back(const std::string& string);
 
   // Return the value at a certain position.
-  FixedString operator[](const size_t n);
-  const FixedString operator[](const size_t n) const;
+  const std::string operator[](const size_t n) const;
 
   FixedString at(const ChunkOffset chunk_offset);
 

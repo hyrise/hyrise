@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "fixed_string.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
@@ -79,6 +80,28 @@ ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
   return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
+template <>
+ValueID DictionaryColumn<FixedString>::lower_bound(const AllTypeVariant& value) const {
+  DebugAssert(!variant_is_null(value), "Null value passed.");
+
+  const auto typed_value = FixedString(type_cast<std::string>(value));
+
+  auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+}
+
+template <>
+ValueID DictionaryColumn<FixedString>::upper_bound(const AllTypeVariant& value) const {
+  DebugAssert(!variant_is_null(value), "Null value passed.");
+
+  const auto typed_value = FixedString(type_cast<std::string>(value));
+
+  auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+}
+
 template <typename T>
 size_t DictionaryColumn<T>::unique_values_count() const {
   return _dictionary->size();
@@ -94,6 +117,7 @@ const ValueID DictionaryColumn<T>::null_value_id() const {
   return _null_value_id;
 }
 
+template class DictionaryColumn<FixedString>;
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 
 }  // namespace opossum

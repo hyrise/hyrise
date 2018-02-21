@@ -30,13 +30,13 @@ TEST_F(FixedStringTest, Constructors) {
 
   auto str1 = FixedString(&charvector[0], 3);
   EXPECT_EQ(str1.string(), "foo");
-  
+
   auto str3 = FixedString("barbaz");
   EXPECT_EQ(str3.string(), "barbaz");
-  
+
   auto str4 = FixedString(str1);
-  EXPECT_EQ(str4.string(), "foo");  
-  
+  EXPECT_EQ(str4.string(), "foo");
+
   auto str5 = FixedString(std::move(str1));
   EXPECT_EQ(str5.string(), "foo");
 }

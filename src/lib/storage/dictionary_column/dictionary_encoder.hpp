@@ -6,6 +6,7 @@
 
 #include "storage/base_column_encoder.hpp"
 
+#include "fixed_string.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/value_vector.hpp"
@@ -26,6 +27,8 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
   static constexpr auto _uses_vector_compression = true;
+  // Allow usage of FixedString in the DictionaryColumn
+  static const auto _enable_fixed_strings = false;
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
@@ -33,6 +36,14 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
+
+    if (_enable_fixed_strings && std::is_same<T, std::string>::value) {
+      const auto fixed_string_length = _calculate_fixed_string_length(values);
+      if (fixed_string_length != 0) {
+        // Use FixedString for dictionary compression
+        // return _on_encode_fixed_string();
+      }
+    }
 
     auto dictionary = ValueVector<T>{values.cbegin(), values.cend(), alloc};
 
@@ -104,6 +115,19 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static ValueID _get_value_id(const ValueVector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+  }
+
+  template <typename T>
+  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<T>& values) const {
+    return 0;
+  }
+
+  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
+    size_t max_string_length = 0;
+    for (const auto& value : values) {
+      if (value.size() > max_string_length) max_string_length = value.size();
+    }
+    return max_string_length;
   }
 };
 
