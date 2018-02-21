@@ -17,7 +17,6 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
-#include "utils/format_bytes.hpp"
 #include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {

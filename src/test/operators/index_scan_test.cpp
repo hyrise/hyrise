@@ -9,7 +9,7 @@
 
 #include "operators/index_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -28,7 +28,7 @@ class OperatorsIndexScanTest : public BaseTest {
     table->add_column("a", DataType::Int);
     table->add_column("b", DataType::Int);
     for (int i = 0; i <= 24; i += 2) table->append({i, 100 + i});
-    DeprecatedDictionaryCompression::compress_table(*table);
+    ChunkEncoder::encode_all_chunks(table);
 
     _chunk_ids = std::vector<ChunkID>(table->chunk_count());
     std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0u});

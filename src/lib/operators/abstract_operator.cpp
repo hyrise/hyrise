@@ -10,6 +10,7 @@
 #include "sql/sql_query_operator.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 
 namespace opossum {
 
@@ -115,74 +116,30 @@ void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& op
 }
 
 void AbstractOperator::print(std::ostream& stream) const {
-  std::vector<bool> levels;
-  std::unordered_map<const AbstractOperator*, size_t> id_by_operator;
-  size_t id_counter = 0;
-  _print_impl(stream, levels, id_by_operator, id_counter);
+  const auto get_children_fn = [](const auto& op) {
+    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    if (op->input_left()) children.emplace_back(op->input_left());
+    if (op->input_right()) children.emplace_back(op->input_right());
+    return children;
+  };
+  const auto node_print_fn = [](const auto& op, auto& stream) {
+    stream << op->description();
+
+    // If the operator was already executed, print some info about data and performance
+    const auto output = op->get_output();
+    if (output) {
+      stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+             << output->column_count() << " column(s)/";
+
+      stream << format_bytes(output->estimate_memory_usage());
+      stream << "/";
+      stream << op->performance_data().walltime_ns << "ns)";
+    }
+  };
+
+  print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
 }
 
 void AbstractOperator::_on_cleanup() {}
-
-void AbstractOperator::_print_impl(std::ostream& out, std::vector<bool>& levels,
-                                   std::unordered_map<const AbstractOperator*, size_t>& id_by_operator,
-                                   size_t& id_counter) const {
-  /**
-   * NOTE: Code taken from AbstractLQPNode::_print_impl() - wouldn't know how we could cleanly make it reusable, so
-   * C/P it is
-   */
-
-  const auto max_level = levels.empty() ? 0 : levels.size() - 1;
-  for (size_t level = 0; level < max_level; ++level) {
-    if (levels[level]) {
-      out << " | ";
-    } else {
-      out << "   ";
-    }
-  }
-
-  if (!levels.empty()) {
-    out << " \\_";
-  }
-
-  /**
-   * Check whether the node has been printed before
-   */
-  const auto iter = id_by_operator.find(this);
-  if (iter != id_by_operator.end()) {
-    out << "Recurring Operator --> [" << iter->second << "]" << std::endl;
-    return;
-  }
-
-  const auto this_node_id = id_counter;
-  id_counter++;
-  id_by_operator.emplace(this, this_node_id);
-
-  out << "[" << this_node_id << "] " << description();
-
-  // If the operator was already executed, print some info about data and performance
-  const auto output = get_output();
-  if (output) {
-    out << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/" << output->column_count()
-        << " column(s)/";
-
-    out << format_bytes(output->estimate_memory_usage());
-    out << "/";
-    out << _performance_data.walltime_ns << "ns)";
-  }
-
-  out << std::endl;
-
-  levels.emplace_back(input_right() != nullptr);
-
-  if (input_left()) {
-    input_left()->_print_impl(out, levels, id_by_operator, id_counter);
-  }
-  if (input_right()) {
-    levels.back() = false;
-    input_right()->_print_impl(out, levels, id_by_operator, id_counter);
-  }
-
-  levels.pop_back();
-}
 
 }  // namespace opossum

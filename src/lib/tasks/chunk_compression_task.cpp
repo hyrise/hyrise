@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "storage/chunk.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -32,7 +32,7 @@ void ChunkCompressionTask::_on_execute() {
     DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
 
-    DeprecatedDictionaryCompression::compress_chunk(table->column_types(), chunk);
+    ChunkEncoder::encode_chunk(chunk, table->column_types());
   }
 }
 

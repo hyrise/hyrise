@@ -40,6 +40,12 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   }
 }
 
+void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
+                                const ColumnEncodingSpec& column_encoding_spec) {
+  const auto chunk_encoding_spec = ChunkEncodingSpec{chunk->column_count(), column_encoding_spec};
+  encode_chunk(chunk, data_types, chunk_encoding_spec);
+}
+
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
   const auto data_types = table->column_types();
@@ -54,6 +60,18 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   }
 }
 
+void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
+                                 const ColumnEncodingSpec& column_encoding_spec) {
+  const auto data_types = table->column_types();
+
+  for (auto chunk_id : chunk_ids) {
+    Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
+    auto chunk = table->get_chunk(chunk_id);
+
+    encode_chunk(chunk, data_types, column_encoding_spec);
+  }
+}
+
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const std::vector<ChunkEncodingSpec>& chunk_encoding_specs) {
   const auto column_types = table->column_types();
@@ -65,6 +83,17 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
     const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
 
     encode_chunk(chunk, column_types, chunk_encoding_spec);
+  }
+}
+
+void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
+                                     const ColumnEncodingSpec& column_encoding_spec) {
+  const auto column_types = table->column_types();
+
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    auto chunk = table->get_chunk(chunk_id);
+
+    encode_chunk(chunk, column_types, column_encoding_spec);
   }
 }
 

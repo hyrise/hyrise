@@ -10,7 +10,7 @@ namespace opossum {
 class Chunk;
 
 /**
- * @brief Compresses a chunk of a table
+ * @brief Compresses a chunk of a table using the default encoding
  *
  * The task compresses a chunk by sequentially compressing columns.
  * From each value column, a dictionary column is created that replaces the
