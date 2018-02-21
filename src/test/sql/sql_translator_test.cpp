@@ -439,9 +439,9 @@ TEST_F(SQLTranslatorTest, Update) {
   const auto update_a = LQPExpression::create_column(_table_a_a);
   const auto update_b = LQPExpression::create_literal(3.2f);
 
-  const auto lqp =
-      UpdateNode::make("table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
-                       PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int64_t{1}, _stored_table_node_a));
+  const auto lqp = UpdateNode::make(
+      "table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
+      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int64_t(1), _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
