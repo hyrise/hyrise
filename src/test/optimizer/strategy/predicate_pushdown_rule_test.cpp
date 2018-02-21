@@ -27,12 +27,17 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
     _b_a = LQPColumnReference(_table_b, ColumnID{0});
     _b_b = LQPColumnReference(_table_b, ColumnID{1});
 
+    StorageManager::get().add_table("c", load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE));
+    _table_c = std::make_shared<StoredTableNode>("c");
+    _c_a = LQPColumnReference(_table_c, ColumnID{0});
+    _c_b = LQPColumnReference(_table_c, ColumnID{1});
+
     _rule = std::make_shared<PredicatePushdownRule>();
   }
 
   std::shared_ptr<PredicatePushdownRule> _rule;
-  std::shared_ptr<StoredTableNode> _table_a, _table_b;
-  LQPColumnReference _a_a, _a_b, _b_a, _b_b;
+  std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;
+  LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
 };
 
 TEST_F(PredicatePushdownRuleTest, SimpleLiteralJoinPushdownTest) {
@@ -95,6 +100,38 @@ TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
   EXPECT_EQ(reordered, sort_node);
   EXPECT_EQ(reordered->left_child(), predicate_node);
   EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
+}
+
+TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
+  auto join_node_ab = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
+  auto join_node_bc = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_b_a, _c_a), PredicateCondition::Equals);
+  
+  join_node_bc->set_left_child(_table_b);
+  join_node_bc->set_right_child(_table_c);
+  join_node_ab->set_left_child(join_node_bc);
+  join_node_ab->set_right_child(_table_a);
+
+  auto predicate_node_0 = std::make_shared<PredicateNode>(_b_b, PredicateCondition::Equals, _a_b);
+  predicate_node_0->set_left_child(join_node_ab);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>(_a_b, PredicateCondition::GreaterThan, 123);
+  predicate_node_1->set_left_child(predicate_node_0);
+
+  auto predicate_node_2 = std::make_shared<PredicateNode>(_c_a, PredicateCondition::GreaterThan, 100);
+  predicate_node_2->set_left_child(predicate_node_1);
+
+  auto reordered0 = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
+  auto reordered1 = StrategyBaseTest::apply_rule(_rule, reordered0);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, reordered1);
+
+  EXPECT_EQ(reordered, predicate_node_0);
+  EXPECT_EQ(reordered->left_child(), join_node_ab);
+  EXPECT_EQ(reordered->left_child()->left_child(), join_node_bc);
+  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), _table_b);
+  EXPECT_EQ(reordered->left_child()->left_child()->right_child(), predicate_node_2);
+  EXPECT_EQ(reordered->left_child()->left_child()->right_child()->left_child(), _table_c);
+  EXPECT_EQ(reordered->left_child()->right_child(), predicate_node_1);
+  EXPECT_EQ(reordered->left_child()->right_child()->left_child(), _table_a);
 }
 
 }  // namespace opossum
