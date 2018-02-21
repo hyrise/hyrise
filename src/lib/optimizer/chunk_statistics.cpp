@@ -35,8 +35,19 @@ auto build_stats(const ValueColumn<T>& column) {
 
 template <typename T>
 auto build_stats(const DeprecatedDictionaryColumn<T>& column) {
-  DebugAssert(false, "Not Implemented!");
-  return std::make_shared<ChunkColumnStatistics>();
+  auto statistics = std::make_shared<ChunkColumnStatistics>();
+    const auto & dictionary = *column.dictionary();
+    // only create statistics when the compressed dictionary is not empty
+    if(!dictionary.empty()) {
+      auto min_max_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+      statistics->add_filter(min_max_filter);
+
+      auto range_filter = RangeFilter<T>::build_filter(dictionary);
+      if (range_filter) { // no range filter for strings
+          statistics->add_filter(range_filter);
+      }
+    }
+    return statistics;
 }
 
 template <typename T>

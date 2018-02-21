@@ -33,7 +33,6 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
-#include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -405,7 +404,6 @@ int Console::load_table(const std::string& args) {
     try {
       const auto default_chunk_size = 500000u;
       auto table = opossum::load_table(filepath, default_chunk_size);
-      DictionaryCompression::compress_table(*table);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);

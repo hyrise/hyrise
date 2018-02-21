@@ -139,8 +139,9 @@ std::shared_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
       //       distance 5, index 4
 
       std::vector<std::pair<T,T>> ranges;
-      for(const auto& [_distance, index] : distances) {
+      for(const auto& distance_index_pair : distances) {
         // `index + 1` is ok because we check `dict_it + 1 != dictionary.cend()` above
+        auto index = std::get<1>(distance_index_pair);
         ranges.push_back(std::make_pair(dictionary[index], dictionary[index + 1]));
       }
 
