@@ -32,10 +32,14 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _perform_join();
 
+  template <typename LeftIterator>
+  void _join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
+                                     const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index);
+
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                         RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                         const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index);
+  void _join_two_columns_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                                     RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                                     const ChunkID chunk_id_right);
 
   void append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                       const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left, const ChunkID chunk_id_right);

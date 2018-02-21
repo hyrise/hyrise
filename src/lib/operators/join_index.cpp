@@ -127,16 +127,25 @@ void JoinIndex::_perform_join() {
           // clang-format off
           if constexpr (neither_is_string_column || both_are_string_columns) {
               auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
-              auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
-              iterable_left.with_iterators([&](auto left_it, auto left_end) {
-                  iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                      with_comparator(_predicate_condition, [&](auto comparator) {
-                          this->_join_two_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                                  chunk_id_right, index);
-                      });
-                  });
-              });
+              if (index != nullptr) {
+                // utilize index for join
+                iterable_left.with_iterators([&](auto left_it, auto left_end) {
+                    this->_join_two_columns_using_index(left_it, left_end, chunk_id_left, chunk_id_right, index);
+                });
+              } else {
+                // fallback to nested loop implementation
+                auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
+
+                iterable_left.with_iterators([&](auto left_it, auto left_end) {
+                    iterable_right.with_iterators([&](auto right_it, auto right_end) {
+                        with_comparator(_predicate_condition, [&](auto comparator) {
+                            this->_join_two_columns_nested_loop(comparator, left_it, left_end, right_it, right_end,
+                            chunk_id_left, chunk_id_right);
+                        });
+                    });
+                });
+              }
           }
           // clang-format on
         });
@@ -180,92 +189,93 @@ void JoinIndex::_perform_join() {
   _output_table->emplace_chunk(output_chunk);
 }
 
+// join loop that joins two chunks of two columns using an iterator for the left, and an index for the right
+template <typename LeftIterator>
+void JoinIndex::_join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
+                                              const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index) {
+  for (; left_it != left_end; ++left_it) {
+    const auto left_value = *left_it;
+    if (left_value.is_null()) continue;
+
+    // The index interface takes a vector of ATVs, so we need to wrap our value
+    auto comp_values = std::vector<AllTypeVariant>{AllTypeVariant(left_value.value())};
+
+    auto range_begin = BaseIndex::Iterator{};
+    auto range_end = BaseIndex::Iterator{};
+
+    switch (_predicate_condition) {
+      case PredicateCondition::Equals: {
+        range_begin = index->lower_bound(comp_values);
+        range_end = index->upper_bound(comp_values);
+        break;
+      }
+      case PredicateCondition::NotEquals: {
+        // first, get all values less than the search value
+        range_begin = index->cbegin();
+        range_end = index->lower_bound(comp_values);
+
+        append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
+
+        // set range for second half to all values greater than the search value
+        range_begin = index->upper_bound(comp_values);
+        range_end = index->cend();
+        break;
+      }
+      case PredicateCondition::GreaterThan: {
+        range_begin = index->cbegin();
+        range_end = index->lower_bound(comp_values);
+        break;
+      }
+      case PredicateCondition::GreaterThanEquals: {
+        range_begin = index->cbegin();
+        range_end = index->upper_bound(comp_values);
+        break;
+      }
+      case PredicateCondition::LessThan: {
+        range_begin = index->upper_bound(comp_values);
+        range_end = index->cend();
+        break;
+      }
+      case PredicateCondition::LessThanEquals: {
+        range_begin = index->lower_bound(comp_values);
+        range_end = index->cend();
+        break;
+      }
+      default:
+        Fail("Unsupported comparison type encountered");
+    }
+
+    append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
+  }
+}
+
 // join loop that joins two chunks of two columns via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void JoinIndex::_join_two_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                  RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                  const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index) {
-  if (index != nullptr) {
-    // We have a proper index and can use it, so we do an index join for this chunk combination
+void JoinIndex::_join_two_columns_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                                              RightIterator right_begin, RightIterator right_end,
+                                              const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
+  // No index so we fall back on a nested loop join
+  for (; left_it != left_end; ++left_it) {
+    const auto left_value = *left_it;
+    if (left_value.is_null()) continue;
 
-    for (; left_it != left_end; ++left_it) {
-      const auto left_value = *left_it;
-      if (left_value.is_null()) continue;
+    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
+      const auto right_value = *right_it;
+      if (right_value.is_null()) continue;
 
-      // The index interface takes a vector of ATVs, so we need to wrap our value
-      auto comp_values = std::vector<AllTypeVariant>{AllTypeVariant(left_value.value())};
+      if (func(left_value.value(), right_value.value())) {
+        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
+        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
 
-      auto range_begin = BaseIndex::Iterator{};
-      auto range_end = BaseIndex::Iterator{};
-
-      switch (_predicate_condition) {
-        case PredicateCondition::Equals: {
-          range_begin = index->lower_bound(comp_values);
-          range_end = index->upper_bound(comp_values);
-          break;
+        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+          _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
         }
-        case PredicateCondition::NotEquals: {
-          // first, get all values less than the search value
-          range_begin = index->cbegin();
-          range_end = index->lower_bound(comp_values);
 
-          append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
-
-          // set range for second half to all values greater than the search value
-          range_begin = index->upper_bound(comp_values);
-          range_end = index->cend();
-          break;
-        }
-        case PredicateCondition::GreaterThan: {
-          range_begin = index->cbegin();
-          range_end = index->lower_bound(comp_values);
-          break;
-        }
-        case PredicateCondition::GreaterThanEquals: {
-          range_begin = index->cbegin();
-          range_end = index->upper_bound(comp_values);
-          break;
-        }
-        case PredicateCondition::LessThan: {
-          range_begin = index->upper_bound(comp_values);
-          range_end = index->cend();
-          break;
-        }
-        case PredicateCondition::LessThanEquals: {
-          range_begin = index->lower_bound(comp_values);
-          range_end = index->cend();
-          break;
-        }
-        default:
-          Fail("Unsupported comparison type encountered");
-      }
-
-      append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
-    }
-  } else {
-    // No index so we fall back on a nested loop join
-    for (; left_it != left_end; ++left_it) {
-      const auto left_value = *left_it;
-      if (left_value.is_null()) continue;
-
-      for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-        const auto right_value = *right_it;
-        if (right_value.is_null()) continue;
-
-        if (func(left_value.value(), right_value.value())) {
-          _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-          _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
-
-          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-            _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
-          }
-
-          if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
-            DebugAssert(chunk_id_right < _right_in_table->chunk_count(), "invalid chunk_id in join_index");
-            DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right)->size(),
-                        "invalid chunk_offset in join_index");
-            _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
-          }
+        if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+          DebugAssert(chunk_id_right < _right_in_table->chunk_count(), "invalid chunk_id in join_index");
+          DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right)->size(),
+                      "invalid chunk_offset in join_index");
+          _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
         }
       }
     }
