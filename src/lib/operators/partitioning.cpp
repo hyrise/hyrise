@@ -238,7 +238,7 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
           // doing this for one column only is enough because the rows to copy are the same in all columns
           for (size_t row = source_chunk_start_index; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
             if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID &&
-                rows_to_copy.size() <= num_to_insert) {
+                rows_to_copy.size() < num_to_insert) {
               rows_to_copy.push_back(row);
               last_touched_index_source_chunk = row;
             }
