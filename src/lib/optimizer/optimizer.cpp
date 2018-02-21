@@ -7,6 +7,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
+#include "strategy/projection_combination_rule.hpp"
 
 namespace opossum {
 
@@ -20,8 +21,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
-  final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
+  // final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
+  final_batch.add_rule(std::make_shared<ProjectionCombinationRule>());
   optimizer->add_rule_batch(final_batch);
 
   return optimizer;
