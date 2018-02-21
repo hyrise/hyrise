@@ -186,10 +186,10 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/hyrise_server.cpp
-    server/hyrise_server.hpp
-    server/hyrise_session.cpp
-    server/hyrise_session.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
     server/then_operator.hpp
@@ -313,7 +313,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-    )
+)
 
 set(
     LIBRARIES

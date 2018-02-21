@@ -85,7 +85,7 @@ boost::future<void> ClientConnection::send_status_message(const NetworkMessageTy
   return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
-boost::future<void> ClientConnection::send_row_description(const std::vector<ColumnDescription> row_description) {
+boost::future<void> ClientConnection::send_row_description(const std::vector<ColumnDescription>& row_description) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
 
   // Int16 Specifies the number of fields in a row (can be zero).
@@ -97,18 +97,26 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
    String
    The field name.
 
-   Int32 - If the field can be identified as a column of a specific table, the object ID of the table; otherwise zero.
+   Int32
+   If the field can be identified as a column of a specific table, the object ID of the table; otherwise zero.
 
-   Int16 - If the field can be identified as a column of a specific table, the attribute number of the column; otherwise zero.
+   Int16
+   If the field can be identified as a column of a specific table, the attribute number of the column; otherwise zero.
 
-   Int32 - The object ID of the field's data type.
-           Found at: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
+   Int32
+   The object ID of the field's data type.
+   Found at: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
 
-   Int16 - The data type size (see pg_type.typlen). Note that negative values denote variable-width types.
+   Int16
+   The data type size (see pg_type.typlen). Note that negative values denote variable-width types.
 
-   Int32 - The type modifier (see pg_attribute.atttypmod). The meaning of the modifier is type-specific.
+   Int32
+   The type modifier (see pg_attribute.atttypmod). The meaning of the modifier is type-specific.
 
-   Int16 - The format code being used for the field. Currently will be zero (text) or one (binary). In a RowDescription returned from the statement variant of Describe, the format code is not yet known and will always be zero.
+   Int16
+   The format code being used for the field. Currently will be zero (text) or one (binary).
+   In a RowDescription returned from the statement variant of Describe, the format code is not yet known and will always
+   be zero.
    */
 
   for (const auto& column_description : row_description) {
@@ -120,6 +128,23 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
     PostgresWireHandler::write_value(*output_packet, htons(column_description.type_width));  // regular int
     PostgresWireHandler::write_value(*output_packet, htonl(-1));                             // no modifier
     PostgresWireHandler::write_value(*output_packet, htons(0u));                             // text format
+  }
+
+  return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };
+}
+
+boost::future<void> ClientConnection::send_data_row(const std::vector<std::string>& row_strings) {
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::DataRow);
+
+  // Number of columns in row
+  PostgresWireHandler::write_value(*output_packet, htons(row_strings.size()));
+
+  for (const auto& value_string : row_strings) {
+    // Size of string representation of value, NOT of value type's size
+    PostgresWireHandler::write_value(*output_packet, htonl(value_string.length()));
+
+    // Text mode means that all values are sent as non-terminated strings
+    PostgresWireHandler::write_string(*output_packet, value_string, false);
   }
 
   return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };

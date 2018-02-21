@@ -6,7 +6,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "server/hyrise_server.hpp"
+#include "server/server.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
 
     boost::asio::io_service io_service;
 
-    opossum::HyriseServer server(io_service, port);
+    opossum::Server server(io_service, port);
 
     io_service.run();
   } catch (std::exception& e) {

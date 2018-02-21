@@ -7,9 +7,9 @@ namespace opossum {
 
 using boost::asio::ip::tcp;
 
-class HyriseServer {
+class Server {
  public:
-  HyriseServer(boost::asio::io_service& io_service, uint16_t port);
+  Server(boost::asio::io_service& io_service, uint16_t port);
 
  protected:
   void accept_next_connection();

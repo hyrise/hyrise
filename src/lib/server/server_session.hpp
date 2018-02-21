@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "postgres_wire_handler.hpp"
+#include "server/client_connection.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "tasks/server/server_task.hpp"
 #include "types.hpp"
@@ -16,11 +17,9 @@ namespace opossum {
 
 using boost::asio::ip::tcp;
 
-class ClientConnection;
-
-class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
+class ServerSession : public std::enable_shared_from_this<ServerSession> {
  public:
-  explicit HyriseSession(boost::asio::io_service& io_service, std::shared_ptr<ClientConnection> connection)
+  explicit ServerSession(boost::asio::io_service& io_service, std::shared_ptr<ClientConnection> connection)
       : _io_service(io_service), _connection(connection) {}
 
   void start();
@@ -40,7 +39,7 @@ class HyriseSession : public std::enable_shared_from_this<HyriseSession> {
   template <typename T>
   auto _dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future());
 
-  std::shared_ptr<HyriseSession> _self;
+  std::shared_ptr<ServerSession> _self;
 
   boost::asio::io_service& _io_service;
   std::shared_ptr<ClientConnection> _connection;

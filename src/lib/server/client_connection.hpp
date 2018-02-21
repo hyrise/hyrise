@@ -22,8 +22,6 @@ struct ColumnDescription {
 };
 
 class ClientConnection {
-  friend class SendQueryResponseTask;
-
  public:
   explicit ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
     _response_buffer.reserve(_max_response_size);
@@ -41,7 +39,8 @@ class ClientConnection {
   boost::future<void> send_error(const std::string& message);
   boost::future<void> send_notice(const std::string& notice);
   boost::future<void> send_status_message(const NetworkMessageType& type);
-  boost::future<void> send_row_description(const std::vector<ColumnDescription> row_description);
+  boost::future<void> send_row_description(const std::vector<ColumnDescription>& row_description);
+  boost::future<void> send_data_row(const std::vector<std::string>& row_strings);
   boost::future<void> send_command_complete(const std::string& message);
 
  protected:
