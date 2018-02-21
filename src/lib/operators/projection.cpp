@@ -10,9 +10,9 @@
 
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
-#include "sql/sql_query_plan.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/reference_column.hpp"
 #include "utils/arithmetic_operator_expression.hpp"
 
@@ -62,8 +62,7 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     auto values = pmr_concurrent_vector<T>(row_count, T{});
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
-  }
-  else if (expression->type() == ExpressionType::Select) {
+  } else if (expression->type() == ExpressionType::Select) {
     auto chunk = expression->table()->get_chunk(ChunkID{0});
     auto base_column = chunk->get_column(ColumnID{0});
 
@@ -72,11 +71,9 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     T subselect_value{};
     if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(base_column)) {
       subselect_value = value_column->get(ChunkOffset{0});
-    }
-    else if (auto dictionary_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(base_column)) {
+    } else if (auto dictionary_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(base_column)) {
       subselect_value = dictionary_column->dictionary()->at(0);
-    }
-    else {
+    } else {
       // fall back on slow access
       subselect_value = type_cast<T>((*base_column)[ChunkOffset{0}]);
     }
@@ -88,8 +85,7 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     auto values = pmr_concurrent_vector<T>(row_count, subselect_value);
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
-  }
-  else {
+  } else {
     // fill a value column with the specified expression
     auto values = _evaluate_expression<T>(expression, input_table_left, chunk_id);
 
@@ -139,11 +135,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
 
       if (result_table->row_count() == 0) {
-          Fail("Subselect returned no results.");
+        Fail("Subselect returned no results.");
       }
 
       if (result_table->row_count() > 1) {
-          Fail("Subselect returned more than one row.");
+        Fail("Subselect returned more than one row.");
       }
 
       column_expression->set_table(result_table);

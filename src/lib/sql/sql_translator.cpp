@@ -1112,7 +1112,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }
 
-
   auto predicate_node = PredicateNode::make(column_id, predicate_condition, value, value2);
   predicate_node->set_left_child(current_node);
 

@@ -60,7 +60,8 @@ ColumnID PQPExpression::column_id() const {
 }
 
 std::shared_ptr<AbstractOperator> PQPExpression::subselect_operator() {
-  DebugAssert(_subselect_operator, "Expression " + expression_type_to_string.at(_type) + " does not have a subselect operator");
+  DebugAssert(_subselect_operator,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a subselect operator");
   return *_subselect_operator;
 }
 
@@ -69,9 +70,7 @@ std::shared_ptr<const Table> PQPExpression::table() {
   return *_table;
 }
 
-void PQPExpression::set_table(std::shared_ptr<const Table> table) {
-  _table = table;
-}
+void PQPExpression::set_table(std::shared_ptr<const Table> table) { _table = table; }
 
 std::string PQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                      bool is_root) const {
