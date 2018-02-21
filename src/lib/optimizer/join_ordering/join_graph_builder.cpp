@@ -42,8 +42,9 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
   switch (node->type()) {
     case LQPNodeType::Join: {
       /**
-       * For now, only inner joins are turned into predicates for the JoinGraph. Cross joins are simply being traversed
-       * past and all other joins are turned into vertices.
+       * Cross joins are simply being traversed past. Outer joins are hard to address during JoinOrdering and until we
+       * do, outer join predicates are not included in the JoinGraph.
+       * The outer join node is added as a vertex and traversal stops at this point.
        */
 
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
