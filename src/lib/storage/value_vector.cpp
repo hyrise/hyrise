@@ -73,6 +73,11 @@ typename ValueVector<T>::const_iterator ValueVector<T>::cend() const noexcept {
 }
 
 template <typename T>
+void ValueVector<T>::erase(iterator start, iterator end) {
+  _values.erase(start, end);
+}
+
+template <typename T>
 T& ValueVector<T>::operator[](const size_t n) {
   return _values[n];
 }
@@ -85,6 +90,11 @@ const T& ValueVector<T>::operator[](const size_t n) const {
 template <typename T>
 size_t ValueVector<T>::size() const {
   return _values.size();
+}
+
+template <typename T>
+size_t ValueVector<T>::capacity() const {
+  return _values.capacity();
 }
 
 template <typename T>
@@ -160,6 +170,8 @@ const FixedString ValueVector<FixedString>::operator[](const size_t n) const {
 }
 
 size_t ValueVector<FixedString>::size() const { return _chars.size() / _string_length; }
+
+size_t ValueVector<FixedString>::capacity() const { return _chars.capacity(); }
 
 void ValueVector<FixedString>::erase(const iterator start, const iterator end) {
   auto it = _chars.begin();

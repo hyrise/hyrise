@@ -41,11 +41,28 @@ class FixedString {
     if (_delete) delete[] _mem;
   }
 
-  // Copy chars of current FixedString to a new destination
-  size_t copys(char* s, size_t len, size_t pos = 0) const {
-    const auto copied_length = len < _string_length - pos ? len : _string_length - pos;
-    std::memcpy(s, _mem + pos, copied_length);
-    return copied_length;
+  // Copy assign
+  FixedString& operator=(const FixedString& other) {
+    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
+    other._copy(_mem, copied_length);
+    // Fill unused fields of char array with null terminator
+    if (copied_length < _string_length) {
+      memset(_mem + copied_length, '\0', _string_length - copied_length);
+    }
+    return *this;
+  }
+
+  // Move assign
+  FixedString& operator=(FixedString&& other) {
+    if (this != &other) {
+      const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
+      other._copy(_mem, copied_length);
+      // Fill unused fields of char array with null terminator
+      if (copied_length < _string_length) {
+        memset(_mem + copied_length, '\0', _string_length - copied_length);
+      }
+    }
+    return *this;
   }
 
   // Returns the length of the string
@@ -63,16 +80,6 @@ class FixedString {
     }
   }
 
-  FixedString& operator=(const FixedString& other) {
-    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
-    other.copys(_mem, copied_length);
-    // Fill unused fields of char array with null terminator
-    if (copied_length < _string_length) {
-      memset(_mem + copied_length, '\0', _string_length - copied_length);
-    }
-    return *this;
-  }
-
   // Compare FixedStrings by comparing the underlying char arrays
   bool operator<(const FixedString& other) const { return memcmp(_mem, other._mem, _string_length) < 0; }
   bool operator==(const FixedString& other) const { return memcmp(_mem, other._mem, _string_length) == 0; }
@@ -86,10 +93,17 @@ class FixedString {
   // Swap two FixedStrings by exchanging the underlying memory's content
   void swap(const FixedString& other) const { std::swap_ranges(_mem, _mem + _string_length, other._mem); }
 
- private:
+ protected:
   char* const _mem;
   const size_t _string_length;
   const bool _delete = true;
+
+  // Copy chars of current FixedString to a new destination
+  size_t _copy(char* s, size_t len, size_t pos = 0) const {
+    const auto copied_length = len < _string_length - pos ? len : _string_length - pos;
+    std::memcpy(s, _mem + pos, copied_length);
+    return copied_length;
+  }
 };
 
 }  // namespace opossum
