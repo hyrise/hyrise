@@ -28,7 +28,7 @@ template <typename T>
 class JoinFullTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoop, JoinSortMerge> JoinFullTypes;
+typedef ::testing::Types<JoinNestedLoop/*, JoinSortMerge*/> JoinFullTypes;
 TYPED_TEST_CASE(JoinFullTest, JoinFullTypes);
 
 TYPED_TEST(JoinFullTest, CrossJoin) {

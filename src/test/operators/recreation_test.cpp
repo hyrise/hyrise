@@ -49,7 +49,7 @@ template <typename T>
 class RecreationTestJoin : public RecreationTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash/*, JoinSortMerge*/>;
 TYPED_TEST_CASE(RecreationTestJoin, JoinTypes);
 
 TYPED_TEST(RecreationTestJoin, RecreationJoin) {

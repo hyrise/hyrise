@@ -14,6 +14,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
 #include "storage/storage_manager.hpp"
@@ -30,7 +31,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, /*JoinSortMerge,*/ JoinMPSM>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
