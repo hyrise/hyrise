@@ -15,7 +15,7 @@ class FixedStringTest : public BaseTest {
 TEST_F(FixedStringTest, StringLength) {
   FixedString str1 = FixedString(std::string("astring"));
 
-  EXPECT_EQ(str1.size();, 7u);
+  EXPECT_EQ(str1.size(), 7u);
 }
 
 TEST_F(FixedStringTest, CharvectorToString) {
