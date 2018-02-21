@@ -164,7 +164,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   }
 
   if (encoding_type.has_value()) {
-    DeprecatedDictionaryCompression::compress_table(*table, encoding_type.value());
+    ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{encoding_type.value()});
   }
 
   return table;
