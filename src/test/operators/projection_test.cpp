@@ -12,7 +12,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -41,12 +41,12 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_float->execute();
 
     std::shared_ptr<Table> test_table_dict = load_table("src/test/tables/int_int_int.tbl", 2);
-    DeprecatedDictionaryCompression::compress_table(*test_table_dict);
+    ChunkEncoder::encode_all_chunks(test_table_dict);
     _table_wrapper_int_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
     _table_wrapper_int_dict->execute();
 
     std::shared_ptr<Table> test_table_dict_null = load_table("src/test/tables/int_int_int.tbl", 2);
-    DeprecatedDictionaryCompression::compress_table(*test_table_dict_null);
+    ChunkEncoder::encode_all_chunks(test_table_dict_null);
     _table_wrapper_int_dict_null = std::make_shared<TableWrapper>(std::move(test_table_dict_null));
     _table_wrapper_int_dict_null->execute();
 

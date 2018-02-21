@@ -35,7 +35,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
   if (_join_mode == JoinMode::Cross || _join_mode == JoinMode::Natural) {
-    return std::make_shared<JoinNode>(_join_mode);
+    return JoinNode::make(_join_mode);
   } else {
     Assert(left_child(), "Can't clone without child");
 
@@ -43,7 +43,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
         adapt_column_reference_to_different_lqp(_join_column_references->first, left_child(), copied_left_child),
         adapt_column_reference_to_different_lqp(_join_column_references->first, right_child(), copied_right_child),
     };
-    return std::make_shared<JoinNode>(_join_mode, join_column_references, *_predicate_condition);
+    return JoinNode::make(_join_mode, join_column_references, *_predicate_condition);
   }
 }
 
@@ -114,6 +114,19 @@ std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
   return right_child()->get_verbose_column_name(static_cast<ColumnID>(column_id - left_child()->output_column_count()));
 }
 
+bool JoinNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& join_node = static_cast<const JoinNode&>(rhs);
+
+  if (_join_mode != join_node._join_mode || _predicate_condition != join_node._predicate_condition) return false;
+  if (_join_column_references.has_value() != join_node._join_column_references.has_value()) return false;
+
+  if (!_join_column_references.has_value()) return true;
+
+  return _equals(*this, _join_column_references->first, join_node, join_node._join_column_references->first) &&
+         _equals(*this, _join_column_references->second, join_node, join_node._join_column_references->second);
+}
+
 void JoinNode::_on_child_changed() { _output_column_names.reset(); }
 
 void JoinNode::_update_output() const {
@@ -132,10 +145,12 @@ void JoinNode::_update_output() const {
   const auto& right_names = right_child()->output_column_names();
 
   _output_column_names.emplace();
-  bool only_left = _join_mode == JoinMode::Semi || _join_mode == JoinMode::Anti;
 
-    auto output_size = only_left ? left_names.size() : left_names.size() + right_names.size();
-  _output_column_names->reserve(output_size);
+  const auto only_output_left_columns = _join_mode == JoinMode::Semi || _join_mode == JoinMode::Anti;
+
+  const auto output_column_count =
+      only_output_left_columns ? left_names.size() : left_names.size() + right_names.size();
+  _output_column_names->reserve(output_column_count);
 
   _output_column_names->insert(_output_column_names->end(), left_names.begin(), left_names.end());
 
@@ -147,7 +162,7 @@ void JoinNode::_update_output() const {
   _output_column_references->insert(_output_column_references->end(), left_child()->output_column_references().begin(),
                                     left_child()->output_column_references().end());
 
-  if (!only_left) {
+  if (!only_output_left_columns) {
     _output_column_names->insert(_output_column_names->end(), right_names.begin(), right_names.end());
     _output_column_references->insert(_output_column_references->end(),
                                       right_child()->output_column_references().begin(),

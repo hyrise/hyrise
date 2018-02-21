@@ -13,6 +13,14 @@
 
 namespace opossum {
 
+std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& child) {
+  std::vector<std::shared_ptr<LQPExpression>> expressions =
+      LQPExpression::create_columns(child->output_column_references());
+  const auto projection_node = ProjectionNode::make(expressions);
+  projection_node->set_left_child(child);
+  return projection_node;
+}
+
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
@@ -48,7 +56,7 @@ std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
         adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
   }
 
-  return std::make_shared<ProjectionNode>(column_expressions);
+  return ProjectionNode::make(column_expressions);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expressions() const {
@@ -91,6 +99,15 @@ std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
   } else {
     return column_expression->to_string();
   }
+}
+
+bool ProjectionNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& projection_node = dynamic_cast<const ProjectionNode&>(rhs);
+
+  Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
+  return _equals(*left_child(), _column_expressions, *projection_node.left_child(),
+                 projection_node._column_expressions);
 }
 
 void ProjectionNode::_update_output() const {
