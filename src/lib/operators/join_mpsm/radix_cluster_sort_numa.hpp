@@ -252,12 +252,12 @@ class RadixClusterSortNUMA {
   **/
   std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa(
       std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
-    // TODO(florian): do this for all NUMA partitions
-    // make them all run on their respective nodes using jobs so we can assume to be on a single node from here on
+
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
 
     auto radix_bitmask = _cluster_count - 1;
 
+    // TODO(florian) properly allocate these jobs on the correct chunks
     for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
       output->push_back(_cluster((*input_chunks)[node_id],
                                  [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id));
@@ -405,19 +405,11 @@ class RadixClusterSortNUMA {
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_columns);
       output.clusters_right = _concatenate_chunks(materialized_right_columns);
-    } else
-      if (_equi_case) {
+    } else {
       output.clusters_left = _radix_cluster_numa(materialized_left_columns);
       output.clusters_right = _radix_cluster_numa(materialized_right_columns);
-    } else {
-      DebugAssert(false, "non equi case not currently supported by numa join");
-      //      auto result = _range_cluster(materialized_left_columns, materialized_right_columns);
-      //      output.clusters_left = std::move(result.first);
-      //      output.clusters_right = std::move(result.second);
     }
 
-    // Sort each cluster (right now std::sort -> but maybe can be replaced with
-    // an more efficient algorithm, if subparts are already sorted [InsertionSort?!])
 
     // TODO(florian): repartition clusters_left so that each cluster is contiguous on one numa-node
     output.clusters_left = _repartition_clusters(output.clusters_left);
