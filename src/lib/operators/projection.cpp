@@ -7,12 +7,11 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <logical_query_plan/lqp_translator.hpp>
-#include <sql/sql_query_plan.hpp>
-#include <scheduler/current_scheduler.hpp>
 
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
+#include "sql/sql_query_plan.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
 #include "utils/arithmetic_operator_expression.hpp"
