@@ -92,6 +92,35 @@ TEST_F(ValueVectorTest, ReverseIterator) {
   EXPECT_EQ(*it_rend, "str1");
 }
 
+TEST_F(ValueVectorTest, ShrinkValueVector) {
+  auto valuevector = ValueVector<std::string>();
+  valuevector.push_back("str1");
+  valuevector.push_back("str2");
+  valuevector.push_back("str3");
+  valuevector.shrink_to_fit();
+
+  EXPECT_EQ(valuevector.size(), 3u);
+
+  auto it = valuevector.begin();
+  ++it;
+  valuevector.erase(it, valuevector.end());
+
+  EXPECT_EQ(valuevector.size(), 1u);
+
+  valuevector.shrink_to_fit();
+
+  EXPECT_EQ(valuevector.capacity(), 1u);
+}
+
+TEST_F(ValueVectorTest, ReserveValueVector) {
+  auto valuevector = ValueVector<float>();
+  valuevector.reserve(2u);
+
+  EXPECT_EQ(valuevector.capacity(), 2u);
+}
+
+// ValueVector of FixedString tests
+
 TEST_F(ValueVectorTest, SubscriptOperatorFixedString) {
   auto valuevector = ValueVector<FixedString>(6u);
   valuevector.push_back("abc");
@@ -200,22 +229,19 @@ TEST_F(ValueVectorTest, ShrinkFixedString) {
   valuevector.push_back("str1");
   valuevector.push_back("str2");
   valuevector.push_back("str3");
-
-  auto it = valuevector.begin();
-  ++it;
-
   valuevector.shrink_to_fit();
 
   EXPECT_EQ(valuevector.size(), 3u);
 
+  auto it = valuevector.begin();
+  ++it;
   valuevector.erase(it, valuevector.end());
 
   EXPECT_EQ(valuevector.size(), 1u);
 
   valuevector.shrink_to_fit();
 
-  // TODO(team_btm): test otherwise
-  // EXPECT_EQ(valuevector.capacity(), 4u);
+  EXPECT_EQ(valuevector.capacity(), 4u);
 }
 
 TEST_F(ValueVectorTest, ConstValueVectorFixedString) {
@@ -248,6 +274,13 @@ TEST_F(ValueVectorTest, DataSize) {
   valuevector.push_back("str2");
 
   EXPECT_EQ(valuevector.data_size(), 48u);
+}
+
+TEST_F(ValueVectorTest, ReserveFixedString) {
+  auto valuevector = ValueVector<FixedString>(4u);
+  valuevector.reserve(2u);
+
+  EXPECT_EQ(valuevector.capacity(), 8u);
 }
 
 }  // namespace opossum
