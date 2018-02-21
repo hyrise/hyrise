@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "storage/column_iterables.hpp"
-#include "storage/value_vector.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
+#include "storage/value_vector.hpp"
 
 #include "base_attribute_vector.hpp"
 

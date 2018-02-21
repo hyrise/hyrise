@@ -11,7 +11,7 @@
 namespace opossum {
 
 // FixedString is a data type, which stores a string in an array of chars in order to
-// save memory space by avoiding SSO 
+// save memory space by avoiding SSO
 class FixedString {
  public:
   // Create a FixedString from a std::string
@@ -52,9 +52,17 @@ class FixedString {
   size_t size() const { return _string_length; }
 
   // Creates a string object from FixedString
-  std::string string() const { return std::string(_mem, _string_length); }
+  std::string string() const {
+    const auto string_value = std::string(_mem, _string_length);
+    const auto pos = string_value.find('\0');
 
-  
+    if (pos == std::string::npos) {
+      return string_value;
+    } else {
+      return string_value.substr(0, pos);
+    }
+  }
+
   FixedString& operator=(const FixedString& other) {
     const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
     other.copys(_mem, copied_length);

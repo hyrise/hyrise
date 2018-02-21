@@ -173,9 +173,7 @@ PolymorphicAllocator<FixedString> ValueVector<FixedString>::get_allocator() { re
 
 void ValueVector<FixedString>::reserve(const size_t n) { _chars.reserve(n * _string_length); }
 
-size_t ValueVector<FixedString>::data_size() const {
-  return sizeof(*this) + _chars.size();
-}
+size_t ValueVector<FixedString>::data_size() const { return sizeof(*this) + _chars.size(); }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueVector);
 

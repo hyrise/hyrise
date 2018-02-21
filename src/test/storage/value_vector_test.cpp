@@ -92,7 +92,6 @@ TEST_F(ValueVectorTest, ReverseIterator) {
   EXPECT_EQ(*it_rend, "str1");
 }
 
-
 TEST_F(ValueVectorTest, SubscriptOperatorFixedString) {
   auto valuevector = ValueVector<FixedString>(6u);
   valuevector.push_back("abc");
@@ -139,7 +138,6 @@ TEST_F(ValueVectorTest, IteratorConstFixedString) {
 
   EXPECT_EQ(it_begin->string(), "str1");
   EXPECT_EQ(it_end->string(), "str2");
-
 
   auto const_it_begin = valuevector_const.cbegin();
   auto const_it_end = valuevector_const.cend();

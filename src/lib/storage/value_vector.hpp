@@ -63,9 +63,7 @@ class ValueVector {
   // template <class Iter>
 
   // Remove elements from the vector
-  void erase(iterator start, iterator end) {
-    _values.erase(start, end);
-  }
+  void erase(iterator start, iterator end) { _values.erase(start, end); }
 
   // Return the value at a certain position.
   T& operator[](const size_t n);
@@ -84,7 +82,7 @@ class ValueVector {
 
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<T> get_allocator();
-  
+
   // Return the calculated size of ValueVector in main memory
   size_t data_size() const;
 
