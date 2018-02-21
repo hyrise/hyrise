@@ -26,6 +26,7 @@ class JoinIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     // load and create the indexed tables
+    // TODO(anyone): replace with load_table_with_index as soon as all index types support chunk encoder compression
     _table_wrapper_a = load_table_with_index_deprecated_compression("src/test/tables/int_float.tbl", 2);
     _table_wrapper_b = load_table_with_index_deprecated_compression("src/test/tables/int_float2.tbl", 2);
     _table_wrapper_c = load_table_with_index_deprecated_compression("src/test/tables/int_string.tbl", 4);
@@ -38,8 +39,10 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_j = load_table_with_index_deprecated_compression("src/test/tables/int3.tbl", 1);
     _table_wrapper_k = load_table_with_index_deprecated_compression("src/test/tables/int4.tbl", 1);
     _table_wrapper_l = load_table_with_index_deprecated_compression("src/test/tables/int.tbl", 1);
-    _table_wrapper_m = load_table_with_index_deprecated_compression("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
-    _table_wrapper_n = load_table_with_index_deprecated_compression("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+    _table_wrapper_m = load_table_with_index_deprecated_compression(
+        "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
+    _table_wrapper_n = load_table_with_index_deprecated_compression(
+        "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
@@ -58,8 +61,8 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_n->execute();
   }
 
-    // some indices only support deprecated compression at the moment
-  std::shared_ptr<TableWrapper> load_table_with_index_deprecated_compression(const std::string& filename, const size_t chunk_size) {
+  std::shared_ptr<TableWrapper> load_table_with_index_deprecated_compression(const std::string& filename,
+                                                                             const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
     DeprecatedDictionaryCompression::compress_table(*table);
@@ -77,7 +80,6 @@ class JoinIndexTest : public BaseTest {
     return std::make_shared<TableWrapper>(table);
   }
 
-    // uses chunk encoder, not supported by all indices at the moment
   std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
