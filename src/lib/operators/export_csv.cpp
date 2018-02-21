@@ -37,7 +37,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     ColumnMeta column_meta;
     column_meta.name = table->column_name(column_id);
-    column_meta.type = data_type_to_string.left.at(table->column_type(column_id));
+    column_meta.type = data_type_to_string.left.at(table->column_data_type(column_id));
     column_meta.nullable = table->column_is_nullable(column_id);
 
     meta.columns.push_back(column_meta);
@@ -66,7 +66,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   // Create visitors for every column, so that we do not have to do that more than once.
   std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->column_count());
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    auto visitor = make_shared_by_data_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(column_id));
+    auto visitor = make_shared_by_data_type<ColumnVisitable, ExportCsvVisitor>(table->column_data_type(column_id));
     visitors[column_id] = std::move(visitor);
   }
 

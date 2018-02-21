@@ -141,7 +141,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table->column_type(column_id));
+    column_types[column_id] = data_type_to_string.left.at(table->column_data_type(column_id));
     column_names[column_id] = table->column_name(column_id);
     column_nullables[column_id] = table->column_is_nullable(column_id);
   }
@@ -159,7 +159,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(column_id));
+    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_data_type(column_id));
     chunk->get_column(column_id)->visit(*visitor, context);
   }
 }
