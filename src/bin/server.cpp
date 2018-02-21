@@ -20,11 +20,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Generate some data for testing
-    auto table = tpcc::TpccTableGenerator::generate_tpcc_table("ITEM");
-    opossum::StorageManager::get().add_table("ITEM", table);
-
-    auto table2 = opossum::load_table("src/test/tables/int.tbl", 100);
-    opossum::StorageManager::get().add_table("foo", table2);
+    // auto table = tpcc::TpccTableGenerator::generate_tpcc_table("ITEM");
+    // opossum::StorageManager::get().add_table("ITEM", table);
 
     // Install a multi threaded scheduler
     opossum::CurrentScheduler::set(
