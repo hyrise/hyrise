@@ -113,6 +113,12 @@ void ValueVector<T>::reserve(const size_t n) {
 }
 
 template <typename T>
+const pmr_vector<T>& ValueVector<T>::values() const { return _values; }
+
+template <typename T>
+const T* ValueVector<T>::data() const { return &_values[0]; }
+
+template <typename T>
 size_t ValueVector<T>::data_size() const {
   return sizeof(*this) + _values.size() * sizeof(typename decltype(_values)::value_type);
 }
@@ -184,6 +190,8 @@ void ValueVector<FixedString>::shrink_to_fit() { _chars.shrink_to_fit(); }
 PolymorphicAllocator<FixedString> ValueVector<FixedString>::get_allocator() { return _chars.get_allocator(); }
 
 void ValueVector<FixedString>::reserve(const size_t n) { _chars.reserve(n * _string_length); }
+
+const char* ValueVector<FixedString>::data() const { return &_chars[0]; }
 
 size_t ValueVector<FixedString>::data_size() const { return sizeof(*this) + _chars.size(); }
 

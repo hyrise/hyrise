@@ -77,6 +77,12 @@ class ValueVector {
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<T> get_allocator();
 
+  // Return a reference to the underlying vector
+  const pmr_vector<T>& values() const;
+
+  // Return a pointer to the first element of the data vector
+  const T* data() const;
+
   // Return the calculated size of ValueVector in main memory
   size_t data_size() const;
 
@@ -182,6 +188,9 @@ class ValueVector<FixedString> {
 
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<FixedString> get_allocator();
+
+  // Return a pointer to the first element of the char vector
+  const char* data() const;
 
   // Return the calculated size of ValueVector in main memory
   size_t data_size() const;
