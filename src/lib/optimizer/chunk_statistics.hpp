@@ -130,15 +130,13 @@ std::shared_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
       std::sort(distances.begin(), distances.end(),
                 [](const auto& pair1, const auto& pair2){ return pair1.second < pair2.second; });
 
-      // derive intervals where items exists from distances
+      // derive intervals where items don't exist from distances
       //
-      // start   end  next_startpoint
-      // v       v    v
-      // 1 2 3 4 5    10 11     15 16
+      //         index  index + 1
+      //         v      v
+      // 1 2 3 4 5      10 11     15 16
       //         ^
       //       distance 5, index 4
-      //
-      // next_startpoint is the start of the next range
 
       std::vector<std::pair<T,T>> ranges;
       for(const auto& [_distance, index] : distances) {
