@@ -28,7 +28,7 @@ class TransactionContext;
 //
 // Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
 
-class AbstractOperator : private Noncopyable {
+class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
@@ -48,6 +48,9 @@ class AbstractOperator : private Noncopyable {
 
   virtual const std::string name() const = 0;
   virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+
+  // This only checks if the operator has/had a transaction context without having to convert the weak_ptr
+  bool transaction_context_is_set() const;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
@@ -106,7 +109,7 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> _output;
 
   // Weak pointer breaks cyclical dependency between operators and context
-  std::weak_ptr<TransactionContext> _transaction_context;
+  std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   PerformanceData _performance_data;
 

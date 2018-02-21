@@ -18,8 +18,13 @@ class Chunk;
 class Table;
 
 struct ColumnEncodingSpec {
+  constexpr ColumnEncodingSpec() : encoding_type{EncodingType::DeprecatedDictionary} {}
+  constexpr ColumnEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr ColumnEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
+      : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
+
   EncodingType encoding_type;
-  std::optional<VectorCompressionType> vector_compression_type = {};
+  std::optional<VectorCompressionType> vector_compression_type;
 };
 
 using ChunkEncodingSpec = std::vector<ColumnEncodingSpec>;
@@ -48,16 +53,38 @@ class ChunkEncoder {
                            const ChunkEncodingSpec& encoding_spec);
 
   /**
+   * @brief Encodes a chunk using the same column-encoding spec
+   */
+  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
+                           const ColumnEncodingSpec& column_encoding_spec = {});
+
+  /**
    * @brief Encodes the specified chunks of the passed table
+   *
+   * The encoding is specified per column for each chunk.
    */
   static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                             const std::map<ChunkID, ChunkEncodingSpec>& encoding_specs);
 
   /**
-   * @brief Encodes a complete table
+   * @brief Encodes the specified chunks of the passed table using a single column-encoding spec
+   */
+  static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
+                            const ColumnEncodingSpec& column_encoding_spec = {});
+
+  /**
+   * @brief Encodes an entire table
+   *
+   * The encoding is specified per column for each chunk.
    */
   static void encode_all_chunks(const std::shared_ptr<Table>& table,
                                 const std::vector<ChunkEncodingSpec>& encoding_specs);
+
+  /**
+   * @brief Encodes an entire table using a single column-encoding spec
+   */
+  static void encode_all_chunks(const std::shared_ptr<Table>& table,
+                                const ColumnEncodingSpec& column_encoding_spec = {});
 };
 
 }  // namespace opossum

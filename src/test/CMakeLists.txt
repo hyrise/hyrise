@@ -18,6 +18,9 @@ set(
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     logical_query_plan/aggregate_node_test.cpp
+    logical_query_plan/create_view_node_test.cpp
+    logical_query_plan/drop_view_node_test.cpp
+    logical_query_plan/lqp_find_first_subplan_mismatch_test.cpp
     logical_query_plan/delete_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
     logical_query_plan/insert_node_test.cpp
@@ -46,6 +49,7 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
+    operators/join_hash_test.cpp
     operators/join_index_test.cpp
     operators/join_null_test.cpp
     operators/join_semi_anti_test.cpp
@@ -72,6 +76,7 @@ set(
     optimizer/expression_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp

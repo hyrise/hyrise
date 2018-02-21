@@ -9,11 +9,15 @@ namespace opossum {
 /**
  * This node type represents the SHOW TABLES management command.
  */
-class ShowTablesNode : public AbstractLQPNode {
+class ShowTablesNode : public EnableMakeForLQPNode<ShowTablesNode>, public AbstractLQPNode {
  public:
   ShowTablesNode();
 
   std::string description() const override;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
+  const std::vector<std::string>& output_column_names() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

@@ -5,6 +5,7 @@ set(
     abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
+    all_type_variant.cpp
     all_type_variant.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
@@ -156,6 +157,8 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/constant_calculation_rule.cpp
+    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
@@ -244,8 +247,6 @@ set(
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
-    storage/deprecated_dictionary_compression.cpp
-    storage/deprecated_dictionary_compression.hpp
     storage/encoding_type.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
@@ -322,6 +323,8 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
+    utils/arithmetic_operator_expression.hpp
+    utils/arithmetic_operator_expression_impl.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
@@ -338,6 +341,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
 )
@@ -348,6 +352,23 @@ set(
     sqlparser
     ${TBB_LIBRARY}
 )
+
+if (NOT DISABLE_JIT_SUPPORT)
+    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
+    set(JIT_EMBEDDED_SOURCES
+        # files listed here will be embedded into the binary as LLVM IR
+    )
+    embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
+    set(
+        SOURCES
+        ${SOURCES}
+        ${JIT_EMBEDDED_SOURCES}
+        ${LLVM_BUNDLE_FILE}
+    )
+    # Prevent clang from complaining about unused defines when compiling the assembly file
+    set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
+    set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
+endif()
 
 if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
