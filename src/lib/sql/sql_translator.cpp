@@ -1107,7 +1107,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     DebugAssert(column_expressions.size() <= std::numeric_limits<uint16_t>::max(),
                 "Number of column expressions cannot exceed maximum value of ColumnID.");
     value = LQPColumnReference(current_node, ColumnID{static_cast<uint16_t>(column_expressions.size() - 1)});
-
   } else {
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }

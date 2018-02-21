@@ -95,20 +95,6 @@ TEST_F(JoinNodeTest, OutputColumnReferences) {
   EXPECT_EQ(_join_node->output_column_references().at(4), _t_b_y);
 }
 
-TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
-  ASSERT_EQ(_semi_join_node->output_column_references().size(), 3u);
-  EXPECT_EQ(_semi_join_node->output_column_references().at(0), _t_a_a);
-  EXPECT_EQ(_semi_join_node->output_column_references().at(1), _t_a_b);
-  EXPECT_EQ(_semi_join_node->output_column_references().at(2), _t_a_c);
-}
-
-TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
-  ASSERT_EQ(_anti_join_node->output_column_references().size(), 3u);
-  EXPECT_EQ(_anti_join_node->output_column_references().at(0), _t_a_a);
-  EXPECT_EQ(_anti_join_node->output_column_references().at(1), _t_a_b);
-  EXPECT_EQ(_anti_join_node->output_column_references().at(2), _t_a_c);
-}
-
 TEST_F(JoinNodeTest, ShallowEquals) {
   EXPECT_TRUE(_inner_join_node->shallow_equals(*_inner_join_node));
 
@@ -124,6 +110,20 @@ TEST_F(JoinNodeTest, ShallowEquals) {
   EXPECT_FALSE(other_join_node_b->shallow_equals(*_inner_join_node));
   EXPECT_FALSE(other_join_node_c->shallow_equals(*_inner_join_node));
   EXPECT_TRUE(other_join_node_d->shallow_equals(*_inner_join_node));
+}
+
+TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
+  ASSERT_EQ(_semi_join_node->output_column_references().size(), 3u);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(2), _t_a_c);
+}
+
+TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
+  ASSERT_EQ(_anti_join_node->output_column_references().size(), 3u);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(2), _t_a_c);
 }
 
 }  // namespace opossum

@@ -145,7 +145,6 @@ void JoinNode::_update_output() const {
   const auto& right_names = right_child()->output_column_names();
 
   _output_column_names.emplace();
-
   const auto only_output_left_columns = _join_mode == JoinMode::Semi || _join_mode == JoinMode::Anti;
 
   const auto output_column_count =
