@@ -83,23 +83,10 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
 const std::vector<std::string>& SQLPipeline::get_sql_strings() {
   if (!_sql_strings.empty()) {
-    return _sql_strings; 
-  }
-
-  _sql_strings.reserve(statement_count());
-  for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _sql_strings.push_back(pipeline_statement->get_sql_string());
-  }
-
-  return _sql_strings;
-}
-
-const std::vector<std::string>& SQLPipeline::get_sql_strings() {
-  if (!_sql_strings.empty()) {
     return _sql_strings;
   }
 
-  _sql_strings.reserve(_num_statements);
+  _sql_strings.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     _sql_strings.push_back(pipeline_statement->get_sql_string());
   }

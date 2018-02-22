@@ -44,9 +44,6 @@ class SQLPipelineStatement : public Noncopyable {
   // Returns the raw SQL string.
   const std::string& get_sql_string();
 
-  // Returns the raw SQL string.
-  const std::string& get_sql_string();
-
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
 

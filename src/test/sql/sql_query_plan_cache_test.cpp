@@ -51,7 +51,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   EXPECT_FALSE(cache.has(Q2));
 
   // Execute a query and cache its plan.
-  SQLPipelineStatement pipeline_statement{Q1, false};
+  SQLPipelineStatement pipeline_statement{Q1, UseMvcc::No};
   pipeline_statement.get_result_table();
   cache.set(Q1, *(pipeline_statement.get_query_plan()));
 

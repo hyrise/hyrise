@@ -40,9 +40,6 @@ class SQLPipeline : public Noncopyable {
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_strings();
 
-  // Returns the SQL string for each statement.
-  const std::vector<std::string>& get_sql_strings();
-
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
 
