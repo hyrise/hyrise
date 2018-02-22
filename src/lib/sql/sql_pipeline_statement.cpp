@@ -125,6 +125,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   if (const auto prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
     parsed_sql = SQLPipelineStatement(prepared_statement->query).get_parsed_sql_statement();
+    _num_parameters = static_cast<uint16_t>(parsed_sql->parameters().size());
   }
 
   try {
@@ -209,6 +210,9 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       // "Normal" mode in which the query plan is created
       const auto& lqp = get_optimized_logical_plan();
       _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
+
+      // Set number of parameters to match later in case of prepared statement
+      _query_plan->set_num_parameters(_num_parameters);
     }
 
     if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);

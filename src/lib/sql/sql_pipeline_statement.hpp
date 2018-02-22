@@ -121,6 +121,8 @@ class SQLPipelineStatement : public Noncopyable {
   std::chrono::microseconds _execution_time_micros;
 
   PreparedStatementCache _prepared_statements;
+  // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
+  uint16_t _num_parameters = 0;
 };
 
 }  // namespace opossum
