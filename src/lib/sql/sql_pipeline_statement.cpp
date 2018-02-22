@@ -10,25 +10,37 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/hsql_expr_translator.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, bool use_mvcc)
-    : _sql_string(sql), _use_mvcc(use_mvcc), _auto_commit(_use_mvcc) {}
+SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, bool use_mvcc,
+                                           PreparedStatementCache prepared_statements)
+    : _sql_string(sql),
+      _use_mvcc(use_mvcc),
+      _auto_commit(_use_mvcc),
+      _prepared_statements(std::move(prepared_statements)) {}
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql,
-                                           std::shared_ptr<TransactionContext> transaction_context)
-    : _sql_string(sql), _use_mvcc(true), _auto_commit(false), _transaction_context(std::move(transaction_context)) {
+                                           std::shared_ptr<TransactionContext> transaction_context,
+                                           PreparedStatementCache prepared_statements)
+    : _sql_string(sql),
+      _use_mvcc(true),
+      _auto_commit(false),
+      _transaction_context(std::move(transaction_context)),
+      _prepared_statements(std::move(prepared_statements)) {
   DebugAssert(_transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
 }
 
 SQLPipelineStatement::SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc)
+                                           std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc,
+                                           PreparedStatementCache prepared_statements)
     : _parsed_sql_statement(std::move(parsed_sql)),
       _use_mvcc(use_mvcc),
-      _auto_commit(_use_mvcc && transaction_context == nullptr) {
+      _auto_commit(_use_mvcc && transaction_context == nullptr),
+      _prepared_statements(std::move(prepared_statements)) {
   Assert(_parsed_sql_statement->size() == 1, "SQLPipelineStatement must hold exactly one SQL statement");
   // We don't want to create a new context yet, as it should contain all changes of previously created (possibly even in
   // same query) pipelines up to the point of this pipeline's execution.
@@ -68,7 +80,14 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
     return _unoptimized_logical_plan;
   }
 
-  const auto& parsed_sql = get_parsed_sql_statement();
+  auto parsed_sql = get_parsed_sql_statement();
+
+  const auto* statement = parsed_sql->getStatement(0);
+  if (const auto prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
+    Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
+    parsed_sql = SQLPipelineStatement(prepared_statement->query).get_parsed_sql_statement();
+  }
+
   try {
     const auto lqp_roots = SQLTranslator{_use_mvcc}.translate_parse_result(*parsed_sql);
     DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
@@ -125,6 +144,12 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   const auto done = std::chrono::high_resolution_clock::now();
   _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
 
+  const auto* statement = get_parsed_sql_statement()->getStatement(0);
+  if (const auto prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
+    Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
+    _prepared_statements->set(prepared_statement->name, *_query_plan);
+  }
+
   return _query_plan;
 }
 
@@ -152,9 +177,40 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
-  const auto& tasks = get_tasks();
+  std::vector<std::shared_ptr<OperatorTask>> tasks;
 
   const auto started = std::chrono::high_resolution_clock::now();
+
+  const auto* statement = get_parsed_sql_statement()->getStatement(0);
+  if (const auto execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
+    Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
+    const auto plan = _prepared_statements->try_get(execute_statement->name);
+    Assert(plan, "Requested prepared statement does not exist!");
+
+    // Get list of arguments from EXECUTE statement.
+    std::vector<AllParameterVariant> arguments;
+    if (execute_statement->parameters != nullptr) {
+      for (const auto* expr : *execute_statement->parameters) {
+        arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
+      }
+    }
+
+//    DebugAssert(arguments.size() == plan->num_parameters(),
+//                "Number of arguments in execute statement does not match number of parameters in prepared statement.");
+
+    tasks = plan->recreate(arguments).create_tasks();
+  } else {
+    // This is the "normal" mode, i.e. when we are not executing a prepared statement
+    tasks = get_tasks();
+  }
+
+  // If this is a PREPARE x FROM ... command, calling get_result_table should not fail but just return
+  if (const auto prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
+    _query_has_output = false;
+    const auto done = std::chrono::high_resolution_clock::now();
+    _execution_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+    return _result_table;
+  }
 
   try {
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);

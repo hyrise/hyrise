@@ -30,8 +30,10 @@ namespace opossum {
  */
 class SQLPipeline : public Noncopyable {
  public:
-  explicit SQLPipeline(const std::string& sql, bool use_mvcc = true);
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
+  explicit SQLPipeline(const std::string& sql, bool use_mvcc = true,
+                       PreparedStatementCache prepared_statements = nullptr);
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+              PreparedStatementCache prepared_statements = nullptr);
 
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
@@ -73,7 +75,8 @@ class SQLPipeline : public Noncopyable {
   std::chrono::microseconds execution_time_microseconds();
 
  private:
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc);
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc,
+              PreparedStatementCache prepared_statements);
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
   size_t _num_statements;

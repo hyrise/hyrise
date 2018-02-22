@@ -5,10 +5,13 @@
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
+
+using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
@@ -28,13 +31,16 @@ namespace opossum {
 class SQLPipelineStatement : public Noncopyable {
  public:
   // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, bool use_mvcc = true);
-  SQLPipelineStatement(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
+  explicit SQLPipelineStatement(const std::string& sql, bool use_mvcc = true,
+                                PreparedStatementCache prepared_statements = nullptr);
+  SQLPipelineStatement(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+                       PreparedStatementCache prepared_statements = nullptr);
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
   SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                       std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc);
+                       std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc,
+                       PreparedStatementCache prepared_statements = nullptr);
 
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
@@ -85,6 +91,8 @@ class SQLPipelineStatement : public Noncopyable {
   const bool _use_mvcc;
   const bool _auto_commit;
   std::shared_ptr<TransactionContext> _transaction_context;
+
+  PreparedStatementCache _prepared_statements;
 };
 
 }  // namespace opossum

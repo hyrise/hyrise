@@ -5,10 +5,12 @@
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, bool use_mvcc) : SQLPipeline(sql, nullptr, use_mvcc) {}
+SQLPipeline::SQLPipeline(const std::string& sql, bool use_mvcc, PreparedStatementCache prepared_statements)
+    : SQLPipeline(sql, nullptr, use_mvcc, std::move(prepared_statements)) {}
 
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context)
-    : SQLPipeline(sql, std::move(transaction_context), true) {
+SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context,
+                         PreparedStatementCache prepared_statements)
+    : SQLPipeline(sql, std::move(transaction_context), true, std::move(prepared_statements)) {
   DebugAssert(_sql_pipeline_statements.front()->transaction_context() != nullptr,
               "Cannot pass nullptr as explicit transaction context.");
   DebugAssert(_sql_pipeline_statements.front()->transaction_context()->phase() == TransactionPhase::Active,
@@ -16,7 +18,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::Transa
 }
 
 // Private constructor
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc)
+SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc,
+                         PreparedStatementCache prepared_statements)
     : _transaction_context(std::move(transaction_context)) {
   hsql::SQLParserResult parse_result;
   try {
@@ -61,8 +64,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
       parsed_statement->setIsValid(true);
 
-      auto pipeline_statement =
-          std::make_shared<SQLPipelineStatement>(std::move(parsed_statement), _transaction_context, use_mvcc);
+      auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
+          std::move(parsed_statement), _transaction_context, use_mvcc, prepared_statements);
       _sql_pipeline_statements.push_back(std::move(pipeline_statement));
     } catch (const std::exception&) {
       // Free all statements owned by us and pass on the error

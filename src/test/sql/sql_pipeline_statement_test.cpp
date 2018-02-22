@@ -444,4 +444,39 @@ TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
   }
 }
 
+TEST_F(SQLPipelineStatementTest, PreparedStatementPrepare) {
+  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+
+  const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
+  SQLPipelineStatement sql_pipeline{prepared_statement, true, prepared_statement_cache};
+
+  sql_pipeline.get_query_plan();
+
+  EXPECT_EQ(prepared_statement_cache->size(), 1u);
+  EXPECT_TRUE(prepared_statement_cache->has("x1"));
+
+  EXPECT_NO_THROW(sql_pipeline.get_result_table());
+}
+
+TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
+  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+
+  const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
+  SQLPipelineStatement prepare_sql_pipeline{prepared_statement, true, prepared_statement_cache};
+  prepare_sql_pipeline.get_result_table();
+
+  EXPECT_EQ(prepared_statement_cache->size(), 1u);
+
+  const std::string execute_statement = "EXECUTE x1 (123)";
+  SQLPipelineStatement execute_sql_pipeline{execute_statement, true, prepared_statement_cache};
+  const auto& table = execute_sql_pipeline.get_result_table();
+
+  auto expected = std::make_shared<Table>();
+  expected->add_column("a", DataType::Int);
+  expected->add_column("b", DataType::Float);
+  expected->append({123, 456.7f});
+
+  EXPECT_TABLE_EQ_UNORDERED(table, expected);
+}
+
 }  // namespace opossum
