@@ -16,14 +16,14 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
 
+  main_batch.add_rule(std::make_shared<ConstantCalculationRule>());
+  main_batch.add_rule(std::make_shared<ProjectionCombinationRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
   optimizer->add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
-  final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
-  final_batch.add_rule(std::make_shared<ProjectionCombinationRule>());
   optimizer->add_rule_batch(final_batch);
 
   return optimizer;

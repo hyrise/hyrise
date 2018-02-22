@@ -53,18 +53,33 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
   const auto child_sides = projections.front()->get_child_sides();
 
   auto column_expressions = std::vector<std::shared_ptr<LQPExpression>>();
+  for (const auto expression : projections.front()->column_expressions()) {
+    if (expression->type() != ExpressionType::Column) {
+      column_expressions.push_back(expression);
+      continue;
+    }
+
+    auto column_reference_replaced = false;
+    auto iter = projections.begin() + 1;
+    while (!column_reference_replaced && iter != projections.end()) {
+      const auto column_references = (*iter)->output_column_references();
+      for (auto column_id = ColumnID{0}; column_id < column_references.size(); ++column_id) {
+        if (expression->column_reference() == column_references.at(column_id)) {
+          column_expressions.push_back((*iter)->column_expressions().at(column_id));
+          column_reference_replaced = true;
+          break;
+        }
+      }
+      ++iter;
+    }
+
+    if (!column_reference_replaced) {
+      column_expressions.push_back(expression);
+    }
+  }
+
   for (auto& projection : projections) {
     projection->remove_from_tree();
-
-    for (const auto new_expression : projection->column_expressions()) {
-      // Make sure to avoid duplicate Expressions from all consecutive ProjectionNodes
-      if (std::find_if(column_expressions.begin(), column_expressions.end(),
-                       [&new_expression](std::shared_ptr<LQPExpression> const& expression) {
-                         return *expression == *new_expression;
-                       }) == column_expressions.end()) {
-        column_expressions.push_back(new_expression);
-      }
-    }
   }
 
   auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
