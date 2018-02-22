@@ -12,6 +12,7 @@
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_column.hpp"
+#include "utils/arithmetic_operator_expression.hpp"
 
 namespace opossum {
 
@@ -194,7 +195,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    */
   Assert(expression->is_arithmetic_operator(), "Projection only supports literals, column refs and arithmetics");
 
-  const auto& arithmetic_operator_function = _get_operator_function<T>(expression->type());
+  const auto& arithmetic_operator_function = function_for_arithmetic_expression<T>(expression->type());
 
   pmr_concurrent_vector<std::optional<T>> values;
   values.resize(table->get_chunk(chunk_id)->size());
@@ -243,77 +244,6 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
   }
 
   return values;
-}
-
-template <typename T>
-std::function<T(const T&, const T&)> Projection::_get_base_operator_function(ExpressionType type) {
-  switch (type) {
-    case ExpressionType::Addition:
-      return std::plus<T>();
-    case ExpressionType::Subtraction:
-      return std::minus<T>();
-    case ExpressionType::Multiplication:
-      return std::multiplies<T>();
-    case ExpressionType::Division:
-      return std::divides<T>();
-
-    default:
-      Fail("Unknown arithmetic operator");
-  }
-}
-
-template <typename T>
-std::function<T(const T&, const T&)> Projection::_get_operator_function(ExpressionType type) {
-  if (type == ExpressionType::Modulo) return std::modulus<T>();
-  return _get_base_operator_function<T>(type);
-}
-
-/**
- * Specialized arithmetic operator implementation for std::string.
- * Two string terms can be added. Anything else is undefined.
- *
- * @returns a lambda function to solve arithmetic string terms
- *
- */
-template <>
-inline std::function<std::string(const std::string&, const std::string&)> Projection::_get_operator_function(
-    ExpressionType type) {
-  Assert(type == ExpressionType::Addition, "Arithmetic operator except for addition not defined for std::string");
-  return std::plus<std::string>();
-}
-
-/**
- * Specialized arithmetic operator implementation for float/double
- * Modulo on float isn't defined.
- *
- * @returns a lambda function to solve arithmetic float/double terms
- *
- */
-template <>
-inline std::function<float(const float&, const float&)> Projection::_get_operator_function(ExpressionType type) {
-  return _get_base_operator_function<float>(type);
-}
-
-template <>
-inline std::function<double(const double&, const double&)> Projection::_get_operator_function(ExpressionType type) {
-  return _get_base_operator_function<double>(type);
-}
-
-/**
- * Specialized arithmetic operator implementation for int
- * Division by 0 needs to be caught when using integers.
- */
-template <>
-inline std::function<int(const int&, const int&)> Projection::_get_operator_function(ExpressionType type) {
-  if (type == ExpressionType::Division) {
-    return [](const int& lhs, const int& rhs) {
-      if (rhs == 0) {
-        throw std::runtime_error("Cannot divide integers by 0.");
-      }
-      return lhs / rhs;
-    };
-  }
-  return _get_base_operator_function<int>(type);
 }
 
 // returns the singleton dummy table used for literal projections

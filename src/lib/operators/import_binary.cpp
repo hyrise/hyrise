@@ -119,7 +119,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 
 std::shared_ptr<Chunk> ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
-  const auto chunk = std::make_shared<Chunk>(ChunkUseMvcc::Yes);
+  const auto chunk = std::make_shared<Chunk>(UseMvcc::Yes);
 
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     chunk->add_column(

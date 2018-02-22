@@ -19,7 +19,7 @@ const std::string Delete::name() const { return "Delete"; }
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
-  context->register_read_write_operator(shared_from_this());
+  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
@@ -120,6 +120,10 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   }
 
   return true;
+}
+
+std::shared_ptr<AbstractOperator> Delete::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Delete>(_table_name, _input_left->recreate(args));
 }
 
 }  // namespace opossum

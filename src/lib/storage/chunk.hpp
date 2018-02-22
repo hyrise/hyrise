@@ -17,7 +17,6 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
-#include "utils/format_bytes.hpp"
 #include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
@@ -25,7 +24,6 @@ namespace opossum {
 class BaseIndex;
 class BaseColumn;
 
-enum class ChunkUseMvcc { Yes, No };
 enum class ChunkUseAccessCounter { Yes, No };
 
 /**
@@ -99,12 +97,11 @@ class Chunk : private Noncopyable {
   };
 
  public:
-  explicit Chunk(ChunkUseMvcc mvcc_mode = ChunkUseMvcc::No, ChunkUseAccessCounter = ChunkUseAccessCounter::No);
+  explicit Chunk(UseMvcc mvcc_mode = UseMvcc::No, ChunkUseAccessCounter = ChunkUseAccessCounter::No);
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
   Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter);
-  Chunk(const PolymorphicAllocator<Chunk>& alloc, const ChunkUseMvcc mvcc_mode,
-        const ChunkUseAccessCounter counter_mode);
+  Chunk(const PolymorphicAllocator<Chunk>& alloc, const UseMvcc mvcc_mode, const ChunkUseAccessCounter counter_mode);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

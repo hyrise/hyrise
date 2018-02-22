@@ -5,6 +5,7 @@
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "optimizer/optimizer.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
@@ -31,16 +32,39 @@ using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
 class SQLPipelineStatement : public Noncopyable {
  public:
   // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, bool use_mvcc = true,
-                                PreparedStatementCache prepared_statements = nullptr);
-  SQLPipelineStatement(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                       PreparedStatementCache prepared_statements = nullptr);
+  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  // No explicit transaction context constructors
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  SQLPipelineStatement(const std::string& sql, const PreparedStatementCache& prepared_statements,
+                       const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const PreparedStatementCache& prepared_statements, const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  // Explicit transaction context constructors
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context);
+
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<TransactionContext>& transaction_context);
+
+  SQLPipelineStatement(const std::string& sql, const PreparedStatementCache& prepared_statements,
+                       const std::shared_ptr<TransactionContext>& transaction_context);
+
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const PreparedStatementCache& prepared_statements,
+                       const std::shared_ptr<TransactionContext>& transaction_context);
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
-  SQLPipelineStatement(std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                       std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc,
-                       PreparedStatementCache prepared_statements = nullptr);
+  SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
+                       const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
+                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
+
+  // Returns the raw SQL string.
+  const std::string& get_sql_string();
 
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
@@ -70,8 +94,20 @@ class SQLPipelineStatement : public Noncopyable {
   // Helper function to create a pretty print error message after an invalid SQL parse
   static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
 
+ protected:
+  void _init_transaction_context();
+
  private:
   const std::string _sql_string;
+  const UseMvcc _use_mvcc;
+
+  // Perform MVCC commit right after the Statement was executed
+  const bool _auto_commit;
+
+  // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
+  std::shared_ptr<TransactionContext> _transaction_context;
+
+  std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
@@ -86,11 +122,6 @@ class SQLPipelineStatement : public Noncopyable {
   // Execution times
   std::chrono::microseconds _compile_time_micros;
   std::chrono::microseconds _execution_time_micros;
-
-  // Transaction related
-  const bool _use_mvcc;
-  const bool _auto_commit;
-  std::shared_ptr<TransactionContext> _transaction_context;
 
   PreparedStatementCache _prepared_statements;
 };
