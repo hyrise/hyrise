@@ -94,9 +94,6 @@ class SQLPipelineStatement : public Noncopyable {
   // Helper function to create a pretty print error message after an invalid SQL parse
   static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
 
- protected:
-  void _init_transaction_context();
-
  private:
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
