@@ -27,7 +27,7 @@ std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(
     order_by_definitions.emplace_back(column_reference, order_by_definition.order_by_mode);
   }
 
-  return std::make_shared<SortNode>(order_by_definitions);
+  return SortNode::make(order_by_definitions);
 }
 
 std::string SortNode::description() const {
@@ -55,5 +55,23 @@ std::string SortNode::description() const {
 }
 
 const OrderByDefinitions& SortNode::order_by_definitions() const { return _order_by_definitions; }
+
+bool SortNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& sort_node = static_cast<const SortNode&>(rhs);
+
+  if (_order_by_definitions.size() != sort_node._order_by_definitions.size()) return false;
+
+  for (size_t definition_idx = 0; definition_idx < sort_node._order_by_definitions.size(); ++definition_idx) {
+    if (_order_by_definitions[definition_idx].order_by_mode !=
+        sort_node._order_by_definitions[definition_idx].order_by_mode)
+      return false;
+    if (!_equals(*this, _order_by_definitions[definition_idx].column_reference, sort_node,
+                 sort_node._order_by_definitions[definition_idx].column_reference))
+      return false;
+  }
+
+  return true;
+}
 
 }  // namespace opossum

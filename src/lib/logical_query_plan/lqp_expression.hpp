@@ -36,6 +36,6 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
   void _deep_copy_impl(const std::shared_ptr<LQPExpression>& copy) const override;
 
  private:
-  std::optional<LQPColumnReference> _column_references;
+  std::optional<LQPColumnReference> _column_reference;
 };
 }  // namespace opossum

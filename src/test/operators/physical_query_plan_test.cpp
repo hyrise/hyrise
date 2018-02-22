@@ -1,5 +1,6 @@
 #include <sstream>
 
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
@@ -10,7 +11,7 @@
 
 namespace opossum {
 
-class PhysicalQueryPlanTest : public ::testing::Test {};
+class PhysicalQueryPlanTest : public BaseTest {};
 
 TEST_F(PhysicalQueryPlanTest, Print) {
   StorageManager::get().add_table("int_int_int_100", load_table("src/test/tables/sqlite/int_int_int_100.tbl", 20));
@@ -27,7 +28,7 @@ TEST_F(PhysicalQueryPlanTest, Print) {
  \_[1] TableScan (Col #0 > 20)
  |  \_[2] GetTable (int_int_int_100)
  \_[3] TableScan (Col #1 > 30)
-    \_Recurring Operator --> [2]
+    \_Recurring Node --> [2]
 )");
 }
 }  // namespace opossum

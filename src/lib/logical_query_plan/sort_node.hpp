@@ -25,13 +25,15 @@ using OrderByDefinitions = std::vector<OrderByDefinition>;
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
-class SortNode : public AbstractLQPNode {
+class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
  public:
   explicit SortNode(const OrderByDefinitions& order_by_definitions);
 
   std::string description() const override;
 
   const OrderByDefinitions& order_by_definitions() const;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

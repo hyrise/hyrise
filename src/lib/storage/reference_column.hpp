@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "base_column.hpp"
-#include "dictionary_column.hpp"
+#include "deprecated_dictionary_column.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -54,7 +54,7 @@ class ReferenceColumn : public BaseColumn {
         continue;
       }
 
-      if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+      if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
         if (dict_column->is_null(row.chunk_offset)) {
           values.push_back(std::nullopt);
         } else {
@@ -69,7 +69,7 @@ class ReferenceColumn : public BaseColumn {
     return values;
   }
 
-  size_t size() const override;
+  size_t size() const final;
 
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;
@@ -112,6 +112,8 @@ class ReferenceColumn : public BaseColumn {
   }
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+
+  size_t estimate_memory_usage() const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need

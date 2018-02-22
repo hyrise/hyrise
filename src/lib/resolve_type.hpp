@@ -10,8 +10,9 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
@@ -197,15 +198,15 @@ template <typename ColumnDataType, typename BaseColumnType, typename Functor>
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
     /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
   using ValueColumnPtr = ConstOutIfConstIn<BaseColumnType, ValueColumn<ColumnDataType>>*;
-  using DictionaryColumnPtr = ConstOutIfConstIn<BaseColumnType, DictionaryColumn<ColumnDataType>>*;
   using ReferenceColumnPtr = ConstOutIfConstIn<BaseColumnType, ReferenceColumn>*;
+  using EncodedColumnPtr = ConstOutIfConstIn<BaseColumnType, BaseEncodedColumn>*;
 
   if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
     func(*value_column);
-  } else if (auto dict_column = dynamic_cast<DictionaryColumnPtr>(&column)) {
-    func(*dict_column);
   } else if (auto ref_column = dynamic_cast<ReferenceColumnPtr>(&column)) {
     func(*ref_column);
+  } else if (auto encoded_column = dynamic_cast<EncodedColumnPtr>(&column)) {
+    resolve_encoded_column_type<ColumnDataType>(*encoded_column, func);
   } else {
     Fail("Unrecognized column type encountered.");
   }

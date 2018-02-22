@@ -6,8 +6,8 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 #include "gtest/gtest.h"
-#include "logical_query_plan/join_node.hpp"
 
+#include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/validate.hpp"
@@ -93,7 +93,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreation) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleCreationWithoutMVCC) {
-  SQLPipelineStatement sql_pipeline{_join_query, false};
+  SQLPipelineStatement sql_pipeline{_join_query, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_sql_string(), _join_query);
@@ -108,14 +108,14 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreation) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, nullptr, true};
+  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, UseMvcc::Yes, nullptr};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, nullptr, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, UseMvcc::No, nullptr};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
@@ -123,14 +123,14 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
-  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, context, true};
+  SQLPipelineStatement sql_pipeline{_select_query_a, _select_parse_result, UseMvcc::Yes, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationTooManyStatements) {
-  EXPECT_THROW(SQLPipelineStatement(_multi_statement_dependant, _multi_statement_parse_result, nullptr, false),
+  EXPECT_THROW(SQLPipelineStatement(_multi_statement_dependant, _multi_statement_parse_result, UseMvcc::No, nullptr),
                std::exception);
 }
 
@@ -181,7 +181,7 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPNotValidated) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
 
@@ -220,7 +220,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& lqp = sql_pipeline.get_optimized_logical_plan();
 
@@ -242,7 +242,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) 
   sql_pipeline.get_optimized_logical_plan();
   const auto& unoptimized_lqp_new = sql_pipeline.get_unoptimized_logical_plan();
 
-  EXPECT_TRUE(subtree_types_are_equal(unoptimized_lqp_new, unoptimized_copy));
+  EXPECT_LQP_EQ(unoptimized_copy, unoptimized_lqp_new);
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlan) {
@@ -301,7 +301,7 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithoutMVCC) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
   const auto& plan = sql_pipeline.get_query_plan();
 
   EXPECT_EQ(plan->tree_roots().at(0)->transaction_context(), nullptr);
@@ -335,7 +335,7 @@ TEST_F(SQLPipelineStatementTest, GetTasksTwice) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetTasksNotValidated) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& tasks = sql_pipeline.get_tasks();
 
@@ -382,7 +382,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableBadQueryNoMVCC) {
   auto sql = "SELECT a + b FROM table_a";
-  SQLPipelineStatement sql_pipeline{sql, false};
+  SQLPipelineStatement sql_pipeline{sql, UseMvcc::No};
 
   // Make sure this is actually the failed execution and not a logic_error from the transaction management.
   EXPECT_THROW(sql_pipeline.get_result_table(), std::runtime_error);
@@ -409,7 +409,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
-  SQLPipelineStatement sql_pipeline{_select_query_a, false};
+  SQLPipelineStatement sql_pipeline{_select_query_a, UseMvcc::No};
 
   const auto& table = sql_pipeline.get_result_table();
 

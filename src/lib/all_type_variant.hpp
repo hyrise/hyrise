@@ -113,4 +113,10 @@ static const auto NULL_VALUE = AllTypeVariant{};
 
 /**@}*/
 
+/**
+ * Checks whether two variants are equal, except when they contain float/double. In this case check whether they are
+ * near, e.g. withing a certain absolute difference from each other.
+ */
+bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error = 0.001);
+
 }  // namespace opossum
