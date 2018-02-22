@@ -21,13 +21,13 @@ std::shared_ptr<const Table> Product::_on_execute() {
   // add columns from left table to output
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
     column_definitions.emplace_back(input_table_left()->column_name(column_id),
-                                    input_table_left()->column_type(column_id));
+                                    input_table_left()->column_data_type(column_id));
   }
 
   // add columns from right table to output
   for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); ++column_id) {
     column_definitions.emplace_back(input_table_right()->column_name(column_id),
-                                    input_table_right()->column_type(column_id));
+                                    input_table_right()->column_data_type(column_id));
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References, UseMvcc::No);

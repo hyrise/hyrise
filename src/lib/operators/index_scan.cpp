@@ -32,7 +32,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _validate_input();
 
-  _out_table = Table::create_with_layout_from(_in_table);
+  _out_table = std::make_shared(_in_table->column_definitions(), TableType::References);
 
   std::mutex output_mutex;
 
@@ -62,15 +62,16 @@ std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk
     // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
-    auto chunk_out = std::make_shared<Chunk>(chunk->get_allocator(), chunk->access_counter());
+
+    std::vector<std::shared_ptr<BaseColumn>> columns;
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
       auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-      chunk_out->add_column(ref_column_out);
+      columns.emplace_back(ref_column_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->emplace_chunk(std::move(chunk_out));
+    _out_table->add_chunk_new(columns, chunk->get_allocator(), chunk->access_counter());
   });
 
   job_task->schedule();
@@ -88,7 +89,7 @@ void IndexScan::_validate_input() {
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
 
-  Assert(_in_table->get_type() == TableType::Data, "IndexScan only supports persistent tables right now.");
+  Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
 PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {

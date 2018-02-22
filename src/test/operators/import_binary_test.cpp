@@ -14,8 +14,7 @@ namespace opossum {
 class OperatorsImportBinaryTest : public BaseTest {};
 
 TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::Float);
+  auto expected_table = std::make_shared<Table>(TableColumnDefinition{"a", DataType::Float}, TableType::Data, 5);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});

@@ -60,9 +60,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &columns]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, chunk);
-      if (_meta.auto_compress && chunk->size() == _meta.chunk_size) {
-        DeprecatedDictionaryCompression::compress_chunk(table->column_types(), chunk);
+      const auto row_count = _parse_into_chunk(relevant_content, field_ends, *table, columns);
+      if (_meta.auto_compress && row_count == _meta.chunk_size) {
+        DeprecatedDictionaryCompression::compress_columns(table->column_data_types(), columns);
       }
     }));
     tasks.back()->schedule();
@@ -72,8 +72,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     task->join();
   }
 
-  for (auto& chunk : chunks) {
-    table->emplace_chunk(std::move(chunk));
+  for (auto& chunk_columns : columns_by_chunks) {
+    table->add_chunk_new(chunk_columns);
   }
 
   return table;
@@ -147,8 +147,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   return true;
 }
 
-void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  const std::shared_ptr<Chunk>& chunk) {
+size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
+                                  std::vector<std::shared_ptr<BaseColumn>>& columns) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
@@ -185,8 +185,10 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
 
   // Transform the field_offsets to columns and add columns to chunk.
   for (auto& converter : converters) {
-    chunk->add_column(converter->finish());
+    columns.emplace_back(converter->finish());
   }
+
+  return row_count;
 }
 
 void CsvParser::_sanitize_field(std::string& field) {

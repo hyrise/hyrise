@@ -25,20 +25,21 @@ std::shared_ptr<AbstractOperator> ShowColumns::recreate(const std::vector<AllPar
 }
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
-  auto out_table = std::make_shared<Table>();
-  out_table->add_column_definition("column_name", DataType::String);
-  out_table->add_column_definition("column_type", DataType::String);
-  out_table->add_column_definition("is_nullable", DataType::Int);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("column_name", DataType::String);
+  column_definitions.emplace_back("column_type", DataType::String);
+  column_definitions.emplace_back("is_nullable", DataType::Int);
+  auto out_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);
-  auto chunk = std::make_shared<Chunk>();
+  std::vector<std::shared_ptr<BaseColumn>> columns;
 
   const auto& column_names = table->column_names();
   const auto vc_names = std::make_shared<ValueColumn<std::string>>(
       tbb::concurrent_vector<std::string>(column_names.begin(), column_names.end()));
-  chunk->add_column(vc_names);
+  columns.emplace_back(vc_names);
 
-  const auto& column_types = table->column_types();
+  const auto& column_types = table->column_data_types();
 
   auto data_types = tbb::concurrent_vector<std::string>{};
   for (const auto column_type : column_types) {
@@ -46,14 +47,14 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   }
 
   const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(data_types));
-  chunk->add_column(vc_types);
+  columns.emplace_back(vc_types);
 
   const auto& column_nullables = table->column_nullables();
   const auto vc_nullables = std::make_shared<ValueColumn<int32_t>>(
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
-  chunk->add_column(vc_nullables);
+  columns.emplace_back(vc_nullables);
 
-  out_table->emplace_chunk(std::move(chunk));
+  out_table->add_chunk_new(columns);
 
   return out_table;
 }

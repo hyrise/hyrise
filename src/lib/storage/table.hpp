@@ -35,8 +35,13 @@ class Table : private Noncopyable {
   // Returns the number of columns
   size_t column_count() const;
 
+  // Convenience functions for accessing the column definitions
   const std::string& column_name(const ColumnID column_id) const;
+  std::vector<std::string> column_names() const;
+
   DataType column_data_type(const ColumnID column_id) const;
+  std::vector<DataType> column_data_types() const;
+
   bool column_nullable(const ColumnID column_id) const;
 
   // Returns the number of rows.

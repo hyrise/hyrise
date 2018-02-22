@@ -46,8 +46,6 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 }
 
 void JoinNestedLoop::_create_table_structure() {
-  _output_table = std::make_shared<Table>();
-
   _left_in_table = _input_left->get_output();
   _right_in_table = _input_right->get_output();
 
@@ -57,19 +55,23 @@ void JoinNestedLoop::_create_table_structure() {
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
 
+  TableColumnDefinitions output_column_definitions;
+
   // Preparing output table by adding columns from left table
   for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
-    auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
-    _output_table->add_column_definition(_left_in_table->column_name(column_id), _left_in_table->column_type(column_id),
+    auto nullable = (left_may_produce_null || _left_in_table->column_nullable(column_id));
+    output_column_definitions.emplace_back(_left_in_table->column_name(column_id), _left_in_table->column_data_type(column_id),
                                          nullable);
   }
 
   // Preparing output table by adding columns from right table
   for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
-    auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
-    _output_table->add_column_definition(_right_in_table->column_name(column_id),
-                                         _right_in_table->column_type(column_id), nullable);
+    auto nullable = (right_may_produce_null || _right_in_table->column_nullable(column_id));
+    output_column_definitions.emplace_back(_right_in_table->column_name(column_id),
+                                         _right_in_table->column_data_type(column_id), nullable);
   }
+
+  _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 }
 
 // inner join loop that joins two columns via their iterators

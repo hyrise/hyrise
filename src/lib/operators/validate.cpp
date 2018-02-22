@@ -46,7 +46,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
 
   const auto _in_table = input_table_left();
-  auto output = Table::create_with_layout_from(_in_table);
+  auto output = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
@@ -54,7 +54,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto chunk_in = _in_table->get_chunk(chunk_id);
 
-    auto chunk_out = std::make_shared<Chunk>();
+    std::vector<std::shared_ptr<BaseColumn>> output_columns;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(ColumnID{0}));
@@ -84,7 +84,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         const auto column = std::static_pointer_cast<const ReferenceColumn>(chunk_in->get_column(column_id));
         const auto referenced_column_id = column->referenced_column_id();
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, referenced_column_id, pos_list_out);
-        chunk_out->add_column(ref_col_out);
+        output_columns.emplace_back(ref_col_out);
       }
 
       // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
@@ -104,12 +104,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Create actual ReferenceColumn objects.
       for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
-        chunk_out->add_column(ref_col_out);
+        output_columns.emplace_back(ref_col_out);
       }
     }
 
-    if (chunk_out->size() > 0 || output->get_chunk(ChunkID{0})->size() == 0) {
-      output->emplace_chunk(std::move(chunk_out));
+    if (!pos_list_out->empty() > 0 || output->get_chunk(ChunkID{0})->size() == 0) {
+      output->add_chunk_new(output_columns);
     }
   }
   return output;

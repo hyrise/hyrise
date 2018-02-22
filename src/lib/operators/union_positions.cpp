@@ -17,7 +17,7 @@
  * ### UnionPositions implementation
  * The UnionPositions Operator turns each input table into a ReferenceMatrix.
  * The rows in the ReferenceMatrices (see below) need to be sorted in order for them to be merged, that is,
- * performing the UnionPositions  operation.
+ * performing the UnionPositions operation.
  * Since sorting a multi-column matrix by rows would require a lot of value-copying, for each ReferenceMatrix, a
  * VirtualPosList is created.
  * Each element of this VirtualPosList references a row in a ReferenceMatrix by index. This way, if two values need to
@@ -106,7 +106,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   // Somewhat random way to decide on a chunk size.
   const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
 
-  auto out_table = Table::create_with_layout_from(input_table_left(), out_chunk_size);
+  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, out_chunk_size);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
@@ -120,7 +120,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   // Turn 'pos_lists' into a new chunk and append it to the table
   const auto emit_chunk = [&]() {
-    auto chunk = std::make_shared<Chunk>();
+    std::vector<std::shared_ptr<BaseColumn>> output_columns;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_column_id_begin = _column_segment_offsets[pos_lists_idx];
@@ -130,11 +130,11 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
         auto ref_column = std::make_shared<ReferenceColumn>(
             _referenced_tables[pos_lists_idx], _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
-        chunk->add_column(ref_column);
+        output_columns.emplace_back(ref_column);
       }
     }
 
-    out_table->emplace_chunk(std::move(chunk));
+    out_table->add_chunk_new(output_columns);
   };
 
   /**
@@ -190,7 +190,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 }
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
-  DebugAssert(Table::layouts_equal(input_table_left(), input_table_right()),
+  DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables don't have the same layout");
 
   // Later code relies on input tables containing columns
@@ -212,8 +212,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   /**
    * Both tables must contain only ReferenceColumns
    */
-  Assert(input_table_left()->get_type() == TableType::References &&
-         input_table_right()->get_type() == TableType::References,
+  Assert(input_table_left()->type() == TableType::References &&
+         input_table_right()->type() == TableType::References,
          "UnionPositions doesn't support non-reference tables yet");
 
   /**

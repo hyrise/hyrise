@@ -76,7 +76,6 @@ std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  auto output = std::make_shared<Table>();
   auto reuse_column_from_input = true;
 
   /**
@@ -119,17 +118,17 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     std::vector<std::shared_ptr<BaseColumn>> output_columns;
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
-      resolve_data_type(output_table->column_type(ColumnID{expression_index}), [&](auto type) {
+      resolve_data_type(output_table->column_data_type(ColumnID{expression_index}), [&](auto type) {
         const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], input_table_left(),
                        reuse_column_from_input);
         output_columns.emplace_back(column);
       });
     }
 
-    output->add_chunk_new(output_columns);
+    output_table->add_chunk_new(output_columns);
   }
 
-  return output;
+  return output_table;
 }
 
 DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
@@ -138,7 +137,7 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
     return data_type_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::Column) {
-    return table->column_type(expression->column_id());
+    return table->column_data_type(expression->column_id());
   }
 
   Assert(expression->is_arithmetic_operator(),

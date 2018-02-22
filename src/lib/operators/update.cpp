@@ -29,12 +29,13 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
   // 1. Create insert_table with ReferenceColumns that contain all rows that should be updated
-  auto insert_table = std::make_shared<Table>();
-
+  TableColumnDefinitions insert_table_column_defintions;
   for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-    insert_table->add_column_definition(table_to_update->column_name(column_id),
-                                        table_to_update->column_type(column_id));
+    insert_table_column_defintions.emplace_back(table_to_update->column_name(column_id),
+                                        table_to_update->column_data_type(column_id));
   }
+
+  auto insert_table = std::make_shared<Table>(insert_table_column_defintions, TableType::References);
 
   auto current_row_in_left_chunk = 0u;
   auto current_pos_list = std::shared_ptr<const PosList>();
@@ -57,12 +58,12 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    auto chunk = std::make_shared<Chunk>(UseMvcc::No);
+    std::vector<std::shared_ptr<BaseColumn>> insert_table_columns;
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-      chunk->add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
+      insert_table_columns.emplace_back(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
 
-    insert_table->emplace_chunk(std::move(chunk));
+    insert_table->add_chunk_new(insert_table_columns);
   }
 
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right

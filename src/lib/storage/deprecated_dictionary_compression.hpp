@@ -47,7 +47,7 @@ class DeprecatedDictionaryCompression {
    * @param column_types from the chunk’s table
    * @param chunk to be compressed
    */
-  static void compress_chunk(const std::vector<DataType>& column_types, const std::shared_ptr<Chunk>& chunk,
+  static void compress_columns(const std::vector<DataType>& column_types, std::vector<std::shared_ptr<BaseColumn>> &columns,
                              EncodingType encoding_type = EncodingType::DeprecatedDictionary);
 
   /**

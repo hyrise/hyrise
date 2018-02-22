@@ -47,10 +47,27 @@ const std::string& Table::column_name(const ColumnID column_id) const {
   return _column_definitions[column_id].name;
 }
 
+std::vector<std::string> Table::column_names() const {
+  std::vector<std::string> names;
+  names.reserve(_column_definitions.size());
+  for (const auto& column_definition : _column_definitions) {
+    names.emplace_back(column_definition.name);
+  }
+  return names;
+}
+
 DataType Table::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
   return _column_definitions[column_id].data_type;
+}
 
+std::vector<DataType> Table::column_data_types() const {
+  std::vector<DataType> data_types;
+  data_types.reserve(_column_definitions.size());
+  for (const auto& column_definition : _column_definitions) {
+    data_types.emplace_back(column_definition.data_type);
+  }
+  return data_types;
 }
 
 bool Table::column_nullable(const ColumnID column_id) const {

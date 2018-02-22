@@ -24,19 +24,16 @@ std::shared_ptr<BaseColumn> DeprecatedDictionaryCompression::compress_column(Dat
   return encode_column(encoding_type, data_type, value_column);
 }
 
-void DeprecatedDictionaryCompression::compress_chunk(const std::vector<DataType>& column_types,
-                                                     const std::shared_ptr<Chunk>& chunk, EncodingType encoding_type) {
-  DebugAssert((column_types.size() == chunk->column_count()),
+void DeprecatedDictionaryCompression::compress_columns(const std::vector<DataType> &column_types,
+                                                       std::vector<std::shared_ptr<BaseColumn>> &columns,
+                                                       EncodingType encoding_type) {
+  DebugAssert((column_types.size() == columns.size()),
               "Number of column types does not match the chunk’s column count.");
 
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-    auto value_column = chunk->get_mutable_column(column_id);
+  for (ColumnID column_id{0}; column_id < columns.size(); ++column_id) {
+    auto value_column = columns[column_id];
     auto dict_column = compress_column(column_types[column_id], value_column, encoding_type);
-    chunk->replace_column(column_id, dict_column);
-  }
-
-  if (chunk->has_mvcc_columns()) {
-    chunk->shrink_mvcc_columns();
+    columns[column_id] = dict_column;
   }
 }
 
@@ -45,14 +42,14 @@ void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::v
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 
-    compress_chunk(table.column_types(), table.get_chunk(chunk_id), encoding_type);
+    compress_columns(table.column_data_types(), table.get_chunk(chunk_id), encoding_type);
   }
 }
 
 void DeprecatedDictionaryCompression::compress_table(Table& table, EncodingType encoding_type) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
-    compress_chunk(table.column_types(), chunk, encoding_type);
+    compress_columns(table.column_data_types(), chunk, encoding_type);
   }
 }
 
