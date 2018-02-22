@@ -54,7 +54,6 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
 
   auto column_expressions = std::vector<std::shared_ptr<LQPExpression>>();
   for (const auto expression : projections.front()->column_expressions()) {
-
     // If the expression is no reference to another column, we can just add it.
     if (expression->type() != ExpressionType::Column) {
       column_expressions.push_back(expression);
