@@ -71,7 +71,7 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
 
 auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   const auto type = info.param;
-  auto string = vector_compression_type_to_string.left.at(type);
+  auto string = vector_compression_type_to_string.at(type);
   string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
   return string;
 };
