@@ -19,13 +19,14 @@ class ChunkEncoderTest : public BaseTest {
  public:
   void SetUp() override {
     static const auto max_chunk_size = 5u;
-    _table = std::make_shared<Table>(max_chunk_size);
 
     static const auto column_count = 3u;
+    TableColumnDefinitions column_definitions;
     for (auto column_id = 0u; column_id < column_count; ++column_id) {
       const auto column_name = std::to_string(column_id);
-      _table->add_column(column_name, DataType::Int);
+      column_definitions.emplace_back(column_name, DataType::Int);
     }
+    _table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, max_chunk_size);
 
     static const auto row_count = max_chunk_size * 3u;
     for (auto row_id = 0u; row_id < row_count; ++row_id) {

@@ -16,7 +16,7 @@ void SQLResultOperator::set_input_operator(const std::shared_ptr<const AbstractO
 
 std::shared_ptr<const Table> SQLResultOperator::_on_execute() {
   if (!_input_left) {
-    return std::make_shared<Table>({});
+    return std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
   }
   return _input_left->get_output();
 }

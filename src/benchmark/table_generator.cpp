@@ -20,19 +20,19 @@ namespace opossum {
 
 std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
                                                       std::optional<EncodingType> encoding_type) {
-  std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
    * Generate table layout with column names from 'a' to 'z'.
    * Create a vector for each column.
    */
+  TableColumnDefinitions column_definitions;
   for (size_t i = 0; i < _num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
-    table->add_column_definition(column_name, DataType::Int);
+    column_definitions.emplace_back(column_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
-  auto chunk = std::make_shared<Chunk>();
+  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, chunk_size);
   std::default_random_engine engine;
   std::uniform_int_distribution<int> dist(0, _max_different_value);
   for (size_t i = 0; i < _num_rows; i++) {
@@ -41,12 +41,12 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
      * Reset vectors and chunk.
      */
     if (i % vector_size == 0 && i > 0) {
+      std::vector<std::shared_ptr<BaseColumn>> columns;
       for (size_t j = 0; j < _num_columns; j++) {
-        chunk->add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+        columns.emplace_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
       }
-      table->emplace_chunk(std::move(chunk));
-      chunk = std::make_shared<Chunk>();
+      table->add_chunk_new(columns);
     }
     /*
      * Set random value for every column.
@@ -59,10 +59,11 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
    * Add remaining values to table, if any.
    */
   if (value_vectors[0].size() > 0) {
+    std::vector<std::shared_ptr<BaseColumn>> columns;
     for (size_t j = 0; j < _num_columns; j++) {
-      chunk->add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+      columns.emplace_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
     }
-    table->emplace_chunk(std::move(chunk));
+    table->add_chunk_new(columns);
   }
 
   if (encoding_type.has_value()) {
