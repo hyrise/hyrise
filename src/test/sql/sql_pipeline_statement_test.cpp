@@ -139,6 +139,40 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationTooManyStatements) {
                std::exception);
 }
 
+TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
+  // Simple sanity test for all other constructor options
+
+  const auto optimizer = Optimizer::create_default_optimizer();
+  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  // No transaction context
+  SQLPipelineStatement sql_pipeline1{_select_query_a, optimizer, UseMvcc::Yes};
+  EXPECT_EQ(sql_pipeline1.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline1.get_sql_string(), _select_query_a);
+
+  SQLPipelineStatement sql_pipeline2{_select_query_a, prepared_cache, UseMvcc::No};
+  EXPECT_EQ(sql_pipeline2.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline2.get_sql_string(), _select_query_a);
+
+  SQLPipelineStatement sql_pipeline3{_select_query_a, optimizer, prepared_cache, UseMvcc::Yes};
+  EXPECT_EQ(sql_pipeline3.transaction_context(), nullptr);
+  EXPECT_EQ(sql_pipeline3.get_sql_string(), _select_query_a);
+
+  // With transaction context
+  SQLPipelineStatement sql_pipeline4{_select_query_a, optimizer, transaction_context};
+  EXPECT_EQ(sql_pipeline4.transaction_context(), transaction_context);
+  EXPECT_EQ(sql_pipeline4.get_sql_string(), _select_query_a);
+
+  SQLPipelineStatement sql_pipeline5{_select_query_a, prepared_cache, transaction_context};
+  EXPECT_EQ(sql_pipeline5.transaction_context(), transaction_context);
+  EXPECT_EQ(sql_pipeline5.get_sql_string(), _select_query_a);
+
+  SQLPipelineStatement sql_pipeline6{_select_query_a, optimizer, prepared_cache, transaction_context};
+  EXPECT_EQ(sql_pipeline6.transaction_context(), transaction_context);
+  EXPECT_EQ(sql_pipeline6.get_sql_string(), _select_query_a);
+}
+
 TEST_F(SQLPipelineStatementTest, GetParsedSQL) {
   SQLPipelineStatement sql_pipeline{_select_query_a};
   const auto& parsed_sql = sql_pipeline.get_parsed_sql_statement();
@@ -487,6 +521,95 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
   expected->append({123, 456.7f});
 
   EXPECT_TABLE_EQ_UNORDERED(table, expected);
+}
+
+TEST_F(SQLPipelineStatementTest, PreparedStatementMultiPlaceholderExecute) {
+  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+
+  const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ? OR (a > ? AND b < ?)'";
+  SQLPipelineStatement prepare_sql_pipeline{prepared_statement, prepared_statement_cache};
+  prepare_sql_pipeline.get_result_table();
+
+  EXPECT_EQ(prepared_statement_cache->size(), 1u);
+
+  const std::string execute_statement = "EXECUTE x1 (123, 10000, 500)";
+  SQLPipelineStatement execute_sql_pipeline{execute_statement, prepared_statement_cache};
+  const auto& table = execute_sql_pipeline.get_result_table();
+
+  auto expected = std::make_shared<Table>();
+  expected->add_column("a", DataType::Int);
+  expected->add_column("b", DataType::Float);
+  expected->append({123, 456.7f});
+  expected->append({12345, 458.7f});
+
+  EXPECT_TABLE_EQ_UNORDERED(table, expected);
+}
+
+TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
+  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+
+  const std::string prepared_statement1 = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
+  const std::string prepared_statement2 = "PREPARE x2 FROM 'SELECT * FROM table_a WHERE a > ?'";
+  const std::string prepared_statement_multi =
+      "PREPARE x_multi FROM 'SELECT * FROM table_a WHERE a = ? OR (a > ? AND b < ?)'";
+
+  SQLPipelineStatement prepare_sql_pipeline1{prepared_statement1, prepared_statement_cache};
+  SQLPipelineStatement prepare_sql_pipeline2{prepared_statement2, prepared_statement_cache};
+  SQLPipelineStatement prepare_sql_pipeline_multi{prepared_statement_multi, prepared_statement_cache};
+
+  prepare_sql_pipeline1.get_result_table();
+  prepare_sql_pipeline2.get_result_table();
+  prepare_sql_pipeline_multi.get_result_table();
+
+  EXPECT_EQ(prepared_statement_cache->size(), 3u);
+  EXPECT_TRUE(prepared_statement_cache->has("x1"));
+  EXPECT_TRUE(prepared_statement_cache->has("x2"));
+  EXPECT_TRUE(prepared_statement_cache->has("x_multi"));
+
+  const std::string execute_statement1 = "EXECUTE x1 (123)";
+  const std::string execute_statement1_invalid = "EXECUTE x1 (123, 10000)";  // too many arguments
+
+  const std::string execute_statement2 = "EXECUTE x2 (10000)";
+  const std::string execute_statement2_invalid = "EXECUTE x2";  // too few arguments
+
+  const std::string execute_statement_multi = "EXECUTE x_multi (123, 10000, 500)";
+  const std::string execute_statement_multi_invalid = "EXECUTE x_multi (123, 10000, 500, 100)";  // too many arguments
+
+  EXPECT_THROW(SQLPipelineStatement(execute_statement1_invalid).get_result_table(), std::exception);
+  EXPECT_THROW(SQLPipelineStatement(execute_statement2_invalid).get_result_table(), std::exception);
+  EXPECT_THROW(SQLPipelineStatement(execute_statement_multi_invalid).get_result_table(), std::exception);
+
+  SQLPipelineStatement execute_sql_pipeline1{execute_statement1, prepared_statement_cache};
+  const auto& table1 = execute_sql_pipeline1.get_result_table();
+
+  SQLPipelineStatement execute_sql_pipeline2{execute_statement2, prepared_statement_cache};
+  const auto& table2 = execute_sql_pipeline2.get_result_table();
+
+  SQLPipelineStatement execute_sql_pipeline_multi{execute_statement_multi, prepared_statement_cache};
+  const auto& table_multi = execute_sql_pipeline_multi.get_result_table();
+
+  // x1 result
+  auto expected1 = std::make_shared<Table>();
+  expected1->add_column("a", DataType::Int);
+  expected1->add_column("b", DataType::Float);
+  expected1->append({123, 456.7f});
+
+  // x2 result
+  auto expected2 = std::make_shared<Table>();
+  expected2->add_column("a", DataType::Int);
+  expected2->add_column("b", DataType::Float);
+  expected2->append({12345, 458.7f});
+
+  // x_multi result
+  auto expected_multi = std::make_shared<Table>();
+  expected_multi->add_column("a", DataType::Int);
+  expected_multi->add_column("b", DataType::Float);
+  expected_multi->append({123, 456.7f});
+  expected_multi->append({12345, 458.7f});
+
+  EXPECT_TABLE_EQ_UNORDERED(table1, expected1);
+  EXPECT_TABLE_EQ_UNORDERED(table2, expected2);
+  EXPECT_TABLE_EQ_UNORDERED(table_multi, expected_multi);
 }
 
 TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
