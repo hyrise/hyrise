@@ -103,5 +103,6 @@ auto invoke(boost::future<T>&& lhs, then_t, F&& f) ->
     return std::move(f)(std::forward<T>(fut.get()));
   });
 };
-}
-}
+
+}  // namespace then_operator
+}  // namespace opossum

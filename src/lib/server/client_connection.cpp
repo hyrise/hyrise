@@ -28,7 +28,7 @@ boost::future<RequestHeader> ClientConnection::receive_packet_header() {
 }
 
 boost::future<InputPacket> ClientConnection::receive_packet_contents(uint32_t size) {
-  // TODO: Maybe we could offer a version of this where the returned packet is already parsed
+  // TODO(anyone): Maybe we could offer a version of this where the returned packet is already parsed
   return _receive_bytes_async(size);
 }
 
@@ -37,7 +37,7 @@ boost::future<void> ClientConnection::send_ssl_denied() {
   auto output_packet = std::make_shared<OutputPacket>();
   PostgresWireHandler::write_value(*output_packet, NetworkMessageType::SslNo);
 
-  return _send_bytes_async(output_packet, true) >> then >> [](unsigned long) { /* ignore the result */ };
+  return _send_bytes_async(output_packet, true) >> then >> [](uint64_t) { /* ignore the result */ };
 }
 
 boost::future<void> ClientConnection::send_auth() {
@@ -57,8 +57,6 @@ boost::future<void> ClientConnection::send_ready_for_query() {
 
 boost::future<void> ClientConnection::send_error(const std::string& message) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
-
-  // An error response has to include at least one identified field
 
   // Send the error message
   PostgresWireHandler::write_value(*output_packet, 'M');
@@ -195,10 +193,10 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<Outp
 
 boost::future<uint64_t> ClientConnection::_flush_async() {
   return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future) >> then >>
-         [=](unsigned long sent_bytes) {
+         [=](uint64_t sent_bytes) {
            Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
            _response_buffer.clear();
-           return (uint64_t)sent_bytes;
+           return static_cast<uint64_t>(sent_bytes);
          };
 }
 

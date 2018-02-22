@@ -9,7 +9,7 @@ namespace opossum {
 template <typename T>
 class ServerTask : public AbstractTask {
  public:
-  explicit ServerTask() {}
+  ServerTask() = default;
 
   using result_type = T;
 

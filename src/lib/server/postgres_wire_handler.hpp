@@ -1,13 +1,13 @@
 #pragma once
 
-#include <SQLParserResult.h>
 #include <arpa/inet.h>
 #include <algorithm>
-#include <sql/sql_pipeline_statement.hpp>
 #include <string>
 #include <vector>
 
+#include "SQLParserResult.h"
 #include "all_parameter_variant.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "types.hpp"
 
 namespace opossum {

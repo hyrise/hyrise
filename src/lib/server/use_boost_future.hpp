@@ -1,9 +1,9 @@
 #pragma once
 
 #include <boost/asio/detail/config.hpp>
-#include <memory>
-
 #include <boost/asio/detail/push_options.hpp>
+
+#include <memory>
 
 namespace boost {
 namespace asio {

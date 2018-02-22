@@ -8,7 +8,8 @@ class TransactionContext;
 
 class CommitTransactionTask : public ServerTask<void> {
  public:
-  CommitTransactionTask(std::shared_ptr<TransactionContext> transaction) : _transaction(transaction) {}
+  explicit CommitTransactionTask(std::shared_ptr<TransactionContext> transaction)
+      : _transaction(std::move(transaction)) {}
 
  protected:
   void _on_execute() override;

@@ -7,9 +7,6 @@
 
 #include <chrono>
 #include <iostream>
-#include <sql/sql_translator.hpp>
-#include <tasks/server/bind_server_prepared_statement_task.hpp>
-#include <tasks/server/execute_server_prepared_statement_task.hpp>
 #include <thread>
 
 #include "SQLParserResult.h"
@@ -17,8 +14,11 @@
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_translator.hpp"
+#include "tasks/server/bind_server_prepared_statement_task.hpp"
 #include "tasks/server/commit_transaction_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
+#include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
 #include "tasks/server/send_query_response_task.hpp"
@@ -202,7 +202,7 @@ boost::future<void> ServerSession::_handle_parse_command(std::unique_ptr<ParsePa
 
   return _dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info->query)) >> then >>
          [=](std::unique_ptr<CreatePipelineResult> result) {
-           // We know that SQL Pipeline is set in the result because the load table command is not allowed in this context
+           // We know that SQLPipeline is set because the load table command is not allowed in this context
            _prepared_statements.insert(std::make_pair(prepared_statement_name, result->sql_pipeline));
          } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
@@ -274,7 +274,7 @@ boost::future<void> ServerSession::_handle_execute_command(std::string portal_na
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
            if (!result_table)
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
-                    []() { return (uint64_t)0; };
+                    []() { return 0ull; };
 
            auto task = std::make_shared<SendQueryResponseTask>(_connection, result_table);
            return _dispatch_server_task(task);

@@ -20,22 +20,21 @@ class promise_handler {
  public:
   // Construct from use_future special value.
   template <typename Alloc>
-  promise_handler(use_boost_future_t<Alloc> uf)
-      : promise_(std::allocate_shared<boost::promise<T> >(BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()),
-                                                          std::allocator_arg,
-                                                          BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()))) {}
+  explicit promise_handler(use_boost_future_t<Alloc> uf)
+      : promise(std::allocate_shared<boost::promise<T> >(BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()),
+                                                         std::allocator_arg,
+                                                         BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()))) {}
 
-  void operator()(T t) { promise_->set_value(t); }
+  void operator()(T t) { promise->set_value(t); }
 
   void operator()(const boost::system::error_code& ec, T t) {
     if (ec)
-      promise_->set_exception(std::make_exception_ptr(boost::system::system_error(ec)));
+      promise->set_exception(std::make_exception_ptr(boost::system::system_error(ec)));
     else
-      promise_->set_value(t);
+      promise->set_value(t);
   }
 
-  //private:
-  std::shared_ptr<boost::promise<T> > promise_;
+  std::shared_ptr<boost::promise<T> > promise;
 };
 
 // Completion handler to adapt a void promise as a completion handler.
@@ -44,29 +43,29 @@ class promise_handler<void> {
  public:
   // Construct from use_future special value. Used during rebinding.
   template <typename Alloc>
-  promise_handler(use_boost_future_t<Alloc> uf)
-      : promise_(std::allocate_shared<boost::promise<void> >(
-            BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()), std::allocator_arg,
-            BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()))) {}
+  explicit promise_handler(use_boost_future_t<Alloc> uf)
+      : promise(std::allocate_shared<boost::promise<void> >(BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()),
+                                                            std::allocator_arg,
+                                                            BOOST_ASIO_REBIND_ALLOC(Alloc, char)(uf.get_allocator()))) {
+  }
 
-  void operator()() { promise_->set_value(); }
+  void operator()() { promise->set_value(); }
 
   void operator()(const boost::system::error_code& ec) {
     if (ec)
-      promise_->set_exception(std::make_exception_ptr(boost::system::system_error(ec)));
+      promise->set_exception(std::make_exception_ptr(boost::system::system_error(ec)));
     else
-      promise_->set_value();
+      promise->set_value();
   }
 
-  //private:
-  std::shared_ptr<boost::promise<void> > promise_;
+  std::shared_ptr<boost::promise<void> > promise;
 };
 
 // Ensure any exceptions thrown from the handler are propagated back to the
 // caller via the future.
 template <typename Function, typename T>
 void asio_handler_invoke(Function f, promise_handler<T>* h) {
-  std::shared_ptr<boost::promise<T> > p(h->promise_);
+  std::shared_ptr<boost::promise<T> > p(h->promise);
   try {
     f();
   } catch (...) {
@@ -87,7 +86,7 @@ class async_result<detail::promise_handler<T> > {
 
   // Constructor creates a new promise for the async operation, and obtains the
   // corresponding future.
-  explicit async_result(detail::promise_handler<T>& h) { value_ = h.promise_->get_future(); }
+  explicit async_result(detail::promise_handler<T>& h) { value_ = h.promise->get_future(); }
 
   // Obtain the future to be returned from the initiating function.
   type get() { return std::move(value_); }

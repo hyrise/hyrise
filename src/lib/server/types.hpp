@@ -20,9 +20,11 @@ enum class NetworkMessageType : unsigned char {
   ReadyForQuery = 'Z',
   RowDescription = 'T',
   DataRow = 'D',
+
   // Errors
   HumanReadableError = 'M',
   SqlstateCodeError = 'C',
+
   // Commands
   ExecuteCommand = 'E',
   SyncCommand = 'S',
@@ -33,6 +35,7 @@ enum class NetworkMessageType : unsigned char {
   ParseCommand = 'P',
   SimpleQueryCommand = 'Q',
   CloseCommand = 'C',
+
   // SSL willingness
   SslYes = 'S',
   SslNo = 'N',

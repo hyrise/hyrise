@@ -10,7 +10,7 @@ class Table;
 
 class ExecuteServerPreparedStatementTask : public ServerTask<std::shared_ptr<const Table>> {
  public:
-  ExecuteServerPreparedStatementTask(std::shared_ptr<SQLQueryPlan> prepared_plan)
+  explicit ExecuteServerPreparedStatementTask(std::shared_ptr<SQLQueryPlan> prepared_plan)
       : _prepared_plan(std::move(prepared_plan)) {}
 
  protected:

@@ -23,8 +23,6 @@ class Delete : public AbstractReadWriteOperator {
   const std::string name() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
-
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   void _on_commit_records(const CommitID cid) override;

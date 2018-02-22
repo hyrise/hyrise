@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
-
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/thread/future.hpp>
+
+#include <memory>
 
 namespace opossum {
 

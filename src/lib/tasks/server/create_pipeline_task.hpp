@@ -13,10 +13,10 @@ struct CreatePipelineResult {
   std::optional<std::pair<std::string, std::string>> load_table;
 };
 
-// TODO: I think we can make the CreatePipelineResult a unique_ptr again...
 class CreatePipelineTask : public ServerTask<std::unique_ptr<CreatePipelineResult>> {
  public:
-  CreatePipelineTask(std::string sql, bool allow_load_table = false) : _sql(sql), _allow_load_table(allow_load_table) {}
+  explicit CreatePipelineTask(std::string sql, bool allow_load_table = false)
+      : _sql(sql), _allow_load_table(allow_load_table) {}
 
  protected:
   void _on_execute() override;
