@@ -575,9 +575,9 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   const std::string execute_statement_multi = "EXECUTE x_multi (123, 10000, 500)";
   const std::string execute_statement_multi_invalid = "EXECUTE x_multi (123, 10000, 500, 100)";  // too many arguments
 
-  EXPECT_THROW(SQLPipelineStatement(execute_statement1_invalid).get_result_table(), std::exception);
-  EXPECT_THROW(SQLPipelineStatement(execute_statement2_invalid).get_result_table(), std::exception);
-  EXPECT_THROW(SQLPipelineStatement(execute_statement_multi_invalid).get_result_table(), std::exception);
+  EXPECT_THROW(SQLPipelineStatement(execute_statement1_invalid).get_result_table(), std::runtime_error);
+  EXPECT_THROW(SQLPipelineStatement(execute_statement2_invalid).get_result_table(), std::runtime_error);
+  EXPECT_THROW(SQLPipelineStatement(execute_statement_multi_invalid).get_result_table(), std::runtime_error);
 
   SQLPipelineStatement execute_sql_pipeline1{execute_statement1, prepared_statement_cache};
   const auto& table1 = execute_sql_pipeline1.get_result_table();

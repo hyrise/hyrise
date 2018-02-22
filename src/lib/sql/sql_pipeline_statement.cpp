@@ -201,6 +201,9 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
         }
       }
 
+      Assert(arguments.size() == plan->num_parameters(),
+             "Number of arguments provided does not match expected number of arguments.");
+
       _query_plan->append_plan(plan->recreate(arguments));
     } else {
       // "Normal" mode in which the query plan is created
