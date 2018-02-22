@@ -54,11 +54,16 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
 
   auto column_expressions = std::vector<std::shared_ptr<LQPExpression>>();
   for (const auto expression : projections.front()->column_expressions()) {
+
+    // If the expression is no reference to another column, we can just add it.
     if (expression->type() != ExpressionType::Column) {
       column_expressions.push_back(expression);
       continue;
     }
 
+    // If the expression IS a reference to another column,
+    // we have to check if the referenced column is part of one of the other ProjectionNodes that we are combining,
+    // and then instead add the referenced column here.
     auto column_reference_replaced = false;
     auto iter = projections.begin() + 1;
     while (!column_reference_replaced && iter != projections.end()) {
@@ -73,6 +78,8 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
       ++iter;
     }
 
+    // If we didn't find the referenced column, it is somewhere else in the tree, so we can leave the
+    // column reference in the combined ProjectionNode
     if (!column_reference_replaced) {
       column_expressions.push_back(expression);
     }
