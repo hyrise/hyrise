@@ -43,7 +43,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
       return _get_within_cached_meta_block(i);
     }
 
-    if (_is_index_after_cached_meta_block(i)) {
+    if (_is_index_after_or_within_cached_meta_block(i)) {
       const auto relative_index = _index_relative_to_cached_meta_block(i);
       const auto relative_meta_block_index = relative_index / Packing::meta_block_size;
 
@@ -69,7 +69,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   size_t size() const final { return _size; }
 
  private:
-  bool _is_index_within_cached_block(size_t index) {
+  bool _is_index_within_cached_block(size_t index) const {
     const auto begin = _cached_block_first_index;
     const auto end = _cached_block_first_index + Packing::block_size;
     return begin <= index && index < end;
@@ -77,16 +77,16 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
 
   size_t _index_within_cached_block(size_t index) { return index - _cached_block_first_index; }
 
-  bool _is_index_within_cached_meta_block(size_t index) {
+  bool _is_index_within_cached_meta_block(size_t index) const {
     const auto begin = _cached_meta_block_first_index;
     const auto end = _cached_meta_block_first_index + Packing::meta_block_size;
     return begin <= index && index < end;
   }
 
-  size_t _index_relative_to_cached_meta_block(size_t index) { return index - _cached_meta_block_first_index; }
+  size_t _index_relative_to_cached_meta_block(size_t index) const { return index - _cached_meta_block_first_index; }
 
-  bool _is_index_after_cached_meta_block(size_t index) {
-    return (_cached_meta_block_first_index + Packing::meta_block_size) <= index;
+  bool _is_index_after_or_within_cached_meta_block(size_t index) const {
+    return _cached_meta_block_first_index <= index;
   }
 
   uint32_t _get_within_cached_block(size_t index) { return (*_cached_block)[_index_within_cached_block(index)]; }
@@ -103,9 +103,9 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
    * jumps to the meta block with the relative
    * index `meta_block_index`
    */
-  void _read_meta_info_from_offset(size_t meta_block_index) {
+  void _read_meta_info_from_offset(size_t relative_meta_block_index) {
     auto meta_info_offset = _cached_meta_info_offset;
-    for (auto i = 0u; i < meta_block_index; ++i) {
+    for (auto i = 0u; i < relative_meta_block_index; ++i) {
       static const auto meta_info_data_size = 1u;  // One 128 bit block
       const auto meta_block_data_size =
           meta_info_data_size + std::accumulate(_cached_meta_info.begin(), _cached_meta_info.end(), 0u);
@@ -114,7 +114,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
     }
 
     _cached_meta_info_offset = meta_info_offset;
-    _cached_meta_block_first_index += meta_block_index * Packing::meta_block_size;
+    _cached_meta_block_first_index += relative_meta_block_index * Packing::meta_block_size;
   }
 
   void _clear_meta_block_cache() {

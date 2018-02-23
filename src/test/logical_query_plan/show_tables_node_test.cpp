@@ -10,7 +10,7 @@ namespace opossum {
 
 class ShowTablesNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _show_tables_node = std::make_shared<ShowTablesNode>(); }
+  void SetUp() override { _show_tables_node = ShowTablesNode::make(); }
 
   std::shared_ptr<ShowTablesNode> _show_tables_node;
 };
