@@ -2,7 +2,6 @@
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/config.hpp>
-#include <boost/asio/detail/memory.hpp>
 #include <boost/asio/handler_type.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
