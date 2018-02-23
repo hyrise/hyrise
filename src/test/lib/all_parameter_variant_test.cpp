@@ -60,11 +60,6 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
     EXPECT_EQ(value, "string");
   }
   {
-    AllParameterVariant parameter(static_cast<uint8_t>(123));
-    auto value = type_cast<uint8_t>(boost::get<AllTypeVariant>(parameter));
-    EXPECT_EQ(value, static_cast<uint8_t>(123));
-  }
-  {
     AllParameterVariant parameter(static_cast<int32_t>(123));
     auto value = type_cast<int32_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int32_t>(123));
