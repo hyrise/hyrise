@@ -17,7 +17,7 @@ namespace opossum {
  */
 class JitOperator : public AbstractReadOnlyOperator {
  public:
-  explicit JitOperator(const std::shared_ptr<const AbstractOperator> left,
+  explicit JitOperator(const std::shared_ptr<const AbstractOperator> left, const bool use_jit = true,
                        const std::vector<JitAbstractOperator::Ptr>& operators = {});
 
   const std::string name() const final;
@@ -33,6 +33,7 @@ class JitOperator : public AbstractReadOnlyOperator {
   const JitReadTuple::Ptr _source() const;
   const JitAbstractSink::Ptr _sink() const;
 
+  const bool _use_jit;
   std::vector<JitAbstractOperator::Ptr> _operators;
 };
 
