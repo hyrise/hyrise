@@ -70,17 +70,28 @@ std::vector<DataType> Table::column_data_types() const {
   return data_types;
 }
 
-bool Table::column_nullable(const ColumnID column_id) const {
+bool Table::column_is_nullable(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
   return _column_definitions[column_id].nullable;
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
-  Fail("Todo");
-//  // TODO(Anyone): Chunks should be preallocated for chunk size
-//  if (_chunks.back()->size() == _max_chunk_size) emplace_chunk();
+  if (_chunks.empty() || _chunks->back()->size() >= _max_chunk_size) {
+    append_value_column_chunk();
+  }
 
-//  _chunks.back()->append(values);
+  _chunks.back()->append(values);
+}
+
+void Table::append_mutable_chunk() {
+  std::vector<std::shared_ptr<BaseColumn>> columns;
+  for (const auto& column_definition : _column_definitions) {
+    resolve_data_type(column_definition.data_type, [&](auto type) {
+      using ColumnDataType = decltype(type)::type;
+      columns.emplace_back(std::make_shared<ValueColumn<ColumnDataType>>());
+    });
+  }
+  add_chunk_new(columns)
 }
 
 uint64_t Table::row_count() const {

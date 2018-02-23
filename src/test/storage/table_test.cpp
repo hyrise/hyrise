@@ -16,83 +16,85 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    t.add_column("col_1", DataType::Int);
-    t.add_column("col_2", DataType::String);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("col_1", DataType::Int);
+    column_definitions.emplace_back("col_2", DataType::String);
+    t = std::make_shared<Table>(column_definitions);
   }
 
-  Table t{2};
+  std::shared_ptr<Table> t;
 };
 
 TEST_F(StorageTableTest, ChunkCount) {
-  EXPECT_EQ(t.chunk_count(), 1u);
-  t.append({4, "Hello,"});
-  t.append({6, "world"});
-  t.append({3, "!"});
-  EXPECT_EQ(t.chunk_count(), 2u);
+  EXPECT_EQ(t->chunk_count(), 1u);
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
+  t->append({3, "!"});
+  EXPECT_EQ(t->chunk_count(), 2u);
 }
 
 TEST_F(StorageTableTest, GetChunk) {
-  t.get_chunk(ChunkID{0});
+  t->get_chunk(ChunkID{0});
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.get_chunk(ChunkID{q}), std::exception);
-  t.append({4, "Hello,"});
-  t.append({6, "world"});
-  t.append({3, "!"});
-  t.get_chunk(ChunkID{1});
+  // EXPECT_THROW(t->get_chunk(ChunkID{q}), std::exception);
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
+  t->append({3, "!"});
+  t->get_chunk(ChunkID{1});
 }
 
-TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t.column_count(), 2u); }
+TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t->column_count(), 2u); }
 
 TEST_F(StorageTableTest, RowCount) {
-  EXPECT_EQ(t.row_count(), 0u);
-  t.append({4, "Hello,"});
-  t.append({6, "world"});
-  t.append({3, "!"});
-  EXPECT_EQ(t.row_count(), 3u);
+  EXPECT_EQ(t->row_count(), 0u);
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
+  t->append({3, "!"});
+  EXPECT_EQ(t->row_count(), 3u);
 }
 
 TEST_F(StorageTableTest, GetColumnName) {
-  EXPECT_EQ(t.column_name(ColumnID{0}), "col_1");
-  EXPECT_EQ(t.column_name(ColumnID{1}), "col_2");
+  EXPECT_EQ(t->column_name(ColumnID{0}), "col_1");
+  EXPECT_EQ(t->column_name(ColumnID{1}), "col_2");
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.column_name(ColumnID{2}), std::exception);
+  // EXPECT_THROW(t->column_name(ColumnID{2}), std::exception);
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
-  EXPECT_EQ(t.column_type(ColumnID{0}), DataType::Int);
-  EXPECT_EQ(t.column_type(ColumnID{1}), DataType::String);
+  EXPECT_EQ(t->column_is_type(ColumnID{0}), DataType::Int);
+  EXPECT_EQ(t->column_is_type(ColumnID{1}), DataType::String);
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.column_type(ColumnID{2}), std::exception);
+  // EXPECT_THROW(t->column_is_type(ColumnID{2}), std::exception);
 }
 
 TEST_F(StorageTableTest, GetColumnIdByName) {
-  EXPECT_EQ(t.column_id_by_name("col_2"), 1u);
-  EXPECT_THROW(t.column_id_by_name("no_column_name"), std::exception);
+  EXPECT_EQ(t->column_id_by_name("col_2"), 1u);
+  EXPECT_THROW(t->column_id_by_name("no_column_name"), std::exception);
 }
 
-TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.max_chunk_size(), 2u); }
+TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t->max_chunk_size(), 2u); }
 
 TEST_F(StorageTableTest, GetValue) {
-  t.append({4, "Hello,"});
-  t.append({6, "world"});
-  t.append({3, "!"});
-  ASSERT_EQ(t.get_value<int>(ColumnID{0}, 0u), 4);
-  EXPECT_EQ(t.get_value<int>(ColumnID{0}, 2u), 3);
-  ASSERT_FALSE(t.get_value<std::string>(ColumnID{1}, 0u).compare("Hello,"));
-  ASSERT_FALSE(t.get_value<std::string>(ColumnID{1}, 2u).compare("!"));
-  EXPECT_THROW(t.get_value<int>(ColumnID{3}, 0u), std::exception);
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
+  t->append({3, "!"});
+  ASSERT_EQ(t->get_value<int>(ColumnID{0}, 0u), 4);
+  EXPECT_EQ(t->get_value<int>(ColumnID{0}, 2u), 3);
+  ASSERT_FALSE(t->get_value<std::string>(ColumnID{1}, 0u).compare("Hello,"));
+  ASSERT_FALSE(t->get_value<std::string>(ColumnID{1}, 2u).compare("!"));
+  EXPECT_THROW(t->get_value<int>(ColumnID{3}, 0u), std::exception);
 }
 
 TEST_F(StorageTableTest, ColumnNameTooLong) {
-  EXPECT_THROW(t.add_column(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), DataType::Int);
+  EXPECT_THROW(TableColumnDefinition(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), DataType::Int);
                , std::exception);
 }
 
 TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
-  t.append({4, "Hello,"});
-  t.append({6, "world"});
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
 
-  auto chunk = t.get_chunk(ChunkID{0});
+  auto chunk = t->get_chunk(ChunkID{0});
 
   const auto values = std::vector<CommitID>{1u, 2u};
 
@@ -125,53 +127,38 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 }
 
 TEST_F(StorageTableTest, EmplaceChunk) {
-  EXPECT_EQ(t.chunk_count(), 1u);
+  EXPECT_EQ(t->chunk_count(), 1u);
 
-  t.append({4, "Hello,"});
+  t->append({4, "Hello,"});
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  auto c = std::make_shared<Chunk>();
-  c->add_column(vc_int);
-  c->add_column(vc_str);
-
-  t.emplace_chunk(std::move(c));
-  EXPECT_EQ(t.chunk_count(), 2u);
+  t->add_chunk_new({vc_int, vc_str});
+  EXPECT_EQ(t->chunk_count(), 2u);
 }
 
 TEST_F(StorageTableTest, EmplaceChunkReplacesFirstChunkIfNoRows) {
-  EXPECT_EQ(t.chunk_count(), 1u);
+  EXPECT_EQ(t->chunk_count(), 1u);
 
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  auto c = std::make_shared<Chunk>();
-  c->add_column(vc_int);
-  c->add_column(vc_str);
 
-  t.emplace_chunk(std::move(c));
-  EXPECT_EQ(t.chunk_count(), 1u);
+  t->add_chunk_new({vc_int, vc_str});
+  EXPECT_EQ(t->chunk_count(), 1u);
 }
 
 TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
-  EXPECT_EQ(t.chunk_count(), 1u);
+  EXPECT_EQ(t->chunk_count(), 1u);
 
-  t.append({4, "Hello,"});
+  t->append({4, "Hello,"});
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  auto c = std::make_shared<Chunk>();
-  c->add_column(vc_int);
-  c->add_column(vc_str);
-
-  t.emplace_chunk(std::move(c));
-  EXPECT_EQ(t.chunk_count(), 2u);
+  t->add_chunk_new({vc_int, vc_str});
+  EXPECT_EQ(t->chunk_count(), 2u);
 
   std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  auto c2 = std::make_shared<Chunk>();
-  c2->add_column(vc_int);
-  c2->add_column(vc_str);
-
-  t.emplace_chunk(std::move(c2));
-  EXPECT_EQ(t.chunk_count(), 3u);
+  t->add_chunk_new({vc_int, vc_str});
+  EXPECT_EQ(t->chunk_count(), 3u);
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) { EXPECT_THROW(Table{0}, std::logic_error); }
@@ -182,12 +169,12 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto empty_memory_usage = t.estimate_memory_usage();
+  const auto empty_memory_usage = t->estimate_memory_usage();
 
-  t.append({4, "Hello"});
-  t.append({5, "Hello"});
+  t->append({4, "Hello"});
+  t->append({5, "Hello"});
 
-  EXPECT_GT(t.estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
+  EXPECT_GT(t->estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
 }
 
 }  // namespace opossum

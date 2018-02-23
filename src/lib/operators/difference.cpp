@@ -125,7 +125,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     }
 
     // Only add chunk if it would contain any tuples
-    if (!output_columns.empty() && !output_columns[0]->size() > 0) {
+    if (!output_columns.empty() && output_columns[0]->size() > 0) {
       output->add_chunk_new(output_columns);
     }
   }

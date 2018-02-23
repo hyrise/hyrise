@@ -72,7 +72,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
+      build_input->column_is_type(build_column_id), probe_input->column_is_type(probe_column_id), build_operator,
       probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }

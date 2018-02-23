@@ -42,7 +42,7 @@ class Table : private Noncopyable {
   DataType column_data_type(const ColumnID column_id) const;
   std::vector<DataType> column_data_types() const;
 
-  bool column_nullable(const ColumnID column_id) const;
+  bool column_is_nullable(const ColumnID column_id) const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -68,6 +68,9 @@ class Table : private Noncopyable {
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
+
+  // Create and append a Chunk consisting of ValueColumns.
+  void append_mutable_chunk();
 
   // returns one materialized value
   // multiversion concurrency control values of chunks are ignored

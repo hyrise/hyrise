@@ -155,7 +155,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
   std::vector<std::unique_ptr<BaseCsvConverter>> converters;
 
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto is_nullable = table.column_nullable(column_id);
+    const auto is_nullable = table.column_is_nullable(column_id);
     const auto column_type = table.column_data_type(column_id);
 
     converters.emplace_back(

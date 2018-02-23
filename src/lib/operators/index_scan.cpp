@@ -32,7 +32,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _validate_input();
 
-  _out_table = std::make_shared(_in_table->column_definitions(), TableType::References);
+  _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
   std::mutex output_mutex;
 

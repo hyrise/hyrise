@@ -36,6 +36,12 @@ Chunk::Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
 
   if (use_mvcc == UseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
   if (alloc) _alloc = alloc;
+
+  _is_mutable = std::all_of(_columns.begin(), _columns.end(), [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
+}
+
+bool Chunk::is_mutable() const {
+  return _is_mutable;
 }
 
 void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
