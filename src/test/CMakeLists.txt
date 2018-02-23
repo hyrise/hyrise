@@ -73,6 +73,9 @@ set(
     operators/validate_visibility_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
+    optimizer/join_ordering/join_graph_builder_test.cpp
+    optimizer/join_ordering/join_graph_test.cpp
+    optimizer/join_ordering/join_plan_predicate_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
@@ -84,18 +87,13 @@ set(
     optimizer/table_statistics_join_test.cpp
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
-    sql/sql_base_test.cpp
-    sql/sql_base_test.hpp
     sql/sql_basic_cache_test.cpp
     sql/hsql_expression_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp
-    sql/sql_parse_tree_cache_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
-    sql/sql_prepare_execute_test.cpp
-    sql/sql_query_operator_test.cpp
     sql/sql_query_plan_cache_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_translator_test.cpp
