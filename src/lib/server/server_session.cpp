@@ -274,7 +274,7 @@ boost::future<void> ServerSession::_handle_execute_command(std::string portal_na
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
            if (!result_table)
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
-                    []() { return 0ull; };
+                    []() { return uint64_t(0); };
 
            auto task = std::make_shared<SendQueryResponseTask>(_connection, result_table);
            return _dispatch_server_task(task);

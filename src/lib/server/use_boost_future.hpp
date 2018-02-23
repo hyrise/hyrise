@@ -2,6 +2,7 @@
 
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/push_options.hpp>
+#include <boost/version.hpp>
 
 #include <memory>
 
@@ -64,4 +65,8 @@ constexpr use_boost_future_t<> use_boost_future;
 
 #include <boost/asio/detail/pop_options.hpp>
 
+#if BOOST_VERSION >= 106400
 #include "use_boost_future_impl.hpp"
+#else
+#include "use_boost_future_legacy_impl.hpp"
+#endif

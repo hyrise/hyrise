@@ -218,6 +218,7 @@ set(
     server/client_connection.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
+    server/use_boost_future_legacy_impl.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
