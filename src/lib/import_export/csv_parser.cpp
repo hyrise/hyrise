@@ -62,7 +62,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &columns]() {
       const auto row_count = _parse_into_chunk(relevant_content, field_ends, *table, columns);
       if (_meta.auto_compress && row_count == _meta.chunk_size) {
-        DeprecatedDictionaryCompression::compress_columns(table->column_data_types(), columns);
+        columns = DeprecatedDictionaryCompression::compress_columns(table->column_data_types(), columns);
       }
     }));
     tasks.back()->schedule();

@@ -107,11 +107,6 @@ class Chunk : private Noncopyable {
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<AccessCounter> access_counter = nullptr);
 
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  Chunk(Chunk&&) = default;
-  Chunk& operator=(Chunk&&) = default;
-
   // Atomically replaces the current column at column_id with the passed column
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
@@ -137,6 +132,8 @@ class Chunk : private Noncopyable {
    */
   std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
   std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
+
+  const std::vector<std::shared_ptr<BaseColumn>>& columns() const;
 
   bool has_mvcc_columns() const;
   bool has_access_counter() const;

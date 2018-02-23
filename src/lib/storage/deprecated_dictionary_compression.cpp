@@ -37,12 +37,19 @@ void DeprecatedDictionaryCompression::compress_columns(const std::vector<DataTyp
   }
 }
 
+void DeprecatedDictionaryCompression::compress_chunk(Table& table, const ChunkID chunk_id, EncodingType encoding_type) {
+  Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
+  auto uncompressed_columns = table.get_chunk(chunk_id)->columns();
+  auto compressed_columns = compress_columns(table.column_data_types(), uncompressed_columns, encoding_type);
+  table.replace_chunk(chunk_id, compressed_columns);
+}
+
 void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
                                                       EncodingType encoding_type) {
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 
-    compress_columns(table.column_data_types(), table.get_chunk(chunk_id), encoding_type);
+    compress_chunk(table, chunk_id, encoding_type);
   }
 }
 
