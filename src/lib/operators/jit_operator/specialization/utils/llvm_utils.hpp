@@ -10,8 +10,6 @@
 
 #include <fstream>
 
-#include "error_utils.hpp"
-
 namespace opossum {
 
 struct llvm_utils {
@@ -27,7 +25,6 @@ struct llvm_utils {
       llvm::raw_fd_ostream os(path, error_code, llvm::sys::fs::F_None);
       llvm::WriteBitcodeToFile(&module, os);
       os.flush();
-      error_utils::handle_error(error_code.value());
     } else {
       throw std::invalid_argument("invalid file extension for LLVM bitcode file");
     }
@@ -36,7 +33,6 @@ struct llvm_utils {
   static std::unique_ptr<llvm::Module> module_from_file(const std::string& path, llvm::LLVMContext& context) {
     llvm::SMDiagnostic error;
     auto module = llvm::parseIRFile(path, error, context);
-    error_utils::handle_error(error);
     return module;
   }
 
@@ -44,7 +40,6 @@ struct llvm_utils {
     llvm::SMDiagnostic error;
     const auto buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(str));
     auto module = llvm::parseIR(*buffer, error, context);
-    error_utils::handle_error(error);
     return module;
   }
 };

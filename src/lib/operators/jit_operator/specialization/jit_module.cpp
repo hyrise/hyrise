@@ -1,4 +1,4 @@
-#include "module.hpp"
+#include "jit_module.hpp"
 
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Linker/IRMover.h>
@@ -14,15 +14,15 @@
 
 namespace opossum {
 
-Module::Module(const std::string& root_function_name)
-    : _repository{IRRepository::get()},
+JitModule::JitModule(const std::string& root_function_name)
+    : _repository{JitRepository::get()},
       _module{std::make_unique<llvm::Module>(root_function_name, *_repository.llvm_context())},
       _compiler{_repository.llvm_context()},
       _root_function_name{root_function_name} {
   _module->setDataLayout(_compiler.data_layout());
 }
 
-void Module::specialize(const RuntimePointer::Ptr& runtime_this) {
+void JitModule::specialize(const JitRuntimePointer::Ptr& runtime_this) {
   const auto root_function = _repository.get_function(_root_function_name);
   DebugAssert(root_function, "root function not found in repository");
   _root_function = _clone_function(*root_function, "_");
@@ -41,7 +41,7 @@ void Module::specialize(const RuntimePointer::Ptr& runtime_this) {
   // }
 }
 
-bool Module::_specialize(const RuntimePointer::Ptr& runtime_this) {
+bool JitModule::_specialize(const JitRuntimePointer::Ptr& runtime_this) {
   // add runtime value for this pointer
   _runtime_values[&*_root_function->arg_begin()] = runtime_this;
 
@@ -56,10 +56,10 @@ bool Module::_specialize(const RuntimePointer::Ptr& runtime_this) {
       // attempt to resolve virtual calls
       const auto called_value = call_site.getCalledValue();
       const auto called_runtime_value =
-          std::dynamic_pointer_cast<const KnownRuntimePointer>(_get_runtime_value(called_value));
+          std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(called_value));
       if (called_runtime_value && called_runtime_value->is_valid()) {
         const auto vtable_index = called_runtime_value->up().total_offset() / _module->getDataLayout().getPointerSize();
-        const auto instance = reinterpret_cast<RTTIHelper*>(called_runtime_value->up().up().base().address());
+        const auto instance = reinterpret_cast<JitRTTIHelper*>(called_runtime_value->up().up().base().address());
         const auto class_name = typeid(*instance).name();
         if (const auto repo_function = _repository.get_vtable_entry(class_name, vtable_index)) {
           const auto cloned_function = _clone_function(*repo_function);
@@ -101,7 +101,7 @@ bool Module::_specialize(const RuntimePointer::Ptr& runtime_this) {
   return true;
 }
 
-void Module::_optimize() {
+void JitModule::_optimize() {
   _modified = false;
   _runtime_values.clear();
 
@@ -122,9 +122,9 @@ void Module::_optimize() {
   _rename_values();
   llvm_utils::module_to_file(before_path, *_module);
 
+  // TODO(johannes) remove later
   std::error_code error_code;
   llvm::raw_fd_ostream remarks_file(remarks_path, error_code, llvm::sys::fs::F_None);
-  error_utils::handle_error(error_code);
   _repository.llvm_context()->setDiagnosticsOutputFile(std::make_unique<llvm::yaml::Output>(remarks_file));
 
   const llvm::Triple module_triple(_module->getTargetTriple());
@@ -163,10 +163,10 @@ void Module::_optimize() {
   _repository.llvm_context()->setDiagnosticsOutputFile(nullptr);
 }
 
-void Module::_replace_loads_with_runtime_values() {
+void JitModule::_replace_loads_with_runtime_values() {
   _visit<llvm::LoadInst>([&](llvm::LoadInst& inst) {
     const auto runtime_pointer =
-        std::dynamic_pointer_cast<const KnownRuntimePointer>(_get_runtime_value(inst.getPointerOperand()));
+        std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(inst.getPointerOperand()));
     if (!runtime_pointer || !runtime_pointer->is_valid()) {
       return;
     }
@@ -195,14 +195,14 @@ void Module::_replace_loads_with_runtime_values() {
   });
 }
 
-llvm::Function* Module::_create_function_declaration(const llvm::Function& function, const std::string& suffix) {
+llvm::Function* JitModule::_create_function_declaration(const llvm::Function& function, const std::string& suffix) {
   const auto declaration = llvm::Function::Create(llvm::cast<llvm::FunctionType>(function.getValueType()),
                                                   function.getLinkage(), function.getName() + suffix, _module.get());
   declaration->copyAttributesFrom(&function);
   return declaration;
 }
 
-llvm::Function* Module::_clone_function(const llvm::Function& function, const std::string& suffix) {
+llvm::Function* JitModule::_clone_function(const llvm::Function& function, const std::string& suffix) {
   const auto cloned_function = _create_function_declaration(function, suffix);
 
   // map personality function
@@ -246,7 +246,7 @@ llvm::Function* Module::_clone_function(const llvm::Function& function, const st
   return cloned_function;
 }
 
-llvm::GlobalVariable* Module::_clone_global(const llvm::GlobalVariable& global) {
+llvm::GlobalVariable* JitModule::_clone_global(const llvm::GlobalVariable& global) {
   const auto cloned_global = new llvm::GlobalVariable(*_module, global.getValueType(), global.isConstant(),
                                                       global.getLinkage(), nullptr, global.getName(), nullptr,
                                                       global.getThreadLocalMode(), global.getType()->getAddressSpace());
@@ -269,7 +269,7 @@ llvm::GlobalVariable* Module::_clone_global(const llvm::GlobalVariable& global) 
   return cloned_global;
 }
 
-const RuntimePointer::Ptr& Module::_get_runtime_value(const llvm::Value* value) {
+const JitRuntimePointer::Ptr& JitModule::_get_runtime_value(const llvm::Value* value) {
   // try serving from cache
   if (_runtime_values.count(value)) {
     return _runtime_values[value];
@@ -280,7 +280,7 @@ const RuntimePointer::Ptr& Module::_get_runtime_value(const llvm::Value* value) 
       switch (constant_expr->getOpcode()) {
         case llvm::Instruction::IntToPtr:
           if (const auto address = llvm::dyn_cast<llvm::ConstantInt>(constant_expr->getOperand(0))) {
-            _runtime_values[value] = std::make_shared<ConstantRuntimePointer>(address->getValue().getLimitedValue());
+            _runtime_values[value] = std::make_shared<JitConstantRuntimePointer>(address->getValue().getLimitedValue());
           }
           break;
         default:
@@ -289,34 +289,34 @@ const RuntimePointer::Ptr& Module::_get_runtime_value(const llvm::Value* value) 
     }
   } else if (const auto load_inst = llvm::dyn_cast<llvm::LoadInst>(value)) {
     if (load_inst->getType()->isPointerTy()) {
-      if (const auto base = std::dynamic_pointer_cast<const KnownRuntimePointer>(
+      if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
               _get_runtime_value(load_inst->getPointerOperand()))) {
-        _runtime_values[value] = std::make_shared<DereferencedRuntimePointer>(base);
+        _runtime_values[value] = std::make_shared<JitDereferencedRuntimePointer>(base);
       }
     }
   } else if (const auto gep_inst = llvm::dyn_cast<llvm::GetElementPtrInst>(value)) {
     llvm::APInt offset(64, 0);
     if (gep_inst->accumulateConstantOffset(_module->getDataLayout(), offset)) {
       if (const auto base =
-              std::dynamic_pointer_cast<const KnownRuntimePointer>(_get_runtime_value(gep_inst->getPointerOperand()))) {
-        _runtime_values[value] = std::make_shared<OffsetRuntimePointer>(base, offset.getLimitedValue());
+              std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(gep_inst->getPointerOperand()))) {
+        _runtime_values[value] = std::make_shared<JitOffsetRuntimePointer>(base, offset.getLimitedValue());
       }
     }
   } else if (const auto bitcast_inst = llvm::dyn_cast<llvm::BitCastInst>(value)) {
     if (const auto base =
-            std::dynamic_pointer_cast<const KnownRuntimePointer>(_get_runtime_value(bitcast_inst->getOperand(0)))) {
-      _runtime_values[value] = std::make_shared<OffsetRuntimePointer>(base, 0L);
+            std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(bitcast_inst->getOperand(0)))) {
+      _runtime_values[value] = std::make_shared<JitOffsetRuntimePointer>(base, 0L);
     }
   }
 
   if (!_runtime_values.count(value)) {
-    _runtime_values[value] = std::make_shared<RuntimePointer>();
+    _runtime_values[value] = std::make_shared<JitRuntimePointer>();
   }
 
   return _runtime_values[value];
 }
 
-void Module::_rename_values() {
+void JitModule::_rename_values() {
   int32_t block_counter = 0;
   _visit<llvm::BasicBlock>([&](auto& block) { block.setName("b" + std::to_string(block_counter++)); });
 
@@ -329,7 +329,7 @@ void Module::_rename_values() {
 }
 
 template <typename T, typename U>
-void Module::_visit(U& element, std::function<void(T&)> fn) {
+void JitModule::_visit(U& element, std::function<void(T&)> fn) {
   // clang-format off
   if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::Module>) {
     for (auto& function : element) {
@@ -368,7 +368,7 @@ void Module::_visit(U& element, std::function<void(T&)> fn) {
 }
 
 template <typename T>
-void Module::_visit(std::function<void(T&)> fn) {
+void JitModule::_visit(std::function<void(T&)> fn) {
   _visit(*_root_function, fn);
 }
 

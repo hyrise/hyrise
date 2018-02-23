@@ -395,8 +395,11 @@ if (NOT DISABLE_JIT_SUPPORT)
         operators/jit_operator.hpp
         operators/jit_operator/specialization/jit_compiler.cpp
         operators/jit_operator/specialization/jit_compiler.hpp
+        operators/jit_operator/specialization/jit_module.cpp
+        operators/jit_operator/specialization/jit_module.hpp
         operators/jit_operator/specialization/jit_repository.cpp
         operators/jit_operator/specialization/jit_repository.hpp
+        operators/jit_operator/specialization/jit_runtime_pointer.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE}

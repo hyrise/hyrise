@@ -5,22 +5,22 @@
 
 #include <stack>
 
-#include "ir_repository.hpp"
+#include "jit_repository.hpp"
 #include "jit_compiler.hpp"
-#include "runtime_pointer.hpp"
+#include "jit_runtime_pointer.hpp"
 
 namespace opossum {
 
-class RTTIHelper {
+class JitRTTIHelper {
  private:
   virtual void _() const {}
 };
 
-class Module {
+class JitModule {
  public:
-  explicit Module(const std::string& root_function_name);
+  explicit JitModule(const std::string& root_function_name);
 
-  void specialize(const RuntimePointer::Ptr& runtime_this);
+  void specialize(const JitRuntimePointer::Ptr& runtime_this);
 
   template <typename T>
   std::function<T> compile() {
@@ -34,7 +34,7 @@ class Module {
   }
 
  private:
-  bool _specialize(const RuntimePointer::Ptr& runtime_this);
+  bool _specialize(const JitRuntimePointer::Ptr& runtime_this);
 
   void _optimize();
 
@@ -46,7 +46,7 @@ class Module {
 
   llvm::GlobalVariable* _clone_global(const llvm::GlobalVariable& global);
 
-  const RuntimePointer::Ptr& _get_runtime_value(const llvm::Value* value);
+  const JitRuntimePointer::Ptr& _get_runtime_value(const llvm::Value* value);
 
   void _rename_values();
 
@@ -56,7 +56,7 @@ class Module {
   template <typename T>
   void _visit(std::function<void(T&)> fn);
 
-  const IRRepository& _repository;
+  const JitRepository& _repository;
   std::unique_ptr<llvm::Module> _module;
   JitCompiler _compiler;
 
@@ -64,7 +64,7 @@ class Module {
   llvm::Function* _root_function;
   bool _modified;
   llvm::ValueToValueMapTy _llvm_value_map;
-  std::unordered_map<const llvm::Value*, RuntimePointer::Ptr> _runtime_values;
+  std::unordered_map<const llvm::Value*, JitRuntimePointer::Ptr> _runtime_values;
 };
 
 }  // namespace opossum
