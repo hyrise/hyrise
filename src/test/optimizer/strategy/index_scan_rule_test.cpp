@@ -65,13 +65,13 @@ class IndexScanRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -80,7 +80,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
@@ -88,8 +88,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -98,7 +98,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
   table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
@@ -106,8 +106,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -116,13 +116,13 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, ColumnID{1});
+  auto predicate_node_0 = PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}},
+                                              PredicateCondition::GreaterThan, ColumnID{1});
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -131,7 +131,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
@@ -139,8 +139,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>(80'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -149,7 +149,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
   table->create_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
@@ -157,8 +157,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -167,7 +167,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
@@ -175,8 +175,8 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -185,7 +185,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
@@ -193,12 +193,12 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
   auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference{predicate_node_0, ColumnID{1}},
-                                                          PredicateCondition::LessThan, 15);
+  auto predicate_node_1 =
+      PredicateNode::make(LQPColumnReference{predicate_node_0, ColumnID{1}}, PredicateCondition::LessThan, 15);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);

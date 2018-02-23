@@ -42,7 +42,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
         adapt_column_reference_to_different_lqp(groupby_column_reference, left_child(), copied_left_child));
   }
 
-  return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_references);
+  return AggregateNode::make(aggregate_expressions, groupby_column_references);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {
@@ -180,6 +180,16 @@ std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
   }
 
   return std::nullopt;
+}
+
+bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
+
+  Assert(left_child() && rhs.left_child(), "Can't compare column references without children");
+  return _equals(*left_child(), _aggregate_expressions, *rhs.left_child(), aggregate_node.aggregate_expressions()) &&
+         _equals(*left_child(), _groupby_column_references, *rhs.left_child(),
+                 aggregate_node.groupby_column_references());
 }
 
 void AggregateNode::_update_output() const {

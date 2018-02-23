@@ -9,6 +9,11 @@
 
 namespace opossum {
 
+// We need a boolean data type in the JitOperator, but don't want to add it to
+// DATA_TYPE_INFO to avoid costly template instantiations.
+// See "all_type_variant.hpp" for details.
+#define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
+
 #define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
 
@@ -68,7 +73,7 @@ namespace opossum {
 class JitVariantVector {
  public:
   void resize(const size_t new_size) {
-    BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, DATA_TYPE_INFO)
+    BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO)
     _is_null.resize(new_size);
   }
 
@@ -80,7 +85,7 @@ class JitVariantVector {
   bool set_is_null(const size_t index, const bool is_null) { return _is_null[index]; }
 
  private:
-  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, DATA_TYPE_INFO)
+  BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
   std::vector<uint8_t> _is_null;
 };
 

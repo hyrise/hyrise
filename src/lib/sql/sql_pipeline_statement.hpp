@@ -69,6 +69,8 @@ class SQLPipelineStatement : public Noncopyable {
   std::chrono::microseconds compile_time_microseconds() const;
   std::chrono::microseconds execution_time_microseconds() const;
 
+  bool query_plan_cache_hit() const;
+
   // Helper function to create a pretty print error message after an invalid SQL parse
   static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
 
@@ -93,6 +95,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
+  bool _query_plan_cache_hit = false;
 
   // Execution times
   std::chrono::microseconds _compile_time_micros;
