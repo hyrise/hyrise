@@ -82,7 +82,7 @@ class JitVariantVector {
   template <typename T>
   void set(const size_t index, const T value);
   bool is_null(const size_t index) { return _is_null[index]; }
-  bool set_is_null(const size_t index, const bool is_null) { return _is_null[index]; }
+  void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
 
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
