@@ -11,6 +11,11 @@ namespace opossum {
 template <typename IterableT>
 class AnyColumnIterable;
 
+/**
+ * @defgroup AnyColumnIterable Traits
+ * @{
+ */
+
 template <typename IterableT>
 struct is_any_column_iterable : std::false_type {};
 
@@ -19,11 +24,21 @@ struct is_any_column_iterable<AnyColumnIterable<IterableT>> : std::true_type {};
 
 template <typename IterableT>
 constexpr auto is_any_column_iterable_v = is_any_column_iterable<IterableT>::value;
+/**@}*/
 
 /**
  * @brief Makes any column iterable return type erased iterators
  *
- * The iterators forwarded are of type AnyColumnIterator<T>.
+ * AnyColumnIterable’s sole reason for existence is compile speed.
+ * Since iterables are almost always used in highly templated code,
+ * the functor or lambda passed to their with_iterators methods is
+ * called using many different iterators, which leads to a lot of code
+ * being generated. This affects compile times. The AnyColumnIterator
+ * alleviate the long compile times by erasing the iterators’ types and
+ * thus reducing the number of instantiations to one (for each column type).
+ *
+ * The iterators forwarded are of type AnyColumnIterator<T>. They wrap
+ * any column iterator with the cost of a virtual function call for each access.
  */
 template <typename IterableT>
 class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable<IterableT>> {
@@ -76,6 +91,20 @@ auto erase_type_from_iterable(const IterableT& iterable) {
     return AnyColumnIterable{iterable};
   }
   // clang-format on
+}
+
+/**
+ * In debug mode, this function returns a type erased version
+ * of the passed iterable, i.e., all iterators have the same type,
+ * which greatly reduces compile times.
+ */
+template <typename Iterable>
+decltype(auto) may_erase_type_from_iterable(const Iterable& iterable) {
+#if IS_DEBUG
+  return erase_type_from_iterable(iterable);
+#else
+  return iterable;
+#endif
 }
 
 }  // namespace opossum

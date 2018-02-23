@@ -8,6 +8,11 @@ namespace opossum {
 
 namespace detail {
 
+/**
+ * Emulates a base class for column iterators with a virtual interface.
+ * It duplicates all methods implemented by column iterators and
+ * makes the virtual.
+ */
 template <typename T>
 class AnyColumnIteratorWrapperBase {
  public:
@@ -16,9 +21,20 @@ class AnyColumnIteratorWrapperBase {
   virtual void increment() = 0;
   virtual bool equal(const AnyColumnIteratorWrapperBase<T>* other) const = 0;
   virtual ColumnIteratorValue<T> dereference() const = 0;
+
+  /**
+   * Column iterators need to be copyable so we need a way
+   * to copy the iterator within the wrapper.
+   */
   virtual std::unique_ptr<AnyColumnIteratorWrapperBase<T>> clone() const = 0;
 };
 
+/**
+ * @brief The class where the wrapped iterator’s methods are called.
+ *
+ * Passes the virtual method call on to the non-virtual methods of the
+ * iterator class passed as template argument.
+ */
 template <typename T, typename Iterator>
 class AnyColumnIteratorWrapper : public AnyColumnIteratorWrapperBase<T> {
  public:
@@ -26,11 +42,12 @@ class AnyColumnIteratorWrapper : public AnyColumnIteratorWrapperBase<T> {
 
   void increment() final { ++_iterator; }
 
+  /**
+   * Although `other` could have a different type, it is practically impossible,
+   * since AnyColumnIterator is only used within AnyColumnIterable.
+   */
   bool equal(const AnyColumnIteratorWrapperBase<T>* other) const final {
-    const auto casted_other = dynamic_cast<const AnyColumnIteratorWrapper<T, Iterator>*>(other);
-
-    if (casted_other == nullptr) return false;
-
+    const auto casted_other = static_cast<const AnyColumnIteratorWrapper<T, Iterator>*>(other);
     return _iterator == casted_other->_iterator;
   }
 
@@ -51,6 +68,19 @@ class AnyColumnIteratorWrapper : public AnyColumnIteratorWrapperBase<T> {
 
 /**
  * @brief Erases the type of any column iterator
+ *
+ * Erases the type of any column iterator by wrapping it
+ * in a templated class inheriting from a common base class.
+ * The base class specifies a virtual interface which is
+ * implemented by the templated sub-class.
+ *
+ * AnyColumnIterator inherits from BaseColumnIterator and
+ * thus has the same interface as all other column iterators.
+ *
+ * AnyColumnIterator exists only the improve compile times and should
+ * not be used outside of AnyColumnIterable.
+ *
+ * For another example for type erasure see: https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure
  */
 template <typename T>
 class AnyColumnIterator : public BaseColumnIterator<AnyColumnIterator<T>, ColumnIteratorValue<T>> {

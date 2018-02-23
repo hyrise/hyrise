@@ -1,37 +1,16 @@
 #pragma once
 
+#include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
 
-#if IS_DEBUG
-#include "storage/column_iterables/any_column_iterable.hpp"
-#endif
-
 namespace opossum {
 
 template <typename T>
 class ReferenceColumnIterable;
-
-namespace detail {
-
-/**
- * In debug mode, this function returns a type erased version
- * of the passed iterable, i.e., all iterators have the same type,
- * which greatly reduces compile times.
- */
-template <typename Iterable>
-decltype(auto) may_erase_type(const Iterable& iterable) {
-#if IS_DEBUG
-  return erase_type_from_iterable(iterable);
-#else
-  return iterable;
-#endif
-}
-
-}  // namespace detail
 
 /**
  * @defgroup Uniform interface to create an iterable from a column
@@ -50,22 +29,22 @@ decltype(auto) may_erase_type(const Iterable& iterable) {
 
 template <typename T>
 auto create_iterable_from_column(const ValueColumn<T>& column) {
-  return detail::may_erase_type(ValueColumnIterable<T>{column});
+  return may_erase_type_from_iterable(ValueColumnIterable<T>{column});
 }
 
 template <typename T>
 auto create_iterable_from_column(const DeprecatedDictionaryColumn<T>& column) {
-  return detail::may_erase_type(DeprecatedDictionaryColumnIterable<T>{column});
+  return may_erase_type_from_iterable(DeprecatedDictionaryColumnIterable<T>{column});
 }
 
 template <typename T>
 auto create_iterable_from_column(const DictionaryColumn<T>& column) {
-  return detail::may_erase_type(DictionaryColumnIterable<T>{column});
+  return may_erase_type_from_iterable(DictionaryColumnIterable<T>{column});
 }
 
 template <typename T>
 auto create_iterable_from_column(const RunLengthColumn<T>& column) {
-  return detail::may_erase_type(RunLengthColumnIterable<T>{column});
+  return may_erase_type_from_iterable(RunLengthColumnIterable<T>{column});
 }
 
 /**
