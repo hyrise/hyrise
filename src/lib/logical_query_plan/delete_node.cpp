@@ -14,7 +14,7 @@ DeleteNode::DeleteNode(const std::string& table_name) : AbstractLQPNode(LQPNodeT
 std::shared_ptr<AbstractLQPNode> DeleteNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_left_child,
     const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  return std::make_shared<DeleteNode>(_table_name);
+  return DeleteNode::make(_table_name);
 }
 
 std::string DeleteNode::description() const {
@@ -28,5 +28,12 @@ std::string DeleteNode::description() const {
 bool DeleteNode::subtree_is_read_only() const { return false; }
 
 const std::string& DeleteNode::table_name() const { return _table_name; }
+
+bool DeleteNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& delete_node = static_cast<const DeleteNode&>(rhs);
+
+  return _table_name == delete_node._table_name;
+}
 
 }  // namespace opossum

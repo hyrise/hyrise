@@ -13,7 +13,7 @@ class LQPExpression;
 /**
  * Node type to represent updates (i.e., invalidation and inserts) in a table.
  */
-class UpdateNode : public AbstractLQPNode {
+class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNode {
  public:
   explicit UpdateNode(const std::string& table_name,
                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
@@ -24,6 +24,8 @@ class UpdateNode : public AbstractLQPNode {
   const std::string& table_name() const;
 
   const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
+
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(

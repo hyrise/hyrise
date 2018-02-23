@@ -5,6 +5,7 @@ set(
     abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
+    all_type_variant.cpp
     all_type_variant.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
@@ -202,8 +203,6 @@ set(
     sql/sql_planner.cpp
     sql/sql_planner.hpp
     sql/sql_query_cache.hpp
-    sql/sql_query_operator.cpp
-    sql/sql_query_operator.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
     sql/sql_result_operator.cpp
