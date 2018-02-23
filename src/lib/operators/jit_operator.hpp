@@ -17,10 +17,12 @@ namespace opossum {
  */
 class JitOperator : public AbstractReadOnlyOperator {
  public:
-  explicit JitOperator(const std::shared_ptr<const AbstractOperator> left);
+  explicit JitOperator(const std::shared_ptr<const AbstractOperator> left,
+                       const std::vector<JitAbstractOperator::Ptr>& operators = {});
 
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const final;
 
   void add_jit_operator(const JitAbstractOperator::Ptr& op);
 
