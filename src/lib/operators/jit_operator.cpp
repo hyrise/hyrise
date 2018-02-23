@@ -2,7 +2,9 @@
 
 namespace opossum {
 
-JitOperator::JitOperator(const std::shared_ptr<const AbstractOperator> left) : AbstractReadOnlyOperator{left} {}
+JitOperator::JitOperator(const std::shared_ptr<const AbstractOperator> left,
+                         const std::vector<JitAbstractOperator::Ptr>& operators)
+    : AbstractReadOnlyOperator{left}, _operators{operators} {}
 
 const std::string JitOperator::name() const { return "JitOperator"; }
 
@@ -14,6 +16,10 @@ const std::string JitOperator::description(DescriptionMode description_mode) con
     desc << op->description() << separator;
   }
   return desc.str();
+}
+
+std::shared_ptr<AbstractOperator> JitOperator::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<JitOperator>(input_left()->recreate(args), _operators);
 }
 
 void JitOperator::add_jit_operator(const JitAbstractOperator::Ptr& op) { _operators.push_back(op); }
