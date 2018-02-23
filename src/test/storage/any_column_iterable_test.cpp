@@ -8,7 +8,7 @@
 
 #include "storage/value_column.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
-#include "storage/value_column/any_column_iterable.hpp"
+#include "storage/column_iterables/any_column_iterable.hpp"
 
 namespace opossum {
 
@@ -76,7 +76,7 @@ TEST_F(AnyColumnIterableTest, RandomlyIterateOverColumn) {
   auto iterable = ValueColumnIterable<int32_t>{*_column};
   auto any_iterable = AnyColumnIterable{iterable};
 
-  chunk_offsets_list = create_sequential_chunk_offsets_list();
+  const auto chunk_offsets_list = create_sequential_chunk_offsets_list();
 
   iterable.with_iterators(&chunk_offsets_list, [&](auto it, auto end) {
     any_iterable.with_iterators(&chunk_offsets_list, [&](auto any_it, auto any_end) {

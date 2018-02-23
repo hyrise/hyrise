@@ -34,7 +34,7 @@ constexpr auto is_any_column_iterable_v = is_any_column_iterable<IterableT>::val
  * the functor or lambda passed to their with_iterators methods is
  * called using many different iterators, which leads to a lot of code
  * being generated. This affects compile times. The AnyColumnIterator
- * alleviate the long compile times by erasing the iterators’ types and
+ * alleviates the long compile times by erasing the iterators’ types and
  * thus reducing the number of instantiations to one (for each column type).
  *
  * The iterators forwarded are of type AnyColumnIterator<T>. They wrap

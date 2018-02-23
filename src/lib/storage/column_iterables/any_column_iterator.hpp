@@ -66,6 +66,9 @@ class AnyColumnIteratorWrapper : public AnyColumnIteratorWrapperBase<T> {
 
 }  // namespace detail
 
+template <typename IterableT>
+class AnyColumnIterable;
+
 /**
  * @brief Erases the type of any column iterator
  *
@@ -77,18 +80,29 @@ class AnyColumnIteratorWrapper : public AnyColumnIteratorWrapperBase<T> {
  * AnyColumnIterator inherits from BaseColumnIterator and
  * thus has the same interface as all other column iterators.
  *
- * AnyColumnIterator exists only the improve compile times and should
+ * AnyColumnIterator exists only to improve compile times and should
  * not be used outside of AnyColumnIterable.
  *
  * For another example for type erasure see: https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure
  */
 template <typename T>
 class AnyColumnIterator : public BaseColumnIterator<AnyColumnIterator<T>, ColumnIteratorValue<T>> {
- public:
+ private:
+  /**
+   * Prevents AnyColumnIterator from being created
+   * by anything else but AnyColumnIterable
+   *
+   * @{
+   */
+  template <typename U>
+  friend class AnyColumnIterable;
+
   template <typename Iterator>
   explicit AnyColumnIterator(const Iterator& iterator)
       : _wrapper{std::make_unique<detail::AnyColumnIteratorWrapper<T, Iterator>>(iterator)} {}
+  /**@}*/
 
+ public:
   AnyColumnIterator(const AnyColumnIterator& other) : _wrapper{other._wrapper->clone()} {}
 
  private:
