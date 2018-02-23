@@ -1,4 +1,4 @@
-#include "ir_repository.hpp"
+#include "jit_repository.hpp"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -12,16 +12,16 @@
 namespace opossum {
 
 // singleton
-IRRepository& IRRepository::get() {
-  static IRRepository instance;
+JitRepository& JitRepository::get() {
+  static JitRepository instance;
   return instance;
 }
 
-const llvm::Function* IRRepository::get_function(const std::string& name) const {
+const llvm::Function* JitRepository::get_function(const std::string& name) const {
   return _functions.count(name) ? _functions.at(name) : nullptr;
 }
 
-const llvm::Function* IRRepository::get_vtable_entry(const std::string& class_name, const size_t index) const {
+const llvm::Function* JitRepository::get_vtable_entry(const std::string& class_name, const size_t index) const {
   const auto vtable_name = vtable_prefix + class_name;
   if (_vtables.count(vtable_name) && _vtables.at(vtable_name).size() > index) {
     return _vtables.at(vtable_name)[index];
@@ -29,9 +29,9 @@ const llvm::Function* IRRepository::get_vtable_entry(const std::string& class_na
   return nullptr;
 }
 
-std::shared_ptr<llvm::LLVMContext> IRRepository::llvm_context() const { return _llvm_context; }
+std::shared_ptr<llvm::LLVMContext> JitRepository::llvm_context() const { return _llvm_context; }
 
-IRRepository::IRRepository()
+JitRepository::JitRepository()
     : _llvm_context{std::make_shared<llvm::LLVMContext>()},
       _module{_parse_module(std::string(&jit_llvm_bundle, jit_llvm_bundle_size), *_llvm_context)} {
   llvm::StripDebugInfo(*_module);
@@ -63,7 +63,7 @@ IRRepository::IRRepository()
   // _dump(std::cout);
 }
 
-std::unique_ptr<llvm::Module> IRRepository::_parse_module(const std::string& module_string,
+std::unique_ptr<llvm::Module> JitRepository::_parse_module(const std::string& module_string,
                                                           llvm::LLVMContext& context) const {
   llvm::SMDiagnostic error;
   const auto buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(module_string));
@@ -76,7 +76,7 @@ std::unique_ptr<llvm::Module> IRRepository::_parse_module(const std::string& mod
   return module;
 }
 
-void IRRepository::_dump(std::ostream& os) const {
+void JitRepository::_dump(std::ostream& os) const {
   os << "IR Repository" << std::endl;
   os << "--- functions ---" << std::endl;
   for (const auto& fn : _functions) {

@@ -16,9 +16,9 @@ extern char jit_llvm_bundle;
 extern size_t jit_llvm_bundle_size;
 
 // Singleton
-class IRRepository : private Noncopyable {
+class JitRepository : private Noncopyable {
  public:
-  static IRRepository& get();
+  static JitRepository& get();
 
   const llvm::Function* get_function(const std::string& name) const;
   const llvm::Function* get_vtable_entry(const std::string& class_name, const size_t index) const;
@@ -26,7 +26,7 @@ class IRRepository : private Noncopyable {
   std::shared_ptr<llvm::LLVMContext> llvm_context() const;
 
  private:
-  IRRepository();
+  JitRepository();
 
   std::unique_ptr<llvm::Module> _parse_module(const std::string& module_string, llvm::LLVMContext& context) const;
   void _dump(std::ostream& os) const;
