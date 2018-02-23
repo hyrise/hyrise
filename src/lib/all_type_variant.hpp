@@ -55,7 +55,7 @@ namespace detail {
 // We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in
 // "lib/operators/jit_operator/jit_types.hpp".
 // We need to append to the end of the enum to not break the matching of indices between DataType and AllTypeVariant.
-enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES), Bool};
+enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES), Bool };
 
 static constexpr auto data_types = hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
 static constexpr auto data_type_enum_values =
