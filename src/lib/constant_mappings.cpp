@@ -6,7 +6,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "operators/jit_operator/jit_types.hpp"
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 

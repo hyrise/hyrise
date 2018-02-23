@@ -21,6 +21,13 @@ class TableStatistics;
 QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
     : column_name(column_name), table_name(table_name) {}
 
+std::string QualifiedColumnName::as_string() const {
+  std::stringstream ss;
+  if (table_name) ss << *table_name << ".";
+  ss << column_name;
+  return ss.str();
+}
+
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
@@ -47,6 +54,21 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
 
   return parents;
 }
+
+std::vector<LQPParentRelation> AbstractLQPNode::parent_relations() const {
+  std::vector<LQPParentRelation> parent_relations(parent_count());
+
+  const auto parents = this->parents();
+  const auto child_sides = get_child_sides();
+
+  for (size_t parent_idx = 0; parent_idx < parent_relations.size(); ++parent_idx) {
+    parent_relations[parent_idx] = LQPParentRelation{parents[parent_idx], child_sides[parent_idx]};
+  }
+
+  return parent_relations;
+}
+
+size_t AbstractLQPNode::parent_count() const { return _parents.size(); }
 
 void AbstractLQPNode::remove_parent(const std::shared_ptr<AbstractLQPNode>& parent) {
   const auto child_side = get_child_side(parent);
@@ -569,13 +591,6 @@ bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left, const LQPColumnRe
       column_reference_left, mutable_lqp_left.shared_from_this(), mutable_lqp_right.shared_from_this());
 
   return column_reference_left_adapted_to_right == column_reference_right;
-}
-
-std::string QualifiedColumnName::as_string() const {
-  std::stringstream ss;
-  if (table_name) ss << *table_name << ".";
-  ss << column_name;
-  return ss.str();
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
