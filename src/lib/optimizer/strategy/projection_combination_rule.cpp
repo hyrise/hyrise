@@ -16,7 +16,6 @@ bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
     return _apply_to_children(node);
   }
 
-  // auto tree_altered = false;
   std::vector<std::shared_ptr<ProjectionNode>> projection_nodes;
 
   // Gather subsequent ProjectionNodes
@@ -82,10 +81,6 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     if (!column_reference_replaced) {
       column_expressions.push_back(expression);
     }
-  }
-
-  for (auto& projection : projections) {
-    projection->remove_from_tree();
   }
 
   auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
