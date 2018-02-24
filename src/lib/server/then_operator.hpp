@@ -72,7 +72,7 @@ auto invoke(boost::future<void>&& lhs, then_t, F&& f) -> typename std::enable_if
               return std::move(f)();
             })
       .unwrap();
-};
+}
 
 // handle future<T> inputs with lambdas producing future<*> outputs
 template <class T, class F, class R = std::result_of_t<std::decay_t<F>(T)>>
@@ -83,7 +83,7 @@ auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> typename std::enable_if<is
               return std::move(f)(std::forward<T>(fut.get()));
             })
       .unwrap();
-};
+}
 
 // handle future<void> inputs
 template <class F, class R = std::result_of_t<std::decay_t<F>()>>
@@ -93,7 +93,7 @@ auto invoke(boost::future<void>&& lhs, then_t, F&& f) ->
     fut.get();
     return std::move(f)();
   });
-};
+}
 
 // handle future<T> inputs
 template <class T, class F, class R = std::result_of_t<std::decay_t<F>(T)>>
@@ -102,7 +102,7 @@ auto invoke(boost::future<T>&& lhs, then_t, F&& f) ->
   return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut) mutable->R {
     return std::move(f)(std::forward<T>(fut.get()));
   });
-};
+}
 
 }  // namespace then_operator
 }  // namespace opossum
