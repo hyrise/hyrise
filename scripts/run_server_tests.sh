@@ -38,7 +38,7 @@ RUN_TEST "LOAD TABLE" "LOAD src/test/tables/int.tbl foo;"
 # TEST 2: simple select statement
 RUN_TEST "SIMPLE QUERY" "SELECT * FROM foo LIMIT 2;"
 
-# TEST 3: complex statement 1
+# TEST 3: complex statement
 # ...
 
 # stop server
