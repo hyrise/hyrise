@@ -80,7 +80,8 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionInProjectionTest) {
 }
 
 TEST_F(ConstantCalculationRuleTest, ResolveMultipleExpressionsTest) {
-  const auto query = "SELECT 100, a FROM (SELECT * FROM table_a WHERE b = 10.0 / 2.5) as table_b WHERE a = 120 + 1 + 1 + 1";
+  const auto query =
+      "SELECT 100, a FROM (SELECT * FROM table_a WHERE b = 10.0 / 2.5) as table_b WHERE a = 120 + 1 + 1 + 1";
   const auto result_node = compile_query(query);
 
   const auto resolved = StrategyBaseTest::apply_rule(_rule, result_node);
@@ -99,7 +100,8 @@ TEST_F(ConstantCalculationRuleTest, ResolveMultipleExpressionsTest) {
   EXPECT_EQ(predicate_node_1->left_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
 
   ASSERT_EQ(predicate_node_1->left_child()->left_child()->left_child()->left_child()->type(), LQPNodeType::Predicate);
-  const auto predicate_node_2 = std::dynamic_pointer_cast<PredicateNode>(predicate_node_1->left_child()->left_child()->left_child()->left_child());
+  const auto predicate_node_2 = std::dynamic_pointer_cast<PredicateNode>(
+      predicate_node_1->left_child()->left_child()->left_child()->left_child());
   EXPECT_FALSE(predicate_node_2->right_child());
   EXPECT_EQ(predicate_node_2->predicate_condition(), PredicateCondition::Equals);
 
