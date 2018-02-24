@@ -10,7 +10,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_operator.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -24,26 +24,22 @@ class SQLQueryPlanTest : public BaseTest {
 
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
-
-    SQLQueryOperator::get_parse_tree_cache().resize(0);
-    SQLQueryOperator::get_query_plan_cache().resize(0);
   }
 };
 
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   std::string query1 = "SELECT a FROM table_a;";
 
-  SQLQueryOperator op(query1, false, false);
-  op.execute();
+  SQLPipelineStatement pipeline_statement{query1, UseMvcc::No};
 
   // Get the query plan.
-  const SQLQueryPlan& plan1 = op.get_query_plan();
-  auto tasks = plan1.create_tasks();
+  const auto& plan1 = pipeline_statement.get_query_plan();
+  auto tasks = plan1->create_tasks();
   ASSERT_EQ(2u, tasks.size());
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
 
-  const SQLQueryPlan plan2 = plan1.recreate();
+  const auto plan2 = plan1->recreate();
   auto cloned_tasks = plan2.create_tasks();
   ASSERT_EQ(2u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
@@ -69,22 +65,20 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   std::string query1 = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9;";
 
   // Generate query plan.
-  SQLQueryOperator op(query1, false, false);
-  op.execute();
+  SQLPipelineStatement pipeline_statement{query1, UseMvcc::No};
 
   // Get the query plan template.
-  const SQLQueryPlan& tmpl = op.get_query_plan();
-  auto tmpl_tasks = tmpl.create_tasks();
+  const auto& tmpl = pipeline_statement.get_query_plan();
 
   // Get a copy and schedule all tasks.
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
 
-  auto cloned_tasks = tmpl.recreate().create_tasks();
+  auto cloned_tasks = tmpl->recreate().create_tasks();
   for (auto task : cloned_tasks) {
     task->schedule();
   }
 
-  auto cloned_tasks2 = tmpl.recreate().create_tasks();
+  auto cloned_tasks2 = tmpl->recreate().create_tasks();
   for (auto task : cloned_tasks2) {
     task->schedule();
   }

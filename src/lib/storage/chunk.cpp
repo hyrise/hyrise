@@ -44,8 +44,6 @@ Chunk::Chunk(const ChunkColumnList& columns,
   }
 
   if (alloc) _alloc = *alloc;
-
-  _is_mutable = std::all_of(_columns.begin(), _columns.end(), [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
 }
 
 Chunk::Chunk(const ChunkColumnList& columns,
@@ -63,12 +61,10 @@ Chunk::Chunk(const ChunkColumnList& columns,
 #endif
 
   if (alloc) _alloc = *alloc;
-
-  _is_mutable = std::all_of(_columns.begin(), _columns.end(), [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
 }
 
 bool Chunk::is_mutable() const {
-  return _is_mutable;
+  return std::all_of(_columns.begin(), _columns.end(), [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
 }
 
 void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {

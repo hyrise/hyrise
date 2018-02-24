@@ -56,9 +56,6 @@ void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
                    const std::shared_ptr<const AbstractLQPNode>& child);
 
-bool subtree_types_are_equal(const std::shared_ptr<AbstractLQPNode>& got,
-                             const std::shared_ptr<AbstractLQPNode>& expected);
-
 template <typename Functor>
 bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
   if (node == nullptr) return false;
@@ -129,3 +126,16 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 
 #define ASSERT_LQP_TIE(parent, child_side, child) \
   if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
+
+#define EXPECT_LQP_EQ(lhs, rhs)                                  \
+  {                                                              \
+    const auto mismatch = lhs->find_first_subplan_mismatch(rhs); \
+    if (mismatch) {                                              \
+      std::cout << "Differing subtrees" << std::endl;            \
+      mismatch->first->print();                                  \
+      std::cout << std::endl;                                    \
+      mismatch->second->print();                                 \
+      std::cout << std::endl;                                    \
+      GTEST_FAIL();                                              \
+    }                                                            \
+  }

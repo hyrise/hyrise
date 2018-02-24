@@ -158,19 +158,6 @@ void Table::add_chunk_new(const ChunkColumnList& columns,
   _chunks.emplace_back(std::make_shared<Chunk>(columns, _use_mvcc, alloc, access_counter));
 }
 
-void Table::replace_chunk(const ChunkID chunk_id, const ChunkColumnList& columns,
-                                            const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                                            const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
-  Assert(chunk_id < chunk_count(), "ChunkID out of range");
-  std::shared_ptr<Chunk> chunk;
-  if (_use_mvcc == UseMvcc::Yes) {
-    chunk = std::make_shared<Chunk>(columns, _chunks[chunk_id]->mvcc_columns(), alloc, access_counter);
-  } else {
-    chunk = std::make_shared<Chunk>(columns, UseMvcc::No, alloc, access_counter);
-  }
-  std::atomic_exchange(&_chunks[chunk_id], chunk);
-}
-
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }

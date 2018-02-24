@@ -19,7 +19,6 @@
 #include "types.hpp"
 #include "table_column_definition.hpp"
 #include "utils/copyable_atomic.hpp"
-#include "utils/format_bytes.hpp"
 #include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
@@ -228,7 +227,6 @@ class Chunk : private Noncopyable {
  private:
   PolymorphicAllocator<Chunk> _alloc;
   ChunkColumnList _columns;
-  bool _is_mutable;
   std::shared_ptr<MvccColumns> _mvcc_columns;
   std::shared_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;

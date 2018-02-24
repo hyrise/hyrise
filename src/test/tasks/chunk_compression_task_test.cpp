@@ -10,18 +10,13 @@
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
 #include "storage/base_deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
 namespace opossum {
 
-class ChunkCompressionTaskTest : public BaseTest {
- protected:
-  void SetUp() override {}
-
- private:
-};
+class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   auto table = load_table("src/test/tables/compression_input.tbl", 12u);

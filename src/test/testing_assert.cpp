@@ -283,15 +283,4 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChil
   return false;
 }
 
-bool subtree_types_are_equal(const std::shared_ptr<AbstractLQPNode>& got,
-                             const std::shared_ptr<AbstractLQPNode>& expected) {
-  if (got == nullptr && expected == nullptr) return true;
-  if (got == nullptr) return false;
-  if (expected == nullptr) return false;
-
-  if (got->type() != expected->type()) return false;
-  return subtree_types_are_equal(got->left_child(), expected->left_child()) &&
-         subtree_types_are_equal(got->right_child(), expected->right_child());
-}
-
 }  // namespace opossum

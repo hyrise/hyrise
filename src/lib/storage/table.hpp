@@ -69,10 +69,6 @@ class Table : private Noncopyable {
                                        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                                        const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
 
-  void replace_chunk(const ChunkID chunk_id, const ChunkColumnList& columns,
-                                       const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                                       const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
-
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   uint32_t max_chunk_size() const;
 
