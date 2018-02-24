@@ -50,20 +50,20 @@ class NUMAPlacementTest : public BaseTest {
 
   // Creates a table with a single column and increasing integers modulo 1000.
   std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
-    auto table = std::make_shared<Table>(num_rows_per_chunk);
-    table->add_column("a", DataType::Int, false);
+    auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data, UseMvcc::Yes, num_rows_per_chunk);
 
     for (size_t i = 0; i < num_chunks; i++) {
+      ChunkColumnList columns;
+
       const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));
-      auto chunk = std::make_shared<Chunk>(alloc, UseMvcc::Yes, ChunkUseAccessCounter::Yes);
       auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
       auto& values = value_column->values();
       values.reserve(num_rows_per_chunk);
       for (size_t row = 0; row < num_rows_per_chunk; row++) {
         values.push_back(static_cast<int>(row % 1000));
       }
-      chunk->add_column(value_column);
-      table->emplace_chunk(std::move(chunk));
+      columns.emplace_back(value_column);
+      table->add_chunk_new(columns, alloc, std::make_shared<Chunk::AccessCounter>(alloc));
     }
     DeprecatedDictionaryCompression::compress_table(*table);
     return table;

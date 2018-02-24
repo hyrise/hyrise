@@ -6,6 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
+#include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {
@@ -47,7 +48,7 @@ class DeprecatedDictionaryCompression {
    * @param column_types from the chunk’s table
    * @param chunk to be compressed
    */
-  static void compress_columns(const std::vector<DataType>& column_types, std::vector<std::shared_ptr<BaseColumn>> &columns,
+  static ChunkColumnList compress_columns(const std::vector<DataType>& column_types, const ChunkColumnList &columns,
                              EncodingType encoding_type = EncodingType::DeprecatedDictionary);
 
   static void compress_chunk(Table& table, const ChunkID chunk_id, EncodingType encoding_type = EncodingType::DeprecatedDictionary);

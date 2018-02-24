@@ -32,6 +32,8 @@ class Table : private Noncopyable {
 
   TableType type() const;
 
+  UseMvcc has_mvcc() const;
+
   // Returns the number of columns
   size_t column_count() const;
 
@@ -42,12 +44,17 @@ class Table : private Noncopyable {
   DataType column_data_type(const ColumnID column_id) const;
   std::vector<DataType> column_data_types() const;
 
-  bool column_nullable(const ColumnID column_id) const;
+  bool column_is_nullable(const ColumnID column_id) const;
+  std::vector<bool> columns_are_nullable() const;
+
+  ColumnID column_id_by_name(const std::string& column_name) const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
   // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
+
+  bool empty() const;
 
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
@@ -58,7 +65,11 @@ class Table : private Noncopyable {
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
-  std::shared_ptr<Chunk> add_chunk_new(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+  void add_chunk_new(const ChunkColumnList& columns,
+                                       const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+                                       const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
+
+  void replace_chunk(const ChunkID chunk_id, const ChunkColumnList& columns,
                                        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                                        const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
 
@@ -68,6 +79,9 @@ class Table : private Noncopyable {
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
+
+  // Create and append a Chunk consisting of ValueColumns.
+  void append_mutable_chunk();
 
   // returns one materialized value
   // multiversion concurrency control values of chunks are ignored

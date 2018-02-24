@@ -21,17 +21,15 @@ std::shared_ptr<AbstractOperator> ShowTables::recreate(const std::vector<AllPara
 }
 
 std::shared_ptr<const Table> ShowTables::_on_execute() {
-  auto table = std::make_shared<Table>();
-  table->add_column_definition("table_name", DataType::String);
+  auto table = std::make_shared<Table>(TableColumnDefinitions{{"table_name", DataType::String}}, TableType::Data);
 
   const auto table_names = StorageManager::get().table_names();
   const auto column = std::make_shared<ValueColumn<std::string>>(
       tbb::concurrent_vector<std::string>(table_names.begin(), table_names.end()));
 
-  auto chunk = std::make_shared<Chunk>();
-  chunk->add_column(column);
-
-  table->emplace_chunk(std::move(chunk));
+  ChunkColumnList columns;
+  columns.emplace_back(column);
+  table->add_chunk_new(columns);
 
   return table;
 }

@@ -49,8 +49,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   class DummyTable : public Table {
    public:
-    DummyTable() : Table(Chunk::MAX_SIZE) {
-      add_column("dummy", DataType::Int);
+    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int}}) {
       append(std::vector<AllTypeVariant>{0});
     }
   };
@@ -61,7 +60,7 @@ class Projection : public AbstractReadOnlyOperator {
   ColumnExpressions _column_expressions;
 
   template <typename T>
-  static std::shared_ptr<BaseColumn> _create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
+  static std::shared_ptr<BaseColumn> _create_column(boost::hana::basic_type<T> type,
                              const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
                              std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input);
 

@@ -108,6 +108,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else {
       column_definition.data_type = type;
     }
+
+    column_definitions.emplace_back(column_definition);
   }
   auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, input_table_left()->max_chunk_size());
 
@@ -115,7 +117,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    * Perform the projection
    */
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    ChunkColumnList output_columns;
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output_table->column_data_type(ColumnID{expression_index}), [&](auto type) {

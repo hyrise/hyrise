@@ -194,9 +194,7 @@ TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
-  auto chunk = std::make_shared<Chunk>();
-  chunk->add_column(this->dict_col_int);
-  chunk->add_column(this->dict_col_str);
+  auto chunk = std::make_shared<Chunk>(ChunkColumnList({this->dict_col_int, this->dict_col_str}));
 
   chunk->create_index<TypeParam>({this->dict_col_int});
   chunk->create_index<TypeParam>({this->dict_col_int, this->dict_col_str});

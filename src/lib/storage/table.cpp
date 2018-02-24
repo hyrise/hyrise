@@ -16,7 +16,9 @@
 namespace opossum {
 
 TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable):
-  name(name), data_type(data_type), nullable(nullable) {}
+  name(name), data_type(data_type), nullable(nullable) {
+  DebugAssert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
+}
 
 Table::Table(const TableColumnDefinitions& column_definitions,
              const TableType type,
@@ -36,6 +38,10 @@ const TableColumnDefinitions& Table::column_definitions() const {
 
 TableType Table::type() const {
   return _type;
+}
+
+UseMvcc Table::has_mvcc() const {
+  return _use_mvcc;
 }
 
 size_t Table::column_count() const {
@@ -70,17 +76,44 @@ std::vector<DataType> Table::column_data_types() const {
   return data_types;
 }
 
-bool Table::column_nullable(const ColumnID column_id) const {
+bool Table::column_is_nullable(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
   return _column_definitions[column_id].nullable;
 }
 
-void Table::append(std::vector<AllTypeVariant> values) {
-  Fail("Todo");
-//  // TODO(Anyone): Chunks should be preallocated for chunk size
-//  if (_chunks.back()->size() == _max_chunk_size) emplace_chunk();
+std::vector<bool> Table::columns_are_nullable() const {
+  std::vector<bool> nullable(column_count());
+  for (size_t column_idx = 0; column_idx < column_count(); ++column_idx) {
+    nullable[column_idx] = _column_definitions[column_idx].nullable;
+  }
+  return nullable;
+}
 
-//  _chunks.back()->append(values);
+ColumnID Table::column_id_by_name(const std::string& column_name) const {
+  const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
+    return column_definition.name == column_name;
+  });
+  DebugAssert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
+  return static_cast<ColumnID>(std::distance(_column_definitions.begin(), iter));
+}
+
+void Table::append(std::vector<AllTypeVariant> values) {
+  if (_chunks.empty() || _chunks.back()->size() >= _max_chunk_size) {
+    append_mutable_chunk();
+  }
+
+  _chunks.back()->append(values);
+}
+
+void Table::append_mutable_chunk() {
+  ChunkColumnList columns;
+  for (const auto& column_definition : _column_definitions) {
+    resolve_data_type(column_definition.data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      columns.emplace_back(std::make_shared<ValueColumn<ColumnDataType>>(column_definition.nullable));
+    });
+  }
+  add_chunk_new(columns);
 }
 
 uint64_t Table::row_count() const {
@@ -89,6 +122,10 @@ uint64_t Table::row_count() const {
     ret += chunk->size();
   }
   return ret;
+}
+
+bool Table::empty() const {
+  return row_count() == 0u;
 }
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
@@ -115,11 +152,23 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-std::shared_ptr<Chunk> Table::add_chunk_new(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+void Table::add_chunk_new(const ChunkColumnList& columns,
                                             const std::optional<PolymorphicAllocator<Chunk>>& alloc,
                                             const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
-  _chunks.emplace_back(std::make_shared<Chunk>(_column_definitions, _use_mvcc, alloc, access_counter));
-  return _chunks.back();
+  _chunks.emplace_back(std::make_shared<Chunk>(columns, _use_mvcc, alloc, access_counter));
+}
+
+void Table::replace_chunk(const ChunkID chunk_id, const ChunkColumnList& columns,
+                                            const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+                                            const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
+  Assert(chunk_id < chunk_count(), "ChunkID out of range");
+  std::shared_ptr<Chunk> chunk;
+  if (_use_mvcc == UseMvcc::Yes) {
+    chunk = std::make_shared<Chunk>(columns, _chunks[chunk_id]->mvcc_columns(), alloc, access_counter);
+  } else {
+    chunk = std::make_shared<Chunk>(columns, UseMvcc::No, alloc, access_counter);
+  }
+  std::atomic_exchange(&_chunks[chunk_id], chunk);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

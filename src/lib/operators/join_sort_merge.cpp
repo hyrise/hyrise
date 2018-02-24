@@ -572,7 +572,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(std::vector<std::shared_ptr<BaseColumn>>& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_columns(ChunkColumnList& output_columns, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
@@ -661,7 +661,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Add the columns from both input tables to the output
-    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    ChunkColumnList output_columns;
     _add_output_columns(output_columns, _sort_merge_join.input_table_left(), output_left);
     _add_output_columns(output_columns, _sort_merge_join.input_table_right(), output_right);
 

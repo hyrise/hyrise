@@ -72,7 +72,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
+      build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
       probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }
@@ -646,14 +646,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     We assume that either all Chunks contain ReferenceColumns or all Chunk contain Value/DictionaryColumns.
     But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
     */
-    auto ref_col_left =
-        std::dynamic_pointer_cast<const ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
-            ? true
-            : false;
-    auto ref_col_right = std::dynamic_pointer_cast<const ReferenceColumn>(
-                             _right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
-                             ? true
-                             : false;
+    auto ref_col_left = _left_in_table->type() == TableType::References;
+    auto ref_col_right = _right_in_table->type() == TableType::References;
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       auto& left = left_pos_lists[partition_id];
@@ -664,7 +658,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
       DebugAssert(left.size() == right.size(), "Invalid PosList sizes");
 
-      std::vector<std::shared_ptr<BaseColumn>> output_columns;
+      ChunkColumnList output_columns;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
@@ -685,7 +679,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return _output_table;
   }
 
-  static void write_output_columns(std::vector<std::shared_ptr<BaseColumn>>& output_columns,
+  static void write_output_columns(ChunkColumnList& output_columns,
                                   const std::shared_ptr<const Table> input_table, PosList& pos_list,
                                   bool is_ref_column) {
     // Add columns from input table to output chunk

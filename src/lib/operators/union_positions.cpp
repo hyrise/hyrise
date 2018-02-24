@@ -106,7 +106,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   // Somewhat random way to decide on a chunk size.
   const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
 
-  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, out_chunk_size);
+  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, UseMvcc::No, out_chunk_size);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
@@ -120,7 +120,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   // Turn 'pos_lists' into a new chunk and append it to the table
   const auto emit_chunk = [&]() {
-    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    ChunkColumnList output_columns;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_column_id_begin = _column_segment_offsets[pos_lists_idx];

@@ -45,7 +45,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto left_column_type = _in_table->column_type(_left_column_id);
+  const auto left_column_type = _in_table->column_data_type(_left_column_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -82,7 +82,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto left_column_type = _in_table->column_type(_left_column_id);
+  const auto left_column_type = _in_table->column_data_type(_left_column_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;

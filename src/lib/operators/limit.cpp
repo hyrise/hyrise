@@ -25,12 +25,12 @@ size_t Limit::num_rows() const { return _num_rows; }
 std::shared_ptr<const Table> Limit::_on_execute() {
   const auto input_table = input_table_left();
 
-  auto output_table = std::make_shared(input_table->column_definitions(), TableType::References);
+  auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < _num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
-    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    ChunkColumnList output_columns;
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), _num_rows - i);
 

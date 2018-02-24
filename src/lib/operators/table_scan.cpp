@@ -103,7 +103,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
       //auto chunk_out = std::make_shared<Chunk>(chunk_guard->get_allocator(), chunk_guard->access_counter());
-      std::vector<std::shared_ptr<BaseColumn>> out_columns;
+      ChunkColumnList out_columns;
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
@@ -169,10 +169,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 void TableScan::_on_cleanup() { _impl.reset(); }
 
 void TableScan::_init_scan() {
-  DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
-
   if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
-    const auto left_column_type = _in_table->column_definitions[_left_column_id].type;
+    const auto left_column_type = _in_table->column_data_type(_left_column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
     DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");

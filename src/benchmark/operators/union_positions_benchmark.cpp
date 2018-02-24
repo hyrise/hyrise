@@ -92,7 +92,7 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
     for (size_t row_idx = 0; row_idx < num_rows;) {
       const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
-      std::vector<std::shared_ptr<BaseColumn>> columns;
+      ChunkColumnList columns;
       for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
         /**
          * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table

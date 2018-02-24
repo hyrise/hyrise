@@ -1,6 +1,7 @@
 #include "deprecated_dictionary_compression.hpp"
 
 #include <memory>
+#include <numeric>
 #include <vector>
 
 #include "base_value_column.hpp"
@@ -24,24 +25,29 @@ std::shared_ptr<BaseColumn> DeprecatedDictionaryCompression::compress_column(Dat
   return encode_column(encoding_type, data_type, value_column);
 }
 
-void DeprecatedDictionaryCompression::compress_columns(const std::vector<DataType> &column_types,
-                                                       std::vector<std::shared_ptr<BaseColumn>> &columns,
+ChunkColumnList DeprecatedDictionaryCompression::compress_columns(const std::vector<DataType> &column_types,
+                                                       const ChunkColumnList &columns,
                                                        EncodingType encoding_type) {
   DebugAssert((column_types.size() == columns.size()),
               "Number of column types does not match the chunk’s column count.");
 
+  ChunkColumnList compressed_columns(columns.size());
+
   for (ColumnID column_id{0}; column_id < columns.size(); ++column_id) {
     auto value_column = columns[column_id];
     auto dict_column = compress_column(column_types[column_id], value_column, encoding_type);
-    columns[column_id] = dict_column;
+    compressed_columns[column_id] = dict_column;
   }
+
+  return compressed_columns;
 }
 
 void DeprecatedDictionaryCompression::compress_chunk(Table& table, const ChunkID chunk_id, EncodingType encoding_type) {
   Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
-  auto uncompressed_columns = table.get_chunk(chunk_id)->columns();
+  const auto chunk = table.get_chunk(chunk_id);
+  auto uncompressed_columns = chunk->columns();
   auto compressed_columns = compress_columns(table.column_data_types(), uncompressed_columns, encoding_type);
-  table.replace_chunk(chunk_id, compressed_columns);
+  table.replace_chunk(chunk_id, compressed_columns, chunk->get_allocator(), chunk->access_counter());
 }
 
 void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids,
@@ -55,8 +61,7 @@ void DeprecatedDictionaryCompression::compress_chunks(Table& table, const std::v
 
 void DeprecatedDictionaryCompression::compress_table(Table& table, EncodingType encoding_type) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    auto chunk = table.get_chunk(chunk_id);
-    compress_columns(table.column_data_types(), chunk, encoding_type);
+    compress_chunk(table, chunk_id, encoding_type);
   }
 }
 

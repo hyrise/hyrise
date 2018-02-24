@@ -21,10 +21,16 @@ const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 // The last chunk offset is reserved for NULL as used in ReferenceColumns.
 const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-Chunk::Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+void Chunk::MvccColumns::print(std::ostream& stream) const {
+  stream << "TIDs: "; for (const auto& tid : tids) stream << tid << ", "; stream << std::endl;  // NOLINT
+  stream << "BeginCIDs: "; for (const auto& begin_cid : begin_cids) stream << begin_cid << ", "; stream << std::endl;  // NOLINT
+  stream << "EndCIDs: "; for (const auto& end_cid : end_cids) stream << end_cid << ", "; stream << std::endl;  // NOLINT
+}
+
+Chunk::Chunk(const ChunkColumnList& columns,
       UseMvcc use_mvcc,
       const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-      const std::shared_ptr<AccessCounter> access_counter): _columns(columns.begin(), columns.end()), _access_counter(access_counter) {
+      const std::shared_ptr<AccessCounter> access_counter): _columns(columns), _access_counter(access_counter) {
 
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
 #if IS_DEBUG
@@ -32,10 +38,37 @@ Chunk::Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
     Assert(column->size() == chunk_size, "Columns don't have the same length");
   }
 #endif
-  grow_mvcc_column_size_by(chunk_size, 0);
+  if (use_mvcc == UseMvcc::Yes) {
+    _mvcc_columns = std::make_shared<MvccColumns>();
+    grow_mvcc_column_size_by(chunk_size, 0);
+  }
 
-  if (use_mvcc == UseMvcc::Yes) _mvcc_columns = std::make_shared<MvccColumns>();
-  if (alloc) _alloc = alloc;
+  if (alloc) _alloc = *alloc;
+
+  _is_mutable = std::all_of(_columns.begin(), _columns.end(), [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
+}
+
+Chunk::Chunk(const ChunkColumnList& columns,
+             std::shared_ptr<MvccColumns> mvcc_columns,
+             const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+             const std::shared_ptr<AccessCounter> access_counter): _columns(columns), _access_counter(access_counter) {
+  DebugAssert(mvcc_columns, "Need to pass in mvcc_columns if calling this constructor");
+  // TODO(anybody): Assert mvcc_columns size
+
+  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+#if IS_DEBUG
+  for (const auto& column : columns) {
+    Assert(column->size() == chunk_size, "Columns don't have the same length");
+  }
+#endif
+
+  if (alloc) _alloc = *alloc;
+
+  _is_mutable = std::all_of(_columns.begin(), _columns.end(), [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
+}
+
+bool Chunk::is_mutable() const {
+  return _is_mutable;
 }
 
 void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
@@ -66,7 +99,7 @@ std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
-const std::vector<std::shared_ptr<BaseColumn>>& Chunk::columns() const {
+const ChunkColumnList& Chunk::columns() const {
   return _columns;
 }
 

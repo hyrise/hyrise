@@ -32,7 +32,7 @@ void ChunkCompressionTask::_on_execute() {
     DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
 
-    DeprecatedDictionaryCompression::compress_chunk(table->column_types(), chunk);
+    DeprecatedDictionaryCompression::compress_chunk(*table, chunk_id);
   }
 }
 

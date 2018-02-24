@@ -95,6 +95,8 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   ins->execute();
   context->rollback();
 
+  ASSERT_EQ(table->chunk_count(), 4u);
+
   auto compression = std::make_unique<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
   compression->execute();

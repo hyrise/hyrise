@@ -29,7 +29,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
     // iterating over all chunks of table input
     for (ChunkID in_chunk_id{0}; in_chunk_id < input->chunk_count(); in_chunk_id++) {
       // creating empty chunk to add columns with positions
-      std::vector<std::shared_ptr<BaseColumn>> output_columns;
+      ChunkColumnList output_columns;
 
       // iterating over all columns of the current chunk
       for (ColumnID column_id{0}; column_id < input->column_count(); ++column_id) {

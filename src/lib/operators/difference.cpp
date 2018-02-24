@@ -64,7 +64,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
 
-    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    ChunkColumnList output_columns;
 
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
@@ -125,7 +125,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     }
 
     // Only add chunk if it would contain any tuples
-    if (!output_columns.empty() && !output_columns[0]->size() > 0) {
+    if (!output_columns.empty() && output_columns[0]->size() > 0) {
       output->add_chunk_new(output_columns);
     }
   }

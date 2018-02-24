@@ -355,7 +355,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       // Partition by group columns
       for (const auto column_id : _groupby_column_ids) {
         auto base_column = chunk_in->get_column(column_id);
-        auto column_type = input_table->column_type(column_id);
+        auto column_type = input_table->column_data_type(column_id);
 
         resolve_data_and_column_type(column_type, *base_column, [&](auto type, auto& typed_column) {
           using ColumnDataType = typename decltype(type)::type;
@@ -476,7 +476,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         }
 
         auto base_column = chunk_in->get_column(*aggregate.column);
-        auto data_type = input_table->column_type(*aggregate.column);
+        auto data_type = input_table->column_data_type(*aggregate.column);
 
         /*
         Invoke correct aggregator for each column
@@ -516,7 +516,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   for (const auto column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id));
 
-    auto groupby_column = make_shared_by_data_type<BaseColumn, ValueColumn>(input_table->column_data_type(column_id), true)
+    auto groupby_column = make_shared_by_data_type<BaseColumn, ValueColumn>(input_table->column_data_type(column_id), true);
     _groupby_columns.emplace_back(groupby_column);
     _output_columns.emplace_back(groupby_column);
   }

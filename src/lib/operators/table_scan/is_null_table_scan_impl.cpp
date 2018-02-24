@@ -70,7 +70,7 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  const auto left_column_type = _in_table->column_type(_left_column_id);
+  const auto left_column_type = _in_table->column_data_type(_left_column_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;

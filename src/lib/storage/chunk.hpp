@@ -29,6 +29,8 @@ class BaseColumn;
 
 enum class ChunkUseAccessCounter { Yes, No };
 
+using ChunkColumnList = pmr_concurrent_vector<std::shared_ptr<BaseColumn>>;
+
 /**
  * A Chunk is a horizontal partition of a table.
  * It stores the table's data column by column.
@@ -52,6 +54,8 @@ class Chunk : private Noncopyable {
     pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
     pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
     pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+
+    void print(std::ostream& stream = std::cout) const;
 
    private:
     /**
@@ -102,10 +106,19 @@ class Chunk : private Noncopyable {
  public:
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
-  Chunk(const std::vector<std::shared_ptr<BaseColumn>>& columns,
+  Chunk(const ChunkColumnList& columns,
         UseMvcc mvcc_mode = UseMvcc::No,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<AccessCounter> access_counter = nullptr);
+
+  // Explicitly specify mvcc columns
+  Chunk(const ChunkColumnList& columns,
+        std::shared_ptr<MvccColumns> mvcc_columns,
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+        const std::shared_ptr<AccessCounter> access_counter = nullptr);
+
+  // returns whether new rows can be appended to this Chunk
+  bool is_mutable() const;
 
   // Atomically replaces the current column at column_id with the passed column
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
@@ -133,7 +146,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
   std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
-  const std::vector<std::shared_ptr<BaseColumn>>& columns() const;
+  const ChunkColumnList& columns() const;
 
   bool has_mvcc_columns() const;
   bool has_access_counter() const;
@@ -214,7 +227,8 @@ class Chunk : private Noncopyable {
 
  private:
   PolymorphicAllocator<Chunk> _alloc;
-  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
+  ChunkColumnList _columns;
+  bool _is_mutable;
   std::shared_ptr<MvccColumns> _mvcc_columns;
   std::shared_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;

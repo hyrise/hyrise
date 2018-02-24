@@ -122,8 +122,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     start_index = last_chunk->size();
 
     // If last chunk is compressed, add a new uncompressed chunk
-    if (std::dynamic_pointer_cast<const BaseEncodedColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
-      _target_table->create_new_chunk();
+    if (!last_chunk->is_mutable()) {
+      _target_table->append_mutable_chunk();
       total_chunks_inserted++;
     }
 
@@ -146,7 +146,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
       // Create new chunk if necessary.
       if (remaining_rows > 0) {
-        _target_table->create_new_chunk();
+        _target_table->append_mutable_chunk();
         total_chunks_inserted++;
       }
     }

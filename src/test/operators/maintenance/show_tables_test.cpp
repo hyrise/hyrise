@@ -30,8 +30,8 @@ TEST_F(ShowTablesTest, CanBeRecreated) {
 TEST_F(ShowTablesTest, CanShowTables) {
   auto& sm = StorageManager::get();
 
-  sm.add_table("first_table", std::make_shared<Table>());
-  sm.add_table("second_table", std::make_shared<Table>());
+  sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}));
+  sm.add_table("second_table", std::make_shared<Table>(TableColumnDefinitions{}));
 
   auto st = std::make_shared<ShowTables>();
   st->execute();

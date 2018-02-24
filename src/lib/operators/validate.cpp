@@ -54,7 +54,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto chunk_in = _in_table->get_chunk(chunk_id);
 
-    std::vector<std::shared_ptr<BaseColumn>> output_columns;
+    ChunkColumnList output_columns;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(ColumnID{0}));
@@ -66,7 +66,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();
-      DebugAssert(referenced_table->get_chunk(ChunkID{0})->has_mvcc_columns(),
+      DebugAssert(referenced_table->has_mvcc(),
                   "Trying to use Validate on a table that has no MVCC columns");
 
       for (auto row_id : *ref_col_in->pos_list()) {
@@ -93,6 +93,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       DebugAssert(chunk_in->has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
       const auto mvcc_columns = chunk_in->mvcc_columns();
 
+      mvcc_columns->print();
+
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {
@@ -108,7 +110,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       }
     }
 
-    if (!pos_list_out->empty() > 0 || output->get_chunk(ChunkID{0})->size() == 0) {
+    if (!pos_list_out->empty() > 0) {
       output->add_chunk_new(output_columns);
     }
   }

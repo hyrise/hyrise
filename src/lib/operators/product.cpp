@@ -45,8 +45,6 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
   const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
   const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
 
-  auto output_chunk = std::make_shared<Chunk>();
-
   // we use an approach here in which we do not have nested loops for left and right but create both sides separately
   // When the result looks like this:
   //   l1 r1
@@ -61,7 +59,7 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
-  std::vector<std::shared_ptr<BaseColumn>> output_columns;
+  ChunkColumnList output_columns;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
     // reusing the same code for left and right side - using a reference_wrapper is ugly, but better than code

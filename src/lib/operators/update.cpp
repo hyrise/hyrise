@@ -24,6 +24,8 @@ Update::~Update() = default;
 const std::string Update::name() const { return "Update"; }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
+  if (_input_left->get_output()->empty()) return nullptr; // Subsequent code relies on there being at least one chunk
+
   DebugAssert((_execution_input_valid(context)), "Input to Update isn't valid");
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
@@ -58,7 +60,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    std::vector<std::shared_ptr<BaseColumn>> insert_table_columns;
+    ChunkColumnList insert_table_columns;
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
       insert_table_columns.emplace_back(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
@@ -114,6 +116,8 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   if (context == nullptr) return false;
 
   if (input_table_left()->column_count() != input_table_right()->column_count()) return false;
+
+  if (input_table_left()->chunk_count() == 0) return false;
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
