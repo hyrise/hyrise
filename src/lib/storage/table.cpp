@@ -77,7 +77,7 @@ std::vector<bool> Table::columns_are_nullable() const {
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
                                  [&](const auto& column_definition) { return column_definition.name == column_name; });
-  DebugAssert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
+  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
   return static_cast<ColumnID>(std::distance(_column_definitions.begin(), iter));
 }
 

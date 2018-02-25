@@ -4,7 +4,7 @@ namespace opossum {
 
 TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable)
     : name(name), data_type(data_type), nullable(nullable) {
-  DebugAssert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
+  Assert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
 }
 
 bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
