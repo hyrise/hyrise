@@ -53,7 +53,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         }
       }
 
-      output_columns.emplace_back(std::make_shared<ReferenceColumn>(referenced_table, output_column_id, output_pos_list));
+      output_columns.emplace_back(
+          std::make_shared<ReferenceColumn>(referenced_table, output_column_id, output_pos_list));
     }
 
     i += output_chunk_row_count;

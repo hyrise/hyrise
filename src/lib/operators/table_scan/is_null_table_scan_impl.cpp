@@ -7,9 +7,9 @@
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
 #include "storage/dictionary_column/attribute_vector_iterable.hpp"
+#include "storage/reference_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column/null_value_vector_iterable.hpp"
-#include "storage/reference_column.hpp"
 
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -19,10 +19,12 @@ namespace opossum {
 IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                                          const PredicateCondition& predicate_condition)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition} {
-  DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull, "Invalid PredicateCondition");
+  DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
+              "Invalid PredicateCondition");
 }
 
-void IsNullTableScanImpl::handle_column(const ReferenceColumn& left_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+void IsNullTableScanImpl::handle_column(const ReferenceColumn& left_column,
+                                        std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   BaseSingleColumnTableScanImpl::handle_column(left_column, base_context);
 

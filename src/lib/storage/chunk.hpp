@@ -16,8 +16,8 @@
 #include "index/column_index_type.hpp"
 
 #include "all_type_variant.hpp"
-#include "types.hpp"
 #include "table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 #include "utils/scoped_locking_ptr.hpp"
 
@@ -105,14 +105,12 @@ class Chunk : private Noncopyable {
  public:
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
-  Chunk(const ChunkColumnList& columns,
-        UseMvcc mvcc_mode = UseMvcc::No,
+  Chunk(const ChunkColumnList& columns, UseMvcc mvcc_mode = UseMvcc::No,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<AccessCounter> access_counter = nullptr);
 
   // Explicitly specify mvcc columns
-  Chunk(const ChunkColumnList& columns,
-        std::shared_ptr<MvccColumns> mvcc_columns,
+  Chunk(const ChunkColumnList& columns, std::shared_ptr<MvccColumns> mvcc_columns,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<AccessCounter> access_counter = nullptr);
 

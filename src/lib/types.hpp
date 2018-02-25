@@ -64,8 +64,9 @@ template <typename T>
 class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
  public:
   pmr_concurrent_vector(PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, alloc) {}  // NOLINT
-  pmr_concurrent_vector(std::initializer_list<T> init_list, PolymorphicAllocator<T> alloc = {}) : tbb::concurrent_vector<T>(init_list), _alloc(alloc) {}  // NOLINT
-  pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})                             // NOLINT
+  pmr_concurrent_vector(std::initializer_list<T> init_list, PolymorphicAllocator<T> alloc = {})
+      : tbb::concurrent_vector<T>(init_list), _alloc(alloc) {}         // NOLINT
+  pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : pmr_concurrent_vector(n, T{}, alloc) {}
   pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(n, val),
@@ -94,15 +95,13 @@ struct RowID {
 
   RowID() = default;
 
-  RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset):
-    chunk_id(chunk_id), chunk_offset(chunk_offset) {
-    DebugAssert((chunk_offset == INVALID_CHUNK_OFFSET) == (chunk_id == INVALID_CHUNK_ID), "Only one 'invalid'/NULL RowIDs value allowed, and that is NULL_ROW_ID");
+  RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset) : chunk_id(chunk_id), chunk_offset(chunk_offset) {
+    DebugAssert((chunk_offset == INVALID_CHUNK_OFFSET) == (chunk_id == INVALID_CHUNK_ID),
+                "Only one 'invalid'/NULL RowIDs value allowed, and that is NULL_ROW_ID");
   }
 
   // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
-  bool is_null() const {
-    return chunk_offset == INVALID_CHUNK_OFFSET;
-  }
+  bool is_null() const { return chunk_offset == INVALID_CHUNK_OFFSET; }
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {

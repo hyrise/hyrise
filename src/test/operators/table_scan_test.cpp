@@ -36,7 +36,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Int);
 
-    std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(table_column_definitions, TableType::Data, UseMvcc::No, 5);
+    std::shared_ptr<Table> test_even_dict =
+        std::make_shared<Table>(table_column_definitions, TableType::Data, UseMvcc::No, 5);
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
     ChunkEncoder::encode_chunks(test_even_dict, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
@@ -123,7 +124,6 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table) {
-
     auto pos_list = std::make_shared<PosList>();
     pos_list->reserve(table->row_count());
 

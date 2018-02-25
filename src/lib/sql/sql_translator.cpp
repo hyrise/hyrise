@@ -186,7 +186,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     if (insert.type == hsql::kInsertValues) {
       DebugAssert(insert.values != nullptr, "Insert: no values given");
 
-      Assert(data_types_match_expr_types(target_table->column_data_types(), *insert.values), "Insert: Column type mismatch");
+      Assert(data_types_match_expr_types(target_table->column_data_types(), *insert.values),
+             "Insert: Column type mismatch");
 
       // In the case of INSERT ... VALUES (...), simply create a
       current_result_node = _translate_projection(*insert.values, current_result_node);

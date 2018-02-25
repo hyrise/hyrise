@@ -30,9 +30,9 @@ std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterV
 }
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(input_table_left()->column_data_type(_column_id),
-                                                                           input_table_left(), _column_id,
-                                                                           _order_by_mode, _output_chunk_size);
+  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
+      input_table_left()->column_data_type(_column_id), input_table_left(), _column_id, _order_by_mode,
+      _output_chunk_size);
   return _impl->_on_execute();
 }
 
@@ -50,7 +50,8 @@ class Sort::SortImplMaterializeOutput {
 
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
-    auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, UseMvcc::No, _output_chunk_size);
+    auto output =
+        std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, UseMvcc::No, _output_chunk_size);
 
     // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
 

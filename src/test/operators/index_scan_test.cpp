@@ -43,7 +43,7 @@ class OperatorsIndexScanTest : public BaseTest {
 
     _table_wrapper = std::make_shared<TableWrapper>(table);
     _table_wrapper->execute();
-    
+
     auto empty_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
 
     _empty_table_wrapper = std::make_shared<TableWrapper>(empty_table);

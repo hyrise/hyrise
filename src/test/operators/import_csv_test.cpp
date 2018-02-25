@@ -50,7 +50,8 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, UseMvcc::No, 5);
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, UseMvcc::No, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -191,7 +192,8 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_with_null.csv");
   importer->execute();
 
-  TableColumnDefinitions column_definitions{{"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
+  TableColumnDefinitions column_definitions{
+      {"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 3);
 
   expected_table->append({458.7f, 12345, NULL_VALUE});

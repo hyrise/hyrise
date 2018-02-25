@@ -514,9 +514,11 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   // add group by columns
   for (const auto column_id : _groupby_column_ids) {
-    _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id));
+    _output_column_definitions.emplace_back(input_table->column_name(column_id),
+                                            input_table->column_data_type(column_id));
 
-    auto groupby_column = make_shared_by_data_type<BaseColumn, ValueColumn>(input_table->column_data_type(column_id), true);
+    auto groupby_column =
+        make_shared_by_data_type<BaseColumn, ValueColumn>(input_table->column_data_type(column_id), true);
     _groupby_columns.emplace_back(groupby_column);
     _output_columns.emplace_back(groupby_column);
   }

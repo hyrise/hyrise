@@ -24,7 +24,7 @@ Update::~Update() = default;
 const std::string Update::name() const { return "Update"; }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
-  if (_input_left->get_output()->empty()) return nullptr; // Subsequent code relies on there being at least one chunk
+  if (_input_left->get_output()->empty()) return nullptr;  // Subsequent code relies on there being at least one chunk
 
   DebugAssert((_execution_input_valid(context)), "Input to Update isn't valid");
 
@@ -34,7 +34,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   TableColumnDefinitions insert_table_column_defintions;
   for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
     insert_table_column_defintions.emplace_back(table_to_update->column_name(column_id),
-                                        table_to_update->column_data_type(column_id));
+                                                table_to_update->column_data_type(column_id));
   }
 
   auto insert_table = std::make_shared<Table>(insert_table_column_defintions, TableType::References);
@@ -50,7 +50,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
         current_row_in_left_chunk = 0u;
         current_pos_list = std::static_pointer_cast<const ReferenceColumn>(
-        input_table_left()->get_chunk(current_left_chunk_id)->get_column(ColumnID{0}))
+                               input_table_left()->get_chunk(current_left_chunk_id)->get_column(ColumnID{0}))
                                ->pos_list();
         current_left_chunk_id++;
       }

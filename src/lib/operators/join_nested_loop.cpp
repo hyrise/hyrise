@@ -60,15 +60,15 @@ void JoinNestedLoop::_create_table_structure() {
   // Preparing output table by adding columns from left table
   for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
     auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
-    output_column_definitions.emplace_back(_left_in_table->column_name(column_id), _left_in_table->column_data_type(column_id),
-                                         nullable);
+    output_column_definitions.emplace_back(_left_in_table->column_name(column_id),
+                                           _left_in_table->column_data_type(column_id), nullable);
   }
 
   // Preparing output table by adding columns from right table
   for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
     auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(_right_in_table->column_name(column_id),
-                                         _right_in_table->column_data_type(column_id), nullable);
+                                           _right_in_table->column_data_type(column_id), nullable);
   }
 
   _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
@@ -220,8 +220,7 @@ void JoinNestedLoop::_perform_join() {
   _output_table->add_chunk_new(columns);
 }
 
-void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns,
-                                          const std::shared_ptr<const Table> input_table,
+void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns, const std::shared_ptr<const Table> input_table,
                                           std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
@@ -239,13 +238,13 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns,
             new_pos_list->push_back(NULL_ROW_ID);
           } else {
             auto reference_column = std::static_pointer_cast<const ReferenceColumn>(
-            input_table->get_chunk(row.chunk_id)->get_column(column_id));
+                input_table->get_chunk(row.chunk_id)->get_column(column_id));
             new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
           }
         }
 
-        auto reference_column = std::static_pointer_cast<const ReferenceColumn>(
-        input_table->get_chunk(ChunkID{0})->get_column(column_id));
+        auto reference_column =
+            std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
 
         column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
                                                    reference_column->referenced_column_id(), new_pos_list);

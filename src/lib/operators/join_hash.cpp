@@ -97,8 +97,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped) {
-  }
+        _inputs_swapped(inputs_swapped) {}
 
   virtual ~JoinHashImpl() = default;
 
@@ -568,10 +567,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
         output_column_definitions = _right_in_table->column_definitions();
       } else {
-        output_column_definitions = concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
+        output_column_definitions =
+            concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
       }
     } else {
-      output_column_definitions = concatenated(_left_in_table->column_definitions(), _right_in_table->column_definitions());
+      output_column_definitions =
+          concatenated(_left_in_table->column_definitions(), _right_in_table->column_definitions());
     }
 
     _output_table = std::make_shared<Table>(output_column_definitions, TableType::References, UseMvcc::No);
@@ -693,46 +694,47 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return _output_table;
   }
 
-  static void write_output_columns(ChunkColumnList& output_columns,
-                                  const std::shared_ptr<const Table> input_table, PosList& pos_list) {
+  static void write_output_columns(ChunkColumnList& output_columns, const std::shared_ptr<const Table> input_table,
+                                   PosList& pos_list) {
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       if (input_table->type() == TableType::References) {
         if (input_table->chunk_count() > 0) {
-          auto ref_col =
-          std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
+          auto ref_col = std::dynamic_pointer_cast<const ReferenceColumn>(
+              input_table->get_chunk(ChunkID{0})->get_column(column_id));
 
           // Get all the input pos lists so that we only have to pointer cast the columns once
           auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
           for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
             // This works because we assume that the columns have to be either all ReferenceColumns or none.
-            auto ref_column =
-            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id)->get_column(column_id));
+            auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(
+                input_table->get_chunk(chunk_id)->get_column(column_id));
             input_pos_lists.push_back(ref_column->pos_list());
           }
 
           // Get the row ids that are referenced
           auto new_pos_list = std::make_shared<PosList>();
-          for (const auto &row : pos_list) {
+          for (const auto& row : pos_list) {
             if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
               new_pos_list->push_back(row);
             } else {
               new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
             }
           }
-          output_columns.emplace_back(
-          std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
-                                            new_pos_list));
+          output_columns.emplace_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(),
+                                                                        ref_col->referenced_column_id(), new_pos_list));
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
           const auto dummy_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-          output_columns.emplace_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
+          output_columns.emplace_back(
+              std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
         }
       } else {
-        output_columns.emplace_back(std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
+        output_columns.emplace_back(
+            std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
       }
     }
   }

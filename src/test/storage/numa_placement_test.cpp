@@ -50,7 +50,8 @@ class NUMAPlacementTest : public BaseTest {
 
   // Creates a table with a single column and increasing integers modulo 1000.
   std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
-    auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data, UseMvcc::Yes, num_rows_per_chunk);
+    auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                         UseMvcc::Yes, num_rows_per_chunk);
 
     for (size_t i = 0; i < num_chunks; i++) {
       ChunkColumnList columns;

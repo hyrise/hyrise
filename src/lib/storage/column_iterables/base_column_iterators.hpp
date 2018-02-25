@@ -72,7 +72,8 @@ class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> 
 
  protected:
   const ChunkOffsetMapping& chunk_offsets() const {
-    DebugAssert(_chunk_offsets_it->into_referenced != INVALID_CHUNK_OFFSET, "Invalid ChunkOffset, calling code should handle null values");
+    DebugAssert(_chunk_offsets_it->into_referenced != INVALID_CHUNK_OFFSET,
+                "Invalid ChunkOffset, calling code should handle null values");
     return *_chunk_offsets_it;
   }
 

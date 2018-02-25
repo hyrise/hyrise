@@ -291,7 +291,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   table_right->add_chunk_new(ChunkColumnList({column_right_0_0, column_right_0_1, column_right_0_2}));
   table_right->add_chunk_new(ChunkColumnList({column_right_1_0, column_right_1_1, column_right_1_2}));
-  
+
   auto table_wrapper_left_op = std::make_shared<TableWrapper>(table_left);
   auto table_wrapper_right_op = std::make_shared<TableWrapper>(table_right);
   auto set_union_op = std::make_shared<UnionPositions>(table_wrapper_left_op, table_wrapper_right_op);

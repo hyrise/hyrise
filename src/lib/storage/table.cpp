@@ -15,14 +15,12 @@
 
 namespace opossum {
 
-TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable):
-  name(name), data_type(data_type), nullable(nullable) {
+TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable)
+    : name(name), data_type(data_type), nullable(nullable) {
   DebugAssert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
 }
 
-Table::Table(const TableColumnDefinitions& column_definitions,
-             const TableType type,
-             const UseMvcc use_mvcc,
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const UseMvcc use_mvcc,
              const uint32_t max_chunk_size)
     : _column_definitions(column_definitions),
       _type(type),
@@ -32,21 +30,13 @@ Table::Table(const TableColumnDefinitions& column_definitions,
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
-const TableColumnDefinitions& Table::column_definitions() const {
-  return _column_definitions;
-}
+const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
 
-TableType Table::type() const {
-  return _type;
-}
+TableType Table::type() const { return _type; }
 
-UseMvcc Table::has_mvcc() const {
-  return _use_mvcc;
-}
+UseMvcc Table::has_mvcc() const { return _use_mvcc; }
 
-size_t Table::column_count() const {
-  return _column_definitions.size();
-}
+size_t Table::column_count() const { return _column_definitions.size(); }
 
 const std::string& Table::column_name(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
@@ -90,9 +80,8 @@ std::vector<bool> Table::columns_are_nullable() const {
 }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
-  const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
-    return column_definition.name == column_name;
-  });
+  const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
+                                 [&](const auto& column_definition) { return column_definition.name == column_name; });
   DebugAssert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
   return static_cast<ColumnID>(std::distance(_column_definitions.begin(), iter));
 }
@@ -124,9 +113,7 @@ uint64_t Table::row_count() const {
   return ret;
 }
 
-bool Table::empty() const {
-  return row_count() == 0u;
-}
+bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
@@ -152,9 +139,8 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::add_chunk_new(const ChunkColumnList& columns,
-                                            const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                                            const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
+void Table::add_chunk_new(const ChunkColumnList& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+                          const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
   _chunks.emplace_back(std::make_shared<Chunk>(columns, _use_mvcc, alloc, access_counter));
 }
 

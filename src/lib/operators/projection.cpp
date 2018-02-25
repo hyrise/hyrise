@@ -40,9 +40,10 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T> type,
-                                const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
-                                std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input) {
+std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
+                                                       const std::shared_ptr<PQPExpression>& expression,
+                                                       std::shared_ptr<const Table> input_table_left,
+                                                       bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
   if (reuse_column_from_input) {
     // we have to use get_mutable_column here because we cannot add a const column to the chunk
@@ -111,7 +112,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     column_definitions.emplace_back(column_definition);
   }
-  auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, input_table_left()->max_chunk_size());
+  auto output_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection
@@ -122,7 +124,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output_table->column_data_type(ColumnID{expression_index}), [&](auto type) {
         const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], input_table_left(),
-                       reuse_column_from_input);
+                                           reuse_column_from_input);
         output_columns.emplace_back(column);
       });
     }

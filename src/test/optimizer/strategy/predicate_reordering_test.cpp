@@ -32,7 +32,9 @@ class TableStatisticsMock : public TableStatistics {
   // we don't need a shared_ptr<Table> for this mock, so just set a nullptr
   TableStatisticsMock() : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{})) { _row_count = 0; }
 
-  explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{})) { _row_count = row_count; }
+  explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{})) {
+    _row_count = row_count;
+  }
 
   std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id,
                                                         const PredicateCondition predicate_condition,

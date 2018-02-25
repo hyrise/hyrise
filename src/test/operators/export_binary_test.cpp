@@ -58,7 +58,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   column_definitions.emplace_back("FirstColumn", DataType::Int);
   column_definitions.emplace_back("SecondColumn", DataType::String);
 
-  table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No,30000);
+  table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);

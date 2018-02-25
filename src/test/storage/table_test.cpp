@@ -85,8 +85,9 @@ TEST_F(StorageTableTest, GetValue) {
 }
 
 TEST_F(StorageTableTest, ColumnNameTooLong) {
-  EXPECT_THROW(TableColumnDefinition(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), DataType::Int);
-               , std::exception);
+  EXPECT_THROW(
+      TableColumnDefinition(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), DataType::Int);
+      , std::exception);
 }
 
 TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {

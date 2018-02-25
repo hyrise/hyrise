@@ -19,8 +19,7 @@ const std::string UnionAll::name() const { return "UnionAll"; }
 std::shared_ptr<const Table> UnionAll::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
-  DebugAssert(input_table_left()->type() == input_table_left()->type(),
-              "Input tables must have the same type");
+  DebugAssert(input_table_left()->type() == input_table_left()->type(), "Input tables must have the same type");
 
   auto output = std::make_shared<Table>(input_table_left()->column_definitions(), input_table_left()->type());
 

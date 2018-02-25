@@ -106,7 +106,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   // Somewhat random way to decide on a chunk size.
   const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
 
-  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, UseMvcc::No, out_chunk_size);
+  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, UseMvcc::No,
+                                           out_chunk_size);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
@@ -212,8 +213,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   /**
    * Both tables must contain only ReferenceColumns
    */
-  Assert(input_table_left()->type() == TableType::References &&
-         input_table_right()->type() == TableType::References,
+  Assert(input_table_left()->type() == TableType::References && input_table_right()->type() == TableType::References,
          "UnionPositions doesn't support non-reference tables yet");
 
   /**

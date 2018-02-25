@@ -35,7 +35,8 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     const auto data_type = data_type_to_string.right.at(col_types[i]);
     column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
   }
-  std::shared_ptr<Table> test_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, chunk_size);
+  std::shared_ptr<Table> test_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, chunk_size);
 
   while (std::getline(infile, line)) {
     std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');

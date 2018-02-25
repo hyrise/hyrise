@@ -65,7 +65,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
       if (_meta.auto_compress && row_count == _meta.chunk_size) {
         for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
           const auto value_column = std::static_pointer_cast<BaseValueColumn>(columns[column_id]);
-          columns[column_id] = encode_column(EncodingType::DeprecatedDictionary, table->column_data_type(column_id), value_column);
+          columns[column_id] =
+              encode_column(EncodingType::DeprecatedDictionary, table->column_data_type(column_id), value_column);
         }
       }
     }));
@@ -151,8 +152,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   return true;
 }
 
-size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  ChunkColumnList& columns) {
+size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
+                                    const Table& table, ChunkColumnList& columns) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;

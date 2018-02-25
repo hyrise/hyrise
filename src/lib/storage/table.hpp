@@ -23,10 +23,8 @@ class TableStatistics;
 // A table is partitioned horizontally into a number of chunks
 class Table : private Noncopyable {
  public:
-  explicit Table(const TableColumnDefinitions& column_definitions,
-                 const TableType type = TableType::Data,
-                 const UseMvcc use_mvcc = UseMvcc::No,
-                 const uint32_t max_chunk_size = Chunk::MAX_SIZE);
+  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type = TableType::Data,
+                 const UseMvcc use_mvcc = UseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
 
   const TableColumnDefinitions& column_definitions() const;
 
@@ -66,8 +64,8 @@ class Table : private Noncopyable {
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   void add_chunk_new(const ChunkColumnList& columns,
-                                       const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                                       const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
+                     const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+                     const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   uint32_t max_chunk_size() const;
