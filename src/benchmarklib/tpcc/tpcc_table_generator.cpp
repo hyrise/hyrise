@@ -60,6 +60,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   opossum::ChunkEncoder::encode_all_chunks(table);
 
@@ -98,6 +99,7 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_warehouse_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   opossum::ChunkEncoder::encode_all_chunks(table);
 
@@ -148,6 +150,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
@@ -189,6 +193,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
@@ -255,6 +261,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
@@ -287,6 +295,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_history_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
@@ -331,6 +341,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
@@ -433,6 +445,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
@@ -458,6 +472,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
 
   auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
                                                 opossum::UseMvcc::Yes);
+  for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
+  
   opossum::ChunkEncoder::encode_all_chunks(table);
   return table;
 }
