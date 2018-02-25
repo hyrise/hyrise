@@ -47,7 +47,8 @@ bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
 std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     std::vector<std::shared_ptr<ProjectionNode>>& projections) const {
   // Store original child and parents
-  auto child = projections.back()->left_child();
+  auto left_child = projections.back()->left_child();
+  auto right_child = projections.back()->right_child();
   const auto parents = projections.front()->parents();
   const auto child_sides = projections.front()->get_child_sides();
 
@@ -83,14 +84,17 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     }
   }
 
-  for (auto& projection : projections) {
-    projection->remove_from_tree();
-  }
-
   auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
 
-  // Ensure that parents and child are chained back to the new node correctly
-  projection_node->set_left_child(child);
+  // Ensure that parents and children are chained back to the new node correctly
+  if (left_child) {
+    left_child->clear_parents();
+    projection_node->set_left_child(left_child);
+  }
+  if (right_child) {
+    right_child->clear_parents();
+    projection_node->set_right_child(right_child);
+  }
 
   for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
     parents[parent_idx]->set_child(child_sides[parent_idx], projection_node);
