@@ -8,7 +8,6 @@
 #include "optimizer/table_statistics.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tuning/greedy_selector.hpp"
