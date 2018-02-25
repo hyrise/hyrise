@@ -50,7 +50,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     ColumnIteratorValue<T> dereference() const {
-      if (*_pos_list_it == NULL_ROW_ID) return ColumnIteratorValue<T>{T{}, true, 0u};
+      if (_pos_list_it->is_null()) return ColumnIteratorValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;

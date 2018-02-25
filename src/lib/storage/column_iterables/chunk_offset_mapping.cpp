@@ -7,7 +7,7 @@ ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list) {
 
   for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < pos_list.size(); ++chunk_offset) {
     const auto row_id = pos_list[chunk_offset];
-    if (row_id == NULL_ROW_ID) continue;
+    if (row_id.is_null()) continue;
 
     // Returns ChunkOffsetsList for row_id.chunk_id or creates new
     auto& mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];

@@ -95,7 +95,14 @@ struct RowID {
   RowID() = default;
 
   RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset):
-    chunk_id(chunk_id), chunk_offset(chunk_offset) {}
+    chunk_id(chunk_id), chunk_offset(chunk_offset) {
+    DebugAssert((chunk_offset == INVALID_CHUNK_OFFSET) == (chunk_id == INVALID_CHUNK_ID), "Only one 'invalid'/NULL RowIDs value allowed, and that is NULL_ROW_ID");
+  }
+
+  // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
+  bool is_null() const {
+    return chunk_offset == INVALID_CHUNK_OFFSET;
+  }
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {

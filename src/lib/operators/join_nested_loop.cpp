@@ -235,7 +235,7 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns,
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto row : *pos_list) {
-          if (row == NULL_ROW_ID) {
+          if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
           } else {
             auto reference_column = std::static_pointer_cast<const ReferenceColumn>(

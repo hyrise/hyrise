@@ -31,7 +31,7 @@ void IsNullTableScanImpl::handle_column(const ReferenceColumn& left_column, std:
   // Additionally to the null values in the referencED column, we need to find null values in the referencING column
   if (_predicate_condition == PredicateCondition::IsNull) {
     for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list.size(); ++chunk_offset) {
-      if (pos_list[chunk_offset] == NULL_ROW_ID) context->_matches_out.emplace_back(context->_chunk_id, chunk_offset);
+      if (pos_list[chunk_offset].is_null()) context->_matches_out.emplace_back(context->_chunk_id, chunk_offset);
     }
   }
 }

@@ -61,7 +61,6 @@ using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *
- *   // don’t forget to check if chunk_offsets().index_into_referenced == INVALID_CHUNK_OFFSET (i.e. NULL)
  *   Value dereference() const { return Value{}; }
  * };
  */
