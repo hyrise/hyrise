@@ -99,7 +99,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
-      //auto chunk_out = std::make_shared<Chunk>(chunk_guard->get_allocator(), chunk_guard->access_counter());
       ChunkColumnList out_columns;
 
       /**
