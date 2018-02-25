@@ -322,7 +322,7 @@ TaskVector NewOrderRefImpl::get_create_order_tasks(const int32_t d_next_o_id, co
     column_definitions.emplace_back(original_table->column_name(columnID), original_table->column_data_type(columnID),
                                     false);
   }
-  auto new_table = std::make_shared<opossum::Table>(column_definitions);
+  auto new_table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data);
 
   opossum::ChunkColumns columns;
   columns.push_back(create_single_value_column<int32_t>(d_next_o_id));
@@ -358,7 +358,7 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(const int32_t o_id, const
     column_definitions.emplace_back(original_table->column_name(columnID), original_table->column_data_type(columnID),
                                     false);
   }
-  auto new_table = std::make_shared<opossum::Table>(column_definitions);
+  auto new_table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data);
 
   opossum::ChunkColumns columns;
   columns.push_back(create_single_value_column<int32_t>(o_id));
@@ -526,7 +526,7 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
     column_definitions.emplace_back(original_table->column_name(columnID), original_table->column_data_type(columnID),
                                     false);
   }
-  auto new_table = std::make_shared<opossum::Table>(column_definitions);
+  auto new_table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data);
 
   opossum::ChunkColumns columns;
   columns.push_back(create_single_value_column<int32_t>(ol_o_id));

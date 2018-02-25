@@ -85,7 +85,7 @@ class TableBuilder {
                                                              column_name_and_type[boost::hana::llong_c<1>]);
                              return column_definitions;
                            });
-    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, use_mvcc, chunk_size);
+    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
   }
 
   std::shared_ptr<opossum::Table> finish_table() {
@@ -198,8 +198,7 @@ TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
     : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
-  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, Chunk::MAX_SIZE,
-                                UseMvcc::Yes};
+  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes};
   TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes};
   TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes};
   TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, UseMvcc::Yes};
