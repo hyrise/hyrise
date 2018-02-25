@@ -114,8 +114,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   const auto table_type = reuse_columns_from_input ? input_table_left()->type() : TableType::Data;
-  auto output_table =
-      std::make_shared<Table>(column_definitions, table_type, input_table_left()->max_chunk_size());
+  auto output_table = std::make_shared<Table>(column_definitions, table_type, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection

@@ -31,8 +31,10 @@ class StorageManagerTest : public BaseTest {
 
 TEST_F(StorageManagerTest, AddTableTwice) {
   auto& sm = StorageManager::get();
-  EXPECT_THROW(sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)), std::exception);
-  EXPECT_THROW(sm.add_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)), std::exception);
+  EXPECT_THROW(sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
+               std::exception);
+  EXPECT_THROW(sm.add_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
+               std::exception);
 }
 
 TEST_F(StorageManagerTest, GetTable) {

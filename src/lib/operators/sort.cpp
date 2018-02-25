@@ -50,8 +50,7 @@ class Sort::SortImplMaterializeOutput {
 
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
-    auto output =
-        std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
+    auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
     // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
 

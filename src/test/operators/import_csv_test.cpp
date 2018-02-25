@@ -50,8 +50,7 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped.csv");
   importer->execute();
 
-  auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});

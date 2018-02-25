@@ -20,8 +20,8 @@ TableColumnDefinition::TableColumnDefinition(const std::string& name, const Data
   DebugAssert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
 }
 
-Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             const uint32_t max_chunk_size, const UseMvcc use_mvcc)
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const uint32_t max_chunk_size,
+             const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
