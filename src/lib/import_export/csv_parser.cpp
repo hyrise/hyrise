@@ -190,7 +190,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   // Transform the field_offsets to columns and add columns to chunk.
   for (auto& converter : converters) {
-    columns.emplace_back(converter->finish());
+    columns.push_back(converter->finish());
   }
 
   return row_count;
