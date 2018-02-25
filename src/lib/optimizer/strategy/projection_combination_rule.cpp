@@ -83,6 +83,10 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     }
   }
 
+  for (auto& projection : projections) {
+    projection->remove_from_tree();
+  }
+
   auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
 
   // Ensure that parents and child are chained back to the new node correctly
