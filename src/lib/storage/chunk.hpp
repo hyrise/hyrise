@@ -16,12 +16,12 @@
 #include "index/column_index_type.hpp"
 
 #include "all_type_variant.hpp"
+#include "chunk_access_counter.hpp"
+#include "mvcc_columns.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 #include "utils/scoped_locking_ptr.hpp"
-#include "chunk_access_counter.hpp"
-#include "mvcc_columns.hpp"
 
 namespace opossum {
 
@@ -41,8 +41,6 @@ class Chunk : private Noncopyable {
  public:
   static const ChunkOffset MAX_SIZE;
 
-  // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
-  // As such, it cannot have MVCC information.
   Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<ChunkAccessCounter> access_counter = nullptr);

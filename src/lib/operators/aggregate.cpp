@@ -557,7 +557,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   // Write the output
-  _output = std::make_shared<Table>(_output_column_definitions, TableType::Data, UseMvcc::No);
+  _output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   _output->append_chunk(_output_columns);
 
   return _output;

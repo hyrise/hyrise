@@ -6,17 +6,11 @@
 
 namespace opossum {
 
-MvccColumns::MvccColumns(const size_t size) {
-  grow_by(size, 0);
-}
+MvccColumns::MvccColumns(const size_t size) { grow_by(size, 0); }
 
-size_t MvccColumns::size() const {
-  return _size;
-}
+size_t MvccColumns::size() const { return _size; }
 
 void MvccColumns::shrink() {
-  std::unique_lock<std::shared_mutex> lock{_mutex};
-
   tids.shrink_to_fit();
   begin_cids.shrink_to_fit();
   end_cids.shrink_to_fit();

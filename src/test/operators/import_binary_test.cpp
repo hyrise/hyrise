@@ -15,7 +15,7 @@ class OperatorsImportBinaryTest : public BaseTest {};
 
 TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
   auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float}}, TableType::Data, UseMvcc::No, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float}}, TableType::Data, 5);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -29,7 +29,7 @@ TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
 TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -44,7 +44,7 @@ TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
 TEST_F(OperatorsImportBinaryTest, StringValueColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -59,7 +59,7 @@ TEST_F(OperatorsImportBinaryTest, StringValueColumn) {
 TEST_F(OperatorsImportBinaryTest, StringDictionaryColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10, UseMvcc::Yes);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -83,7 +83,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, 2);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -103,7 +103,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, 2);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -127,7 +127,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, 2);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -161,7 +161,7 @@ TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
   column_definitions.emplace_back("FirstColumn", DataType::Int);
   column_definitions.emplace_back("SecondColumn", DataType::String);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 30'000);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30'000);
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/TwoColumnsNoValues.bin");
   importer->execute();
@@ -173,7 +173,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsValueColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
   expected_table->append({""});
   expected_table->append({""});
@@ -191,7 +191,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionaryColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
   expected_table->append({""});
   expected_table->append({""});
@@ -244,7 +244,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   expected_table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   expected_table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -266,7 +266,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   expected_table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   expected_table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

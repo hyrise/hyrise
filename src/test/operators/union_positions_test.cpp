@@ -282,12 +282,12 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   column_definitions.emplace_back("a", DataType::Int);
   column_definitions.emplace_back("b", DataType::Float);
   column_definitions.emplace_back("c", DataType::Int);
-  auto table_left = std::make_shared<Table>(column_definitions, TableType::References, UseMvcc::No, 3);
+  auto table_left = std::make_shared<Table>(column_definitions, TableType::References, 3);
 
   table_left->append_chunk(ChunkColumns({column_left_0_0, column_left_0_1, column_left_0_2}));
   table_left->append_chunk(ChunkColumns({column_left_1_0, column_left_1_1, column_left_1_2}));
 
-  auto table_right = std::make_shared<Table>(column_definitions, TableType::References, UseMvcc::No, 4);
+  auto table_right = std::make_shared<Table>(column_definitions, TableType::References, 4);
 
   table_right->append_chunk(ChunkColumns({column_right_0_0, column_right_0_1, column_right_0_2}));
   table_right->append_chunk(ChunkColumns({column_right_1_0, column_right_1_1, column_right_1_2}));

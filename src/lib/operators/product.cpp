@@ -30,7 +30,7 @@ std::shared_ptr<const Table> Product::_on_execute() {
                                     input_table_right()->column_data_type(column_id));
   }
 
-  auto output = std::make_shared<Table>(column_definitions, TableType::References, UseMvcc::No);
+  auto output = std::make_shared<Table>(column_definitions, TableType::References);
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {

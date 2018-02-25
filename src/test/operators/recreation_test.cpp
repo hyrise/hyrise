@@ -37,7 +37,7 @@ class RecreationTest : public BaseTest {
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
 
-    _test_get_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, UseMvcc::No, 2);
+    _test_get_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     StorageManager::get().add_table("aNiceTestTable", _test_get_table);
   }
 

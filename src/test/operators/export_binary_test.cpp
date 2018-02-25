@@ -58,7 +58,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   column_definitions.emplace_back("FirstColumn", DataType::Int);
   column_definitions.emplace_back("SecondColumn", DataType::String);
 
-  table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 30000);
+  table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
@@ -72,7 +72,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -89,7 +89,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -107,7 +107,7 @@ TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -126,7 +126,7 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -151,7 +151,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -174,7 +174,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -200,7 +200,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -229,7 +229,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
   column_definitions.emplace_back("d", DataType::Float);
   column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -253,7 +253,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -274,7 +274,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -301,7 +301,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -327,7 +327,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

@@ -111,7 +111,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
     output_column_definitions.emplace_back(column_names[column_id], data_type, column_nullables[column_id]);
   }
 
-  auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, UseMvcc::Yes, chunk_size);
+  auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   return std::make_pair(table, chunk_count);
 }

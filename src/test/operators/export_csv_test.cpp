@@ -26,7 +26,7 @@ class OperatorsExportCsvTest : public BaseTest {
     column_definitions.emplace_back("b", DataType::String);
     column_definitions.emplace_back("c", DataType::Float);
 
-    table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+    table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
   void TearDown() override {
@@ -157,7 +157,7 @@ TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
   column_definitions.emplace_back("d", DataType::Long);
   column_definitions.emplace_back("e", DataType::Double);
 
-  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(new_table));

@@ -18,7 +18,7 @@ class StorageTableTest : public BaseTest {
   void SetUp() override {
     column_definitions.emplace_back("col_1", DataType::Int);
     column_definitions.emplace_back("col_2", DataType::String);
-    t = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 2);
+    t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
   std::shared_ptr<Table> t;
@@ -91,7 +91,7 @@ TEST_F(StorageTableTest, ColumnNameTooLong) {
 }
 
 TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
-  t = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, 2);
+  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
   t->append({4, "Hello,"});
   t->append({6, "world"});
@@ -166,7 +166,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
   TableColumnDefinitions column_definitions{};
-  EXPECT_THROW(Table(column_definitions, TableType::Data, UseMvcc::No, 0), std::logic_error);
+  EXPECT_THROW(Table(column_definitions, TableType::Data, 0), std::logic_error);
 }
 
 TEST_F(StorageTableTest, MemoryUsageEstimation) {

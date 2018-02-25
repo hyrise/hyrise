@@ -27,7 +27,7 @@ class ReferenceColumnTest : public BaseTest {
     column_definitions.emplace_back("a", DataType::Int, true);
     column_definitions.emplace_back("b", DataType::Float);
 
-    _test_table = std::make_shared<opossum::Table>(column_definitions, TableType::Data, UseMvcc::No, 3);
+    _test_table = std::make_shared<opossum::Table>(column_definitions, TableType::Data, 3);
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
     _test_table->append({12345, 458.7f});
@@ -37,7 +37,7 @@ class ReferenceColumnTest : public BaseTest {
     TableColumnDefinitions column_definitions2;
     column_definitions2.emplace_back("a", DataType::Int);
     column_definitions2.emplace_back("b", DataType::Int);
-    _test_table_dict = std::make_shared<opossum::Table>(column_definitions2, TableType::Data, UseMvcc::Yes, 5);
+    _test_table_dict = std::make_shared<opossum::Table>(column_definitions2, TableType::Data, 5, UseMvcc::Yes);
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
 
     ChunkEncoder::encode_chunks(_test_table_dict, {ChunkID{0}, ChunkID{1}});

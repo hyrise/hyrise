@@ -19,7 +19,7 @@ class OperatorsValidateVisibilityTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("col_1", DataType::Int);
     column_definitions.emplace_back("col_2", DataType::Int);
-    t = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::Yes, chunk_size);
+    t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
     t->append({123, 456});
 
     StorageManager::get().add_table(table_name, t);

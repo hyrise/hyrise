@@ -29,7 +29,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
 
-  auto output = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, UseMvcc::No);
+  auto output = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
 
   // 1. We create a set of all right input rows as concatenated strings.
 

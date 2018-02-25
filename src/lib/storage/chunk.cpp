@@ -24,7 +24,7 @@ Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_colu
     : _columns(columns), _mvcc_columns(mvcc_columns), _access_counter(access_counter) {
 #if IS_DEBUG
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
-  Assert (!_mvcc_columns || _mvcc_columns->size() == chunk_size, "Invalid MvccColumns size");
+  Assert(!_mvcc_columns || _mvcc_columns->size() == chunk_size, "Invalid MvccColumns size");
   for (const auto& column : columns) {
     Assert(column->size() == chunk_size, "Columns don't have the same length");
   }

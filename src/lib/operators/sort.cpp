@@ -51,7 +51,7 @@ class Sort::SortImplMaterializeOutput {
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
     auto output =
-        std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, UseMvcc::No, _output_chunk_size);
+        std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
     // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
 
@@ -100,7 +100,7 @@ class Sort::SortImplMaterializeOutput {
           // Check if value column is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            chunk_it->emplace_back(*column_it);
+            chunk_it->push_back(*column_it);
             ++column_it;
             ++chunk_it;
           }
@@ -108,7 +108,7 @@ class Sort::SortImplMaterializeOutput {
 
         // Last column has not been added
         if (chunk_offset_out > 0u) {
-          chunk_it->emplace_back(*column_it);
+          chunk_it->push_back(*column_it);
         }
       });
     }

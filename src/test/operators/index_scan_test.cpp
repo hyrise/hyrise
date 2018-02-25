@@ -27,7 +27,7 @@ class OperatorsIndexScanTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int);
     column_definitions.emplace_back("b", DataType::Int);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
     for (int i = 0; i <= 24; i += 2) table->append({i, 100 + i});
     ChunkEncoder::encode_all_chunks(table);
 
@@ -44,7 +44,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _table_wrapper = std::make_shared<TableWrapper>(table);
     _table_wrapper->execute();
 
-    auto empty_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+    auto empty_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
     _empty_table_wrapper = std::make_shared<TableWrapper>(empty_table);
     _empty_table_wrapper->execute();

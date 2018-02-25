@@ -575,7 +575,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           concatenated(_left_in_table->column_definitions(), _right_in_table->column_definitions());
     }
 
-    _output_table = std::make_shared<Table>(output_column_definitions, TableType::References, UseMvcc::No);
+    _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 
     /*
      * This flag is used in the materialization and probing phases.
@@ -722,7 +722,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             }
           }
           output_columns.push_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(),
-                                                                        ref_col->referenced_column_id(), new_pos_list));
+                                                                     ref_col->referenced_column_id(), new_pos_list));
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that

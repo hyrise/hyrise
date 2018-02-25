@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <shared_mutex>
+#include <shared_mutex>  // NOLINT lint thinks this is a C header or something
 
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"

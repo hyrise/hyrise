@@ -19,7 +19,7 @@ class OperatorsPrintTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("col_1", DataType::Int);
     column_definitions.emplace_back("col_2", DataType::String);
-    t = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, chunk_size);
+    t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
     StorageManager::get().add_table(table_name, t);
 
     gt = std::make_shared<GetTable>(table_name);

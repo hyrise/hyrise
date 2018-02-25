@@ -98,7 +98,7 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
     colum_definitions.emplace_back(column_name, data_type, column_meta.nullable);
   }
 
-  return std::make_shared<Table>(colum_definitions, TableType::Data, UseMvcc::Yes, _meta.chunk_size);
+  return std::make_shared<Table>(colum_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
 }
 
 bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,

@@ -191,7 +191,7 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
       column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
     }
 
-    return std::make_shared<Table>(column_definitions);
+    return std::make_shared<Table>(column_definitions, TableType::Data);
   }
 
   return nullptr;

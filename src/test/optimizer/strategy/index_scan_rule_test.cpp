@@ -30,9 +30,9 @@ namespace opossum {
 class TableStatisticsMock : public TableStatistics {
  public:
   // we don't need a shared_ptr<Table> for this mock, so just set a nullptr
-  TableStatisticsMock() : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{})) { _row_count = 0; }
+  TableStatisticsMock() : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)) { _row_count = 0; }
 
-  explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{})) {
+  explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)) {
     _row_count = row_count;
   }
 

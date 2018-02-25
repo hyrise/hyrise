@@ -51,7 +51,7 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   importer->execute();
 
   auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, UseMvcc::No, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -95,7 +95,7 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String}, {"b", DataType::String}, {"c", DataType::String}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({"", "", ""});
   }
@@ -109,7 +109,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
   importer->schedule();
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 20);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -128,7 +128,7 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({1, 2, 3});
   }
@@ -162,7 +162,7 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 20);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -179,7 +179,7 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -194,7 +194,7 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
 
   TableColumnDefinitions column_definitions{
       {"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
 
   expected_table->append({458.7f, 12345, NULL_VALUE});
   expected_table->append({NULL_VALUE, 123, 456});
@@ -208,7 +208,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   expected_table->append({"xxx"});
   expected_table->append({"www"});
@@ -240,7 +240,7 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   column_definitions.emplace_back("f", DataType::Int);
   column_definitions.emplace_back("g", DataType::Float);
   column_definitions.emplace_back("h", DataType::Double);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
   expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
@@ -256,7 +256,7 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   expected_table->append({"xxx\\\"xyz\\\""});
 
@@ -276,7 +276,7 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No, 20);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});

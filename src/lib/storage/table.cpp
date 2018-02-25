@@ -20,8 +20,8 @@ TableColumnDefinition::TableColumnDefinition(const std::string& name, const Data
   DebugAssert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
 }
 
-Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const UseMvcc use_mvcc,
-             const uint32_t max_chunk_size)
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
+             const uint32_t max_chunk_size, const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
@@ -139,17 +139,21 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::append_chunk(const ChunkColumns &columns, const std::optional<PolymorphicAllocator<Chunk>> &alloc,
-                         const std::shared_ptr<ChunkAccessCounter> &access_counter) {
+void Table::append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+                         const std::shared_ptr<ChunkAccessCounter>& access_counter) {
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
 
 #if IS_DEBUG
   for (const auto& column : columns) {
     DebugAssert(column->size() == chunk_size, "Columns don't have the same length");
-    const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
+    const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column) != nullptr;
     switch (_type) {
-      case TableType::References: DebugAssert(is_reference_column, "Invalid column type"); break;
-      case TableType::Data: DebugAssert(!is_reference_column, "Invalid column type"); break;
+      case TableType::References:
+        DebugAssert(is_reference_column, "Invalid column type");
+        break;
+      case TableType::Data:
+        DebugAssert(!is_reference_column, "Invalid column type");
+        break;
     }
   }
 #endif

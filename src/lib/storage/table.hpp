@@ -27,8 +27,8 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
  public:
-  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type = TableType::Data,
-                 const UseMvcc use_mvcc = UseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
+  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
+                 const uint32_t max_chunk_size = Chunk::MAX_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{
@@ -52,7 +52,6 @@ class Table : private Noncopyable {
 
   /** @} */
 
-
   TableType type() const;
 
   UseMvcc has_mvcc() const;
@@ -69,7 +68,6 @@ class Table : private Noncopyable {
    * @return row_count() == 0
    */
   bool empty() const;
-
 
   /**
    * @defgroup Accessing and adding Chunks
@@ -90,15 +88,13 @@ class Table : private Noncopyable {
    * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
    * @param alloc
    */
-  void append_chunk(const ChunkColumns &columns,
-                    const std::optional<PolymorphicAllocator<Chunk>> &alloc = std::nullopt,
-                    const std::shared_ptr<ChunkAccessCounter> &access_counter = nullptr);
+  void append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+                    const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
   // Create and append a Chunk consisting of ValueColumns.
   void append_mutable_chunk();
 
   /** @} */
-
 
   /**
    * @defgroup Convenience methods for accessing/adding Table data. Slow, use only for testing!
@@ -131,7 +127,6 @@ class Table : private Noncopyable {
   }
 
   /** @} */
-
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 

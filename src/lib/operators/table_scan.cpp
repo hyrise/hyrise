@@ -78,7 +78,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   _init_scan();
 
-  _output_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References, UseMvcc::No);
+  _output_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
   std::mutex output_mutex;
 
