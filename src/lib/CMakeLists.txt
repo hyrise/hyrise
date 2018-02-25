@@ -333,6 +333,28 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tuning/abstract_evaluator.hpp
+    tuning/abstract_selector.hpp
+    tuning/greedy_selector.cpp
+    tuning/greedy_selector.hpp
+    tuning/index/base_index_evaluator.cpp
+    tuning/index/base_index_evaluator.hpp
+    tuning/index/column_ref.cpp
+    tuning/index/column_ref.hpp
+    tuning/index/index_evaluator.cpp
+    tuning/index/index_evaluator.hpp
+    tuning/index/index_choice.cpp
+    tuning/index/index_choice.hpp
+    tuning/index/index_operation.cpp
+    tuning/index/index_operation.hpp
+    tuning/null_operation.cpp
+    tuning/null_operation.hpp
+    tuning/tuner.cpp
+    tuning/tuner.hpp
+    tuning/tuning_choice.hpp
+    tuning/tuning_choice.cpp
+    tuning/tuning_operation.hpp
+    tuning/tuning_operation.cpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
