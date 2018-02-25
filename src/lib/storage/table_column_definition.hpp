@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
