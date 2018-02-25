@@ -9,9 +9,7 @@ struct TableColumnDefinition final {
   TableColumnDefinition() = default;
   TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable = false);
 
-  bool operator==(const TableColumnDefinition& rhs) const {
-    return name == rhs.name && data_type == rhs.data_type && nullable == rhs.nullable;
-  }
+  bool operator==(const TableColumnDefinition& rhs) const;
 
   std::string name;
   DataType data_type{DataType::Int};
