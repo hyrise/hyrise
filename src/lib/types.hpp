@@ -85,12 +85,17 @@ using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 
-// Used to represent NULL values
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 struct RowID {
-  ChunkID chunk_id{0};
+  ChunkID chunk_id{INVALID_CHUNK_ID};
   ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
+
+  RowID() = default;
+
+  RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset):
+    chunk_id(chunk_id), chunk_offset(chunk_offset) {}
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {
@@ -128,12 +133,11 @@ constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
-constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
 // ... in ReferenceColumns
-const RowID NULL_ROW_ID = RowID{ChunkID{0}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
+const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
 // ... in DictionaryColumns
 constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};

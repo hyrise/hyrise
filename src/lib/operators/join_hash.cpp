@@ -724,6 +724,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
                                             new_pos_list));
         } else {
+          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to
+          // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matt
           output_columns.emplace_back(std::make_shared<ReferenceColumn>(std::make_shared<Table>(input_table->column_definitions(), TableType::Data), column_id, std::make_shared<PosList>(pos_list)));
         }
       } else {
