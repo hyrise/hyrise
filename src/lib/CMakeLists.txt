@@ -302,6 +302,7 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
+    storage/table_column_definition.cpp
     storage/table_column_definition.hpp
     storage/value_column.cpp
     storage/value_column.hpp

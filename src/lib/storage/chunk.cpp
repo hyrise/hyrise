@@ -44,7 +44,7 @@ void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column)
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) _mvcc_columns->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
+  if (has_mvcc_columns()) mvcc_columns()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),

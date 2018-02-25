@@ -15,11 +15,6 @@
 
 namespace opossum {
 
-TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable)
-    : name(name), data_type(data_type), nullable(nullable) {
-  DebugAssert(name.size() <= std::numeric_limits<ColumnNameLength>::max(), "Column Name is too long");
-}
-
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const uint32_t max_chunk_size,
              const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
