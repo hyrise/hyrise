@@ -43,7 +43,7 @@ class Chunk : private Noncopyable {
 
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
-  Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
+  Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<ChunkAccessCounter> access_counter = nullptr);
 
