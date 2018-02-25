@@ -72,7 +72,10 @@ class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> 
       : _chunk_offsets_it{chunk_offsets_it} {}
 
  protected:
-  const ChunkOffsetMapping& chunk_offsets() const { return *_chunk_offsets_it; }
+  const ChunkOffsetMapping& chunk_offsets() const {
+    DebugAssert(_chunk_offsets_it->into_referenced != INVALID_CHUNK_OFFSET, "Invalid ChunkOffset, calling code should handle null values");
+    return *_chunk_offsets_it;
+  }
 
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

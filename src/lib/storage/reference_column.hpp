@@ -38,7 +38,7 @@ class ReferenceColumn : public BaseColumn {
       auto chunk = _referenced_table->get_chunk(row.chunk_id);
       std::shared_ptr<const BaseColumn> column = chunk->get_column(_referenced_column_id);
 
-      if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+      if (row == NULL_ROW_ID) {
         values.push_back(std::nullopt);
         continue;
       }

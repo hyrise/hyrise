@@ -68,10 +68,6 @@ class DeprecatedAttributeVectorIterable : public PointAccessibleColumnIterable<D
 
     ColumnIteratorValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<ValueID>{NULL_VALUE_ID, true, chunk_offsets.into_referencing};
-
       const auto value_id = _attribute_vector.get(chunk_offsets.into_referenced);
       const auto is_null = (value_id == NULL_VALUE_ID);
 

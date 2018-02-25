@@ -589,7 +589,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                                   ref_column->referenced_column_id(), new_pos_list);
           output_columns.emplace_back(new_ref_column);
         } else {
-          output_columns.emplace_back(std::make_shared<ReferenceColumn>(std::make_shared<Table>(input_table->column_definitions(), TableType::Data), column_id, pos_list));
+          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
+          // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
+          // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
+          // it.
+          const auto dummy_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
+          output_columns.emplace_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
         }
       } else {
         auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
@@ -615,7 +620,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Get the row ids that are referenced
     auto new_pos_list = std::make_shared<PosList>();
     for (const auto& row : *pos_list) {
-      if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+      if (row == NULL_ROW_ID) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {
         new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
