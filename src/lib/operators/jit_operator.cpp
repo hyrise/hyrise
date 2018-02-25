@@ -61,11 +61,11 @@ std::shared_ptr<const Table> JitOperator::_on_execute() {
   std::function<void(const JitReadTuple*, JitRuntimeContext&)> execute_func;
 
   if (_use_jit) {
+    JitRepository::get();
     auto start = std::chrono::high_resolution_clock::now();
     module.specialize(std::make_shared<JitConstantRuntimePointer>(_source().get()));
+    auto runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
     execute_func = module.compile<void(const JitReadTuple*, JitRuntimeContext&)>();
-    auto runtime = std::round(
-            std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
     std::cout << "jitting took " << runtime / 1000.0 << "ms" << std::endl;
   } else {
     execute_func = &JitReadTuple::execute;

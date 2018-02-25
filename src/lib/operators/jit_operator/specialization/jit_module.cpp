@@ -7,6 +7,8 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
+#include "utils/my_llvm.hpp"
+
 #include <queue>
 #include <sstream>
 
@@ -27,18 +29,124 @@ void JitModule::specialize(const JitRuntimePointer::Ptr& runtime_this) {
   DebugAssert(root_function, "root function not found in repository");
   _root_function = _clone_function(*root_function, "_");
 
-  _specialize(runtime_this);
+  _runtime_values[&*_root_function->arg_begin()] = runtime_this;
+  _resolve_virtual_calls();
+  //_replace_loads_with_runtime_values();
   _optimize();
-  _specialize(runtime_this);
-  _optimize();
-  _specialize(runtime_this);
-  _optimize();
-  _specialize(runtime_this);
-  _optimize();
-  // while (_modified) {
+  //_runtime_values[&*_root_function->arg_begin()] = runtime_this;
+  //_resolve_virtual_calls();
+ // _optimize();
 
-  // _specialize(runtime_this);
-  // }
+  // llvm_utils::module_to_file("/tmp/after.ll", *_module);
+
+  return;
+
+  auto start = std::chrono::high_resolution_clock::now();
+  _specialize(runtime_this);
+  auto runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  std::cout << runtime << std::endl;
+
+  start = std::chrono::high_resolution_clock::now();
+  _optimize();
+  runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  std::cout << runtime << std::endl;
+
+  start = std::chrono::high_resolution_clock::now();
+  _specialize(runtime_this);
+  runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  std::cout << runtime << std::endl;
+
+  start = std::chrono::high_resolution_clock::now();
+  _optimize();
+  runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  std::cout << runtime << std::endl;
+
+  //_specialize(runtime_this);
+  //_optimize();
+
+}
+
+void JitModule::_resolve_virtual_calls() {
+  std::queue<llvm::CallSite> call_sites;
+  _visit<llvm::CallInst>([&](llvm::CallInst& inst) { call_sites.push(llvm::CallSite(&inst)); });
+  _visit<llvm::InvokeInst>([&](llvm::InvokeInst& inst) { call_sites.push(llvm::CallSite(&inst)); });
+
+  while (!call_sites.empty()) {
+    auto& call_site = call_sites.front();
+    if (call_site.isIndirectCall()) {
+      //call_site.getCalledValue()->print(llvm::outs(), true);
+      //std::cout << std::endl;
+      // attempt to resolve virtual function call
+      const auto called_value = call_site.getCalledValue();
+      const auto called_runtime_value = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(called_value));
+      if (called_runtime_value && called_runtime_value->is_valid()) {
+        const auto vtable_index = called_runtime_value->up().total_offset() / _module->getDataLayout().getPointerSize();
+        const auto instance = reinterpret_cast<JitRTTIHelper*>(called_runtime_value->up().up().base().address());
+        const auto class_name = typeid(*instance).name();
+        if (const auto repo_function = _repository.get_vtable_entry(class_name, vtable_index)) {
+          call_site.setCalledFunction(repo_function);
+        }
+      } else {
+        // The virtual call could not be resolved. There is nothing we can inline so we might as well move on.
+        call_sites.pop();
+        continue;
+      }
+    }
+
+    auto& function = *call_site.getCalledFunction();
+
+    // std::cout << "about to inline " << function.getName().str() << std::endl;
+    _llvm_value_map.clear();
+    // map personality function
+    //if (function.hasPersonalityFn()) {
+    //  _visit<llvm::Function>(*function.getPersonalityFn(), [&](const auto& fn) {
+    //    if (!_llvm_value_map.count(&fn)) {
+    //      _llvm_value_map[&fn] = _create_function_declaration(fn);
+    //    }
+    //  });
+   // }
+
+    // map called functions
+    _visit<const llvm::Function>(function, [&](const auto& fn) {
+      if (fn.isDeclaration() && !_llvm_value_map.count(&fn)) {
+        _llvm_value_map[&fn] = _create_function_declaration(fn);
+      }
+    });
+
+    // map global variables
+    _visit<const llvm::GlobalVariable>(function, [&](auto& global) {
+      if (!_llvm_value_map.count(&global)) {
+        _llvm_value_map[&global] = _clone_global(global);
+      }
+    });
+
+    // map function args
+    auto function_arg = function.arg_begin();
+    auto call_arg = call_site.arg_begin();
+    for (; function_arg != function.arg_end() && call_arg != call_site.arg_end(); ++function_arg, ++call_arg) {
+      _llvm_value_map[function_arg] = call_arg->get();
+    }
+
+    llvm::InlineFunctionInfo info;
+    InlineContext ctx{_module.get(), _runtime_values, _llvm_value_map};
+    if (llvm::MyInlineFunction(call_site, info, nullptr, false, ctx)) {
+      for (const auto& new_call_site : info.InlinedCallSites) {
+        call_sites.push(new_call_site);
+      }
+    }
+
+    //if (function.hasPersonalityFn()) {
+//      _root_function->setPersonalityFn(_llvm_value_map[function.getPersonalityFn()]);
+  //  }
+
+    call_sites.pop();
+  }
+}
+
+void JitModule::_adce() {
+  llvm::legacy::PassManager pass_manager;
+  pass_manager.add(llvm::createAggressiveDCEPass());
+  pass_manager.run(*_module);
 }
 
 bool JitModule::_specialize(const JitRuntimePointer::Ptr& runtime_this) {
@@ -110,22 +218,22 @@ void JitModule::_optimize() {
     branch_inst.setMetadata(18, nullptr);
   });
 
-  const auto before_path = "/tmp/before.ll";
-  const auto after_path = "/tmp/after.ll";
-  const auto remarks_path = "/tmp/remarks.yml";
+//  const auto before_path = "/tmp/before.ll";
+//  const auto after_path = "/tmp/after.ll";
+//  const auto remarks_path = "/tmp/remarks.yml";
 
-  std::cout << "Running optimization" << std::endl
-            << "  before:  " << before_path << std::endl
-            << "  after:   " << after_path << std::endl
-            << "  remarks: " << remarks_path << std::endl;
+//  std::cout << "Running optimization" << std::endl
+//            << "  before:  " << before_path << std::endl
+//            << "  after:   " << after_path << std::endl
+//            << "  remarks: " << remarks_path << std::endl;
 
-  _rename_values();
-  llvm_utils::module_to_file(before_path, *_module);
+//  _rename_values();
+//  llvm_utils::module_to_file(before_path, *_module);
 
   // TODO(johannes) remove later
-  std::error_code error_code;
-  llvm::raw_fd_ostream remarks_file(remarks_path, error_code, llvm::sys::fs::F_None);
-  _repository.llvm_context()->setDiagnosticsOutputFile(std::make_unique<llvm::yaml::Output>(remarks_file));
+//  std::error_code error_code;
+//  llvm::raw_fd_ostream remarks_file(remarks_path, error_code, llvm::sys::fs::F_None);
+//  _repository.llvm_context()->setDiagnosticsOutputFile(std::make_unique<llvm::yaml::Output>(remarks_file));
 
   const llvm::Triple module_triple(_module->getTargetTriple());
   const llvm::TargetLibraryInfoImpl target_lib_info(module_triple);
@@ -145,8 +253,8 @@ void JitModule::_optimize() {
 
   pass_builder.DisableUnitAtATime = false;
   pass_builder.DisableUnrollLoops = false;
-  pass_builder.LoopVectorize = true;
-  pass_builder.SLPVectorize = true;
+  pass_builder.LoopVectorize = false;
+  pass_builder.SLPVectorize = false;
 
   _compiler.target_machine().adjustPassManager(pass_builder);
   pass_builder.populateFunctionPassManager(function_pass_manager);
@@ -159,8 +267,8 @@ void JitModule::_optimize() {
   function_pass_manager.doFinalization();
   pass_manager.run(*_module);
 
-  llvm_utils::module_to_file(after_path, *_module);
-  _repository.llvm_context()->setDiagnosticsOutputFile(nullptr);
+//  llvm_utils::module_to_file(after_path, *_module);
+//  _repository.llvm_context()->setDiagnosticsOutputFile(nullptr);
 }
 
 void JitModule::_replace_loads_with_runtime_values() {
@@ -270,6 +378,8 @@ llvm::GlobalVariable* JitModule::_clone_global(const llvm::GlobalVariable& globa
 }
 
 const JitRuntimePointer::Ptr& JitModule::_get_runtime_value(const llvm::Value* value) {
+  //value->print(llvm::outs(), true);
+  // std::cout << std::endl;
   // try serving from cache
   if (_runtime_values.count(value)) {
     return _runtime_values[value];

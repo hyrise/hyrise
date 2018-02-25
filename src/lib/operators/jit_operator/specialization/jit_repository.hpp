@@ -20,8 +20,8 @@ class JitRepository : private Noncopyable {
  public:
   static JitRepository& get();
 
-  const llvm::Function* get_function(const std::string& name) const;
-  const llvm::Function* get_vtable_entry(const std::string& class_name, const size_t index) const;
+  llvm::Function* get_function(const std::string& name) const;
+  llvm::Function* get_vtable_entry(const std::string& class_name, const size_t index) const;
 
   std::shared_ptr<llvm::LLVMContext> llvm_context() const;
 
@@ -33,8 +33,8 @@ class JitRepository : private Noncopyable {
 
   std::shared_ptr<llvm::LLVMContext> _llvm_context;
   std::unique_ptr<llvm::Module> _module;
-  std::unordered_map<std::string, const llvm::Function*> _functions;
-  std::unordered_map<std::string, std::vector<const llvm::Function*>> _vtables;
+  std::unordered_map<std::string, llvm::Function*> _functions;
+  std::unordered_map<std::string, std::vector<llvm::Function*>> _vtables;
 
   const std::string vtable_prefix = "_ZTV";
 };

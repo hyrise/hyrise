@@ -26,8 +26,8 @@ class JitModule {
   std::function<T> compile() {
     const auto function_name = _root_function_name + "_";
 
-    // note: strangely, llvm::verifyModule returns false for valid modules
-    Assert(!llvm::verifyModule(*_module, &llvm::dbgs()), "Module is invalid.");
+    // Strangely, llvm::verifyModule returns false for valid modules
+    // DebugAssert(!llvm::verifyModule(*_module, &llvm::dbgs()), "Module is invalid.");
 
     _compiler.add_module(std::move(_module));
     return _compiler.find_symbol<T>(function_name);
@@ -37,6 +37,10 @@ class JitModule {
   bool _specialize(const JitRuntimePointer::Ptr& runtime_this);
 
   void _optimize();
+
+  void _resolve_virtual_calls();
+
+  void _adce();
 
   void _replace_loads_with_runtime_values();
 

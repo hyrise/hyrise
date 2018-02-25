@@ -389,6 +389,8 @@ if (NOT DISABLE_JIT_SUPPORT)
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
+        operators/jit_operator/specialization/utils/my_llvm.cpp
+        operators/jit_operator/specialization/utils/my_llvm.hpp
         logical_query_plan/jit_aware_lqp_translator.cpp
         logical_query_plan/jit_aware_lqp_translator.hpp
         operators/jit_operator.cpp
