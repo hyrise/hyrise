@@ -42,6 +42,7 @@ class OperatorsExportBinaryTest : public BaseTest {
     std::istreambuf_iterator<char> end;
 
     while (iterator_original != end && iterator_created != end) {
+      std::cout << (int)*iterator_original << " - " << (int)*iterator_created << std::endl;
       if (*iterator_original != *iterator_created) return false;
       ++iterator_original;
       ++iterator_created;

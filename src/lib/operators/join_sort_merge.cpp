@@ -577,15 +577,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the column data (in the form of a poslist)
-      // Check whether the referenced column is already a reference column
-      const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(column_id);
-      const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(base_column);
-      if (ref_column) {
+      if (input_table->type() == TableType::References) {
         // Create a pos_list referencing the original column instead of the reference column
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
-        auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
-                                                                ref_column->referenced_column_id(), new_pos_list);
-        output_columns.emplace_back(new_ref_column);
+
+        if (input_table->chunk_count() > 0) {
+          const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(column_id);
+          const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(base_column);
+
+          auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
+                                                                  ref_column->referenced_column_id(), new_pos_list);
+          output_columns.emplace_back(new_ref_column);
+        } else {
+          output_columns.emplace_back(std::make_shared<ReferenceColumn>(std::make_shared<Table>(input_table->column_definitions(), TableType::Data), column_id, pos_list));
+        }
       } else {
         auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
         output_columns.emplace_back(new_ref_column);
@@ -611,7 +616,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto new_pos_list = std::make_shared<PosList>();
     for (const auto& row : *pos_list) {
       if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-        new_pos_list->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        new_pos_list->push_back(NULL_ROW_ID);
       } else {
         new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
       }

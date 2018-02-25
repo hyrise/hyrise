@@ -178,7 +178,7 @@ void JoinNestedLoop::_perform_join() {
       for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
           _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-          _pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          _pos_list_right->emplace_back(NULL_ROW_ID);
         }
       }
     }
@@ -227,25 +227,31 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns,
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
 
-    if (input_table->type() == TableType::References && input_table->chunk_count() > 0) {
-      auto new_pos_list = std::make_shared<PosList>();
+    if (input_table->type() == TableType::References) {
+      if (input_table->chunk_count() > 0) {
+        auto new_pos_list = std::make_shared<PosList>();
 
-      ChunkID current_chunk_id{0};
+        ChunkID current_chunk_id{0};
 
-      // de-reference to the correct RowID so the output can be used in a Multi Join
-      for (const auto row : *pos_list) {
-        if (row == NULL_ROW_ID) {
-          new_pos_list->push_back(NULL_ROW_ID);
-        } else {
-          auto reference_column = std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(row.chunk_id)->get_column(column_id));
-          new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
+        // de-reference to the correct RowID so the output can be used in a Multi Join
+        for (const auto row : *pos_list) {
+          if (row == NULL_ROW_ID) {
+            new_pos_list->push_back(NULL_ROW_ID);
+          } else {
+            auto reference_column = std::static_pointer_cast<const ReferenceColumn>(
+            input_table->get_chunk(row.chunk_id)->get_column(column_id));
+            new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
+          }
         }
+
+        auto reference_column = std::static_pointer_cast<const ReferenceColumn>(
+        input_table->get_chunk(ChunkID{0})->get_column(column_id));
+
+        column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
+                                                   reference_column->referenced_column_id(), new_pos_list);
+      } else {
+        column = std::make_shared<ReferenceColumn>(std::make_shared<Table>(input_table->column_definitions(), TableType::Data), column_id, pos_list);
       }
-
-      auto reference_column = std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
-
-      column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
-                                                 reference_column->referenced_column_id(), new_pos_list);
     } else {
       column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
     }

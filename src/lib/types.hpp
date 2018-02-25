@@ -133,7 +133,7 @@ constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max(
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
 // ... in ReferenceColumns
-const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
+const RowID NULL_ROW_ID = RowID{ChunkID{0}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
 // ... in DictionaryColumns
 constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};

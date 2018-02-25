@@ -216,7 +216,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               materialized_chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
             } else {
               // We need to add this to avoid gaps in the list of offsets when we iterate later on
-              materialized_chunk.emplace_back(RowID{chunk_id, INVALID_CHUNK_OFFSET}, T{});
+              materialized_chunk.emplace_back(NULL_ROW_ID, T{});
             }
           });
         });
@@ -465,7 +465,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               // We assume that the relations have been swapped previously,
               // so that the outer relation is the probing relation.
             } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-              pos_list_left_local.emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+              pos_list_left_local.emplace_back(NULL_ROW_ID);
               pos_list_right_local.emplace_back(row.row_id);
             }
           }
@@ -481,7 +481,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
           for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& row = partition[partition_offset];
-            pos_list_left_local.emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+            pos_list_left_local.emplace_back(NULL_ROW_ID);
             pos_list_right_local.emplace_back(row.row_id);
           }
         }
@@ -662,14 +662,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       _probe(radix_right, hashtables, left_pos_lists, right_pos_lists);
     }
 
-    /*
-    Add columns to output chunk.
-    We assume that either all Chunks contain ReferenceColumns or all Chunk contain Value/DictionaryColumns.
-    But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
-    */
-    auto ref_col_left = _left_in_table->type() == TableType::References;
-    auto ref_col_right = _right_in_table->type() == TableType::References;
-
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       auto& left = left_pos_lists[partition_id];
       auto& right = right_pos_lists[partition_id];
@@ -677,21 +669,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (left.empty() && right.empty()) {
         continue;
       }
-      DebugAssert(left.size() == right.size(), "Invalid PosList sizes");
 
       ChunkColumnList output_columns;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
-        write_output_columns(output_columns, _right_in_table, right, ref_col_right);
+        write_output_columns(output_columns, _right_in_table, right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
         if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
-          write_output_columns(output_columns, _left_in_table, left, ref_col_left);
+          DebugAssert(left.size() == right.size(), "Invalid PosList sizes");
+          write_output_columns(output_columns, _left_in_table, left);
         }
       } else {
-        write_output_columns(output_columns, _left_in_table, left, ref_col_left);
-        write_output_columns(output_columns, _right_in_table, right, ref_col_right);
+        DebugAssert(left.size() == right.size(), "Invalid PosList sizes");
+        write_output_columns(output_columns, _left_in_table, left);
+        write_output_columns(output_columns, _right_in_table, right);
       }
 
       _output_table->add_chunk_new(output_columns);
@@ -701,34 +694,38 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   static void write_output_columns(ChunkColumnList& output_columns,
-                                  const std::shared_ptr<const Table> input_table, PosList& pos_list,
-                                  bool is_ref_column) {
+                                  const std::shared_ptr<const Table> input_table, PosList& pos_list) {
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-      if (is_ref_column) {
-        auto ref_col =
-            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
+      if (input_table->type() == TableType::References) {
+        if (input_table->chunk_count() > 0) {
+          auto ref_col =
+          std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
 
-        // Get all the input pos lists so that we only have to pointer cast the columns once
-        auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
-        for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
-          // This works because we assume that the columns have to be either all ReferenceColumns or none.
-          auto ref_column =
-              std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id)->get_column(column_id));
-          input_pos_lists.push_back(ref_column->pos_list());
-        }
-
-        // Get the row ids that are referenced
-        auto new_pos_list = std::make_shared<PosList>();
-        for (const auto& row : pos_list) {
-          if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-            new_pos_list->push_back(row);
-          } else {
-            new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+          // Get all the input pos lists so that we only have to pointer cast the columns once
+          auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+          for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
+            // This works because we assume that the columns have to be either all ReferenceColumns or none.
+            auto ref_column =
+            std::dynamic_pointer_cast<const ReferenceColumn>(input_table->get_chunk(chunk_id)->get_column(column_id));
+            input_pos_lists.push_back(ref_column->pos_list());
           }
+
+          // Get the row ids that are referenced
+          auto new_pos_list = std::make_shared<PosList>();
+          for (const auto &row : pos_list) {
+            if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+              new_pos_list->push_back(row);
+            } else {
+              new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+            }
+          }
+          output_columns.emplace_back(
+          std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
+                                            new_pos_list));
+        } else {
+          output_columns.emplace_back(std::make_shared<ReferenceColumn>(std::make_shared<Table>(input_table->column_definitions(), TableType::Data), column_id, std::make_shared<PosList>(pos_list)));
         }
-        output_columns.emplace_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
-                                                   new_pos_list));
       } else {
         output_columns.emplace_back(std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
       }
