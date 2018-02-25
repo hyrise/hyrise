@@ -27,9 +27,9 @@ std::shared_ptr<const Table> ShowTables::_on_execute() {
   const auto column = std::make_shared<ValueColumn<std::string>>(
       tbb::concurrent_vector<std::string>(table_names.begin(), table_names.end()));
 
-  ChunkColumnList columns;
-  columns.emplace_back(column);
-  table->add_chunk_new(columns);
+  ChunkColumns columns;
+  columns.push_back(column);
+  table->append_chunk(columns);
 
   return table;
 }

@@ -32,12 +32,12 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   auto out_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);
-  ChunkColumnList columns;
+  ChunkColumns columns;
 
   const auto& column_names = table->column_names();
   const auto vc_names = std::make_shared<ValueColumn<std::string>>(
       tbb::concurrent_vector<std::string>(column_names.begin(), column_names.end()));
-  columns.emplace_back(vc_names);
+  columns.push_back(vc_names);
 
   const auto& column_types = table->column_data_types();
 
@@ -47,14 +47,14 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   }
 
   const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(data_types));
-  columns.emplace_back(vc_types);
+  columns.push_back(vc_types);
 
   const auto& column_nullables = table->columns_are_nullable();
   const auto vc_nullables = std::make_shared<ValueColumn<int32_t>>(
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
-  columns.emplace_back(vc_nullables);
+  columns.push_back(vc_nullables);
 
-  out_table->add_chunk_new(columns);
+  out_table->append_chunk(columns);
 
   return out_table;
 }

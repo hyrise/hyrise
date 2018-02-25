@@ -20,22 +20,24 @@ namespace opossum {
 
 class TableStatistics;
 
-// A table is partitioned horizontally into a number of chunks
+/**
+ * A Table is partitioned horizontally into a number of chunks.
+ *
+ *
+ */
 class Table : private Noncopyable {
  public:
   explicit Table(const TableColumnDefinitions& column_definitions, const TableType type = TableType::Data,
                  const UseMvcc use_mvcc = UseMvcc::No, const uint32_t max_chunk_size = Chunk::MAX_SIZE);
+  /**
+   * @defgroup Getter and convenience functions for the column definitions
+   * @{
+   */
 
   const TableColumnDefinitions& column_definitions() const;
 
-  TableType type() const;
-
-  UseMvcc has_mvcc() const;
-
-  // Returns the number of columns
   size_t column_count() const;
 
-  // Convenience functions for accessing the column definitions
   const std::string& column_name(const ColumnID column_id) const;
   std::vector<std::string> column_names() const;
 
@@ -45,15 +47,34 @@ class Table : private Noncopyable {
   bool column_is_nullable(const ColumnID column_id) const;
   std::vector<bool> columns_are_nullable() const;
 
+  // Fail()s, if there is no column of that name
   ColumnID column_id_by_name(const std::string& column_name) const;
+
+  /** @} */
+
+
+  TableType type() const;
+
+  UseMvcc has_mvcc() const;
+
+  // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
+  uint32_t max_chunk_size() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
   // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
 
+  /**
+   * @return row_count() == 0
+   */
   bool empty() const;
 
+
+  /**
+   * @defgroup Accessing and adding Chunks
+   * @{
+   */
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
@@ -63,19 +84,30 @@ class Table : private Noncopyable {
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
-  void add_chunk_new(const ChunkColumnList& columns,
-                     const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                     const std::shared_ptr<Chunk::AccessCounter>& access_counter = nullptr);
+  /**
+   * Creates a new Chunk and appends it to this table.
+   * Makes sure the @param columns match with the TableType (only ReferenceColumns or only data containing columns)
+   * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
+   * @param alloc
+   */
+  void append_chunk(const ChunkColumns &columns,
+                    const std::optional<PolymorphicAllocator<Chunk>> &alloc = std::nullopt,
+                    const std::shared_ptr<ChunkAccessCounter> &access_counter = nullptr);
 
-  // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
-  uint32_t max_chunk_size() const;
+  // Create and append a Chunk consisting of ValueColumns.
+  void append_mutable_chunk();
+
+  /** @} */
+
+
+  /**
+   * @defgroup Convenience methods for accessing/adding Table data. Slow, use only for testing!
+   * @{
+   */
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
-
-  // Create and append a Chunk consisting of ValueColumns.
-  void append_mutable_chunk();
 
   // returns one materialized value
   // multiversion concurrency control values of chunks are ignored
@@ -97,6 +129,9 @@ class Table : private Noncopyable {
     }
     Fail("Row does not exist.");
   }
+
+  /** @} */
+
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 

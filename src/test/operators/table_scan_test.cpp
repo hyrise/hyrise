@@ -96,9 +96,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     auto col_a = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{1}, pos_list);
 
-    ChunkColumnList columns({col_a, col_b});
+    ChunkColumns columns({col_a, col_b});
 
-    table->add_chunk_new(columns);
+    table->append_chunk(columns);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     return table_wrapper;
@@ -135,19 +135,19 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
-    ChunkColumnList columns;
+    ChunkColumns columns;
     TableColumnDefinitions column_definitions;
 
     for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
       column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id));
 
       auto column_out = std::make_shared<ReferenceColumn>(table, column_id, pos_list);
-      columns.emplace_back(column_out);
+      columns.push_back(column_out);
     }
 
     auto table_out = std::make_shared<Table>(column_definitions);
 
-    table_out->add_chunk_new(columns);
+    table_out->append_chunk(columns);
 
     return table_out;
   }
@@ -172,9 +172,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     column_definitions.emplace_back("b", DataType::Float, true);
     auto ref_table = std::make_shared<Table>(column_definitions, TableType::References);
 
-    ChunkColumnList columns({ref_column_a, ref_column_b});
+    ChunkColumns columns({ref_column_a, ref_column_b});
 
-    ref_table->add_chunk_new(columns);
+    ref_table->append_chunk(columns);
 
     return ref_table;
   }

@@ -572,7 +572,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(ChunkColumnList& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_columns(ChunkColumns& output_columns, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
@@ -587,18 +587,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
           auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
                                                                   ref_column->referenced_column_id(), new_pos_list);
-          output_columns.emplace_back(new_ref_column);
+          output_columns.push_back(new_ref_column);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
           const auto dummy_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-          output_columns.emplace_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
+          output_columns.push_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
         }
       } else {
         auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
-        output_columns.emplace_back(new_ref_column);
+        output_columns.push_back(new_ref_column);
       }
     }
   }
@@ -670,7 +670,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Add the columns from both input tables to the output
-    ChunkColumnList output_columns;
+    ChunkColumns output_columns;
     _add_output_columns(output_columns, _sort_merge_join.input_table_left(), output_left);
     _add_output_columns(output_columns, _sort_merge_join.input_table_right(), output_right);
 
@@ -679,7 +679,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                   _sort_merge_join.input_table_right()->column_definitions());
     auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References, UseMvcc::No);
 
-    output_table->add_chunk_new(output_columns);
+    output_table->append_chunk(output_columns);
 
     return output_table;
   }

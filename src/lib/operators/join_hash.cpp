@@ -671,7 +671,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      ChunkColumnList output_columns;
+      ChunkColumns output_columns;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
@@ -688,13 +688,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_columns(output_columns, _right_in_table, right);
       }
 
-      _output_table->add_chunk_new(output_columns);
+      _output_table->append_chunk(output_columns);
     }
 
     return _output_table;
   }
 
-  static void write_output_columns(ChunkColumnList& output_columns, const std::shared_ptr<const Table> input_table,
+  static void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
                                    PosList& pos_list) {
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
@@ -721,7 +721,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
             }
           }
-          output_columns.emplace_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(),
+          output_columns.push_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(),
                                                                         ref_col->referenced_column_id(), new_pos_list));
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
@@ -729,11 +729,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
           const auto dummy_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-          output_columns.emplace_back(
+          output_columns.push_back(
               std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
         }
       } else {
-        output_columns.emplace_back(
+        output_columns.push_back(
             std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
       }
     }

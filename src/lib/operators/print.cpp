@@ -89,8 +89,8 @@ std::shared_ptr<const Table> Print::_on_execute() {
         auto end = mvcc_columns->end_cids[row];
         auto tid = mvcc_columns->tids[row];
 
-        auto begin_str = begin == Chunk::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
+        auto begin_str = begin == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(begin);
+        auto end_str = end == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(end);
         auto tid_str = tid == 0 ? "" : std::to_string(tid);
 
         _out << "|" << std::setw(6) << begin_str << std::setw(0);

@@ -519,8 +519,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
     auto groupby_column =
         make_shared_by_data_type<BaseColumn, ValueColumn>(input_table->column_data_type(column_id), true);
-    _groupby_columns.emplace_back(groupby_column);
-    _output_columns.emplace_back(groupby_column);
+    _groupby_columns.push_back(groupby_column);
+    _output_columns.push_back(groupby_column);
   }
   /**
    * Write group-by columns.
@@ -558,7 +558,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   // Write the output
   _output = std::make_shared<Table>(_output_column_definitions, TableType::Data, UseMvcc::No);
-  _output->add_chunk_new(_output_columns);
+  _output->append_chunk(_output_columns);
 
   return _output;
 }
@@ -719,7 +719,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the column
   _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
-  _output_columns.emplace_back(col);
+  _output_columns.push_back(col);
 }
 
 }  // namespace opossum

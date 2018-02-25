@@ -20,15 +20,15 @@
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 #include "utils/scoped_locking_ptr.hpp"
+#include "chunk_access_counter.hpp"
+#include "mvcc_columns.hpp"
 
 namespace opossum {
 
 class BaseIndex;
 class BaseColumn;
 
-enum class ChunkUseAccessCounter { Yes, No };
-
-using ChunkColumnList = pmr_concurrent_vector<std::shared_ptr<BaseColumn>>;
+using ChunkColumns = pmr_concurrent_vector<std::shared_ptr<BaseColumn>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -39,80 +39,13 @@ using ChunkColumnList = pmr_concurrent_vector<std::shared_ptr<BaseColumn>>;
  */
 class Chunk : private Noncopyable {
  public:
-  static const CommitID MAX_COMMIT_ID;
   static const ChunkOffset MAX_SIZE;
 
-  /**
-   * Columns storing visibility information
-   * for multiversion concurrency control
-   */
-  struct MvccColumns {
-    friend class Chunk;
-
-   public:
-    pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
-    pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
-
-    void print(std::ostream& stream = std::cout) const;
-
-   private:
-    /**
-     * @brief Mutex used to manage access to MVCC columns
-     *
-     * Exclusively locked in shrink_to_fit()
-     * Locked for shared ownership when MVCC columns are accessed
-     * via the mvcc_columns() getters
-     */
-    std::shared_mutex _mutex;
-  };
-
-  /**
-   * Data structure for storing chunk access times
-   *
-   * The chunk access times are tracked using ProxyChunk objects
-   * that measure the cycles they were in scope using the RDTSC instructions.
-   * The access times are added to a counter. The ChunkMetricCollection tasks
-   * is regularly scheduled by the NUMAPlacementManager. This tasks takes a snapshot
-   * of the current counter values and places them in a history. The history is
-   * stored in a ring buffer, so that only a limited number of history items are
-   * preserved.
-   */
-  struct AccessCounter {
-    friend class Chunk;
-
-   public:
-    explicit AccessCounter(const PolymorphicAllocator<uint64_t>& alloc) : _history(_capacity, alloc) {}
-
-    void increment() { _counter++; }
-    void increment(uint64_t value) { _counter.fetch_add(value); }
-
-    // Takes a snapshot of the current counter and adds it to the history
-    void process() { _history.push_back(_counter); }
-
-    // Returns the access time of the chunk during the specified number of
-    // recent history sample iterations.
-    uint64_t history_sample(size_t lookback) const;
-
-    uint64_t counter() const { return _counter; }
-
-   private:
-    const size_t _capacity = 100;
-    std::atomic<std::uint64_t> _counter{0};
-    pmr_ring_buffer<uint64_t> _history;
-  };
-
- public:
   // If you're passing in an access_counter, this means that it is a derivative of an already existing chunk.
   // As such, it cannot have MVCC information.
-  Chunk(const ChunkColumnList& columns, UseMvcc mvcc_mode = UseMvcc::No,
+  Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-        const std::shared_ptr<AccessCounter> access_counter = nullptr);
-
-  // Explicitly specify mvcc columns
-  Chunk(const ChunkColumnList& columns, std::shared_ptr<MvccColumns> mvcc_columns,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-        const std::shared_ptr<AccessCounter> access_counter = nullptr);
+        const std::shared_ptr<ChunkAccessCounter> access_counter = nullptr);
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
@@ -143,7 +76,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
   std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
-  const ChunkColumnList& columns() const;
+  const ChunkColumns& columns() const;
 
   bool has_mvcc_columns() const;
   bool has_access_counter() const;
@@ -159,20 +92,6 @@ class Chunk : private Noncopyable {
    */
   SharedScopedLockingPtr<MvccColumns> mvcc_columns();
   SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
-
-  /**
-   * Compacts the internal representation of
-   * the mvcc columns in order to reduce fragmentation
-   * Locks mvcc columns exclusively in order to do so
-   */
-  void shrink_mvcc_columns();
-
-  /**
-   * Grows all mvcc columns by the given delta
-   *
-   * @param begin_cid value all new begin_cids will be set to
-   */
-  void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
@@ -208,7 +127,7 @@ class Chunk : private Noncopyable {
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
-  std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
+  std::shared_ptr<ChunkAccessCounter> access_counter() const { return _access_counter; }
 
   bool references_exactly_one_table() const;
 
@@ -224,9 +143,9 @@ class Chunk : private Noncopyable {
 
  private:
   PolymorphicAllocator<Chunk> _alloc;
-  ChunkColumnList _columns;
+  ChunkColumns _columns;
   std::shared_ptr<MvccColumns> _mvcc_columns;
-  std::shared_ptr<AccessCounter> _access_counter;
+  std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 

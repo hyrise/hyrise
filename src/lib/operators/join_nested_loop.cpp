@@ -207,7 +207,7 @@ void JoinNestedLoop::_perform_join() {
   }
 
   // write output chunks
-  ChunkColumnList columns;
+  ChunkColumns columns;
 
   if (_mode == JoinMode::Right) {
     _write_output_chunks(columns, right_table, _pos_list_right);
@@ -217,10 +217,10 @@ void JoinNestedLoop::_perform_join() {
     _write_output_chunks(columns, right_table, _pos_list_right);
   }
 
-  _output_table->add_chunk_new(columns);
+  _output_table->append_chunk(columns);
 }
 
-void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns, const std::shared_ptr<const Table> input_table,
+void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
                                           std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
@@ -260,7 +260,7 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumnList& columns, const std::s
       column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
     }
 
-    columns.emplace_back(column);
+    columns.push_back(column);
   }
 }
 

@@ -29,9 +29,9 @@ class StorageChunkTest : public BaseTest {
     dc_int = encode_column(EncodingType::DeprecatedDictionary, DataType::Int, vc_int);
     dc_str = encode_column(EncodingType::DeprecatedDictionary, DataType::String, vc_str);
 
-    ChunkColumnList empty_columns;
-    empty_columns.emplace_back(std::make_shared<ValueColumn<int32_t>>());
-    empty_columns.emplace_back(std::make_shared<ValueColumn<std::string>>());
+    ChunkColumns empty_columns;
+    empty_columns.push_back(std::make_shared<ValueColumn<int32_t>>());
+    empty_columns.push_back(std::make_shared<ValueColumn<std::string>>());
 
     c = std::make_shared<Chunk>(empty_columns);
   }
@@ -45,12 +45,12 @@ class StorageChunkTest : public BaseTest {
 
 TEST_F(StorageChunkTest, AddColumnToChunk) {
   EXPECT_EQ(c->size(), 0u);
-  c = std::make_shared<Chunk>(ChunkColumnList({vc_int, vc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({vc_int, vc_str}));
   EXPECT_EQ(c->size(), 3u);
 }
 
 TEST_F(StorageChunkTest, AddValuesToChunk) {
-  c = std::make_shared<Chunk>(ChunkColumnList({vc_int, vc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({vc_int, vc_str}));
   c->append({2, "two"});
   EXPECT_EQ(c->size(), 4u);
 
@@ -62,7 +62,7 @@ TEST_F(StorageChunkTest, AddValuesToChunk) {
 }
 
 TEST_F(StorageChunkTest, RetrieveColumn) {
-  c = std::make_shared<Chunk>(ChunkColumnList({vc_int, vc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({vc_int, vc_str}));
   c->append({2, "two"});
 
   auto base_col = c->get_column(ColumnID{0});
@@ -78,7 +78,7 @@ TEST_F(StorageChunkTest, UnknownColumnType) {
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<ColumnID>{ColumnID{0}});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<ColumnID>{ColumnID{0}});
   auto index_int_str = c->create_index<CompositeGroupKeyIndex>(std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
@@ -88,7 +88,7 @@ TEST_F(StorageChunkTest, AddIndexByColumnID) {
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnPointer) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   auto index_int_str =
@@ -99,7 +99,7 @@ TEST_F(StorageChunkTest, AddIndexByColumnPointer) {
 }
 
 TEST_F(StorageChunkTest, GetIndexByColumnID) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   auto index_int_str =
@@ -114,7 +114,7 @@ TEST_F(StorageChunkTest, GetIndexByColumnID) {
 }
 
 TEST_F(StorageChunkTest, GetIndexByColumnPointer) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   auto index_int_str =
@@ -132,7 +132,7 @@ TEST_F(StorageChunkTest, GetIndexByColumnPointer) {
 }
 
 TEST_F(StorageChunkTest, GetIndicesByColumnIDs) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   auto index_int_str =
@@ -150,7 +150,7 @@ TEST_F(StorageChunkTest, GetIndicesByColumnIDs) {
 }
 
 TEST_F(StorageChunkTest, GetIndicesByColumnPointers) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   auto index_int_str =
@@ -168,7 +168,7 @@ TEST_F(StorageChunkTest, GetIndicesByColumnPointers) {
 }
 
 TEST_F(StorageChunkTest, RemoveIndex) {
-  c = std::make_shared<Chunk>(ChunkColumnList({dc_int, dc_str}));
+  c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
   auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
   auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
   auto index_int_str =

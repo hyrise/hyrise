@@ -15,50 +15,16 @@
 
 namespace opossum {
 
-// The last commit id is reserved for uncommitted changes
-const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
-
 // The last chunk offset is reserved for NULL as used in ReferenceColumns.
 const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-void Chunk::MvccColumns::print(std::ostream& stream) const {
-  stream << "TIDs: ";
-  for (const auto& tid : tids) stream << tid << ", ";
-  stream << std::endl;  // NOLINT
-  stream << "BeginCIDs: ";
-  for (const auto& begin_cid : begin_cids) stream << begin_cid << ", ";
-  stream << std::endl;  // NOLINT
-  stream << "EndCIDs: ";
-  for (const auto& end_cid : end_cids) stream << end_cid << ", ";
-  stream << std::endl;  // NOLINT
-}
-
-Chunk::Chunk(const ChunkColumnList& columns, UseMvcc use_mvcc, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<AccessCounter> access_counter)
-    : _columns(columns), _access_counter(access_counter) {
-  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
-#if IS_DEBUG
-  for (const auto& column : columns) {
-    Assert(column->size() == chunk_size, "Columns don't have the same length");
-  }
-#endif
-  if (use_mvcc == UseMvcc::Yes) {
-    _mvcc_columns = std::make_shared<MvccColumns>();
-    grow_mvcc_column_size_by(chunk_size, 0);
-  }
-
-  if (alloc) _alloc = *alloc;
-}
-
-Chunk::Chunk(const ChunkColumnList& columns, std::shared_ptr<MvccColumns> mvcc_columns,
+Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<AccessCounter> access_counter)
-    : _columns(columns), _access_counter(access_counter) {
-  DebugAssert(mvcc_columns, "Need to pass in mvcc_columns if calling this constructor");
-  // TODO(anybody): Assert mvcc_columns size
-
-  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+             const std::shared_ptr<ChunkAccessCounter> access_counter)
+    : _columns(columns), _mvcc_columns(mvcc_columns), _access_counter(access_counter) {
 #if IS_DEBUG
+  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+  Assert (!_mvcc_columns || _mvcc_columns->size() == chunk_size, "Invalid MvccColumns size");
   for (const auto& column : columns) {
     Assert(column->size() == chunk_size, "Columns don't have the same length");
   }
@@ -78,7 +44,7 @@ void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column)
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
+  if (has_mvcc_columns()) _mvcc_columns->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),
@@ -100,7 +66,7 @@ std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
-const ChunkColumnList& Chunk::columns() const { return _columns; }
+const ChunkColumns& Chunk::columns() const { return _columns; }
 
 uint16_t Chunk::column_count() const { return _columns.size(); }
 
@@ -110,37 +76,19 @@ uint32_t Chunk::size() const {
   return first_column->size();
 }
 
-void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
-  auto mvcc_columns = this->mvcc_columns();
-
-  mvcc_columns->tids.grow_to_at_least(size() + delta);
-  mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
-  mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
-}
-
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
-SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
+SharedScopedLockingPtr<MvccColumns> Chunk::mvcc_columns() {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-SharedScopedLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
+SharedScopedLockingPtr<const MvccColumns> Chunk::mvcc_columns() const {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
-}
-
-void Chunk::shrink_mvcc_columns() {
-  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
-
-  std::unique_lock<std::shared_mutex> lock{_mvcc_columns->_mutex};
-
-  _mvcc_columns->tids.shrink_to_fit();
-  _mvcc_columns->begin_cids.shrink_to_fit();
-  _mvcc_columns->end_cids.shrink_to_fit();
 }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
@@ -221,7 +169,7 @@ size_t Chunk::estimate_memory_usage() const {
   }
 
   // TODO(anybody) Index memory usage missing
-  // TODO(anybody) AccessCounter memory usage missing
+  // TODO(anybody) ChunkAccessCounter memory usage missing
 
   if (_mvcc_columns) {
     bytes += sizeof(_mvcc_columns->tids) + sizeof(_mvcc_columns->begin_cids) + sizeof(_mvcc_columns->end_cids);
@@ -231,15 +179,6 @@ size_t Chunk::estimate_memory_usage() const {
   }
 
   return bytes;
-}
-
-uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
-  if (_history.size() < 2 || lookback == 0) return 0;
-  const auto last = _history.back();
-  const auto prelast_index =
-      std::max(static_cast<int64_t>(0), static_cast<int64_t>(_history.size()) - static_cast<int64_t>(lookback));
-  const auto prelast = _history.at(prelast_index);
-  return last - prelast;
 }
 
 std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(

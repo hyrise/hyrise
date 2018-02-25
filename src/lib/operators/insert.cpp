@@ -133,7 +133,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
       // Resize MVCC vectors.
-      current_chunk->grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
+      current_chunk->mvcc_columns()->grow_by(rows_to_insert_this_loop, MvccColumns::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
       auto old_size = current_chunk->size();

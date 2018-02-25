@@ -96,10 +96,10 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
       if (matches_out->empty()) return;
 
-      // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
+      // The output chunk is allocated on the same NUMA node as the input chunk. Also, the ChunkAccessCounter is
       // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
       // original chunk.
-      ChunkColumnList out_columns;
+      ChunkColumns out_columns;
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
@@ -140,17 +140,17 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           }
 
           auto ref_column_out = std::make_shared<ReferenceColumn>(table_out, column_id_out, filtered_pos_list);
-          out_columns.emplace_back(ref_column_out);
+          out_columns.push_back(ref_column_out);
         }
       } else {
         for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
           auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-          out_columns.emplace_back(ref_column_out);
+          out_columns.push_back(ref_column_out);
         }
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      _output_table->add_chunk_new(out_columns, chunk_guard->get_allocator(), chunk_guard->access_counter());
+      _output_table->append_chunk(out_columns, chunk_guard->get_allocator(), chunk_guard->access_counter());
     });
 
     jobs.push_back(job_task);

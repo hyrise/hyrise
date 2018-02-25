@@ -95,14 +95,14 @@ void Table::append(std::vector<AllTypeVariant> values) {
 }
 
 void Table::append_mutable_chunk() {
-  ChunkColumnList columns;
+  ChunkColumns columns;
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      columns.emplace_back(std::make_shared<ValueColumn<ColumnDataType>>(column_definition.nullable));
+      columns.push_back(std::make_shared<ValueColumn<ColumnDataType>>(column_definition.nullable));
     });
   }
-  add_chunk_new(columns);
+  append_chunk(columns);
 }
 
 uint64_t Table::row_count() const {
@@ -139,9 +139,28 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::add_chunk_new(const ChunkColumnList& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                          const std::shared_ptr<Chunk::AccessCounter>& access_counter) {
-  _chunks.emplace_back(std::make_shared<Chunk>(columns, _use_mvcc, alloc, access_counter));
+void Table::append_chunk(const ChunkColumns &columns, const std::optional<PolymorphicAllocator<Chunk>> &alloc,
+                         const std::shared_ptr<ChunkAccessCounter> &access_counter) {
+  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+
+#if IS_DEBUG
+  for (const auto& column : columns) {
+    DebugAssert(column->size() == chunk_size, "Columns don't have the same length");
+    const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
+    switch (_type) {
+      case TableType::References: DebugAssert(is_reference_column, "Invalid column type"); break;
+      case TableType::Data: DebugAssert(!is_reference_column, "Invalid column type"); break;
+    }
+  }
+#endif
+
+  std::shared_ptr<MvccColumns> mvcc_columns;
+
+  if (_use_mvcc == UseMvcc::Yes) {
+    mvcc_columns = std::make_shared<MvccColumns>(chunk_size);
+  }
+
+  _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_columns, alloc, access_counter));
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

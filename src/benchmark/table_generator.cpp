@@ -41,12 +41,12 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
      * Reset vectors and chunk.
      */
     if (i % vector_size == 0 && i > 0) {
-      ChunkColumnList columns;
+      ChunkColumns columns;
       for (size_t j = 0; j < _num_columns; j++) {
-        columns.emplace_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+        columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
       }
-      table->add_chunk_new(columns);
+      table->append_chunk(columns);
     }
     /*
      * Set random value for every column.
@@ -59,11 +59,11 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
    * Add remaining values to table, if any.
    */
   if (value_vectors[0].size() > 0) {
-    ChunkColumnList columns;
+    ChunkColumns columns;
     for (size_t j = 0; j < _num_columns; j++) {
-      columns.emplace_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+      columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
     }
-    table->add_chunk_new(columns);
+    table->append_chunk(columns);
   }
 
   if (encoding_type.has_value()) {

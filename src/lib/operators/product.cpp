@@ -59,7 +59,7 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
-  ChunkColumnList output_columns;
+  ChunkColumns output_columns;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
     // reusing the same code for left and right side - using a reference_wrapper is ugly, but better than code
@@ -98,10 +98,10 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
           }
         }
       }
-      output_columns.emplace_back(std::make_shared<ReferenceColumn>(referenced_table, referenced_column, pos_list_out));
+      output_columns.push_back(std::make_shared<ReferenceColumn>(referenced_table, referenced_column, pos_list_out));
     }
   }
 
-  output->add_chunk_new(output_columns);
+  output->append_chunk(output_columns);
 }
 }  // namespace opossum

@@ -36,7 +36,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   }
 
   if (chunk->has_mvcc_columns()) {
-    chunk->shrink_mvcc_columns();
+    chunk->mvcc_columns()->shrink();
   }
 }
 

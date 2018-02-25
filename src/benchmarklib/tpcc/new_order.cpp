@@ -324,16 +324,16 @@ TaskVector NewOrderRefImpl::get_create_order_tasks(const int32_t d_next_o_id, co
   }
   auto new_table = std::make_shared<opossum::Table>(column_definitions);
 
-  opossum::ChunkColumnList columns;
-  columns.emplace_back(create_single_value_column<int32_t>(d_next_o_id));
-  columns.emplace_back(create_single_value_column<int32_t>(d_id));
-  columns.emplace_back(create_single_value_column<int32_t>(w_id));
-  columns.emplace_back(create_single_value_column<int32_t>(c_id));
-  columns.emplace_back(create_single_value_column<int32_t>(o_entry_d));
-  columns.emplace_back(create_single_value_column<int32_t>(o_carrier_id));
-  columns.emplace_back(create_single_value_column<int32_t>(o_ol_cnt));
-  columns.emplace_back(create_single_value_column<int32_t>(o_all_local));
-  new_table->add_chunk_new(columns);
+  opossum::ChunkColumns columns;
+  columns.push_back(create_single_value_column<int32_t>(d_next_o_id));
+  columns.push_back(create_single_value_column<int32_t>(d_id));
+  columns.push_back(create_single_value_column<int32_t>(w_id));
+  columns.push_back(create_single_value_column<int32_t>(c_id));
+  columns.push_back(create_single_value_column<int32_t>(o_entry_d));
+  columns.push_back(create_single_value_column<int32_t>(o_carrier_id));
+  columns.push_back(create_single_value_column<int32_t>(o_ol_cnt));
+  columns.push_back(create_single_value_column<int32_t>(o_all_local));
+  new_table->append_chunk(columns);
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
   const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);
@@ -360,11 +360,11 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(const int32_t o_id, const
   }
   auto new_table = std::make_shared<opossum::Table>(column_definitions);
 
-  opossum::ChunkColumnList columns;
-  columns.emplace_back(create_single_value_column<int32_t>(o_id));
-  columns.emplace_back(create_single_value_column<int32_t>(d_id));
-  columns.emplace_back(create_single_value_column<int32_t>(w_id));
-  new_table->add_chunk_new(columns);
+  opossum::ChunkColumns columns;
+  columns.push_back(create_single_value_column<int32_t>(o_id));
+  columns.push_back(create_single_value_column<int32_t>(d_id));
+  columns.push_back(create_single_value_column<int32_t>(w_id));
+  new_table->append_chunk(columns);
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
   const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);
@@ -528,18 +528,18 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
   }
   auto new_table = std::make_shared<opossum::Table>(column_definitions);
 
-  opossum::ChunkColumnList columns;
-  columns.emplace_back(create_single_value_column<int32_t>(ol_o_id));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_d_id));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_w_id));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_number));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_i_id));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_supply_w_id));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_delivery_d));
-  columns.emplace_back(create_single_value_column<int32_t>(ol_quantity));
-  columns.emplace_back(create_single_value_column<float>(ol_amount));
-  columns.emplace_back(create_single_value_column<std::string>(ol_dist_info));
-  new_table->add_chunk_new(columns);
+  opossum::ChunkColumns columns;
+  columns.push_back(create_single_value_column<int32_t>(ol_o_id));
+  columns.push_back(create_single_value_column<int32_t>(ol_d_id));
+  columns.push_back(create_single_value_column<int32_t>(ol_w_id));
+  columns.push_back(create_single_value_column<int32_t>(ol_number));
+  columns.push_back(create_single_value_column<int32_t>(ol_i_id));
+  columns.push_back(create_single_value_column<int32_t>(ol_supply_w_id));
+  columns.push_back(create_single_value_column<int32_t>(ol_delivery_d));
+  columns.push_back(create_single_value_column<int32_t>(ol_quantity));
+  columns.push_back(create_single_value_column<float>(ol_amount));
+  columns.push_back(create_single_value_column<std::string>(ol_dist_info));
+  new_table->append_chunk(columns);
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
   const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);

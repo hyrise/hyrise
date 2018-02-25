@@ -114,7 +114,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   const auto previous_size = chunk->size();
 
-  chunk->shrink_mvcc_columns();
+  chunk->mvcc_columns()->shrink();
 
   ASSERT_EQ(previous_size, chunk->size());
   ASSERT_TRUE(chunk->has_mvcc_columns());
@@ -134,7 +134,7 @@ TEST_F(StorageTableTest, EmplaceChunk) {
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
 
-  t->add_chunk_new({vc_int, vc_str});
+  t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 1u);
 }
 
@@ -145,7 +145,7 @@ TEST_F(StorageTableTest, EmplaceChunkAndAppend) {
   EXPECT_EQ(t->chunk_count(), 1u);
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->add_chunk_new(ChunkColumnList{{vc_int, vc_str}});
+  t->append_chunk(ChunkColumns{{vc_int, vc_str}});
   EXPECT_EQ(t->chunk_count(), 2u);
 }
 
@@ -155,12 +155,12 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   t->append({4, "Hello,"});
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->add_chunk_new({vc_int, vc_str});
+  t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 2u);
 
   std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->add_chunk_new({vc_int, vc_str});
+  t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 3u);
 }
 

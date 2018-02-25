@@ -51,7 +51,7 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkColumnList>& columns_by_chunk,
+  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
@@ -158,7 +158,7 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkColumnList>& columns_by_chunk,
+  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {

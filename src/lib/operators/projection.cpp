@@ -119,17 +119,17 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    * Perform the projection
    */
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    ChunkColumnList output_columns;
+    ChunkColumns output_columns;
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
       resolve_data_type(output_table->column_data_type(ColumnID{expression_index}), [&](auto type) {
         const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], input_table_left(),
                                            reuse_column_from_input);
-        output_columns.emplace_back(column);
+        output_columns.push_back(column);
       });
     }
 
-    output_table->add_chunk_new(output_columns);
+    output_table->append_chunk(output_columns);
   }
 
   return output_table;

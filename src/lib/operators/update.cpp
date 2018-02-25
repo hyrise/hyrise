@@ -60,12 +60,12 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceColumns with built poslist.
-    ChunkColumnList insert_table_columns;
+    ChunkColumns insert_table_columns;
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-      insert_table_columns.emplace_back(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
+      insert_table_columns.push_back(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
 
-    insert_table->add_chunk_new(insert_table_columns);
+    insert_table->append_chunk(insert_table_columns);
   }
 
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right

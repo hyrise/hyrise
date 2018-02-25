@@ -14,7 +14,7 @@ namespace opossum {
 namespace {
 
 bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
-                    const Chunk::MvccColumns& columns) {
+                    const MvccColumns& columns) {
   const auto row_tid = columns.tids[chunk_offset].load();
   const auto begin_cid = columns.begin_cids[chunk_offset];
   const auto end_cid = columns.end_cids[chunk_offset];
@@ -54,7 +54,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto chunk_in = _in_table->get_chunk(chunk_id);
 
-    ChunkColumnList output_columns;
+    ChunkColumns output_columns;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(ColumnID{0}));
@@ -83,7 +83,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         const auto column = std::static_pointer_cast<const ReferenceColumn>(chunk_in->get_column(column_id));
         const auto referenced_column_id = column->referenced_column_id();
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, referenced_column_id, pos_list_out);
-        output_columns.emplace_back(ref_col_out);
+        output_columns.push_back(ref_col_out);
       }
 
       // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
@@ -103,12 +103,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Create actual ReferenceColumn objects.
       for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
-        output_columns.emplace_back(ref_col_out);
+        output_columns.push_back(ref_col_out);
       }
     }
 
     if (!pos_list_out->empty() > 0) {
-      output->add_chunk_new(output_columns);
+      output->append_chunk(output_columns);
     }
   }
   return output;
