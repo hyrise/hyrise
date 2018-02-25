@@ -80,8 +80,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   _output_table = std::make_shared<Table>(_in_table->column_definitions(),
                                           TableType::References,
-                                          UseMvcc::No,
-                                          _in_table->max_chunk_size());
+                                          UseMvcc::No);
 
   std::mutex output_mutex;
 

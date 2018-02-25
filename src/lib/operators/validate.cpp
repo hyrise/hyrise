@@ -93,8 +93,6 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       DebugAssert(chunk_in->has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
       const auto mvcc_columns = chunk_in->mvcc_columns();
 
-      mvcc_columns->print();
-
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {

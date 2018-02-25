@@ -42,7 +42,6 @@ class OperatorsExportBinaryTest : public BaseTest {
     std::istreambuf_iterator<char> end;
 
     while (iterator_original != end && iterator_created != end) {
-      std::cout << (int)*iterator_original << " - " << (int)*iterator_created << std::endl;
       if (*iterator_original != *iterator_created) return false;
       ++iterator_original;
       ++iterator_created;
@@ -296,10 +295,10 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String, true);
-  column_definitions.emplace_back("b", DataType::Int, true);
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
   column_definitions.emplace_back("c", DataType::Long, true);
-  column_definitions.emplace_back("d", DataType::Float, true);
+  column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No);
@@ -322,10 +321,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String, true);
-  column_definitions.emplace_back("b", DataType::Int, true);
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
   column_definitions.emplace_back("c", DataType::Long, true);
-  column_definitions.emplace_back("d", DataType::Float, true);
+  column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, UseMvcc::No);
