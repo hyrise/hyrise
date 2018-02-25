@@ -61,7 +61,7 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     }
 
     // If the expression IS a reference to another column,
-    // we have to check if the referenced column is part of one of the other ProjectionNodes that we are combining,
+    // we have to check if the referenced column was created by one of the other ProjectionNodes that we are combining,
     // and then instead add the referenced column here.
     auto column_reference_replaced = false;
     auto iter = projections.begin() + 1;
