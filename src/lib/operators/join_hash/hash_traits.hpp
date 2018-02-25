@@ -27,9 +27,8 @@ struct JoinHashTraits<L, R, std::enable_if_t<std::is_integral_v<L> && std::is_in
 
 // If one is integer and the other floating type, use the floating type to hash
 template <typename L, typename R>
-struct JoinHashTraits<L, R,
-                      std::enable_if_t<(std::is_integral_v<L> && std::is_floating_point_v<R>) ||
-                                       (std::is_integral_v<R> && std::is_floating_point_v<L>)>> {
+struct JoinHashTraits<L, R, std::enable_if_t<(std::is_integral_v<L> && std::is_floating_point_v<R>) ||
+                                             (std::is_integral_v<R> && std::is_floating_point_v<L>)>> {
   using HashType = std::conditional_t<std::is_floating_point_v<L>, L, R>;
   static constexpr bool needs_lexical_cast = false;
 };

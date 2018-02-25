@@ -148,6 +148,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       Assert(_use_mvcc == UseMvcc::No, "Trying to use non-MVCC cached query with a transaction context.");
     }
 
+    _query_plan_cache_hit = true;
     _query_plan->append_plan(plan.recreate());
     if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);
 
@@ -274,6 +275,11 @@ std::string SQLPipelineStatement::create_parse_error_message(const std::string& 
             << "\nError message: " << result.errorMsg();
 
   return error_msg.str();
+}
+
+bool SQLPipelineStatement::query_plan_cache_hit() const {
+  DebugAssert(_query_plan != nullptr, "Asking for cache hit before compiling query plan will return undefined result");
+  return _query_plan_cache_hit;
 }
 
 }  // namespace opossum
