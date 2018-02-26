@@ -6,7 +6,7 @@ namespace opossum {
 
 template <typename T>
 auto create_iterable_from_column(const ReferenceColumn& column) {
-  return may_erase_type_from_iterable(ReferenceColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(ReferenceColumnIterable<T>{column});
 }
 
 }  // namespace opossum

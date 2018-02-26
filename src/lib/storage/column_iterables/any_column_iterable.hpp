@@ -12,6 +12,23 @@ template <typename IterableT>
 class AnyColumnIterable;
 
 /**
+ * @brief Wraps passed column iterable in an AnyColumnIterable
+ *
+ * Iterators of returned iterables will all have the same type,
+ * which reduces compile times due to fewer template instantiations.
+ *
+ * Returns iterable if it has already been wrapped
+ */
+template <typename IterableT>
+auto erase_type_from_iterable(const IterableT& iterable);
+
+/**
+ * @brief Wraps passed column iterable in an AnyColumnIterable in debug mode
+ */
+template <typename IterableT>
+decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable);
+
+/**
  * @defgroup AnyColumnIterable Traits
  * @{
  */
@@ -27,7 +44,7 @@ constexpr auto is_any_column_iterable_v = is_any_column_iterable<IterableT>::val
 /**@}*/
 
 /**
- * @brief Makes any column iterable return type erased iterators
+ * @brief Makes any column iterable return type-erased iterators
  *
  * AnyColumnIterable’s sole reason for existence is compile speed.
  * Since iterables are almost always used in highly templated code,
@@ -77,11 +94,6 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
   IterableT _iterable;
 };
 
-/**
- * @brief Wraps passed column iterable in an AnyColumnIterable
- *
- * Returns iterable if it has already been wrapped
- */
 template <typename IterableT>
 auto erase_type_from_iterable(const IterableT& iterable) {
   // clang-format off
@@ -93,13 +105,8 @@ auto erase_type_from_iterable(const IterableT& iterable) {
   // clang-format on
 }
 
-/**
- * In debug mode, this function returns a type erased version
- * of the passed iterable, i.e., all iterators have the same type,
- * which greatly reduces compile times.
- */
-template <typename Iterable>
-decltype(auto) may_erase_type_from_iterable(const Iterable& iterable) {
+template <typename IterableT>
+decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable) {
 #if IS_DEBUG
   return erase_type_from_iterable(iterable);
 #else

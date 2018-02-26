@@ -29,22 +29,22 @@ class ReferenceColumnIterable;
 
 template <typename T>
 auto create_iterable_from_column(const ValueColumn<T>& column) {
-  return may_erase_type_from_iterable(ValueColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(ValueColumnIterable<T>{column});
 }
 
 template <typename T>
 auto create_iterable_from_column(const DeprecatedDictionaryColumn<T>& column) {
-  return may_erase_type_from_iterable(DeprecatedDictionaryColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(DeprecatedDictionaryColumnIterable<T>{column});
 }
 
 template <typename T>
 auto create_iterable_from_column(const DictionaryColumn<T>& column) {
-  return may_erase_type_from_iterable(DictionaryColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T>{column});
 }
 
 template <typename T>
 auto create_iterable_from_column(const RunLengthColumn<T>& column) {
-  return may_erase_type_from_iterable(RunLengthColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(RunLengthColumnIterable<T>{column});
 }
 
 /**

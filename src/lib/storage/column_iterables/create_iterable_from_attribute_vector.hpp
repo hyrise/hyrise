@@ -23,11 +23,11 @@ namespace opossum {
  */
 
 inline auto create_iterable_from_attribute_vector(const BaseDictionaryColumn& column) {
-  return may_erase_type_from_iterable(AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()});
+  return erase_type_from_iterable_if_debug(AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()});
 }
 
 inline auto create_iterable_from_attribute_vector(const BaseDeprecatedDictionaryColumn& column) {
-  return may_erase_type_from_iterable(DeprecatedAttributeVectorIterable{*column.attribute_vector()});
+  return erase_type_from_iterable_if_debug(DeprecatedAttributeVectorIterable{*column.attribute_vector()});
 }
 
 /**@}*/

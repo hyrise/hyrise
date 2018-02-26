@@ -10,8 +10,8 @@ namespace detail {
 
 /**
  * Emulates a base class for column iterators with a virtual interface.
- * It duplicates all methods implemented by column iterators and
- * makes the virtual.
+ * It duplicates all methods implemented by column iterators as part of
+ * a virtual interface.
  */
 template <typename T>
 class AnyColumnIteratorWrapperBase {
