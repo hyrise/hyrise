@@ -12,8 +12,7 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  virtual void read_value(JitRuntimeContext& context) const = 0;
-  virtual void increment(JitRuntimeContext& context) const = 0;
+  virtual void read_value() const = 0;
 };
 
 /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
@@ -21,7 +20,7 @@ class BaseJitColumnReader {
  *
  * Why we need this wrapper:
  * Most operators access data by creating a fixed number (usually one or two) of column iterables and
- * then immediately uses those iterators in a lambda. The JitOperator, on the other hand, processes
+ * then immediately use those iterators in a lambda. The JitOperator, on the other hand, processes
  * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of column iterators
  * at the same time.
  *
@@ -39,32 +38,27 @@ class BaseJitColumnReader {
 template <typename Iterator, typename DataType, bool Nullable>
 class JitColumnReader : public BaseJitColumnReader {
  public:
-  JitColumnReader(const size_t input_index, const JitTupleValue& tuple_value)
-      : _input_index{input_index}, _tuple_value{tuple_value} {}
+  JitColumnReader(const Iterator& iterator, const JitMaterializedTupleValue& tuple_value)
+      : _iterator{iterator}, _tuple_value{tuple_value} {}
 
-  void read_value(JitRuntimeContext& context) const {
-    const auto& value = *_iterator(context);
+  void read_value() const {
+    const auto& value = *_iterator;
+    ++_iterator;
     // clang-format off
     if constexpr (Nullable) {
-      _tuple_value.materialize(context).set_is_null(value.is_null());
+      tuple_value.set_is_null(value.is_null());
       if (!value.is_null()) {
-        _tuple_value.materialize(context).template set<DataType>(value.value());
+        tuple_value.template set<DataType>(value.value());
       }
     } else {
-      _tuple_value.materialize(context).template set<DataType>(value.value());
+      tuple_value.template set<DataType>(value.value());
     }
     // clang-format on
   }
 
-  void increment(JitRuntimeContext& context) const final { ++_iterator(context); }
-
  private:
-  Iterator& _iterator(JitRuntimeContext& context) const {
-    return *std::static_pointer_cast<Iterator>(context.inputs[_input_index]);
-  }
-
-  const size_t _input_index;
-  const JitTupleValue _tuple_value;
+  Iterator _iterator;
+  const JitMaterializedTupleValue tuple_value;
 };
 
 struct JitInputColumn {
@@ -78,7 +72,7 @@ struct JitInputLiteral {
 };
 
 /* JitReadTuple must be the first operator in any chain of jit operators.
- * It is responsible for
+ * It is responsible for:
  * 1) storing literal values to the runtime tuple before the query is executed
  * 2) reading data from the the input table to the runtime tuple
  * 3) advancing the column iterators
@@ -103,7 +97,6 @@ class JitReadTuple : public JitAbstractOperator {
   uint32_t _num_tuple_values{0};
   std::vector<JitInputColumn> _input_columns;
   std::vector<JitInputLiteral> _input_literals;
-  std::vector<std::shared_ptr<const BaseJitColumnReader>> _column_readers;
 
  private:
   void _consume(JitRuntimeContext& context) const final {}

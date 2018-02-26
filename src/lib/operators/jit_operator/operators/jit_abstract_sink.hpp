@@ -8,18 +8,17 @@ namespace opossum {
 
 /**
  * JitAbstractSink is the last jit operator in the operator chain.
- * It is responsible for:
+ * It is responsible for transforming everything back into the data format the rest
+ * of the query pipeline uses. It does this by:
  * 1) adding column definitions to the output table
  * 2) storing the tuples in output chunks
  * 3) appending the output chunks to the output table
- *
- * In order to it has a number of virtual methods, that are called before the query
- * is executed and after processing each input chunk is completed.
  */
 class JitAbstractSink : public JitAbstractOperator {
  public:
   virtual ~JitAbstractSink() = default;
 
+  // Is called
   virtual void before_query(Table& out_table, JitRuntimeContext& context) {}
   virtual void after_chunk(Table& out_table, JitRuntimeContext& context) const {}
 };

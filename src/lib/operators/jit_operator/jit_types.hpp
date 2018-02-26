@@ -57,7 +57,7 @@ namespace opossum {
  *    of types), we create one strongly typed vector per data type. All of these vectors have size N, so each value
  *    (representing one column of the tuple) has a slot in each vector.
  *    Accessing the value at position P as an "int" will return the element at position P in the integer vector.
- *    There is no automatic type conversions happening here. Soring a value as "int" and reading it later as "double"
+ *    There is no automatic type conversions happening here. Storing a value as "int" and reading it later as "double"
  *    won't work, since this accesses different memory locations in different vectors.
  *    This is not a problem, however, since the type of each value does not change throughout query execution.
  *
@@ -89,13 +89,15 @@ class JitVariantVector {
   std::vector<uint8_t> _is_null;
 };
 
+class BaseJitColumnReader;
+
 // The structure encapsulates all data available to the JitOperator at runtime,
 // but NOT during code specialization.
 struct JitRuntimeContext {
   uint32_t chunk_size;
   ChunkOffset chunk_offset;
   JitVariantVector tuple;
-  std::vector<std::shared_ptr<JitBaseColumnIterator>> inputs;
+  std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
   std::vector<std::shared_ptr<BaseValueColumn>> outputs;
   std::shared_ptr<Chunk> out_chunk;
 };
