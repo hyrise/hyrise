@@ -28,23 +28,23 @@ class BaseJitColumnWriter {
 template <typename ValueColumn, typename DataType, bool Nullable>
 class JitColumnWriter : public BaseJitColumnWriter {
  public:
-  JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitMaterializedTupleValue& tuple_value)
+  JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitMaterializedValue& tuple_value)
       : _column{column}, _tuple_value{tuple_value} {}
 
   void write_value() const {
     const auto value = _tuple_value.template get<DataType>();
-    _column.values().push_back(value);
+    _column->values().push_back(value);
     // clang-format off
     if constexpr (Nullable) {
       const auto is_null = _tuple_value.is_null();
-      _column.null_values().push_back(is_null);
+      _column->null_values().push_back(is_null);
     }
     // clang-format on
   }
 
  private:
   std::shared_ptr<ValueColumn> _column;
-  const JitTupleValue _tuple_value;
+  const JitMaterializedValue _tuple_value;
 };
 
 struct JitOutputColumn {

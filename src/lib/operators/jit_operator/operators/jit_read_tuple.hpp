@@ -12,7 +12,7 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  virtual void read_value() const = 0;
+  virtual void read_value() = 0;
 };
 
 /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
@@ -38,27 +38,27 @@ class BaseJitColumnReader {
 template <typename Iterator, typename DataType, bool Nullable>
 class JitColumnReader : public BaseJitColumnReader {
  public:
-  JitColumnReader(const Iterator& iterator, const JitMaterializedTupleValue& tuple_value)
+  JitColumnReader(const Iterator& iterator, const JitMaterializedValue& tuple_value)
       : _iterator{iterator}, _tuple_value{tuple_value} {}
 
-  void read_value() const {
+  void read_value() {
     const auto& value = *_iterator;
     ++_iterator;
     // clang-format off
     if constexpr (Nullable) {
-      tuple_value.set_is_null(value.is_null());
+      _tuple_value.set_is_null(value.is_null());
       if (!value.is_null()) {
-        tuple_value.template set<DataType>(value.value());
+        _tuple_value.template set<DataType>(value.value());
       }
     } else {
-      tuple_value.template set<DataType>(value.value());
+      _tuple_value.template set<DataType>(value.value());
     }
     // clang-format on
   }
 
  private:
   Iterator _iterator;
-  const JitMaterializedTupleValue tuple_value;
+  JitMaterializedValue _tuple_value;
 };
 
 struct JitInputColumn {

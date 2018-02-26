@@ -51,6 +51,7 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
   // Create new value columns and add them to the runtime context to make them accessible by the column writers
   for (const auto& output_column : _output_columns) {
     const auto data_type = output_column.tuple_value.data_type();
+    const auto is_nullable = output_column.tuple_value.is_nullable();
 
     // Create the appropriate column writer for the output column
     resolve_data_type(data_type, [&](auto type) {
@@ -61,7 +62,7 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
                 column, output_column.tuple_value.materialize(context)));
       } else {
-        _column_writers.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
+        context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
                 column, output_column.tuple_value.materialize(context)));
       }
     });
