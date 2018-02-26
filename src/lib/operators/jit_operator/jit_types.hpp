@@ -45,7 +45,8 @@ namespace opossum {
  * JitTupleValues are part of the JitOperator and must thus not store a reference to the JitRuntimeContext. So while
  * they "know" how to access values in the runtime tuple, they do not have the means to do so.
  * Only by passing the runtime context to a JitTupleValue, a JitMaterializedValue is created.
- * This materialized value finally allows the operator to access a data value.
+ * This materialized value contains a reference to the underlying vector and finally allows the operator to access a
+ * data value.
  */
 
 /* The JitVariantVector can be used in two ways:
@@ -103,6 +104,10 @@ struct JitRuntimeContext {
   std::shared_ptr<Chunk> out_chunk;
 };
 
+// A JitMaterializedValue is a wrapper to access an actual value in the runtime context.
+// While a JitTupleValue is only an abstract representation of the value (knowing how to access it, but not being able
+// to actually do so), the JitMaterializedValue can access the value.
+// It is usually created from a JitTupleValue by providing the context at runtime.
 struct JitMaterializedValue {
   JitMaterializedValue(const DataType data_type, const bool is_nullable, const size_t vector_index,
                        JitVariantVector& vector)
@@ -129,6 +134,12 @@ struct JitMaterializedValue {
   JitVariantVector& _vector;
 };
 
+// The JitTupleValue represents a value in the runtime tuple.
+// The JitTupleValue has information about the DataType and index of the value it represents, but it does NOT have
+// a reference to the runtime tuple with the actual values.
+// however, this is enough for the jit engine to optimize any operation involving the value.
+// It only knows how to access the value, once it gets converted to a JitMaterializedValue by providing the runtime
+// context.
 class JitTupleValue {
  public:
   JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
