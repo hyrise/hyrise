@@ -6,9 +6,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/value_column.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
-#include "storage/column_iterables/any_column_iterable.hpp"
 
 namespace opossum {
 
@@ -16,9 +16,7 @@ class AnyColumnIterableTest : public BaseTest {
  protected:
   static constexpr auto row_count = 200u;
 
-  void SetUp() override {
-    _column = create_int_w_null_value_column();
-  }
+  void SetUp() override { _column = create_int_w_null_value_column(); }
 
   std::shared_ptr<ValueColumn<int32_t>> create_int_w_null_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count);

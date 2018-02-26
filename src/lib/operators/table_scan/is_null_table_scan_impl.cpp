@@ -4,8 +4,8 @@
 
 #include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/base_value_column.hpp"
-#include "storage/create_iterable_from_column.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column/null_value_vector_iterable.hpp"
 
