@@ -10,7 +10,7 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
-  virtual void write_value(JitRuntimeContext& context) const = 0;
+  virtual void write_value() const = 0;
 };
 
 /* JitColumnWriters provide a template-free interface to store tuple values in ValueColumns in the output table.
@@ -28,26 +28,22 @@ class BaseJitColumnWriter {
 template <typename ValueColumn, typename DataType, bool Nullable>
 class JitColumnWriter : public BaseJitColumnWriter {
  public:
-  JitColumnWriter(const size_t output_index, const JitTupleValue& tuple_value)
-      : _output_index{output_index}, _tuple_value{tuple_value} {}
+  JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitMaterializedTupleValue& tuple_value)
+      : _column{column}, _tuple_value{tuple_value} {}
 
-  void write_value(JitRuntimeContext& context) const {
-    const auto value = _tuple_value.materialize(context).template get<DataType>();
-    _value_column(context).values().push_back(value);
+  void write_value() const {
+    const auto value = _tuple_value.template get<DataType>();
+    _column.values().push_back(value);
     // clang-format off
     if constexpr (Nullable) {
-      const auto is_null = _tuple_value.materialize(context).is_null();
-      _value_column(context).null_values().push_back(is_null);
+      const auto is_null = _tuple_value.is_null();
+      _column.null_values().push_back(is_null);
     }
     // clang-format on
   }
 
  private:
-  ValueColumn& _value_column(JitRuntimeContext& context) const {
-    return *std::static_pointer_cast<ValueColumn>(context.outputs[_output_index]);
-  }
-
-  const size_t _output_index;
+  std::shared_ptr<ValueColumn> _column;
   const JitTupleValue _tuple_value;
 };
 
@@ -77,7 +73,6 @@ class JitWriteTuple : public JitAbstractSink {
   void _create_output_chunk(JitRuntimeContext& context) const;
 
   std::vector<JitOutputColumn> _output_columns;
-  std::vector<std::shared_ptr<const BaseJitColumnWriter>> _column_writers;
 };
 
 }  // namespace opossum

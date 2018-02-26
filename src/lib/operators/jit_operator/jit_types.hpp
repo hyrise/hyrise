@@ -90,6 +90,7 @@ class JitVariantVector {
 };
 
 class BaseJitColumnReader;
+class BaseJitColumnWriter;
 
 // The structure encapsulates all data available to the JitOperator at runtime,
 // but NOT during code specialization.
@@ -98,7 +99,7 @@ struct JitRuntimeContext {
   ChunkOffset chunk_offset;
   JitVariantVector tuple;
   std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
-  std::vector<std::shared_ptr<BaseValueColumn>> outputs;
+  std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
   std::shared_ptr<Chunk> out_chunk;
 };
 

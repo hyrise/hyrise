@@ -22,18 +22,6 @@ void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& context) {
     const auto data_type = output_column.tuple_value.data_type();
     const auto is_nullable = output_column.tuple_value.is_nullable();
     out_table.add_column_definition(output_column.column_name, data_type, is_nullable);
-
-    // Create the appropriate column writer for each output column
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      if (is_nullable) {
-        _column_writers.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
-            _column_writers.size(), output_column.tuple_value));
-      } else {
-        _column_writers.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
-            _column_writers.size(), output_column.tuple_value));
-      }
-    });
   }
 
   _create_output_chunk(context);
@@ -51,8 +39,8 @@ void JitWriteTuple::add_output_column(const std::string& column_name, const JitT
 }
 
 void JitWriteTuple::_consume(JitRuntimeContext& context) const {
-  for (const auto& column_writer : _column_writers) {
-    column_writer->write_value(context);
+  for (const auto& output : context.outputs) {
+    output->write_value();
   }
 }
 
@@ -63,11 +51,19 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
   // Create new value columns and add them to the runtime context to make them accessible by the column writers
   for (const auto& output_column : _output_columns) {
     const auto data_type = output_column.tuple_value.data_type();
+
+    // Create the appropriate column writer for the output column
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto column = std::make_shared<ValueColumn<ColumnDataType>>(output_column.tuple_value.is_nullable());
-      context.outputs.push_back(column);
-      context.out_chunk->add_column(column);
+
+      if (is_nullable) {
+        context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
+                column, output_column.tuple_value.materialize(context)));
+      } else {
+        _column_writers.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
+                column, output_column.tuple_value.materialize(context)));
+      }
     });
   }
 }
