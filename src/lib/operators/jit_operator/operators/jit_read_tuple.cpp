@@ -46,9 +46,11 @@ void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, Ji
       create_iterable_from_column<ColumnDataType>(typed_column).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
         if (is_nullable) {
-          context.inputs.push_back(std::make_shared<JitColumnReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value.materialize(context)));
+          context.inputs.push_back(std::make_shared<JitColumnReader<IteratorType, ColumnDataType, true>>(
+              it, input_column.tuple_value.materialize(context)));
         } else {
-          context.inputs.push_back(std::make_shared<JitColumnReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value.materialize(context)));
+          context.inputs.push_back(std::make_shared<JitColumnReader<IteratorType, ColumnDataType, false>>(
+              it, input_column.tuple_value.materialize(context)));
         }
       });
     });
