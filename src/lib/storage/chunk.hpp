@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "index/column_index_type.hpp"
-#include "optimizer/chunk_statistics.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -24,6 +23,7 @@ namespace opossum {
 
 class BaseIndex;
 class BaseColumn;
+class ChunkStatistics;
 
 enum class ChunkUseAccessCounter { Yes, No };
 
@@ -210,7 +210,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<ChunkStatistics> statistics() const { return _statistics; }
 
   void set_statistics(std::shared_ptr<ChunkStatistics> statistics) { _statistics = statistics; }
-  
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
    */

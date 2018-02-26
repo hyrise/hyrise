@@ -48,6 +48,10 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::parents() const {
   return parents;
 }
 
+size_t AbstractLQPNode::parent_count() const {
+  return _parents.size();
+}
+
 void AbstractLQPNode::remove_parent(const std::shared_ptr<AbstractLQPNode>& parent) {
   const auto child_side = get_child_side(parent);
   parent->set_child(child_side, nullptr);
@@ -126,7 +130,7 @@ void AbstractLQPNode::set_child(LQPChildSide side, const std::shared_ptr<Abstrac
   _child_changed();
 }
 
-uint8_t AbstractLQPNode::child_count() const {
+size_t AbstractLQPNode::child_count() const {
   /**
    * Testing the shared_ptrs for null in _children to determine child count
    */

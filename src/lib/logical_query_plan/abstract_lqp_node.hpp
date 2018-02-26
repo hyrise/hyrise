@@ -93,6 +93,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   std::vector<std::shared_ptr<AbstractLQPNode>> parents() const;
 
+  /**
+   * @returns the number of parents
+   */
+  size_t parent_count() const;
+
   void remove_parent(const std::shared_ptr<AbstractLQPNode>& parent);
   void clear_parents();
 
@@ -117,12 +122,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   void set_child(LQPChildSide side, const std::shared_ptr<AbstractLQPNode>& child);
 
-  /*
+  /**
    * @returns the number of children
    */
-  uint8_t child_count() const;
+  size_t child_count() const;
 
-  /*
+  /**
    * @returns whether the node is a leaf (==has no children)
    */
   bool is_leaf() const;

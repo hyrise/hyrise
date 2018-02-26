@@ -10,6 +10,11 @@
 #include "types.hpp"
 
 #include "storage/base_encoded_column.hpp"
+#include "storage/deprecated_dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/run_length_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 
@@ -37,7 +42,41 @@ class ChunkColumnStatistics {
     return false;
   }
 
-  protected:
+ protected:
+  template<typename T>
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(const pmr_vector<T>& dictionary);
+
+  template<typename T>
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const DictionaryColumn<T>& column) {
+    const auto & dictionary = *column.dictionary();
+    return build_statistics_from_dictionary(dictionary);
+  }
+
+  template<typename T>
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ValueColumn<T>& column) {
+  DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
+  return std::make_shared<ChunkColumnStatistics>();
+  }
+
+  template<typename T>
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const DeprecatedDictionaryColumn<T>& column) {
+    const auto & dictionary = *column.dictionary();
+    return build_statistics_from_dictionary(dictionary);
+  }
+
+  template<typename T>
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ReferenceColumn& column) {
+  DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
+  return std::make_shared<ChunkColumnStatistics>();
+  }
+
+  template<typename T>
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const RunLengthColumn<T>& column) {
+  DebugAssert(false, "Not Implemented!");
+  return std::make_shared<ChunkColumnStatistics>();
+  }
+
+ protected:
   std::vector<std::shared_ptr<BaseFilter>> _filters;
 };
 
@@ -76,11 +115,13 @@ class MinMaxFilter : public BaseFilter {
 template <typename T>
 class RangeFilter : public BaseFilter {
  public:
+  static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
+
   RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(ranges) {};
   virtual ~RangeFilter() = default;
 
-  static std::shared_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
-  
+  static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
+
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
     T t_value = type_cast<T>(value);
     // Operators work as follows: value_from_table <operator> t_value
@@ -101,52 +142,66 @@ class RangeFilter : public BaseFilter {
   }
 
  protected:
-  std::vector<std::pair<T,T>> _ranges; 
+  std::vector<std::pair<T,T>> _ranges;
 };
 
 template<typename T>
-std::shared_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary) {
-  if constexpr (std::is_same<T, std::string>::value) {
-      return nullptr;
-  } else {
-      // calculate distances by taking the difference between two neighbouring elements
-      std::vector<std::pair<T, size_t>> distances;
-      for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
-        auto dict_it_next = dict_it + 1;
-        distances.emplace_back(std::make_pair(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it)));
-      }
-
-      std::sort(distances.begin(), distances.end(),
-                [](const auto& pair1, const auto& pair2){ return pair1.first > pair2.first; });
-
-      // select how many ranges we want in the filter
-      // make this customizable?
-      const size_t max_ranges_count = 10;
-
-      if(max_ranges_count - 1 < distances.size()) {
-        distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
-      }
-
-      std::sort(distances.begin(), distances.end(),
-                [](const auto& pair1, const auto& pair2){ return pair1.second < pair2.second; });
-
-      // derive intervals where items don't exist from distances
-      //
-      //         index  index + 1
-      //         v      v
-      // 1 2 3 4 5      10 11     15 16
-      //         ^
-      //       distance 5, index 4
-
-      std::vector<std::pair<T,T>> ranges;
-      for(const auto& distance_index_pair : distances) {
-        // `index + 1` is ok because we check `dict_it + 1 != dictionary.cend()` above
-        auto index = std::get<1>(distance_index_pair);
-        ranges.push_back(std::make_pair(dictionary[index], dictionary[index + 1]));
-      }
-
-      return std::make_shared<RangeFilter<T>>(ranges);
+std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary) {
+  // calculate distances by taking the difference between two neighbouring elements
+  std::vector<std::pair<T, size_t>> distances;
+  distances.reserve(dictionary.size());
+  for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
+    auto dict_it_next = dict_it + 1;
+    distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it));
   }
+
+  std::sort(distances.begin(), distances.end(),
+            [](const auto& pair1, const auto& pair2){ return pair1.first > pair2.first; });
+
+  // select how many ranges we want in the filter
+  // make this customizable?
+  const size_t max_ranges_count = 10;
+
+  if ((max_ranges_count - 1) < distances.size()) {
+    distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
+  }
+
+  std::sort(distances.begin(), distances.end(),
+            [](const auto& pair1, const auto& pair2){ return pair1.second < pair2.second; });
+
+  // derive intervals where items don't exist from distances
+  //
+  //         index  index + 1
+  //         v      v
+  // 1 2 3 4 5      10 11     15 16
+  //         ^
+  //       distance 5, index 4
+
+  std::vector<std::pair<T,T>> ranges;
+  for(const auto& distance_index_pair : distances) {
+    // `index + 1` is ok because we check `dict_it + 1 != dictionary.cend()` above
+    auto index = std::get<1>(distance_index_pair);
+    ranges.push_back(std::make_pair(dictionary[index], dictionary[index + 1]));
+  }
+
+  return std::make_unique<RangeFilter<T>>(std::move(ranges));
+}
+
+template<typename T>
+std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
+  auto statistics = std::make_shared<ChunkColumnStatistics>();
+  // only create statistics when the compressed dictionary is not empty
+  if(!dictionary.empty()) {
+   auto min_max_filter = std::make_unique<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+   statistics->add_filter(std::move(min_max_filter));
+
+   // no range filter for strings
+   if constexpr (std::is_arithmetic_v<T>) {
+     auto range_filter = RangeFilter<T>::build_filter(dictionary);
+     statistics->add_filter(std::move(range_filter));
+   }
+  }
+  return statistics;
 }
 
 class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
@@ -156,8 +211,6 @@ class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
   const std::vector<std::shared_ptr<ChunkColumnStatistics>>& statistics() const { return _statistics; }
 
   bool can_prune(const ColumnID column_id, const AllTypeVariant& value, const PredicateCondition predicate_type) const;
-
-  std::string to_string() const;
 
  protected:
   std::vector<std::shared_ptr<ChunkColumnStatistics>> _statistics;

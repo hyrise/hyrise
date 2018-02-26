@@ -13,10 +13,9 @@ class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
     _test_table = std::make_shared<Table>(2);
-    StorageManager::get().add_table("aNiceTestTable", _test_table);
-
-    auto& man = StorageManager::get();
-    man.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));
+    auto& manager = StorageManager::get();
+    manager.add_table("aNiceTestTable", _test_table);
+    manager.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));
   }
 
   std::shared_ptr<Table> _test_table;
