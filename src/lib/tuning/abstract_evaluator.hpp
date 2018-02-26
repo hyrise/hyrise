@@ -13,6 +13,7 @@ namespace opossum {
  */
 class AbstractEvaluator {
  public:
+  virtual ~AbstractEvaluator() {}
   /**
    * Generate TuningChoices and append them to the given vector.
    */

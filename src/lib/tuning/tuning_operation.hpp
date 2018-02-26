@@ -10,6 +10,7 @@ namespace opossum {
  */
 class TuningOperation {
  public:
+  virtual ~TuningOperation() {}
   /**
    * Perform this tuning operation.
    * If you need a no-op TuningOperation, look at NullOperation.

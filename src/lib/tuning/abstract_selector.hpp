@@ -22,6 +22,7 @@ namespace opossum {
  */
 class AbstractSelector {
  public:
+  virtual ~AbstractSelector() {}
   /**
    * Determine the index operation sequence as specified above based on the
    * given list of choices and the budget value.

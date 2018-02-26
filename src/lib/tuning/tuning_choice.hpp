@@ -17,6 +17,7 @@ namespace opossum {
  */
 class TuningChoice {
  public:
+  virtual ~TuningChoice() {}
   /**
    * An estimate regarding the performance impact of this modification.
    * values < 0.0f: expected degradation of system performance
