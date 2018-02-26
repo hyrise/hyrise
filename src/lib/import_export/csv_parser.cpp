@@ -15,7 +15,7 @@
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -49,7 +49,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
-    chunks.emplace_back(std::make_shared<Chunk>(ChunkUseMvcc::Yes));
+    chunks.emplace_back(std::make_shared<Chunk>(UseMvcc::Yes));
     auto& chunk = chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
@@ -62,7 +62,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
       _parse_into_chunk(relevant_content, field_ends, *table, chunk);
       if (_meta.auto_compress && chunk->size() == _meta.chunk_size) {
-        DeprecatedDictionaryCompression::compress_chunk(table->column_types(), chunk);
+        ChunkEncoder::encode_chunk(chunk, table->column_types());
       }
     }));
     tasks.back()->schedule();

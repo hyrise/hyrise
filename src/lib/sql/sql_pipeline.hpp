@@ -5,9 +5,11 @@
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "storage/chunk.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -30,8 +32,10 @@ namespace opossum {
  */
 class SQLPipeline : public Noncopyable {
  public:
-  explicit SQLPipeline(const std::string& sql, bool use_mvcc = true);
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
+  explicit SQLPipeline(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes,
+                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+              const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
 
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_strings();
@@ -60,13 +64,13 @@ class SQLPipeline : public Noncopyable {
 
   // This returns the SQLPipelineStatement that caused this pipeline to throw an error.
   // If there is no failed statement, this fails
-  const std::shared_ptr<SQLPipelineStatement>& failed_pipeline_statement();
+  const std::shared_ptr<SQLPipelineStatement>& failed_pipeline_statement() const;
 
   // Returns the number of SQLPipelineStatements present in this pipeline
-  size_t num_statements();
+  size_t statement_count() const;
 
   // Returns whether the pipeline requires execution to handle all statements
-  bool requires_execution();
+  bool requires_execution() const;
 
   // Returns the entire compile time. Only possible to get this after all statements have been executed or if the
   // pipeline does not require previous execution to compile all statements.
@@ -76,10 +80,13 @@ class SQLPipeline : public Noncopyable {
   std::chrono::microseconds execution_time_microseconds();
 
  private:
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, bool use_mvcc);
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
+              const std::shared_ptr<Optimizer>& optimizer);
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
-  size_t _num_statements;
+
+  std::shared_ptr<TransactionContext> _transaction_context;
+  std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::vector<std::string> _sql_strings;
@@ -98,9 +105,6 @@ class SQLPipeline : public Noncopyable {
   bool _requires_execution;
 
   std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
-
-  // Transaction related
-  std::shared_ptr<TransactionContext> _transaction_context;
 
   // Execution times
   std::chrono::microseconds _compile_time_microseconds{};

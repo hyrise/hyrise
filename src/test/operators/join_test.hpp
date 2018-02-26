@@ -10,7 +10,7 @@
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -43,26 +43,29 @@ class JoinTest : public BaseTest {
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
     _table_wrapper_n = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
+    _table_wrapper_o = std::make_shared<TableWrapper>(load_table("src/test/tables/float_zero_precision.tbl", 1));
+    _table_wrapper_p = std::make_shared<TableWrapper>(load_table("src/test/tables/double_zero_precision.tbl", 1));
+    _table_wrapper_q = std::make_shared<TableWrapper>(load_table("src/test/tables/string_numbers.tbl", 1));
 
     // load and create DeprecatedDictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float2.tbl", 2);
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float.tbl", 2);
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_m_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}});
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_n_dict = std::make_shared<TableWrapper>(std::move(table));
 
     // execute all TableWrapper operators in advance
@@ -80,6 +83,9 @@ class JoinTest : public BaseTest {
     _table_wrapper_l->execute();
     _table_wrapper_m->execute();
     _table_wrapper_n->execute();
+    _table_wrapper_o->execute();
+    _table_wrapper_p->execute();
+    _table_wrapper_q->execute();
     _table_wrapper_a_dict->execute();
     _table_wrapper_b_dict->execute();
     _table_wrapper_c_dict->execute();
@@ -107,8 +113,9 @@ class JoinTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
-      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_a_dict,
-      _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict, _table_wrapper_n_dict;
+      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_o, _table_wrapper_p,
+      _table_wrapper_q, _table_wrapper_a_dict, _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict,
+      _table_wrapper_n_dict;
 };
 
 }  // namespace opossum

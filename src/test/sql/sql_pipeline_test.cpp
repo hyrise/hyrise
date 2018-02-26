@@ -16,7 +16,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -80,14 +79,14 @@ TEST_F(SQLPipelineTest, SimpleCreation) {
   SQLPipeline sql_pipeline{_select_query_a};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
-  SQLPipeline sql_pipeline{_select_query_a, false};
+  SQLPipeline sql_pipeline{_select_query_a, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
@@ -95,21 +94,21 @@ TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
   SQLPipeline sql_pipeline{_select_query_a, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
-  EXPECT_EQ(sql_pipeline.num_statements(), 1u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 1u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationMulti) {
   SQLPipeline sql_pipeline{_multi_statement_query};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
-  SQLPipeline sql_pipeline{_multi_statement_query, false};
+  SQLPipeline sql_pipeline{_multi_statement_query, UseMvcc::No};
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
@@ -117,7 +116,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
   SQLPipeline sql_pipeline{_multi_statement_query, context};
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
-  EXPECT_EQ(sql_pipeline.num_statements(), 2u);
+  EXPECT_EQ(sql_pipeline.statement_count(), 2u);
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationInvalid) {

@@ -4,6 +4,18 @@ else()
     add_definitions(-DIS_DEBUG=0)
 endif()
 
+option(DISABLE_JIT_SUPPORT "Build without JIT support" OFF)
+if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+    set(DISABLE_JIT_SUPPORT ON)
+endif()
+
+if (NOT DISABLE_JIT_SUPPORT)
+    add_definitions(-DHYRISE_JIT_SUPPORT=1)
+else()
+    add_definitions(-DHYRISE_JIT_SUPPORT=0)
+    MESSAGE(STATUS "Building without JIT support")
+endif()
+
 option(DISABLE_NUMA_SUPPORT "Build without NUMA support" OFF)
 if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
@@ -46,7 +58,11 @@ include_directories(
     ${TBB_INCLUDE_DIR}
 )
 
-if (${NUMA_FOUND})
+if (NOT DISABLE_JIT_SUPPORT)
+    include_directories(${LLVM_INCLUDE_DIR})
+endif()
+
+if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
     include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()

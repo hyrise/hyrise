@@ -13,7 +13,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/deprecated_dictionary_compression.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
@@ -36,7 +36,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     test_even_dict->add_column("a", DataType::Int);
     test_even_dict->add_column("b", DataType::Int);
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
-    DeprecatedDictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}}, _encoding_type);
+    ChunkEncoder::encode_chunks(test_even_dict, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
     auto table_wrapper_even_dict = std::make_shared<TableWrapper>(std::move(test_even_dict));
     table_wrapper_even_dict->execute();
@@ -59,7 +59,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       table->append({i, 100.1 + i});
     }
 
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{2}}, _encoding_type);
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{2}}, {_encoding_type});
 
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -109,7 +109,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       table->append({i, 100.0f + i});
     }
 
-    DeprecatedDictionaryCompression::compress_chunks(*table, {ChunkID{0}}, _encoding_type);
+    ChunkEncoder::encode_chunks(table, {ChunkID{0}}, {_encoding_type});
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
     table_wrapper->execute();
@@ -147,7 +147,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     const auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
-      DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
+      ChunkEncoder::encode_all_chunks(table, {_encoding_type});
     }
 
     auto pos_list_a = std::make_shared<PosList>(
@@ -400,7 +400,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
 
 TEST_P(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
+  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -415,7 +415,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues)
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
+  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -500,7 +500,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
+  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -551,7 +551,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-  DeprecatedDictionaryCompression::compress_table(*table, _encoding_type);
+  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
