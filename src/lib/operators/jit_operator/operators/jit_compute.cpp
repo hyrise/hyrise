@@ -8,14 +8,15 @@ namespace opossum {
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{ExpressionType::Column}, _result_value{tuple_value} {}
 
-JitExpression::JitExpression(const JitExpression::Ptr& child, const ExpressionType expression_type,
+JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const ExpressionType expression_type,
                              const size_t result_tuple_index)
     : _left_child{child},
       _expression_type{expression_type},
       _result_value{JitTupleValue(_compute_result_type(), result_tuple_index)} {}
 
-JitExpression::JitExpression(const JitExpression::Ptr& left_child, const ExpressionType expression_type,
-                             const JitExpression::Ptr& right_child, const size_t result_tuple_index)
+JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_child,
+                             const ExpressionType expression_type,
+                             const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index)
     : _left_child{left_child},
       _right_child{right_child},
       _expression_type{expression_type},
@@ -31,15 +32,15 @@ std::string JitExpression::to_string() const {
   return "(" + left + expression_type_to_string.at(_expression_type) + " " + right + ")";
 }
 
-void JitExpression::compute(JitRuntimeContext& ctx) const {
+void JitExpression::compute(JitRuntimeContext& context) const {
   // We are dealing with an already computed value here, so there is nothing to do.
   if (_expression_type == ExpressionType::Column) {
     return;
   }
 
-  auto left_value = _left_child->result().materialize(ctx);
-  auto result_value = _result_value.materialize(ctx);
-  _left_child->compute(ctx);
+  auto left_value = _left_child->result().materialize(context);
+  auto result_value = _result_value.materialize(context);
+  _left_child->compute(context);
 
   if (!_is_binary_operator()) {
     switch (_expression_type) {
@@ -59,8 +60,8 @@ void JitExpression::compute(JitRuntimeContext& ctx) const {
     return;
   }
 
-  auto right_value = _right_child->result().materialize(ctx);
-  _right_child->compute(ctx);
+  auto right_value = _right_child->result().materialize(context);
+  _right_child->compute(context);
 
   switch (_expression_type) {
     case ExpressionType::Addition:
@@ -199,15 +200,15 @@ bool JitExpression::_is_binary_operator() const {
   }
 }
 
-JitCompute::JitCompute(const JitExpression::Ptr& expression) : _expression{expression} {}
+JitCompute::JitCompute(const std::shared_ptr<const JitExpression>& expression) : _expression{expression} {}
 
 std::string JitCompute::description() const {
   return "[Compute] x" + std::to_string(_expression->result().tuple_index()) + " = " + _expression->to_string();
 }
 
-void JitCompute::next(JitRuntimeContext& ctx) const {
-  _expression->compute(ctx);
-  emit(ctx);
+void JitCompute::_consume(JitRuntimeContext& context) const {
+  _expression->compute(context);
+  _emit(context);
 }
 
 }  // namespace opossum
