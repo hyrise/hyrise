@@ -61,10 +61,10 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
 
       if (is_nullable) {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
-                column, output_column.tuple_value.materialize(context)));
+            column, output_column.tuple_value.materialize(context)));
       } else {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
-                column, output_column.tuple_value.materialize(context)));
+            column, output_column.tuple_value.materialize(context)));
       }
     });
   }
