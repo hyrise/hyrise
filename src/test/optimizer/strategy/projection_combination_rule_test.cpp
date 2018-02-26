@@ -72,18 +72,23 @@ TEST_F(ProjectionCombinationRuleTest, CombineProjectionsInJoinTest) {
   ASSERT_EQ(projection_node_1->column_expressions()[1]->type(), ExpressionType::Column);
 
   const auto original_node_1 = projection_node_1->left_child()->left_child()->left_child();
-  EXPECT_EQ(projection_node_1->column_expressions()[0]->column_reference(), LQPColumnReference(original_node_1, ColumnID{0}));
-  EXPECT_EQ(projection_node_1->column_expressions()[1]->column_reference(), LQPColumnReference(original_node_1, ColumnID{1}));
+  EXPECT_EQ(projection_node_1->column_expressions()[0]->column_reference(),
+            LQPColumnReference(original_node_1, ColumnID{0}));
+  EXPECT_EQ(projection_node_1->column_expressions()[1]->column_reference(),
+            LQPColumnReference(original_node_1, ColumnID{1}));
 
   ASSERT_EQ(combined->left_child()->right_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node_2 = std::static_pointer_cast<ProjectionNode>(combined->left_child()->right_child()->left_child()->left_child());
+  const auto projection_node_2 =
+      std::static_pointer_cast<ProjectionNode>(combined->left_child()->right_child()->left_child()->left_child());
   ASSERT_EQ(projection_node_2->column_expressions().size(), 2u);
   ASSERT_EQ(projection_node_2->column_expressions()[0]->type(), ExpressionType::Column);
   ASSERT_EQ(projection_node_2->column_expressions()[1]->type(), ExpressionType::Column);
 
   const auto original_node_2 = projection_node_2->left_child()->left_child()->left_child();
-  EXPECT_EQ(projection_node_2->column_expressions()[0]->column_reference(), LQPColumnReference(original_node_2, ColumnID{0}));
-  EXPECT_EQ(projection_node_2->column_expressions()[1]->column_reference(), LQPColumnReference(original_node_2, ColumnID{1}));
+  EXPECT_EQ(projection_node_2->column_expressions()[0]->column_reference(),
+            LQPColumnReference(original_node_2, ColumnID{0}));
+  EXPECT_EQ(projection_node_2->column_expressions()[1]->column_reference(),
+            LQPColumnReference(original_node_2, ColumnID{1}));
 }
 
 }  // namespace opossum
