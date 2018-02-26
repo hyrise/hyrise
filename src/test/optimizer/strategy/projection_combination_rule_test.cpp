@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "abstract_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/strategy/projection_combination_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
@@ -30,8 +31,15 @@ class ProjectionCombinationRuleTest : public StrategyBaseTest {
   std::shared_ptr<ProjectionCombinationRule> _rule;
 };
 
-TEST_F(ProjectionCombinationRuleTest, CombineProjectionsTest) {
-  const auto query = "SELECT 100, foo.a FROM (SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a) as foo;";
+TEST_F(ProjectionCombinationRuleTest, CombineProjections) {
+  const auto query =
+      R"(SELECT 100, foo.a
+        FROM (
+          SELECT *
+          FROM table_a
+          JOIN table_b
+          ON table_a.a = table_b.a
+        ) as foo;)";
   const auto result_node = compile_query(query);
 
   const auto combined = StrategyBaseTest::apply_rule(_rule, result_node);
@@ -44,7 +52,77 @@ TEST_F(ProjectionCombinationRuleTest, CombineProjectionsTest) {
   EXPECT_EQ(projection_node->column_expressions().size(), 2u);
 }
 
-TEST_F(ProjectionCombinationRuleTest, CombineProjectionsInJoinTest) {
+TEST_F(ProjectionCombinationRuleTest, WithReorderingsAndAliases) {
+  const auto query =
+      R"(SELECT "20", d AS e
+        FROM (
+          SELECT 100, c AS d, 20, a
+          FROM (
+            SELECT b AS c, a
+            FROM table_a
+            WHERE a > 5
+          ) AS foo
+        ) as bar;)";
+  const auto result_node = compile_query(query);
+
+  const auto combined = StrategyBaseTest::apply_rule(_rule, result_node);
+
+  ASSERT_EQ(combined->type(), LQPNodeType::Projection);
+  EXPECT_EQ(combined->left_child()->type(), LQPNodeType::Predicate);
+
+  const auto projection_node = std::static_pointer_cast<ProjectionNode>(combined);
+  ASSERT_EQ(projection_node->column_expressions().size(), 2u);
+  ASSERT_EQ(projection_node->column_expressions()[0]->type(), ExpressionType::Literal);
+  ASSERT_EQ(projection_node->column_expressions()[1]->type(), ExpressionType::Column);
+
+  EXPECT_EQ(projection_node->column_expressions()[0]->value(), AllTypeVariant{20});
+
+  const auto original_node = projection_node->left_child()->left_child();
+  EXPECT_EQ(projection_node->column_expressions()[1]->column_reference(),
+            LQPColumnReference(original_node, ColumnID{1}));
+}
+
+TEST_F(ProjectionCombinationRuleTest, WithAggregate) {
+  const auto query =
+      R"(SELECT *
+        FROM (
+          SELECT SUM(a + a)
+          FROM (
+            SELECT *
+            FROM (
+              SELECT 100, a
+              FROM table_a
+            ) as foo
+          ) as bar
+        ) as baz;)";
+  const auto result_node = compile_query(query);
+
+  const auto combined = StrategyBaseTest::apply_rule(_rule, result_node);
+
+  ASSERT_EQ(combined->type(), LQPNodeType::Projection);
+  const auto projection_node_1 = std::static_pointer_cast<ProjectionNode>(combined);
+  ASSERT_EQ(projection_node_1->column_expressions().size(), 1u);
+  EXPECT_EQ(projection_node_1->column_expressions()[0]->type(), ExpressionType::Column);
+
+  ASSERT_EQ(projection_node_1->left_child()->type(), LQPNodeType::Aggregate);
+  const auto aggregate_node = std::static_pointer_cast<AggregateNode>(projection_node_1->left_child());
+  EXPECT_EQ(projection_node_1->column_expressions()[0]->column_reference(),
+            LQPColumnReference(aggregate_node, ColumnID{0}));
+
+  ASSERT_EQ(aggregate_node->left_child()->type(), LQPNodeType::Projection);
+  const auto projection_node_2 = std::static_pointer_cast<ProjectionNode>(aggregate_node->left_child());
+  ASSERT_EQ(projection_node_2->column_expressions().size(), 2u);
+  ASSERT_EQ(projection_node_2->column_expressions()[0]->type(), ExpressionType::Literal);
+  ASSERT_EQ(projection_node_2->column_expressions()[1]->type(), ExpressionType::Column);
+
+  EXPECT_EQ(projection_node_2->column_expressions()[0]->value(), AllTypeVariant{100});
+
+  const auto original_node = projection_node_2->left_child();
+  EXPECT_EQ(projection_node_2->column_expressions()[1]->column_reference(),
+            LQPColumnReference(original_node, ColumnID{0}));
+}
+
+TEST_F(ProjectionCombinationRuleTest, WithJoin) {
   const auto query =
       R"(SELECT *
         FROM (
