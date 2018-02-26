@@ -612,6 +612,51 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   EXPECT_TABLE_EQ_UNORDERED(table_multi, expected_multi);
 }
 
+TEST_F(SQLPipelineStatementTest, PreparedInsertStatementExecute) {
+  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+
+  const std::string prepared_statement = "PREPARE x1 FROM 'INSERT INTO table_a VALUES (?, ?)'";
+  SQLPipelineStatement prepare_sql_pipeline{prepared_statement, prepared_statement_cache};
+  prepare_sql_pipeline.get_result_table();
+
+  EXPECT_EQ(prepared_statement_cache->size(), 1u);
+
+  const std::string execute_statement = "EXECUTE x1 (1, 0.75)";
+  SQLPipelineStatement execute_sql_pipeline{execute_statement, prepared_statement_cache};
+  execute_sql_pipeline.get_result_table();
+
+  SQLPipelineStatement select_sql_pipeline{_select_query_a};
+  const auto table = select_sql_pipeline.get_result_table();
+
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
+}
+
+TEST_F(SQLPipelineStatementTest, PreparedUpdateStatementExecute) {
+  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+
+  const std::string prepared_statement = "PREPARE x1 FROM 'UPDATE table_a SET a = ? WHERE a = ?'";
+  SQLPipelineStatement prepare_sql_pipeline{prepared_statement, prepared_statement_cache};
+  prepare_sql_pipeline.get_result_table();
+
+  EXPECT_EQ(prepared_statement_cache->size(), 1u);
+
+  const std::string execute_statement = "EXECUTE x1 (1, 123)";
+  SQLPipelineStatement execute_sql_pipeline{execute_statement, prepared_statement_cache};
+  execute_sql_pipeline.get_result_table();
+
+  SQLPipelineStatement select_sql_pipeline{_select_query_a};
+  const auto table = select_sql_pipeline.get_result_table();
+
+  auto expected = std::make_shared<Table>();
+  expected->add_column("a", DataType::Int);
+  expected->add_column("b", DataType::Float);
+  expected->append({1, 456.7f});
+  expected->append({1234, 457.7f});
+  expected->append({12345, 458.7f});
+
+  EXPECT_TABLE_EQ_UNORDERED(table, expected);
+}
+
 TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   SQLPipelineStatement sql_pipeline{_select_query_a};
   sql_pipeline.get_result_table();

@@ -146,7 +146,8 @@ void ProjectionNode::_update_output() const {
         _output_column_names->emplace_back(column_name);
       }
 
-    } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
+    } else if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder ||
+               expression->is_arithmetic_operator()) {
       _output_column_references->emplace_back(shared_from_this(), column_id);
 
       if (!expression->alias()) {
