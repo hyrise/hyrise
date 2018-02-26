@@ -25,7 +25,7 @@ class ProjectionCombinationRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  std::shared_ptr<ProjectionNode> _combine_projections(std::vector<std::shared_ptr<ProjectionNode>>& projections) const;
+  std::shared_ptr<ProjectionNode> _combine_projection_nodes(std::vector<std::shared_ptr<ProjectionNode>>& projection_nodes) const;
 };
 
 }  // namespace opossum

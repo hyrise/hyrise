@@ -34,7 +34,7 @@ bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
   }
 
   if (projection_nodes.size() > 1) {
-    const auto combined_projection_node = _combine_projections(projection_nodes);
+    const auto combined_projection_node = _combine_projection_nodes(projection_nodes);
     _apply_to_children(combined_projection_node);
     return true;
   }
@@ -42,15 +42,15 @@ bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
   return _apply_to_children(node);
 }
 
-std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
-    std::vector<std::shared_ptr<ProjectionNode>>& projections) const {
+std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projection_nodes(
+    std::vector<std::shared_ptr<ProjectionNode>>& projection_nodes) const {
   // Store original child and parents
-  auto left_child = projections.back()->left_child();
-  const auto parents = projections.front()->parents();
-  const auto child_sides = projections.front()->get_child_sides();
+  auto left_child = projection_nodes.back()->left_child();
+  const auto parents = projection_nodes.front()->parents();
+  const auto child_sides = projection_nodes.front()->get_child_sides();
 
   auto column_expressions = std::vector<std::shared_ptr<LQPExpression>>();
-  for (const auto expression : projections.front()->column_expressions()) {
+  for (const auto expression : projection_nodes.front()->column_expressions()) {
     // If the expression is no reference to another column, we can just add it.
     if (expression->type() != ExpressionType::Column) {
       column_expressions.push_back(expression);
@@ -61,8 +61,8 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     // we have to check if the referenced column is part of one of the other ProjectionNodes that we are combining,
     // and then instead add the referenced column here.
     auto column_reference_replaced = false;
-    auto iter = projections.begin() + 1;
-    while (!column_reference_replaced && iter != projections.end()) {
+    auto iter = projection_nodes.begin() + 1;
+    while (!column_reference_replaced && iter != projection_nodes.end()) {
       const auto column_references = (*iter)->output_column_references();
       for (auto column_id = ColumnID{0}; column_id < column_references.size(); ++column_id) {
         if (expression->column_reference() == column_references.at(column_id)) {
