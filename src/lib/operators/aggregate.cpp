@@ -271,17 +271,8 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
 
-  // create context if it doesn't exist yet
-  if (!_contexts_per_column[column_index]) {
-    _contexts_per_column[column_index] = std::make_shared<AggregateContext<ColumnDataType, AggregateType>>();
-  }
-
   auto& context =
       *std::static_pointer_cast<AggregateContext<ColumnDataType, AggregateType>>(_contexts_per_column[column_index]);
-
-  if (!context.results) {
-    context.results = std::make_shared<std::map<AggregateKey, AggregateResult<AggregateType, ColumnDataType>>>();
-  }
 
   auto& results = *context.results;
   auto& hash_keys = _keys_per_chunk[chunk_id];
@@ -737,7 +728,8 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   _output_columns.push_back(col);
 }
 
-std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(const DataType data_type, const AggregateFunction function) const {
+std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(const DataType data_type,
+                                                                             const AggregateFunction function) const {
   std::shared_ptr<ColumnVisitableContext> context;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -765,9 +757,10 @@ std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(con
   return context;
 }
 
-template<typename ColumnDataType, AggregateFunction aggregate_function>
+template <typename ColumnDataType, AggregateFunction aggregate_function>
 std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context_impl() const {
-  const auto context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::aggregate_type>>();
+  const auto context = std::make_shared<
+      AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::aggregate_type>>();
   context->results = std::make_shared<typename decltype(context->results)::element_type>();
   return context;
 }

@@ -114,9 +114,10 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
-  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context(const DataType data_type, const AggregateFunction function) const;
+  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context(const DataType data_type,
+                                                                    const AggregateFunction function) const;
 
-  template<typename ColumnDataType, AggregateFunction aggregate_function>
+  template <typename ColumnDataType, AggregateFunction aggregate_function>
   std::shared_ptr<ColumnVisitableContext> _create_aggregate_context_impl() const;
 
   const std::vector<AggregateColumnDefinition> _aggregates;

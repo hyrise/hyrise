@@ -85,8 +85,7 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_null_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_null_dict->execute();
 
-    _table_wrapper_int_int =
-    std::make_shared<TableWrapper>(load_table("src/test/tables/int_int.tbl", 2));
+    _table_wrapper_int_int = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int.tbl", 2));
     _table_wrapper_int_int->execute();
   }
 
@@ -538,7 +537,8 @@ TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
 }
 
 TEST_F(OperatorsAggregateTest, EmptyInputTable) {
-  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_int_int, ColumnID{0}, PredicateCondition::LessThan, int32_t{32});
+  const auto table_scan =
+      std::make_shared<TableScan>(_table_wrapper_int_int, ColumnID{0}, PredicateCondition::LessThan, int32_t{32});
 
   const auto aggregates = std::vector<AggregateColumnDefinition>({{ColumnID{0}, AggregateFunction::Sum}});
   const auto aggregate = std::make_shared<Aggregate>(table_scan, aggregates, std::vector<ColumnID>({ColumnID{1}}));
