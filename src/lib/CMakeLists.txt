@@ -70,6 +70,7 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
@@ -99,11 +100,14 @@ set(
     operators/insert.cpp
     operators/insert.hpp
     operators/join_hash.cpp
+    operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
+    operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
     operators/maintenance/create_view.cpp
@@ -124,13 +128,13 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
-    operators/table_scan.cpp
-    operators/table_scan.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan.cpp
+    operators/table_scan.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
@@ -151,6 +155,15 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
+    optimizer/join_ordering/join_edge.cpp
+    optimizer/join_ordering/join_edge.hpp
+    optimizer/join_ordering/join_graph_builder.cpp
+    optimizer/join_ordering/join_graph_builder.hpp
+    optimizer/join_ordering/join_graph.cpp
+    optimizer/join_ordering/join_graph.hpp
+    optimizer/join_ordering/join_plan_predicate.cpp
+    optimizer/join_ordering/join_plan_predicate.hpp
+    optimizer/join_ordering/join_vertex_set.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -193,9 +206,14 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    sql/abstract_cache.hpp
+    sql/gdfs_cache.hpp
+    sql/gds_cache.hpp
     sql/hsql_expr_translator.cpp
     sql/hsql_expr_translator.hpp
     sql/lru_cache.hpp
+    sql/lru_k_cache.hpp
+    sql/random_cache.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
@@ -203,16 +221,14 @@ set(
     sql/sql_planner.cpp
     sql/sql_planner.hpp
     sql/sql_query_cache.hpp
-    sql/sql_query_operator.cpp
-    sql/sql_query_operator.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_column.hpp
     storage/base_column_encoder.hpp
+    storage/base_column.hpp
     storage/base_deprecated_dictionary_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
@@ -220,31 +236,31 @@ set(
     storage/base_encoded_column.hpp
     storage/base_value_column.hpp
     storage/chunk.cpp
-    storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/chunk.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
-    storage/column_iterables.hpp
     storage/column_iterables/base_column_iterators.hpp
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
     storage/column_iterables/constant_value_iterable.hpp
+    storage/column_iterables.hpp
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
-    storage/deprecated_dictionary_column.cpp
-    storage/deprecated_dictionary_column.hpp
     storage/deprecated_dictionary_column/base_attribute_vector.hpp
+    storage/deprecated_dictionary_column.cpp
     storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
     storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
     storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
     storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
-    storage/dictionary_column.cpp
-    storage/dictionary_column.hpp
+    storage/deprecated_dictionary_column.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
+    storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
+    storage/dictionary_column.hpp
     storage/encoding_type.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
@@ -253,19 +269,19 @@ set(
     storage/index/base_index.cpp
     storage/index/base_index.hpp
     storage/index/column_index_type.hpp
-    storage/index/index_info.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key.cpp
-    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
+    storage/index/group_key/variable_length_key.cpp
+    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_proxy.cpp
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
+    storage/index/index_info.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
@@ -286,28 +302,29 @@ set(
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp
     storage/value_column/value_column_iterable.hpp
-    storage/vector_compression/base_vector_decompressor.hpp
-    storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_compressed_vector.hpp
-    storage/vector_compression/vector_compression.cpp
-    storage/vector_compression/vector_compression.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
+    storage/vector_compression/base_vector_compressor.hpp
+    storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/compressed_vector_type.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
     storage/vector_compression/simd_bp128/oversized_types.hpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
-    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
     storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
     storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
+    storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
     storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
     storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
     storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
     storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
     storage/vector_compression/simd_bp128/simd_bp128_vector.cpp
     storage/vector_compression/simd_bp128/simd_bp128_vector.hpp
-    storage/vector_compression/compressed_vector_type.hpp
+    storage/vector_compression/vector_compression.cpp
+    storage/vector_compression/vector_compression.hpp
+    strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
     tasks/chunk_metrics_collection_task.cpp
@@ -320,17 +337,17 @@ set(
     type_comparison.hpp
     types.hpp
     uid_allocator.hpp
-    utils/assert.hpp
     utils/arithmetic_operator_expression.hpp
     utils/arithmetic_operator_expression_impl.hpp
+    utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp
-    utils/load_table.cpp
-    utils/load_table.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
+    utils/load_table.cpp
+    utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp

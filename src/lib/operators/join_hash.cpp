@@ -151,11 +151,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   template <typename T>
   constexpr uint32_t hash_value(T& value) {
-    if constexpr (!std::is_same_v<T, HashedType>) {
-      return murmur2<HashedType>(type_cast<HashedType>(value), _partitioning_seed);
+    // clang-format off
+    // doesn't deal with constexpr nicely
+    if constexpr(!std::is_same_v<T, HashedType>) {
+        return murmur2<HashedType>(type_cast<HashedType>(value), _partitioning_seed);
     } else {
       return murmur2<HashedType>(value, _partitioning_seed);
     }
+    // clang-format on
   }
 
   template <typename T>

@@ -175,24 +175,31 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
   const auto* statement = get_parsed_sql_statement()->getStatement(0);
 
+  auto check_same_mvcc_mode = [this](const SQLQueryPlan& plan) {
+    if (plan.tree_roots().front()->transaction_context_is_set()) {
+      Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
+    } else {
+      Assert(_use_mvcc == UseMvcc::No, "Trying to use non-MVCC cached query with a transaction context.");
+    }
+  };
+
   try {
     if (const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string)) {
       // Handle query plan if statement has been cached
       auto& plan = *cached_plan;
 
       DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
-      if (plan.tree_roots().front()->transaction_context_is_set()) {
-        Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
-      } else {
-        Assert(_use_mvcc == UseMvcc::No, "Trying to use non-MVCC cached query with a transaction context.");
-      }
+      check_same_mvcc_mode(plan);
 
+      _query_plan_cache_hit = true;
       _query_plan->append_plan(plan.recreate());
     } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
       // Handle query plan if we are executing a prepared statement
       Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
       const auto plan = _prepared_statements->try_get(execute_statement->name);
+
       Assert(plan, "Requested prepared statement does not exist!");
+      check_same_mvcc_mode(*plan);
 
       // Get list of arguments from EXECUTE statement.
       std::vector<AllParameterVariant> arguments;
@@ -342,5 +349,10 @@ std::string SQLPipelineStatement::create_parse_error_message(const std::string& 
             << "\nError message: " << result.errorMsg();
 
   return error_msg.str();
+}
+
+bool SQLPipelineStatement::query_plan_cache_hit() const {
+  DebugAssert(_query_plan != nullptr, "Asking for cache hit before compiling query plan will return undefined result");
+  return _query_plan_cache_hit;
 }
 }  // namespace opossum
