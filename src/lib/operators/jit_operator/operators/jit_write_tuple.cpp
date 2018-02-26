@@ -57,6 +57,7 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto column = std::make_shared<ValueColumn<ColumnDataType>>(output_column.tuple_value.is_nullable());
+      context.out_chunk->add_column(column);
 
       if (is_nullable) {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
