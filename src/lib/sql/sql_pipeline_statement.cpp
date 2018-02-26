@@ -123,6 +123,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   const auto* statement = parsed_sql->getStatement(0);
   if (const auto prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
+    // If this is as PreparedStatement, we want to translate the actual query and not the PREPARE FROM ... part.
+    // However, that part is not yet parsed, so we need to parse the raw string from the PreparedStatement.
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
     parsed_sql = SQLPipelineStatement(prepared_statement->query).get_parsed_sql_statement();
     _num_parameters = static_cast<uint16_t>(parsed_sql->parameters().size());
@@ -175,7 +177,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
   const auto* statement = get_parsed_sql_statement()->getStatement(0);
 
-  auto check_same_mvcc_mode = [this](const SQLQueryPlan& plan) {
+  auto assert_same_mvcc_mode = [this](const SQLQueryPlan& plan) {
     if (plan.tree_roots().front()->transaction_context_is_set()) {
       Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
     } else {
@@ -189,7 +191,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       auto& plan = *cached_plan;
 
       DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
-      check_same_mvcc_mode(plan);
+      assert_same_mvcc_mode(plan);
 
       _query_plan_cache_hit = true;
       _query_plan->append_plan(plan.recreate());
@@ -199,7 +201,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       const auto plan = _prepared_statements->try_get(execute_statement->name);
 
       Assert(plan, "Requested prepared statement does not exist!");
-      check_same_mvcc_mode(*plan);
+      assert_same_mvcc_mode(*plan);
 
       // Get list of arguments from EXECUTE statement.
       std::vector<AllParameterVariant> arguments;

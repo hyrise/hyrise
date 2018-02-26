@@ -116,7 +116,7 @@ Console::Console()
     _tpcc_commands.push_back(it->first);
   }
 
-  _prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(DefaultCacheCapacity);
+  _prepared_statements = std::make_shared<SQLQueryCache<SQLQueryPlan>>(DefaultCacheCapacity);
 }
 
 Console& Console::get() {
@@ -222,9 +222,9 @@ bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
       _sql_pipeline =
-          std::make_unique<SQLPipeline>(sql, _prepared_statement_cache, _explicitly_created_transaction_context);
+          std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
     } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statement_cache);
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements);
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
