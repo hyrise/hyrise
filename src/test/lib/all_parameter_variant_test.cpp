@@ -23,6 +23,11 @@ TEST_F(AllParameterVariantTest, GetCurrentType) {
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
+    AllParameterVariant parameter(true);
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
+    EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
+  }
+  {
     AllParameterVariant parameter(static_cast<int32_t>(123));
     EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));

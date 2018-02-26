@@ -29,7 +29,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
       _right_wildcard{right_wildcard},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {
   // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
-  auto regex_string = _sqllike_to_regex(_right_wildcard);
+  auto regex_string = sqllike_to_regex(_right_wildcard);
   _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
 }
 
@@ -81,6 +81,30 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
       this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
     });
   });
+}
+
+std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
+  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{".", "\\."},
+                                                                                    {"^", "\\^"},
+                                                                                    {"$", "\\$"},
+                                                                                    {"+", "\\+"},
+                                                                                    {"?", "\\?"},
+                                                                                    {"(", "\\("},
+                                                                                    {")", "\\"},
+                                                                                    {"{", "\\{"},
+                                                                                    {"}", "\\}"},
+                                                                                    {"\\", "\\\\"},
+                                                                                    {"|", "\\|"},
+                                                                                    {".", "\\."},
+                                                                                    {"*", "\\*"},
+                                                                                    {"%", ".*"},
+                                                                                    {"_", "."}}};
+
+  for (const auto& pair : replace_by) {
+    boost::replace_all(sqllike, pair.first, pair.second);
+  }
+
+  return "^" + sqllike + "$";
 }
 
 template <typename DictionaryColumnType>
@@ -136,30 +160,6 @@ std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_diction
   }
 
   return result;
-}
-
-std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{".", "\\."},
-                                                                                    {"^", "\\^"},
-                                                                                    {"$", "\\$"},
-                                                                                    {"+", "\\+"},
-                                                                                    {"?", "\\?"},
-                                                                                    {"(", "\\("},
-                                                                                    {")", "\\"},
-                                                                                    {"{", "\\{"},
-                                                                                    {"}", "\\}"},
-                                                                                    {"\\", "\\\\"},
-                                                                                    {"|", "\\|"},
-                                                                                    {".", "\\."},
-                                                                                    {"*", "\\*"},
-                                                                                    {"%", ".*"},
-                                                                                    {"_", "."}}};
-
-  for (const auto& pair : replace_by) {
-    boost::replace_all(sqllike, pair.first, pair.second);
-  }
-
-  return "^" + sqllike + "$";
 }
 
 }  // namespace opossum
