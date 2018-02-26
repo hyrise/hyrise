@@ -15,21 +15,19 @@ namespace opossum {
  */
 class JitAbstractOperator {
  public:
-  using Ptr = std::shared_ptr<JitAbstractOperator>;
-
   virtual ~JitAbstractOperator() = default;
 
-  void set_next_operator(const JitAbstractOperator::Ptr& next_operator) { _next_operator = next_operator; }
+  void set_next_operator(const std::shared_ptr<JitAbstractOperator>& next_operator) { _next_operator = next_operator; }
 
   virtual std::string description() const = 0;
 
  protected:
-  void emit(JitRuntimeContext& ctx) const { _next_operator->next(ctx); }
+  void _emit(JitRuntimeContext& context) const { _next_operator->_consume(context); }
 
  private:
-  virtual void next(JitRuntimeContext& ctx) const = 0;
+  virtual void _consume(JitRuntimeContext& context) const = 0;
 
-  JitAbstractOperator::Ptr _next_operator;
+  std::shared_ptr<JitAbstractOperator> _next_operator;
 };
 
 }  // namespace opossum

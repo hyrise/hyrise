@@ -12,7 +12,7 @@ namespace opossum {
 
 JitOperator::JitOperator(const std::shared_ptr<const AbstractOperator> left,
                          const bool use_jit,
-                         const std::vector<JitAbstractOperator::Ptr>& operators)
+                         const std::vector<std::shared_ptr<JitAbstractOperator>>& operators)
     : AbstractReadOnlyOperator{left}, _use_jit{use_jit}, _operators{operators} {}
 
 const std::string JitOperator::name() const { return "JitOperator"; }
@@ -31,13 +31,13 @@ std::shared_ptr<AbstractOperator> JitOperator::recreate(const std::vector<AllPar
   return std::make_shared<JitOperator>(input_left()->recreate(args), _use_jit, _operators);
 }
 
-void JitOperator::add_jit_operator(const JitAbstractOperator::Ptr& op) { _operators.push_back(op); }
+void JitOperator::add_jit_operator(const std::shared_ptr<JitAbstractOperator>& op) { _operators.push_back(op); }
 
-const JitReadTuple::Ptr JitOperator::_source() const {
+const std::shared_ptr<JitReadTuple> JitOperator::_source() const {
   return std::dynamic_pointer_cast<JitReadTuple>(_operators.front());
 }
 
-const JitAbstractSink::Ptr JitOperator::_sink() const {
+const std::shared_ptr<JitAbstractSink> JitOperator::_sink() const {
   return std::dynamic_pointer_cast<JitAbstractSink>(_operators.back());
 }
 
@@ -53,9 +53,9 @@ std::shared_ptr<const Table> JitOperator::_on_execute() {
   const auto& in_table = *input_left()->get_output();
   auto out_table = std::make_shared<opossum::Table>(in_table.max_chunk_size());
 
-  JitRuntimeContext ctx;
-  _source()->before_query(in_table, ctx);
-  _sink()->before_query(*out_table, ctx);
+  JitRuntimeContext context;
+  _source()->before_query(in_table, context);
+  _sink()->before_query(*out_table, context);
 
   JitModule module(JIT_ABSTRACT_SOURCE_EXECUTE_MANGLED_NAME);
   std::function<void(const JitReadTuple*, JitRuntimeContext&)> execute_func;
@@ -74,12 +74,12 @@ std::shared_ptr<const Table> JitOperator::_on_execute() {
   for (opossum::ChunkID chunk_id{0}; chunk_id < in_table.chunk_count(); ++chunk_id) {
     const auto& in_chunk = *in_table.get_chunk(chunk_id);
 
-    ctx.chunk_size = in_chunk.size();
-    ctx.chunk_offset = 0;
+    context.chunk_size = in_chunk.size();
+    context.chunk_offset = 0;
 
-    _source()->before_chunk(in_table, in_chunk, ctx);
-    execute_func(_source().get(), ctx);
-    _sink()->after_chunk(*out_table, ctx);
+    _source()->before_chunk(in_table, in_chunk, context);
+    execute_func(_source().get(), context);
+    _sink()->after_chunk(*out_table, context);
   }
 
   return out_table;

@@ -18,23 +18,23 @@ namespace opossum {
 class JitOperator : public AbstractReadOnlyOperator {
  public:
   explicit JitOperator(const std::shared_ptr<const AbstractOperator> left, const bool use_jit = true,
-                       const std::vector<JitAbstractOperator::Ptr>& operators = {});
+                       const std::vector<std::shared_ptr<JitAbstractOperator>>& operators = {});
 
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const final;
 
-  void add_jit_operator(const JitAbstractOperator::Ptr& op);
+  void add_jit_operator(const std::shared_ptr<JitAbstractOperator>& op);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
  private:
-  const JitReadTuple::Ptr _source() const;
-  const JitAbstractSink::Ptr _sink() const;
+  const std::shared_ptr<JitReadTuple> _source() const;
+  const std::shared_ptr<JitAbstractSink> _sink() const;
 
   const bool _use_jit;
-  std::vector<JitAbstractOperator::Ptr> _operators;
+  std::vector<std::shared_ptr<JitAbstractOperator>> _operators;
 };
 
 }  // namespace opossum

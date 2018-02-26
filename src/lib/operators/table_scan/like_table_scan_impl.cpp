@@ -95,7 +95,6 @@ std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
                                                                                     {"}", "\\}"},
                                                                                     {"\\", "\\\\"},
                                                                                     {"|", "\\|"},
-                                                                                    {".", "\\."},
                                                                                     {"*", "\\*"},
                                                                                     {"%", ".*"},
                                                                                     {"_", "."}}};
