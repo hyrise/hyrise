@@ -129,7 +129,7 @@ template <typename T>
 DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType rhs) {
   // This lambda calls the op_func (a lambda that could performs the actual computation) and determines the return type
   // of that lambda.
-  const auto determine_retrun_type_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(
+  const auto determine_return_type_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(
       op_func(typed_lhs, typed_rhs), DataType()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
     // This templated function returns the DataType enum value for a given ResultType.
@@ -137,7 +137,7 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   };
 
   const auto catching_func =
-      InvalidTypeCatcher<decltype(determine_retrun_type_wrapper), DataType>(determine_retrun_type_wrapper);
+      InvalidTypeCatcher<decltype(determine_return_type_wrapper), DataType>(determine_return_type_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);

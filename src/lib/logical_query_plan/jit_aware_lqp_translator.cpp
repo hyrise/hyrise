@@ -82,10 +82,10 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
   return jit_operator;
 }
 
-JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
+std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_to_jit_expression(
     const std::shared_ptr<AbstractLQPNode>& node, JitReadTuple& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
-  JitExpression::Ptr left, right;
+  std::shared_ptr<const JitExpression> left, right;
   switch (node->type()) {
     case LQPNodeType::Predicate:
       // If there are further conditions (either PredicateNodes of UnionNodes) down the line, we need a logical AND here
@@ -111,12 +111,12 @@ JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
   }
 }
 
-JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
+std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_to_jit_expression(
     const std::shared_ptr<PredicateNode>& node, JitReadTuple& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   auto condition = predicate_condition_to_expression_type.at(node->predicate_condition());
   auto left = _translate_to_jit_expression(node->column_reference(), jit_source, input_node);
-  JitExpression::Ptr right;
+  std::shared_ptr<const JitExpression> right;
 
   switch (condition) {
     /* Binary predicates */
@@ -139,10 +139,10 @@ JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
   }
 }
 
-JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
+std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_to_jit_expression(
     const LQPExpression& lqp_expression, JitReadTuple& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
-  JitExpression::Ptr left, right;
+  std::shared_ptr<const JitExpression> left, right;
   switch (lqp_expression.type()) {
     case ExpressionType::Literal:
       return _translate_to_jit_expression(lqp_expression.value(), jit_source, input_node);
@@ -183,7 +183,7 @@ JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
   }
 }
 
-JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
+std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_to_jit_expression(
     const LQPColumnReference& lqp_column_reference, JitReadTuple& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   const auto column_id = input_node->find_output_column_id(lqp_column_reference);
@@ -208,7 +208,7 @@ JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
   }
 }
 
-JitExpression::Ptr JitAwareLQPTranslator::_translate_to_jit_expression(
+std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_to_jit_expression(
     const AllParameterVariant& value, JitReadTuple& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
   if (is_lqp_column_reference(value)) {
