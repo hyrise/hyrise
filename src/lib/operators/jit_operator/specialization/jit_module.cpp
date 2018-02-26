@@ -304,6 +304,9 @@ void JitModule::_replace_loads_with_runtime_values() {
 }
 
 llvm::Function* JitModule::_create_function_declaration(const llvm::Function& function, const std::string& suffix) {
+  if (auto fn = _module->getFunction(function.getName())) {
+    return fn;
+  }
   const auto declaration = llvm::Function::Create(llvm::cast<llvm::FunctionType>(function.getValueType()),
                                                   function.getLinkage(), function.getName() + suffix, _module.get());
   declaration->copyAttributesFrom(&function);
