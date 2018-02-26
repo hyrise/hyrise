@@ -193,8 +193,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
       assert_same_mvcc_mode(plan);
 
-      _query_plan_cache_hit = true;
       _query_plan->append_plan(plan.recreate());
+      _query_plan_cache_hit = true;
     } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
       // Handle query plan if we are executing a prepared statement
       Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
@@ -234,8 +234,10 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     _prepared_statements->set(prepared_statement->name, *_query_plan);
   }
 
-  // Cache newly created plan for the according sql statement
-  SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
+  // Cache newly created plan for the according sql statement (only if not already cached)
+  if (!_query_plan_cache_hit) {
+    SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
+  }
 
   const auto done = std::chrono::high_resolution_clock::now();
   _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
