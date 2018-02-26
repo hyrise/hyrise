@@ -18,8 +18,6 @@ namespace opossum {
  */
 class JitAbstractSink : public JitAbstractOperator {
  public:
-  using Ptr = std::shared_ptr<JitAbstractSink>;
-
   virtual ~JitAbstractSink() = default;
 
   virtual void before_query(Table& out_table, JitRuntimeContext& ctx) {}

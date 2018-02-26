@@ -10,8 +10,6 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
-  using Ptr = std::shared_ptr<const BaseJitColumnWriter>;
-
   virtual void write_value(JitRuntimeContext& ctx) const = 0;
 };
 
@@ -79,7 +77,7 @@ class JitWriteTuple : public JitAbstractSink {
   void _create_output_chunk(JitRuntimeContext& ctx) const;
 
   std::vector<JitOutputColumn> _output_columns;
-  std::vector<BaseJitColumnWriter::Ptr> _column_writers;
+  std::vector<std::shared_ptr<const BaseJitColumnWriter>> _column_writers;
 };
 
 }  // namespace opossum

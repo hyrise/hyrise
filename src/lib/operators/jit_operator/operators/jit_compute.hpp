@@ -16,12 +16,11 @@ namespace opossum {
  */
 class JitExpression {
  public:
-  using Ptr = std::shared_ptr<const JitExpression>;
-
   explicit JitExpression(const JitTupleValue& tuple_value);
-  JitExpression(const JitExpression::Ptr& child, const ExpressionType expression_type, const size_t result_tuple_index);
-  JitExpression(const JitExpression::Ptr& left_child, const ExpressionType expression_type,
-                const JitExpression::Ptr& right_child, const size_t result_tuple_index);
+  JitExpression(const std::shared_ptr<const JitExpression>& child, const ExpressionType expression_type,
+                const size_t result_tuple_index);
+  JitExpression(const std::shared_ptr<const JitExpression>& left_child, const ExpressionType expression_type,
+                const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index);
 
   std::string to_string() const;
 
@@ -35,8 +34,8 @@ class JitExpression {
 
   bool _is_binary_operator() const;
 
-  const Ptr _left_child;
-  const Ptr _right_child;
+  const std::shared_ptr<const JitExpression> _left_child;
+  const std::shared_ptr<const JitExpression> _right_child;
   const ExpressionType _expression_type;
   const JitTupleValue _result_value;
 };
@@ -46,14 +45,14 @@ class JitExpression {
  */
 class JitCompute : public JitAbstractOperator {
  public:
-  explicit JitCompute(const JitExpression::Ptr& expression);
+  explicit JitCompute(const std::shared_ptr<const JitExpression>& expression);
 
   std::string description() const final;
 
  private:
   void next(JitRuntimeContext& ctx) const final;
 
-  JitExpression::Ptr _expression;
+  std::shared_ptr<const JitExpression> _expression;
 };
 
 }  // namespace opossum

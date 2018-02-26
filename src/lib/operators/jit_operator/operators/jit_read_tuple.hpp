@@ -12,8 +12,6 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  using Ptr = std::shared_ptr<const BaseJitColumnReader>;
-
   virtual void read_value(JitRuntimeContext& ctx) const = 0;
   virtual void increment(JitRuntimeContext& ctx) const = 0;
 };
@@ -90,8 +88,6 @@ struct JitInputLiteral {
  */
 class JitReadTuple : public JitAbstractOperator {
  public:
-  using Ptr = std::shared_ptr<JitReadTuple>;
-
   std::string description() const final;
 
   void before_query(const Table& in_table, JitRuntimeContext& ctx);
@@ -107,7 +103,7 @@ class JitReadTuple : public JitAbstractOperator {
   uint32_t _num_tuple_values{0};
   std::vector<JitInputColumn> _input_columns;
   std::vector<JitInputLiteral> _input_literals;
-  std::vector<BaseJitColumnReader::Ptr> _column_readers;
+  std::vector<std::shared_ptr<const BaseJitColumnReader>> _column_readers;
 
  private:
   void next(JitRuntimeContext& ctx) const final {}

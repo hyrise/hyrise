@@ -8,14 +8,15 @@ namespace opossum {
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{ExpressionType::Column}, _result_value{tuple_value} {}
 
-JitExpression::JitExpression(const JitExpression::Ptr& child, const ExpressionType expression_type,
+JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const ExpressionType expression_type,
                              const size_t result_tuple_index)
     : _left_child{child},
       _expression_type{expression_type},
       _result_value{JitTupleValue(_compute_result_type(), result_tuple_index)} {}
 
-JitExpression::JitExpression(const JitExpression::Ptr& left_child, const ExpressionType expression_type,
-                             const JitExpression::Ptr& right_child, const size_t result_tuple_index)
+JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_child,
+                             const ExpressionType expression_type,
+                             const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index)
     : _left_child{left_child},
       _right_child{right_child},
       _expression_type{expression_type},
@@ -199,7 +200,7 @@ bool JitExpression::_is_binary_operator() const {
   }
 }
 
-JitCompute::JitCompute(const JitExpression::Ptr& expression) : _expression{expression} {}
+JitCompute::JitCompute(const std::shared_ptr<const JitExpression>& expression) : _expression{expression} {}
 
 std::string JitCompute::description() const {
   return "[Compute] x" + std::to_string(_expression->result().tuple_index()) + " = " + _expression->to_string();
