@@ -12,12 +12,11 @@ class AbstractLQPNode;
 class ProjectionNode;
 
 /**
- * This optimizer rule combines consecutive ProjectionNodes if they all have exactly one child/parent
- * (Note: The node furthest up in the tree, the "root" of a ProjectionNode sequence,
- * can have multiple parents; the one furthest down in the sequence can have multiple children).
+ * This optimizer rule combines consecutive ProjectionNodes if they all have exactly one parent
+ * (except for the node closest to the tree root in a sequence of ProjectionNodes, which can have multiple parents).
  *
- * The rule removes all but the root ProjectionNode of the sequence from the tree.
- * If the root ProjectionNode contains any LQPColumnReferences to a column in one of the ProjectionNodes
+ * The rule removes all but the ProjectionNode closest to the tree root (the top node of that sequence) from the tree.
+ * If the top ProjectionNode contains any LQPColumnReferences to a column created by one of the ProjectionNodes
  * to be removed, then the LQPColumnReference is replaced by the actual column.
  */
 class ProjectionCombinationRule : public AbstractRule {

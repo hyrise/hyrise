@@ -23,10 +23,8 @@ bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
   while (current_node->type() == LQPNodeType::Projection) {
     projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(current_node));
 
-    // If current node has multiple or no children, end the combination here
-    if (current_node->right_child() || !current_node->left_child()) {
-      break;
-    }
+    DebugAssert(current_node->left_child(), "LQP invalid: ProjectionNode must have a left child.");
+    DebugAssert(!current_node->right_child(), "LQP invalid: ProjectionNode can not have a right child.");
 
     current_node = current_node->left_child();
 
@@ -48,7 +46,6 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
     std::vector<std::shared_ptr<ProjectionNode>>& projections) const {
   // Store original child and parents
   auto left_child = projections.back()->left_child();
-  auto right_child = projections.back()->right_child();
   const auto parents = projections.front()->parents();
   const auto child_sides = projections.front()->get_child_sides();
 
@@ -86,15 +83,9 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projections(
 
   auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
 
-  // Ensure that parents and children are chained back to the new node correctly
-  if (left_child) {
-    left_child->clear_parents();
-    projection_node->set_left_child(left_child);
-  }
-  if (right_child) {
-    right_child->clear_parents();
-    projection_node->set_right_child(right_child);
-  }
+  // Ensure that parents and child are chained back to the new node correctly
+  left_child->clear_parents();
+  projection_node->set_left_child(left_child);
 
   for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
     parents[parent_idx]->set_child(child_sides[parent_idx], projection_node);
