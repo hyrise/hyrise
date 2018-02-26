@@ -14,7 +14,7 @@ class JitFilter : public JitAbstractOperator {
   std::string description() const final;
 
  private:
-  void next(JitRuntimeContext& ctx) const final;
+  void _consume(JitRuntimeContext& context) const final;
 
   const JitTupleValue _condition;
 };

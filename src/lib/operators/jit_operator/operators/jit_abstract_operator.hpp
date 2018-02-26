@@ -22,10 +22,10 @@ class JitAbstractOperator {
   virtual std::string description() const = 0;
 
  protected:
-  void emit(JitRuntimeContext& ctx) const { _next_operator->next(ctx); }
+  void _emit(JitRuntimeContext& context) const { _next_operator->_consume(context); }
 
  private:
-  virtual void next(JitRuntimeContext& ctx) const = 0;
+  virtual void _consume(JitRuntimeContext& context) const = 0;
 
   std::shared_ptr<JitAbstractOperator> _next_operator;
 };

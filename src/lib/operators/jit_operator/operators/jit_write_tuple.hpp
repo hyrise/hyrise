@@ -10,7 +10,7 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
-  virtual void write_value(JitRuntimeContext& ctx) const = 0;
+  virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
 /* JitColumnWriters provide a template-free interface to store tuple values in ValueColumns in the output table.
@@ -31,20 +31,20 @@ class JitColumnWriter : public BaseJitColumnWriter {
   JitColumnWriter(const size_t output_index, const JitTupleValue& tuple_value)
       : _output_index{output_index}, _tuple_value{tuple_value} {}
 
-  void write_value(JitRuntimeContext& ctx) const {
-    const auto value = _tuple_value.materialize(ctx).template get<DataType>();
-    _value_column(ctx).values().push_back(value);
+  void write_value(JitRuntimeContext& context) const {
+    const auto value = _tuple_value.materialize(context).template get<DataType>();
+    _value_column(context).values().push_back(value);
     // clang-format off
     if constexpr (Nullable) {
-      const auto is_null = _tuple_value.materialize(ctx).is_null();
-      _value_column(ctx).null_values().push_back(is_null);
+      const auto is_null = _tuple_value.materialize(context).is_null();
+      _value_column(context).null_values().push_back(is_null);
     }
     // clang-format on
   }
 
  private:
-  ValueColumn& _value_column(JitRuntimeContext& ctx) const {
-    return *std::static_pointer_cast<ValueColumn>(ctx.outputs[_output_index]);
+  ValueColumn& _value_column(JitRuntimeContext& context) const {
+    return *std::static_pointer_cast<ValueColumn>(context.outputs[_output_index]);
   }
 
   const size_t _output_index;
@@ -66,15 +66,15 @@ class JitWriteTuple : public JitAbstractSink {
  public:
   std::string description() const final;
 
-  void before_query(Table& out_table, JitRuntimeContext& ctx) final;
-  void after_chunk(Table& out_table, JitRuntimeContext& ctx) const final;
+  void before_query(Table& out_table, JitRuntimeContext& context) final;
+  void after_chunk(Table& out_table, JitRuntimeContext& context) const final;
 
   void add_output_column(const std::string& column_name, const JitTupleValue& tuple_value);
 
  private:
-  void next(JitRuntimeContext& ctx) const final;
+  void _consume(JitRuntimeContext& context) const final;
 
-  void _create_output_chunk(JitRuntimeContext& ctx) const;
+  void _create_output_chunk(JitRuntimeContext& context) const;
 
   std::vector<JitOutputColumn> _output_columns;
   std::vector<std::shared_ptr<const BaseJitColumnWriter>> _column_writers;

@@ -138,8 +138,8 @@ class JitTupleValue {
   size_t tuple_index() const { return _tuple_index; }
 
   // Converts this abstract value into an actually accessible value
-  JitMaterializedValue materialize(JitRuntimeContext& ctx) const {
-    return JitMaterializedValue(_data_type, _is_nullable, _tuple_index, ctx.tuple);
+  JitMaterializedValue materialize(JitRuntimeContext& context) const {
+    return JitMaterializedValue(_data_type, _is_nullable, _tuple_index, context.tuple);
   }
 
  private:

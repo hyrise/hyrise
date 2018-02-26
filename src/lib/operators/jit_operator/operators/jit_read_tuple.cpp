@@ -18,16 +18,16 @@ std::string JitReadTuple::description() const {
   return desc.str();
 }
 
-void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& ctx) {
+void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& context) {
   // Create a runtime tuple of the appropriate size
-  ctx.tuple.resize(_num_tuple_values);
+  context.tuple.resize(_num_tuple_values);
 
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
     auto data_type = input_literal.tuple_value.data_type();
     resolve_data_type(data_type, [&](auto type) {
       using DataType = typename decltype(type)::type;
-      input_literal.tuple_value.materialize(ctx).set<DataType>(boost::get<DataType>(input_literal.value));
+      input_literal.tuple_value.materialize(context).set<DataType>(boost::get<DataType>(input_literal.value));
     });
   }
 
@@ -55,8 +55,8 @@ void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& ctx) {
   }
 }
 
-void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& ctx) const {
-  ctx.inputs.clear();
+void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
+  context.inputs.clear();
 
   // Create the column iterator for each input column and store them to the runtime context
   for (const auto& input_column : _input_columns) {
@@ -67,20 +67,20 @@ void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, Ji
       using ColumnDataType = typename decltype(type)::type;
       create_iterable_from_column<ColumnDataType>(typed_column).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
-        ctx.inputs.push_back(std::make_shared<IteratorType>(it));
+        context.inputs.push_back(std::make_shared<IteratorType>(it));
       });
     });
   }
 }
 
-void JitReadTuple::execute(JitRuntimeContext& ctx) const {
-  for (; ctx.chunk_offset < ctx.chunk_size; ++ctx.chunk_offset) {
+void JitReadTuple::execute(JitRuntimeContext& context) const {
+  for (; context.chunk_offset < context.chunk_size; ++context.chunk_offset) {
     // We read from and advance all column iterators, before passing the tuple on to the next operator.
     for (const auto& column_reader : _column_readers) {
-      column_reader->read_value(ctx);
-      column_reader->increment(ctx);
+      column_reader->read_value(context);
+      column_reader->increment(context);
     }
-    emit(ctx);
+    _emit(context);
   }
 }
 

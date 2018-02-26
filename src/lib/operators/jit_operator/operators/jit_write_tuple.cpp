@@ -16,7 +16,7 @@ std::string JitWriteTuple::description() const {
   return desc.str();
 }
 
-void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& ctx) {
+void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& context) {
   for (const auto& output_column : _output_columns) {
     // Add a column definition for each output column
     const auto data_type = output_column.tuple_value.data_type();
@@ -36,13 +36,13 @@ void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& ctx) {
     });
   }
 
-  _create_output_chunk(ctx);
+  _create_output_chunk(context);
 }
 
-void JitWriteTuple::after_chunk(Table& out_table, JitRuntimeContext& ctx) const {
-  if (ctx.out_chunk->size() > 0) {
-    out_table.emplace_chunk(ctx.out_chunk);
-    _create_output_chunk(ctx);
+void JitWriteTuple::after_chunk(Table& out_table, JitRuntimeContext& context) const {
+  if (context.out_chunk->size() > 0) {
+    out_table.emplace_chunk(context.out_chunk);
+    _create_output_chunk(context);
   }
 }
 
@@ -50,15 +50,15 @@ void JitWriteTuple::add_output_column(const std::string& column_name, const JitT
   _output_columns.push_back({column_name, value});
 }
 
-void JitWriteTuple::next(JitRuntimeContext& ctx) const {
+void JitWriteTuple::_consume(JitRuntimeContext& context) const {
   for (const auto& column_writer : _column_writers) {
-    column_writer->write_value(ctx);
+    column_writer->write_value(context);
   }
 }
 
-void JitWriteTuple::_create_output_chunk(JitRuntimeContext& ctx) const {
-  ctx.out_chunk = std::make_shared<Chunk>();
-  ctx.outputs.clear();
+void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
+  context.out_chunk = std::make_shared<Chunk>();
+  context.outputs.clear();
 
   // Create new value columns and add them to the runtime context to make them accessible by the column writers
   for (const auto& output_column : _output_columns) {
@@ -66,8 +66,8 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& ctx) const {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto column = std::make_shared<ValueColumn<ColumnDataType>>(output_column.tuple_value.is_nullable());
-      ctx.outputs.push_back(column);
-      ctx.out_chunk->add_column(column);
+      context.outputs.push_back(column);
+      context.out_chunk->add_column(column);
     });
   }
 }

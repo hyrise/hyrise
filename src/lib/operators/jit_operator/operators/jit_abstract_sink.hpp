@@ -20,8 +20,8 @@ class JitAbstractSink : public JitAbstractOperator {
  public:
   virtual ~JitAbstractSink() = default;
 
-  virtual void before_query(Table& out_table, JitRuntimeContext& ctx) {}
-  virtual void after_chunk(Table& out_table, JitRuntimeContext& ctx) const {}
+  virtual void before_query(Table& out_table, JitRuntimeContext& context) {}
+  virtual void after_chunk(Table& out_table, JitRuntimeContext& context) const {}
 };
 
 }  // namespace opossum

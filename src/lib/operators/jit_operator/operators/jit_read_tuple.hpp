@@ -12,8 +12,8 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  virtual void read_value(JitRuntimeContext& ctx) const = 0;
-  virtual void increment(JitRuntimeContext& ctx) const = 0;
+  virtual void read_value(JitRuntimeContext& context) const = 0;
+  virtual void increment(JitRuntimeContext& context) const = 0;
 };
 
 /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
@@ -42,25 +42,25 @@ class JitColumnReader : public BaseJitColumnReader {
   JitColumnReader(const size_t input_index, const JitTupleValue& tuple_value)
       : _input_index{input_index}, _tuple_value{tuple_value} {}
 
-  void read_value(JitRuntimeContext& ctx) const {
-    const auto& value = *_iterator(ctx);
+  void read_value(JitRuntimeContext& context) const {
+    const auto& value = *_iterator(context);
     // clang-format off
     if constexpr (Nullable) {
-      _tuple_value.materialize(ctx).set_is_null(value.is_null());
+      _tuple_value.materialize(context).set_is_null(value.is_null());
       if (!value.is_null()) {
-        _tuple_value.materialize(ctx).template set<DataType>(value.value());
+        _tuple_value.materialize(context).template set<DataType>(value.value());
       }
     } else {
-      _tuple_value.materialize(ctx).template set<DataType>(value.value());
+      _tuple_value.materialize(context).template set<DataType>(value.value());
     }
     // clang-format on
   }
 
-  void increment(JitRuntimeContext& ctx) const final { ++_iterator(ctx); }
+  void increment(JitRuntimeContext& context) const final { ++_iterator(context); }
 
  private:
-  Iterator& _iterator(JitRuntimeContext& ctx) const {
-    return *std::static_pointer_cast<Iterator>(ctx.inputs[_input_index]);
+  Iterator& _iterator(JitRuntimeContext& context) const {
+    return *std::static_pointer_cast<Iterator>(context.inputs[_input_index]);
   }
 
   const size_t _input_index;
@@ -90,14 +90,14 @@ class JitReadTuple : public JitAbstractOperator {
  public:
   std::string description() const final;
 
-  void before_query(const Table& in_table, JitRuntimeContext& ctx);
-  void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& ctx) const;
+  void before_query(const Table& in_table, JitRuntimeContext& context);
+  void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
 
   JitTupleValue add_input_column(const Table& table, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
   size_t add_temorary_value();
 
-  void execute(JitRuntimeContext& ctx) const;
+  void execute(JitRuntimeContext& context) const;
 
  protected:
   uint32_t _num_tuple_values{0};
@@ -106,7 +106,7 @@ class JitReadTuple : public JitAbstractOperator {
   std::vector<std::shared_ptr<const BaseJitColumnReader>> _column_readers;
 
  private:
-  void next(JitRuntimeContext& ctx) const final {}
+  void _consume(JitRuntimeContext& context) const final {}
 };
 
 }  // namespace opossum

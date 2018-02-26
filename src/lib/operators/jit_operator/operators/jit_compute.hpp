@@ -27,7 +27,7 @@ class JitExpression {
   ExpressionType expression_type() const { return _expression_type; }
   JitTupleValue result() const { return _result_value; }
 
-  void compute(JitRuntimeContext& ctx) const;
+  void compute(JitRuntimeContext& context) const;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();
@@ -50,7 +50,7 @@ class JitCompute : public JitAbstractOperator {
   std::string description() const final;
 
  private:
-  void next(JitRuntimeContext& ctx) const final;
+  void _consume(JitRuntimeContext& context) const final;
 
   std::shared_ptr<const JitExpression> _expression;
 };
