@@ -61,17 +61,12 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projection_n
     // we have to check if the referenced column was created by one of the other ProjectionNodes
     // that we are combining, and then instead add the referenced column here.
     auto column_reference_replaced = false;
-    auto iter = projection_nodes.begin() + 1;
-    while (!column_reference_replaced && iter != projection_nodes.end()) {
-      const auto column_references = (*iter)->output_column_references();
-      for (auto column_id = ColumnID{0}; column_id < column_references.size(); ++column_id) {
-        if (expression->column_reference() == column_references.at(column_id)) {
-          column_expressions.push_back((*iter)->column_expressions().at(column_id));
-          column_reference_replaced = true;
-          break;
-        }
-      }
-      ++iter;
+    auto iter =
+        std::find(projection_nodes.begin(), projection_nodes.end(), expression->column_reference().original_node());
+    if (iter != projection_nodes.end()) {
+      column_expressions.push_back(
+          (*iter)->column_expressions().at(expression->column_reference().original_column_id()));
+      column_reference_replaced = true;
     }
 
     // If we didn't find the referenced column, it is somewhere else in the tree, so we can leave the
