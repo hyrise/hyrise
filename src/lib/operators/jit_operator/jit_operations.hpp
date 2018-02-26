@@ -98,9 +98,8 @@ struct InvalidTypeCatcher : Functor {
 // lot of work for the JIT compiler. If we let the JIT compiler do the inlining instead, it is able to prune the
 // function to the relevant case during inlining. This allows for faster jitting.
 template <typename T>
-void jit_compute_impl(const T& op_func, const JitMaterializedValue& lhs,
-                                                const JitMaterializedValue& rhs, JitMaterializedValue& result,
-                                                const uint16_t combined_types) {
+void jit_compute(const T& op_func, const JitMaterializedValue& lhs,
+                                                const JitMaterializedValue& rhs, JitMaterializedValue& result) {
   // Handle NULL values and return if either input is NULL.
   result.set_is_null(lhs.is_null() || rhs.is_null());
   if (result.is_null()) {
@@ -118,17 +117,12 @@ void jit_compute_impl(const T& op_func, const JitMaterializedValue& lhs,
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
+  const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (DATA_TYPE_INFO)(DATA_TYPE_INFO))
     default:
       Fail("unreachable");
   }
-}
-
-template <typename T>
-void jit_compute(const T& op_func, const JitMaterializedValue& lhs, const JitMaterializedValue& rhs, JitMaterializedValue& result) {
-  const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
-  jit_compute_impl(op_func, lhs, rhs, result, combined_types);
 }
 
 template <typename T>
