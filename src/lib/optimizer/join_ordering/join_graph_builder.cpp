@@ -14,18 +14,18 @@ std::shared_ptr<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Ab
    */
   auto current_node = lqp;
   while (_lqp_node_type_is_vertex(current_node->type())) {
-    if (!current_node->left_child() || current_node->right_child()) {
+    if (!current_node->left_input() || current_node->right_input()) {
       break;
     }
 
-    current_node = current_node->left_child();
+    current_node = current_node->left_input();
   }
-  const auto parent_relations = current_node->parent_relations();
+  const auto output_relations = current_node->output_relations();
 
   // Traverse the LQP, identifying JoinPlanPredicates and Vertices
   _traverse(current_node);
 
-  return JoinGraph::from_predicates(std::move(_vertices), std::move(parent_relations), _predicates);
+  return JoinGraph::from_predicates(std::move(_vertices), std::move(output_relations), _predicates);
 }
 
 void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
@@ -56,8 +56,8 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       }
 
       if (join_node->join_mode() == JoinMode::Inner || join_node->join_mode() == JoinMode::Cross) {
-        _traverse(node->left_child());
-        _traverse(node->right_child());
+        _traverse(node->left_input());
+        _traverse(node->right_input());
       } else {
         _vertices.emplace_back(node);
       }
@@ -84,7 +84,7 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
             predicate_node->column_reference(), predicate_node->predicate_condition(), predicate_node->value()));
       }
 
-      _traverse(node->left_child());
+      _traverse(node->left_input());
     } break;
 
     case LQPNodeType::Union: {
@@ -130,9 +130,9 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
           predicate_node->column_reference(), predicate_node->predicate_condition(), predicate_node->value());
     }
 
-    const auto base_node = predicate_node->left_child();
+    const auto base_node = predicate_node->left_input();
 
-    if (base_node->parent_count() > 1) {
+    if (base_node->output_count() > 1) {
       return {base_node, left_predicate};
     } else {
       const auto parse_result_right = _parse_predicate(base_node);
@@ -152,11 +152,11 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
 
 JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
     const std::shared_ptr<UnionNode>& union_node) const {
-  DebugAssert(union_node->left_child() && union_node->right_child(),
+  DebugAssert(union_node->left_input() && union_node->right_input(),
               "UnionNode needs both children set in order to be parsed");
 
-  const auto parse_result_left = _parse_predicate(union_node->left_child());
-  const auto parse_result_right = _parse_predicate(union_node->right_child());
+  const auto parse_result_left = _parse_predicate(union_node->left_input());
+  const auto parse_result_right = _parse_predicate(union_node->right_input());
 
   DebugAssert(parse_result_left.base_node == parse_result_right.base_node, "Invalid OR not having a single base node");
 

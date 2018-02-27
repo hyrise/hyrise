@@ -53,14 +53,14 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, Predic
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
+bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPInputSide child_side,
                    const std::shared_ptr<const AbstractLQPNode>& child);
 
 template <typename Functor>
 bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
   if (node == nullptr) return false;
   if (contains_fn(node)) return true;
-  return contained_in_lqp(node->left_child(), contains_fn) || contained_in_lqp(node->right_child(), contains_fn);
+  return contained_in_lqp(node->left_input(), contains_fn) || contained_in_lqp(node->right_input(), contains_fn);
 }
 
 template <typename Functor>

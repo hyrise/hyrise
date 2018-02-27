@@ -63,7 +63,7 @@ const std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::
 }
 
 template <typename DerivedExpression>
-void AbstractExpression<DerivedExpression>::set_right_child(const std::shared_ptr<DerivedExpression>& right) {
+void AbstractExpression<DerivedExpression>::set_right_child(const std::shared_ptr<DerivedExpression> &right) {
   _right_child = right;
 }
 
@@ -263,7 +263,7 @@ std::string AbstractExpression<DerivedExpression>::to_string(
          "To generate expression string, Expressions need to be operators or operands (which are already covered "
          "further up).");
 
-  Assert(left_child(), "Operator needs left child.");
+  Assert(left_child(), "Operator needs left input.");
 
   std::string result;
   const auto left_column_name = left_child()->to_string(input_column_names, false);
@@ -275,7 +275,7 @@ std::string AbstractExpression<DerivedExpression>::to_string(
     const auto right_column_name = right_child()->to_string(input_column_names, false);
     result = left_column_name + " " + op + " " + right_column_name;
   } else {
-    Assert(!right_child(), "Unary Operator can only have left child.");
+    Assert(!right_child(), "Unary Operator can only have left input.");
 
     result = op + " " + left_column_name;
   }

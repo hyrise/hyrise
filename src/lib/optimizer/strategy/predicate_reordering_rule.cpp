@@ -25,13 +25,13 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     // Gather adjacent PredicateNodes
     auto current_node = node;
     while (current_node->type() == LQPNodeType::Predicate) {
-      // Once a node has multiple parents, we're not talking about a Predicate chain anymore
-      if (current_node->parents().size() > 1) {
+      // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
+      if (current_node->outputs().size() > 1) {
         break;
       }
 
       predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
-      current_node = current_node->left_child();
+      current_node = current_node->left_input();
     }
 
     /**
@@ -54,10 +54,10 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 }
 
 bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
-  // Store original child and parent
-  auto child = predicates.back()->left_child();
-  const auto parents = predicates.front()->parents();
-  const auto child_sides = predicates.front()->get_child_sides();
+  // Store original input and parent
+  auto child = predicates.back()->left_input();
+  const auto parents = predicates.front()->outputs();
+  const auto child_sides = predicates.front()->get_input_sides();
 
   const auto sort_predicate = [&](auto& left, auto& right) {
     return left->derive_statistics_from(child)->row_count() > right->derive_statistics_from(child)->row_count();
@@ -76,14 +76,14 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   // Ensure that nodes are chained correctly
-  predicates.back()->set_left_child(child);
+  predicates.back()->set_left_input(child);
 
   for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-    parents[parent_idx]->set_child(child_sides[parent_idx], predicates.front());
+    parents[parent_idx]->set_input(child_sides[parent_idx], predicates.front());
   }
 
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
-    predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);
+    predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
   }
 
   return true;

@@ -64,7 +64,7 @@ bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_p
                                                              const LQPColumnReference& expression_column,
                                                              const AllTypeVariant& value) {
   auto parent_tree_changed = false;
-  for (auto parent : node->parents()) {
+  for (auto parent : node->outputs()) {
     if (parent->type() != LQPNodeType::Predicate) {
       parent_tree_changed |= _replace_expression_in_parents(parent, expression_column, value);
       continue;
