@@ -28,7 +28,7 @@ namespace opossum {
 class BaseIndex;
 class BaseColumn;
 
-using ChunkColumns = pmr_concurrent_vector<std::shared_ptr<BaseColumn>>;
+using ChunkColumns = pmr_vector<std::shared_ptr<BaseColumn>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
