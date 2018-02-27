@@ -98,6 +98,7 @@ set(
     sql/sql_query_plan_test.cpp
     sql/sql_translator_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
+    storage/any_column_iterable_test.cpp
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp

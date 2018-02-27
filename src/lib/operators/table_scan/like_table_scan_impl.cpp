@@ -13,10 +13,9 @@
 #include <vector>
 
 #include "storage/column_iterables/constant_value_iterable.hpp"
+#include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
-#include "storage/dictionary_column/attribute_vector_iterable.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
@@ -119,7 +118,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = _create_attribute_vector_iterable(left_column);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
 
   // Regex matches all
   if (match_count == dictionary_matches.size()) {
