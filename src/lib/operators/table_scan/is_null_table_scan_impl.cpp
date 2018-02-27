@@ -4,10 +4,8 @@
 
 #include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/base_value_column.hpp"
+#include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
-#include "storage/dictionary_column/attribute_vector_iterable.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column/null_value_vector_iterable.hpp"
 
@@ -66,7 +64,7 @@ void IsNullTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& le
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  auto left_column_iterable = _create_attribute_vector_iterable(left_column);
+  auto left_column_iterable = create_iterable_from_attribute_vector(left_column);
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
@@ -77,7 +75,7 @@ void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  auto left_column_iterable = _create_attribute_vector_iterable(left_column);
+  auto left_column_iterable = create_iterable_from_attribute_vector(left_column);
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });

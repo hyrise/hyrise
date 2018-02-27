@@ -36,7 +36,23 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Projection>(_input_left->recreate(args), _column_expressions);
+  ColumnExpressions new_column_expressions;
+
+  for (const auto& column_expression : _column_expressions) {
+    if (column_expression->type() == ExpressionType::Placeholder) {
+      auto value_placeholder = column_expression->value_placeholder();
+
+      if (value_placeholder.index() < args.size()) {
+        const auto& parameter_variant = args[value_placeholder.index()];
+        auto value = boost::get<AllTypeVariant>(parameter_variant);
+        new_column_expressions.emplace_back(column_expression->set_placeholder_value(value));
+      }
+    } else {
+      new_column_expressions.emplace_back(column_expression);
+    }
+  }
+
+  return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
 }
 
 template <typename T>
@@ -138,7 +154,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
 DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                              const std::shared_ptr<const Table>& table) {
-  if (expression->type() == ExpressionType::Literal) {
+  if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder) {
     return data_type_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::Column) {

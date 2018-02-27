@@ -1,14 +1,20 @@
 #pragma once
 
 #include <boost/iterator/iterator_facade.hpp>
-#include <utility>
-#include <vector>
 
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/column_iterables/column_iterator_values.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+/**
+ * @brief template-free base class of all iterators used by iterables
+ *
+ * The class allows the JitOperator to keep pointers to differently specialized versions
+ * of the iterators in a common data structure.
+ */
+class JitBaseColumnIterator {};
 
 /**
  * @brief base class of all iterators used by iterables
@@ -40,7 +46,8 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-using BaseColumnIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
+class BaseColumnIterator : public boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>,
+                           public JitBaseColumnIterator {};
 
 /**
  * @brief base class of all point-access iterators used by iterables

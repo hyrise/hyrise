@@ -17,8 +17,9 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
-      auto begin = Iterator<ZsIteratorType>{_null_value_id, vector.cbegin(), vector.cbegin()};
-      auto end = Iterator<ZsIteratorType>{_null_value_id, vector.cbegin(), vector.cend()};
+      auto begin = Iterator<ZsIteratorType>{_null_value_id, vector.cbegin(), ChunkOffset{0u}};
+      auto end =
+          Iterator<ZsIteratorType>{_null_value_id, vector.cend(), static_cast<ChunkOffset>(_attribute_vector.size())};
       functor(begin, end);
     });
   }
@@ -43,10 +44,8 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
   template <typename ZsIteratorType>
   class Iterator : public BaseColumnIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<ValueID>> {
    public:
-    explicit Iterator(const ValueID null_value_id, const ZsIteratorType begin_attribute_it, ZsIteratorType attribute_it)
-        : _null_value_id{null_value_id},
-          _attribute_it{attribute_it},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_attribute_it, attribute_it))} {}
+    explicit Iterator(const ValueID null_value_id, ZsIteratorType attribute_it, ChunkOffset chunk_offset)
+        : _null_value_id{null_value_id}, _attribute_it{attribute_it}, _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

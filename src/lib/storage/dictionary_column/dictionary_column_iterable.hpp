@@ -20,9 +20,9 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
       using ZsIteratorType = decltype(vector.cbegin());
 
       auto begin =
-          Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cbegin(), vector.cbegin()};
-      auto end =
-          Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cbegin(), vector.cend()};
+          Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cend(),
+                                          static_cast<ChunkOffset>(_column.size())};
       functor(begin, end);
     });
   }
@@ -48,12 +48,12 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
   template <typename ZsIteratorType>
   class Iterator : public BaseColumnIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
    public:
-    explicit Iterator(const pmr_vector<T>& dictionary, const ValueID null_value_id,
-                      const ZsIteratorType begin_attribute_it, ZsIteratorType attribute_it)
+    explicit Iterator(const pmr_vector<T>& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
+                      ChunkOffset chunk_offset)
         : _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_it{attribute_it},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_attribute_it, attribute_it))} {}
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

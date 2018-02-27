@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -156,7 +157,7 @@ void JoinNestedLoop::_perform_join() {
 
           // clang-format off
           if constexpr (neither_is_string_column || both_are_string_columns) {
-            auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+            auto iterable_left = erase_type_from_iterable(create_iterable_from_column<LeftType>(typed_left_column));
             auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
             iterable_left.with_iterators([&](auto left_it, auto left_end) {

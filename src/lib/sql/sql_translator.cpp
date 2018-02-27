@@ -169,7 +169,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     auto expressions_it = expressions.begin();
 
     while (data_types_it != data_types.end() && expressions_it != expressions.end()) {
-      if (!literal_matches_data_type(*(*expressions_it), *data_types_it)) {
+      if (!literal_matches_data_type(*(*expressions_it), *data_types_it) &&
+          !(*expressions_it)->isType(hsql::kExprParameter)) {
+        // if this is a PreparedStatement, we don't have a mismatch
         return false;
       }
       data_types_it++;
@@ -814,7 +816,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
     const auto expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
 
     DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
-                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal,
+                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal ||
+                    expr->type() == ExpressionType::Placeholder,
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
     if (expr->type() == ExpressionType::Star) {
