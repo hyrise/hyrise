@@ -43,6 +43,8 @@ void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column)
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
+  DebugAssert(is_mutable(), "Can't append to immutable Chunk");
+
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
   if (has_mvcc_columns()) mvcc_columns()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
 
@@ -152,7 +154,7 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   }
 
   _alloc = PolymorphicAllocator<size_t>(memory_source);
-  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
+  ChunkColumns new_columns(_alloc);
   for (size_t i = 0; i < _columns.size(); i++) {
     new_columns.push_back(_columns.at(i)->copy_using_allocator(_alloc));
   }

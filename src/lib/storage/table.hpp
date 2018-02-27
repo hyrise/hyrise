@@ -22,8 +22,6 @@ class TableStatistics;
 
 /**
  * A Table is partitioned horizontally into a number of chunks.
- *
- *
  */
 class Table : private Noncopyable {
  public:

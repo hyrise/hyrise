@@ -97,7 +97,7 @@ struct RowID {
 
   RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset) : chunk_id(chunk_id), chunk_offset(chunk_offset) {
     DebugAssert((chunk_offset == INVALID_CHUNK_OFFSET) == (chunk_id == INVALID_CHUNK_ID),
-                "Only one 'invalid'/NULL RowIDs value allowed, and that is NULL_ROW_ID");
+                "If you pass in one of the arguments as INVALID/NULL, the other has to be INVALID/NULL as well. This makes sure there is just one value representing an invalid row id.");
   }
 
   // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
