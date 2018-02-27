@@ -29,7 +29,7 @@ class SQLQueryPlanCacheTest : public BaseTest {
   }
 
   void execute_query(const std::string& query) {
-    SQLPipelineStatement pipeline_statement{query};
+    SQLPipelineStatement pipeline_statement{query, UseMvcc::No};
     pipeline_statement.get_result_table();
 
     if (pipeline_statement.query_plan_cache_hit()) {
