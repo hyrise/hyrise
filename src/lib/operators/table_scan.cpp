@@ -95,10 +95,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
       if (matches_out->empty()) return;
-
-      // The output chunk is allocated on the same NUMA node as the input chunk. Also, the ChunkAccessCounter is
-      // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
-      // original chunk.
+      
       ChunkColumns out_columns;
 
       /**

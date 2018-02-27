@@ -32,7 +32,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
     column_definitions.emplace_back(column_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
-  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
   std::default_random_engine engine;
   std::uniform_int_distribution<int> dist(0, _max_different_value);
   for (size_t i = 0; i < _num_rows; i++) {

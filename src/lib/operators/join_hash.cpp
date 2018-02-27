@@ -728,9 +728,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
-          const auto dummy_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data);
-          output_columns.push_back(
-              std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
+          const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
+          output_columns.push_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
         }
       } else {
         output_columns.push_back(

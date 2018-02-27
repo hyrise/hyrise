@@ -15,6 +15,10 @@
 
 namespace opossum {
 
+std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
+  return std::make_shared<Table>(column_definitions, TableType::Data);
+}
+
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const uint32_t max_chunk_size,
              const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),

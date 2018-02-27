@@ -384,8 +384,7 @@ if (NOT DISABLE_JIT_SUPPORT)
         SOURCES
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE}
-        storage/mvcc_columns.cpp storage/mvcc_columns.hpp)
+        ${LLVM_BUNDLE_FILE})
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})

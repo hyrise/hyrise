@@ -55,11 +55,6 @@ class AbstractBenchmarkTableGenerator {
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
-    /**
-     * We have to add Chunks when we add the first column.
-     * This has to be done after the first column was created and added,
-     * because empty Chunks would be pruned right away.
-     */
     bool is_first_column = column_definitions.size() == 0;
 
     auto data_type = opossum::data_type_from_type<T>();
