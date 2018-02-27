@@ -115,6 +115,8 @@ Console::Console()
   for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
+
+  _prepared_statements = std::make_shared<SQLQueryCache<SQLQueryPlan>>(DefaultCacheCapacity);
 }
 
 Console& Console::get() {
@@ -219,9 +221,10 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
+      _sql_pipeline =
+          std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
     } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements);
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
