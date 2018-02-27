@@ -63,7 +63,7 @@ const std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::
 }
 
 template <typename DerivedExpression>
-void AbstractExpression<DerivedExpression>::set_right_child(const std::shared_ptr<DerivedExpression> &right) {
+void AbstractExpression<DerivedExpression>::set_right_child(const std::shared_ptr<DerivedExpression>& right) {
   _right_child = right;
 }
 

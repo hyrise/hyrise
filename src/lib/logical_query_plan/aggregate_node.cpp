@@ -119,7 +119,7 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   }
 }
 
-void AggregateNode::_on_child_changed() {
+void AggregateNode::_on_input_changed() {
   DebugAssert(!right_input(), "AggregateNode can't have a right input.");
 
   _output_column_names.reset();

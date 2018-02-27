@@ -37,7 +37,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_input,
       const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
-  void _on_child_changed() override;
+  void _on_input_changed() override;
 
  private:
   std::vector<std::shared_ptr<LQPExpression>> _column_expressions;

@@ -127,7 +127,7 @@ bool JoinNode::shallow_equals(const AbstractLQPNode& rhs) const {
          _equals(*this, _join_column_references->second, join_node, join_node._join_column_references->second);
 }
 
-void JoinNode::_on_child_changed() { _output_column_names.reset(); }
+void JoinNode::_on_input_changed() { _output_column_names.reset(); }
 
 void JoinNode::_update_output() const {
   /**

@@ -109,14 +109,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   size_t output_count() const;
 
-  void remove_output(const std::shared_ptr<AbstractLQPNode> &output);
+  void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
   void clear_outputs();
 
   /**
    * @pre this has has @param output as an output
    * @return whether this is the left or right input in the specified output.
    */
-  LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode> &output) const;
+  LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const;
 
   /**
    * @returns {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
@@ -124,14 +124,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::vector<LQPInputSide> get_input_sides() const;
 
   std::shared_ptr<AbstractLQPNode> left_input() const;
-  void set_left_input(const std::shared_ptr<AbstractLQPNode> &left);
+  void set_left_input(const std::shared_ptr<AbstractLQPNode>& left);
 
   std::shared_ptr<AbstractLQPNode> right_input() const;
   void set_right_input(const std::shared_ptr<AbstractLQPNode>& right);
 
   std::shared_ptr<AbstractLQPNode> input(LQPInputSide side) const;
 
-  void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode> &input);
+  void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input);
   // @}
 
   LQPNodeType type() const;
@@ -320,7 +320,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * In derived nodes, clear all data that depends on inputs and only set it lazily on request (see, e.g.
    * output_column_names())
    */
-  virtual void _on_child_changed() {}
+  virtual void _on_input_changed() {}
 
   // Used to easily differentiate between node types without pointer casts.
   LQPNodeType _type;
@@ -367,9 +367,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::shared_ptr<TableStatistics> _statistics;
 
   /**
-   * Reset statistics, call _on_child_changed() for node specific behaviour and call _child_changed() on outputs
+   * Reset statistics, call _on_input_changed() for node specific behaviour and call _input_changed() on outputs
    */
-  void _child_changed();
+  void _input_changed();
 
   static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
   _find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,

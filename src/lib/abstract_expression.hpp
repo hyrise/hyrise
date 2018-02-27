@@ -87,7 +87,7 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
   void set_left_child(const std::shared_ptr<DerivedExpression>& left);
 
   const std::shared_ptr<DerivedExpression> right_child() const;
-  void set_right_child(const std::shared_ptr<DerivedExpression> &right);
+  void set_right_child(const std::shared_ptr<DerivedExpression>& right);
   // @}
 
   ExpressionType type() const;

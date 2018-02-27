@@ -45,7 +45,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
-  void _on_child_changed() override;
+  void _on_input_changed() override;
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_input,
       const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;

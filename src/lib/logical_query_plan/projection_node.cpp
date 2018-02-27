@@ -63,7 +63,7 @@ const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expres
   return _column_expressions;
 }
 
-void ProjectionNode::_on_child_changed() {
+void ProjectionNode::_on_input_changed() {
   DebugAssert(!right_input(), "Projection can't have a right input");
 
   _output_column_names.reset();

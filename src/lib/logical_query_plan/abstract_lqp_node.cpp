@@ -70,7 +70,7 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
 
 size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
 
-void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode> &output) {
+void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
   const auto input_side = get_input_side(output);
   output->set_input(input_side, nullptr);
 }
@@ -84,7 +84,7 @@ void AbstractLQPNode::clear_outputs() {
   }
 }
 
-LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNode> &output) const {
+LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const {
   if (output->_inputs[0].get() == this) {
     return LQPInputSide::Left;
   } else if (output->_inputs[1].get() == this) {
@@ -109,7 +109,7 @@ std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 
-void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode> &left) {
+void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& left) {
   set_input(LQPInputSide::Left, left);
 }
 
@@ -120,32 +120,32 @@ void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& ri
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::input(LQPInputSide side) const {
-  const auto child_index = static_cast<int>(side);
-  return _inputs[child_index];
+  const auto input_index = static_cast<int>(side);
+  return _inputs[input_index];
 }
 
-void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode> &input) {
-  // We need a reference to _inputs[child_index], so not calling this->input(side)
-  auto& current_child = _inputs[static_cast<int>(side)];
+void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
+  // We need a reference to _inputs[input_idx], so not calling this->input(side)
+  auto& current_input = _inputs[static_cast<int>(side)];
 
-  if (current_child == input) {
+  if (current_input == input) {
     return;
   }
 
   // Untie from previous input
-  if (current_child) {
-    current_child->_remove_output_pointer(shared_from_this());
+  if (current_input) {
+    current_input->_remove_output_pointer(shared_from_this());
   }
 
   /**
-   * Tie in the new child
+   * Tie in the new input
    */
-  current_child = input;
-  if (current_child) {
-    current_child->_add_output_pointer(shared_from_this());
+  current_input = input;
+  if (current_input) {
+    current_input->_add_output_pointer(shared_from_this());
   }
 
-  _child_changed();
+  _input_changed();
 }
 
 LQPNodeType AbstractLQPNode::type() const { return _type; }
@@ -162,10 +162,10 @@ bool AbstractLQPNode::subplan_is_validated() const {
 
   if (!left_input() && !right_input()) return false;
 
-  auto children_validated = true;
-  if (left_input()) children_validated &= left_input()->subplan_is_validated();
-  if (right_input()) children_validated &= right_input()->subplan_is_validated();
-  return children_validated;
+  auto inputs_validated = true;
+  if (left_input()) inputs_validated &= left_input()->subplan_is_validated();
+  if (right_input()) inputs_validated &= right_input()->subplan_is_validated();
+  return inputs_validated;
 }
 
 void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
@@ -202,11 +202,11 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
   /**
    * Default implementation of output_column_references() will return the ColumnReferences of the left_input if it exists,
    * otherwise will pretend that all Columns originate in this node.
-   * Nodes with both children need to override this as the default implementation can't cover their behaviour.
+   * Nodes with both inputs need to override this as the default implementation can't cover their behaviour.
    */
 
   if (!_output_column_references) {
-    Assert(!right_input(), "Nodes that have two children must override this method");
+    Assert(!right_input(), "Nodes that have two inputs must override this method");
     if (left_input()) {
       _output_column_references = left_input()->output_column_references();
     } else {
@@ -244,7 +244,7 @@ std::optional<LQPColumnReference> AbstractLQPNode::find_column(const QualifiedCo
   }
 
   /**
-   * Look for the Column in child nodes
+   * Look for the Column in input nodes
    */
   const auto resolve_qualified_column_name = [&](
       const auto& node, const auto& qualified_column_name) -> std::optional<LQPColumnReference> {
@@ -286,8 +286,8 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     return shared_from_this();
   }
 
-  // If this node has an alias, it hides the names of tables in its children and search does not continue.
-  // Also, it does not need to continue if there are no children
+  // If this node has an alias, it hides the names of tables in its inputs and search does not continue.
+  // Also, it does not need to continue if there are no inputs
   if (!left_input() || _table_alias) {
     return nullptr;
   }
@@ -298,10 +298,10 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
     const auto table_name_origin_in_right_input = right_input()->find_table_name_origin(table_name);
 
     if (table_name_origin_in_left_input && table_name_origin_in_right_input) {
-      // Both children could contain the table in the case of a diamond-shaped LQP as produced by an OR.
+      // Both inputs could contain the table in the case of a diamond-shaped LQP as produced by an OR.
       // This is legal as long as they ultimately resolve to the same table origin.
       Assert(table_name_origin_in_left_input == table_name_origin_in_right_input,
-             "If a node has two children, both have to resolve a table name to the same node");
+             "If a node has two inputs, both have to resolve a table name to the same node");
       return table_name_origin_in_left_input;
     } else if (table_name_origin_in_right_input) {
       return table_name_origin_in_right_input;
@@ -331,10 +331,10 @@ ColumnID AbstractLQPNode::get_output_column_id(const LQPColumnReference& column_
 size_t AbstractLQPNode::output_column_count() const { return output_column_names().size(); }
 
 void AbstractLQPNode::remove_from_tree() {
-  Assert(!right_input(), "Can only remove nodes that only have a left input or no children");
+  Assert(!right_input(), "Can only remove nodes that only have a left input or no inputs");
 
   /**
-   * Back up outputs and in which child side they hold this node
+   * Back up outputs and in which input side they hold this node
    */
   auto outputs = this->outputs();
   auto input_sides = this->get_input_sides();
@@ -347,8 +347,8 @@ void AbstractLQPNode::remove_from_tree() {
   set_left_input(nullptr);
 
   /**
-   * Tie this nodes previous outputs with this nodes previous left child
-   * If left_input is nullptr, still call set_child so this node will get untied from the LQP.
+   * Tie this nodes previous outputs with this nodes previous left input
+   * If left_input is nullptr, still call set_input so this node will get untied from the LQP.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], left_input);
@@ -357,13 +357,13 @@ void AbstractLQPNode::remove_from_tree() {
 
 void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& replacement_node) {
   DebugAssert(replacement_node->_outputs.empty(), "Node can't have outputs");
-  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(), "Node can't have children");
+  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(), "Node can't have inputs");
 
   const auto outputs = this->outputs();
   const auto input_sides = this->get_input_sides();
 
   /**
-   * Tie the replacement_node with this nodes children
+   * Tie the replacement_node with this nodes inputs
    */
   replacement_node->set_left_input(left_input());
   replacement_node->set_right_input(right_input());
@@ -385,11 +385,11 @@ void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& repla
 void AbstractLQPNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
 void AbstractLQPNode::print(std::ostream& out) const {
-  const auto get_children_fn = [](const auto& node) {
-    std::vector<std::shared_ptr<const AbstractLQPNode>> children;
-    if (node->left_input()) children.emplace_back(node->left_input());
-    if (node->right_input()) children.emplace_back(node->right_input());
-    return children;
+  const auto get_inputs_fn = [](const auto& node) {
+    std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
+    if (node->left_input()) inputs.emplace_back(node->left_input());
+    if (node->right_input()) inputs.emplace_back(node->right_input());
+    return inputs;
   };
   const auto node_print_fn = [](const auto& node, auto& stream) {
     stream << node->description();
@@ -399,16 +399,16 @@ void AbstractLQPNode::print(std::ostream& out) const {
     }
   };
 
-  print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_children_fn, node_print_fn, out);
+  print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_inputs_fn, node_print_fn, out);
 }
 
 std::string AbstractLQPNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(!right_input(), "Node with right input needs to override this function.");
 
   /**
-   *  A AbstractLQPNode without a left child should generally be a StoredTableNode, which overrides this function. But
+   *  A AbstractLQPNode without a left input should generally be a StoredTableNode, which overrides this function. But
    *  since get_verbose_column_name() is just a convenience function we don't want to force anyone to override this
-   *  function when experimenting with nodes. Thus we handle the case of no left child here as well.
+   *  function when experimenting with nodes. Thus we handle the case of no left input here as well.
    */
   if (!left_input()) {
     if (_table_alias) {
@@ -450,13 +450,13 @@ std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
   return qualified_column_name;
 }
 
-void AbstractLQPNode::_child_changed() {
+void AbstractLQPNode::_input_changed() {
   _statistics.reset();
   _output_column_references.reset();
 
-  _on_child_changed();
+  _on_input_changed();
   for (auto& output : outputs()) {
-    output->_child_changed();
+    output->_input_changed();
   }
 }
 
