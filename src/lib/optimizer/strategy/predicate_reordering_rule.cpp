@@ -54,9 +54,9 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 }
 
 bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
-  // Store original input and parent
+  // Store original input and output
   auto child = predicates.back()->left_input();
-  const auto parents = predicates.front()->outputs();
+  const auto outputs = predicates.front()->outputs();
   const auto child_sides = predicates.front()->get_input_sides();
 
   const auto sort_predicate = [&](auto& left, auto& right) {
@@ -78,8 +78,8 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   // Ensure that nodes are chained correctly
   predicates.back()->set_left_input(child);
 
-  for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-    parents[parent_idx]->set_input(child_sides[parent_idx], predicates.front());
+  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+    outputs[output_idx]->set_input(child_sides[output_idx], predicates.front());
   }
 
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {

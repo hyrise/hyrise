@@ -61,21 +61,21 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
   // Go up in LQP to find corresponding PredicateNode
   std::shared_ptr<AbstractLQPNode> node = cross_join;
   while (true) {
-    const auto parents = node->outputs();
+    const auto outputs = node->outputs();
 
     /**
-     * Can't deal with the parents.size() > 0 case - would need to check that a potential predicate exists in all
-     * parents and this is too much work considering the JoinDetectionRule will be removed soon-ish (TM)
+     * Can't deal with the outputs.size() > 0 case - would need to check that a potential predicate exists in all
+     * outputs and this is too much work considering the JoinDetectionRule will be removed soon-ish (TM)
      */
-    if (parents.empty() || parents.size() > 1) {
+    if (outputs.empty() || outputs.size() > 1) {
       break;
     }
 
-    if (node->get_input_side(parents[0]) == LQPInputSide::Right) {
-      column_id_offset += parents[0]->left_input()->output_column_count();
+    if (node->get_input_side(outputs[0]) == LQPInputSide::Right) {
+      column_id_offset += outputs[0]->left_input()->output_column_count();
     }
 
-    node = parents[0];
+    node = outputs[0];
 
     /**
      * TODO(anyone)

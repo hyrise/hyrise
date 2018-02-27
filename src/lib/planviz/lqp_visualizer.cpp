@@ -28,17 +28,17 @@ void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNo
 
 void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->left_input()) {
-    auto left_child = node->left_input();
-    _add_vertex(left_child, left_child->description());
-    _build_dataflow(left_child, node);
-    _build_subtree(left_child);
+    auto left_input = node->left_input();
+    _add_vertex(left_input, left_input->description());
+    _build_dataflow(left_input, node);
+    _build_subtree(left_input);
   }
 
   if (node->right_input()) {
-    auto right_child = node->right_input();
-    _add_vertex(right_child, right_child->description());
-    _build_dataflow(right_child, node);
-    _build_subtree(right_child);
+    auto right_input = node->right_input();
+    _add_vertex(right_input, right_input->description());
+    _build_dataflow(right_input, node);
+    _build_subtree(right_input);
   }
 }
 

@@ -100,7 +100,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
 
   /**
-   * @return {{outputs()[0], get_child_sides()[0]}, ..., {outputs()[n-1], get_child_sides()[n-1]}}
+   * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
    */
   std::vector<LQPOutputRelation> output_relations() const;
 

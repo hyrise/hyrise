@@ -237,11 +237,11 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   EXPECT_EQ(reordered_1->left_input(), predicate_node_3);
 }
 
-TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
+TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   /**
    * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
    * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
-   * predicates to the parent (the cross node in this case). This test checks whether the attachment happens as the
+   * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
    * correct child.
    *
    *             _______Cross________
@@ -286,13 +286,13 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   EXPECT_EQ(reordered->left_input()->left_input(), predicate_0);
   EXPECT_EQ(reordered->left_input()->left_input()->left_input(), table_0);
   EXPECT_EQ(reordered->right_input(), predicate_4);
-  EXPECT_EQ(reordered->right_input()->right_input(), predicate_3);
-  EXPECT_EQ(reordered->right_input()->right_input()->right_input(), predicate_2);
+  EXPECT_EQ(reordered->right_input()->left_input(), predicate_3);
+  EXPECT_EQ(reordered->right_input()->left_input()->left_input(), predicate_2);
 }
 
-TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
+TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   /**
-   * If a PredicateNode has multiple parents, it should not be considered for reordering
+   * If a PredicateNode has multiple outputs, it should not be considered for reordering
    */
   /**
    *      _____Union___
@@ -303,7 +303,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
    *         |
    *       Table
    *
-   * predicate_a should come before predicate_b - but since Predicate_b has two parents, it can't be reordered
+   * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
    */
 
   /**

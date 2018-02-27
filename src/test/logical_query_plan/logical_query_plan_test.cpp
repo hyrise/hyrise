@@ -91,7 +91,7 @@ class LogicalQueryPlanTest : public BaseTest {
   LQPColumnReference _t_b_b;
 };
 
-TEST_F(LogicalQueryPlanTest, SimpleParentTest) {
+TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
   ASSERT_EQ(_mock_node_a->left_input(), nullptr);
   ASSERT_EQ(_mock_node_a->right_input(), nullptr);
   ASSERT_TRUE(_mock_node_a->outputs().empty());
@@ -113,7 +113,7 @@ TEST_F(LogicalQueryPlanTest, SimpleParentTest) {
   ASSERT_ANY_THROW(_projection_node->get_input_side(_mock_node_a));
 }
 
-TEST_F(LogicalQueryPlanTest, SimpleClearParentsTest) {
+TEST_F(LogicalQueryPlanTest, SimpleClearOutputs) {
   _predicate_node_a->set_left_input(_mock_node_a);
 
   ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
@@ -261,7 +261,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
   EXPECT_EQ(_nodes[5]->left_input(), nullptr);
   EXPECT_EQ(_nodes[5]->right_input(), nullptr);
 
-  // Make sure new_node is the only parent of _nodes[6]
+  // Make sure new_node is the only output of _nodes[6]
   EXPECT_EQ(_nodes[6]->outputs().size(), 1u);
   ASSERT_LQP_TIE(new_node, LQPInputSide::Left, _nodes[6]);
 
@@ -348,7 +348,7 @@ TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
   EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_input(),
                                                                      lqp_copy->left_input())
                 .original_node(),
-            lqp_copy->left_input()->left_input()->left_input());
+            lqp_copy->left_input()->left_input()->right_input());
 
   /**
    * column_reference_b can be resolved from the Aggregate since it is a GroupByColumn
@@ -357,7 +357,7 @@ TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
       AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_column_id(),
       column_reference_b.original_column_id());
   EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_node(),
-            lqp_copy->left_input()->left_input()->left_input());
+            lqp_copy->left_input()->left_input()->right_input());
 
   /**
    * SUM(a) can be resolved from the Aggregate

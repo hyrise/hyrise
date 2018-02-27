@@ -175,7 +175,7 @@ TEST_F(JoinGraphBuilderTest, ComplexLQP) {
   EXPECT_EQ(to_string(edge_ac->predicates.at(0)), "x2 <= z1");
 
   /**
-   * Test parent relations
+   * Test output relations
    */
   ASSERT_EQ(_join_graph->output_relations.size(), 1u);
   EXPECT_EQ(_join_graph->output_relations.at(0).output, _projection_node_a);

@@ -364,7 +364,7 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
   EXPECT_EQ(output, join_node1);
   EXPECT_EQ(output->left_input(), _table_node_a);
   ASSERT_INNER_JOIN_NODE(output->right_input(), PredicateCondition::Equals, _b_a, _c_b);
-  EXPECT_EQ(output->right_input()->right_input(), _table_node_b);
+  EXPECT_EQ(output->right_input()->left_input(), _table_node_b);
   EXPECT_EQ(output->right_input()->right_input(), _table_node_c);
 }
 

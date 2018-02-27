@@ -59,10 +59,10 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
   std::vector<LQPOutputRelation> output_relations(output_count());
 
   const auto outputs = this->outputs();
-  const auto child_sides = get_input_sides();
+  const auto input_sides = get_input_sides();
 
   for (size_t output_idx = 0; output_idx < output_relations.size(); ++output_idx) {
-    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], child_sides[output_idx]};
+    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
   }
 
   return output_relations;
@@ -71,8 +71,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
 size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
 
 void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode> &output) {
-  const auto child_side = get_input_side(output);
-  output->set_input(child_side, nullptr);
+  const auto input_side = get_input_side(output);
+  output->set_input(input_side, nullptr);
 }
 
 void AbstractLQPNode::clear_outputs() {
@@ -95,16 +95,16 @@ LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNo
 }
 
 std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
-  std::vector<LQPInputSide> child_sides;
-  child_sides.reserve(_outputs.size());
+  std::vector<LQPInputSide> input_sides;
+  input_sides.reserve(_outputs.size());
 
   for (const auto& output_weak_ptr : _outputs) {
     const auto output = output_weak_ptr.lock();
     DebugAssert(output, "Failed to lock output");
-    child_sides.emplace_back(get_input_side(output));
+    input_sides.emplace_back(get_input_side(output));
   }
 
-  return child_sides;
+  return input_sides;
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
@@ -337,7 +337,7 @@ void AbstractLQPNode::remove_from_tree() {
    * Back up outputs and in which child side they hold this node
    */
   auto outputs = this->outputs();
-  auto child_sides = this->get_input_sides();
+  auto input_sides = this->get_input_sides();
 
   /**
    * Hold left_input ptr in extra variable to keep the ref count up and untie it from this node.
@@ -351,7 +351,7 @@ void AbstractLQPNode::remove_from_tree() {
    * If left_input is nullptr, still call set_child so this node will get untied from the LQP.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(child_sides[output_idx], left_input);
+    outputs[output_idx]->set_input(input_sides[output_idx], left_input);
   }
 }
 
@@ -360,7 +360,7 @@ void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& repla
   DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(), "Node can't have children");
 
   const auto outputs = this->outputs();
-  const auto child_sides = this->get_input_sides();
+  const auto input_sides = this->get_input_sides();
 
   /**
    * Tie the replacement_node with this nodes children
@@ -372,7 +372,7 @@ void AbstractLQPNode::replace_with(const std::shared_ptr<AbstractLQPNode>& repla
    * Tie the replacement_node with this nodes outputs. This will effectively perform clear_outputs() on this node.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(child_sides[output_idx], replacement_node);
+    outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
   }
 
   /**

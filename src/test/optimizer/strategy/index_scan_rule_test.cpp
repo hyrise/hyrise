@@ -184,7 +184,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::IndexScan);
 }
 
-TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
+TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");

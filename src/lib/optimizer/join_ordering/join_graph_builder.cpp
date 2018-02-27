@@ -10,7 +10,7 @@ namespace opossum {
 std::shared_ptr<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
   /**
    * Traverse the LQP until the first non-vertex type (e.g. a UnionNode) is found or a node doesn't have precisely
-   * one child. This way, we traverse past Sort/Aggregate etc. nodes that later form the "parents" of the JoinGraph
+   * one child. This way, we traverse past Sort/Aggregate etc. nodes that later form the "outputs" of the JoinGraph
    */
   auto current_node = lqp;
   while (_lqp_node_type_is_vertex(current_node->type())) {
