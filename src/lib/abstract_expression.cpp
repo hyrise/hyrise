@@ -244,6 +244,8 @@ std::string AbstractExpression<DerivedExpression>::to_string(
         return "\"" + boost::get<std::string>(value()) + "\"";
       }
       return type_cast<std::string>(value());
+    case ExpressionType::Placeholder:
+      return "?";
     case ExpressionType::Column:
       Fail("This should be handled in derived AbstractExpression type");
       return "";

@@ -1,8 +1,6 @@
 #pragma once
 
 #include <boost/iterator/iterator_facade.hpp>
-#include <utility>
-#include <vector>
 
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/column_iterables/column_iterator_values.hpp"

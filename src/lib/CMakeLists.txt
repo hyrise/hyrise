@@ -241,14 +241,20 @@ set(
     storage/chunk.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
+    storage/column_iterables.hpp
+    storage/column_iterables/any_column_iterable.hpp
+    storage/column_iterables/any_column_iterator.hpp
     storage/column_iterables/base_column_iterators.hpp
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
     storage/column_iterables/constant_value_iterable.hpp
-    storage/column_iterables.hpp
+    storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
+    storage/create_iterable_from_column.ipp
+    storage/deprecated_dictionary_column.cpp
+    storage/deprecated_dictionary_column.hpp
     storage/deprecated_dictionary_column/base_attribute_vector.hpp
     storage/deprecated_dictionary_column.cpp
     storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
