@@ -47,12 +47,12 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     }
   }
 
-  return _apply_to_children(node);
+  return _apply_to_inputs(node);
 }
 
 std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predicate_for_cross_join(
     const std::shared_ptr<JoinNode>& cross_join) {
-  Assert(cross_join->left_input() && cross_join->right_input(), "Cross Join must have two children");
+  Assert(cross_join->left_input() && cross_join->right_input(), "Cross Join must have two inputs");
 
   // Everytime we traverse a node which we're the right input of, the ColumnIDs a predicate needs to reference become
   // offset

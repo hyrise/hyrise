@@ -63,7 +63,7 @@ bool StoredTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
   return _table_name == stored_table_node._table_name;
 }
 
-void StoredTableNode::_on_input_changed() { Fail("StoredTableNode cannot have children."); }
+void StoredTableNode::_on_input_changed() { Fail("StoredTableNode cannot have inputs."); }
 
 std::optional<QualifiedColumnName> StoredTableNode::_resolve_local_table_name(
     const QualifiedColumnName& qualified_column_name) const {

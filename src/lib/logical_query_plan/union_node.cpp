@@ -23,7 +23,7 @@ UnionMode UnionNode::union_mode() const { return _union_mode; }
 std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(_union_mode); }
 
 std::string UnionNode::get_verbose_column_name(ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need children to determine Column name");
+  Assert(left_input() && right_input(), "Need inputs to determine Column name");
   Assert(column_id < left_input()->output_column_names().size(), "ColumnID out of range");
   Assert(right_input()->output_column_names().size() == left_input()->output_column_names().size(),
          "Input node mismatch");

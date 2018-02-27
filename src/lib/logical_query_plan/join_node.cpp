@@ -48,7 +48,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
 }
 
 std::string JoinNode::description() const {
-  Assert(left_input() && right_input(), "Can't generate description if children aren't set");
+  Assert(left_input() && right_input(), "Can't generate description if inputren aren't set");
 
   std::ostringstream desc;
 
@@ -106,7 +106,7 @@ const std::optional<PredicateCondition>& JoinNode::predicate_condition() const {
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
 std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Can't generate column names without children being set");
+  Assert(left_input() && right_input(), "Can't generate column names without inputren being set");
 
   if (column_id < left_input()->output_column_count()) {
     return left_input()->get_verbose_column_name(column_id);
@@ -131,15 +131,15 @@ void JoinNode::_on_input_changed() { _output_column_names.reset(); }
 
 void JoinNode::_update_output() const {
   /**
-   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
-   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever a input changed and is
+   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left input in Join) and thus
    * allows easier manipulation in the optimizer.
    */
 
   DebugAssert(left_input() && right_input(), "Need both inputs to compute output");
 
   /**
-   * Collect the output column names of the children on the fly, because the children might change.
+   * Collect the output column names of the inputren on the fly, because the inputren might change.
    */
   const auto& left_names = left_input()->output_column_names();
   const auto& right_names = right_input()->output_column_names();
@@ -154,7 +154,7 @@ void JoinNode::_update_output() const {
   _output_column_names->insert(_output_column_names->end(), left_names.begin(), left_names.end());
 
   /**
-   * Collect the output ColumnIDs of the children on the fly, because the children might change.
+   * Collect the output ColumnIDs of the inputren on the fly, because the inputren might change.
    */
   _output_column_references.emplace();
 

@@ -63,7 +63,7 @@ bool UpdateNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   const auto& update_node = static_cast<const UpdateNode&>(rhs);
 
-  Assert(left_input() && rhs.left_input(), "Can't compare column references without children");
+  Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
   return _table_name == update_node._table_name &&
          _equals(*left_input(), _column_expressions, *update_node.left_input(), update_node._column_expressions);
 }

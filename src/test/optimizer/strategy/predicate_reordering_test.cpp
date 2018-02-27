@@ -242,7 +242,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
    * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
    * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
    * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
-   * correct child.
+   * correct input.
    *
    *             _______Cross________
    *            /                    \

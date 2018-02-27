@@ -270,7 +270,7 @@ std::string AbstractExpression<DerivedExpression>::to_string(
   const auto& op = expression_type_to_operator_string.at(_type);
 
   if (is_binary_operator()) {
-    Assert(right_child(), "Binary Operator needs both children.");
+    Assert(right_child(), "Binary Operator needs both inputs.");
 
     const auto right_column_name = right_child()->to_string(input_column_names, false);
     result = left_column_name + " " + op + " " + right_column_name;

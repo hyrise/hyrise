@@ -126,7 +126,7 @@ void AggregateNode::_on_input_changed() {
 }
 
 const std::vector<std::string>& AggregateNode::output_column_names() const {
-  Assert(left_input(), "Child not set, can't know output column names without it");
+  Assert(left_input(), "Input not set, can't know output column names without it");
   if (!_output_column_names) {
     _update_output();
   }
@@ -186,7 +186,7 @@ bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
 
-  Assert(left_input() && rhs.left_input(), "Can't compare column references without children");
+  Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
   return _equals(*left_input(), _aggregate_expressions, *rhs.left_input(), aggregate_node.aggregate_expressions()) &&
          _equals(*left_input(), _groupby_column_references, *rhs.left_input(),
                  aggregate_node.groupby_column_references());
@@ -194,8 +194,8 @@ bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
 
 void AggregateNode::_update_output() const {
   /**
-   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
-   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever an input changed and is
+   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left input in Join) and thus
    * allows easier manipulation in the optimizer.
    */
 

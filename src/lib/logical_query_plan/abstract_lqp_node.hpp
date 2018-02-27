@@ -91,7 +91,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * The _outputs are implicitly set in set_left_input/set_right_input.
    * For removing outputs use remove_output() or clear_outputs().
    *
-   * set_child() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value
+   * set_input() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value
    */
 
   /**
@@ -213,10 +213,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   ColumnID get_output_column_id(const LQPColumnReference& column_reference) const;
 
   /**
-   * Makes this nodes outputs point to this node's left child
-   * Unties this node's child from this node
+   * Makes this nodes outputs point to this node's left input
+   * Unties this node's input from this node
    *
-   * @pre this has no right child
+   * @pre this has no right input
    */
   void remove_from_tree();
 
@@ -309,7 +309,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /**
    * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
-   * @param left_input and @param right_input are deep copies of the left and right child respectively, used for deep-copying
+   * @param left_input and @param right_input are deep copies of the left and right input respectively, used for deep-copying
    * ColumnReferences
    */
   virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
@@ -377,7 +377,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   // @{
   /**
-   * Add or remove a output without manipulating this outputs child ptr. For internal usage in set_left_input(),
+   * Add or remove a output without manipulating this outputs input ptr. For internal usage in set_left_input(),
    * set_right_input(), remove_output
    */
   void _remove_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
@@ -387,7 +387,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
 /**
  * LQP node types should derive from this in order to enable the <NodeType>::make() function that allows for a clean
- * notation when building LQPs via code by allowing to pass in a nodes child(ren) as the last argument(s).
+ * notation when building LQPs via code by allowing to pass in a nodes input(ren) as the last argument(s).
  *
  * const auto input_lqp =
  * PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,

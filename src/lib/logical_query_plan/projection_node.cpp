@@ -13,11 +13,11 @@
 
 namespace opossum {
 
-std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& child) {
+std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& input) {
   std::vector<std::shared_ptr<LQPExpression>> expressions =
-      LQPExpression::create_columns(child->output_column_references());
+      LQPExpression::create_columns(input->output_column_references());
   const auto projection_node = ProjectionNode::make(expressions);
-  projection_node->set_left_input(child);
+  projection_node->set_left_input(input);
   return projection_node;
 }
 
@@ -105,15 +105,15 @@ bool ProjectionNode::shallow_equals(const AbstractLQPNode& rhs) const {
   Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
   const auto& projection_node = dynamic_cast<const ProjectionNode&>(rhs);
 
-  Assert(left_input() && rhs.left_input(), "Can't compare column references without children");
+  Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
   return _equals(*left_input(), _column_expressions, *projection_node.left_input(),
                  projection_node._column_expressions);
 }
 
 void ProjectionNode::_update_output() const {
   /**
-   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
-   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever an input changed and is
+   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left input in Join) and thus
    * allows easier manipulation in the optimizer.
    */
 
