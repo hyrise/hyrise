@@ -34,6 +34,12 @@
  *     very cheap or the invariant is considered very important
  */
 
+// __FILENAME__ is __FILE__ with irrelevant leading chars trimmed
+#ifndef __FILENAME__
+#ifndef __FILENAME__
+#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+#endif
+
 namespace opossum {
 
 template <typename T>
@@ -48,17 +54,12 @@ inline void Assert(const T& value, const std::string& msg) {
 
 }  // namespace opossum
 
-// clang-format off
-#define Assert(expr, msg) \
-  if (!static_cast<bool>(expr)) { \
-    opossum::Fail(std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+#define Assert(expr, msg)                                                                  \
+  if (!static_cast<bool>(expr)) {                                                          \
+    opossum::Fail(std::string(__FILENAME__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   }
-// clang-format on
 
 #if IS_DEBUG
-#ifndef __FILENAME__
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
-#endif
 #define DebugAssert(expr, msg) Assert(expr, msg)
 #else
 #define DebugAssert(expr, msg)
