@@ -113,42 +113,43 @@ void JoinIndex::_perform_join() {
       auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
 
       resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
-        resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
-          using LeftType = typename decltype(left_type)::type;
-          using RightType = typename decltype(right_type)::type;
+        using LeftType = typename decltype(left_type)::type;
 
-          // make sure that we do not compile invalid versions of these lambdas
-          constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
-          constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
+        auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
 
-          constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
-          constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
+        if (index != nullptr) {
+          // utilize index for join
+          iterable_left.with_iterators([&](auto left_it, auto left_end) {
+            this->_join_two_columns_using_index(left_it, left_end, chunk_id_left, chunk_id_right, index);
+          });
+        } else {
+          // fallback to nested loop implementation
+          resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
+            using RightType = typename decltype(right_type)::type;
 
-          // clang-format off
-          if constexpr (neither_is_string_column || both_are_string_columns) {
-              auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+            // make sure that we do not compile invalid versions of these lambdas
+            constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
+            constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
 
-              if (index != nullptr) {
-                // utilize index for join
-                iterable_left.with_iterators([&](auto left_it, auto left_end) {
-                    this->_join_two_columns_using_index(left_it, left_end, chunk_id_left, chunk_id_right, index);
-                });
-              } else {
-                // fallback to nested loop implementation
-                auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
+            constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+            constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-                iterable_left.with_iterators([&](auto left_it, auto left_end) {
-                    iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                        with_comparator(_predicate_condition, [&](auto comparator) {
-                            this->_join_two_columns_nested_loop(comparator, left_it, left_end, right_it, right_end,
-                            chunk_id_left, chunk_id_right);
-                        });
-                    });
-                });
-              }
-          }
-          // clang-format on
-        });
+            // clang-format off
+            if constexpr (neither_is_string_column || both_are_string_columns) {
+              auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
+
+              iterable_left.with_iterators([&](auto left_it, auto left_end) {
+                  iterable_right.with_iterators([&](auto right_it, auto right_end) {
+                      with_comparator(_predicate_condition, [&](auto comparator) {
+                          this->_join_two_columns_nested_loop(comparator, left_it, left_end, right_it, right_end,
+                                                              chunk_id_left, chunk_id_right);
+                      });
+                  });
+              });
+            }
+          });
+        }
+        // clang-format on
       });
     }
   }
