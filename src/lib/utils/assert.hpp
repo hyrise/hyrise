@@ -41,14 +41,6 @@
 
 namespace opossum {
 
-template <typename T>
-inline void Assert(const T& value, const std::string& msg) {
-  if (static_cast<bool>(value)) {
-    return;
-  }
-  throw std::logic_error(msg);
-}
-
 [[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
 }  // namespace opossum
