@@ -36,7 +36,6 @@
 
 // __FILENAME__ is __FILE__ with irrelevant leading chars trimmed
 #ifndef __FILENAME__
-#ifndef __FILENAME__
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 #endif
 
