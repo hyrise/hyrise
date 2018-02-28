@@ -13,11 +13,11 @@ namespace filesystem = std::experimental::filesystem;
 #include "utils/performance_warning.hpp"
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
-  opossum::Assert(!filesystem::exists(opossum::test_data_path),
+  Assert(!filesystem::exists(opossum::test_data_path),
                   "Cannot create directory for test data: \"" + opossum::test_data_path + "\" already exists.");
 
   if (prefix) {
-    opossum::Assert(filesystem::exists("./" + *prefix),
+    Assert(filesystem::exists("./" + *prefix),
                     "Cannot create directory for test data because \"" + *prefix + "\" does not exist");
   }
 
@@ -31,7 +31,7 @@ void remove_test_data_directory() {
 }
 
 int main(int argc, char** argv) {
-  opossum::Assert(
+  Assert(
       filesystem::exists("src/test/tables"),
       "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
 
