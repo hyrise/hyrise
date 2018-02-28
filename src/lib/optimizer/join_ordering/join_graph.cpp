@@ -19,7 +19,7 @@ std::shared_ptr<JoinGraph> JoinGraph::from_lqp(const std::shared_ptr<AbstractLQP
 }
 
 std::shared_ptr<JoinGraph> JoinGraph::from_predicates(
-    std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
+    std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
     const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates) {
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> vertex_to_index;
   std::map<JoinVertexSet, std::shared_ptr<JoinEdge>> vertices_to_edge;
@@ -40,12 +40,12 @@ std::shared_ptr<JoinGraph> JoinGraph::from_predicates(
     iter->second->predicates.emplace_back(predicate);
   }
 
-  return std::make_shared<JoinGraph>(std::move(vertices), std::move(parent_relations), std::move(edges));
+  return std::make_shared<JoinGraph>(std::move(vertices), std::move(output_relations), std::move(edges));
 }
 
 JoinGraph::JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
-                     std::vector<LQPParentRelation> parent_relations, std::vector<std::shared_ptr<JoinEdge>> edges)
-    : vertices(std::move(vertices)), parent_relations(std::move(parent_relations)), edges(std::move(edges)) {}
+                     std::vector<LQPOutputRelation> output_relations, std::vector<std::shared_ptr<JoinEdge>> edges)
+    : vertices(std::move(vertices)), output_relations(std::move(output_relations)), edges(std::move(edges)) {}
 
 std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> JoinGraph::find_predicates(
     const JoinVertexSet& vertex_set) const {
