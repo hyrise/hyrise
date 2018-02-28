@@ -350,6 +350,8 @@ set(
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
+    utils/format_duration.cpp
+    utils/format_duration.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
