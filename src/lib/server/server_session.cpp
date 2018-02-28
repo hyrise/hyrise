@@ -32,25 +32,21 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-void ServerSession::start() {
-  // Keep a pointer to itself that will be released once the connection is closed
-  _self = shared_from_this();
-
-  (_perform_session_startup() >> then >> [=]() { return _handle_client_requests(); })
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::start() {
+  return (_perform_session_startup() >> then >> [=]() { return _handle_client_requests(); })
       // Use .then instead of >> then >> to be able to handle exceptions
-      .then(boost::launch::sync, [=](boost::future<void> f) {
+      .then(boost::launch::sync, [](boost::future<void> f) {
         try {
           f.get();
         } catch (std::exception& e) {
           std::cerr << e.what() << std::endl;
         }
-
-        // Release self and close the socket
-        _self.reset();
       });
 }
 
-boost::future<void> ServerSession::_perform_session_startup() {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_perform_session_startup() {
   return _connection->receive_startup_packet_header() >> then >> [=](uint32_t startup_packet_length) {
     if (startup_packet_length == 0) {
       // This is a request for SSL, deny it and wait for the next startup packet
@@ -62,7 +58,8 @@ boost::future<void> ServerSession::_perform_session_startup() {
   };
 }
 
-boost::future<void> ServerSession::_handle_client_requests() {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_client_requests() {
   auto receive_packet_contents = [=](RequestHeader request) {
     return _connection->receive_packet_contents(request.payload_length) >> then >>
            [=](InputPacket packet_contents) { return std::make_pair(request, std::move(packet_contents)); };
@@ -133,11 +130,12 @@ boost::future<void> ServerSession::_handle_client_requests() {
                      })
                .unwrap()
            // Proceed with the next incoming message
-           >> then >> boost::bind(&ServerSession::_handle_client_requests, this);
+           >> then >> boost::bind(&ServerSessionImpl<T>::_handle_client_requests, this);
   };
 }
 
-boost::future<void> ServerSession::_handle_simple_query_command(const std::string sql) {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_simple_query_command(const std::string sql) {
   auto create_sql_pipeline = [=]() { return _dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true)); };
 
   auto load_table_file = [=](std::string& file_name, std::string& table_name) {
@@ -160,7 +158,7 @@ boost::future<void> ServerSession::_handle_simple_query_command(const std::strin
 
       auto row_description = SendQueryResponseTask::build_row_description(sql_pipeline->get_result_table());
 
-      auto task = std::make_shared<SendQueryResponseTask>(_connection, result_table);
+      auto task = std::make_shared<SendQueryResponseTask>(nullptr /* TODO */, result_table);
       return _connection->send_row_description(row_description) >> then >>
              [=]() { return _dispatch_server_task(task); };
     };
@@ -188,7 +186,8 @@ boost::future<void> ServerSession::_handle_simple_query_command(const std::strin
   };
 }
 
-boost::future<void> ServerSession::_handle_parse_command(std::unique_ptr<ParsePacket> parse_info) {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_parse_command(std::unique_ptr<ParsePacket> parse_info) {
   auto prepared_statement_name = parse_info->statement_name;
 
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
@@ -208,7 +207,8 @@ boost::future<void> ServerSession::_handle_parse_command(std::unique_ptr<ParsePa
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
 
-boost::future<void> ServerSession::_handle_bind_command(BindPacket packet) {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_bind_command(BindPacket packet) {
   auto statement_it = _prepared_statements.find(packet.statement_name);
   if (statement_it == _prepared_statements.end()) throw std::logic_error("Unknown statement");
 
@@ -239,24 +239,28 @@ boost::future<void> ServerSession::_handle_bind_command(BindPacket packet) {
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
-boost::future<void> ServerSession::_handle_describe_command(std::string portal_name) {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_describe_command(std::string portal_name) {
   // Ignore this for now
   return boost::make_ready_future();
 }
 
-boost::future<void> ServerSession::_handle_sync_command() {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_sync_command() {
   if (!_transaction) return boost::make_ready_future();
 
   return _dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction)) >> then >>
          [=]() { _transaction.reset(); };
 }
 
-boost::future<void> ServerSession::_handle_flush_command() {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_flush_command() {
   // Ignore this for now
   return boost::make_ready_future();
 }
 
-boost::future<void> ServerSession::_handle_execute_command(std::string portal_name) {
+template <typename T>
+boost::future<void> ServerSessionImpl<T>::_handle_execute_command(std::string portal_name) {
   auto portal_it = _portals.find(portal_name);
   if (portal_it == _portals.end()) throw std::logic_error("Unknown portal");
 
@@ -276,7 +280,7 @@ boost::future<void> ServerSession::_handle_execute_command(std::string portal_na
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
                     []() { return uint64_t(0); };
 
-           auto task = std::make_shared<SendQueryResponseTask>(_connection, result_table);
+           auto task = std::make_shared<SendQueryResponseTask>(nullptr /* TODO */, result_table);
            return _dispatch_server_task(task);
          } >>
          then >> [=](uint64_t row_count) {
@@ -286,14 +290,15 @@ boost::future<void> ServerSession::_handle_execute_command(std::string portal_na
 }
 
 template <typename T>
-auto ServerSession::_dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future()) {
+template <typename TResult>
+auto ServerSessionImpl<T>::_dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future()) {
   using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
 
   CurrentScheduler::schedule_tasks(TaskList({task}));
 
   return task->get_future()
       .then(boost::launch::sync,
-            [=](boost::future<typename T::result_type> result) {
+            [=](boost::future<typename TResult::result_type> result) {
               // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
               return _io_service.post(boost::asio::use_boost_future)
                      // Make sure to be on the main thread before re-throwing the exceptions
@@ -303,5 +308,7 @@ auto ServerSession::_dispatch_server_task(std::shared_ptr<T> task) -> decltype(t
             })
       .unwrap();
 }
+
+template class ServerSessionImpl<ClientConnection>;
 
 }  // namespace opossum

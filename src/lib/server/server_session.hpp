@@ -17,12 +17,13 @@ namespace opossum {
 
 using boost::asio::ip::tcp;
 
-class ServerSession : public std::enable_shared_from_this<ServerSession> {
+template <typename T>
+class ServerSessionImpl {
  public:
-  explicit ServerSession(boost::asio::io_service& io_service, std::shared_ptr<ClientConnection> connection)
+  explicit ServerSessionImpl(boost::asio::io_service& io_service, std::shared_ptr<T> connection)
       : _io_service(io_service), _connection(connection) {}
 
-  void start();
+  boost::future<void> start();
 
  protected:
   boost::future<void> _perform_session_startup();
@@ -36,18 +37,19 @@ class ServerSession : public std::enable_shared_from_this<ServerSession> {
   boost::future<void> _handle_sync_command();
   boost::future<void> _handle_flush_command();
 
-  template <typename T>
-  auto _dispatch_server_task(std::shared_ptr<T> task) -> decltype(task->get_future());
-
-  std::shared_ptr<ServerSession> _self;
+  template <typename TResult>
+  auto _dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future());
 
   boost::asio::io_service& _io_service;
-  std::shared_ptr<ClientConnection> _connection;
+  std::shared_ptr<T> _connection;
 
   std::shared_ptr<TransactionContext> _transaction;
   std::unordered_map<std::string, std::shared_ptr<SQLPipeline>> _prepared_statements;
   // TODO(lawben): The type of _portals will change when prepared statements are supported in the SQLPipeline
   std::unordered_map<std::string, std::pair<hsql::StatementType, std::shared_ptr<SQLQueryPlan>>> _portals;
 };
+
+// The corresponding template instantiation takes place in the .cpp
+using ServerSession = ServerSessionImpl<ClientConnection>;
 
 }  // namespace opossum
