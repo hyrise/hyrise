@@ -197,47 +197,44 @@ void JoinIndex::_join_two_columns_using_index(LeftIterator left_it, LeftIterator
     const auto left_value = *left_it;
     if (left_value.is_null()) continue;
 
-    // The index interface takes a vector of ATVs, so we need to wrap our value
-    auto comp_values = std::vector<AllTypeVariant>{AllTypeVariant(left_value.value())};
-
     auto range_begin = BaseIndex::Iterator{};
     auto range_end = BaseIndex::Iterator{};
 
     switch (_predicate_condition) {
       case PredicateCondition::Equals: {
-        range_begin = index->lower_bound(comp_values);
-        range_end = index->upper_bound(comp_values);
+        range_begin = index->lower_bound({left_value.value()});
+        range_end = index->upper_bound({left_value.value()});
         break;
       }
       case PredicateCondition::NotEquals: {
         // first, get all values less than the search value
         range_begin = index->cbegin();
-        range_end = index->lower_bound(comp_values);
+        range_end = index->lower_bound({left_value.value()});
 
-        append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
+        _append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
 
         // set range for second half to all values greater than the search value
-        range_begin = index->upper_bound(comp_values);
+        range_begin = index->upper_bound({left_value.value()});
         range_end = index->cend();
         break;
       }
       case PredicateCondition::GreaterThan: {
         range_begin = index->cbegin();
-        range_end = index->lower_bound(comp_values);
+        range_end = index->lower_bound({left_value.value()});
         break;
       }
       case PredicateCondition::GreaterThanEquals: {
         range_begin = index->cbegin();
-        range_end = index->upper_bound(comp_values);
+        range_end = index->upper_bound({left_value.value()});
         break;
       }
       case PredicateCondition::LessThan: {
-        range_begin = index->upper_bound(comp_values);
+        range_begin = index->upper_bound({left_value.value()});
         range_end = index->cend();
         break;
       }
       case PredicateCondition::LessThanEquals: {
-        range_begin = index->lower_bound(comp_values);
+        range_begin = index->lower_bound({left_value.value()});
         range_end = index->cend();
         break;
       }
@@ -245,7 +242,7 @@ void JoinIndex::_join_two_columns_using_index(LeftIterator left_it, LeftIterator
         Fail("Unsupported comparison type encountered");
     }
 
-    append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
+    _append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
   }
 }
 
@@ -282,30 +279,32 @@ void JoinIndex::_join_two_columns_nested_loop(const BinaryFunctor& func, LeftIte
   }
 }
 
-void JoinIndex::append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
-                               const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left,
-                               const ChunkID chunk_id_right) {
+void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
+                                const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left,
+                                const ChunkID chunk_id_right) {
   auto num_right_matches = std::distance(range_begin, range_end);
 
-  if (num_right_matches > 0) {
-    // Remember the matches for outer joins
-    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-      _left_matches[chunk_id_left][chunk_offset_left] = true;
-    }
+  if (num_right_matches == 0) {
+    return;
+  }
 
-    // we replicate the left value for each right value
-    std::fill_n(std::back_inserter(*_pos_list_left), num_right_matches, RowID{chunk_id_left, chunk_offset_left});
+  // Remember the matches for outer joins
+  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+    _left_matches[chunk_id_left][chunk_offset_left] = true;
+  }
 
-    std::transform(range_begin, range_end, std::back_inserter(*_pos_list_right),
-                   [chunk_id_right](ChunkOffset chunk_offset_right) {
-                     return RowID{chunk_id_right, chunk_offset_right};
-                   });
+  // we replicate the left value for each right value
+  std::fill_n(std::back_inserter(*_pos_list_left), num_right_matches, RowID{chunk_id_left, chunk_offset_left});
 
-    if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
-      std::for_each(range_begin, range_end, [this, chunk_id_right](ChunkOffset chunk_offset_right) {
-        _right_matches[chunk_id_right][chunk_offset_right] = true;
-      });
-    }
+  std::transform(range_begin, range_end, std::back_inserter(*_pos_list_right),
+                 [chunk_id_right](ChunkOffset chunk_offset_right) {
+                   return RowID{chunk_id_right, chunk_offset_right};
+                 });
+
+  if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+    std::for_each(range_begin, range_end, [this, chunk_id_right](ChunkOffset chunk_offset_right) {
+      _right_matches[chunk_id_right][chunk_offset_right] = true;
+    });
   }
 }
 

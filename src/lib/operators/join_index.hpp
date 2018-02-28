@@ -41,8 +41,8 @@ class JoinIndex : public AbstractJoinOperator {
                                      RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                                      const ChunkID chunk_id_right);
 
-  void append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
-                      const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left, const ChunkID chunk_id_right);
+  void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
+                       const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left, const ChunkID chunk_id_right);
 
   void _create_table_structure();
 
