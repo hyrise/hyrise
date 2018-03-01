@@ -81,43 +81,47 @@ class ColumnIterable {
   }
 
   /**
-   * Materialize all values in this Iterable.
-   * Fallback implementation. Derived Iterables can implement their own, faster version.
-   * @param container   The container the values of this Iterable will be push_back()ed into.
+   * @defgroup Function for the materialization of values and nulls
+   * @{
+   */
+
+  /**
+   * Materialize all values in this iterable.
+   * Fallback implementation. Derived iterables can implement their own, faster version.
+   * @param container   Container with the same value_type as the values in the column
    */
   template <typename Container>
   void materialize_values(Container& container) const {
-    for_each([&](const auto& iter) {
-      DebugAssert(!iter.is_null(), "NULL value in materialize_values(), call materialize_values_and_nulls() instead");
-      container.push_back(iter.value());
+    for_each([&](const auto& value) {
+      DebugAssert(!value.is_null(), "NULL value in materialize_values(), call materialize_values_and_nulls() instead");
+      container.push_back(value.value());
     });
   }
 
   /**
-   * Materialize all values in this Iterable as std::optional<ValueType>. std::nullopt if value is NULL.
-   * Fallback implementation. Derived Iterables can implement their own, faster version.
-   * @param container   The container the values of this Iterable will be push_back()ed into
+   * Materialize all values in this iterable as std::optional<ValueType>. std::nullopt if value is NULL.
+   * Fallback implementation. Derived iterables can implement their own, faster version.
+   * @param container   Container with value_type std::pair<bool, T>, where
+   *                        bool indicates whether the value is NULL or not
+   *                        T is the same as the type of the values in the column
+   *                        pair in favour over optional to avoid branches for initialization
    */
   template <typename Container>
   void materialize_values_and_nulls(Container& container) const {
-    for_each([&](const auto& iter) {
-      if (iter.is_null()) {
-        container.push_back(std::nullopt);
-      } else {
-        container.push_back(iter.value());
-      }
-    });
+    for_each([&](const auto& value) { container.push_back(std::make_pair(value.is_null(), value.value())); });
   }
 
   /**
    * Materialize all null values in this Iterable.
-   * Fallback implementation. Derived Iterables can implement their own, faster version.
-   * @param container   The container the information whether a value is NULL or not is push_back()ed into
+   * Fallback implementation. Derived iterables can implement their own, faster version.
+   * @param container   The container with value_type bool storing the information whether a value is NULL or not
    */
   template <typename Container>
   void materialize_nulls(Container& container) const {
-    for_each([&](const auto& iter) { container.push_back(iter.is_null()); });
+    for_each([&](const auto& value) { container.push_back(value.is_null()); });
   }
+
+  /** @} */
 
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }

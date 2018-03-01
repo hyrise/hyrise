@@ -31,8 +31,8 @@ class MaterializeTest : public EncodingTest {
   }
 
   template <typename T>
-  std::vector<std::optional<T>> materialize_values_and_nulls_to_vector(const BaseColumn& column) {
-    std::vector<std::optional<T>> values_and_nulls;
+  std::vector<std::pair<bool, T>> materialize_values_and_nulls_to_vector(const BaseColumn& column) {
+    std::vector<std::pair<bool, T>> values_and_nulls;
     materialize_values_and_nulls(column, values_and_nulls);
     return values_and_nulls;
   }
@@ -92,11 +92,11 @@ TEST_P(MaterializeTest, MaterializeFloatReferences) {
 TEST_P(MaterializeTest, MaterializeValuesAndNulls) {
   const auto values_and_nulls = materialize_values_and_nulls_to_vector<int32_t>(
       *_data_table_with_nulls->get_chunk(ChunkID(1))->get_column(ColumnID(0)));
-  auto expected = std::vector<std::optional<int32_t>>{};
-  expected.emplace_back(std::nullopt);
-  expected.emplace_back(1234);
 
-  EXPECT_EQ(expected, values_and_nulls);
+  ASSERT_EQ(values_and_nulls.size(), 2u);
+  EXPECT_EQ(values_and_nulls[0].first, true);
+  EXPECT_EQ(values_and_nulls[1].first, false);
+  EXPECT_EQ(values_and_nulls[1].second, 1234);
 }
 
 TEST_P(MaterializeTest, MaterializeNulls) {
@@ -107,6 +107,8 @@ TEST_P(MaterializeTest, MaterializeNulls) {
   EXPECT_EQ(expected, nulls);
 }
 
-INSTANCIATE_ENCODING_TYPE_TESTS(MaterializeTest);
+INSTANTIATE_TEST_CASE_P(MaterializeTestInstances, MaterializeTest,
+                        ::testing::ValuesIn(std::begin(all_column_encoding_specs),
+                                            std::end(all_column_encoding_specs)), ); // NOLINT
 
 }  // namespace opossum
