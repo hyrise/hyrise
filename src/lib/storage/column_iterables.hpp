@@ -81,13 +81,13 @@ class ColumnIterable {
   }
 
   /**
-   * @defgroup Function for the materialization of values and nulls
+   * @defgroup Function for the materialization of values and nulls. The following implementations may be overridden by
+   * derived classes.
    * @{
    */
 
   /**
    * Materialize all values in this iterable.
-   * Fallback implementation. Derived iterables can implement their own, faster version.
    * @param container   Container with the same value_type as the values in the column
    */
   template <typename Container>
@@ -100,7 +100,6 @@ class ColumnIterable {
 
   /**
    * Materialize all values in this iterable as std::optional<ValueType>. std::nullopt if value is NULL.
-   * Fallback implementation. Derived iterables can implement their own, faster version.
    * @param container   Container with value_type std::pair<bool, T>, where
    *                        bool indicates whether the value is NULL or not
    *                        T is the same as the type of the values in the column
@@ -113,7 +112,6 @@ class ColumnIterable {
 
   /**
    * Materialize all null values in this Iterable.
-   * Fallback implementation. Derived iterables can implement their own, faster version.
    * @param container   The container with value_type bool storing the information whether a value is NULL or not
    */
   template <typename Container>
