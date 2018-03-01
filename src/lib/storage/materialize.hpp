@@ -14,10 +14,12 @@ namespace opossum {
  *
  * Use like:
  *
- * pmr_vector<std::optional<T>> values_and_nulls;
- * values_and_nulls.reserve(chunk->size()); // Optional
- * materialize_values_and_nulls(*chunk->get_column(expression->column_id()), values_and_nulls);
- * return values_and_nulls;
+ * ```c++
+ *   pmr_vector<std::optional<T>> values_and_nulls;
+ *   values_and_nulls.reserve(chunk->size()); // Optional
+ *   materialize_values_and_nulls(*chunk->get_column(expression->column_id()), values_and_nulls);
+ *   return values_and_nulls;
+ * ```
  */
 
 // Materialize the values in the Column
