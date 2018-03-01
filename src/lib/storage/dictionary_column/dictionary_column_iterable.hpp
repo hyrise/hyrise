@@ -55,6 +55,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
         _attribute_it{attribute_it},
         _chunk_offset{chunk_offset} {}
 
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
