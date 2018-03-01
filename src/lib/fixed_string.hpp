@@ -50,14 +50,6 @@ class FixedString {
     return *this;
   }
 
-  // // Move assign
-  // FixedString& operator=(FixedString&& other) {
-  //   if (this != &other) {
-  //     return _assign(other);
-  //   }
-  //   return *this;
-  // }
-
   // Returns the length of the string
   size_t size() const { return _string_length; }
 
@@ -81,7 +73,7 @@ class FixedString {
   friend std::ostream& operator<<(std::ostream& os, const FixedString& obj) { return os << obj.string(); }
 
   // Support swappable concept needed for sorting values. See: http://en.cppreference.com/w/cpp/concept/Swappable
-  friend void swap(const FixedString lhs, const FixedString rhs) { lhs.swap(rhs); }
+  friend void swap(const FixedString& lhs, const FixedString& rhs) { lhs.swap(rhs); }
 
   // Swap two FixedStrings by exchanging the underlying memory's content
   void swap(const FixedString& other) const { std::swap_ranges(_mem, _mem + _string_length, other._mem); }

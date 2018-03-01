@@ -7,9 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "column_visitable.hpp"
-#include "type_cast.hpp"
-#include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -79,11 +76,13 @@ void ValueVector<T>::erase(iterator start, iterator end) {
 
 template <typename T>
 T& ValueVector<T>::operator[](const size_t n) {
+  PerformanceWarning("operator[] used");
   return _values[n];
 }
 
 template <typename T>
 const T& ValueVector<T>::operator[](const size_t n) const {
+  PerformanceWarning("operator[] used");
   return _values[n];
 }
 
@@ -139,7 +138,7 @@ void ValueVector<FixedString>::push_back(const std::string& string) {
 }
 
 FixedString ValueVector<FixedString>::at(const ChunkOffset chunk_offset) {
-  return FixedString(reinterpret_cast<char*>(&_chars.at(chunk_offset * _string_length)), _string_length);
+  return FixedString(&_chars.at(chunk_offset * _string_length), _string_length);
 }
 
 ValueVector<FixedString>::iterator ValueVector<FixedString>::begin() noexcept {
@@ -172,6 +171,7 @@ reverse_iterator ValueVector<FixedString>::rbegin() noexcept { return reverse_it
 reverse_iterator ValueVector<FixedString>::rend() noexcept { return reverse_iterator(begin()); }
 
 const std::string ValueVector<FixedString>::operator[](const size_t n) const {
+  PerformanceWarning("operator[] used");
   const auto string_value = std::string(&_chars[n * _string_length], _string_length);
   const auto pos = string_value.find('\0');
 

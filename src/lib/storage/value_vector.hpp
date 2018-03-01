@@ -34,7 +34,7 @@ class ValueVector {
   }
 
   // Create a ValueVector with given values
-  ValueVector(const ValueVector<T>&& other) : _values(other._values) {}
+  ValueVector(const ValueVector<T>&& other) : _values(std::move(other._values)) {}
   ValueVector(const ValueVector<T>& other) : _values(other._values) {}
   ValueVector(const ValueVector<T>& other, const PolymorphicAllocator<size_t>& alloc) : _values(other._values, alloc) {}
 
@@ -115,7 +115,7 @@ class ValueVector<FixedString> {
   }
 
   // Create a ValueVector of FixedStrings with given values
-  ValueVector(const ValueVector<FixedString>&& other) : _string_length(other._string_length), _chars(other._chars) {}
+  ValueVector(const ValueVector<FixedString>&& other) : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}
   ValueVector(const ValueVector<FixedString>& other) : _string_length(other._string_length), _chars(other._chars) {}
   ValueVector(const ValueVector<FixedString>& other, const PolymorphicAllocator<size_t>& alloc)
       : _string_length(other._string_length), _chars(other._chars, alloc) {}
@@ -144,7 +144,7 @@ class ValueVector<FixedString> {
     friend class boost::iterator_core_access;
     bool equal(iterator const& other) const { return this->_pos == other._pos; }
     typename facade::difference_type distance_to(iterator const& other) const {
-      return (int64_t(other._pos) - int64_t(this->_pos)) / int64_t(_string_length);
+      return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
     }
     void advance(typename facade::difference_type n) { _pos += n * _string_length; }
     void increment() { _pos += _string_length; }
