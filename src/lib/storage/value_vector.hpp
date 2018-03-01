@@ -20,12 +20,7 @@ class ValueVector {
   using const_iterator = typename pmr_vector<T>::const_iterator;
   using reverse_iterator = typename pmr_vector<T>::reverse_iterator;
 
-  // TODO(team_btm): check rule of 3/5
   ValueVector();
-
-  // TODO(team_btm): move to cpp
-  // note(toni): When moving this to cpp we need to explicitly instantiate
-  //             all templates which is not nice :(
 
   // Create a ValueVector with given values by iterating over other container
   template <class Iter>
@@ -59,13 +54,7 @@ class ValueVector {
   const_iterator cbegin() const noexcept;
   const_iterator cend() const noexcept;
 
-  // TODO(team_btm): Is there any specific reason for templating?
-  // template <class Iter>
-
-  // Remove elements from the vector
-  void erase(iterator start, iterator end) {
-    _values.erase(start, end);
-  }
+  void erase(iterator start, iterator end);
 
   // Return the value at a certain position.
   T& operator[](const size_t n);
@@ -76,6 +65,9 @@ class ValueVector {
   // Return the number of entries in the column.
   size_t size() const;
 
+  // Return the amount of allocated memory
+  size_t capacity() const;
+
   // Request the vector capacity to be at least enough to contain n elements
   void reserve(const size_t n);
 
@@ -84,7 +76,13 @@ class ValueVector {
 
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<T> get_allocator();
-  
+
+  // Return a reference to the underlying vector
+  const pmr_vector<T>& values() const;
+
+  // Return a pointer to the first element of the data vector
+  const T* data() const;
+
   // Return the calculated size of ValueVector in main memory
   size_t data_size() const;
 
@@ -105,16 +103,12 @@ class ValueVector<FixedString> {
  public:
   explicit ValueVector(size_t string_length) : _string_length(string_length) {}
 
-  // TODO(team_btm): move to cpp
-  // note(toni): see comment above
-
   // Create a ValueVector of FixedStrings with given values by iterating over other container
   template <class Iter>
   ValueVector(Iter first, Iter last, size_t string_length) : _string_length(string_length) {
     _iterator_push_back(first, last);
   }
 
-  // TODO(team_btm): move to cpp
   template <class Iter>
   ValueVector(Iter first, Iter last) : _string_length(first->size()) {
     _iterator_push_back(first, last);
@@ -130,8 +124,7 @@ class ValueVector<FixedString> {
   void push_back(const std::string& string);
 
   // Return the value at a certain position.
-  FixedString operator[](const size_t n);
-  const FixedString operator[](const size_t n) const;
+  const std::string operator[](const size_t n) const;
 
   FixedString at(const ChunkOffset chunk_offset);
 
@@ -180,6 +173,9 @@ class ValueVector<FixedString> {
   // Return the number of entries in the column.
   size_t size() const;
 
+  // Return the amount of allocated memory
+  size_t capacity() const;
+
   // Request the vector capacity to be at least enough to contain n elements
   void reserve(const size_t n);
 
@@ -191,6 +187,9 @@ class ValueVector<FixedString> {
 
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<FixedString> get_allocator();
+
+  // Return a pointer to the first element of the char vector
+  const char* data() const;
 
   // Return the calculated size of ValueVector in main memory
   size_t data_size() const;

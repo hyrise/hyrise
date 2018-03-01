@@ -73,6 +73,11 @@ typename ValueVector<T>::const_iterator ValueVector<T>::cend() const noexcept {
 }
 
 template <typename T>
+void ValueVector<T>::erase(iterator start, iterator end) {
+  _values.erase(start, end);
+}
+
+template <typename T>
 T& ValueVector<T>::operator[](const size_t n) {
   return _values[n];
 }
@@ -88,6 +93,11 @@ size_t ValueVector<T>::size() const {
 }
 
 template <typename T>
+size_t ValueVector<T>::capacity() const {
+  return _values.capacity();
+}
+
+template <typename T>
 void ValueVector<T>::shrink_to_fit() {
   _values.shrink_to_fit();
 }
@@ -100,6 +110,16 @@ PolymorphicAllocator<T> ValueVector<T>::get_allocator() {
 template <typename T>
 void ValueVector<T>::reserve(const size_t n) {
   _values.reserve(n);
+}
+
+template <typename T>
+const pmr_vector<T>& ValueVector<T>::values() const {
+  return _values;
+}
+
+template <typename T>
+const T* ValueVector<T>::data() const {
+  return &_values[0];
 }
 
 template <typename T>
@@ -151,15 +171,20 @@ reverse_iterator ValueVector<FixedString>::rbegin() noexcept { return reverse_it
 
 reverse_iterator ValueVector<FixedString>::rend() noexcept { return reverse_iterator(begin()); }
 
-FixedString ValueVector<FixedString>::operator[](const size_t n) {
-  return FixedString(&_chars[n * _string_length], _string_length);
-}
+const std::string ValueVector<FixedString>::operator[](const size_t n) const {
+  const auto string_value = std::string(&_chars[n * _string_length], _string_length);
+  const auto pos = string_value.find('\0');
 
-const FixedString ValueVector<FixedString>::operator[](const size_t n) const {
-  return FixedString(const_cast<char*>(&_chars[n * _string_length]), _string_length);
+  if (pos == std::string::npos) {
+    return string_value;
+  } else {
+    return string_value.substr(0, pos);
+  }
 }
 
 size_t ValueVector<FixedString>::size() const { return _chars.size() / _string_length; }
+
+size_t ValueVector<FixedString>::capacity() const { return _chars.capacity(); }
 
 void ValueVector<FixedString>::erase(const iterator start, const iterator end) {
   auto it = _chars.begin();
@@ -173,9 +198,9 @@ PolymorphicAllocator<FixedString> ValueVector<FixedString>::get_allocator() { re
 
 void ValueVector<FixedString>::reserve(const size_t n) { _chars.reserve(n * _string_length); }
 
-size_t ValueVector<FixedString>::data_size() const {
-  return sizeof(*this) + _chars.size();
-}
+const char* ValueVector<FixedString>::data() const { return &_chars[0]; }
+
+size_t ValueVector<FixedString>::data_size() const { return sizeof(*this) + _chars.size(); }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueVector);
 
