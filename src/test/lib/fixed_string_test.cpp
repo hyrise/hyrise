@@ -7,8 +7,7 @@
 
 namespace opossum {
 
-class FixedStringTest : public BaseTest {
-};
+class FixedStringTest : public BaseTest {};
 
 TEST_F(FixedStringTest, StringLength) {
   FixedString str1 = FixedString(std::string("astring"));

@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "utils/assert.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -41,7 +41,7 @@ class FixedString {
   // Copy assign
   FixedString& operator=(const FixedString& other) {
     DebugAssert(other.size() <= _string_length, "Other FixedString is longer than current maximum string length")
-    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
+        const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
     other._copy(_mem, copied_length);
     // Fill unused fields of char array with null terminator
     if (copied_length < _string_length) {

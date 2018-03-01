@@ -115,7 +115,8 @@ class ValueVector<FixedString> {
   }
 
   // Create a ValueVector of FixedStrings with given values
-  ValueVector(const ValueVector<FixedString>&& other) : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}
+  ValueVector(const ValueVector<FixedString>&& other)
+      : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}
   ValueVector(const ValueVector<FixedString>& other) : _string_length(other._string_length), _chars(other._chars) {}
   ValueVector(const ValueVector<FixedString>& other, const PolymorphicAllocator<size_t>& alloc)
       : _string_length(other._string_length), _chars(other._chars, alloc) {}

@@ -8,8 +8,7 @@
 
 namespace opossum {
 
-class ValueVectorTest : public BaseTest {
-};
+class ValueVectorTest : public BaseTest {};
 
 TEST_F(ValueVectorTest, PushString) {
   auto valuevector = ValueVector<FixedString>(3u);
