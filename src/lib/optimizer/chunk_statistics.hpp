@@ -18,6 +18,10 @@
 
 namespace opossum {
 
+// select how many ranges we want in the filter
+// make this customizable?
+static constexpr uint32_t MAX_RANGES_COUNT = 10;
+
 class BaseFilter : public std::enable_shared_from_this<BaseFilter> {
  public:
   virtual ~BaseFilter() = default;
@@ -162,12 +166,8 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   std::sort(distances.begin(), distances.end(),
             [](const auto& pair1, const auto& pair2){ return pair1.first > pair2.first; });
 
-  // select how many ranges we want in the filter
-  // make this customizable?
-  const size_t max_ranges_count = 10;
-
-  if ((max_ranges_count - 1) < distances.size()) {
-    distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
+  if ((MAX_RANGES_COUNT - 1) < distances.size()) {
+    distances.erase(distances.cbegin() + (MAX_RANGES_COUNT - 1), distances.cend());
   }
 
   std::sort(distances.begin(), distances.end(),
