@@ -14,25 +14,35 @@ std::vector<ColumnDescription> SendQueryResponseTask::build_row_description(cons
   const auto& column_types = table->column_types();
 
   for (auto column_id = 0u; column_id < table->column_count(); ++column_id) {
+    uint32_t object_id;
+    int32_t type_id;
+
     switch (column_types[column_id]) {
       case DataType::Int:
-        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 23, /* type id */ 4});
+        object_id = 23;
+        type_id = 4;
         break;
       case DataType::Long:
-        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 20, /* type id */ 8});
+        object_id = 20;
+        type_id = 8;
         break;
       case DataType::Float:
-        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 700, /* type id */ 4});
+        object_id = 700;
+        type_id = 4;
         break;
       case DataType::Double:
-        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 701, /* type id */ 8});
+        object_id = 701;
+        type_id = 8;
         break;
       case DataType::String:
-        result.emplace_back(ColumnDescription{column_names[column_id], /* object_id */ 25, /* type id */ -1});
+        object_id = 25;
+        type_id = -1;
         break;
       default:
         Fail("Bad DataType");
     }
+
+    result.emplace_back(ColumnDescription{column_names[column_id], object_id, type_id});
   }
 
   return result;
@@ -49,12 +59,12 @@ std::string SendQueryResponseTask::build_command_complete_message(hsql::Statemen
       return "INSERT 0 1";
     }
     case hsql::StatementType::kStmtUpdate: {
-      // We do not return how many rows are affected
-      return "UPDATE 0";
+      // We do not return how many rows are affected, because we don't track this information
+      return "UPDATE -1";
     }
     case hsql::StatementType::kStmtDelete: {
-      // We do not return how many rows are affected
-      return "DELETE 0";
+      // We do not return how many rows are affected, because we don't track this information
+      return "DELETE -1";
     }
     case hsql::StatementType::kStmtCreate: {
       // 0 rows retrieved (Postgres requires a CREATE TABLE statement to return SELECT)

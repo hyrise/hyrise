@@ -8,6 +8,10 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
+ClientConnection::ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
+  _response_buffer.reserve(_max_response_size);
+}
+
 boost::future<uint32_t> ClientConnection::receive_startup_packet_header() {
   static const uint32_t STARTUP_HEADER_LENGTH = 8u;
 
@@ -15,7 +19,7 @@ boost::future<uint32_t> ClientConnection::receive_startup_packet_header() {
 }
 
 boost::future<void> ClientConnection::receive_startup_packet_contents(uint32_t size) {
-  return _receive_bytes_async(size) >> then >> [=](InputPacket p) {
+  return _receive_bytes_async(size) >> then >> [](InputPacket p) {
     // Read these values and ignore them
     PostgresWireHandler::handle_startup_package_content(p);
   };
@@ -58,7 +62,7 @@ boost::future<void> ClientConnection::send_ready_for_query() {
 boost::future<void> ClientConnection::send_error(const std::string& message) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
 
-  // Send the error message
+  // Send the error message with type info 'M' that indicates that the following body is a plain message to be displayed
   PostgresWireHandler::write_value(*output_packet, 'M');
   PostgresWireHandler::write_string(*output_packet, message);
 
@@ -70,6 +74,7 @@ boost::future<void> ClientConnection::send_error(const std::string& message) {
 boost::future<void> ClientConnection::send_notice(const std::string& notice) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
 
+  // Send notice message with type info 'M' that indicates that the following body is a plain message to be displayed
   PostgresWireHandler::write_value(*output_packet, 'M');
   PostgresWireHandler::write_string(*output_packet, notice);
 
@@ -169,14 +174,17 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
 }
 
 boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush) {
-  auto packet_size = packet->data.size();
+  const auto packet_size = packet->data.size();
 
   // If the packet is SslNo (size == 1), it has a special format and does not require a size
   if (packet_size > 1) {
     PostgresWireHandler::write_output_packet_size(*packet);
   }
 
-  if (_response_buffer.size() + packet->data.size() > _max_response_size) {
+  Assert(packet_size <= _max_response_size,
+         "The output packet is too big and cannot be sent. This should never happen!");
+
+  if (_response_buffer.size() + packet_size > _max_response_size) {
     // We have to flush before we can actually process the data
     return _flush_async() >> then >> [=](uint64_t) { return _send_bytes_async(packet, flush); };
   }
@@ -184,7 +192,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<Outp
   _response_buffer.insert(_response_buffer.end(), packet->data.begin(), packet->data.end());
 
   if (flush) {
-    return _flush_async() >> then >> [=](uint64_t) { return (uint64_t)packet_size; };
+    return _flush_async() >> then >> [=](uint64_t) { return static_cast<uint64_t>(packet_size); };
   } else {
     // Return an already resolved future (we have just written data to the buffer)
     return boost::make_ready_future<uint64_t>(packet_size);
@@ -199,5 +207,4 @@ boost::future<uint64_t> ClientConnection::_flush_async() {
            return static_cast<uint64_t>(sent_bytes);
          };
 }
-
 }  // namespace opossum

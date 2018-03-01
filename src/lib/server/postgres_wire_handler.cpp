@@ -10,14 +10,15 @@
 namespace opossum {
 
 uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) {
-  auto n_length = read_value<uint32_t>(packet);
+  auto network_length = read_value<uint32_t>(packet);
   // We ALWAYS need to convert from network endianess to host endianess with these fancy macros
   // ntohl = network to host long and htonl = host to network long (where long = uint32)
+  // We use the prefix network_ to indicate that the value still needs to be converted.
   // TODO(lawben): This should be integrated into the read_value template for numeric data types at some point
-  auto length = ntohl(n_length);
+  auto length = ntohl(network_length);
 
-  auto n_version = read_value<uint32_t>(packet);
-  auto version = ntohl(n_version);
+  auto network_version = read_value<uint32_t>(packet);
+  auto version = ntohl(network_version);
 
   // Reset data buffer
   packet.offset = packet.data.cbegin();
@@ -32,20 +33,20 @@ uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) 
 }
 
 void PostgresWireHandler::handle_startup_package_content(const InputPacket& packet) {
-  // Ignore the content for now
+  // Ignore the content, because we don't care about the variables that were passed in.
   read_values<char>(packet, packet.data.size());
 }
 
 RequestHeader PostgresWireHandler::handle_header(const InputPacket& packet) {
   auto tag = read_value<NetworkMessageType>(packet);
 
-  auto n_length = read_value<uint32_t>(packet);
-  auto length = ntohl(n_length);
+  auto network_length = read_value<uint32_t>(packet);
+  auto length = ntohl(network_length);
 
   packet.offset = packet.data.begin();
 
   // Return length minus the already read bytes (the message type doesn't count into the length)
-  return {/* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(n_length))};
+  return {/* message_type = */ tag, /* payload_length = */ static_cast<uint32_t>(length - sizeof(network_length))};
 }
 
 std::string PostgresWireHandler::handle_query_packet(const InputPacket& packet) { return read_string(packet); }
@@ -55,9 +56,9 @@ ParsePacket PostgresWireHandler::handle_parse_packet(const InputPacket& packet) 
 
   auto query = read_string(packet);
 
-  auto n_parameter_data_types = read_value<uint16_t>(packet);
+  auto network_parameter_data_types = read_value<uint16_t>(packet);
 
-  /*auto parameter_data_types = */ read_values<uint32_t>(packet, n_parameter_data_types);
+  /*auto parameter_data_types = */ read_values<uint32_t>(packet, network_parameter_data_types);
 
   //  SQLPipeline sql_pipeline{query};
   //  auto parsed_statements = sql_pipeline.get_parsed_sql_statements();
@@ -73,22 +74,22 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
 
   auto statement_name = read_string(packet);
 
-  auto n_format_codes = read_value<int16_t>(packet);
+  auto num_format_codes = ntohs(read_value<int16_t>(packet));
 
-  auto format_codes = read_values<int16_t>(packet, n_format_codes);
+  auto format_codes = read_values<int16_t>(packet, num_format_codes);
 
-  auto n_parameter_values = ntohs(read_value<int16_t>(packet));
+  auto num_parameter_values = ntohs(read_value<int16_t>(packet));
 
   std::vector<AllParameterVariant> parameter_values;
-  for (auto i = 0; i < n_parameter_values; ++i) {
+  for (auto i = 0; i < num_parameter_values; ++i) {
     auto parameter_value_length = ntohl(read_value<int32_t>(packet));
     auto x = read_values<char>(packet, parameter_value_length);
     const std::string x_str(x.begin(), x.end());
     parameter_values.emplace_back(x_str);
   }
 
-  auto n_result_column_format_codes = read_value<int16_t>(packet);
-  auto result_column_format_codes = read_values<int16_t>(packet, n_result_column_format_codes);
+  auto num_result_column_format_codes = ntohs(read_value<int16_t>(packet));
+  auto result_column_format_codes = read_values<int16_t>(packet, num_result_column_format_codes);
 
   return BindPacket{statement_name, portal, std::move(parameter_values)};
 }

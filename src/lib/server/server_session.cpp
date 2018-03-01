@@ -113,7 +113,8 @@ boost::future<void> ServerSession::_handle_client_requests() {
 
     auto command_result = receive_packet_contents(request) >> then >> process_command;
 
-    // Handle any exceptions that have occurred during process_command
+    // Handle any exceptions that have occurred during process_command. For this, we need to call .then() explicitly,
+    // because >> then >> does not handle execptions
     return command_result
                .then(boost::launch::sync,
                      [=](boost::future<void> result) {
@@ -182,9 +183,11 @@ boost::future<void> ServerSession::_handle_simple_query_command(const std::strin
   _portals.erase("");
 
   return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
-    return result->load_table.has_value()
-               ? load_table_file(result->load_table.value().first, result->load_table.value().second)
-               : execute_sql_pipeline(result->sql_pipeline) >> then >> send_query_response;
+    if (result->load_table.has_value()) {
+      return load_table_file(result->load_table.value().first, result->load_table.value().second);
+    } else {
+      return execute_sql_pipeline(result->sql_pipeline) >> then >> send_query_response;
+    }
   };
 }
 
@@ -195,8 +198,9 @@ boost::future<void> ServerSession::_handle_parse_command(std::unique_ptr<ParsePa
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   auto statement_it = _prepared_statements.find(prepared_statement_name);
   if (statement_it != _prepared_statements.end()) {
-    if (!prepared_statement_name.empty())
+    if (!prepared_statement_name.empty()) {
       throw std::logic_error("Named prepared statements must be explicitly closed before they can be redefined");
+    }
     _prepared_statements.erase(statement_it);
   }
 
@@ -240,7 +244,7 @@ boost::future<void> ServerSession::_handle_bind_command(BindPacket packet) {
 }
 
 boost::future<void> ServerSession::_handle_describe_command(std::string portal_name) {
-  // Ignore this for now
+  // Ignore this because this message is received in a batch with other commands that handle the response.
   return boost::make_ready_future();
 }
 
@@ -252,7 +256,7 @@ boost::future<void> ServerSession::_handle_sync_command() {
 }
 
 boost::future<void> ServerSession::_handle_flush_command() {
-  // Ignore this for now
+  // Ignore this because this message is received in a batch with other commands that handle the response.
   return boost::make_ready_future();
 }
 

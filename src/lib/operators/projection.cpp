@@ -43,6 +43,7 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
       auto value_placeholder = column_expression->value_placeholder();
 
       if (value_placeholder.index() < args.size()) {
+        const auto& parameter_variant = args[value_placeholder.index()];
         auto value = boost::get<AllTypeVariant>(parameter_variant);
         new_column_expressions.emplace_back(column_expression->set_placeholder_value(value));
       }

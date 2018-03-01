@@ -14,7 +14,7 @@ void ExecuteServerPreparedStatementTask::_on_execute() {
     //    _transaction_context->commit();
     auto result_table = tasks.back()->get_operator()->get_output();
     _promise.set_value(std::move(result_table));
-  } catch (const std::exception& exception) {
+  } catch (const std::exception&) {
     _promise.set_exception(boost::current_exception());
   }
 }
