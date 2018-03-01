@@ -11,6 +11,7 @@
 
 namespace opossum {
 
+// Base Class for tests that should be run with various encodings
 class EncodingTest : public ::testing::TestWithParam<ColumnEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path, ChunkOffset max_chunk_size) {
