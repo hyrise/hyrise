@@ -11,6 +11,8 @@
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
+#include "storage/create_iterable_from_column.hpp"
+#include "storage/materialize.hpp"
 #include "storage/reference_column.hpp"
 #include "utils/arithmetic_operator_expression.hpp"
 
@@ -190,20 +192,14 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    * Handle column reference
    */
   if (expression->type() == ExpressionType::Column) {
-    auto column = table->get_chunk(chunk_id)->get_column(expression->column_id());
+    const auto chunk = table->get_chunk(chunk_id);
 
-    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-      // values are copied
-      return value_column->materialize_values();
-    }
-    if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
-      return dict_column->materialize_values();
-    }
-    if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
-      return ref_column->template materialize_values<T>();  // Clang needs the template prefix
-    }
+    pmr_concurrent_vector<std::optional<T>> values_and_nulls;
+    values_and_nulls.reserve(chunk->size());
 
-    Fail("Materializing chunk failed.");
+    materialize_values_and_nulls(*chunk->get_column(expression->column_id()), values_and_nulls);
+
+    return values_and_nulls;
   }
 
   /**

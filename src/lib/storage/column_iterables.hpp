@@ -80,6 +80,45 @@ class ColumnIterable {
     });
   }
 
+  /**
+   * Materialize all values in this Iterable.
+   * Fallback implementation. Derived Iterables can implement their own, faster version.
+   * @param container   The container the values of this Iterable will be push_back()ed into.
+   */
+  template <typename Container>
+  void materialize_values(Container& container) const {
+    for_each([&](const auto& iter) {
+      DebugAssert(!iter.is_null(), "NULL value in materialize_values(), call materialize_values_and_nulls() instead");
+      container.push_back(iter.value());
+    });
+  }
+
+  /**
+   * Materialize all values in this Iterable as std::optional<ValueType>. std::nullopt if value is NULL.
+   * Fallback implementation. Derived Iterables can implement their own, faster version.
+   * @param container   The container the values of this Iterable will be push_back()ed into
+   */
+  template <typename Container>
+  void materialize_values_and_nulls(Container& container) const {
+    for_each([&](const auto& iter) {
+      if (iter.is_null()) {
+        container.push_back(std::nullopt);
+      } else {
+        container.push_back(iter.value());
+      }
+    });
+  }
+
+  /**
+   * Materialize all null values in this Iterable.
+   * Fallback implementation. Derived Iterables can implement their own, faster version.
+   * @param container   The container the information whether a value is NULL or not is push_back()ed into
+   */
+  template <typename Container>
+  void materialize_null(Container& container) const {
+    for_each([&](const auto& iter) { container.push_back(iter.is_null()); });
+  }
+
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 };
