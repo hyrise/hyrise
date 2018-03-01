@@ -72,7 +72,7 @@ class ChunkColumnStatistics {
 
   template<typename T>
   static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const RunLengthColumn<T>& column) {
-  DebugAssert(false, "Not Implemented!");
+  //DebugAssert(false, "Not Implemented!");
   return std::make_shared<ChunkColumnStatistics>();
   }
 
@@ -124,15 +124,11 @@ class RangeFilter : public BaseFilter {
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
     T t_value = type_cast<T>(value);
-    // Operators work as follows: value_from_table <operator> t_value
-    // e.g. OpGreaterThan: value_from_table > t_value
-    // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
     switch (predicate_type) {
       case PredicateCondition::Equals: {
         bool prunable = false;
-        for(const auto& bounds : _ranges) {
-          auto& [min, max] = bounds;
-          prunable |= t_value > min && t_value < max;
+        for(const auto& [min, max] : _ranges) {
+          prunable |=  min < t_value && t_value < max;
         }
         return prunable;
       }

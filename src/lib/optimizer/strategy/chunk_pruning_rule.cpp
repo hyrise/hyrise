@@ -33,8 +33,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   while (current_node->type() == LQPNodeType::Predicate) {
     predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
     current_node = current_node->left_input();
-    // Once a node has multiple parents, we're not talking about a Predicate chain anymore
-    if (current_node->type() == LQPNodeType::Predicate && current_node->parent_count() > 1) {
+    // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
+    if (current_node->type() == LQPNodeType::Predicate && current_node->output_count() > 1) {
       return _apply_to_inputs(node);
     }
   }
@@ -82,7 +82,9 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
                                                             std::shared_ptr<PredicateNode> predicate) {
-  DebugAssert(is_variant(predicate->value()), "we need an AllTypeVariant");
+  if(!is_variant(predicate->value())) {
+    return std::set<ChunkID>();
+  }
   auto original_column_id = predicate->column_reference().original_column_id();
   auto& value = boost::get<AllTypeVariant>(predicate->value());
   auto condition = predicate->predicate_condition();
