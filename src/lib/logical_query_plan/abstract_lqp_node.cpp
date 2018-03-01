@@ -150,9 +150,9 @@ void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<Abstrac
 
 size_t AbstractLQPNode::input_count() const {
   /**
-   * Testing the shared_ptrs for null in _children to determine child count
+   * Testing the shared_ptrs for null in _inputs to determine input count
    */
-  return _inputs[0] ? (_inputs[1] ? 2 : 1) : (_inputs[1] ? 1 : 0);
+  return _inputs.size() - std::count(_inputs.cbegin(), _inputs.cend(), nullptr);
 }
 
 bool AbstractLQPNode::is_leaf() const { return input_count() == 0; }
