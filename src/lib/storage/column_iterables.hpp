@@ -81,8 +81,8 @@ class ColumnIterable {
   }
 
   /**
-   * @defgroup Function for the materialization of values and nulls. The following implementations may be overridden by
-   * derived classes.
+   * @defgroup Function for the materialization of values and nulls.
+   * The following implementations may be overridden by derived classes.
    * @{
    */
 
