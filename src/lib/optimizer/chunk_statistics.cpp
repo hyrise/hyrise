@@ -8,6 +8,53 @@
 
 namespace opossum {
 
+template<typename T>
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
+  auto statistics = std::make_shared<ChunkColumnStatistics>();
+  // only create statistics when the compressed dictionary is not empty
+  if(!dictionary.empty()) {
+   auto min_max_filter = std::make_unique<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+   statistics->add_filter(std::move(min_max_filter));
+
+   // no range filter for strings
+   if constexpr (std::is_arithmetic_v<T>) {
+     auto range_filter = RangeFilter<T>::build_filter(dictionary);
+     statistics->add_filter(std::move(range_filter));
+   }
+  }
+  return statistics;
+}
+
+template<typename T>
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const DictionaryColumn<T>& column) {
+    const auto & dictionary = *column.dictionary();
+    return build_statistics_from_dictionary(dictionary);
+}
+
+template<typename T>
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ValueColumn<T>& column) {
+    DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
+    return std::make_shared<ChunkColumnStatistics>();
+}
+
+template<typename T>
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const DeprecatedDictionaryColumn<T>& column) {
+    const auto & dictionary = *column.dictionary();
+    return build_statistics_from_dictionary(dictionary);
+}
+
+template<typename T>
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ReferenceColumn& column) {
+    DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
+    return std::make_shared<ChunkColumnStatistics>();
+}
+
+template<typename T>
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const RunLengthColumn<T>& column) {
+    //DebugAssert(false, "Not Implemented!");
+    return std::make_shared<ChunkColumnStatistics>();
+}
+
 std::shared_ptr<ChunkColumnStatistics>
 ChunkColumnStatistics::build_statistics(DataType data_type, std::shared_ptr<BaseColumn> column)
 {
