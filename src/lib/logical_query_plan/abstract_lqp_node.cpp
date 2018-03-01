@@ -155,8 +155,6 @@ size_t AbstractLQPNode::input_count() const {
   return _inputs.size() - std::count(_inputs.cbegin(), _inputs.cend(), nullptr);
 }
 
-bool AbstractLQPNode::is_leaf() const { return input_count() == 0; }
-
 LQPNodeType AbstractLQPNode::type() const { return _type; }
 
 bool AbstractLQPNode::subplan_is_read_only() const {

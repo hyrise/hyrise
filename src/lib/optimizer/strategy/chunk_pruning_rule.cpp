@@ -29,7 +29,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   // Gather consecutive PredicateNodes
   auto current_node = node;
   while (current_node->type() == LQPNodeType::Predicate) {
-    predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
+    predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
     current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
     if (current_node->type() == LQPNodeType::Predicate && current_node->output_count() > 1) {
@@ -46,7 +46,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     return _apply_to_inputs(node);
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
-  DebugAssert(stored_table->is_leaf(), "Stored table nodes should be leaves.");
+  DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
 
   /**
    * A chain of predicates followed by a stored table node was found.
