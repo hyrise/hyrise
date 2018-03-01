@@ -26,22 +26,22 @@ class JoinNodeTest : public BaseTest {
     _t_b_y = {_mock_node_b, ColumnID{1}};
 
     _join_node = JoinNode::make(JoinMode::Cross);
-    _join_node->set_left_child(_mock_node_a);
-    _join_node->set_right_child(_mock_node_b);
+    _join_node->set_left_input(_mock_node_a);
+    _join_node->set_right_input(_mock_node_b);
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
-    _inner_join_node->set_left_child(_mock_node_a);
-    _inner_join_node->set_right_child(_mock_node_b);
+    _inner_join_node->set_left_input(_mock_node_a);
+    _inner_join_node->set_right_input(_mock_node_b);
 
     _semi_join_node =
         std::make_shared<JoinNode>(JoinMode::Semi, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
-    _semi_join_node->set_left_child(_mock_node_a);
-    _semi_join_node->set_right_child(_mock_node_b);
+    _semi_join_node->set_left_input(_mock_node_a);
+    _semi_join_node->set_right_input(_mock_node_b);
 
     _anti_join_node =
         std::make_shared<JoinNode>(JoinMode::Anti, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
-    _anti_join_node->set_left_child(_mock_node_a);
-    _anti_join_node->set_right_child(_mock_node_b);
+    _anti_join_node->set_left_input(_mock_node_a);
+    _anti_join_node->set_right_input(_mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
