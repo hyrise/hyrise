@@ -128,7 +128,6 @@ class ValueVector<FixedString> {
 
   FixedString at(const ChunkOffset chunk_offset);
 
-  // TODO(team_btm): move??
   class iterator : public boost::iterator_facade<iterator, FixedString, std::random_access_iterator_tag, FixedString> {
    public:
     iterator(size_t string_length, const pmr_vector<char>& vector, size_t pos = 0)

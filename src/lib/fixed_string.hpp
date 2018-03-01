@@ -6,12 +6,13 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "utils/assert.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 // FixedString is a data type, which stores a string in an array of chars in order to
-// save memory space by avoiding SSO
+// save memory space by avoiding small string optimization (SSO)
 class FixedString {
  public:
   // Create a FixedString from a std::string
@@ -22,10 +23,6 @@ class FixedString {
 
   // Create a FixedString from a memory address
   FixedString(char* mem, size_t string_length) : _mem(mem), _string_length(string_length), _delete(false) {}
-
-  FixedString(FixedString& other) : _mem(new char[other._string_length]{}), _string_length(other._string_length) {
-    std::memcpy(_mem, other._mem, _string_length);
-  }
 
   // Create a FixedString with an existing one
   FixedString(const FixedString& other) : _mem(new char[other._string_length]{}), _string_length(other._string_length) {
@@ -43,24 +40,13 @@ class FixedString {
 
   // Copy assign
   FixedString& operator=(const FixedString& other) {
-    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
-    other._copy(_mem, copied_length);
-    // Fill unused fields of char array with null terminator
-    if (copied_length < _string_length) {
-      memset(_mem + copied_length, '\0', _string_length - copied_length);
-    }
-    return *this;
+    return _assign(other);
   }
 
   // Move assign
   FixedString& operator=(FixedString&& other) {
     if (this != &other) {
-      const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
-      other._copy(_mem, copied_length);
-      // Fill unused fields of char array with null terminator
-      if (copied_length < _string_length) {
-        memset(_mem + copied_length, '\0', _string_length - copied_length);
-      }
+      return _assign(other);
     }
     return *this;
   }
@@ -103,6 +89,17 @@ class FixedString {
     const auto copied_length = len < _string_length - pos ? len : _string_length - pos;
     std::memcpy(s, _mem + pos, copied_length);
     return copied_length;
+  }
+
+  FixedString& _assign(const FixedString& other) {
+    DebugAssert(other.size() <= _string_length, "Other FixedString is longer than current maximum string length")
+    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
+    other._copy(_mem, copied_length);
+    // Fill unused fields of char array with null terminator
+    if (copied_length < _string_length) {
+      memset(_mem + copied_length, '\0', _string_length - copied_length);
+    }
+    return *this;
   }
 };
 

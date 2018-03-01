@@ -8,8 +8,6 @@
 namespace opossum {
 
 class FixedStringTest : public BaseTest {
- protected:
-  void SetUp() override {}
 };
 
 TEST_F(FixedStringTest, StringLength) {
@@ -75,7 +73,7 @@ TEST_F(FixedStringTest, Print) {
   auto fs = FixedString("foo");
   std::stringstream sstream;
   sstream << fs;
-  EXPECT_NE(sstream.str().find("foo"), std::string::npos);
+  EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
 }  // namespace opossum

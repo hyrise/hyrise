@@ -9,8 +9,6 @@
 namespace opossum {
 
 class ValueVectorTest : public BaseTest {
- protected:
-  void SetUp() override {}
 };
 
 TEST_F(ValueVectorTest, PushString) {
@@ -190,7 +188,7 @@ TEST_F(ValueVectorTest, ReverseIteratorFixedString) {
   EXPECT_EQ(first_value->string(), "str1");
 
   for (auto it = valuevector.rbegin(); it != valuevector.rend(); ++it) {
-    *it = FixedString("abcde");
+    *it = FixedString("abcd");
   }
 
   EXPECT_EQ(valuevector[0], "abcd");
