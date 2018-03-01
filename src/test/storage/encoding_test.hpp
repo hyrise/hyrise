@@ -30,8 +30,7 @@ class EncodingTest : public ::testing::TestWithParam<ColumnEncodingSpec> {
     ColumnEncodingSpec(EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned), \
     ColumnEncodingSpec(EncodingType::Dictionary, VectorCompressionType::SimdBp128), \
     ColumnEncodingSpec(EncodingType::Dictionary, VectorCompressionType::SimdBp128), \
-    ColumnEncodingSpec(EncodingType::RunLength) \
-  ),)
+    ColumnEncodingSpec(EncodingType::RunLength)), )
 // clang-format on
 
 }  // namespace opossum

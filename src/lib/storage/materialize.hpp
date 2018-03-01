@@ -2,9 +2,9 @@
 
 #include <optional>
 
+#include "resolve_type.hpp"
 #include "storage/base_column.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
