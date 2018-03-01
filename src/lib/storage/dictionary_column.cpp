@@ -117,6 +117,8 @@ const ValueID DictionaryColumn<T>::null_value_id() const {
   return _null_value_id;
 }
 
+// Since FixedString data type is not part of the AllTypeVariant, we have
+// too explicitly instantiate FixedString template class.
 template class DictionaryColumn<FixedString>;
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
 

@@ -42,7 +42,7 @@ class FixedString {
   FixedString& operator=(const FixedString& other) {
     DebugAssert(other.size() <= _string_length, "Other FixedString is longer than current maximum string length")
         const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
-    other._copy(_mem, copied_length);
+    other._copy_to(_mem, copied_length);
     // Fill unused fields of char array with null terminator
     if (copied_length < _string_length) {
       memset(_mem + copied_length, '\0', _string_length - copied_length);
@@ -84,7 +84,7 @@ class FixedString {
   const bool _delete = true;
 
   // Copy chars of current FixedString to a new destination
-  size_t _copy(char* s, size_t len, size_t pos = 0) const {
+  size_t _copy_to(char* s, size_t len, size_t pos = 0) const {
     const auto copied_length = len < _string_length - pos ? len : _string_length - pos;
     std::memcpy(s, _mem + pos, copied_length);
     return copied_length;
