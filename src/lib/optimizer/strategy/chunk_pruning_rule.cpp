@@ -1,7 +1,5 @@
 #include "chunk_pruning_rule.hpp"
 
-#include <boost/variant.hpp>
-
 #include <algorithm>
 #include <iostream>
 

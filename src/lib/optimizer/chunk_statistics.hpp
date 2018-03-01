@@ -108,8 +108,8 @@ class MinMaxFilter : public BaseFilter {
     }
   }
  protected:
-  T _min;
-  T _max;
+  const T _min;
+  const T _max;
 };
 
 template <typename T>
