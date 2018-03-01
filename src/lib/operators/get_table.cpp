@@ -18,12 +18,12 @@ const std::string GetTable::name() const { return "GetTable"; }
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  std::stringstream ss;
-  ss << name() << separator << "(" << table_name() << ")";
+  std::stringstream stream;
+  stream << name() << separator << "(" << table_name() << ")";
   if (_excluded_chunks) {
-    ss << separator << "(" << _excluded_chunks->size() << " Chunks pruned)";
+    stream << separator << "(" << _excluded_chunks->size() << " Chunks pruned)";
   }
-  return ss.str();
+  return stream.str();
 }
 
 const std::string& GetTable::table_name() const { return _name; }
