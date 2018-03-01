@@ -42,10 +42,10 @@ void materialize_values_and_nulls(const BaseColumn& column, Container& container
 }
 
 // Materialize the nulls in the Column
-template <typename ColumnValueType, typename BoolContainer>
-void materialize_nulls(const BaseColumn& column, BoolContainer& bool_container) {
+template <typename ColumnValueType, typename Container>
+void materialize_nulls(const BaseColumn& column, Container& container) {
   resolve_column_type<ColumnValueType>(column, [&](const auto& column) {
-    create_iterable_from_column<ColumnValueType>(column).materialize_nulls(bool_container);
+    create_iterable_from_column<ColumnValueType>(column).materialize_nulls(container);
   });
 }
 
