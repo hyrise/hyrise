@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
@@ -39,15 +40,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   // we create a copy of the original table and don't include the excluded chunks
   auto pruned_table = Table::create_with_layout_from(original_table, original_table->max_chunk_size());
-  auto excluded_chunks_it = _excluded_chunks->begin();
+  auto excluded_chunks_set = std::unordered_set<ChunkID>(_excluded_chunks->cbegin(), _excluded_chunks->cend());
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-    if (excluded_chunks_it != _excluded_chunks->end()) {
-      DebugAssert(chunk_id <= (*excluded_chunks_it), "Excluded Chunks vector must be sorted");
-      // exclude chunk chunk_id if it is present in _excluded_chunks
-      if (*excluded_chunks_it == chunk_id) {
-        ++excluded_chunks_it;
-        continue;
-      }
+    if (excluded_chunks_set.count(chunk_id)) {
+      continue;
     }
     pruned_table->emplace_chunk(original_table->get_chunk(chunk_id));
   }
