@@ -16,7 +16,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -122,6 +121,23 @@ TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
 
 TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
   EXPECT_THROW(SQLPipeline sql_pipeline{_multi_statement_invalid}, std::exception);
+}
+
+TEST_F(SQLPipelineTest, ConstructorCombinations) {
+  // Simple sanity test for all other constructor options
+  const auto optimizer = Optimizer::create_default_optimizer();
+  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  // No transaction context
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, UseMvcc::Yes));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, prepared_cache, UseMvcc::No));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, prepared_cache, UseMvcc::Yes));
+
+  // With transaction context
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, transaction_context));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, prepared_cache, transaction_context));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, prepared_cache, transaction_context));
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatements) {

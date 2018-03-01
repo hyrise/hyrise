@@ -78,13 +78,6 @@ const pmr_concurrent_vector<std::optional<T>> DeprecatedDictionaryColumn<T>::mat
 }
 
 template <typename T>
-const T& DeprecatedDictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
-  DebugAssert(value_id != NULL_VALUE_ID, "Null value id passed.");
-
-  return _dictionary->at(value_id);
-}
-
-template <typename T>
 ValueID DeprecatedDictionaryColumn<T>::lower_bound(T value) const {
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;

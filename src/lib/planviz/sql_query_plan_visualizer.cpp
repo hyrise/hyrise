@@ -5,6 +5,7 @@
 #include "planviz/abstract_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "utils/format_duration.hpp"
 
 namespace opossum {
 
@@ -65,7 +66,7 @@ void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractO
 
   if (op->get_output()) {
     auto wall_time = op->performance_data().walltime_ns;
-    label += "\n\n" + std::to_string(wall_time) + " ns";
+    label += "\n\n" + format_duration(wall_time);
     info.pen_width = std::fmax(1, std::ceil(std::log10(wall_time) / 2));
   }
 

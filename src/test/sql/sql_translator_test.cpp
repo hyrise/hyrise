@@ -84,19 +84,19 @@ TEST_F(SQLTranslatorTest, ExpressionTest) {
   const auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_EQ(result_node->left_child()->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  EXPECT_EQ(result_node->left_input()->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(result_node->right_input());
 
-  ASSERT_EQ(result_node->left_child()->left_child()->type(), LQPNodeType::Predicate);
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child()->left_child());
-  EXPECT_FALSE(predicate_node->right_child());
+  ASSERT_EQ(result_node->left_input()->left_input()->type(), LQPNodeType::Predicate);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_input()->left_input());
+  EXPECT_FALSE(predicate_node->right_input());
   EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
 
-  ASSERT_EQ(predicate_node->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
+  ASSERT_EQ(predicate_node->left_input()->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_input());
   EXPECT_TRUE(projection_node->column_expressions().back()->is_arithmetic_operator());
 
-  const auto original_node = projection_node->left_child();
+  const auto original_node = projection_node->left_input();
 
   // The value() of the PredicateNode is the LQPColumnReference to the (added) projection node column
   // containing the nested expression
@@ -109,9 +109,9 @@ TEST_F(SQLTranslatorTest, ExpressionWithColumnTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1231 + b";
   const auto result_node = compile_query(query);
 
-  ASSERT_EQ(result_node->left_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
+  ASSERT_EQ(result_node->left_input()->left_input()->left_input()->type(), LQPNodeType::Projection);
   const auto projection_node =
-      std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child()->left_child()->left_child());
+      std::dynamic_pointer_cast<ProjectionNode>(result_node->left_input()->left_input()->left_input());
 
   const auto expression = projection_node->column_expressions().back();
   EXPECT_TRUE(expression->is_arithmetic_operator());
@@ -156,7 +156,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  EXPECT_FALSE(result_node->right_input());
 
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   EXPECT_NE(projection_node, nullptr);
@@ -165,14 +165,14 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
   EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_input());
   ASSERT_NE(aggregate_node, nullptr);
-  ASSERT_NE(aggregate_node->left_child(), nullptr);
+  ASSERT_NE(aggregate_node->left_input(), nullptr);
 
-  const auto stored_table_node = aggregate_node->left_child();
+  const auto stored_table_node = aggregate_node->left_input();
   EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-  EXPECT_FALSE(stored_table_node->left_child());
-  EXPECT_FALSE(stored_table_node->right_child());
+  EXPECT_FALSE(stored_table_node->left_input());
+  EXPECT_FALSE(stored_table_node->right_input());
 
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const std::vector<LQPColumnReference> groupby_columns = {LQPColumnReference{stored_table_node, ColumnID{0}}};
@@ -191,7 +191,7 @@ TEST_F(SQLTranslatorTest, AggregateWithExpression) {
   const auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  EXPECT_FALSE(result_node->right_input());
 
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   EXPECT_NE(projection_node, nullptr);
@@ -200,16 +200,16 @@ TEST_F(SQLTranslatorTest, AggregateWithExpression) {
   EXPECT_EQ(projection_node->output_column_names()[0], std::string("s"));
   EXPECT_EQ(projection_node->output_column_names()[1], std::string("f"));
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_input());
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
   EXPECT_EQ(aggregate_node->groupby_column_references().size(), 0u);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
 
-  const auto stored_table_node = aggregate_node->left_child();
+  const auto stored_table_node = aggregate_node->left_input();
   EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-  EXPECT_FALSE(stored_table_node->left_child());
-  EXPECT_FALSE(stored_table_node->right_child());
+  EXPECT_FALSE(stored_table_node->left_input());
+  EXPECT_FALSE(stored_table_node->right_input());
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
@@ -217,7 +217,7 @@ TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
   const auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(result_node->right_child());
+  EXPECT_FALSE(result_node->right_input());
 
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   EXPECT_NE(projection_node, nullptr);
@@ -226,20 +226,20 @@ TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
   EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
   EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_input());
   EXPECT_NE(aggregate_node, nullptr);
-  EXPECT_NE(aggregate_node->left_child(), nullptr);
+  EXPECT_NE(aggregate_node->left_input(), nullptr);
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const std::vector<LQPColumnReference> groupby_columns(
-      {LQPColumnReference{aggregate_node->left_child(), ColumnID{0}}});
+      {LQPColumnReference{aggregate_node->left_input(), ColumnID{0}}});
   EXPECT_EQ(aggregate_node->groupby_column_references(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
 
-  const auto stored_table_node = aggregate_node->left_child();
+  const auto stored_table_node = aggregate_node->left_input();
   EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-  EXPECT_FALSE(stored_table_node->left_child());
-  EXPECT_FALSE(stored_table_node->right_child());
+  EXPECT_FALSE(stored_table_node->left_input());
+  EXPECT_FALSE(stored_table_node->right_input());
 }
 
 TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
@@ -466,26 +466,26 @@ TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
    * [Projection] table_b.a, SUM(table_c.a), table_a.b, table_a.b
    *  |_[Aggregate] SUM(table_c.a) GROUP BY [table_a.b, table_a.a, table_b.a, table_b.b]
    *     |_[Cross Join]
-   *      | |_[Cross Join]                     (left_child)
+   *      | |_[Cross Join]                     (left_input)
    *      |   |_[StoredTable] Name: 'table_a'
    *      |   |_[StoredTable] Name: 'table_b'
-   *      |_[StoredTable] Name: 'table_c'      (right_child)
+   *      |_[StoredTable] Name: 'table_c'      (right_input)
    */
 
   const auto result = compile_query(query);
 
-  ASSERT_NE(result->left_child(), nullptr);                                             // Aggregate
-  ASSERT_NE(result->left_child()->left_child(), nullptr);                               // CrossJoin
-  ASSERT_NE(result->left_child()->left_child()->left_child(), nullptr);                 // CrossJoin
-  ASSERT_NE(result->left_child()->left_child()->left_child()->left_child(), nullptr);   // table_a
-  ASSERT_NE(result->left_child()->left_child()->left_child()->right_child(), nullptr);  // table_b
-  ASSERT_NE(result->left_child()->left_child()->right_child(), nullptr);                // table_c
+  ASSERT_NE(result->left_input(), nullptr);                                             // Aggregate
+  ASSERT_NE(result->left_input()->left_input(), nullptr);                               // CrossJoin
+  ASSERT_NE(result->left_input()->left_input()->left_input(), nullptr);                 // CrossJoin
+  ASSERT_NE(result->left_input()->left_input()->left_input()->left_input(), nullptr);   // table_a
+  ASSERT_NE(result->left_input()->left_input()->left_input()->right_input(), nullptr);  // table_b
+  ASSERT_NE(result->left_input()->left_input()->right_input(), nullptr);                // table_c
 
-  ASSERT_EQ(result->left_child()->type(), LQPNodeType::Aggregate);
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result->left_child());
-  const auto table_a_node = result->left_child()->left_child()->left_child()->left_child();
-  const auto table_b_node = result->left_child()->left_child()->left_child()->right_child();
-  const auto table_c_node = result->left_child()->left_child()->right_child();
+  ASSERT_EQ(result->left_input()->type(), LQPNodeType::Aggregate);
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result->left_input());
+  const auto table_a_node = result->left_input()->left_input()->left_input()->left_input();
+  const auto table_b_node = result->left_input()->left_input()->left_input()->right_input();
+  const auto table_c_node = result->left_input()->left_input()->right_input();
 
   /**
    * Assert the Projection
@@ -574,7 +574,7 @@ TEST_F(SQLTranslatorTest, ColumnAlias) {
 
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
 
-  const auto& expressions = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_child())->column_expressions();
+  const auto& expressions = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_input())->column_expressions();
   EXPECT_EQ(expressions.size(), 2u);
   EXPECT_EQ(*expressions[0]->alias(), std::string("y"));
   EXPECT_EQ(*expressions[1]->alias(), std::string("z"));

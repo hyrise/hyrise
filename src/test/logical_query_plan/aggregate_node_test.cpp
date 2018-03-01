@@ -41,7 +41,7 @@ class AggregateNodeTest : public BaseTest {
     _groupby_columns = std::vector<LQPColumnReference>{_a, _c};
 
     _aggregate_node = AggregateNode::make(_aggregates, _groupby_columns);
-    _aggregate_node->set_left_child(_mock_node);
+    _aggregate_node->set_left_input(_mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -140,13 +140,13 @@ TEST_F(AggregateNodeTest, ShallowEquals) {
   const auto groupby_columns_a = std::vector<LQPColumnReference>{_a, _c};
 
   const auto other_aggregate_node_a = AggregateNode::make(aggregates_a, _groupby_columns);
-  other_aggregate_node_a->set_left_child(_mock_node);
+  other_aggregate_node_a->set_left_input(_mock_node);
   EXPECT_FALSE(_aggregate_node->shallow_equals(*other_aggregate_node_a));
   EXPECT_FALSE(other_aggregate_node_a->shallow_equals(*_aggregate_node));
 
   const auto groupby_columns_b = std::vector<LQPColumnReference>{_a, _c, _b};
   const auto other_aggregate_node_b = AggregateNode::make(_aggregates, groupby_columns_b);
-  other_aggregate_node_b->set_left_child(_mock_node);
+  other_aggregate_node_b->set_left_input(_mock_node);
   EXPECT_FALSE(_aggregate_node->shallow_equals(*other_aggregate_node_b));
   EXPECT_FALSE(other_aggregate_node_b->shallow_equals(*_aggregate_node));
 }

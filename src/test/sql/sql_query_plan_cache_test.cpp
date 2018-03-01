@@ -2,19 +2,19 @@
 #include <string>
 #include <utility>
 
-#include "sql_base_test.hpp"
+#include "base_test.hpp"
 
 #include "sql/gdfs_cache.hpp"
 #include "sql/lru_cache.hpp"
 #include "sql/lru_k_cache.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_operator.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-// The fixture for testing class GetTable.
-class SQLQueryPlanCacheTest : public SQLBaseTest {
+class SQLQueryPlanCacheTest : public BaseTest {
  protected:
   void SetUp() override {
     // Load tables.
@@ -23,28 +23,37 @@ class SQLQueryPlanCacheTest : public SQLBaseTest {
     auto table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
 
-    parse_tree_cache_hits = 0;
-    query_plan_cache_hits = 0;
+    _query_plan_cache_hits = 0;
+
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
-  void TearDown() override {
-    SQLQueryOperator::get_parse_tree_cache().resize(0);
-    SQLQueryOperator::get_query_plan_cache().resize(0);
-    SQLQueryOperator::get_prepared_statement_cache().clear();
-    SQLQueryOperator::get_prepared_statement_cache().resize(1024);
+  void execute_query(const std::string& query) {
+    SQLPipelineStatement pipeline_statement{query};
+    pipeline_statement.get_result_table();
+
+    if (pipeline_statement.query_plan_cache_hit()) {
+      _query_plan_cache_hits++;
+    }
   }
+
+  const std::string Q1 = "SELECT * FROM table_a;";
+  const std::string Q2 = "SELECT * FROM table_b;";
+  const std::string Q3 = "SELECT * FROM table_a WHERE a > 1;";
+
+  size_t _query_plan_cache_hits;
 };
 
 TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
-  SQLQueryCache<SQLQueryPlan> cache(2);
+  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
 
   EXPECT_FALSE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
 
   // Execute a query and cache its plan.
-  SQLQueryOperator op(Q1, false, false);
-  op.execute();
-  cache.set(Q1, op.get_query_plan());
+  SQLPipelineStatement pipeline_statement{Q1, UseMvcc::No};
+  pipeline_statement.get_result_table();
+  cache.set(Q1, *(pipeline_statement.get_query_plan()));
 
   EXPECT_TRUE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
@@ -63,20 +72,20 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 
 // Test query plan cache with LRU implementation.
 TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
-  SQLQueryCache<SQLQueryPlan>& cache = SQLQueryOperator::get_query_plan_cache();
+  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   cache.replace_cache_impl<LRUCache<std::string, SQLQueryPlan>>(2);
 
   // Execute the queries in arbitrary order.
-  execute_query_task(Q1, false);  // Miss.
-  execute_query_task(Q2, false);  // Miss.
-  execute_query_task(Q1, false);  // Hit.
-  execute_query_task(Q3, false);  // Miss, evict Q2.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q1, false);  // Hit.
-  execute_query_task(Q2, false);  // Miss, evict Q3.
-  execute_query_task(Q1, false);  // Hit.
-  execute_query_task(Q3, false);  // Miss, evict Q2.
-  execute_query_task(Q1, false);  // Hit.
+  execute_query(Q1);  // Miss.
+  execute_query(Q2);  // Miss.
+  execute_query(Q1);  // Hit.
+  execute_query(Q3);  // Miss, evict Q2.
+  execute_query(Q3);  // Hit.
+  execute_query(Q1);  // Hit.
+  execute_query(Q2);  // Miss, evict Q3.
+  execute_query(Q1);  // Hit.
+  execute_query(Q3);  // Miss, evict Q2.
+  execute_query(Q1);  // Hit.
 
   EXPECT_TRUE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
@@ -84,29 +93,29 @@ TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
   EXPECT_FALSE(cache.has("SELECT * FROM test;"));
 
   // Check for the expected number of hits.
-  EXPECT_EQ(5u, query_plan_cache_hits);
+  EXPECT_EQ(5u, _query_plan_cache_hits);
 }
 
 // Test query plan cache with GDFS implementation.
 TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
-  SQLQueryCache<SQLQueryPlan>& cache = SQLQueryOperator::get_query_plan_cache();
+  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   cache.replace_cache_impl<GDFSCache<std::string, SQLQueryPlan>>(2);
 
   // Execute the queries in arbitrary order.
-  execute_query_task(Q1, false);  // Miss.
-  execute_query_task(Q2, false);  // Miss.
-  execute_query_task(Q1, false);  // Hit.
-  execute_query_task(Q3, false);  // Miss, evict Q2.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q1, false);  // Hit.
-  execute_query_task(Q2, false);  // Miss, evict Q1.
-  execute_query_task(Q1, false);  // Miss, evict Q2.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q1, false);  // Hit.
+  execute_query(Q1);  // Miss.
+  execute_query(Q2);  // Miss.
+  execute_query(Q1);  // Hit.
+  execute_query(Q3);  // Miss, evict Q2.
+  execute_query(Q3);  // Hit.
+  execute_query(Q3);  // Hit.
+  execute_query(Q3);  // Hit.
+  execute_query(Q3);  // Hit.
+  execute_query(Q3);  // Hit.
+  execute_query(Q1);  // Hit.
+  execute_query(Q2);  // Miss, evict Q1.
+  execute_query(Q1);  // Miss, evict Q2.
+  execute_query(Q3);  // Hit.
+  execute_query(Q1);  // Hit.
 
   EXPECT_TRUE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
@@ -114,26 +123,26 @@ TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
   EXPECT_FALSE(cache.has("SELECT * FROM test;"));
 
   // Check for the expected number of hits.
-  EXPECT_EQ(9u, query_plan_cache_hits);
+  EXPECT_EQ(9u, _query_plan_cache_hits);
 }
 
-// Test query plan cache with GDFS implementation.
+// Test query plan cache with LRUK implementation.
 TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
-  SQLQueryCache<SQLQueryPlan>& cache = SQLQueryOperator::get_query_plan_cache();
+  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   cache.replace_cache_impl<LRUKCache<2, std::string, SQLQueryPlan>>(2);
 
   // Execute the queries in arbitrary order.
-  execute_query_task(Q1, false);  // Miss.
-  execute_query_task(Q2, false);  // Miss.
-  execute_query_task(Q2, false);  // Hit.
-  execute_query_task(Q1, false);  // Hit.
-  execute_query_task(Q3, false);  // Miss, evict Q1.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q1, false);  // Miss, evict Q2.
-  execute_query_task(Q2, false);  // Miss, evict Q1.
-  execute_query_task(Q1, false);  // Miss, evict Q2.
-  execute_query_task(Q3, false);  // Hit.
-  execute_query_task(Q1, false);  // Hit.
+  execute_query(Q1);  // Miss.
+  execute_query(Q2);  // Miss.
+  execute_query(Q2);  // Hit.
+  execute_query(Q1);  // Hit.
+  execute_query(Q3);  // Miss, evict Q1.
+  execute_query(Q3);  // Hit.
+  execute_query(Q1);  // Miss, evict Q2.
+  execute_query(Q2);  // Miss, evict Q1.
+  execute_query(Q1);  // Miss, evict Q2.
+  execute_query(Q3);  // Hit.
+  execute_query(Q1);  // Hit.
 
   EXPECT_TRUE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
@@ -141,7 +150,7 @@ TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
   EXPECT_FALSE(cache.has("SELECT * FROM test;"));
 
   // Check for the expected number of hits.
-  EXPECT_EQ(5u, query_plan_cache_hits);
+  EXPECT_EQ(5u, _query_plan_cache_hits);
 }
 
 }  // namespace opossum

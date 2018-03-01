@@ -13,8 +13,8 @@ DropViewNode::DropViewNode(const std::string& view_name)
     : AbstractLQPNode(LQPNodeType::DropView), _view_name(view_name) {}
 
 std::shared_ptr<AbstractLQPNode> DropViewNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   return DropViewNode::make(_view_name);
 }
 
@@ -26,7 +26,7 @@ std::string DropViewNode::description() const {
   return desc.str();
 }
 
-bool DropViewNode::subtree_is_read_only() const { return false; }
+bool DropViewNode::subplan_is_read_only() const { return false; }
 
 const std::vector<std::string>& DropViewNode::output_column_names() const {
   static std::vector<std::string> output_column_names_dummy;
