@@ -29,6 +29,6 @@ class GetTable : public AbstractReadOnlyOperator {
 
   // name of the table to retrieve
   const std::string _name;
-  std::optional<std::vector<ChunkID>> _excluded_chunks;
+  std::vector<ChunkID> _excluded_chunks;
 };
 }  // namespace opossum
