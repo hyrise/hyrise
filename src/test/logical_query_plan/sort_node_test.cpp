@@ -34,13 +34,13 @@ TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(_sort_node->description(), "[Sort] table_a.i (Ascending)");
 
   auto sort_b = SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Descending}});
-  sort_b->set_left_child(_table_node);
+  sort_b->set_left_input(_table_node);
   EXPECT_EQ(sort_b->description(), "[Sort] table_a.i (Descending)");
 
   auto sort_c = SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_c, OrderByMode::Descending},
                                                               OrderByDefinition{_a_b, OrderByMode::Ascending},
                                                               OrderByDefinition{_a_a, OrderByMode::Descending}});
-  sort_c->set_left_child(_table_node);
+  sort_c->set_left_input(_table_node);
   EXPECT_EQ(sort_c->description(), "[Sort] table_a.d (Descending), table_a.f (Ascending), table_a.i (Descending)");
 }
 

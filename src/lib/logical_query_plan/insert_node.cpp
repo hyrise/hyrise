@@ -13,8 +13,8 @@ namespace opossum {
 InsertNode::InsertNode(const std::string table_name) : AbstractLQPNode(LQPNodeType::Insert), _table_name(table_name) {}
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   return InsertNode::make(_table_name);
 }
 
@@ -26,7 +26,7 @@ std::string InsertNode::description() const {
   return desc.str();
 }
 
-bool InsertNode::subtree_is_read_only() const { return false; }
+bool InsertNode::subplan_is_read_only() const { return false; }
 
 const std::string& InsertNode::table_name() const { return _table_name; }
 

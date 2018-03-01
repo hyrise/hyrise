@@ -22,9 +22,9 @@ std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   // we only want to follow chains of predicates
   if (node->type() != LQPNodeType::Predicate) {
-    return _apply_to_children(node);
+    return _apply_to_inputs(node);
   }
-  DebugAssert(node->child_count() == 1, "Predicate nodes should only have 1 child");
+  DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
@@ -32,20 +32,20 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   auto current_node = node;
   while (current_node->type() == LQPNodeType::Predicate) {
     predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
-    current_node = current_node->left_child();
+    current_node = current_node->left_input();
     // Once a node has multiple parents, we're not talking about a Predicate chain anymore
     if (current_node->type() == LQPNodeType::Predicate && current_node->parent_count() > 1) {
-      return _apply_to_children(node);
+      return _apply_to_inputs(node);
     }
   }
 
   // skip over validation nodes
   if (current_node->type() == LQPNodeType::Validate) {
-    current_node = current_node->left_child();
+    current_node = current_node->left_input();
   }
 
   if (current_node->type() != LQPNodeType::StoredTable) {
-    return _apply_to_children(node);
+    return _apply_to_inputs(node);
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->is_leaf(), "Stored table nodes should be leaves.");

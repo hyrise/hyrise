@@ -31,7 +31,7 @@ std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
 bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() == LQPNodeType::Predicate) {
-    const auto& child = node->left_child();
+    const auto& child = node->left_input();
 
     if (child->type() == LQPNodeType::StoredTable) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
@@ -47,7 +47,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     }
   }
 
-  return _apply_to_children(node);
+  return _apply_to_inputs(node);
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
@@ -62,10 +62,10 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
   const auto column_id = predicate_node->get_output_column_id(predicate_node->column_reference());
   if (index_info.column_ids[0] != column_id) return false;
 
-  const auto row_count_table = predicate_node->left_child()->derive_statistics_from(nullptr, nullptr)->row_count();
+  const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  const auto row_count_predicate = predicate_node->derive_statistics_from(predicate_node->left_child())->row_count();
+  const auto row_count_predicate = predicate_node->derive_statistics_from(predicate_node->left_input())->row_count();
   const float selectivity = row_count_predicate / row_count_table;
 
   if (selectivity > INDEX_SCAN_SELECTIVITY_THRESHOLD) return false;
