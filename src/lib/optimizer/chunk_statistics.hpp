@@ -60,7 +60,7 @@ class ChunkColumnStatistics {
 template <typename T>
 class MinMaxFilter : public BaseFilter {
  public:
-  MinMaxFilter(T min, T max) : _min(min), _max(max){};
+  explicit MinMaxFilter(T min, T max) : _min(min), _max(max) {}
   ~MinMaxFilter() override = default;
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
@@ -94,7 +94,7 @@ class RangeFilter : public BaseFilter {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
 
-  RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)){};
+  explicit RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)) {}
   ~RangeFilter() override = default;
 
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
