@@ -63,12 +63,11 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   }
 
   // wanted side effect of usings sets: excluded_chunks vector is sorted
-  auto & already_excluded_chunks = stored_table->excluded_chunks();
+  auto& already_excluded_chunks = stored_table->excluded_chunks();
   if (!already_excluded_chunks.empty()) {
     std::vector<ChunkID> intersection;
-    std::set_intersection(already_excluded_chunks.begin(), already_excluded_chunks.end(),
-                          excluded_chunks.begin(), excluded_chunks.end(),
-                          std::back_inserter(intersection));
+    std::set_intersection(already_excluded_chunks.begin(), already_excluded_chunks.end(), excluded_chunks.begin(),
+                          excluded_chunks.end(), std::back_inserter(intersection));
     stored_table->set_excluded_chunks(intersection);
   } else {
     stored_table->set_excluded_chunks(std::vector<ChunkID>(excluded_chunks.begin(), excluded_chunks.end()));
@@ -78,9 +77,9 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   return false;
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
-                                                            std::shared_ptr<PredicateNode> predicate) {
-  if(!is_variant(predicate->value())) {
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
+    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, std::shared_ptr<PredicateNode> predicate) {
+  if (!is_variant(predicate->value())) {
     return std::set<ChunkID>();
   }
   auto original_column_id = predicate->column_reference().original_column_id();

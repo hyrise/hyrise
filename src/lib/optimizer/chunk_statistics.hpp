@@ -39,15 +39,14 @@ class BaseFilter : public std::enable_shared_from_this<BaseFilter> {
 
 class ChunkColumnStatistics {
  public:
-  static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type, std::shared_ptr<BaseColumn> column);
+  static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
+                                                                 std::shared_ptr<BaseColumn> column);
 
-  void add_filter(std::shared_ptr<BaseFilter> filter) {
-    _filters.emplace_back(filter);
-  }
+  void add_filter(std::shared_ptr<BaseFilter> filter) { _filters.emplace_back(filter); }
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const {
-    for(const auto& filter : _filters) {
-      if(filter->can_prune(value, predicate_type)) {
+    for (const auto& filter : _filters) {
+      if (filter->can_prune(value, predicate_type)) {
         return true;
       }
     }
@@ -61,8 +60,7 @@ class ChunkColumnStatistics {
 template <typename T>
 class MinMaxFilter : public BaseFilter {
  public:
-
-  MinMaxFilter(T min, T max) : _min(min), _max(max) {};
+  MinMaxFilter(T min, T max) : _min(min), _max(max){};
   ~MinMaxFilter() override = default;
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
@@ -85,6 +83,7 @@ class MinMaxFilter : public BaseFilter {
         return false;
     }
   }
+
  protected:
   const T _min;
   const T _max;
@@ -95,7 +94,7 @@ class RangeFilter : public BaseFilter {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
 
-  RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(std::move(ranges)) {};
+  RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)){};
   ~RangeFilter() override = default;
 
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
@@ -105,8 +104,8 @@ class RangeFilter : public BaseFilter {
     switch (predicate_type) {
       case PredicateCondition::Equals: {
         bool prunable = false;
-        for(const auto& [min, max] : _ranges) {
-          prunable |=  min < t_value && t_value < max;
+        for (const auto & [ min, max ] : _ranges) {
+          prunable |= min < t_value && t_value < max;
         }
         return prunable;
       }
@@ -116,10 +115,10 @@ class RangeFilter : public BaseFilter {
   }
 
  protected:
-  std::vector<std::pair<T,T>> _ranges;
+  std::vector<std::pair<T, T>> _ranges;
 };
 
-template<typename T>
+template <typename T>
 std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary) {
   // calculate distances by taking the difference between two neighbouring elements
   std::vector<std::pair<T, size_t>> distances;
@@ -130,14 +129,14 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   }
 
   std::sort(distances.begin(), distances.end(),
-            [](const auto& pair1, const auto& pair2){ return pair1.first > pair2.first; });
+            [](const auto& pair1, const auto& pair2) { return pair1.first > pair2.first; });
 
   if ((MAX_RANGES_COUNT - 1) < distances.size()) {
     distances.erase(distances.cbegin() + (MAX_RANGES_COUNT - 1), distances.cend());
   }
 
   std::sort(distances.begin(), distances.end(),
-            [](const auto& pair1, const auto& pair2){ return pair1.second < pair2.second; });
+            [](const auto& pair1, const auto& pair2) { return pair1.second < pair2.second; });
 
   // derive intervals where items don't exist from distances
   //
@@ -147,8 +146,8 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   //         ^
   //       distance 5, index 4
 
-  std::vector<std::pair<T,T>> ranges;
-  for(const auto& distance_index_pair : distances) {
+  std::vector<std::pair<T, T>> ranges;
+  for (const auto& distance_index_pair : distances) {
     // `index + 1` is ok because we check `dict_it + 1 != dictionary.cend()` above
     auto index = std::get<1>(distance_index_pair);
     ranges.push_back(std::make_pair(dictionary[index], dictionary[index + 1]));

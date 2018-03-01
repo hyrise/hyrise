@@ -122,63 +122,63 @@ TEST_F(ChunkPruningTest, IntersectionPruningTest) {
 }
 
 TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_GreaterThan) {
-    auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
-    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
-                                                          PredicateCondition::GreaterThan, 12345);
-    predicate_node->set_left_input(stored_table_node);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
+                                                        PredicateCondition::GreaterThan, 12345);
+  predicate_node->set_left_input(stored_table_node);
 
-    auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-    EXPECT_EQ(pruned, predicate_node);
-    std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-    std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
-    EXPECT_EQ(excluded, expected);
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  EXPECT_EQ(excluded, expected);
 }
 
 TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_Equals) {
-    auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
-    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
-                                                          PredicateCondition::Equals, 458.7);
-    predicate_node->set_left_input(stored_table_node);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{1}),
+                                                        PredicateCondition::Equals, 458.7);
+  predicate_node->set_left_input(stored_table_node);
 
-    auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-    EXPECT_EQ(pruned, predicate_node);
-    std::vector<ChunkID> expected = {ChunkID{0}};
-    std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
-    EXPECT_EQ(excluded, expected);
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = {ChunkID{0}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  EXPECT_EQ(excluded, expected);
 }
 
 TEST_F(ChunkPruningTest, RangeFilterTest) {
-    auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
-    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
-                                                          PredicateCondition::Equals, 50);
-    predicate_node->set_left_input(stored_table_node);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
+                                                        PredicateCondition::Equals, 50);
+  predicate_node->set_left_input(stored_table_node);
 
-    auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-    EXPECT_EQ(pruned, predicate_node);
-    std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-    std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
-    EXPECT_EQ(excluded, expected);
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  EXPECT_EQ(excluded, expected);
 }
 
 TEST_F(ChunkPruningTest, LotsOfRangesFilterTest) {
-    auto stored_table_node = std::make_shared<StoredTableNode>("long_compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>("long_compressed");
 
-    auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
-                                                          PredicateCondition::Equals, 2500);
-    predicate_node->set_left_input(stored_table_node);
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
+                                                        PredicateCondition::Equals, 2500);
+  predicate_node->set_left_input(stored_table_node);
 
-    auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-    EXPECT_EQ(pruned, predicate_node);
-    std::vector<ChunkID> expected = {ChunkID{0}};
-    std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
-    EXPECT_EQ(excluded, expected);
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = {ChunkID{0}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  EXPECT_EQ(excluded, expected);
 }
 
 TEST_F(ChunkPruningTest, GetTablePruningTest) {

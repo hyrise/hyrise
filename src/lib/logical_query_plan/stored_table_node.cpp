@@ -86,9 +86,7 @@ std::optional<QualifiedColumnName> StoredTableNode::_resolve_local_table_name(
   return reference_without_local_alias;
 }
 
-void StoredTableNode::set_excluded_chunks(const std::vector<ChunkID>& chunks) {
-  _excluded_chunks = chunks;
-}
+void StoredTableNode::set_excluded_chunks(const std::vector<ChunkID>& chunks) { _excluded_chunks = chunks; }
 
 const std::vector<ChunkID>& StoredTableNode::excluded_chunks() const { return _excluded_chunks; }
 

@@ -34,7 +34,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   void set_excluded_chunks(const std::vector<ChunkID>& chunks);
   const std::vector<ChunkID>& excluded_chunks() const;
-  
+
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:

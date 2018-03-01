@@ -1,11 +1,11 @@
 #include "get_table.hpp"
 
-#include <optional>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
