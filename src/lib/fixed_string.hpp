@@ -30,7 +30,7 @@ class FixedString {
   }
 
   FixedString(const FixedString&& other)
-      : _mem(new char[other._string_length]{}), _string_length(other._string_length) {
+      : _mem(other._delete ? other._mem : new char[other._string_length]{}), _string_length(other._string_length) {
     std::memcpy(_mem, other._mem, _string_length);
   }
 
@@ -40,16 +40,23 @@ class FixedString {
 
   // Copy assign
   FixedString& operator=(const FixedString& other) {
-    return _assign(other);
-  }
-
-  // Move assign
-  FixedString& operator=(FixedString&& other) {
-    if (this != &other) {
-      return _assign(other);
+    DebugAssert(other.size() <= _string_length, "Other FixedString is longer than current maximum string length")
+    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
+    other._copy(_mem, copied_length);
+    // Fill unused fields of char array with null terminator
+    if (copied_length < _string_length) {
+      memset(_mem + copied_length, '\0', _string_length - copied_length);
     }
     return *this;
   }
+
+  // // Move assign
+  // FixedString& operator=(FixedString&& other) {
+  //   if (this != &other) {
+  //     return _assign(other);
+  //   }
+  //   return *this;
+  // }
 
   // Returns the length of the string
   size_t size() const { return _string_length; }
@@ -89,17 +96,6 @@ class FixedString {
     const auto copied_length = len < _string_length - pos ? len : _string_length - pos;
     std::memcpy(s, _mem + pos, copied_length);
     return copied_length;
-  }
-
-  FixedString& _assign(const FixedString& other) {
-    DebugAssert(other.size() <= _string_length, "Other FixedString is longer than current maximum string length")
-    const auto copied_length = other.size() < _string_length ? other.size() : _string_length;
-    other._copy(_mem, copied_length);
-    // Fill unused fields of char array with null terminator
-    if (copied_length < _string_length) {
-      memset(_mem + copied_length, '\0', _string_length - copied_length);
-    }
-    return *this;
   }
 };
 
