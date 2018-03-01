@@ -22,6 +22,14 @@ class BaseFilter : public std::enable_shared_from_this<BaseFilter> {
  public:
   virtual ~BaseFilter() = default;
 
+  /**
+   * checks whether the filter is able to determine that the given value 
+   * and predicate condition will not yield any positive results with the values
+   * represented by the filter data.
+   * 
+   * In other words: A scan operation with value and predicate_type on the column/chunk
+   * that this filter was created on would yield zero result rows.
+  */
   virtual bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const = 0;
 };
 
@@ -85,10 +93,10 @@ class MinMaxFilter : public BaseFilter {
  public:
 
   MinMaxFilter(T min, T max) : _min(min), _max(max) {};
-  virtual ~MinMaxFilter() = default;
+  ~MinMaxFilter() override = default;
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
-    T t_value = type_cast<T>(value);
+    const auto t_value = type_cast<T>(value);
     // Operators work as follows: value_from_table <operator> t_value
     // e.g. OpGreaterThan: value_from_table > t_value
     // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
@@ -117,13 +125,13 @@ class RangeFilter : public BaseFilter {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
 
-  RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(ranges) {};
-  virtual ~RangeFilter() = default;
+  RangeFilter(std::vector<std::pair<T,T>> ranges) : _ranges(std::move(ranges)) {};
+  ~RangeFilter() override = default;
 
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
-    T t_value = type_cast<T>(value);
+    const auto t_value = type_cast<T>(value);
     switch (predicate_type) {
       case PredicateCondition::Equals: {
         bool prunable = false;
