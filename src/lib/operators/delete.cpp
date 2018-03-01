@@ -16,10 +16,6 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 
 const std::string Delete::name() const { return "Delete"; }
 
-std::shared_ptr<AbstractOperator> Delete::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Delete>(_table_name, _input_left->recreate(args));
-}
-
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
@@ -124,6 +120,10 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   }
 
   return true;
+}
+
+std::shared_ptr<AbstractOperator> Delete::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Delete>(_table_name, _input_left->recreate(args));
 }
 
 }  // namespace opossum

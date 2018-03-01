@@ -90,17 +90,17 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
   }
 
   std::shared_ptr<AbstractLQPNode> _build_query_lqp(QueryNodes& query_nodes) {
-    query_nodes.validate_node->set_left_child(query_nodes.stored_table_node_a);
-    query_nodes.predicate_node_a->set_left_child(query_nodes.validate_node);
-    query_nodes.predicate_node_b->set_left_child(query_nodes.stored_table_node_a);
-    query_nodes.union_node->set_left_child(query_nodes.predicate_node_a);
-    query_nodes.union_node->set_right_child(query_nodes.predicate_node_b);
-    query_nodes.limit_node->set_left_child(query_nodes.union_node);
-    query_nodes.join_node->set_left_child(query_nodes.limit_node);
-    query_nodes.join_node->set_right_child(query_nodes.sort_node);
-    query_nodes.sort_node->set_left_child(query_nodes.aggregate_node);
-    query_nodes.aggregate_node->set_left_child(query_nodes.mock_node_b);
-    query_nodes.projection_node->set_left_child(query_nodes.join_node);
+    query_nodes.validate_node->set_left_input(query_nodes.stored_table_node_a);
+    query_nodes.predicate_node_a->set_left_input(query_nodes.validate_node);
+    query_nodes.predicate_node_b->set_left_input(query_nodes.stored_table_node_a);
+    query_nodes.union_node->set_left_input(query_nodes.predicate_node_a);
+    query_nodes.union_node->set_right_input(query_nodes.predicate_node_b);
+    query_nodes.limit_node->set_left_input(query_nodes.union_node);
+    query_nodes.join_node->set_left_input(query_nodes.limit_node);
+    query_nodes.join_node->set_right_input(query_nodes.sort_node);
+    query_nodes.sort_node->set_left_input(query_nodes.aggregate_node);
+    query_nodes.aggregate_node->set_left_input(query_nodes.mock_node_b);
+    query_nodes.projection_node->set_left_input(query_nodes.join_node);
 
     return query_nodes.projection_node;
   }
@@ -141,8 +141,8 @@ TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
 
   _build_query_lqps();
 
-  _query_nodes_rhs.predicate_node_b->set_left_child(additional_predicate_node);
-  additional_predicate_node->set_left_child(_query_nodes_rhs.stored_table_node_a);
+  _query_nodes_rhs.predicate_node_b->set_left_input(additional_predicate_node);
+  additional_predicate_node->set_left_input(_query_nodes_rhs.stored_table_node_a);
 
   auto mismatch = _query_lqp_lhs->find_first_subplan_mismatch(_query_lqp_rhs);
   ASSERT_TRUE(mismatch);

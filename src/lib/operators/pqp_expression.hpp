@@ -33,11 +33,7 @@ class PQPExpression : public AbstractExpression<PQPExpression> {
 
   bool operator==(const PQPExpression& other) const;
 
-  std::shared_ptr<PQPExpression> set_placeholder_value(const AllTypeVariant& value) {
-    auto copy = create_literal(value, _alias);
-    copy->_column_id = _column_id;
-    return copy;
-  }
+  std::shared_ptr<PQPExpression> set_placeholder_value(const AllTypeVariant& value);
 
  protected:
   void _deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const override;

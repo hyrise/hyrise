@@ -21,7 +21,6 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_planner.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 

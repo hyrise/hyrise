@@ -231,8 +231,6 @@ set(
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
-    sql/sql_planner.cpp
-    sql/sql_planner.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
@@ -254,14 +252,20 @@ set(
     storage/chunk.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
+    storage/column_iterables.hpp
+    storage/column_iterables/any_column_iterable.hpp
+    storage/column_iterables/any_column_iterator.hpp
     storage/column_iterables/base_column_iterators.hpp
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
     storage/column_iterables/constant_value_iterable.hpp
-    storage/column_iterables.hpp
+    storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
+    storage/create_iterable_from_column.ipp
+    storage/deprecated_dictionary_column.cpp
+    storage/deprecated_dictionary_column.hpp
     storage/deprecated_dictionary_column/base_attribute_vector.hpp
     storage/deprecated_dictionary_column.cpp
     storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
@@ -374,6 +378,8 @@ set(
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
+    utils/format_duration.cpp
+    utils/format_duration.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
@@ -399,7 +405,10 @@ set(
 if (NOT DISABLE_JIT_SUPPORT)
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
-        # files listed here will be embedded into the binary as LLVM IR
+        # Files listed here will be embedded into the binary as LLVM-IR
+        operators/jit_operator/jit_operations.hpp
+        operators/jit_operator/jit_types.cpp
+        operators/jit_operator/jit_types.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(

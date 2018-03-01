@@ -35,7 +35,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make();
-  root_node->set_left_child(input);
+  root_node->set_left_input(input);
 
   for (const auto& rule_batch : _rule_batches) {
     switch (rule_batch.execution_policy()) {
@@ -56,8 +56,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   }
 
   // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_child();
-  optimized_node->clear_parents();
+  const auto optimized_node = root_node->left_input();
+  optimized_node->clear_outputs();
 
   return optimized_node;
 }
