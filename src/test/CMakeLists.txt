@@ -38,6 +38,7 @@ set(
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
     operators/aggregate_test.cpp
+    operators/case_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
     operators/export_binary_test.cpp
