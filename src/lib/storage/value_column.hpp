@@ -41,9 +41,6 @@ class ValueColumn : public BaseValueColumn {
   const pmr_concurrent_vector<T>& values() const;
   pmr_concurrent_vector<T>& values();
 
-  // return a generated vector of all values (or nulls)
-  const pmr_concurrent_vector<std::optional<T>> materialize_values() const;
-
   // Return whether column supports null values.
   bool is_nullable() const final;
 
