@@ -115,7 +115,7 @@ class ColumnIterable {
    * @param container   The container the information whether a value is NULL or not is push_back()ed into
    */
   template <typename Container>
-  void materialize_null(Container& container) const {
+  void materialize_nulls(Container& container) const {
     for_each([&](const auto& iter) { container.push_back(iter.is_null()); });
   }
 
