@@ -66,12 +66,13 @@ std::shared_ptr<AbstractOperator> PQPExpression::subselect_operator() {
 }
 
 std::shared_ptr<const Table> PQPExpression::subselect_table() {
-  DebugAssert(_subselect_table, "Expression " + expression_type_to_string.at(_type) + " does not have a subselect table");
+  DebugAssert(_subselect_table,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a subselect table");
   return *_subselect_table;
 }
 
 void PQPExpression::set_subselect_table(std::shared_ptr<const Table> table) {
-  DebugAssert(type() == ExpressionType::Subselect, "Table can only be set for subselect expressions.")
+  DebugAssert(type() == ExpressionType::Subselect, "Table can only be set for subselect expressions.");
   _subselect_table = table;
 }
 
