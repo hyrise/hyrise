@@ -17,11 +17,12 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(c
     statistics->add_filter(std::move(min_max_filter));
 
     // no range filter for strings
-    if
-      constexpr(std::is_arithmetic_v<T>) {
-        auto range_filter = RangeFilter<T>::build_filter(dictionary);
-        statistics->add_filter(std::move(range_filter));
-      }
+    // clang-format off
+    if constexpr(std::is_arithmetic_v<T>) {
+      auto range_filter = RangeFilter<T>::build_filter(dictionary);
+      statistics->add_filter(std::move(range_filter));
+    }
+    // clang-format on
   }
   return statistics;
 }
