@@ -16,6 +16,7 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
@@ -154,15 +155,15 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
   }
 }
 
-std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
+std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
     std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
   switch (attribute_vector_width) {
     case 1:
-      return std::make_shared<FittedAttributeVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+      return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
     case 2:
-      return std::make_shared<FittedAttributeVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+      return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case 4:
-      return std::make_shared<FittedAttributeVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+      return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
@@ -185,13 +186,16 @@ std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream
 }
 
 template <typename T>
-std::shared_ptr<DeprecatedDictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
-                                                                                       ChunkOffset row_count) {
+std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
+                                                                             ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  auto dictionary = _read_values<T>(file, dictionary_size);
+  const auto null_value_id = dictionary_size;
+  auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
+
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
-  return std::make_shared<DeprecatedDictionaryColumn<T>>(std::move(dictionary), std::move(attribute_vector));
+
+  return std::make_shared<DictionaryColumn<T>>(dictionary, attribute_vector, null_value_id);
 }
 
 }  // namespace opossum
