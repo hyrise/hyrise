@@ -6,6 +6,9 @@
 
 namespace opossum {
 
+/**
+ * @brief A column iterable returning an iterator with a constant value.
+ */
 template <typename T>
 class ConstantValueIterable : public ColumnIterable<ConstantValueIterable<T>> {
  public:

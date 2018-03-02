@@ -66,25 +66,6 @@ std::shared_ptr<const BaseAttributeVector> DeprecatedDictionaryColumn<T>::attrib
 }
 
 template <typename T>
-const pmr_concurrent_vector<std::optional<T>> DeprecatedDictionaryColumn<T>::materialize_values() const {
-  pmr_concurrent_vector<std::optional<T>> values(_attribute_vector->size(), std::nullopt, _dictionary->get_allocator());
-
-  for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
-    if (is_null(chunk_offset)) continue;
-    values[chunk_offset] = (*_dictionary)[_attribute_vector->get(chunk_offset)];
-  }
-
-  return values;
-}
-
-template <typename T>
-const T& DeprecatedDictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
-  DebugAssert(value_id != NULL_VALUE_ID, "Null value id passed.");
-
-  return _dictionary->at(value_id);
-}
-
-template <typename T>
 ValueID DeprecatedDictionaryColumn<T>::lower_bound(T value) const {
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;

@@ -27,7 +27,7 @@ class TpccRandomGenerator : public benchmark_utilities::RandomGenerator {
    * Generates a non-uniform random number based on a formula defined by TPCC
    */
   size_t nurand(size_t a, size_t x, size_t y) {
-    opossum::Assert(_nurand_constant_c <= a, "Invalid param: a=" + std::to_string(a));
+    Assert(_nurand_constant_c <= a, "Invalid param: a=" + std::to_string(a));
     return (((random_number(0, a) | random_number(x, y)) + _nurand_constant_c) % (y - x + 1)) + x;
   }
 

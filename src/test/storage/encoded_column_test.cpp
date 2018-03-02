@@ -94,9 +94,9 @@ auto formatter = [](const ::testing::TestParamInfo<ColumnEncodingSpec> info) {
   const auto spec = info.param;
 
   auto stream = std::stringstream{};
-  stream << encoding_type_to_string.left.at(spec.encoding_type);
+  stream << encoding_type_to_string.at(spec.encoding_type);
   if (spec.vector_compression_type) {
-    stream << "-" << vector_compression_type_to_string.left.at(*spec.vector_compression_type);
+    stream << "-" << vector_compression_type_to_string.at(*spec.vector_compression_type);
   }
 
   auto string = stream.str();

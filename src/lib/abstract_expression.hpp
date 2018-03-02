@@ -23,7 +23,7 @@ class AbstractLQPNode;
  *
  * Expressions are structured as a binary tree
  * e.g. 'columnA = 5' would be represented as a root expression with the type ExpressionType::Equals and
- * two child nodes of types ExpressionType::ColumnIdentifier and ExpressionType::Literal.
+ * two child nodes of types ExpressionType::Column and ExpressionType::Literal.
  *
  * For now we decided to have a single Expression without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.

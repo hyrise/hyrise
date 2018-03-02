@@ -21,6 +21,9 @@ namespace opossum {
 template <typename T>
 class AbstractColumnIteratorValue {
  public:
+  using Type = T;
+
+ public:
   virtual const T& value() const = 0;
   virtual bool is_null() const = 0;
 

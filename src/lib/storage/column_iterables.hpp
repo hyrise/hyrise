@@ -64,7 +64,7 @@ class ColumnIterable {
    * @param f is a generic lambda accepting two iterators as parameters
    */
   template <typename Functor>
-  void with_iterators(const Functor& f) {
+  void with_iterators(const Functor& f) const {
     _self()._on_with_iterators(f);
   }
 
@@ -72,13 +72,54 @@ class ColumnIterable {
    * @param f is a generic lambda accepting a column value (i.e. use const auto&)
    */
   template <typename Functor>
-  void for_each(const Functor& f) {
+  void for_each(const Functor& f) const {
     with_iterators([&f](auto it, auto end) {
       for (; it != end; ++it) {
         f(*it);
       }
     });
   }
+
+  /**
+   * @defgroup Functions for the materialization of values and nulls.
+   * The following implementations may be overridden by derived classes.
+   * @{
+   */
+
+  /**
+   * Materialize all values in this iterable.
+   * @param container   Container with the same value_type as the values in the column
+   */
+  template <typename Container>
+  void materialize_values(Container& container) const {
+    for_each([&](const auto& value) {
+      DebugAssert(!value.is_null(), "NULL value in materialize_values(), call materialize_values_and_nulls() instead");
+      container.push_back(value.value());
+    });
+  }
+
+  /**
+   * Materialize all values in this iterable as std::optional<ValueType>. std::nullopt if value is NULL.
+   * @param container   Container with value_type std::pair<bool, T>, where
+   *                        bool indicates whether the value is NULL or not
+   *                        T is the same as the type of the values in the column
+   *                        pair in favour over optional to avoid branches for initialization
+   */
+  template <typename Container>
+  void materialize_values_and_nulls(Container& container) const {
+    for_each([&](const auto& value) { container.push_back(std::make_pair(value.is_null(), value.value())); });
+  }
+
+  /**
+   * Materialize all null values in this Iterable.
+   * @param container   The container with value_type bool storing the information whether a value is NULL or not
+   */
+  template <typename Container>
+  void materialize_nulls(Container& container) const {
+    for_each([&](const auto& value) { container.push_back(value.is_null()); });
+  }
+
+  /** @} */
 
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
@@ -112,7 +153,7 @@ class PointAccessibleColumnIterable : public ColumnIterable<Derived> {
   using ColumnIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
-  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) {
+  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
     with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);
