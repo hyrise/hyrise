@@ -194,7 +194,7 @@ enum class ExpressionType {
   Function,
 
   /*A subselect*/
-  Select,
+  Subselect,
 
   /*Arithmetic operators*/
   Addition,

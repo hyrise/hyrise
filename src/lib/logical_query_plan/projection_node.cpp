@@ -154,7 +154,7 @@ void ProjectionNode::_update_output() const {
         _output_column_names->emplace_back(expression->to_string(left_input()->output_column_names()));
       }
 
-    } else if (expression->type() == ExpressionType::Select) {
+    } else if (expression->type() == ExpressionType::Subselect) {
       auto node = expression->subselect_node();
 
       _output_column_references->emplace_back(node, ColumnID(0));

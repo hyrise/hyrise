@@ -467,7 +467,7 @@ TEST_F(SQLTranslatorTest, WhereSubquery) {
   EXPECT_EQ(expand_projection_node->output_column_references().size(), 3u);
 
   const auto subselect_expression = expand_projection_node->column_expressions().back();
-  EXPECT_EQ(subselect_expression->type(), ExpressionType::Select);
+  EXPECT_EQ(subselect_expression->type(), ExpressionType::Subselect);
 }
 
 TEST_F(SQLTranslatorTest, InSubquery) {
@@ -503,7 +503,7 @@ TEST_F(SQLTranslatorTest, SelectSubquery) {
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
 
   const auto subselect_expression = projection_node->column_expressions().back();
-  EXPECT_EQ(subselect_expression->type(), ExpressionType::Select);
+  EXPECT_EQ(subselect_expression->type(), ExpressionType::Subselect);
 }
 
 TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {

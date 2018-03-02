@@ -82,8 +82,8 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     auto values = pmr_concurrent_vector<T>(row_count, T{});
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
-  } else if (expression->type() == ExpressionType::Select) {
-    auto chunk = expression->table()->get_chunk(ChunkID{0});
+  } else if (expression->type() == ExpressionType::Subselect) {
+    auto chunk = expression->subselect_table()->get_chunk(ChunkID{0});
     auto base_column = chunk->get_column(ColumnID{0});
 
     // the subquery result table can only contain exactly one column with one row
@@ -162,7 +162,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         Fail("Subselect returned more than one row.");
       }
 
-      column_expression->set_table(result_table);
+      column_expression->set_subselect_table(result_table);
 
       name = result_table->column_names()[0];
     } else {
@@ -207,8 +207,8 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
   if (expression->type() == ExpressionType::Column) {
     return table->column_type(expression->column_id());
   }
-  if (expression->type() == ExpressionType::Select) {
-    return expression->table()->column_type(ColumnID(0));
+  if (expression->type() == ExpressionType::Subselect) {
+    return expression->subselect_table()->column_type(ColumnID(0));
   }
 
   Assert(expression->is_arithmetic_operator(),

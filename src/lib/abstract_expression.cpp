@@ -168,7 +168,7 @@ bool AbstractExpression<DerivedExpression>::is_null_literal() const {
 
 template <typename DerivedExpression>
 bool AbstractExpression<DerivedExpression>::is_subselect() const {
-  return _type == ExpressionType::Select;
+  return _type == ExpressionType::Subselect;
 }
 
 template <typename DerivedExpression>
@@ -198,7 +198,7 @@ const std::string AbstractExpression<DerivedExpression>::description() const {
       }
       desc << "]";
       break;
-    case ExpressionType::Select:
+    case ExpressionType::Subselect:
       desc << "[" << alias_string << "]";
       break;
     default: {}
@@ -259,7 +259,7 @@ std::string AbstractExpression<DerivedExpression>::to_string(
              _aggregate_function_arguments[0]->to_string(input_column_names, true) + ")";
     case ExpressionType::Star:
       return std::string("*");
-    case ExpressionType::Select:
+    case ExpressionType::Subselect:
       return "subquery";
     default:
       // Handled further down.
