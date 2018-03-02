@@ -1030,8 +1030,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     const auto column_references = std::make_pair(left_column, right_column);
 
     auto join_node = std::make_shared<JoinNode>(JoinMode::Semi, column_references, PredicateCondition::Equals);
-    join_node->set_left_child(input_node);
-    join_node->set_right_child(subselect_node);
+    join_node->set_left_input(input_node);
+    join_node->set_right_input(subselect_node);
 
     return join_node;
   } else if (predicate_condition != PredicateCondition::IsNull &&
@@ -1080,17 +1080,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     column_expressions.push_back(subselect_expression);
 
     auto expand_projection_node = std::make_shared<ProjectionNode>(column_expressions);
-    expand_projection_node->set_left_child(input_node);
+    expand_projection_node->set_left_input(input_node);
 
     // Compare against the column containing the subselect result
     auto subselect_column_id = ColumnID(column_expressions.size() - 1);
     auto predicate_node =
         std::make_shared<PredicateNode>(column_id, predicate_condition, subselect_column_id, std::nullopt);
-    predicate_node->set_left_child(expand_projection_node);
+    predicate_node->set_left_input(expand_projection_node);
 
     // Remove the column containing the subselect result
     auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
-    reduce_projection_node->set_left_child(predicate_node);
+    reduce_projection_node->set_left_input(predicate_node);
 
     return reduce_projection_node;
   } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {

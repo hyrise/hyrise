@@ -530,7 +530,7 @@ TEST_F(LQPTranslatorTest, ProjectionWithSubselect) {
       LQPExpression::create_subselect(subselect_node)};
 
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
-  projection_node->set_left_child(table_node);
+  projection_node->set_left_input(table_node);
 
   const auto& lqp = projection_node;
   const auto pqp = LQPTranslator{}.translate_node(lqp);

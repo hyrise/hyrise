@@ -453,17 +453,17 @@ TEST_F(SQLTranslatorTest, WhereSubquery) {
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   const auto final_projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
 
-  EXPECT_EQ(final_projection_node->left_child()->type(), LQPNodeType::Projection);
-  const auto reduce_projection_node = std::dynamic_pointer_cast<ProjectionNode>(final_projection_node->left_child());
+  EXPECT_EQ(final_projection_node->left_input()->type(), LQPNodeType::Projection);
+  const auto reduce_projection_node = std::dynamic_pointer_cast<ProjectionNode>(final_projection_node->left_input());
   EXPECT_EQ(reduce_projection_node->output_column_references().size(),
             final_projection_node->output_column_references().size());
 
-  EXPECT_EQ(reduce_projection_node->left_child()->type(), LQPNodeType::Predicate);
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(reduce_projection_node->left_child());
+  EXPECT_EQ(reduce_projection_node->left_input()->type(), LQPNodeType::Predicate);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(reduce_projection_node->left_input());
   EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::LessThan);
 
-  EXPECT_EQ(predicate_node->left_child()->type(), LQPNodeType::Projection);
-  const auto expand_projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
+  EXPECT_EQ(predicate_node->left_input()->type(), LQPNodeType::Projection);
+  const auto expand_projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_input());
   EXPECT_EQ(expand_projection_node->output_column_references().size(), 3u);
 
   const auto subselect_expression = expand_projection_node->column_expressions().back();
@@ -477,16 +477,16 @@ TEST_F(SQLTranslatorTest, InSubquery) {
   EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
   const auto final_projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
 
-  EXPECT_EQ(final_projection_node->left_child()->type(), LQPNodeType::Join);
-  const auto semi_join_node = std::dynamic_pointer_cast<JoinNode>(final_projection_node->left_child());
+  EXPECT_EQ(final_projection_node->left_input()->type(), LQPNodeType::Join);
+  const auto semi_join_node = std::dynamic_pointer_cast<JoinNode>(final_projection_node->left_input());
   EXPECT_EQ(semi_join_node->join_mode(), JoinMode::Semi);
 
-  const auto table_a_node = semi_join_node->left_child();
+  const auto table_a_node = semi_join_node->left_input();
   ASSERT_STORED_TABLE_NODE(table_a_node, "table_a");
 
-  EXPECT_EQ(semi_join_node->right_child()->type(), LQPNodeType::Projection);
+  EXPECT_EQ(semi_join_node->right_input()->type(), LQPNodeType::Projection);
 
-  const auto table_b_node = semi_join_node->right_child()->left_child();
+  const auto table_b_node = semi_join_node->right_input()->left_input();
   ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
 }
 
