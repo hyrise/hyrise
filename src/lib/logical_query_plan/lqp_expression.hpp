@@ -20,6 +20,10 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
       const std::vector<LQPColumnReference>& column_references,
       const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
+  /**
+   * Create an expression representing a subselect.
+   * The expression will contain the root LQP node of the subselect.
+   */
   static std::shared_ptr<LQPExpression> create_subselect(std::shared_ptr<AbstractLQPNode> root_node = nullptr);
 
   // Necessary for the AbstractExpression<T>::create_*() methods
@@ -27,6 +31,7 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
 
   const LQPColumnReference& column_reference() const;
 
+  // Get the root LQP node of the contained subselect
   std::shared_ptr<AbstractLQPNode> subselect_node() const;
 
   void set_column_reference(const LQPColumnReference& column_reference);
@@ -39,9 +44,8 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
  protected:
   void _deep_copy_impl(const std::shared_ptr<LQPExpression>& copy) const override;
 
-  std::optional<std::shared_ptr<AbstractLQPNode>> _subselect_node;
-
  private:
   std::optional<LQPColumnReference> _column_reference;
+  std::optional<std::shared_ptr<AbstractLQPNode>> _subselect_node;
 };
 }  // namespace opossum
