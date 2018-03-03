@@ -40,6 +40,13 @@ class DictionaryColumn : public BaseDictionaryColumn {
   /**@}*/
 
   /**
+   * @defgroup BaseEncodedColumn interface
+   * @{
+   */
+  CompressedVectorType compressed_vector_type() const final;
+  /**@}*/
+
+  /**
    * @defgroup BaseDictionaryColumn interface
    * @{
    */
