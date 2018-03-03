@@ -10,6 +10,7 @@
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "resolve_type.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -17,12 +18,12 @@ namespace opossum {
 template <typename T>
 DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(pmr_vector<T>&& dictionary,
                                                           const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-    : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
+    : BaseDeprecatedDictionaryColumn(data_type_from_type<T>()), _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
 DeprecatedDictionaryColumn<T>::DeprecatedDictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
                                                           const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-    : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
+    : BaseDeprecatedDictionaryColumn(data_type_from_type<T>()), _dictionary(dictionary), _attribute_vector(attribute_vector) {}
 
 template <typename T>
 const AllTypeVariant DeprecatedDictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {

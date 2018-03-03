@@ -229,6 +229,7 @@ set(
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column_encoder.hpp
+    storage/base_column.cpp
     storage/base_column.hpp
     storage/base_deprecated_dictionary_column.hpp
     storage/base_dictionary_column.cpp

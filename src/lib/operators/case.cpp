@@ -2,6 +2,7 @@
 
 #include "storage/column_iterables/any_column_iterator.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "storage/materialize.hpp"
 
 namespace opossum {
 
@@ -19,74 +20,73 @@ std::shared_ptr<const Table> Case::_on_execute() {
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = _input_table_left()->get_chunk(chunk_id);
 
+    output_table->emplace_chunk(input_chunk->forward_data_or_materialize());
+
+    std::shared_ptr<Chunk> output_chunk;
+    if (_input_table_left()->get_type() == TableType::References) {
+//      for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
+//        resolve_data_and_column_type(_input_table_left()->column_type(column_id), *input_chunk->get_column(column_id), [&](auto type, const auto& column) {
+//
+//        });
+//      }
+      output_chunk = input_chunk->materialized();
+    } else {
+//      for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
+//        output_chunk->add_column(input_chunk->get_column(column_id));
+//      }
+      output_chunk = input_chunk->forwarded();
+    }
+
+    std::vector<std::optional<std::vector<int32_t>>> materialized_when_columns(_input_table_left()->column_count());
+
     for (const auto &case_expression : _case_expressions) {
       resolve_data_type(case_expression->result_data_type, [&](auto type) {
         using ResultDataType = typename decltype(type)::type;
 
+        std::vector<std::optional<std::vector<std::pair<bool, ResultDataType>>>> materialized_then_columns(_input_table_left()->column_count());
+
         const auto& typed_case_expression = static_cast<PhysicalCaseExpression<ResultDataType>&>(*case_expression);
-
-        struct ClauseIterator {
-          AnyColumnIterator<int32_t> when_iterator; // When-Columns need to be int32_t
-          boost::variant<Null, ResultDataType, AnyColumnIterator<ResultDataType>> then_iterator_or_value;
-
-          std::optional<ResultDataType> then_value() const {
-            if (then_iterator_or_value.type() == typeid(Null)) {
-              return std::nullopt;
-            } else if (then_iterator_or_value.type() == ResultDataType) {
-              return boost::get<ResultDataType>(then_iterator_or_value)
-            } else if (then_iterator_or_value.type() == typeid(AnyColumnIterator<ResultDataType>)) {
-              return *boost::get<AnyColumnIterator<ResultDataType>>(then_iterator_or_value);
-            } else {
-              Fail("Unexpected type in THEN");
-            }
-          }
-        };
-
-        std::vector<ClauseIterator> clause_iterators;
-
-        for (const auto& case_clause : typed_case_expression.clauses) {
-          ClauseIterator clause_iterator;
-
-          const auto when_base_column = input_chunk->get_column(case_clause.when);
-          resolve_column_type<int32_t>(*when_base_column, [&](const auto& when_column) { // When-Columns need to be int32_t
-            const auto iterable = erase_type_from_iterable(create_iterable_from_column(when_column));
-            clause_iterator.when_iterator = iterable.begin();
-          });
-
-          if (case_clause.then.type() == typeid(Null)) {
-            clause_iterator.then_iterator_or_value = Null{};
-          } else if (case_clause.then.type() == typeid(ColumnID)) {
-            const auto then_base_column = input_chunk->get_column(boost::get<ColumnID>(case_clause.then));
-            resolve_column_type<ResultDataType>(*then_base_column, [&](const auto& then_column) {
-              const auto iterable = erase_type_from_iterable(create_iterable_from_column(then_column));
-              clause_iterator.then_iterator_or_value = iterable.begin();
-            });
-          } else if (case_clause.then.type() == typeid(ResultDataType)) {
-            clause_iterator.then_iterator_or_value = boost::get<ResultDataType>(case_clause.then);
-          } else {
-            Fail("Unexpected type in THEN");
-          }
-
-          clause_iterators.emplace_back(clause_iterator);
-        }
 
         pmr_concurrent_vector<ResultDataType> output_values(input_chunk->size());
         pmr_concurrent_vector<bool> output_nulls(input_chunk->size());
 
         for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-          for (const auto& clause_iterator : clause_iterators) {
-            if (*clause_iterator.when_iterator != int32_t{0}) {
-              const auto then_value = clause_iterator.then_value();
-              output_values.emplace_back(then_value ? *then_value : ResulDataType{});
-              output_nulls.emplace_back(static_cast<bool>(then_value));
+          for (const auto &case_clause : typed_case_expression.clauses) {
+            auto &materialized_when_column = materialized_when_columns[case_clause.when];
+            if (!materialized_when_column) {
+              materialized_when_column.emplace();
+              materialized_when_column->reserve(input_chunk->size());
+              materialize_values(*input_chunk->get_column(case_clause.when), *materialized_when_column);
             }
 
-            clause_iterator.when_iterator.increment();
-            if (clause_iterator.then_iterator_or_value.type() == typeid(AnyColumnIterator<ResultDataType>)) {
-              boost::get<AnyColumnIterator<ResultDataType>>(clause_iterator.then_iterator_or_value).increment();
+            if ((*materialized_when_column)[chunk_offset] == int32_t{0}) continue;
+
+            if (case_clause.then.type() == typeid(Null)) {
+              output_values[chunk_offset] = ResultDataType{};
+              output_nulls[chunk_offset] = true;
+            } else if (case_clause.then.type() == typeid(ColumnID)) {
+              const auto then_column_id = boost::get<ColumnID>(case_clause.then);
+              auto &materialized_then_column = materialized_then_columns[then_column_id];
+              if (!materialized_then_column) {
+                materialized_then_column.emplace();
+                materialized_then_column->reserve(input_chunk->size());
+                materialize_values_and_nulls(*input_chunk->get_column(then_column_id), *materialized_then_column);
+              }
+
+              // Create alias to hopefully ensured this isn't done twice
+              const auto& materialized_then_value_and_null = (*materialized_then_column)[chunk_offset];
+              output_values[chunk_offset] = materialized_then_value_and_null.second;
+              output_nulls[chunk_offset] = materialized_then_value_and_null.first;
+            } else if (case_clause.then.type() == typeid(ResultDataType)) {
+              output_values[chunk_offset] = boost::get<ResultDataType>(case_clause.then);
+              output_nulls[chunk_offset] = false;
+            } else {
+              Fail("Unexpected type in THEN");
             }
           }
         }
+
+        output_chunk->add_column(std::make_shared<ValueColumn<ResultDataType>>(output_values, output_nulls));
       });
     }
   }

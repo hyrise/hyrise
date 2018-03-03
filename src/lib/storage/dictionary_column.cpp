@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "resolve_type.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
@@ -16,7 +17,7 @@ template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
-    : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
+    : BaseDictionaryColumn(data_type_from_type<T>()), _dictionary{dictionary}, _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {

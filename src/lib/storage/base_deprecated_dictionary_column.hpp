@@ -14,6 +14,8 @@ class BaseAttributeVector;
 // the DeprecatedDictionaryColumn, thus allowing the single indexes relying on these methods to be untemplated.
 class BaseDeprecatedDictionaryColumn : public BaseEncodedColumn {
  public:
+  using BaseEncodedColumn::BaseEncodedColumn;
+
   EncodingType encoding_type() const final { return EncodingType::DeprecatedDictionary; }
 
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;

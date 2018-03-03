@@ -11,6 +11,7 @@
 #include "chunk.hpp"
 #include "index/base_index.hpp"
 #include "reference_column.hpp"
+#include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -200,6 +201,20 @@ size_t Chunk::estimate_memory_usage() const {
   }
 
   return bytes;
+}
+
+std::shared_ptr<Chunk> Chunk::forward_clone() const {
+  const auto chunk = std::make_shared<Chunk>(_alloc, _access_counter);
+  chunk->_columns = _columns;
+  chunk->_mvcc_columns = _mvcc_columns;
+  chunk->_indices = _indices;
+}
+
+std::shared_ptr<Chunk> Chunk::materialized_clone() const {
+  const auto chunk = forward_clone();
+  for (auto &column : chunk->_columns) {
+    resolve_data_and_column_type()
+  }
 }
 
 uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
