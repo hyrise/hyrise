@@ -1,8 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <string>
-#include <type_traits>
 
 #include "storage/base_column_encoder.hpp"
 

@@ -16,7 +16,7 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary, RunLength };
+enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary, RunLength, FrameOfReference };
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -29,7 +29,8 @@ enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary,
 constexpr auto supported_data_types_for_type =
     hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, data_types),
                    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types));
+                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
 
 //  Example for an encoding that doesn’t support all data types:
 //  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)
@@ -41,8 +42,12 @@ constexpr auto supported_data_types_for_type =
  *       in a constant expression such as constexpr-if.
  */
 template <typename ColumnEncodingType, typename ColumnDataType>
-auto encoding_supports_data_type(ColumnEncodingType encoding_type, ColumnDataType data_type) {
+constexpr auto encoding_supports_data_type(ColumnEncodingType encoding_type, ColumnDataType data_type) {
   return hana::contains(hana::at_key(supported_data_types_for_type, encoding_type), data_type);
 }
+
+template <EncodingType encoding_type, typename T>
+constexpr auto encoding_supports = encoding_supports_data_type(
+    enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>);
 
 }  // namespace opossum

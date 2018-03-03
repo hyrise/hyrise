@@ -6,6 +6,7 @@
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp"
 #include "storage/dictionary_column/dictionary_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
+#include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
 
 #include "storage/base_value_column.hpp"
 #include "utils/assert.hpp"
@@ -23,7 +24,8 @@ namespace {
 static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
     {EncodingType::DeprecatedDictionary, std::make_shared<DeprecatedDictionaryEncoder>()},
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder>()},
-    {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()}};
+    {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
+    {EncodingType::FrameOfReference, std::make_shared<FrameOfReferenceEncoder>()}};
 
 }  // namespace
 
