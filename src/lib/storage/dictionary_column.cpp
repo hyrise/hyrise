@@ -59,6 +59,9 @@ size_t DictionaryColumn<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
+CompressedVectorType DictionaryColumn<T>::compressed_vector_type() const { return _attribute_vector->type(); }
+
+template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 

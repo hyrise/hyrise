@@ -28,47 +28,6 @@ class ReferenceColumn : public BaseColumn {
 
   void append(const AllTypeVariant&) override;
 
-  // return generated vector of all values (or nulls)
-  template <typename T>
-  const pmr_concurrent_vector<std::optional<T>> materialize_values() const {
-    pmr_concurrent_vector<std::optional<T>> values;
-    values.reserve(_pos_list->size());
-
-    for (const RowID& row : *_pos_list) {
-      auto chunk = _referenced_table->get_chunk(row.chunk_id);
-      std::shared_ptr<const BaseColumn> column = chunk->get_column(_referenced_column_id);
-
-      if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-        values.push_back(std::nullopt);
-        continue;
-      }
-
-      // Can't avoid Code Duplication here because get() is part of a templated class
-
-      if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-        if (value_column->is_null(row.chunk_offset)) {
-          values.push_back(std::nullopt);
-        } else {
-          values.push_back(value_column->get(row.chunk_offset));
-        }
-        continue;
-      }
-
-      if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
-        if (dict_column->is_null(row.chunk_offset)) {
-          values.push_back(std::nullopt);
-        } else {
-          values.push_back(dict_column->get(row.chunk_offset));
-        }
-        continue;
-      }
-
-      Fail("column is no dictionary or value column");
-    }
-
-    return values;
-  }
-
   size_t size() const final;
 
   const std::shared_ptr<const PosList> pos_list() const;

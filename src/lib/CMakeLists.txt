@@ -103,6 +103,8 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
+    operators/join_index.cpp
+    operators/join_index.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -287,6 +289,7 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
+    storage/materialize.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
