@@ -33,7 +33,7 @@ class IndexChoice : public TuningChoice {
     */
 
   /**
-   * The column the this index refers to
+   * The column this index refers to
    */
   ColumnRef column_ref;
 

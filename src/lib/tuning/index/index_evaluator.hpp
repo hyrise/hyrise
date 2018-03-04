@@ -20,7 +20,7 @@ namespace opossum {
  *
  * Desirability is determined by the amount of "saved work" in terms on
  * "unscanned rows", i.e. the number of rows that don't have to be read when
- * using an index on a given column compared to a linear table scan.
+ * using an index on a given column compared to a full column/table scan.
  * This assumes that columns are always scanned completely, meaning that
  * it does not take previous operators into account.
  *

@@ -59,9 +59,9 @@ void Tuner::schedule_tuning_process() {
   Assert(_selector, "Can not run Tuner without an AbstractSelector");
   Assert(!is_running(), "Can not schedule another tuning process while the previous process is still running");
 
-  _evaluate_task = std::make_shared<JobTask>([this]() { this->_evaluate(); });
-  _select_task = std::make_shared<JobTask>([this]() { this->_select(); });
-  _execute_task = std::make_shared<JobTask>([this]() { this->_execute(); });
+  _evaluate_task = std::make_shared<JobTask>([this]() { _evaluate(); });
+  _select_task = std::make_shared<JobTask>([this]() { _select(); });
+  _execute_task = std::make_shared<JobTask>([this]() { _execute(); });
 
   _evaluate_task->set_as_predecessor_of(_select_task);
   _select_task->set_as_predecessor_of(_execute_task);
@@ -97,13 +97,13 @@ void Tuner::wait_for_completion() {
 void Tuner::_evaluate() {
   LOG_INFO("Begin tuning evaluation phase...");
 
-  auto begin = RuntimeClock::now();
+  const auto begin = RuntimeClock::now();
 
   _choices.clear();
   for (const auto& evaluator : _evaluators) {
     evaluator->evaluate(_choices);
 
-    auto runtime = RuntimeClock::now() - begin;
+    const auto runtime = RuntimeClock::now() - begin;
     if (runtime > _remaining_time_budget) {
       LOG_INFO("Interrupt evaluation phase: Time budget exceeded.");
       _status = Status::Timeout;
@@ -128,11 +128,11 @@ void Tuner::_select() {
   }
   LOG_INFO("Begin tuning selection phase...");
 
-  auto begin = RuntimeClock::now();
+  const auto begin = RuntimeClock::now();
 
   _operations = _selector->select(_choices, _cost_budget);
 
-  auto runtime = RuntimeClock::now() - begin;
+  const auto runtime = RuntimeClock::now() - begin;
   if (runtime > _remaining_time_budget) {
     LOG_INFO("Interrupt selection phase: Time budget exceeded.");
     _status = Status::Timeout;
@@ -156,12 +156,12 @@ void Tuner::_execute() {
   }
   LOG_INFO("Begin tuning execution phase...");
 
-  auto begin = RuntimeClock::now();
+  const auto begin = RuntimeClock::now();
 
   for (auto& operation : _operations) {
     operation->execute();
 
-    auto runtime = RuntimeClock::now() - begin;
+    const auto runtime = RuntimeClock::now() - begin;
     if (runtime > _remaining_time_budget) {
       LOG_INFO("Interrupt execution phase: Time budget exceeded.");
       _status = Status::Timeout;
@@ -182,7 +182,8 @@ void Tuner::_log_choices() {
   LOG_DEBUG("TuningChoice set:");
   for (const auto& choice : _choices) {
     LOG_DEBUG("-> " << *choice);
-    (void)choice;  // Silence warning about unused variable in release builds
+    // Silence warning about unused variable in release builds
+    (void)choice;
   }
 }
 
@@ -190,7 +191,8 @@ void Tuner::_log_operations() {
   LOG_DEBUG("TuningOperation sequence:");
   for (const auto& operation : _operations) {
     LOG_DEBUG("-> " << *operation);
-    (void)operation;  // Silence warning about unused variable in release builds
+    // Silence warning about unused variable in release builds
+    (void)operation;
   }
 }
 

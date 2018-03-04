@@ -128,7 +128,6 @@ class Tuner {
   void _log_choices();
   void _log_operations();
 
- protected:
   std::vector<std::unique_ptr<AbstractEvaluator>> _evaluators;
   std::unique_ptr<AbstractSelector> _selector;
 

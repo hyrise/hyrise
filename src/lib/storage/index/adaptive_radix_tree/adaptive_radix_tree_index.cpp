@@ -20,7 +20,7 @@ namespace opossum {
 float AdaptiveRadixTreeIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
                                                          uint32_t value_bytes) {
   // ToDo(anyone): If you use this index in combination with the Tuning subsystem, you need to properly implement this.
-  return std::numeric_limits<float>::quiet_NaN();
+  Fail("AdaptiveRadixTreeIndex::predict_memory_consumption() is not implemented yet");
 }
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)

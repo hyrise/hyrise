@@ -36,8 +36,8 @@ void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& ch
 
   // Fill index_evaluations vector
   _choices.clear();
-  _add_existing_indices();
-  _add_new_indices();
+  _add_existing_indexes();
+  _add_new_indexes();
 
   // Evaluate
   for (auto& index_choice : _choices) {
@@ -59,11 +59,11 @@ void BaseIndexEvaluator::_setup() {}
 void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& /*record*/) {}
 
 float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
-  auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
+  const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
   float memory_cost = 0.0f;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
-    auto index = chunk->get_index(index_choice.type, index_choice.column_ref.column_ids);
+    const auto chunk = table->get_chunk(chunk_id);
+    const auto index = chunk->get_index(index_choice.type, index_choice.column_ref.column_ids);
     if (index) {
       memory_cost += index->memory_consumption();
     }
@@ -74,11 +74,12 @@ float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice)
 void BaseIndexEvaluator::_inspect_query_cache() {
   _access_records.clear();
 
-  // ToDo(anybody): The cache interface could be improved by introducing values() method in
-  // AbstractCache interfaceand implement in all subclasses
-  //  const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
-  // -> so this implementation could be independent of the actual cache implementation
-
+  /*
+   * ToDo(anybody): The cache interface could be improved by introducing values() method in
+   * AbstractCache interface and implement in all subclasses
+   *  const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
+   * -> so this implementation could be independent of the actual cache implementation
+   */
   const auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
@@ -113,27 +114,33 @@ void BaseIndexEvaluator::_inspect_lqp_operator(const std::shared_ptr<const Abstr
     auto lqp_node = queue.front();
     queue.pop_front();
 
-    if (auto left_child = lqp_node->left_child()) {
+    if (auto left_child = lqp_node->left_input()) {
       queue.push_back(left_child);
     }
-    if (auto right_child = lqp_node->right_child()) {
+    if (auto right_child = lqp_node->right_input()) {
       queue.push_back(right_child);
     }
 
     switch (lqp_node->type()) {
       case LQPNodeType::Predicate: {
+        /*
+         * A PredicateNode represents a scan that could possibly be sped up by
+         * creating an index. To do this, we need to find out where this column
+         * came from, i.e. what column on what table is scanned
+         */
         auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
         DebugAssert(predicate_node, "LQP node is not actually a PredicateNode");
         auto lqp_ref = predicate_node->column_reference();
+        // Follow the column reference to the node "producing" it (usually a StoredTableNode)
         if (lqp_ref.original_node()) {
           auto original_node = lqp_ref.original_node();
-          auto original_columnID = original_node->find_output_column_id(lqp_ref);
+          auto original_column_id = original_node->find_output_column_id(lqp_ref);
           if (original_node->type() == LQPNodeType::StoredTable) {
-            DebugAssert(original_columnID, "Could not find column ID for LQPColumnReference");
+            DebugAssert(original_column_id, "Could not find column ID for LQPColumnReference");
             auto stored_table = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
             DebugAssert(stored_table, "referenced node is not actually a StoredTableNode");
 
-            AccessRecord access_record(stored_table->table_name(), *original_columnID, query_frequency);
+            AccessRecord access_record(stored_table->table_name(), *original_column_id, query_frequency);
             access_record.condition = predicate_node->predicate_condition();
             access_record.compare_value = boost::get<AllTypeVariant>(predicate_node->value());
             _access_records.push_back(access_record);
@@ -158,6 +165,12 @@ void BaseIndexEvaluator::_inspect_pqp_operator(const std::shared_ptr<const Abstr
     auto node = queue.front();
     queue.pop_front();
     if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(node)) {
+      /*
+         * A TableScan represents a scan that could possibly be sped up by
+         * creating an index. To do this, we need to find out where this column
+         * came from, i.e. what column on what table is scanned.
+         * Usually the underlying node is a GetTable node, holding this information.
+         */
       DebugAssert(std::dynamic_pointer_cast<const Validate>(table_scan->input_left()) == nullptr,
                   "Validation nodes are not supported. Please run the pipeline without MVCC columns.");
       if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(table_scan->input_left())) {
@@ -179,14 +192,14 @@ void BaseIndexEvaluator::_inspect_pqp_operator(const std::shared_ptr<const Abstr
 }
 
 void BaseIndexEvaluator::_aggregate_access_records() {
-  _new_indices.clear();
+  _new_indexes.clear();
   for (const auto& access_record : _access_records) {
-    _new_indices.insert(access_record.column_ref);
+    _new_indexes.insert(access_record.column_ref);
     _process_access_record(access_record);
   }
 }
 
-void BaseIndexEvaluator::_add_existing_indices() {
+void BaseIndexEvaluator::_add_existing_indexes() {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
     const auto& first_chunk = table->get_chunk(ChunkID{0});
@@ -195,23 +208,23 @@ void BaseIndexEvaluator::_add_existing_indices() {
       const auto& column_id = table->column_id_by_name(column_name);
       auto column_ids = std::vector<ColumnID>();
       column_ids.emplace_back(column_id);
-      auto indices = first_chunk->get_indices(column_ids);
-      for (const auto& index : indices) {
+      auto indexes = first_chunk->get_indices(column_ids);
+      for (const auto& index : indexes) {
         _choices.emplace_back(ColumnRef{table_name, column_id}, true);
         _choices.back().type = index->type();
-        _new_indices.erase({table_name, column_id});
+        _new_indexes.erase({table_name, column_id});
       }
-      if (indices.size() > 1) {
-        LOG_DEBUG("Found " << indices.size() << " indices on " << table_name << "." << column_name);
-      } else if (indices.size() > 0) {
+      if (indexes.size() > 1) {
+        LOG_DEBUG("Found " << indexes.size() << " indexes on " << table_name << "." << column_name);
+      } else if (indexes.size() > 0) {
         LOG_DEBUG("Found index on " << table_name << "." << column_name);
       }
     }
   }
 }
 
-void BaseIndexEvaluator::_add_new_indices() {
-  for (const auto& index_spec : _new_indices) {
+void BaseIndexEvaluator::_add_new_indexes() {
+  for (const auto& index_spec : _new_indexes) {
     _choices.emplace_back(index_spec, false);
   }
 }

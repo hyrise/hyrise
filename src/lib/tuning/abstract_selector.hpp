@@ -17,7 +17,9 @@ namespace opossum {
  * The operation sequence is prioritized by expected performance impact on the system,
  * so that the most beneficial operations come before less useful operations.
  *
- * For more information on the underlying problem, see e.g. Wikipedia:
+ * The underlying problem relates to the knapsack problem, but goes beyond that
+ * in scope (e.g. choices invalidating other choices).
+ * For more information, see e.g. Wikipedia:
  *   https://en.wikipedia.org/wiki/Knapsack_problem
  */
 class AbstractSelector {

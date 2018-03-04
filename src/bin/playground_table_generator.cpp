@@ -62,7 +62,9 @@ class PlaygroundTableGenerator : public benchmark_utilities::AbstractBenchmarkTa
     std::string line;
     auto output = std::make_shared<std::vector<std::string>>();
     std::ifstream inputfile(filename);
-    opossum::Assert(inputfile, "Cannot open file " + filename);
+    if (!inputfile) {
+      throw std::runtime_error("Cannot open file " + filename);
+    }
 
     while (std::getline(inputfile, line)) {
       output->push_back(line);

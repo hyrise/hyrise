@@ -96,7 +96,9 @@ std::shared_ptr<opossum::SQLPipeline> _create_and_cache_pipeline(const std::stri
   auto query_plans = pipeline->get_query_plans();
 
   // ToDo(group01): What is the semantics of multiple entries per query? Handle cases accordingly.
-  opossum::Assert(query_plans.size() == 1, "Expected only one query plan per pipeline");
+  if (query_plans.size() != 1) {
+    throw std::runtime_error("Expected only one query plan per pipeline");
+  }
   return pipeline;
 }
 

@@ -92,11 +92,11 @@ class BaseIndexEvaluator : public AbstractEvaluator {
   void _inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
   void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency);
   void _aggregate_access_records();
-  void _add_existing_indices();
-  void _add_new_indices();
+  void _add_existing_indexes();
+  void _add_new_indexes();
 
   std::vector<AccessRecord> _access_records;
-  std::set<ColumnRef> _new_indices;
+  std::set<ColumnRef> _new_indexes;
 
   std::vector<IndexChoice> _choices;
 };
