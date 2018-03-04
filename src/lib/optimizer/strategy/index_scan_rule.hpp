@@ -14,7 +14,7 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * This optimizer rule finds PredicateNodes whose children are StoredTableNodes. These PredicateNodes are candidates
+ * This optimizer rule finds PredicateNodes whose inputs are StoredTableNodes. These PredicateNodes are candidates
  * for being executed by IndexScans. If the expected selectivity of the predicate falls below a certain threshold, the
  * ScanType of the PredicateNode is set to IndexScan.
  *

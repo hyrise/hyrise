@@ -25,7 +25,7 @@ class ConstantCalculationRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  bool _replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+  bool _replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
                                       const LQPColumnReference& expression_column, const AllTypeVariant& value);
   void _remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id);
 

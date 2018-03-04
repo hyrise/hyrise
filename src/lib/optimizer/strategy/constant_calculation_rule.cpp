@@ -20,7 +20,7 @@ std::string ConstantCalculationRule::name() const { return "Constant Calculation
 
 bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() != LQPNodeType::Projection) {
-    return _apply_to_children(node);
+    return _apply_to_inputs(node);
   }
 
   auto projection_node = std::static_pointer_cast<ProjectionNode>(node);
@@ -50,27 +50,27 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     // If the value is std::nullopt, then the expression could not be resolved at this point,
     // e.g. because it is not an arithmetic operator.
     if (value != std::nullopt &&
-        _replace_expression_in_parents(node, node->output_column_references()[column_id], *value)) {
-      // If we successfully replaced the occurrences of the expression in the parent tree,
+        _replace_expression_in_outputs(node, node->output_column_references()[column_id], *value)) {
+      // If we successfully replaced the occurrences of the expression in the output tree,
       // we can remove the column here.
       _remove_column_from_projection(projection_node, column_id);
     }
   }
 
-  return _apply_to_children(node);
+  return _apply_to_inputs(node);
 }
 
-bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_ptr<AbstractLQPNode>& node,
+bool ConstantCalculationRule::_replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
                                                              const LQPColumnReference& expression_column,
                                                              const AllTypeVariant& value) {
-  auto parent_tree_changed = false;
-  for (auto parent : node->parents()) {
-    if (parent->type() != LQPNodeType::Predicate) {
-      parent_tree_changed |= _replace_expression_in_parents(parent, expression_column, value);
+  auto output_plan_changed = false;
+  for (auto output : node->outputs()) {
+    if (output->type() != LQPNodeType::Predicate) {
+      output_plan_changed |= _replace_expression_in_outputs(output, expression_column, value);
       continue;
     }
 
-    auto predicate_node = std::static_pointer_cast<PredicateNode>(parent);
+    auto predicate_node = std::static_pointer_cast<PredicateNode>(output);
 
     // We look for a PredicateNode which has an LQPColumnReference as value,
     // referring to the column which contains the Expression we resolved before.
@@ -80,12 +80,12 @@ bool ConstantCalculationRule::_replace_expression_in_parents(const std::shared_p
       auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
                                                                 predicate_node->predicate_condition(), value);
       predicate_node->replace_with(new_predicate_node);
-      parent_tree_changed = true;
+      output_plan_changed = true;
     }
 
-    parent_tree_changed |= _replace_expression_in_parents(parent, expression_column, value);
+    output_plan_changed |= _replace_expression_in_outputs(output, expression_column, value);
   }
-  return parent_tree_changed;
+  return output_plan_changed;
 }
 
 void ConstantCalculationRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "storage/chunk.hpp"
+
 namespace opossum {
 
 class Table;
@@ -22,6 +24,6 @@ std::vector<T> _split(const std::string& str, char delimiter) {
   return internal;
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size);
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size = Chunk::MAX_SIZE);
 
 }  // namespace opossum

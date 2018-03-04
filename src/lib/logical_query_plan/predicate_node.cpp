@@ -21,17 +21,17 @@ PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const P
       _value2(value2) {}
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  DebugAssert(left_child(), "Can't copy without child");
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+  DebugAssert(left_input(), "Can't copy without input");
 
   auto value = _value;
   if (is_lqp_column_reference(_value)) {
     value =
-        adapt_column_reference_to_different_lqp(boost::get<LQPColumnReference>(value), left_child(), copied_left_child);
+        adapt_column_reference_to_different_lqp(boost::get<LQPColumnReference>(value), left_input(), copied_left_input);
   }
   return PredicateNode::make(
-      adapt_column_reference_to_different_lqp(_column_reference, left_child(), copied_left_child), _predicate_condition,
+      adapt_column_reference_to_different_lqp(_column_reference, left_input(), copied_left_input), _predicate_condition,
       value, _value2);
 }
 
@@ -84,8 +84,8 @@ ScanType PredicateNode::scan_type() const { return _scan_type; }
 void PredicateNode::set_scan_type(ScanType scan_type) { _scan_type = scan_type; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_child, const std::shared_ptr<AbstractLQPNode>& right_child) const {
-  DebugAssert(left_child && !right_child, "PredicateNode need left_child and no right_child");
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
 
   // If value references a Column, we have to resolve its ColumnID (same as for _column_reference below)
   auto value = _value;
@@ -93,10 +93,10 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     // Doing just `value = boost::get<LQPColumnReference>(value)` triggers a compiler warning in GCC release builds
     // about the assigned value being uninitialized. There seems to be no reason for this and this way seems to be
     // fine... :(
-    value = static_cast<ColumnID::base_type>(left_child->get_output_column_id(boost::get<LQPColumnReference>(value)));
+    value = static_cast<ColumnID::base_type>(left_input->get_output_column_id(boost::get<LQPColumnReference>(value)));
   }
 
-  return left_child->get_statistics()->predicate_statistics(left_child->get_output_column_id(_column_reference),
+  return left_input->get_statistics()->predicate_statistics(left_input->get_output_column_id(_column_reference),
                                                             _predicate_condition, value, _value2);
 }
 

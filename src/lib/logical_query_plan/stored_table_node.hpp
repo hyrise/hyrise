@@ -27,8 +27,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
-      const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractLQPNode>& left_input = nullptr,
+      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
@@ -36,9 +36,9 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
-  void _on_child_changed() override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  void _on_input_changed() override;
   std::optional<QualifiedColumnName> _resolve_local_table_name(
       const QualifiedColumnName& qualified_column_name) const override;
 
