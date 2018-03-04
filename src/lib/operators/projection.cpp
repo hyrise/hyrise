@@ -11,6 +11,8 @@
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
+#include "storage/create_iterable_from_column.hpp"
+#include "storage/materialize.hpp"
 #include "storage/reference_column.hpp"
 #include "utils/arithmetic_operator_expression.hpp"
 
@@ -36,7 +38,23 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Projection>(_input_left->recreate(args), _column_expressions);
+  ColumnExpressions new_column_expressions;
+
+  for (const auto& column_expression : _column_expressions) {
+    if (column_expression->type() == ExpressionType::Placeholder) {
+      auto value_placeholder = column_expression->value_placeholder();
+
+      if (value_placeholder.index() < args.size()) {
+        const auto& parameter_variant = args[value_placeholder.index()];
+        auto value = boost::get<AllTypeVariant>(parameter_variant);
+        new_column_expressions.emplace_back(column_expression->set_placeholder_value(value));
+      }
+    } else {
+      new_column_expressions.emplace_back(column_expression);
+    }
+  }
+
+  return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
 }
 
 template <typename T>
@@ -70,8 +88,8 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     null_values.reserve(values.size());
 
     for (const auto value : values) {
-      non_null_values.push_back(value ? *value : T{});
-      null_values.push_back(value == std::nullopt);
+      non_null_values.push_back(value.second);
+      null_values.push_back(value.first);
     }
 
     column = std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
@@ -130,7 +148,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
 DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                              const std::shared_ptr<const Table>& table) {
-  if (expression->type() == ExpressionType::Literal) {
+  if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder) {
     return data_type_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::Column) {
@@ -157,7 +175,7 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
 }
 
 template <typename T>
-const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
+const pmr_concurrent_vector<std::pair<bool, T>> Projection::_evaluate_expression(
     const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
     const ChunkID chunk_id) {
   /**
@@ -166,28 +184,22 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
    * On the other hand this is not used for nested arithmetic Expressions, such as 'SELECT a + 5 FROM table_a'.
    */
   if (expression->type() == ExpressionType::Literal) {
-    return pmr_concurrent_vector<std::optional<T>>(table->get_chunk(chunk_id)->size(),
-                                                   boost::get<T>(expression->value()));
+    return pmr_concurrent_vector<std::pair<bool, T>>(table->get_chunk(chunk_id)->size(),
+                                                     std::make_pair(false, boost::get<T>(expression->value())));
   }
 
   /**
    * Handle column reference
    */
   if (expression->type() == ExpressionType::Column) {
-    auto column = table->get_chunk(chunk_id)->get_column(expression->column_id());
+    const auto chunk = table->get_chunk(chunk_id);
 
-    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-      // values are copied
-      return value_column->materialize_values();
-    }
-    if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
-      return dict_column->materialize_values();
-    }
-    if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
-      return ref_column->template materialize_values<T>();  // Clang needs the template prefix
-    }
+    pmr_concurrent_vector<std::pair<bool, T>> values_and_nulls;
+    values_and_nulls.reserve(chunk->size());
 
-    Fail("Materializing chunk failed.");
+    materialize_values_and_nulls(*chunk->get_column(expression->column_id()), values_and_nulls);
+
+    return values_and_nulls;
   }
 
   /**
@@ -197,7 +209,7 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
 
   const auto& arithmetic_operator_function = function_for_arithmetic_expression<T>(expression->type());
 
-  pmr_concurrent_vector<std::optional<T>> values;
+  pmr_concurrent_vector<std::pair<bool, T>> values;
   values.resize(table->get_chunk(chunk_id)->size());
 
   const auto& left = expression->left_child();
@@ -207,38 +219,34 @@ const pmr_concurrent_vector<std::optional<T>> Projection::_evaluate_expression(
 
   if ((left_is_literal && variant_is_null(left->value())) || (right_is_literal && variant_is_null(right->value()))) {
     // one of the operands is a literal null - early out.
-    std::fill(values.begin(), values.end(), std::nullopt);
+    std::fill(values.begin(), values.end(), std::make_pair(true, T{}));
   } else if (left_is_literal && right_is_literal) {
     std::fill(values.begin(), values.end(),
-              arithmetic_operator_function(boost::get<T>(left->value()), boost::get<T>(right->value())));
+              std::make_pair(
+                  false, arithmetic_operator_function(boost::get<T>(left->value()), boost::get<T>(right->value()))));
   } else if (right_is_literal) {
     auto left_values = _evaluate_expression<T>(left, table, chunk_id);
     auto right_value = boost::get<T>(right->value());
     // apply operator function to both vectors
-    auto func = [&](std::optional<T> left_value) -> std::optional<T> {
-      if (!left_value) return std::nullopt;
-      return arithmetic_operator_function(*left_value, right_value);
+    auto func = [&](const std::pair<bool, T>& left_value) -> std::pair<bool, T> {
+      return std::make_pair(left_value.first, arithmetic_operator_function(left_value.second, right_value));
     };
     std::transform(left_values.begin(), left_values.end(), values.begin(), func);
-
   } else if (left_is_literal) {
     auto right_values = _evaluate_expression<T>(right, table, chunk_id);
     auto left_value = boost::get<T>(left->value());
     // apply operator function to both vectors
-    auto func = [&](std::optional<T> right_value) -> std::optional<T> {
-      if (!right_value) return std::nullopt;
-      return arithmetic_operator_function(left_value, *right_value);
+    auto func = [&](const std::pair<bool, T>& right_value) -> std::pair<bool, T> {
+      return std::make_pair(right_value.first, arithmetic_operator_function(left_value, right_value.second));
     };
     std::transform(right_values.begin(), right_values.end(), values.begin(), func);
-
   } else {
     auto left_values = _evaluate_expression<T>(left, table, chunk_id);
     auto right_values = _evaluate_expression<T>(right, table, chunk_id);
 
     // apply operator function to both vectors
-    auto func = [&](std::optional<T> left, std::optional<T> right) -> std::optional<T> {
-      if (!left || !right) return std::nullopt;
-      return arithmetic_operator_function(*left, *right);
+    auto func = [&](const std::pair<bool, T>& left, const std::pair<bool, T>& right) -> std::pair<bool, T> {
+      return std::make_pair(left.first || right.first, arithmetic_operator_function(left.second, right.second));
     };
     std::transform(left_values.begin(), left_values.end(), right_values.begin(), values.begin(), func);
   }

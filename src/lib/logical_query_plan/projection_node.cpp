@@ -13,6 +13,14 @@
 
 namespace opossum {
 
+std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& input) {
+  std::vector<std::shared_ptr<LQPExpression>> expressions =
+      LQPExpression::create_columns(input->output_column_references());
+  const auto projection_node = ProjectionNode::make(expressions);
+  projection_node->set_left_input(input);
+  return projection_node;
+}
+
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
@@ -22,8 +30,8 @@ std::string ProjectionNode::description() const {
   desc << "[Projection] ";
 
   std::vector<std::string> verbose_column_names;
-  if (left_child()) {
-    verbose_column_names = left_child()->get_verbose_column_names();
+  if (left_input()) {
+    verbose_column_names = left_input()->get_verbose_column_names();
   }
 
   for (size_t column_idx = 0; column_idx < _column_expressions.size(); ++column_idx) {
@@ -37,26 +45,26 @@ std::string ProjectionNode::description() const {
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  Assert(left_child() && copied_left_child, "Can't deep copy without child to adjust ColumnReferences");
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+  Assert(left_input() && copied_left_input, "Can't deep copy without input to adjust ColumnReferences");
 
   std::vector<std::shared_ptr<LQPExpression>> column_expressions;
   column_expressions.reserve(_column_expressions.size());
   for (const auto& expression : _column_expressions) {
     column_expressions.emplace_back(
-        adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
+        adapt_expression_to_different_lqp(expression->deep_copy(), left_input(), copied_left_input));
   }
 
-  return std::make_shared<ProjectionNode>(column_expressions);
+  return ProjectionNode::make(column_expressions);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expressions() const {
   return _column_expressions;
 }
 
-void ProjectionNode::_on_child_changed() {
-  DebugAssert(!right_child(), "Projection can't have a right child");
+void ProjectionNode::_on_input_changed() {
+  DebugAssert(!right_input(), "Projection can't have a right input");
 
   _output_column_names.reset();
 }
@@ -77,7 +85,7 @@ const std::vector<std::string>& ProjectionNode::output_column_names() const {
 }
 
 std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
-  DebugAssert(left_child(), "Need input to generate name");
+  DebugAssert(left_input(), "Need input to generate name");
   DebugAssert(column_id < _column_expressions.size(), "ColumnID out of range");
 
   const auto& column_expression = _column_expressions[column_id];
@@ -86,23 +94,32 @@ std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
     return *column_expression->alias();
   }
 
-  if (left_child()) {
-    return column_expression->to_string(left_child()->output_column_names());
+  if (left_input()) {
+    return column_expression->to_string(left_input()->output_column_names());
   } else {
     return column_expression->to_string();
   }
 }
 
+bool ProjectionNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& projection_node = dynamic_cast<const ProjectionNode&>(rhs);
+
+  Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
+  return _equals(*left_input(), _column_expressions, *projection_node.left_input(),
+                 projection_node._column_expressions);
+}
+
 void ProjectionNode::_update_output() const {
   /**
-   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
-   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever an input changed and is
+   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left input in Join) and thus
    * allows easier manipulation in the optimizer.
    */
 
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
-  DebugAssert(left_child(), "Can't set output without input");
+  DebugAssert(left_input(), "Can't set output without input");
 
   _output_column_names.emplace();
   _output_column_names->reserve(_column_expressions.size());
@@ -119,21 +136,22 @@ void ProjectionNode::_update_output() const {
     }
 
     if (expression->type() == ExpressionType::Column) {
-      DebugAssert(left_child(), "ProjectionNode needs a child.");
+      DebugAssert(left_input(), "ProjectionNode needs a input.");
 
       _output_column_references->emplace_back(expression->column_reference());
 
       if (!expression->alias()) {
-        const auto input_column_id = left_child()->get_output_column_id(expression->column_reference());
-        const auto& column_name = left_child()->output_column_names()[input_column_id];
+        const auto input_column_id = left_input()->get_output_column_id(expression->column_reference());
+        const auto& column_name = left_input()->output_column_names()[input_column_id];
         _output_column_names->emplace_back(column_name);
       }
 
-    } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
+    } else if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder ||
+               expression->is_arithmetic_operator()) {
       _output_column_references->emplace_back(shared_from_this(), column_id);
 
       if (!expression->alias()) {
-        _output_column_names->emplace_back(expression->to_string(left_child()->output_column_names()));
+        _output_column_names->emplace_back(expression->to_string(left_input()->output_column_names()));
       }
 
     } else {

@@ -17,7 +17,7 @@ namespace opossum {
  * It is useful in tests (e.g. general LQP tests, optimizer tests that just rely on statistics and not actual data) and
  * the playground
  */
-class MockNode : public AbstractLQPNode {
+class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
@@ -28,13 +28,17 @@ class MockNode : public AbstractLQPNode {
 
   const std::vector<std::string>& output_column_names() const override;
 
+  const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
+
   std::string description() const override;
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
 
  private:
   std::vector<std::string> _output_column_names;

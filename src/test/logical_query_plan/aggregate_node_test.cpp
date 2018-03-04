@@ -17,30 +17,31 @@ namespace opossum {
 class AggregateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = std::make_shared<MockNode>(
+    _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = {_mock_node, ColumnID{0}};
     _b = {_mock_node, ColumnID{1}};
     _c = {_mock_node, ColumnID{2}};
 
-    const auto a_expr = LQPExpression::create_column(_a);
-    const auto b_expr = LQPExpression::create_column(_b);
-    const auto c_expr = LQPExpression::create_column(_c);
+    _a_expr = LQPExpression::create_column(_a);
+    _b_expr = LQPExpression::create_column(_b);
+    _c_expr = LQPExpression::create_column(_c);
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
-    _aggregate_node = std::make_shared<AggregateNode>(
-        std::vector<std::shared_ptr<LQPExpression>>{
-            LQPExpression::create_aggregate_function(
-                AggregateFunction::Sum,
-                {LQPExpression::create_binary_operator(ExpressionType::Addition, a_expr, b_expr)}),
-            LQPExpression::create_aggregate_function(
-                AggregateFunction::Sum,
-                {LQPExpression::create_binary_operator(ExpressionType::Addition, a_expr, c_expr)},
-                {std::string("some_sum")})},
-        std::vector<LQPColumnReference>{_a, _c});
-    _aggregate_node->set_left_child(_mock_node);
+    _aggregates = std::vector<std::shared_ptr<LQPExpression>>{
+        LQPExpression::create_aggregate_function(
+            AggregateFunction::Sum,
+            {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
+        LQPExpression::create_aggregate_function(
+            AggregateFunction::Sum, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
+            {std::string("some_sum")})};
+
+    _groupby_columns = std::vector<LQPColumnReference>{_a, _c};
+
+    _aggregate_node = AggregateNode::make(_aggregates, _groupby_columns);
+    _aggregate_node->set_left_input(_mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -48,6 +49,9 @@ class AggregateNodeTest : public BaseTest {
   LQPColumnReference _a;
   LQPColumnReference _b;
   LQPColumnReference _c;
+  std::shared_ptr<LQPExpression> _a_expr, _b_expr, _c_expr;
+  std::vector<std::shared_ptr<LQPExpression>> _aggregates;
+  std::vector<LQPColumnReference> _groupby_columns;
 };
 
 TEST_F(AggregateNodeTest, ColumnReferenceByNamedColumnReference) {
@@ -120,6 +124,31 @@ TEST_F(AggregateNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{1}), "t_a.c");
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{2}), "SUM(t_a.a + t_a.b)");
   EXPECT_EQ(_aggregate_node->get_verbose_column_name(ColumnID{3}), "some_sum");
+}
+
+TEST_F(AggregateNodeTest, ShallowEquals) {
+  EXPECT_TRUE(_aggregate_node->shallow_equals(*_aggregate_node));
+
+  // Build a slightly different aggregate node
+  const auto aggregates_a = std::vector<std::shared_ptr<LQPExpression>>{
+      LQPExpression::create_aggregate_function(
+          AggregateFunction::Min, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
+      LQPExpression::create_aggregate_function(
+          AggregateFunction::Sum, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
+          {std::string("some_sum")})};
+
+  const auto groupby_columns_a = std::vector<LQPColumnReference>{_a, _c};
+
+  const auto other_aggregate_node_a = AggregateNode::make(aggregates_a, _groupby_columns);
+  other_aggregate_node_a->set_left_input(_mock_node);
+  EXPECT_FALSE(_aggregate_node->shallow_equals(*other_aggregate_node_a));
+  EXPECT_FALSE(other_aggregate_node_a->shallow_equals(*_aggregate_node));
+
+  const auto groupby_columns_b = std::vector<LQPColumnReference>{_a, _c, _b};
+  const auto other_aggregate_node_b = AggregateNode::make(_aggregates, groupby_columns_b);
+  other_aggregate_node_b->set_left_input(_mock_node);
+  EXPECT_FALSE(_aggregate_node->shallow_equals(*other_aggregate_node_b));
+  EXPECT_FALSE(other_aggregate_node_b->shallow_equals(*_aggregate_node));
 }
 
 }  // namespace opossum

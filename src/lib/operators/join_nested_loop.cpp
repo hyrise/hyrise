@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -57,19 +58,17 @@ void JoinNestedLoop::_create_table_structure() {
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
 
-  // Preparing output table by adding columns from left table
-  for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
-    auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
-    _output_table->add_column_definition(_left_in_table->column_name(column_id), _left_in_table->column_type(column_id),
-                                         nullable);
-  }
+  // Preparing output table by adding columns from left and right table
+  auto add_column_definitions = [&](auto from_table, auto from_may_produce_null) {
+    for (ColumnID column_id{0}; column_id < from_table->column_count(); ++column_id) {
+      auto nullable = (from_may_produce_null || from_table->column_is_nullable(column_id));
+      _output_table->add_column_definition(from_table->column_name(column_id), from_table->column_type(column_id),
+                                           nullable);
+    }
+  };
 
-  // Preparing output table by adding columns from right table
-  for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
-    auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
-    _output_table->add_column_definition(_right_in_table->column_name(column_id),
-                                         _right_in_table->column_type(column_id), nullable);
-  }
+  add_column_definitions(_left_in_table, left_may_produce_null);
+  add_column_definitions(_right_in_table, right_may_produce_null);
 }
 
 // inner join loop that joins two columns via their iterators
@@ -154,7 +153,7 @@ void JoinNestedLoop::_perform_join() {
 
           // clang-format off
           if constexpr (neither_is_string_column || both_are_string_columns) {
-            auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+            auto iterable_left = erase_type_from_iterable(create_iterable_from_column<LeftType>(typed_left_column));
             auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
             iterable_left.with_iterators([&](auto left_it, auto left_end) {

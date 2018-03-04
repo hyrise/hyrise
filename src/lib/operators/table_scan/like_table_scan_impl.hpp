@@ -42,6 +42,16 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   using BaseSingleColumnTableScanImpl::handle_column;
 
+ public:
+  /**
+   * @defgroup Methods which are used to convert an SQL wildcard into a C++ regex.
+   * @{
+   */
+
+  static std::string sqllike_to_regex(std::string sqllike);
+
+  /**@}*/
+
  private:
   /**
    * @defgroup Methods used for handling dictionary columns
@@ -56,16 +66,6 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @returns number of matches and the result of each dictionary entry
    */
   std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);
-
-  /**@}*/
-
- private:
-  /**
-   * @defgroup Methods which are used to convert an SQL wildcard into a C++ regex.
-   * @{
-   */
-
-  static std::string _sqllike_to_regex(std::string sqllike);
 
   /**@}*/
 

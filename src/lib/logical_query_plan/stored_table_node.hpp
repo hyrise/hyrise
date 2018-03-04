@@ -16,9 +16,9 @@ class TableStatistics;
  * This node type represents a table stored by the table manager.
  * They are the leafs of every meaningful LQP tree.
  */
-class StoredTableNode : public AbstractLQPNode {
+class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
-  explicit StoredTableNode(const std::string& table_name);
+  explicit StoredTableNode(const std::string& table_name, const std::optional<std::string>& alias = std::nullopt);
 
   const std::string& table_name() const;
 
@@ -27,16 +27,18 @@ class StoredTableNode : public AbstractLQPNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_child = nullptr,
-      const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractLQPNode>& left_input = nullptr,
+      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
-  void _on_child_changed() override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  void _on_input_changed() override;
   std::optional<QualifiedColumnName> _resolve_local_table_name(
       const QualifiedColumnName& qualified_column_name) const override;
 

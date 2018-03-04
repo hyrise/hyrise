@@ -34,7 +34,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 
         auto predicate_node = join_condition->predicate_node;
         const auto new_join_node =
-            std::make_shared<JoinNode>(JoinMode::Inner, join_column_ids, predicate_node->predicate_condition());
+            JoinNode::make(JoinMode::Inner, join_column_ids, predicate_node->predicate_condition());
 
         /**
          * Place the conditional join where the cross join was and remove the predicate node
@@ -47,35 +47,35 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     }
   }
 
-  return _apply_to_children(node);
+  return _apply_to_inputs(node);
 }
 
 std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predicate_for_cross_join(
     const std::shared_ptr<JoinNode>& cross_join) {
-  Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
+  Assert(cross_join->left_input() && cross_join->right_input(), "Cross Join must have two inputs");
 
-  // Everytime we traverse a node which we're the right child of, the ColumnIDs a predicate needs to reference become
+  // Everytime we traverse a node which we're the right input of, the ColumnIDs a predicate needs to reference become
   // offset
   auto column_id_offset = 0;
 
   // Go up in LQP to find corresponding PredicateNode
   std::shared_ptr<AbstractLQPNode> node = cross_join;
   while (true) {
-    const auto parents = node->parents();
+    const auto outputs = node->outputs();
 
     /**
-     * Can't deal with the parents.size() > 0 case - would need to check that a potential predicate exists in all
-     * parents and this is too much work considering the JoinDetectionRule will be removed soon-ish (TM)
+     * Can't deal with the outputs.size() > 0 case - would need to check that a potential predicate exists in all
+     * outputs and this is too much work considering the JoinDetectionRule will be removed soon-ish (TM)
      */
-    if (parents.empty() || parents.size() > 1) {
+    if (outputs.empty() || outputs.size() > 1) {
       break;
     }
 
-    if (node->get_child_side(parents[0]) == LQPChildSide::Right) {
-      column_id_offset += parents[0]->left_child()->output_column_count();
+    if (node->get_input_side(outputs[0]) == LQPInputSide::Right) {
+      column_id_offset += outputs[0]->left_input()->output_column_count();
     }
 
-    node = parents[0];
+    node = outputs[0];
 
     /**
      * TODO(anyone)
@@ -104,15 +104,15 @@ std::optional<JoinDetectionRule::JoinCondition> JoinDetectionRule::_find_predica
       auto predicate_left_column_reference = predicate_node->column_reference();
       auto predicate_right_column_reference = boost::get<LQPColumnReference>(predicate_node->value());
 
-      const auto left_in_left = cross_join->left_child()->find_output_column_id(predicate_left_column_reference);
-      const auto right_in_right = cross_join->right_child()->find_output_column_id(predicate_right_column_reference);
+      const auto left_in_left = cross_join->left_input()->find_output_column_id(predicate_left_column_reference);
+      const auto right_in_right = cross_join->right_input()->find_output_column_id(predicate_right_column_reference);
 
       if (left_in_left && right_in_right) {
         return JoinCondition{predicate_node, predicate_left_column_reference, predicate_right_column_reference};
       }
 
-      const auto left_in_right = cross_join->right_child()->find_output_column_id(predicate_left_column_reference);
-      const auto right_in_left = cross_join->left_child()->find_output_column_id(predicate_right_column_reference);
+      const auto left_in_right = cross_join->right_input()->find_output_column_id(predicate_left_column_reference);
+      const auto right_in_left = cross_join->left_input()->find_output_column_id(predicate_right_column_reference);
 
       if (right_in_left && left_in_right) {
         return JoinCondition{predicate_node, predicate_right_column_reference, predicate_left_column_reference};

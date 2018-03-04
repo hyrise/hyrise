@@ -17,23 +17,23 @@ namespace opossum {
 class ProjectionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = std::make_shared<MockNode>(
+    _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = {_mock_node, ColumnID{0}};
     _b = {_mock_node, ColumnID{1}};
     _c = {_mock_node, ColumnID{2}};
 
-    const auto a_expr = LQPExpression::create_column(_a);
-    const auto b_expr = LQPExpression::create_column(_b);
-    const auto c_expr = LQPExpression::create_column(_c);
+    _a_expr = LQPExpression::create_column(_a);
+    _b_expr = LQPExpression::create_column(_b);
+    _c_expr = LQPExpression::create_column(_c);
 
     // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
-    _projection_node = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{
-        c_expr, a_expr, LQPExpression::create_column(_b, {"alias_for_b"}),
-        LQPExpression::create_binary_operator(ExpressionType::Addition, b_expr, c_expr, {"some_addition"}),
-        LQPExpression::create_binary_operator(ExpressionType::Addition, a_expr, c_expr)});
-    _projection_node->set_left_child(_mock_node);
+    _projection_node = ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{
+        _c_expr, _a_expr, LQPExpression::create_column(_b, {"alias_for_b"}),
+        LQPExpression::create_binary_operator(ExpressionType::Addition, _b_expr, _c_expr, {"some_addition"}),
+        LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)});
+    _projection_node->set_left_input(_mock_node);
 
     _some_addition = {_projection_node, ColumnID{3}};
     _a_plus_c = {_projection_node, ColumnID{4}};
@@ -41,6 +41,7 @@ class ProjectionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
+  std::shared_ptr<LQPExpression> _a_expr, _b_expr, _c_expr;
   LQPColumnReference _a;
   LQPColumnReference _b;
   LQPColumnReference _c;
@@ -49,7 +50,8 @@ class ProjectionNodeTest : public BaseTest {
 };
 
 TEST_F(ProjectionNodeTest, Description) {
-  EXPECT_EQ(_projection_node->description(), "[Projection] t_a.c, t_a.a, t_a.b, t_a.b + t_a.c, t_a.a + t_a.c");
+  EXPECT_EQ(_projection_node->description(),
+            "[Projection] t_a.c, t_a.a, t_a.b AS alias_for_b, t_a.b + t_a.c, t_a.a + t_a.c");
 }
 
 TEST_F(ProjectionNodeTest, ColumnReferenceByNamedColumnReference) {
@@ -77,6 +79,26 @@ TEST_F(ProjectionNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{1}), "t_a.a");
   EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{2}), "alias_for_b");
   EXPECT_EQ(_projection_node->get_verbose_column_name(ColumnID{3}), "some_addition");
+}
+
+TEST_F(ProjectionNodeTest, ShallowEquals) {
+  EXPECT_TRUE(_projection_node->shallow_equals(*_projection_node));
+
+  const auto other_projection_node_a = ProjectionNode::make(
+      std::vector<std::shared_ptr<LQPExpression>>{
+          _c_expr, _a_expr, LQPExpression::create_column(_b, {"alias_for_b"}),
+          LQPExpression::create_binary_operator(ExpressionType::Addition, _b_expr, _c_expr, {"some_addition"}),
+          LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
+      _mock_node);
+  EXPECT_TRUE(other_projection_node_a->shallow_equals(*_projection_node));
+
+  const auto other_projection_node_b = ProjectionNode::make(
+      std::vector<std::shared_ptr<LQPExpression>>{
+          _c_expr, _a_expr, LQPExpression::create_column(_b, {"alias_for_bs"}),
+          LQPExpression::create_binary_operator(ExpressionType::Addition, _b_expr, _c_expr, {"some_addition"}),
+          LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)},
+      _mock_node);
+  EXPECT_FALSE(other_projection_node_b->shallow_equals(*_projection_node));
 }
 
 }  // namespace opossum

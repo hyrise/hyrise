@@ -9,6 +9,7 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -56,140 +57,145 @@ class PredicateReorderingTest : public StrategyBaseTest {
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
     _rule = std::make_shared<PredicateReorderingRule>();
+
+    std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(
+        {std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 20, 10, 100),
+         std::make_shared<ColumnStatistics<int32_t>>(ColumnID{1}, 5, 50, 60),
+         std::make_shared<ColumnStatistics<int32_t>>(ColumnID{2}, 2, 110, 1100)});
+
+    auto table_statistics = std::make_shared<TableStatistics>(100, column_statistics);
+
+    _mock_node = MockNode::make(table_statistics);
+
+    _mock_node_a = LQPColumnReference{_mock_node, ColumnID{0}};
+    _mock_node_b = LQPColumnReference{_mock_node, ColumnID{1}};
+    _mock_node_c = LQPColumnReference{_mock_node, ColumnID{2}};
   }
 
+  std::shared_ptr<MockNode> _mock_node;
+  LQPColumnReference _mock_node_a, _mock_node_b, _mock_node_c;
   std::shared_ptr<PredicateReorderingRule> _rule;
 };
 
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThan, 10,
+    PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThan, 50,
+      _mock_node));
+  // clang-format on
+
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
+  predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{1}},
-                                                          PredicateCondition::GreaterThan, 50);
-  predicate_node_1->set_left_child(predicate_node_0);
+  auto predicate_node_1 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{1}}, PredicateCondition::GreaterThan, 50);
+  predicate_node_1->set_left_input(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   EXPECT_EQ(reordered, predicate_node_0);
-  EXPECT_EQ(reordered->left_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->left_child(), stored_table_node);
+  EXPECT_EQ(reordered->left_input(), predicate_node_1);
+  EXPECT_EQ(reordered->left_input()->left_input(), stored_table_node);
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 5);
-  predicate_node_0->set_left_child(stored_table_node);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 5);
+  predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{1}},
-                                                          PredicateCondition::GreaterThan, 1);
-  predicate_node_1->set_left_child(predicate_node_0);
+  auto predicate_node_1 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{1}}, PredicateCondition::GreaterThan, 1);
+  predicate_node_1->set_left_input(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 9);
-  predicate_node_2->set_left_child(predicate_node_1);
+  auto predicate_node_2 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 9);
+  predicate_node_2->set_left_input(predicate_node_1);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
   EXPECT_EQ(reordered, predicate_node_2);
-  EXPECT_EQ(reordered->left_child(), predicate_node_0);
-  EXPECT_EQ(reordered->left_child()->left_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), stored_table_node);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_1);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), stored_table_node);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
+    PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
+      PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
+        ProjectionNode::make_pass_through(
+          PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+            PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
+              _mock_node))))));
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>();
-  stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  const auto expected_optimized_lqp =
+  PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
+    PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
+      PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
+        ProjectionNode::make_pass_through(
+          PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
+            PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
+              _mock_node))))));
+  // clang-format on
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{1}},
-                                                          PredicateCondition::GreaterThan, 50);
-  predicate_node_1->set_left_child(predicate_node_0);
-
-  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 90);
-  predicate_node_2->set_left_child(predicate_node_1);
-
-  const auto& expressions = LQPExpression::create_columns(
-      {LQPColumnReference{stored_table_node, ColumnID{0}}, LQPColumnReference{stored_table_node, ColumnID{1}}});
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
-  projection_node->set_left_child(predicate_node_2);
-
-  auto predicate_node_3 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 10);
-  predicate_node_3->set_left_child(projection_node);
-
-  auto predicate_node_4 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{1}},
-                                                          PredicateCondition::GreaterThan, 50);
-  predicate_node_4->set_left_child(predicate_node_3);
-
-  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_4);
-
-  EXPECT_EQ(reordered, predicate_node_3);
-  EXPECT_EQ(reordered->left_child(), predicate_node_4);
-  EXPECT_EQ(reordered->left_child()->left_child(), projection_node);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), predicate_node_2);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child(), predicate_node_0);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(),
-            stored_table_node);
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
 }
 
 TEST_F(PredicateReorderingTest, TwoReorderings) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("a");
+  auto stored_table_node = StoredTableNode::make("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
+  predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{1}},
-                                                          PredicateCondition::GreaterThan, 50);
-  predicate_node_1->set_left_child(predicate_node_0);
+  auto predicate_node_1 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{1}}, PredicateCondition::GreaterThan, 50);
+  predicate_node_1->set_left_input(predicate_node_0);
 
-  auto sort_node = std::make_shared<SortNode>(
+  auto sort_node = SortNode::make(
       std::vector<OrderByDefinition>{{LQPColumnReference{stored_table_node, ColumnID{0}}, OrderByMode::Ascending}});
-  sort_node->set_left_child(predicate_node_1);
+  sort_node->set_left_input(predicate_node_1);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{2}},
-                                                          PredicateCondition::GreaterThan, 90);
-  predicate_node_2->set_left_child(sort_node);
+  auto predicate_node_2 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 90);
+  predicate_node_2->set_left_input(sort_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{1}},
-                                                          PredicateCondition::GreaterThan, 50);
-  predicate_node_3->set_left_child(predicate_node_2);
+  auto predicate_node_3 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{1}}, PredicateCondition::GreaterThan, 50);
+  predicate_node_3->set_left_input(predicate_node_2);
 
   const auto& expressions = LQPExpression::create_columns(
       {LQPColumnReference{stored_table_node, ColumnID{0}}, LQPColumnReference{stored_table_node, ColumnID{1}}});
-  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
-  projection_node->set_left_child(predicate_node_3);
+  const auto projection_node = ProjectionNode::make(expressions);
+  projection_node->set_left_input(predicate_node_3);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(reordered, projection_node);
-  EXPECT_EQ(reordered->left_child(), predicate_node_2);
-  EXPECT_EQ(reordered->left_child()->left_child(), predicate_node_3);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), sort_node);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child(), predicate_node_0);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(),
+  EXPECT_EQ(reordered->left_input(), predicate_node_2);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_3);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), sort_node);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input(), predicate_node_0);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input()->left_input(), predicate_node_1);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input()->left_input()->left_input(),
             stored_table_node);
 }
 
@@ -197,17 +203,17 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float4.tbl", 2);
   StorageManager::get().add_table("table_a", std::move(table_a));
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  auto stored_table_node = StoredTableNode::make("table_a");
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::LessThan, 20);
-  predicate_node_0->set_left_child(stored_table_node);
+  auto predicate_node_0 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::LessThan, 20);
+  predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::LessThan, 40);
-  predicate_node_1->set_left_child(predicate_node_0);
+  auto predicate_node_1 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::LessThan, 40);
+  predicate_node_1->set_left_input(predicate_node_0);
 
   predicate_node_1->get_statistics();
 
@@ -215,28 +221,28 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::LessThan, 40);
-  predicate_node_2->set_left_child(stored_table_node);
+  auto predicate_node_2 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::LessThan, 40);
+  predicate_node_2->set_left_input(stored_table_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(LQPColumnReference{stored_table_node, ColumnID{0}},
-                                                          PredicateCondition::LessThan, 20);
-  predicate_node_3->set_left_child(predicate_node_2);
+  auto predicate_node_3 =
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::LessThan, 20);
+  predicate_node_3->set_left_input(predicate_node_2);
 
   auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
 
   EXPECT_EQ(reordered, predicate_node_1);
-  EXPECT_EQ(reordered->left_child(), predicate_node_0);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
   EXPECT_EQ(reordered_1, predicate_node_2);
-  EXPECT_EQ(reordered_1->left_child(), predicate_node_3);
+  EXPECT_EQ(reordered_1->left_input(), predicate_node_3);
 }
 
-TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
+TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   /**
    * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
    * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
-   * predicates to the parent (the cross node in this case). This test checks whether the attachment happens as the
-   * correct child.
+   * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
+   * correct input.
    *
    *             _______Cross________
    *            /                    \
@@ -256,42 +262,37 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   auto table_statistics =
       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
-  auto table_0 = std::make_shared<MockNode>(table_statistics);
-  auto table_1 = std::make_shared<MockNode>(table_statistics);
-  auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto predicate_0 =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_0, ColumnID{0}}, PredicateCondition::GreaterThan, 80);
-  auto predicate_1 =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_0, ColumnID{0}}, PredicateCondition::GreaterThan, 60);
-  auto predicate_2 =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, PredicateCondition::GreaterThan, 90);
-  auto predicate_3 =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, PredicateCondition::GreaterThan, 50);
-  auto predicate_4 =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_1, ColumnID{0}}, PredicateCondition::GreaterThan, 30);
+  auto table_0 = MockNode::make(table_statistics);
+  auto table_1 = MockNode::make(table_statistics);
+  auto cross_node = JoinNode::make(JoinMode::Cross);
+  auto predicate_0 = PredicateNode::make(LQPColumnReference{table_0, ColumnID{0}}, PredicateCondition::GreaterThan, 80);
+  auto predicate_1 = PredicateNode::make(LQPColumnReference{table_0, ColumnID{0}}, PredicateCondition::GreaterThan, 60);
+  auto predicate_2 = PredicateNode::make(LQPColumnReference{table_1, ColumnID{0}}, PredicateCondition::GreaterThan, 90);
+  auto predicate_3 = PredicateNode::make(LQPColumnReference{table_1, ColumnID{0}}, PredicateCondition::GreaterThan, 50);
+  auto predicate_4 = PredicateNode::make(LQPColumnReference{table_1, ColumnID{0}}, PredicateCondition::GreaterThan, 30);
 
-  predicate_1->set_left_child(table_0);
-  predicate_0->set_left_child(predicate_1);
-  predicate_4->set_left_child(table_1);
-  predicate_3->set_left_child(predicate_4);
-  predicate_2->set_left_child(predicate_3);
-  cross_node->set_left_child(predicate_0);
-  cross_node->set_right_child(predicate_2);
+  predicate_1->set_left_input(table_0);
+  predicate_0->set_left_input(predicate_1);
+  predicate_4->set_left_input(table_1);
+  predicate_3->set_left_input(predicate_4);
+  predicate_2->set_left_input(predicate_3);
+  cross_node->set_left_input(predicate_0);
+  cross_node->set_right_input(predicate_2);
 
   const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
 
   EXPECT_EQ(reordered, cross_node);
-  EXPECT_EQ(reordered->left_child(), predicate_1);
-  EXPECT_EQ(reordered->left_child()->left_child(), predicate_0);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), table_0);
-  EXPECT_EQ(reordered->right_child(), predicate_4);
-  EXPECT_EQ(reordered->right_child()->left_child(), predicate_3);
-  EXPECT_EQ(reordered->right_child()->left_child()->left_child(), predicate_2);
+  EXPECT_EQ(reordered->left_input(), predicate_1);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_0);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), table_0);
+  EXPECT_EQ(reordered->right_input(), predicate_4);
+  EXPECT_EQ(reordered->right_input()->left_input(), predicate_3);
+  EXPECT_EQ(reordered->right_input()->left_input()->left_input(), predicate_2);
 }
 
-TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
+TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   /**
-   * If a PredicateNode has multiple parents, it should not be considered for reordering
+   * If a PredicateNode has multiple outputs, it should not be considered for reordering
    */
   /**
    *      _____Union___
@@ -302,7 +303,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
    *         |
    *       Table
    *
-   * predicate_a should come before predicate_b - but since Predicate_b has two parents, it can't be reordered
+   * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
    */
 
   /**
@@ -312,25 +313,25 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleParents) {
   auto table_statistics =
       std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
-  auto table_node = std::make_shared<MockNode>(table_statistics);
-  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+  auto table_node = MockNode::make(table_statistics);
+  auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 90);
+      PredicateNode::make(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 90);
   auto predicate_b_node =
-      std::make_shared<PredicateNode>(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
+      PredicateNode::make(LQPColumnReference{table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
 
-  union_node->set_left_child(predicate_a_node);
-  union_node->set_right_child(predicate_b_node);
-  predicate_a_node->set_left_child(predicate_b_node);
-  predicate_b_node->set_left_child(table_node);
+  union_node->set_left_input(predicate_a_node);
+  union_node->set_right_input(predicate_b_node);
+  predicate_a_node->set_left_input(predicate_b_node);
+  predicate_b_node->set_left_input(table_node);
 
   const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
 
   EXPECT_EQ(reordered, union_node);
-  EXPECT_EQ(reordered->left_child(), predicate_a_node);
-  EXPECT_EQ(reordered->right_child(), predicate_b_node);
-  EXPECT_EQ(predicate_a_node->left_child(), predicate_b_node);
-  EXPECT_EQ(predicate_b_node->left_child(), table_node);
+  EXPECT_EQ(reordered->left_input(), predicate_a_node);
+  EXPECT_EQ(reordered->right_input(), predicate_b_node);
+  EXPECT_EQ(predicate_a_node->left_input(), predicate_b_node);
+  EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
 }  // namespace opossum

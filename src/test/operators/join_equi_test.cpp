@@ -13,6 +13,7 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_mpsm.hpp"
+#include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
@@ -31,7 +32,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, /*JoinSortMerge,*/ JoinMPSM>;
+using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
@@ -45,6 +46,48 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
                                              JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    return;
+  }
+
+  // int with float
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_o,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_float_inner.tbl", 1);
+
+  // float with int
+  this->template test_join_output<TypeParam>(this->_table_wrapper_o, this->_table_wrapper_a,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/float_int_inner.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    return;
+  }
+
+  // int with double
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_p,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_double_inner.tbl", 1);
+
+  // double with int
+  this->template test_join_output<TypeParam>(this->_table_wrapper_p, this->_table_wrapper_a,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/double_int_inner.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
+  if (!std::is_same<TypeParam, JoinHash>::value) {
+    return;
+  }
+
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_q,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinOnString) {

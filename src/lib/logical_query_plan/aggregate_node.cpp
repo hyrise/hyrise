@@ -24,25 +24,25 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& 
 }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
-  Assert(left_child(), "Can't clone without child, need it to adapt column references");
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+  Assert(left_input(), "Can't clone without input, need it to adapt column references");
 
   std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
     aggregate_expressions.emplace_back(
-        adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
+        adapt_expression_to_different_lqp(expression->deep_copy(), left_input(), copied_left_input));
   }
 
   std::vector<LQPColumnReference> groupby_column_references;
   groupby_column_references.reserve(_groupby_column_references.size());
   for (const auto& groupby_column_reference : _groupby_column_references) {
     groupby_column_references.emplace_back(
-        adapt_column_reference_to_different_lqp(groupby_column_reference, left_child(), copied_left_child));
+        adapt_column_reference_to_different_lqp(groupby_column_reference, left_input(), copied_left_input));
   }
 
-  return std::make_shared<AggregateNode>(aggregate_expressions, groupby_column_references);
+  return AggregateNode::make(aggregate_expressions, groupby_column_references);
 }
 
 const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {
@@ -59,8 +59,8 @@ std::string AggregateNode::description() const {
   s << "[Aggregate] ";
 
   std::vector<std::string> verbose_column_names;
-  if (left_child()) {
-    verbose_column_names = left_child()->get_verbose_column_names();
+  if (left_input()) {
+    verbose_column_names = left_input()->get_verbose_column_names();
   }
 
   auto stream_aggregate = [&](const std::shared_ptr<LQPExpression>& aggregate_expr) {
@@ -97,7 +97,7 @@ std::string AggregateNode::description() const {
 }
 
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
-  DebugAssert(left_child(), "Need input to generate name");
+  DebugAssert(left_input(), "Need input to generate name");
 
   if (column_id < _groupby_column_references.size()) {
     return _groupby_column_references[column_id].description();
@@ -112,21 +112,21 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
     return *aggregate_expression->alias();
   }
 
-  if (left_child()) {
-    return aggregate_expression->to_string(left_child()->get_verbose_column_names());
+  if (left_input()) {
+    return aggregate_expression->to_string(left_input()->get_verbose_column_names());
   } else {
     return aggregate_expression->to_string();
   }
 }
 
-void AggregateNode::_on_child_changed() {
-  DebugAssert(!right_child(), "AggregateNode can't have a right child.");
+void AggregateNode::_on_input_changed() {
+  DebugAssert(!right_input(), "AggregateNode can't have a right input.");
 
   _output_column_names.reset();
 }
 
 const std::vector<std::string>& AggregateNode::output_column_names() const {
-  Assert(left_child(), "Child not set, can't know output column names without it");
+  Assert(left_input(), "Input not set, can't know output column names without it");
   if (!_output_column_names) {
     _update_output();
   }
@@ -182,16 +182,26 @@ std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
   return std::nullopt;
 }
 
+bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
+
+  Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
+  return _equals(*left_input(), _aggregate_expressions, *rhs.left_input(), aggregate_node.aggregate_expressions()) &&
+         _equals(*left_input(), _groupby_column_references, *rhs.left_input(),
+                 aggregate_node.groupby_column_references());
+}
+
 void AggregateNode::_update_output() const {
   /**
-   * The output (column names and output-to-input mapping) of this node gets cleared whenever a child changed and is
-   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left child in Join) and thus
+   * The output (column names and output-to-input mapping) of this node gets cleared whenever an input changed and is
+   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left input in Join) and thus
    * allows easier manipulation in the optimizer.
    */
 
   DebugAssert(!_output_column_references, "No need to update, _update_output() shouldn't get called.");
   DebugAssert(!_output_column_names, "No need to update, _update_output() shouldn't get called.");
-  DebugAssert(left_child(), "Can't set output without input");
+  DebugAssert(left_input(), "Can't set output without input");
 
   _output_column_names.emplace();
   _output_column_names->reserve(_groupby_column_references.size() + _aggregate_expressions.size());
@@ -208,8 +218,8 @@ void AggregateNode::_update_output() const {
   for (const auto& groupby_column_reference : _groupby_column_references) {
     _output_column_references->emplace_back(groupby_column_reference);
 
-    const auto input_column_id = left_child()->get_output_column_id(groupby_column_reference);
-    _output_column_names->emplace_back(left_child()->output_column_names()[input_column_id]);
+    const auto input_column_id = left_input()->get_output_column_id(groupby_column_reference);
+    _output_column_names->emplace_back(left_input()->output_column_names()[input_column_id]);
   }
 
   auto column_id = static_cast<ColumnID>(_groupby_column_references.size());
@@ -227,7 +237,7 @@ void AggregateNode::_update_output() const {
        * This might result in multiple output columns with the same name, but we accept that.
        * Other DBs behave similarly (e.g. MySQL).
        */
-      column_name = aggregate_expression->to_string(left_child()->output_column_names());
+      column_name = aggregate_expression->to_string(left_input()->output_column_names());
     }
 
     _output_column_names->emplace_back(column_name);

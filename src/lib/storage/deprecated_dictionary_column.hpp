@@ -53,9 +53,6 @@ class DeprecatedDictionaryColumn : public BaseDeprecatedDictionaryColumn {
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final;
 
-  // return a generated vector of all values (or nulls)
-  const pmr_concurrent_vector<std::optional<T>> materialize_values() const;
-
   // return the value represented by a given ValueID
   const T& value_by_value_id(ValueID value_id) const;
 

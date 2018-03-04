@@ -15,17 +15,17 @@ UpdateNode::UpdateNode(const std::string& table_name,
     : AbstractLQPNode(LQPNodeType::Update), _table_name(table_name), _column_expressions(column_expressions) {}
 
 std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
   column_expressions.reserve(_column_expressions.size());
 
   for (const auto& expression : column_expressions) {
     column_expressions.emplace_back(
-        adapt_expression_to_different_lqp(expression->deep_copy(), left_child(), copied_left_child));
+        adapt_expression_to_different_lqp(expression->deep_copy(), left_input(), copied_left_input));
   }
 
-  return std::make_shared<UpdateNode>(_table_name, column_expressions);
+  return UpdateNode::make(_table_name, column_expressions);
 }
 
 std::string UpdateNode::description() const {
@@ -36,8 +36,8 @@ std::string UpdateNode::description() const {
   if (!_column_expressions.empty()) {
     desc << ", Columns: ";
     std::vector<std::string> verbose_column_names;
-    if (left_child()) {
-      verbose_column_names = left_child()->get_verbose_column_names();
+    if (left_input()) {
+      verbose_column_names = left_input()->get_verbose_column_names();
     }
 
     for (size_t column_idx = 0; column_idx < _column_expressions.size(); ++column_idx) {
@@ -51,7 +51,7 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
-bool UpdateNode::subtree_is_read_only() const { return false; }
+bool UpdateNode::subplan_is_read_only() const { return false; }
 
 const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const {
   return _column_expressions;
@@ -59,4 +59,12 @@ const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expression
 
 const std::string& UpdateNode::table_name() const { return _table_name; }
 
+bool UpdateNode::shallow_equals(const AbstractLQPNode& rhs) const {
+  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+  const auto& update_node = static_cast<const UpdateNode&>(rhs);
+
+  Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
+  return _table_name == update_node._table_name &&
+         _equals(*left_input(), _column_expressions, *update_node.left_input(), update_node._column_expressions);
+}
 }  // namespace opossum

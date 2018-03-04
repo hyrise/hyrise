@@ -20,7 +20,7 @@ namespace opossum {
    * Note: SortMergeJoin does not support null values in the input at the moment.
    * Note: Cross joins are not supported. Use the product operator instead.
    * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
-**/
+   */
 class JoinSortMerge : public AbstractJoinOperator {
  public:
   JoinSortMerge(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,

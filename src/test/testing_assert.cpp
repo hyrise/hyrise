@@ -268,30 +268,19 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, Predic
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
-                   const std::shared_ptr<const AbstractLQPNode>& child) {
-  auto parents = child->parents();
-  for (const auto& parent2 : parents) {
-    if (!parent2) {
+bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
+                   const std::shared_ptr<const AbstractLQPNode>& input) {
+  auto outputs = input->outputs();
+  for (const auto& output2 : outputs) {
+    if (!output2) {
       return false;
     }
-    if (parent == parent2 && parent2->child(child_side) == child) {
+    if (output == output2 && output2->input(input_side) == input) {
       return true;
     }
   }
 
   return false;
-}
-
-bool subtree_types_are_equal(const std::shared_ptr<AbstractLQPNode>& got,
-                             const std::shared_ptr<AbstractLQPNode>& expected) {
-  if (got == nullptr && expected == nullptr) return true;
-  if (got == nullptr) return false;
-  if (expected == nullptr) return false;
-
-  if (got->type() != expected->type()) return false;
-  return subtree_types_are_equal(got->left_child(), expected->left_child()) &&
-         subtree_types_are_equal(got->right_child(), expected->right_child());
 }
 
 }  // namespace opossum

@@ -49,7 +49,13 @@ namespace detail {
 #define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
 #define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES) };
+// We use a boolean data type in the JitOperator.
+// However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
+// and should thus be avoided for compilation performance reasons.
+// We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in
+// "lib/operators/jit_operator/jit_types.hpp".
+// We need to append to the end of the enum to not break the matching of indices between DataType and AllTypeVariant.
+enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES), Bool };
 
 static constexpr auto data_types = hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
 static constexpr auto data_type_enum_values =
@@ -112,5 +118,11 @@ static const auto NULL_VALUE = AllTypeVariant{};
   static_assert(true, "End call of macro with a semicolon")
 
 /**@}*/
+
+/**
+ * Checks whether two variants are equal, except when they contain float/double. In this case check whether they are
+ * near, e.g. withing a certain absolute difference from each other.
+ */
+bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error = 0.001);
 
 }  // namespace opossum

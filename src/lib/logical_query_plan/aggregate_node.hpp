@@ -22,10 +22,10 @@ namespace opossum {
  *
  *  The order of the output columns is groupby columns followed by aggregate columns
  */
-class AggregateNode : public AbstractLQPNode {
+class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
   explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
-                         const std::vector<LQPColumnReference>& groupy_column_references);
+                         const std::vector<LQPColumnReference>& groupby_column_references);
 
   const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;
@@ -56,11 +56,13 @@ class AggregateNode : public AbstractLQPNode {
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
-  void _on_child_changed() override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  void _on_input_changed() override;
 
  private:
   std::vector<std::shared_ptr<LQPExpression>> _aggregate_expressions;

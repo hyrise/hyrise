@@ -14,16 +14,18 @@ namespace opossum {
  * By that Optimizer Rules don't have to worry whether they change the tree-identifying root node,
  * e.g. by removing the Projection at the top of the tree.
  */
-class LogicalPlanRootNode : public AbstractLQPNode {
+class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, public AbstractLQPNode {
  public:
   LogicalPlanRootNode();
 
   std::string description() const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
 };
 
 }  // namespace opossum

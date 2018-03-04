@@ -19,7 +19,7 @@ using LQPColumnReferencePair = std::pair<LQPColumnReference, LQPColumnReference>
  * This node type is used to represent any type of Join, including cross products.
  * The idea is that the optimizer is able to decide on the physical join implementation.
  */
-class JoinNode : public AbstractLQPNode {
+class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
  public:
   // Constructor for Natural and Cross Joins
   explicit JoinNode(const JoinMode join_mode);
@@ -37,16 +37,18 @@ class JoinNode : public AbstractLQPNode {
   const std::vector<LQPColumnReference>& output_column_references() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_child,
-      const std::shared_ptr<AbstractLQPNode>& right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& left_input,
+      const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
+  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+
  protected:
-  void _on_child_changed() override;
+  void _on_input_changed() override;
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
 
  private:
   JoinMode _join_mode;

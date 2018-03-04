@@ -10,7 +10,7 @@ namespace opossum {
 
 class ValidateNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _validate_node = std::make_shared<ValidateNode>(); }
+  void SetUp() override { _validate_node = ValidateNode::make(); }
 
   std::shared_ptr<ValidateNode> _validate_node;
 };

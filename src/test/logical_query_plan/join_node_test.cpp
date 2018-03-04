@@ -15,10 +15,9 @@ namespace opossum {
 class JoinNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node_a = std::make_shared<MockNode>(
+    _mock_node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
-    _mock_node_b =
-        std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
+    _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
 
     _t_a_a = {_mock_node_a, ColumnID{0}};
     _t_a_b = {_mock_node_a, ColumnID{1}};
@@ -26,19 +25,30 @@ class JoinNodeTest : public BaseTest {
     _t_b_x = {_mock_node_b, ColumnID{0}};
     _t_b_y = {_mock_node_b, ColumnID{1}};
 
-    _join_node = std::make_shared<JoinNode>(JoinMode::Cross);
-    _join_node->set_left_child(_mock_node_a);
-    _join_node->set_right_child(_mock_node_b);
+    _join_node = JoinNode::make(JoinMode::Cross);
+    _join_node->set_left_input(_mock_node_a);
+    _join_node->set_right_input(_mock_node_b);
 
-    _inner_join_node =
-        std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
-    _inner_join_node->set_left_child(_mock_node_a);
-    _inner_join_node->set_right_child(_mock_node_b);
+    _inner_join_node = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
+    _inner_join_node->set_left_input(_mock_node_a);
+    _inner_join_node->set_right_input(_mock_node_b);
+
+    _semi_join_node =
+        std::make_shared<JoinNode>(JoinMode::Semi, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
+    _semi_join_node->set_left_input(_mock_node_a);
+    _semi_join_node->set_right_input(_mock_node_b);
+
+    _anti_join_node =
+        std::make_shared<JoinNode>(JoinMode::Anti, std::make_pair(_t_a_a, _t_b_y), PredicateCondition::Equals);
+    _anti_join_node->set_left_input(_mock_node_a);
+    _anti_join_node->set_right_input(_mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
   std::shared_ptr<MockNode> _mock_node_b;
   std::shared_ptr<JoinNode> _inner_join_node;
+  std::shared_ptr<JoinNode> _semi_join_node;
+  std::shared_ptr<JoinNode> _anti_join_node;
   std::shared_ptr<JoinNode> _join_node;
   LQPColumnReference _t_a_a;
   LQPColumnReference _t_a_b;
@@ -50,6 +60,10 @@ class JoinNodeTest : public BaseTest {
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Cross Join]"); }
 
 TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Inner Join] t_a.a = t_b.y"); }
+
+TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Semi Join] t_a.a = t_b.y"); }
+
+TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->description(), "[Anti Join] t_a.a = t_b.y"); }
 
 TEST_F(JoinNodeTest, VerboseColumnNames) {
   EXPECT_EQ(_join_node->get_verbose_column_name(ColumnID{0}), "t_a.a");
@@ -79,6 +93,37 @@ TEST_F(JoinNodeTest, OutputColumnReferences) {
   EXPECT_EQ(_join_node->output_column_references().at(2), _t_a_c);
   EXPECT_EQ(_join_node->output_column_references().at(3), _t_b_x);
   EXPECT_EQ(_join_node->output_column_references().at(4), _t_b_y);
+}
+
+TEST_F(JoinNodeTest, ShallowEquals) {
+  EXPECT_TRUE(_inner_join_node->shallow_equals(*_inner_join_node));
+
+  const auto other_join_node_a = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_x),
+                                                PredicateCondition::Equals, _mock_node_a, _mock_node_b);
+  const auto other_join_node_b = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y),
+                                                PredicateCondition::NotLike, _mock_node_a, _mock_node_b);
+  const auto other_join_node_c = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+  const auto other_join_node_d = JoinNode::make(JoinMode::Inner, std::make_pair(_t_a_a, _t_b_y),
+                                                PredicateCondition::Equals, _mock_node_a, _mock_node_b);
+
+  EXPECT_FALSE(other_join_node_a->shallow_equals(*_inner_join_node));
+  EXPECT_FALSE(other_join_node_b->shallow_equals(*_inner_join_node));
+  EXPECT_FALSE(other_join_node_c->shallow_equals(*_inner_join_node));
+  EXPECT_TRUE(other_join_node_d->shallow_equals(*_inner_join_node));
+}
+
+TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
+  ASSERT_EQ(_semi_join_node->output_column_references().size(), 3u);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_semi_join_node->output_column_references().at(2), _t_a_c);
+}
+
+TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
+  ASSERT_EQ(_anti_join_node->output_column_references().size(), 3u);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(0), _t_a_a);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(1), _t_a_b);
+  EXPECT_EQ(_anti_join_node->output_column_references().at(2), _t_a_c);
 }
 
 }  // namespace opossum
