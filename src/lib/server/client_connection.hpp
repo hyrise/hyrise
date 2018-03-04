@@ -23,9 +23,7 @@ struct ColumnDescription {
 
 class ClientConnection {
  public:
-  explicit ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
-    _response_buffer.reserve(_max_response_size);
-  }
+  explicit ClientConnection(tcp::socket socket);
 
   boost::future<uint32_t> receive_startup_packet_header();
   boost::future<void> receive_startup_packet_contents(uint32_t size);

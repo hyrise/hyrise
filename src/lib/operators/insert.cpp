@@ -95,10 +95,6 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<Abstr
 
 const std::string Insert::name() const { return "Insert"; }
 
-std::shared_ptr<AbstractOperator> Insert::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Insert>(_target_table_name, _input_left->recreate(args));
-}
-
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
@@ -231,6 +227,10 @@ void Insert::_on_rollback_records() {
 
     chunk->mvcc_columns()->tids[row_id.chunk_offset] = 0u;
   }
+}
+
+std::shared_ptr<AbstractOperator> Insert::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Insert>(_target_table_name, _input_left->recreate(args));
 }
 
 }  // namespace opossum

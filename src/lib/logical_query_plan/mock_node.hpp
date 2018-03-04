@@ -37,8 +37,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
 
  private:
   std::vector<std::string> _output_column_names;

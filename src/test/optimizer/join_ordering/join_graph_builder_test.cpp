@@ -53,7 +53,7 @@ class JoinGraphBuilderTest : public ::testing::Test {
     _aggregate_node_a = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
                                                         std::vector<LQPColumnReference>{_mock_node_a_x2});
 
-    _aggregate_node_a->set_left_child(_mock_node_a);
+    _aggregate_node_a->set_left_input(_mock_node_a);
 
     _sum_mock_node_a_x1 = _aggregate_node_a->get_column("sum_a"s);
 
@@ -85,25 +85,25 @@ class JoinGraphBuilderTest : public ::testing::Test {
     /**
      * Wire up LQP
      */
-    _projection_node_a->set_left_child(_predicate_node_j);
-    _predicate_node_j->set_left_child(_predicate_node_h);
-    _predicate_node_h->set_left_child(_cross_join_node_a);
-    _cross_join_node_a->set_left_child(_predicate_node_g);
-    _cross_join_node_a->set_right_child(_mock_node_c);
-    _predicate_node_g->set_left_child(_predicate_node_f);
-    _predicate_node_f->set_left_child(_inner_join_node_a);
-    _inner_join_node_a->set_left_child(_predicate_node_a);
-    _inner_join_node_a->set_right_child(_predicate_node_e);
-    _predicate_node_e->set_left_child(_union_node_a);
-    _union_node_a->set_left_child(_predicate_node_c);
-    _union_node_a->set_right_child(_union_node_b);
-    _predicate_node_c->set_left_child(_predicate_node_b);
-    _predicate_node_b->set_left_child(_mock_node_b);
-    _union_node_b->set_left_child(_predicate_node_d);
-    _union_node_b->set_right_child(_predicate_node_i);
-    _predicate_node_d->set_left_child(_mock_node_b);
-    _predicate_node_i->set_left_child(_mock_node_b);
-    _predicate_node_a->set_left_child(_aggregate_node_a);
+    _projection_node_a->set_left_input(_predicate_node_j);
+    _predicate_node_j->set_left_input(_predicate_node_h);
+    _predicate_node_h->set_left_input(_cross_join_node_a);
+    _cross_join_node_a->set_left_input(_predicate_node_g);
+    _cross_join_node_a->set_right_input(_mock_node_c);
+    _predicate_node_g->set_left_input(_predicate_node_f);
+    _predicate_node_f->set_left_input(_inner_join_node_a);
+    _inner_join_node_a->set_left_input(_predicate_node_a);
+    _inner_join_node_a->set_right_input(_predicate_node_e);
+    _predicate_node_e->set_left_input(_union_node_a);
+    _union_node_a->set_left_input(_predicate_node_c);
+    _union_node_a->set_right_input(_union_node_b);
+    _predicate_node_c->set_left_input(_predicate_node_b);
+    _predicate_node_b->set_left_input(_mock_node_b);
+    _union_node_b->set_left_input(_predicate_node_d);
+    _union_node_b->set_right_input(_predicate_node_i);
+    _predicate_node_d->set_left_input(_mock_node_b);
+    _predicate_node_i->set_left_input(_mock_node_b);
+    _predicate_node_a->set_left_input(_aggregate_node_a);
 
     _join_graph = JoinGraphBuilder{}(_lqp);  // NOLINT
   }
@@ -175,11 +175,11 @@ TEST_F(JoinGraphBuilderTest, ComplexLQP) {
   EXPECT_EQ(to_string(edge_ac->predicates.at(0)), "x2 <= z1");
 
   /**
-   * Test parent relations
+   * Test output relations
    */
-  ASSERT_EQ(_join_graph->parent_relations.size(), 1u);
-  EXPECT_EQ(_join_graph->parent_relations.at(0).parent, _projection_node_a);
-  EXPECT_EQ(_join_graph->parent_relations.at(0).child_side, LQPChildSide::Left);
+  ASSERT_EQ(_join_graph->output_relations.size(), 1u);
+  EXPECT_EQ(_join_graph->output_relations.at(0).output, _projection_node_a);
+  EXPECT_EQ(_join_graph->output_relations.at(0).input_side, LQPInputSide::Left);
 }
 
 }  // namespace opossum

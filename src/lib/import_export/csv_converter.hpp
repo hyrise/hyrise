@@ -96,7 +96,7 @@ class CsvConverter : public BaseCsvConverter {
 };
 
 template <>
-inline std::function<int(const std::string&)> CsvConverter<int>::_get_conversion_function() {
+inline std::function<int32_t(const std::string&)> CsvConverter<int32_t>::_get_conversion_function() {
   return [](const std::string& str) {
     size_t pos;
     auto converted = std::stoi(str, &pos);

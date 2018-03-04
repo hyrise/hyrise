@@ -19,17 +19,16 @@ int main(int argc, char* argv[]) {
       port = static_cast<uint16_t>(std::atoi(argv[1]));
     }
 
-    // Generate some data for testing
-    // auto table = tpcc::TpccTableGenerator::generate_tpcc_table("ITEM");
-    // opossum::StorageManager::get().add_table("ITEM", table);
-
-    // Install a multi threaded scheduler
+    // Set scheduler so that the server can execute the tasks on separate threads.
     opossum::CurrentScheduler::set(
         std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
 
     boost::asio::io_service io_service;
 
-    opossum::Server server(io_service, port);
+    // The server registers itself to the boost io_service. The io_service is the main IO control unit here and it lives
+    // until the server doesn't request any IO any more, i.e. is has terminated. The server requests IO in its
+    // constructor and then runs forever.
+    opossum::Server server{io_service, port};
 
     io_service.run();
   } catch (std::exception& e) {

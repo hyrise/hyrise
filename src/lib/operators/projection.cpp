@@ -44,14 +44,12 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 
       if (value_placeholder.index() < args.size()) {
         const auto& parameter_variant = args[value_placeholder.index()];
-        assert(is_variant(parameter_variant));
         auto value = boost::get<AllTypeVariant>(parameter_variant);
         new_column_expressions.emplace_back(column_expression->set_placeholder_value(value));
-        continue;
       }
+    } else {
+      new_column_expressions.emplace_back(column_expression);
     }
-
-    new_column_expressions.emplace_back(column_expression);
   }
 
   return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
@@ -148,7 +146,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
 DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                              const std::shared_ptr<const Table>& table) {
-  if (expression->type() == ExpressionType::Literal) {
+  if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder) {
     return data_type_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::Placeholder) {
