@@ -5,6 +5,7 @@
 
 #include "client_connection.hpp"
 #include "server_session.hpp"
+#include "task_runner.hpp"
 #include "then_operator.hpp"
 
 namespace opossum {
@@ -23,7 +24,8 @@ void Server::accept_next_connection() {
 void Server::start_session(boost::system::error_code error) {
   if (!error) {
     auto connection = std::make_shared<ClientConnection>(std::move(_socket));
-    auto session = std::make_unique<ServerSession>(_io_service, connection);
+    auto task_runner = std::make_shared<TaskRunner>(_io_service);
+    auto session = std::make_unique<ServerSession>(connection, task_runner);
     // Start the session and release it once it has terminated
     session->start() >> then >> [session = std::move(session)]() mutable { session.reset(); };
   }

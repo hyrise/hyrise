@@ -12,7 +12,6 @@
 #include "SQLParserResult.h"
 #include "client_connection.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
@@ -32,8 +31,8 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::start() {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::start() {
   return (_perform_session_startup() >> then >> [=]() { return _handle_client_requests(); })
       // Use .then instead of >> then >> to be able to handle exceptions
       .then(boost::launch::sync, [](boost::future<void> f) {
@@ -45,8 +44,8 @@ boost::future<void> ServerSessionImpl<T>::start() {
       });
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_perform_session_startup() {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_perform_session_startup() {
   return _connection->receive_startup_packet_header() >> then >> [=](uint32_t startup_packet_length) {
     if (startup_packet_length == 0) {
       // This is a request for SSL, deny it and wait for the next startup packet
@@ -58,8 +57,8 @@ boost::future<void> ServerSessionImpl<T>::_perform_session_startup() {
   };
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_client_requests() {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_requests() {
   auto receive_packet_contents = [=](RequestHeader request) {
     return _connection->receive_packet_contents(request.payload_length) >> then >>
            [=](InputPacket packet_contents) { return std::make_pair(request, std::move(packet_contents)); };
@@ -130,23 +129,23 @@ boost::future<void> ServerSessionImpl<T>::_handle_client_requests() {
                      })
                .unwrap()
            // Proceed with the next incoming message
-           >> then >> boost::bind(&ServerSessionImpl<T>::_handle_client_requests, this);
+           >> then >> boost::bind(&ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_requests, this);
   };
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_simple_query_command(const std::string sql) {
-  auto create_sql_pipeline = [=]() { return _dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true)); };
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string sql) {
+  auto create_sql_pipeline = [=]() { return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true)); };
 
   auto load_table_file = [=](std::string& file_name, std::string& table_name) {
     auto task = std::make_shared<LoadServerFileTask>(file_name, table_name);
-    return _dispatch_server_task(task) >> then >>
+    return _task_runner->dispatch_server_task(task) >> then >>
            [=]() { return _connection->send_notice("Successfully loaded " + table_name); };
   };
 
   auto execute_sql_pipeline = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
     auto task = std::make_shared<ExecuteServerQueryTask>(sql_pipeline);
-    return _dispatch_server_task(task) >> then >> [=]() { return sql_pipeline; };
+    return _task_runner->dispatch_server_task(task) >> then >> [=]() { return sql_pipeline; };
   };
 
   auto send_query_response = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
@@ -160,7 +159,7 @@ boost::future<void> ServerSessionImpl<T>::_handle_simple_query_command(const std
 
       auto task = std::make_shared<SendQueryResponseTask>(nullptr /* TODO */, result_table);
       return _connection->send_row_description(row_description) >> then >>
-             [=]() { return _dispatch_server_task(task); };
+             [=]() { return _task_runner->dispatch_server_task(task); };
     };
 
     return send_row_data() >> then >>
@@ -186,8 +185,8 @@ boost::future<void> ServerSessionImpl<T>::_handle_simple_query_command(const std
   };
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_parse_command(std::unique_ptr<ParsePacket> parse_info) {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(std::unique_ptr<ParsePacket> parse_info) {
   auto prepared_statement_name = parse_info->statement_name;
 
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
@@ -199,7 +198,7 @@ boost::future<void> ServerSessionImpl<T>::_handle_parse_command(std::unique_ptr<
     _prepared_statements.erase(statement_it);
   }
 
-  return _dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info->query)) >> then >>
+  return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info->query)) >> then >>
          [=](std::unique_ptr<CreatePipelineResult> result) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
            _prepared_statements.insert(std::make_pair(prepared_statement_name, result->sql_pipeline));
@@ -207,8 +206,8 @@ boost::future<void> ServerSessionImpl<T>::_handle_parse_command(std::unique_ptr<
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_bind_command(BindPacket packet) {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(BindPacket packet) {
   auto statement_it = _prepared_statements.find(packet.statement_name);
   if (statement_it == _prepared_statements.end()) throw std::logic_error("Unknown statement");
 
@@ -230,7 +229,7 @@ boost::future<void> ServerSessionImpl<T>::_handle_bind_command(BindPacket packet
   auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
 
   auto task = std::make_shared<BindServerPreparedStatementTask>(sql_pipeline, std::move(packet.params));
-  return _dispatch_server_task(task) >> then >>
+  return _task_runner->dispatch_server_task(task) >> then >>
          [=](std::unique_ptr<SQLQueryPlan> query_plan) {
            std::shared_ptr<SQLQueryPlan> shared_query_plan = std::move(query_plan);
            auto portal = std::make_pair(statement_type, shared_query_plan);
@@ -239,28 +238,28 @@ boost::future<void> ServerSessionImpl<T>::_handle_bind_command(BindPacket packet
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_describe_command(std::string portal_name) {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_describe_command(std::string portal_name) {
   // Ignore this for now
   return boost::make_ready_future();
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_sync_command() {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_sync_command() {
   if (!_transaction) return boost::make_ready_future();
 
-  return _dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction)) >> then >>
+  return _task_runner->dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction)) >> then >>
          [=]() { _transaction.reset(); };
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_flush_command() {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_flush_command() {
   // Ignore this for now
   return boost::make_ready_future();
 }
 
-template <typename T>
-boost::future<void> ServerSessionImpl<T>::_handle_execute_command(std::string portal_name) {
+template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute_command(std::string portal_name) {
   auto portal_it = _portals.find(portal_name);
   if (portal_it == _portals.end()) throw std::logic_error("Unknown portal");
 
@@ -273,7 +272,7 @@ boost::future<void> ServerSessionImpl<T>::_handle_execute_command(std::string po
 
   query_plan->set_transaction_context(_transaction);
 
-  return _dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan)) >> then >>
+  return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan)) >> then >>
          [=](std::shared_ptr<const Table> result_table) {
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
            if (!result_table)
@@ -281,7 +280,7 @@ boost::future<void> ServerSessionImpl<T>::_handle_execute_command(std::string po
                     []() { return uint64_t(0); };
 
            auto task = std::make_shared<SendQueryResponseTask>(nullptr /* TODO */, result_table);
-           return _dispatch_server_task(task);
+           return _task_runner->dispatch_server_task(task);
          } >>
          then >> [=](uint64_t row_count) {
            auto complete_message = SendQueryResponseTask::build_command_complete_message(statement_type, row_count);
@@ -289,26 +288,6 @@ boost::future<void> ServerSessionImpl<T>::_handle_execute_command(std::string po
          };
 }
 
-template <typename T>
-template <typename TResult>
-auto ServerSessionImpl<T>::_dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future()) {
-  using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
-
-  CurrentScheduler::schedule_tasks(TaskList({task}));
-
-  return task->get_future()
-      .then(boost::launch::sync,
-            [=](boost::future<typename TResult::result_type> result) {
-              // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
-              return _io_service.post(boost::asio::use_boost_future)
-                     // Make sure to be on the main thread before re-throwing the exceptions
-                     >> then >> [result = std::move(result)]() mutable {
-                return result.get();
-              };
-            })
-      .unwrap();
-}
-
-template class ServerSessionImpl<ClientConnection>;
+template class ServerSessionImpl<ClientConnection, TaskRunner>;
 
 }  // namespace opossum

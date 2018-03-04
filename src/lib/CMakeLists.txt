@@ -212,6 +212,7 @@ set(
     server/server_session.hpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
+    server/task_runner.hpp
     server/then_operator.hpp
     server/types.hpp
     server/client_connection.cpp

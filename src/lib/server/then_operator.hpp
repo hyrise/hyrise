@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/thread/future.hpp>
 
 // This code is inspired by the code examples of user Yakk on StackExchange

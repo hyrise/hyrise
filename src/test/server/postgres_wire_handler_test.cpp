@@ -22,6 +22,7 @@ TEST_F(PostgresWireHandlerTest, HandleQueryPacketEmpty) {
 TEST_F(PostgresWireHandlerTest, HandleQueryPacket) {
   ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y'};
   _input_packet.data = buffer;
+  _input_packet.offset = _input_packet.data.cbegin();
 
   std::string result = postgres_wire_handler.handle_query_packet(_input_packet);
 
@@ -35,6 +36,7 @@ TEST_F(PostgresWireHandlerTest, HandleHeader) {
   char* chars = reinterpret_cast<char*>(&value);
   buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t));
   _input_packet.data = buffer;
+  _input_packet.offset = _input_packet.data.cbegin();
 
   auto command_header = PostgresWireHandler::handle_header(_input_packet);
 
@@ -50,6 +52,7 @@ TEST_F(PostgresWireHandlerTest, HandleStartupPackage) {
   buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t));  // length
   buffer.insert(buffer.end(), chars, chars + sizeof(uint32_t));  // version
   _input_packet.data = buffer;
+  _input_packet.offset = _input_packet.data.cbegin();
 
   uint32_t result = postgres_wire_handler.handle_startup_package(_input_packet);
   ASSERT_EQ(result, 92ul);  // 100 - 2 * sizeof(uint32_t)

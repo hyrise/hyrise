@@ -1,7 +1,6 @@
 #pragma once
 
 #include <gmock/gmock.h>
-#include <base_test.hpp>
 #include <boost/thread/future.hpp>
 
 namespace opossum {
