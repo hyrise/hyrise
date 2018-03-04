@@ -9,8 +9,15 @@ class MockConnection {
  public:
   MOCK_METHOD0(receive_startup_packet_header, boost::future<uint32_t>());
   MOCK_METHOD1(receive_startup_packet_contents, boost::future<void>(uint32_t size));
+
   MOCK_METHOD0(receive_packet_header, boost::future<RequestHeader>());
-  MOCK_METHOD1(receive_packet_contents, boost::future<InputPacket>(uint32_t size));
+  MOCK_METHOD1(receive_simple_query_packet_contents, boost::future<std::string>(uint32_t size));
+  MOCK_METHOD1(receive_parse_packet_contents, boost::future<ParsePacket>(uint32_t size));
+  MOCK_METHOD1(receive_bind_packet_contents, boost::future<BindPacket>(uint32_t size));
+  MOCK_METHOD1(receive_describe_packet_contents, boost::future<std::string>(uint32_t size));
+  MOCK_METHOD1(receive_sync_packet_contents, boost::future<void>(uint32_t size));
+  MOCK_METHOD1(receive_flush_packet_contents, boost::future<void>(uint32_t size));
+  MOCK_METHOD1(receive_execute_packet_contents, boost::future<std::string>(uint32_t size));
 
   MOCK_METHOD0(send_ssl_denied, boost::future<void>());
   MOCK_METHOD0(send_auth, boost::future<void>());

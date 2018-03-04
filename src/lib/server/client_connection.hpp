@@ -13,6 +13,8 @@ using ByteBuffer = std::vector<char>;
 struct InputPacket;
 struct OutputPacket;
 struct RequestHeader;
+struct ParsePacket;
+struct BindPacket;
 enum class NetworkMessageType : unsigned char;
 
 struct ColumnDescription {
@@ -21,6 +23,9 @@ struct ColumnDescription {
   int64_t type_width;
 };
 
+// This class provides a wrapper over the TCP socket and (de)serializes
+// network messages using the PostgresWireHandler. It's a very thin wrapper
+// because the ASIO socket is hard to mock, so there are no tests for this class
 class ClientConnection {
  public:
   explicit ClientConnection(tcp::socket socket);
@@ -29,7 +34,13 @@ class ClientConnection {
   boost::future<void> receive_startup_packet_contents(uint32_t size);
 
   boost::future<RequestHeader> receive_packet_header();
-  boost::future<InputPacket> receive_packet_contents(uint32_t size);
+  boost::future<std::string> receive_simple_query_packet_contents(uint32_t size);
+  boost::future<ParsePacket> receive_parse_packet_contents(uint32_t size);
+  boost::future<BindPacket> receive_bind_packet_contents(uint32_t size);
+  boost::future<std::string> receive_describe_packet_contents(uint32_t size);
+  boost::future<void> receive_sync_packet_contents(uint32_t size);
+  boost::future<void> receive_flush_packet_contents(uint32_t size);
+  boost::future<std::string> receive_execute_packet_contents(uint32_t size);
 
   boost::future<void> send_ssl_denied();
   boost::future<void> send_auth();

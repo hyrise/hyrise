@@ -6,10 +6,10 @@
 
 #include <memory>
 
-#include "postgres_wire_handler.hpp"
 #include "client_connection.hpp"
-#include "task_runner.hpp"
+#include "postgres_wire_handler.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "task_runner.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -29,13 +29,13 @@ class ServerSessionImpl {
 
   boost::future<void> _handle_client_requests();
   boost::future<void> _handle_simple_query_command(const std::string sql);
-  boost::future<void> _handle_parse_command(std::unique_ptr<ParsePacket> parse_info);
-  boost::future<void> _handle_bind_command(BindPacket packet);
+  boost::future<void> _handle_parse_command(const ParsePacket& parse_info);
+  boost::future<void> _handle_bind_command(const BindPacket& packet);
   boost::future<void> _handle_describe_command(std::string portal_name);
   boost::future<void> _handle_execute_command(std::string portal_name);
   boost::future<void> _handle_sync_command();
   boost::future<void> _handle_flush_command();
-  
+
   std::shared_ptr<TConnection> _connection;
   std::shared_ptr<TTaskRunner> _task_runner;
 

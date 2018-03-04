@@ -31,9 +31,36 @@ boost::future<RequestHeader> ClientConnection::receive_packet_header() {
   return _receive_bytes_async(HEADER_LENGTH) >> then >> PostgresWireHandler::handle_header;
 }
 
-boost::future<InputPacket> ClientConnection::receive_packet_contents(uint32_t size) {
-  // TODO(anyone): Maybe we could offer a version of this where the returned packet is already parsed
-  return _receive_bytes_async(size);
+boost::future<std::string> ClientConnection::receive_simple_query_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_query_packet;
+}
+
+boost::future<ParsePacket> ClientConnection::receive_parse_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_parse_packet;
+}
+
+boost::future<BindPacket> ClientConnection::receive_bind_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_bind_packet;
+}
+
+boost::future<std::string> ClientConnection::receive_describe_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_describe_packet;
+}
+
+boost::future<void> ClientConnection::receive_sync_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> [](InputPacket packet) {
+    // Packet has no content
+  };
+}
+
+boost::future<void> ClientConnection::receive_flush_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> [](InputPacket packet) {
+    // Packet has no content
+  };
+}
+
+boost::future<std::string> ClientConnection::receive_execute_packet_contents(uint32_t size) {
+  return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_execute_packet;
 }
 
 boost::future<void> ClientConnection::send_ssl_denied() {

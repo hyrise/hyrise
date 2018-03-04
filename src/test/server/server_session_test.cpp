@@ -31,7 +31,7 @@ class ServerSessionTest : public BaseTest {
   void SetUp() override {
     _connection = std::make_shared<TestConnection>();
     _task_runner = std::make_shared<TestTaskRunner>();
-    
+
     _session = std::make_shared<TestServerSession>(_connection, _task_runner);
 
     _configure_default_message_flow();
@@ -45,14 +45,14 @@ class ServerSessionTest : public BaseTest {
 
   void _configure_startup() {
     ON_CALL(*_connection, receive_startup_packet_header())
-      .WillByDefault(Return(ByMove(boost::make_ready_future(uint32_t(32)))));
+        .WillByDefault(Return(ByMove(boost::make_ready_future(uint32_t(32)))));
     ON_CALL(*_connection, receive_startup_packet_contents(_)).WillByDefault(Return(ByMove(boost::make_ready_future())));
   }
 
   void _configure_termination() {
     RequestHeader termination_header{NetworkMessageType::TerminateCommand, 0};
     ON_CALL(*_connection, receive_packet_header())
-      .WillByDefault(Return(ByMove(boost::make_ready_future(termination_header))));
+        .WillByDefault(Return(ByMove(boost::make_ready_future(termination_header))));
   }
 
   void _configure_successful_sends() {
@@ -62,19 +62,19 @@ class ServerSessionTest : public BaseTest {
     ON_CALL(*_connection, send_auth()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_ready_for_query()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_error(_))
-      .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
+        .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_notice(_))
-      .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
+        .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_status_message(_))
-      .WillByDefault(Invoke([](const NetworkMessageType&) { return boost::make_ready_future(); }));
+        .WillByDefault(Invoke([](const NetworkMessageType&) { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_row_description(_))
-      .WillByDefault(Invoke([](const std::vector<ColumnDescription>&) { return boost::make_ready_future(); }));
+        .WillByDefault(Invoke([](const std::vector<ColumnDescription>&) { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_data_row(_))
-      .WillByDefault(Invoke([](const std::vector<std::string>&) { return boost::make_ready_future(); }));
+        .WillByDefault(Invoke([](const std::vector<std::string>&) { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_command_complete(_))
-      .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
+        .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
   }
-  
+
   std::shared_ptr<SQLPipeline> _create_working_sql_pipeline() {
     // We don't mock the SQL Pipeline, so we have to provide a query that executes successfully
     auto t = load_table("src/test/tables/int.tbl", 10);
@@ -98,7 +98,7 @@ TEST_F(ServerSessionTest, SessionPerformsStartup) {
   // Override the default mock implementation defined in _configure_startup by returning the magic value
   // as the header length.
   EXPECT_CALL(*_connection, receive_startup_packet_header())
-    .WillOnce(Return(ByMove(boost::make_ready_future(startup_packet_header_length))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(startup_packet_header_length))));
 
   // Make sure receive_startup_packet_contents is called with the magic value defined above
   EXPECT_CALL(*_connection, receive_startup_packet_contents(startup_packet_header_length));
@@ -120,7 +120,7 @@ TEST_F(ServerSessionTest, SessionHandlesConnectionErrorsDuringStartup) {
 
   auto exception = std::logic_error("Some connection problem");
   EXPECT_CALL(*_connection, receive_startup_packet_contents(_))
-    .WillOnce(Return(ByMove(boost::make_exceptional_future<void>(boost::copy_exception(exception)))));
+      .WillOnce(Return(ByMove(boost::make_exceptional_future<void>(boost::copy_exception(exception)))));
 
   EXPECT_NO_THROW(_session->start().wait());
 }
@@ -163,7 +163,7 @@ TEST_F(ServerSessionTest, SessionShutsDownOnErrorReceivingPacketHeader) {
 
   auto exception = std::logic_error("Some connection problem");
   EXPECT_CALL(*_connection, receive_packet_header())
-    .WillOnce(Return(ByMove(boost::make_exceptional_future<RequestHeader>(boost::copy_exception(exception)))));
+      .WillOnce(Return(ByMove(boost::make_exceptional_future<RequestHeader>(boost::copy_exception(exception)))));
 
   EXPECT_NO_THROW(_session->start().wait());
 }
@@ -177,8 +177,8 @@ TEST_F(ServerSessionTest, SessionRecoversFromErrorsDuringCommandProcessing) {
   EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(request))));
 
   auto exception = std::logic_error("Some connection problem");
-  EXPECT_CALL(*_connection, receive_packet_contents(42))
-    .WillOnce(Return(ByMove(boost::make_exceptional_future<InputPacket>(boost::copy_exception(exception)))));
+  EXPECT_CALL(*_connection, receive_simple_query_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_exceptional_future<std::string>(boost::copy_exception(exception)))));
 
   // Expect that the session sends an error packet to the client,
   // containing the exception's message
@@ -191,35 +191,29 @@ TEST_F(ServerSessionTest, SessionRecoversFromErrorsDuringCommandProcessing) {
   _session->start().wait();
 }
 
-
 TEST_F(ServerSessionTest, SessionExecutesSimpleQueryCommand) {
   InSequence s;
-
-  std::string query = "SELECT * FROM foo;";
-  auto simple_query_command_buffer = ByteBuffer(query.begin(), query.end());
 
   // The session initiates with a ReadyForQuery message
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   // The connection sends the appropriate packet header...
-  RequestHeader request{NetworkMessageType::SimpleQueryCommand, static_cast<uint32_t>(simple_query_command_buffer.size())};
+  RequestHeader request{NetworkMessageType::SimpleQueryCommand, 42};
   EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(request))));
 
   // ... as well as the SQL
-  InputPacket simple_query_command_packet = { simple_query_command_buffer };
-  simple_query_command_packet.offset = simple_query_command_packet.data.cbegin();
-  EXPECT_CALL(*_connection, receive_packet_contents(simple_query_command_buffer.size()))
-    .WillOnce(Return(ByMove(boost::make_ready_future<InputPacket>(std::move(simple_query_command_packet)))));
-  
+  EXPECT_CALL(*_connection, receive_simple_query_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::string("SELECT * FROM foo;")))));
+
   // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
   auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
   create_pipeline_result->sql_pipeline = _create_working_sql_pipeline();
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-    .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
 
   // The session executes the SQLPipeline using another scheduled task
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerQueryTask>>()))
-    .WillOnce(Return(ByMove(boost::make_ready_future())));
+      .WillOnce(Return(ByMove(boost::make_ready_future())));
 
   // It sends the result schema...
   EXPECT_CALL(*_connection, send_row_description(_));
@@ -227,13 +221,92 @@ TEST_F(ServerSessionTest, SessionExecutesSimpleQueryCommand) {
   // ... as well as the row data, using another scheduled task (not tested here)
   uint64_t row_count = 42u;
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<SendQueryResponseTask>>()))
-    .WillOnce(Return(ByMove(boost::make_ready_future(row_count))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(row_count))));
 
   // Finally, the session completes the command...
   EXPECT_CALL(*_connection, send_command_complete(_));
 
   // and accepts the next query
   EXPECT_CALL(*_connection, send_ready_for_query());
+  EXPECT_CALL(*_connection, receive_packet_header());
+
+  _session->start().wait();
+}
+
+TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
+  InSequence s;
+
+  // The session initiates with a ReadyForQuery message
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  // We start with a Parse command, containing the SQL
+  RequestHeader parse_request{NetworkMessageType::ParseCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
+
+  ParsePacket parse_packet = {"", "SELECT * FROM foo;"};
+  EXPECT_CALL(*_connection, receive_parse_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
+
+  // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
+  auto sql_pipeline = _create_working_sql_pipeline();
+  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
+  create_pipeline_result->sql_pipeline = sql_pipeline;
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+
+  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
+
+  // Up next is a Bind command
+  RequestHeader bind_request{NetworkMessageType::BindCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(bind_request))));
+
+  BindPacket bind_packet = {"", "", {}};
+  EXPECT_CALL(*_connection, receive_bind_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
+
+  // The session schedules a task to derive a Query Plan from the SQL Pipeline
+  const auto placeholder_plan = sql_pipeline->get_query_plans().front();
+  placeholder_plan->set_num_parameters(0);
+  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate({}));
+
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
+
+  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
+
+  // Next: Execute command
+  RequestHeader execute_request{NetworkMessageType::ExecuteCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header())
+      .WillOnce(Return(ByMove(boost::make_ready_future(execute_request))));
+
+  EXPECT_CALL(*_connection, receive_execute_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::string("")))));
+
+  // The session executes the SQLPipeline using another scheduled task
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table()))));
+
+  // It sends the row data, using another scheduled task (not tested here)
+  uint64_t row_count = 42u;
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<SendQueryResponseTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(row_count))));
+
+  // ... and completes the command
+  EXPECT_CALL(*_connection, send_command_complete(_));
+
+  // Finally: Sync command
+  RequestHeader sync_request{NetworkMessageType::SyncCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(sync_request))));
+
+  EXPECT_CALL(*_connection, receive_sync_packet_contents(42)).WillOnce(Return(ByMove(boost::make_ready_future())));
+
+  // Session commits the transaction and is ReadyForQuery again
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CommitTransactionTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future())));
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  // Session accepts the next query
   EXPECT_CALL(*_connection, receive_packet_header());
 
   _session->start().wait();

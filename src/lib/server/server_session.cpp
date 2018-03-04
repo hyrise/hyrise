@@ -61,44 +61,43 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_perform_sessio
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_requests() {
-  auto receive_packet_contents = [=](RequestHeader request) {
-    return _connection->receive_packet_contents(request.payload_length) >> then >>
-           [=](InputPacket packet_contents) { return std::make_pair(request, std::move(packet_contents)); };
-  };
-
-  auto process_command = [=](std::pair<RequestHeader, InputPacket> packet) {
-    switch (packet.first.message_type) {
+  auto process_command = [=](RequestHeader request) {
+    switch (request.message_type) {
       case NetworkMessageType::SimpleQueryCommand: {
-        const auto sql = PostgresWireHandler::handle_query_packet(packet.second);
-        return _handle_simple_query_command(sql) >> then >> [=]() { _connection->send_ready_for_query(); };
+        return _connection->receive_simple_query_packet_contents(request.payload_length) >> then >>
+               [=](std::string sql) { return _handle_simple_query_command(sql); } >> then >>
+               [=]() { return _connection->send_ready_for_query(); };
       }
+
       case NetworkMessageType::ParseCommand: {
-        auto parse_info = std::make_unique<ParsePacket>(PostgresWireHandler::handle_parse_packet(packet.second));
-        return _handle_parse_command(std::move(parse_info));
+        return _connection->receive_parse_packet_contents(request.payload_length) >> then >>
+               [=](ParsePacket parse_packet) { return _handle_parse_command(parse_packet); };
       }
 
       case NetworkMessageType::BindCommand: {
-        auto bind_packet = PostgresWireHandler::handle_bind_packet(packet.second);
-        return _handle_bind_command(std::move(bind_packet));
+        return _connection->receive_bind_packet_contents(request.payload_length) >> then >>
+               [=](BindPacket bind_packet) { return _handle_bind_command(bind_packet); };
       }
 
       case NetworkMessageType::DescribeCommand: {
-        auto portal = PostgresWireHandler::handle_describe_packet(packet.second);
-        return _handle_describe_command(portal);
+        return _connection->receive_describe_packet_contents(request.payload_length) >> then >>
+               [=](std::string portal) { return _handle_describe_command(portal); };
       }
 
       case NetworkMessageType::SyncCommand: {
-        // Packet has no content
-        return _handle_sync_command() >> then >> [=]() { _connection->send_ready_for_query(); };
+        return _connection->receive_sync_packet_contents(request.payload_length) >> then >>
+               [=]() { return _handle_sync_command(); } >> then >>
+               [=]() { return _connection->send_ready_for_query(); };
       }
 
       case NetworkMessageType::FlushCommand: {
-        return _handle_flush_command();
+        return _connection->receive_flush_packet_contents(request.payload_length) >> then >>
+               [=]() { return _handle_flush_command(); };
       }
 
       case NetworkMessageType::ExecuteCommand: {
-        auto portal = PostgresWireHandler::handle_execute_packet(packet.second);
-        return _handle_execute_command(std::move(portal));
+        return _connection->receive_execute_packet_contents(request.payload_length) >> then >>
+               [=](std::string portal) { return _handle_execute_command(portal); };
       }
 
       default:
@@ -109,11 +108,9 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
   return _connection->receive_packet_header() >> then >> [=](RequestHeader request) {
     if (request.message_type == NetworkMessageType::TerminateCommand) return boost::make_ready_future();
 
-    auto command_result = receive_packet_contents(request) >> then >> process_command;
-
     // Handle any exceptions that have occurred during process_command. For this, we need to call .then() explicitly,
     // because >> then >> does not handle execptions
-    return command_result
+    return process_command(request)
                .then(boost::launch::sync,
                      [=](boost::future<void> result) {
                        try {
@@ -127,7 +124,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
                          }
 
                          return _connection->send_error(e.what()) >> then >>
-                                [=]() { _connection->send_ready_for_query(); };
+                                [=]() { return _connection->send_ready_for_query(); };
                        }
                      })
                .unwrap()
@@ -138,7 +135,9 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string sql) {
-  auto create_sql_pipeline = [=]() { return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true)); };
+  auto create_sql_pipeline = [=]() {
+    return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
+  };
 
   auto load_table_file = [=](std::string& file_name, std::string& table_name) {
     auto task = std::make_shared<LoadServerFileTask>(file_name, table_name);
@@ -191,8 +190,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
 }
 
 template <typename TConnection, typename TTaskRunner>
-boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(std::unique_ptr<ParsePacket> parse_info) {
-  auto prepared_statement_name = parse_info->statement_name;
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(const ParsePacket& parse_info) {
+  auto prepared_statement_name = parse_info.statement_name;
 
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
@@ -204,7 +203,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
     _prepared_statements.erase(statement_it);
   }
 
-  return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info->query)) >> then >>
+  return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info.query)) >> then >>
          [=](std::unique_ptr<CreatePipelineResult> result) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
            _prepared_statements.insert(std::make_pair(prepared_statement_name, result->sql_pipeline));
@@ -213,7 +212,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
 }
 
 template <typename TConnection, typename TTaskRunner>
-boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(BindPacket packet) {
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
   auto statement_it = _prepared_statements.find(packet.statement_name);
   if (statement_it == _prepared_statements.end()) throw std::logic_error("Unknown statement");
 
