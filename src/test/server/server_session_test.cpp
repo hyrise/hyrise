@@ -436,7 +436,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   EXPECT_CALL(*_connection, receive_bind_packet_contents(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  EXPECT_CALL(*_connection, send_error("Named portals must be explicitly closed before they can be redefined"));
+  EXPECT_CALL(*_connection, send_error("Named portals must be explicitly closed before they can be redefined."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());

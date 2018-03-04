@@ -30,7 +30,7 @@ cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 make hyriseTest -j $((cores / 2))
 cd -
 
-./$build_directory/hyriseTest $test_data_folder
+DYLD_LIBRARY_PATH=/Users/robert/dkw/boost-develop/lib ./$build_directory/hyriseTest $test_data_folder
 rm -fr coverage; mkdir coverage
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
