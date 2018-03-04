@@ -20,8 +20,8 @@ class UnionNodeTest : public BaseTest {
     _c = {_mock_node, ColumnID{2}};
 
     _union_node = UnionNode::make(UnionMode::Positions);
-    _union_node->set_left_child(_mock_node);
-    _union_node->set_right_child(_mock_node);
+    _union_node->set_left_input(_mock_node);
+    _union_node->set_right_input(_mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -60,8 +60,8 @@ TEST_F(UnionNodeTest, MismatchingColumnNames) {
       MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "d"}, {DataType::Int, "c"}}, "t_a");
 
   auto invalid_union = UnionNode::make(UnionMode::Positions);
-  invalid_union->set_left_child(_mock_node);
-  invalid_union->set_right_child(mock_node_b);
+  invalid_union->set_left_input(_mock_node);
+  invalid_union->set_right_input(mock_node_b);
 
   EXPECT_THROW(invalid_union->get_verbose_column_name(ColumnID{1}), std::exception);
 }
@@ -71,8 +71,8 @@ TEST_F(UnionNodeTest, VerboseColumnNames) {
    * UnionNode will only prefix columns with its own ALIAS and forget any table names / aliases of its input tables
    */
   auto verbose_union = UnionNode::make(UnionMode::Positions);
-  verbose_union->set_left_child(_mock_node);
-  verbose_union->set_right_child(_mock_node);
+  verbose_union->set_left_input(_mock_node);
+  verbose_union->set_right_input(_mock_node);
   verbose_union->set_alias("union_alias");
 
   EXPECT_EQ(_union_node->get_verbose_column_name(ColumnID{0}), "a");

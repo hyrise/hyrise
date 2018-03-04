@@ -25,42 +25,42 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     // Gather adjacent PredicateNodes
     auto current_node = node;
     while (current_node->type() == LQPNodeType::Predicate) {
-      // Once a node has multiple parents, we're not talking about a Predicate chain anymore
-      if (current_node->parents().size() > 1) {
+      // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
+      if (current_node->outputs().size() > 1) {
         break;
       }
 
       predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
-      current_node = current_node->left_child();
+      current_node = current_node->left_input();
     }
 
     /**
      * A chain of predicates was found.
      * Sort PredicateNodes in descending order with regards to the expected row_count
-     * Continue rule in deepest child
+     * Continue rule in deepest input
      */
     if (predicate_nodes.size() > 1) {
       reordered = _reorder_predicates(predicate_nodes);
-      reordered |= _apply_to_children(predicate_nodes.back());
+      reordered |= _apply_to_inputs(predicate_nodes.back());
     } else {
-      // No chain was found, continue with the current nodes children.
-      reordered = _apply_to_children(node);
+      // No chain was found, continue with the current nodes inputren.
+      reordered = _apply_to_inputs(node);
     }
   } else {
-    reordered = _apply_to_children(node);
+    reordered = _apply_to_inputs(node);
   }
 
   return reordered;
 }
 
 bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
-  // Store original child and parent
-  auto child = predicates.back()->left_child();
-  const auto parents = predicates.front()->parents();
-  const auto child_sides = predicates.front()->get_child_sides();
+  // Store original input and output
+  auto input = predicates.back()->left_input();
+  const auto outputs = predicates.front()->outputs();
+  const auto input_sides = predicates.front()->get_input_sides();
 
   const auto sort_predicate = [&](auto& left, auto& right) {
-    return left->derive_statistics_from(child)->row_count() > right->derive_statistics_from(child)->row_count();
+    return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
   };
 
   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
@@ -76,14 +76,14 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   // Ensure that nodes are chained correctly
-  predicates.back()->set_left_child(child);
+  predicates.back()->set_left_input(input);
 
-  for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-    parents[parent_idx]->set_child(child_sides[parent_idx], predicates.front());
+  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+    outputs[output_idx]->set_input(input_sides[output_idx], predicates.front());
   }
 
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
-    predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);
+    predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
   }
 
   return true;

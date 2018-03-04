@@ -79,7 +79,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   const auto stored_table_node = StoredTableNode::make("table_int_float");
   auto predicate_node =
       PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
-  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_left_input(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -99,7 +99,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   const auto stored_table_node = StoredTableNode::make("table_int_float");
   auto predicate_node = PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{0}),
                                             PredicateCondition::Between, AllParameterVariant(42), AllTypeVariant(1337));
-  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_left_input(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -132,7 +132,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
   auto predicate_node =
       PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
-  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_left_input(stored_table_node);
   predicate_node->set_scan_type(ScanType::IndexScan);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -168,7 +168,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 
   auto predicate_node = PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}),
                                             PredicateCondition::Between, AllParameterVariant(42), AllTypeVariant(1337));
-  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_left_input(stored_table_node);
   predicate_node->set_scan_type(ScanType::IndexScan);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -212,10 +212,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
 
   auto predicate_node =
       PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
-  predicate_node->set_left_child(stored_table_node);
+  predicate_node->set_left_input(stored_table_node);
   auto predicate_node2 =
       PredicateNode::make(LQPColumnReference(predicate_node, ColumnID{0}), PredicateCondition::LessThanEquals, 42);
-  predicate_node2->set_left_child(predicate_node);
+  predicate_node2->set_left_input(predicate_node);
 
   // The optimizer should not set this ScanType in this situation
   predicate_node2->set_scan_type(ScanType::IndexScan);
@@ -230,7 +230,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
   const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{
       LQPExpression::create_column(LQPColumnReference(stored_table_node, ColumnID{0}), {"a"})};
   auto projection_node = ProjectionNode::make(expressions);
-  projection_node->set_left_child(stored_table_node);
+  projection_node->set_left_input(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
 
   /**
@@ -250,7 +250,7 @@ TEST_F(LQPTranslatorTest, SortNode) {
   const auto stored_table_node = StoredTableNode::make("table_int_float");
   auto sort_node = SortNode::make(
       std::vector<OrderByDefinition>{{LQPColumnReference(stored_table_node, ColumnID{0}), OrderByMode::Ascending}});
-  sort_node->set_left_child(stored_table_node);
+  sort_node->set_left_input(stored_table_node);
   const auto op = LQPTranslator{}.translate_node(sort_node);
 
   const auto sort_op = std::dynamic_pointer_cast<Sort>(op);
@@ -269,8 +269,8 @@ TEST_F(LQPTranslatorTest, JoinNode) {
       JoinNode::make(JoinMode::Outer, std::make_pair(LQPColumnReference(stored_table_node_left, ColumnID{1}),
                                                      LQPColumnReference(stored_table_node_right, ColumnID{0})),
                      PredicateCondition::Equals);
-  join_node->set_left_child(stored_table_node_left);
-  join_node->set_right_child(stored_table_node_right);
+  join_node->set_left_input(stored_table_node_left);
+  join_node->set_right_input(stored_table_node_right);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
@@ -325,7 +325,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
 
   auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
                                             std::vector<LQPColumnReference>{});
-  aggregate_node->set_left_child(stored_table_node);
+  aggregate_node->set_left_input(stored_table_node);
 
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
@@ -364,7 +364,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   auto aggregate_node =
       AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
                           std::vector<LQPColumnReference>{LQPColumnReference(stored_table_node, ColumnID{0})});
-  aggregate_node->set_left_child(stored_table_node);
+  aggregate_node->set_left_input(stored_table_node);
 
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
@@ -411,19 +411,19 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   const auto stored_table_node_left = StoredTableNode::make("table_int_float");
   auto predicate_node_left = PredicateNode::make(LQPColumnReference(stored_table_node_left, ColumnID{0}),
                                                  PredicateCondition::Equals, AllParameterVariant(42));
-  predicate_node_left->set_left_child(stored_table_node_left);
+  predicate_node_left->set_left_input(stored_table_node_left);
 
   const auto stored_table_node_right = StoredTableNode::make("table_int_float2");
   auto predicate_node_right = PredicateNode::make(LQPColumnReference(stored_table_node_right, ColumnID{1}),
                                                   PredicateCondition::GreaterThan, AllParameterVariant(30.0));
-  predicate_node_right->set_left_child(stored_table_node_right);
+  predicate_node_right->set_left_input(stored_table_node_right);
 
   auto join_node =
       JoinNode::make(JoinMode::Inner, LQPColumnReferencePair(LQPColumnReference(stored_table_node_left, ColumnID{0}),
                                                              LQPColumnReference(stored_table_node_right, ColumnID{0})),
                      PredicateCondition::Equals);
-  join_node->set_left_child(predicate_node_left);
-  join_node->set_right_child(predicate_node_right);
+  join_node->set_left_input(predicate_node_left);
+  join_node->set_right_input(predicate_node_right);
 
   const auto op = LQPTranslator{}.translate_node(join_node);
 
@@ -458,7 +458,7 @@ TEST_F(LQPTranslatorTest, LimitNode) {
 
   const auto num_rows = 2u;
   auto limit_node = LimitNode::make(num_rows);
-  limit_node->set_left_child(stored_table_node);
+  limit_node->set_left_input(stored_table_node);
 
   /**
    * Check PQP
@@ -504,11 +504,11 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   auto union_node = UnionNode::make(UnionMode::Positions);
   const auto& lqp = union_node;
 
-  union_node->set_left_child(predicate_node_a);
-  union_node->set_right_child(predicate_node_b);
-  predicate_node_a->set_left_child(predicate_node_c);
-  predicate_node_b->set_left_child(predicate_node_c);
-  predicate_node_c->set_left_child(table_node);
+  union_node->set_left_input(predicate_node_a);
+  union_node->set_right_input(predicate_node_b);
+  predicate_node_a->set_left_input(predicate_node_c);
+  predicate_node_b->set_left_input(predicate_node_c);
+  predicate_node_c->set_left_input(table_node);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
