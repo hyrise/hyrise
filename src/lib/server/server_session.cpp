@@ -101,7 +101,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
       }
 
       default:
-        throw std::logic_error("Unsupported message type");
+        throw std::logic_error("Unsupported message type.");
     }
   };
 
@@ -198,7 +198,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
   auto statement_it = _prepared_statements.find(prepared_statement_name);
   if (statement_it != _prepared_statements.end()) {
     if (!prepared_statement_name.empty()) {
-      throw std::logic_error("Named prepared statements must be explicitly closed before they can be redefined");
+      throw std::logic_error("Named prepared statements must be explicitly closed before they can be redefined.");
     }
     _prepared_statements.erase(statement_it);
   }
@@ -214,7 +214,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
   auto statement_it = _prepared_statements.find(packet.statement_name);
-  if (statement_it == _prepared_statements.end()) throw std::logic_error("Unknown statement");
+  if (statement_it == _prepared_statements.end()) throw std::logic_error("The specified statement does not exist.");
 
   auto sql_pipeline = statement_it->second;
   if (packet.statement_name.empty()) _prepared_statements.erase(statement_it);
@@ -227,7 +227,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
   auto portal_it = _portals.find(portal_name);
   if (portal_it != _portals.end()) {
     if (!portal_name.empty())
-      throw std::logic_error("Named portals must be explicitly closed before they can be redefined");
+      throw std::logic_error("Named portals must be explicitly closed before they can be redefined.");
     _portals.erase(portal_it);
   }
 
@@ -266,7 +266,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_flush_c
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute_command(std::string portal_name) {
   auto portal_it = _portals.find(portal_name);
-  if (portal_it == _portals.end()) throw std::logic_error("Unknown portal");
+  if (portal_it == _portals.end()) throw std::logic_error("The specified portal does not exist.");
 
   auto statement_type = portal_it->second.first;
   auto query_plan = portal_it->second.second;

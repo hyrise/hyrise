@@ -312,4 +312,136 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
   _session->start().wait();
 }
 
+TEST_F(ServerSessionTest, SessionHandlesLoadTableRequestInSimpleQueryCommand) {
+  InSequence s;
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  RequestHeader request{NetworkMessageType::SimpleQueryCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(request))));
+
+  EXPECT_CALL(*_connection, receive_simple_query_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::string("<some load table command>")))));
+
+  // The session schedules a CreatePipelineTask which is responsible for detecting the load table request
+  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
+  create_pipeline_result->load_table = std::make_pair("file name", "table name");
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+
+  // The session schedules a LoadServerFileTask
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<LoadServerFileTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future())));
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+  EXPECT_CALL(*_connection, receive_packet_header());
+
+  _session->start().wait();
+}
+
+TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
+  InSequence s;
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  RequestHeader parse_request{NetworkMessageType::ParseCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
+
+  ParsePacket parse_packet = {"my_named_statement", "SELECT * FROM foo;"};
+  EXPECT_CALL(*_connection, receive_parse_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
+
+  // For this test, we don't actually have to set the SQL Pipeline in the result
+  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+
+  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
+
+  // Send the same parse packet again
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
+  EXPECT_CALL(*_connection, receive_parse_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
+
+  EXPECT_CALL(*_connection,
+              send_error("Named prepared statements must be explicitly closed before they can be redefined."));
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+  EXPECT_CALL(*_connection, receive_packet_header());
+
+  _session->start().wait();
+}
+
+TEST_F(ServerSessionTest, SessionSendsErrorWhenBindingUnknownNamedStatement) {
+  InSequence s;
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  RequestHeader bind_request{NetworkMessageType::BindCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(bind_request))));
+
+  BindPacket bind_packet = {"my_named_statement", "", {}};
+  EXPECT_CALL(*_connection, receive_bind_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
+
+  EXPECT_CALL(*_connection, send_error("The specified statement does not exist."));
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+  EXPECT_CALL(*_connection, receive_packet_header());
+
+  _session->start().wait();
+}
+
+TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
+  InSequence s;
+
+  // Run the initial workflow of the SessionHandlesExtendedProtocolFlow test
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  // Create a statement to bind
+  RequestHeader parse_request{NetworkMessageType::ParseCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
+
+  ParsePacket parse_packet = {"my_named_statement", "SELECT * FROM foo;"};
+  EXPECT_CALL(*_connection, receive_parse_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
+
+  auto sql_pipeline = _create_working_sql_pipeline();
+  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
+  create_pipeline_result->sql_pipeline = sql_pipeline;
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+
+  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
+
+  // The first Bind command
+  RequestHeader bind_request{NetworkMessageType::BindCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(bind_request))));
+
+  BindPacket bind_packet = {"my_named_statement", "my_named_portal", {}};
+  EXPECT_CALL(*_connection, receive_bind_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
+
+  const auto placeholder_plan = sql_pipeline->get_query_plans().front();
+  placeholder_plan->set_num_parameters(0);
+  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate({}));
+
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
+
+  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
+
+  // Send the same Bind command again
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(bind_request))));
+  EXPECT_CALL(*_connection, receive_bind_packet_contents(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
+
+  EXPECT_CALL(*_connection, send_error("Named portals must be explicitly closed before they can be redefined"));
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+  EXPECT_CALL(*_connection, receive_packet_header());
+
+  _session->start().wait();
+}
+
 }  // namespace opossum
