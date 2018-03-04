@@ -123,12 +123,11 @@ class ColumnMaterializer {
 
     const auto column = input->get_chunk(chunk_id)->get_column(column_id);
 
-    return std::make_shared<JobTask>(
-        [this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
-          resolve_column_type<T>(*column, [&](auto& typed_column) {
-            _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
-          });
-        });
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
+      resolve_column_type<T>(*column, [&](auto& typed_column) {
+        _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
+      });
+    });
   }
 
   /**

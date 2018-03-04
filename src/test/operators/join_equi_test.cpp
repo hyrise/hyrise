@@ -12,8 +12,8 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_index.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
@@ -32,8 +32,8 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM
-TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
+using JoinEquiTypes = ::testing::Types < JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex,
+      JoinMPSM TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
   if (!IS_DEBUG) return;
