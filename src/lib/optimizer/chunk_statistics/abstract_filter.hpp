@@ -7,6 +7,11 @@
 
 namespace opossum {
 
+/**
+ * Base class for all Filters. A Filter is part of ChunkColumnStatistics and holds
+ * some kind of statistical information about the columns contents. This information can
+ * be used to optimize SQL Queries.
+*/
 class AbstractFilter : public std::enable_shared_from_this<AbstractFilter> {
  public:
   virtual ~AbstractFilter() = default;
@@ -16,8 +21,8 @@ class AbstractFilter : public std::enable_shared_from_this<AbstractFilter> {
    * and predicate condition will not yield any positive results with the values
    * represented by the filter data.
    * 
-   * In other words: A scan operation with value and predicate_type on the column/chunk
-   * that this filter was created on would yield zero result rows.
+   * In other words: returns true if a scan operation with value and predicate_type
+   * on the column/chunk that this filter was created on would yield zero result rows.
   */
   virtual bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const = 0;
 };

@@ -12,6 +12,12 @@ namespace opossum {
 // make this customizable?
 static constexpr uint32_t MAX_RANGES_COUNT = 10;
 
+/**
+ * Filter that stores MAX_RANGES_COUNT value ranges. Each range represents a gap in the data
+ * i.e. an interval where the column has no values.
+ * These ranges can be used to check whether a certain value exists in the column.
+ * Once the between operator uses two parameters, the ranges can be used for that aswell.
+*/
 template <typename T>
 class RangeFilter : public AbstractFilter {
  public:
