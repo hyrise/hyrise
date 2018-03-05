@@ -22,9 +22,9 @@ namespace opossum {
 // make this customizable?
 static constexpr uint32_t MAX_RANGES_COUNT = 10;
 
-class BaseFilter : public std::enable_shared_from_this<BaseFilter> {
+class AbstractFilter : public std::enable_shared_from_this<AbstractFilter> {
  public:
-  virtual ~BaseFilter() = default;
+  virtual ~AbstractFilter() = default;
 
   /**
    * checks whether the filter is able to determine that the given value 
@@ -42,7 +42,7 @@ class ChunkColumnStatistics {
   static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
                                                                  std::shared_ptr<BaseColumn> column);
 
-  void add_filter(std::shared_ptr<BaseFilter> filter) { _filters.emplace_back(filter); }
+  void add_filter(std::shared_ptr<AbstractFilter> filter) { _filters.emplace_back(filter); }
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const {
     for (const auto& filter : _filters) {
@@ -54,11 +54,11 @@ class ChunkColumnStatistics {
   }
 
  protected:
-  std::vector<std::shared_ptr<BaseFilter>> _filters;
+  std::vector<std::shared_ptr<AbstractFilter>> _filters;
 };
 
 template <typename T>
-class MinMaxFilter : public BaseFilter {
+class MinMaxFilter : public AbstractFilter {
  public:
   explicit MinMaxFilter(T min, T max) : _min(min), _max(max) {}
   ~MinMaxFilter() override = default;
@@ -90,7 +90,7 @@ class MinMaxFilter : public BaseFilter {
 };
 
 template <typename T>
-class RangeFilter : public BaseFilter {
+class RangeFilter : public AbstractFilter {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
 
