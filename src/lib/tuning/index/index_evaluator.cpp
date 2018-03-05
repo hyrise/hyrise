@@ -41,7 +41,7 @@ uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluati
   const auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   // ToDo(anyone) adapt for multi column indices...
   const auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
-  const auto value_count = column_statistics->distinct_count();
+  const auto distinct_value_count = column_statistics->distinct_count();
 
   // Sum up column data type widths
   size_t value_bytes = 0;
@@ -57,10 +57,10 @@ uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluati
   const auto row_count = table->row_count();
   const auto chunk_count = table->chunk_count();
   const auto chunk_rows = row_count / chunk_count;
-  const auto chunk_values = value_count / chunk_count;
+  const auto chunk_distinct_values = distinct_value_count / chunk_count;
 
   const uintptr_t memory_cost_per_chunk =
-      BaseIndex::predict_memory_consumption(index_evaluation.type, chunk_rows, chunk_values, value_bytes);
+      BaseIndex::predict_memory_consumption(index_evaluation.type, chunk_rows, chunk_distinct_values, value_bytes);
   return memory_cost_per_chunk * chunk_count;
 }
 

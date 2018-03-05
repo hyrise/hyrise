@@ -214,8 +214,8 @@ void BaseIndexEvaluator::_add_existing_indexes() {
 }
 
 void BaseIndexEvaluator::_add_new_indexes() {
-  for (const auto& index_spec : _new_indexes) {
-    _choices.emplace_back(index_spec, false);
+  for (const auto& column_ref : _new_indexes) {
+    _choices.emplace_back(column_ref, false);
   }
 }
 

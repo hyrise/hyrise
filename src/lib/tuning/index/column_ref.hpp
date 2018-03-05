@@ -10,7 +10,8 @@ namespace opossum {
 
 /**
  * A ColumnRef is used to reference a set of columns by a table name
- * and their column indices in this table
+ * and their column indexes in this table.
+ * This is used by the IndexEvaluator, IndexChoices and IndexOperations.
  */
 struct ColumnRef {
   ColumnRef(std::string table_name, ColumnID column_id);
