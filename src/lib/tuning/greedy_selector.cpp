@@ -58,8 +58,8 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
   //  2) by accept_desirability() ascending stable
   // The most desirable choice is at back() and among equaly desirable choices
   // the least costly choices to accept are nearer back().
-  std::list<std::shared_ptr<TuningChoice>> sorted_choices(choices.size());
-  std::copy(choices.cbegin(), choices.cend(), sorted_choices.begin());
+  std::list<std::shared_ptr<TuningChoice>> sorted_choices(choices.cbegin(), choices.cend());
+
   sorted_choices.sort([](std::shared_ptr<TuningChoice> lhs, std::shared_ptr<TuningChoice> rhs) {
     return lhs->reject_cost() < rhs->reject_cost();
   });

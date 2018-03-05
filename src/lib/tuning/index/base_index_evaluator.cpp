@@ -204,21 +204,11 @@ void BaseIndexEvaluator::_add_existing_indexes() {
     const auto& table = StorageManager::get().get_table(table_name);
     const auto& first_chunk = table->get_chunk(ChunkID{0});
 
-    for (const auto& column_name : table->column_names()) {
-      const auto& column_id = table->column_id_by_name(column_name);
-      auto column_ids = std::vector<ColumnID>();
-      column_ids.emplace_back(column_id);
-      auto indexes = first_chunk->get_indices(column_ids);
-      for (const auto& index : indexes) {
-        _choices.emplace_back(ColumnRef{table_name, column_id}, true);
-        _choices.back().type = index->type();
-        _new_indexes.erase({table_name, column_id});
-      }
-      if (indexes.size() > 1) {
-        LOG_DEBUG("Found " << indexes.size() << " indexes on " << table_name << "." << column_name);
-      } else if (indexes.size() > 0) {
-        LOG_DEBUG("Found index on " << table_name << "." << column_name);
-      }
+    for (const auto& index_info : table->get_indexes()) {
+        auto index_choice = IndexChoice{ColumnRef{table_name, index_info.column_ids}, true};
+        index_choice.type = index_info.type;
+        _choices.emplace_back(index_choice);
+        _new_indexes.erase({table_name, index_info.column_ids});
     }
   }
 }
