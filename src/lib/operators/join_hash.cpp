@@ -741,7 +741,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   // See usage in _on_execute() for doc.
   static PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> input_table) {
-    std::map<std::vector<const PosList *>, PosListsSPtr> shared_pos_lists_by_pos_lists;
+    std::map<std::vector<const PosList*>, PosListsSPtr> shared_pos_lists_by_pos_lists;
 
     PosListsByColumn pos_lists_by_column(input_table->column_count());
     auto pos_lists_by_column_it = pos_lists_by_column.begin();
@@ -755,7 +755,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
         // This works because we assume that the columns have to be either all ReferenceColumns or none.
-        const auto& ref_column = *static_cast<const ReferenceColumn*>(input_chunks[chunk_id]->columns()[column_id].get());
+        const auto& ref_column =
+            *static_cast<const ReferenceColumn*>(input_chunks[chunk_id]->columns()[column_id].get());
         *pos_lists_iter = ref_column.pos_list().get();
         ++pos_lists_iter;
       }
@@ -771,8 +772,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   static void write_output_chunks(const std::shared_ptr<Chunk>& output_chunk,
                                   const std::shared_ptr<const Table> input_table,
-                                  const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
-                                  PosList& pos_list,
+                                  const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column, PosList& pos_list,
                                   bool is_ref_column) {
     if (pos_list.empty()) return;
 
@@ -804,7 +804,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           iter = output_pos_list_by_input_pos_list_ptrs_sptr.emplace(input_table_pos_lists, new_pos_list).first;
         }
 
-        auto ref_col =  std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
+        auto ref_col =
+            std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
         column = std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
                                                    iter->second);
       } else {
@@ -817,4 +818,3 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 };
 
 }  // namespace opossum
-

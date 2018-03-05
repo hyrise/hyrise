@@ -71,9 +71,7 @@ std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
-const pmr_concurrent_vector<std::shared_ptr<BaseColumn>>& Chunk::columns() const {
-  return _columns;
-}
+const pmr_concurrent_vector<std::shared_ptr<BaseColumn>>& Chunk::columns() const { return _columns; }
 
 uint16_t Chunk::column_count() const { return _columns.size(); }
 
