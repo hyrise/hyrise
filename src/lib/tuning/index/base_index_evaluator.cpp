@@ -56,7 +56,7 @@ void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& ch
 
 void BaseIndexEvaluator::_setup() {}
 
-void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& /*record*/) {}
+void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord&) {}
 
 float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
   const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
