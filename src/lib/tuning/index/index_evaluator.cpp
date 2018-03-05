@@ -40,7 +40,8 @@ ColumnIndexType IndexEvaluator::_propose_index_type(const IndexChoice& index_eva
 uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
   const auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   // ToDo(anyone) adapt for multi column indices...
-  const auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
+  const auto column_statistics =
+      table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
   const auto distinct_value_count = column_statistics->distinct_count();
 
   // Sum up column data type widths

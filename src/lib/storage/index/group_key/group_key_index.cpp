@@ -5,7 +5,8 @@
 
 namespace opossum {
 
-uintptr_t GroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes) {
+uintptr_t GroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
+                                                    uint32_t value_bytes) {
   return row_count * sizeof(ChunkOffset) + value_count * sizeof(std::size_t);
 }
 

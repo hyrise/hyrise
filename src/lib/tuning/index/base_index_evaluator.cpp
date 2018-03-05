@@ -205,10 +205,10 @@ void BaseIndexEvaluator::_add_existing_indexes() {
     const auto& first_chunk = table->get_chunk(ChunkID{0});
 
     for (const auto& index_info : table->get_indexes()) {
-        auto index_choice = IndexChoice{ColumnRef{table_name, index_info.column_ids}, true};
-        index_choice.type = index_info.type;
-        _choices.emplace_back(index_choice);
-        _new_indexes.erase({table_name, index_info.column_ids});
+      auto index_choice = IndexChoice{ColumnRef{table_name, index_info.column_ids}, true};
+      index_choice.type = index_info.type;
+      _choices.emplace_back(index_choice);
+      _new_indexes.erase({table_name, index_info.column_ids});
     }
   }
 }

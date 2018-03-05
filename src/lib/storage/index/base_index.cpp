@@ -11,7 +11,7 @@
 namespace opossum {
 
 uintptr_t BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
-                                            uint32_t value_bytes) {
+                                                uint32_t value_bytes) {
   switch (type) {
     case ColumnIndexType::GroupKey:
       return GroupKeyIndex::predict_memory_consumption(row_count, value_count, value_bytes);
