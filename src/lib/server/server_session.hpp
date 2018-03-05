@@ -36,6 +36,8 @@ class ServerSessionImpl {
   boost::future<void> _handle_sync_command();
   boost::future<void> _handle_flush_command();
 
+  boost::future<uint64_t> _send_query_response(const Table& table);
+
   std::shared_ptr<TConnection> _connection;
   std::shared_ptr<TTaskRunner> _task_runner;
 

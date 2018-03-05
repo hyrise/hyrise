@@ -212,6 +212,8 @@ set(
     server/server_session.hpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
+    server/query_response_builder.cpp
+    server/query_response_builder.hpp
     server/task_runner.hpp
     server/then_operator.hpp
     server/types.hpp
@@ -363,8 +365,6 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
-    tasks/server/send_query_response_task.cpp
-    tasks/server/send_query_response_task.hpp
     tasks/server/server_task.hpp
     type_cast.hpp
     type_comparison.hpp

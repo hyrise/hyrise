@@ -20,9 +20,9 @@
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
-#include "tasks/server/send_query_response_task.hpp"
 
 #include "client_connection.hpp"
+#include "query_response_builder.hpp"
 #include "then_operator.hpp"
 #include "types.hpp"
 #include "use_boost_future.hpp"
@@ -157,21 +157,20 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
       // If there is no result table, e.g. after an INSERT command, we cannot send row data
       if (!result_table) return boost::make_ready_future<uint64_t>(0);
 
-      auto row_description = SendQueryResponseTask::build_row_description(sql_pipeline->get_result_table());
+      auto row_description = QueryResponseBuilder::build_row_description(sql_pipeline->get_result_table());
 
-      auto task = std::make_shared<SendQueryResponseTask>(nullptr /* TODO */, result_table);
       return _connection->send_row_description(row_description) >> then >>
-             [=]() { return _task_runner->dispatch_server_task(task); };
+             [=]() { return QueryResoponseBuilder::send_query_response(/* TODO */, *result_table); };
     };
 
     return send_row_data() >> then >>
            [=](uint64_t row_count) {
              auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
-             auto complete_message = SendQueryResponseTask::build_command_complete_message(statement_type, row_count);
+             auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);
              return _connection->send_command_complete(complete_message);
            } >>
            then >> [=]() {
-             auto execution_info = SendQueryResponseTask::build_execution_info_message(sql_pipeline);
+             auto execution_info = QueryResponseBuilder::build_execution_info_message(sql_pipeline);
              return _connection->send_notice(execution_info);
            };
   };
@@ -284,11 +283,10 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
                     []() { return uint64_t(0); };
 
-           auto task = std::make_shared<SendQueryResponseTask>(nullptr /* TODO */, result_table);
-           return _task_runner->dispatch_server_task(task);
+           return QueryResoponseBuilder::send_query_response(/* TODO */, *result_table);
          } >>
          then >> [=](uint64_t row_count) {
-           auto complete_message = SendQueryResponseTask::build_command_complete_message(statement_type, row_count);
+           auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);
            return _connection->send_command_complete(complete_message);
          };
 }
