@@ -85,4 +85,4 @@ bool ChunkColumnStatistics::can_prune(const AllTypeVariant& value, const Predica
   }
   return false;
 }
-}
+}  // namespace opossum
