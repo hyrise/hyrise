@@ -37,7 +37,9 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
-std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args,
+                                                       const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                                       const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   ColumnExpressions new_column_expressions;
 
   for (const auto& column_expression : _column_expressions) {

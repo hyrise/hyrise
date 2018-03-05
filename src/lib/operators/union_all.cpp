@@ -42,4 +42,9 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 
   return output;
 }
+std::shared_ptr<AbstractOperator> UnionAll::recreate(const std::vector<AllParameterVariant>& args = {},
+                                           const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                           const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+
+}
 }  // namespace opossum

@@ -47,7 +47,9 @@ class TableScan : public AbstractReadOnlyOperator {
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {},
+                                             const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                             const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

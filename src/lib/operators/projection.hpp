@@ -36,7 +36,9 @@ class Projection : public AbstractReadOnlyOperator {
 
   const ColumnExpressions& column_expressions() const;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args,
+                                             const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                             const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   /**
    * The dummy table is used for literal projections that have no input table.

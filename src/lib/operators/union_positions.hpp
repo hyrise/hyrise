@@ -71,7 +71,9 @@ class UnionPositions : public AbstractReadOnlyOperator {
   UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right);
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args,
+                                             const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                             const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
   const std::string name() const override;
 
  private:

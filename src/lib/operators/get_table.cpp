@@ -19,7 +19,9 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
 
 const std::string& GetTable::table_name() const { return _name; }
 
-std::shared_ptr<AbstractOperator> GetTable::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> GetTable::_on_recreate(const std::vector<AllParameterVariant>& args,
+                                                     const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                                     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<GetTable>(_name);
 }
 
