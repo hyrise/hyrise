@@ -104,7 +104,8 @@ class RangeFilter : public BaseFilter {
     switch (predicate_type) {
       case PredicateCondition::Equals: {
         bool prunable = false;
-        for (const auto & [ min, max ] : _ranges) {
+        for (const auto& min_max_pair : _ranges) {
+          const auto & [ min, max ] = min_max_pair;
           prunable |= min < t_value && t_value < max;
         }
         return prunable;
