@@ -4,18 +4,18 @@
 
 #include "resolve_type.hpp"
 
+#include "optimizer/abstract_filter.hpp"
+#include "optimizer/min_max_filter.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column.hpp"
 #include "storage/value_column.hpp"
-#include "optimizer/abstract_filter.hpp"
-#include "optimizer/min_max_filter.hpp"
 
 namespace opossum {
 
-    template <typename T>
+template <typename T>
 static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
   auto statistics = std::make_shared<ChunkColumnStatistics>();
   // only create statistics when the compressed dictionary is not empty
@@ -77,11 +77,11 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(D
 void ChunkColumnStatistics::add_filter(std::shared_ptr<AbstractFilter> filter) { _filters.emplace_back(filter); }
 
 bool ChunkColumnStatistics::can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const {
-    for (const auto& filter : _filters) {
-        if (filter->can_prune(value, predicate_type)) {
-        return true;
-        }
+  for (const auto& filter : _filters) {
+    if (filter->can_prune(value, predicate_type)) {
+      return true;
     }
-    return false;
+  }
+  return false;
 }
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "types.hpp"

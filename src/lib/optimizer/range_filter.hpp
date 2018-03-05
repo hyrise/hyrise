@@ -1,11 +1,10 @@
 #pragma once
 
-#include <vector>
-#include <type_traits>
 #include <memory>
+#include <type_traits>
+#include <vector>
 
 #include "optimizer/abstract_filter.hpp"
-
 
 namespace opossum {
 
