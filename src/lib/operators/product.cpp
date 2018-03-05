@@ -105,9 +105,9 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
 
   output->emplace_chunk(std::move(output_chunk));
 }
-std::shared_ptr<AbstractOperator> Product::recreate(const std::vector<AllParameterVariant>& args,
+std::shared_ptr<AbstractOperator> Product::_on_recreate(const std::vector<AllParameterVariant>& args,
                                            const std::shared_ptr<AbstractOperator>& recreated_input_left,
                                            const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-
+  return std::make_shared<Product>(recreated_input_left, recreated_input_right);
 }
 }  // namespace opossum

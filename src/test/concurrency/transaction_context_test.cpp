@@ -11,6 +11,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "utils/assert.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -37,6 +38,13 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
     context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
     return nullptr;
+  }
+
+
+  std::shared_ptr<AbstractOperator> _on_recreate(const std::vector<AllParameterVariant>& args,
+                                                              const std::shared_ptr<AbstractOperator>& recreated_input_left,
+                                                              const std::shared_ptr<AbstractOperator>& recreated_input_right) const override {
+    Fail("Unexpected function call");
   }
 
   void _on_commit_records(const CommitID cid) override { _func(); }

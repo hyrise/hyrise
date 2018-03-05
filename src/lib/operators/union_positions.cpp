@@ -59,10 +59,10 @@ UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& le
                                const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
-std::shared_ptr<AbstractOperator> UnionPositions::recreate(const std::vector<AllParameterVariant>& args,
+std::shared_ptr<AbstractOperator> UnionPositions::_on_recreate(const std::vector<AllParameterVariant>& args,
                                                            const std::shared_ptr<AbstractOperator>& recreated_input_left,
                                                            const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<UnionPositions>(input_left()->recreate(args), input_right()->recreate(args));
+  return std::make_shared<UnionPositions>(recreated_input_left, recreated_input_right);
 }
 
 const std::string UnionPositions::name() const { return "UnionPositions"; }

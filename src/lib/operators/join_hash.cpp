@@ -38,7 +38,7 @@ const std::string JoinHash::name() const { return "JoinHash"; }
 std::shared_ptr<AbstractOperator> JoinHash::_on_recreate(const std::vector<AllParameterVariant>& args,
                                                      const std::shared_ptr<AbstractOperator>& recreated_input_left,
                                                      const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+  return std::make_shared<JoinHash>(recreated_input_left, recreated_input_right, _mode, _column_ids,
                                     _predicate_condition);
 }
 

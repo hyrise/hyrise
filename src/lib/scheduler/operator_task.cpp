@@ -46,6 +46,7 @@ std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
     subtree_root->set_as_predecessor_of(task);
   }
 
+  // Add AFTER the inputs to establish a task order where predecessor get executed before successors
   tasks.push_back(task);
 
   return task;

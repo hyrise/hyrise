@@ -223,8 +223,6 @@ set(
     sql/sql_query_cache.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
-    sql/sql_result_operator.cpp
-    sql/sql_result_operator.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column_encoder.hpp
