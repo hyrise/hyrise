@@ -109,6 +109,8 @@ INSTANTIATE_TEST_CASE_P(
     ColumnEncodingSpecs, EncodedColumnTest,
     ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                      ColumnEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
+                      ColumnEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
                       ColumnEncodingSpec{EncodingType::RunLength},
                       ColumnEncodingSpec{EncodingType::DeprecatedDictionary}),
     formatter);
