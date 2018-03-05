@@ -101,6 +101,10 @@ uint64_t Table::row_count() const {
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
+const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const {
+  return _chunks;
+}
+
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
     // TODO(Anyone): make more efficient
