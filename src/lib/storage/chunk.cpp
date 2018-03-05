@@ -229,8 +229,9 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
 
 std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
 
-void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> statistics) { 
+void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> statistics) {
   DebugAssert(statistics->size() == column_count());
-  _statistics = statistics; }
+  _statistics = statistics;
+}
 
 }  // namespace opossum
