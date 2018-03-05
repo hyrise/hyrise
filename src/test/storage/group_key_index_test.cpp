@@ -45,7 +45,7 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
 }
 
 TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
-  EXPECT_NEAR(index->memory_consumption(), 0, 1.0f / 1024.0f);  // Expect 1KiB precision
+  EXPECT_EQ(index->memory_consumption(), 104u);
 }
 
 TEST_F(GroupKeyIndexTest, IndexPostings) {

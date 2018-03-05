@@ -72,16 +72,16 @@ class BaseIndexEvaluator : public AbstractEvaluator {
    */
   virtual ColumnIndexType _propose_index_type(const IndexChoice& index_choice) const = 0;
   /**
-   * This method is called on an existing index to determine its memory cost in MiB
+   * This method is called on an existing index to determine its memory cost in bytes
    *
    * The existing implementation simply accumulates the individual index costs
    * as reported by the specific index object over all chunks of a column.
    */
-  virtual float _existing_memory_cost(const IndexChoice& index_choice) const;
+  virtual uintptr_t _existing_memory_cost(const IndexChoice& index_choice) const;
   /**
    * This method is called for every non-existing index to predict its memory cost.
    */
-  virtual float _predict_memory_cost(const IndexChoice& index_choice) const = 0;
+  virtual uintptr_t _predict_memory_cost(const IndexChoice& index_choice) const = 0;
   /**
    * This method is called for every index to calculate its final desirability metric.
    */

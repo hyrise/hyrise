@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-float BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+uintptr_t BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
                                             uint32_t value_bytes) {
   switch (type) {
     case ColumnIndexType::GroupKey:
@@ -20,7 +20,7 @@ float BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset ro
     case ColumnIndexType::AdaptiveRadixTree:
       return AdaptiveRadixTreeIndex::predict_memory_consumption(row_count, value_count, value_bytes);
     default:
-      return std::numeric_limits<float>::quiet_NaN();
+      Fail("predict_memory_consumption() is not implemented for the given index type");
   }
 }
 
@@ -55,7 +55,7 @@ BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
 
-float BaseIndex::memory_consumption() const { return _memory_consumption(); }
+uintptr_t BaseIndex::memory_consumption() const { return _memory_consumption(); }
 
 ColumnIndexType BaseIndex::type() const { return _type; }
 

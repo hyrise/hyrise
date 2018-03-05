@@ -45,10 +45,10 @@ class GroupKeyIndex : public BaseIndex {
 
  public:
   /**
-   * Predicts the memory consumption in MiB of creating this index.
+   * Predicts the memory consumption in bytes of creating this index.
    * See BaseIndex::predict_memory_consumption()
    */
-  static float predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
+  static uintptr_t predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
 
   GroupKeyIndex() = delete;
 
@@ -69,7 +69,7 @@ class GroupKeyIndex : public BaseIndex {
 
   Iterator _cend() const final;
 
-  float _memory_consumption() const final;
+  uintptr_t _memory_consumption() const final;
   /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector

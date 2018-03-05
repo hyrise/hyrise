@@ -17,9 +17,9 @@
 
 namespace opossum {
 
-float CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
+uintptr_t CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
                                                          uint32_t value_bytes) {
-  return ((row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes) / 1024.0f / 1024.0f;
+  return ((row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes);
 }
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns)
@@ -92,11 +92,11 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-float CompositeGroupKeyIndex::_memory_consumption() const {
-  float byte_count = _keys.size() * _keys.key_size();
+uintptr_t CompositeGroupKeyIndex::_memory_consumption() const {
+  uintptr_t byte_count = _keys.size() * _keys.key_size();
   byte_count += _key_offsets.size() * sizeof(ChunkOffset);
   byte_count += _position_list.size() * sizeof(ChunkOffset);
-  return byte_count / 1024.0f / 1024.0f;
+  return byte_count;
 }
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {

@@ -45,10 +45,10 @@ class CompositeGroupKeyIndex : public BaseIndex {
 
  public:
   /**
-   * Predicts the memory consumption in MiB of creating this index.
+   * Predicts the memory consumption in bytes of creating this index.
    * See BaseIndex::predict_memory_consumption()
    */
-  static float predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
+  static uintptr_t predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
 
   CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
   CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
@@ -61,7 +61,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
-  float _memory_consumption() const final;
+  uintptr_t _memory_consumption() const final;
   std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const final;
 
   /**

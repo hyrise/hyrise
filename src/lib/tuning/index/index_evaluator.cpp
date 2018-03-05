@@ -37,7 +37,7 @@ ColumnIndexType IndexEvaluator::_propose_index_type(const IndexChoice& index_eva
   return ColumnIndexType::GroupKey;
 }
 
-float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
+uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
   auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   // ToDo(anyone) adapt for multi column indices...
   auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
@@ -59,7 +59,7 @@ float IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) 
   auto chunk_rows = row_count / chunk_count;
   auto chunk_values = value_count / chunk_count;
 
-  float memory_cost_per_chunk =
+  uintptr_t memory_cost_per_chunk =
       BaseIndex::predict_memory_consumption(index_evaluation.type, chunk_rows, chunk_values, value_bytes);
   return memory_cost_per_chunk * chunk_count;
 }

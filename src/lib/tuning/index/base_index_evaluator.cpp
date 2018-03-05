@@ -42,10 +42,10 @@ void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& ch
   // Evaluate
   for (auto& index_choice : _choices) {
     if (index_choice.exists) {
-      index_choice.memory_cost = _existing_memory_cost(index_choice);
+      index_choice.memory_cost = static_cast<float>(_existing_memory_cost(index_choice));
     } else {
       index_choice.type = _propose_index_type(index_choice);
-      index_choice.memory_cost = _predict_memory_cost(index_choice);
+      index_choice.memory_cost = static_cast<float>(_predict_memory_cost(index_choice));
     }
     index_choice.saved_work = _calculate_saved_work(index_choice);
 
@@ -58,9 +58,9 @@ void BaseIndexEvaluator::_setup() {}
 
 void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord&) {}
 
-float BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
+uintptr_t BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
   const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
-  float memory_cost = 0.0f;
+  uintptr_t memory_cost = 0u;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     const auto index = chunk->get_index(index_choice.type, index_choice.column_ref.column_ids);
