@@ -16,6 +16,8 @@ bool ColumnRef::operator<(const ColumnRef& other) const {
 bool ColumnRef::operator>(const ColumnRef& other) const {
   return (table_name == other.table_name) ? column_ids > other.column_ids : table_name > other.table_name;
 }
+bool ColumnRef::operator>=(const ColumnRef& other) const { return (*this > other) || (*this == other); }
+bool ColumnRef::operator<=(const ColumnRef& other) const { return (*this < other) || (*this == other); }
 
 std::ostream& operator<<(std::ostream& output, const ColumnRef& column_ref) {
   auto table_ptr = StorageManager::get().get_table(column_ref.table_name);
@@ -33,5 +35,7 @@ std::ostream& operator<<(std::ostream& output, const ColumnRef& column_ref) {
 bool ColumnRef::operator==(const ColumnRef& other) const {
   return other.table_name == table_name && other.column_ids == column_ids;
 }
+
+bool ColumnRef::operator!=(const ColumnRef& other) const { return !(*this == other); }
 
 }  // namespace opossum

@@ -37,10 +37,10 @@ TEST_F(ColumnRefTest, GreaterThanOperator) {
   ColumnRef cref_bigger{"table_name", column_ids_bigger};
   ColumnRef cref_other_table{"other_table", column_ids_smaller};
 
-  EXPECT_FALSE(cref_smaller > cref_smaller);
+  EXPECT_GE(cref_smaller, cref_smaller);
 
-  EXPECT_TRUE(cref_smaller > cref_other_table);
-  EXPECT_TRUE(cref_bigger > cref_smaller);
+  EXPECT_GT(cref_smaller, cref_other_table);
+  EXPECT_GT(cref_bigger, cref_smaller);
 }
 
 TEST_F(ColumnRefTest, LessThanOperator) {
@@ -49,12 +49,12 @@ TEST_F(ColumnRefTest, LessThanOperator) {
 
   ColumnRef cref_smaller{"table_name", column_ids_smaller};
   ColumnRef cref_bigger{"table_name", column_ids_bigger};
-  ColumnRef cref_other_table{"other_table", column_ids_smaller};
+  ColumnRef cref_other_table{"z_other_table", column_ids_smaller};
 
-  EXPECT_FALSE(cref_smaller < cref_smaller);
-  EXPECT_FALSE(cref_smaller < cref_other_table);
+  EXPECT_LE(cref_smaller, cref_smaller);
 
-  EXPECT_TRUE(cref_smaller < cref_bigger);
+  EXPECT_LT(cref_smaller, cref_other_table);
+  EXPECT_LT(cref_smaller, cref_bigger);
 }
 
 TEST_F(ColumnRefTest, StreamingOperator) {
@@ -80,10 +80,10 @@ TEST_F(ColumnRefTest, Equality) {
 
   ColumnRef column_ref_other_table{"other_table", same_column_ids};
 
-  EXPECT_TRUE(column_ref == column_ref);
-  EXPECT_TRUE(column_ref == column_ref_same_column_ids);
+  EXPECT_EQ(column_ref, column_ref);
+  EXPECT_EQ(column_ref, column_ref_same_column_ids);
 
-  EXPECT_FALSE(column_ref == column_ref_other_table);
-  EXPECT_FALSE(column_ref == column_ref_different_column_ids);
+  EXPECT_NE(column_ref, column_ref_other_table);
+  EXPECT_NE(column_ref, column_ref_different_column_ids);
 }
 }  // namespace opossum

@@ -25,6 +25,12 @@ struct ColumnRef {
 
   bool operator==(const ColumnRef& other) const;
 
+  bool operator!=(const ColumnRef& other) const;
+
+  bool operator>=(const ColumnRef& other) const;
+
+  bool operator<=(const ColumnRef& other) const;
+
   friend std::ostream& operator<<(std::ostream& output, const ColumnRef& column_ref);
 };
 
