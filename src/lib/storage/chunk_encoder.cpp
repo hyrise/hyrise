@@ -26,8 +26,10 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
-    if (spec.encoding_type == EncodingType::Unencoded) continue;
-
+    if (spec.encoding_type == EncodingType::Unencoded) {
+      column_statistics.push_back(nullptr);
+      continue;
+    }
     const auto data_type = data_types[column_id];
     const auto base_column = chunk->get_column(column_id);
     const auto value_column = std::dynamic_pointer_cast<const BaseValueColumn>(base_column);

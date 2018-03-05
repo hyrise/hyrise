@@ -13,7 +13,10 @@
 
 namespace opossum {
 
-GetTable::GetTable(const std::string& name) : _name(name) {}
+GetTable::GetTable(const std::string& name) : _name(name), _excluded_chunks() {}
+
+GetTable::GetTable(const std::string& name, std::vector<ChunkID> excluded_chunks)
+    : _name(name), _excluded_chunks(excluded_chunks) {}
 
 const std::string GetTable::name() const { return "GetTable"; }
 
@@ -29,8 +32,10 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
 
 const std::string& GetTable::table_name() const { return _name; }
 
+const std::vector<ChunkID>& GetTable::excluded_chunks() const { return _excluded_chunks; }
+
 std::shared_ptr<AbstractOperator> GetTable::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<GetTable>(_name);
+  return std::make_shared<GetTable>(_name, _excluded_chunks);
 }
 
 std::shared_ptr<const Table> GetTable::_on_execute() {

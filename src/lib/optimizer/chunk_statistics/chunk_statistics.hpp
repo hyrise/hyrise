@@ -13,7 +13,7 @@ namespace opossum {
 /**
  * Container class that holds objects with statistical information about a chunk.
  */
-class ChunkStatistics : public std::enable_shared_from_this<ChunkStatistics> {
+class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistics> {
  public:
   explicit ChunkStatistics(std::vector<std::shared_ptr<ChunkColumnStatistics>> statistics) : _statistics(statistics) {}
 

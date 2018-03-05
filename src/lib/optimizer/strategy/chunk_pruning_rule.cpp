@@ -86,7 +86,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
   auto& value = boost::get<AllTypeVariant>(predicate->value());
   auto condition = predicate->predicate_condition();
   std::set<ChunkID> result;
-  for (size_t chunk_id = 0; i < statistics.size(); ++i) {
+  for (size_t chunk_id = 0; chunk_id < statistics.size(); ++chunk_id) {
     // statistics[chunk_id] can be a shared_ptr initialized with a nullptr
     if (statistics[chunk_id] && statistics[chunk_id]->can_prune(original_column_id, value, condition)) {
       result.insert(ChunkID(chunk_id));
