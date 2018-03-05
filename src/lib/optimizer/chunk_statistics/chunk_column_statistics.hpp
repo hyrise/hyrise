@@ -6,7 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-#include "optimizer/abstract_filter.hpp"
+#include "optimizer/chunk_statistics/abstract_filter.hpp"
 
 namespace opossum {
 

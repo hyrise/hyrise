@@ -4,8 +4,9 @@
 
 #include "resolve_type.hpp"
 
-#include "optimizer/abstract_filter.hpp"
-#include "optimizer/min_max_filter.hpp"
+#include "optimizer/chunk_statistics/abstract_filter.hpp"
+#include "optimizer/chunk_statistics/min_max_filter.hpp"
+#include "optimizer/chunk_statistics/range_filter.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
