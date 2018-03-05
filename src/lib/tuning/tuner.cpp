@@ -75,12 +75,12 @@ void Tuner::schedule_tuning_process() {
   _execute_task->schedule();
 }
 
-bool Tuner::is_running() {
+bool Tuner::is_running() const {
   return (_evaluate_task && !_evaluate_task->is_done()) || (_select_task && !_select_task->is_done()) ||
          (_execute_task && !_execute_task->is_done());
 }
 
-Tuner::Status Tuner::status() { return _status; }
+Tuner::Status Tuner::status() const { return _status; }
 
 void Tuner::wait_for_completion() {
   if (_evaluate_task) {
@@ -178,7 +178,7 @@ void Tuner::_execute() {
   LOG_INFO("Tuning execution phase completed.");
 }
 
-void Tuner::_log_choices() {
+void Tuner::_log_choices() const {
   LOG_DEBUG("TuningChoice set:");
   for (const auto& choice : _choices) {
     LOG_DEBUG("-> " << *choice);
@@ -187,7 +187,7 @@ void Tuner::_log_choices() {
   }
 }
 
-void Tuner::_log_operations() {
+void Tuner::_log_operations() const {
   LOG_DEBUG("TuningOperation sequence:");
   for (const auto& operation : _operations) {
     LOG_DEBUG("-> " << *operation);

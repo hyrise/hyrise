@@ -107,12 +107,12 @@ class Tuner {
    * Indicates whether there is a tuning process currently scheduled,
    * which is not yet complete.
    */
-  bool is_running();
+  bool is_running() const;
 
   /**
    * Indicates the status of the last scheduled tuning process
    */
-  Status status();
+  Status status() const;
 
   /**
    * Block the current thread until a running tuning process is finished.
@@ -125,8 +125,8 @@ class Tuner {
   void _select();
   void _execute();
 
-  void _log_choices();
-  void _log_operations();
+  void _log_choices() const;
+  void _log_operations() const;
 
   std::vector<std::unique_ptr<AbstractEvaluator>> _evaluators;
   std::unique_ptr<AbstractSelector> _selector;
