@@ -16,14 +16,14 @@ IndexEvaluator::IndexEvaluator() {}
 void IndexEvaluator::_setup() { _saved_work.clear(); }
 
 void IndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& record) {
-  auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
+  const auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
   // ToDo(anyone) adapt for multi column indices...
-  auto predicate_statistics =
+  const auto predicate_statistics =
       table_statistics->predicate_statistics(record.column_ref.column_ids[0], record.condition, record.compare_value);
-  auto total_rows = table_statistics->row_count();
-  auto match_rows = predicate_statistics->row_count();
-  auto unscanned_rows = total_rows - match_rows;
-  float saved_work = unscanned_rows * record.query_frequency;
+  const auto total_rows = table_statistics->row_count();
+  const auto match_rows = predicate_statistics->row_count();
+  const auto unscanned_rows = total_rows - match_rows;
+  const float saved_work = unscanned_rows * record.query_frequency;
   LOG_INFO("saved work for query on " << record.column_ref.table_name << "." << record.column_ref.column_ids[0] << ": "
                                       << saved_work << "\n");
   if (_saved_work.count(record.column_ref) > 0) {
@@ -38,15 +38,15 @@ ColumnIndexType IndexEvaluator::_propose_index_type(const IndexChoice& index_eva
 }
 
 uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
-  auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
+  const auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   // ToDo(anyone) adapt for multi column indices...
-  auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
-  auto value_count = column_statistics->distinct_count();
+  const auto column_statistics = table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
+  const auto value_count = column_statistics->distinct_count();
 
   // Sum up column data type widths
   size_t value_bytes = 0;
-  for (auto column_id : index_evaluation.column_ref.column_ids) {
-    auto data_type = table->column_type(column_id);
+  for (const auto column_id : index_evaluation.column_ref.column_ids) {
+    const auto data_type = table->column_type(column_id);
     opossum::resolve_data_type(data_type, [&](auto boost_type) {
       using ColumnDataType = typename decltype(boost_type)::type;
       // This assumes that elements are self-contained
@@ -54,12 +54,12 @@ uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluati
     });
   }
 
-  auto row_count = table->row_count();
-  auto chunk_count = table->chunk_count();
-  auto chunk_rows = row_count / chunk_count;
-  auto chunk_values = value_count / chunk_count;
+  const auto row_count = table->row_count();
+  const auto chunk_count = table->chunk_count();
+  const auto chunk_rows = row_count / chunk_count;
+  const auto chunk_values = value_count / chunk_count;
 
-  uintptr_t memory_cost_per_chunk =
+  const uintptr_t memory_cost_per_chunk =
       BaseIndex::predict_memory_consumption(index_evaluation.type, chunk_rows, chunk_values, value_bytes);
   return memory_cost_per_chunk * chunk_count;
 }
