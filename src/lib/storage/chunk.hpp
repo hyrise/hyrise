@@ -207,9 +207,9 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
-  std::shared_ptr<ChunkStatistics> statistics() const { return _statistics; }
+  std::shared_ptr<ChunkStatistics> statistics() const;
 
-  void set_statistics(std::shared_ptr<ChunkStatistics> statistics) { _statistics = statistics; }
+  void set_statistics(std::shared_ptr<ChunkStatistics> statistics);
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns

@@ -62,7 +62,7 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_col
 
 template <typename T>
 static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const RunLengthColumn<T>& column) {
-  // DebugAssert(false, "Not Implemented!");
+  // TODO: implement build_statistics_from_concrete_column
   return std::make_shared<ChunkColumnStatistics>();
 }
 

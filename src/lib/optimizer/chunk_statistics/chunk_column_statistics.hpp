@@ -15,7 +15,7 @@ class BaseColumn;
 /**
  * container class that holds a set of filters with statistical information about a certain chunks column
  */
-class ChunkColumnStatistics {
+final class ChunkColumnStatistics {
  public:
   static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
                                                                  std::shared_ptr<BaseColumn> column);

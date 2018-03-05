@@ -29,7 +29,7 @@ class RangeFilter : public AbstractFilter {
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
-    const auto t_value = type_cast<T>(value);
+    const auto t_value = boost::get<T>(value);
     switch (predicate_type) {
       case PredicateCondition::Equals: {
         bool prunable = false;
