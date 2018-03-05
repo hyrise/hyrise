@@ -139,13 +139,15 @@ void AbstractOperator::print(std::ostream& stream) const {
 void AbstractOperator::_on_cleanup() {}
 
 std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
-  const std::vector<AllParameterVariant>& args) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
+    const std::vector<AllParameterVariant>& args) const {
   const auto iter = recreated_ops.find(this);
   if (iter != recreated_ops.end()) return iter->second;
 
-  const auto recreated_input_left = input_left() ? input_left()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
-  const auto recreated_input_right = input_right() ? input_right()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+  const auto recreated_input_left =
+      input_left() ? input_left()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+  const auto recreated_input_right =
+      input_right() ? input_right()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
 
   const auto recreated_op = _on_recreate(args, recreated_input_left, recreated_input_right);
   recreated_ops.emplace(this, recreated_op);

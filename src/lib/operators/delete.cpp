@@ -122,9 +122,9 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Delete::_on_recreate(const std::vector<AllParameterVariant>& args,
-                                                       const std::shared_ptr<AbstractOperator>& recreated_input_left,
-                                                       const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+std::shared_ptr<AbstractOperator> Delete::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<Delete>(_table_name, recreated_input_left);
 }
 

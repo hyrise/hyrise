@@ -90,12 +90,13 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
   // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
-  std::shared_ptr<AbstractOperator> _recreate_impl(std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
-                                                   const std::vector<AllParameterVariant>& args) const;
+  std::shared_ptr<AbstractOperator> _recreate_impl(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
+      const std::vector<AllParameterVariant>& args) const;
 
-  virtual std::shared_ptr<AbstractOperator> _on_recreate(const std::vector<AllParameterVariant>& args,
-                                                         const std::shared_ptr<AbstractOperator>& recreated_input_left,
-                                                         const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
+  virtual std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
 
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;

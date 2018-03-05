@@ -37,9 +37,7 @@ void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor
   _successors.emplace_back(successor);
 }
 
-const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const {
-  return _successors;
-}
+const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const { return _successors; }
 
 void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 

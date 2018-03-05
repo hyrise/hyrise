@@ -8,8 +8,8 @@
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/union_positions.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
 

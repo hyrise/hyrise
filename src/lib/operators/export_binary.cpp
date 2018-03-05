@@ -9,9 +9,9 @@
 #include "import_export/binary.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
-#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -133,9 +133,9 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(const std::vector<AllParameterVariant>& args,
-                                                             const std::shared_ptr<AbstractOperator>& recreated_input_left,
-                                                             const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<ExportBinary>(recreated_input_left, _filename);
 }
 
@@ -298,7 +298,7 @@ void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstrea
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize2ByteAligned:
-     _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
+      _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize1ByteAligned:
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());

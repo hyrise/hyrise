@@ -29,7 +29,8 @@ const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_o
 }
 
 std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
-    std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks, std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op) {
+    std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
+    std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op) {
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
 

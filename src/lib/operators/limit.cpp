@@ -16,9 +16,9 @@ Limit::Limit(const std::shared_ptr<const AbstractOperator> in, const size_t num_
 
 const std::string Limit::name() const { return "Limit"; }
 
-std::shared_ptr<AbstractOperator> Limit::_on_recreate(const std::vector<AllParameterVariant>& args,
-                                                  const std::shared_ptr<AbstractOperator>& recreated_input_left,
-                                                  const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+std::shared_ptr<AbstractOperator> Limit::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<Limit>(recreated_input_left, _num_rows);
 }
 
