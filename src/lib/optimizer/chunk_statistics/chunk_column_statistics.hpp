@@ -12,6 +12,9 @@ namespace opossum {
 
 class BaseColumn;
 
+/**
+ * container class that holds a set of filters with statistical information about a certain chunks column
+ */
 class ChunkColumnStatistics {
  public:
   static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
@@ -19,6 +22,9 @@ class ChunkColumnStatistics {
 
   void add_filter(std::shared_ptr<AbstractFilter> filter);
 
+  /**
+   * calls can_prune on each filter in this object
+  */
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const;
 
  protected:
