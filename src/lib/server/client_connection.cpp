@@ -8,6 +8,8 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
+const auto ignore_sent_bytes = [](uint64_t sent_bytes) { };
+
 ClientConnection::ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
   _response_buffer.reserve(_max_response_size);
 }
@@ -18,7 +20,7 @@ boost::future<uint32_t> ClientConnection::receive_startup_packet_header() {
   return _receive_bytes_async(STARTUP_HEADER_LENGTH) >> then >> PostgresWireHandler::handle_startup_package;
 }
 
-boost::future<void> ClientConnection::receive_startup_packet_contents(uint32_t size) {
+boost::future<void> ClientConnection::receive_startup_packet_body(uint32_t size) {
   return _receive_bytes_async(size) >> then >> [](InputPacket p) {
     // Read these values and ignore them
     PostgresWireHandler::handle_startup_package_content(p);
@@ -31,35 +33,33 @@ boost::future<RequestHeader> ClientConnection::receive_packet_header() {
   return _receive_bytes_async(HEADER_LENGTH) >> then >> PostgresWireHandler::handle_header;
 }
 
-boost::future<std::string> ClientConnection::receive_simple_query_packet_contents(uint32_t size) {
+boost::future<std::string> ClientConnection::receive_simple_query_packet_body(uint32_t size) {
   return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_query_packet;
 }
 
-boost::future<ParsePacket> ClientConnection::receive_parse_packet_contents(uint32_t size) {
+boost::future<ParsePacket> ClientConnection::receive_parse_packet_body(uint32_t size) {
   return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_parse_packet;
 }
 
-boost::future<BindPacket> ClientConnection::receive_bind_packet_contents(uint32_t size) {
+boost::future<BindPacket> ClientConnection::receive_bind_packet_body(uint32_t size) {
   return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_bind_packet;
 }
 
-boost::future<std::string> ClientConnection::receive_describe_packet_contents(uint32_t size) {
+boost::future<std::string> ClientConnection::receive_describe_packet_body(uint32_t size) {
   return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_describe_packet;
 }
 
-boost::future<void> ClientConnection::receive_sync_packet_contents(uint32_t size) {
-  return _receive_bytes_async(size) >> then >> [](InputPacket packet) {
-    // Packet has no content
-  };
+boost::future<void> ClientConnection::receive_sync_packet_body(uint32_t size) {
+  // Packet has no content, we'll make the receive call anyways, just in case size > 0
+  return _receive_bytes_async(size) >> then >> [](InputPacket packet) {};
 }
 
-boost::future<void> ClientConnection::receive_flush_packet_contents(uint32_t size) {
-  return _receive_bytes_async(size) >> then >> [](InputPacket packet) {
-    // Packet has no content
-  };
+boost::future<void> ClientConnection::receive_flush_packet_body(uint32_t size) {
+  // Packet has no content, we'll make the receive call anyways, just in case size > 0
+  return _receive_bytes_async(size) >> then >> [](InputPacket packet) {};
 }
 
-boost::future<std::string> ClientConnection::receive_execute_packet_contents(uint32_t size) {
+boost::future<std::string> ClientConnection::receive_execute_packet_body(uint32_t size) {
   return _receive_bytes_async(size) >> then >> PostgresWireHandler::handle_execute_packet;
 }
 
@@ -68,14 +68,14 @@ boost::future<void> ClientConnection::send_ssl_denied() {
   auto output_packet = std::make_shared<OutputPacket>();
   PostgresWireHandler::write_value(*output_packet, NetworkMessageType::SslNo);
 
-  return _send_bytes_async(output_packet, true) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet, true) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_auth() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
   PostgresWireHandler::write_value(*output_packet, htonl(0u));
 
-  return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_ready_for_query() {
@@ -83,7 +83,7 @@ boost::future<void> ClientConnection::send_ready_for_query() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ReadyForQuery);
   PostgresWireHandler::write_value(*output_packet, TransactionStatusIndicator::Idle);
 
-  return _send_bytes_async(output_packet, true) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet, true) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_error(const std::string& message) {
@@ -95,7 +95,7 @@ boost::future<void> ClientConnection::send_error(const std::string& message) {
 
   // Terminate the error response
   PostgresWireHandler::write_value(*output_packet, '\0');
-  return _send_bytes_async(output_packet, true) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet, true) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_notice(const std::string& notice) {
@@ -107,12 +107,12 @@ boost::future<void> ClientConnection::send_notice(const std::string& notice) {
 
   // Terminate the notice response
   PostgresWireHandler::write_value(*output_packet, '\0');
-  return _send_bytes_async(output_packet, true) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet, true) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_status_message(const NetworkMessageType& type) {
   auto output_packet = PostgresWireHandler::new_output_packet(type);
-  return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_row_description(const std::vector<ColumnDescription>& row_description) {
@@ -160,7 +160,7 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
     PostgresWireHandler::write_value(*output_packet, htons(0u));                             // text format
   }
 
-  return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_data_row(const std::vector<std::string>& row_strings) {
@@ -198,14 +198,14 @@ boost::future<void> ClientConnection::send_data_row(const std::vector<std::strin
     PostgresWireHandler::write_string(*output_packet, value_string, false);
   }
 
-  return _send_bytes_async(output_packet) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
 boost::future<void> ClientConnection::send_command_complete(const std::string& message) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::CommandComplete);
   PostgresWireHandler::write_string(*output_packet, message);
 
-  return _send_bytes_async(output_packet, true) >> then >> [](uint64_t) { /* ignore the result */ };
+  return _send_bytes_async(output_packet, true) >> then >> ignore_sent_bytes;
 }
 
 boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
@@ -214,6 +214,8 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
 
   return _socket.async_read_some(boost::asio::buffer(result->data, size), boost::asio::use_boost_future) >> then >>
          [=](uint64_t received_size) {
+           // If this assertion should fail, we will end up in either the error handler for the current command or 
+           // the entire session. The connection may be closed but the server will keep running either way.
            Assert(received_size == size, "Client sent less data than expected.");
 
            result->offset = result->data.begin();
@@ -229,6 +231,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<Outp
     PostgresWireHandler::write_output_packet_size(*packet);
   }
 
+  // If this fails, the connection may be closed but the server will keep running.
   Assert(packet_size <= _max_response_size,
          "The output packet is too big and cannot be sent. This should never happen!");
 

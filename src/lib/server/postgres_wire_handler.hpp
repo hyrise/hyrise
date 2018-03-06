@@ -80,11 +80,7 @@ T PostgresWireHandler::read_value(const InputPacket& packet) {
   T result;
   auto num_bytes = sizeof(T);
 
-  auto test = std::distance(packet.offset + num_bytes, packet.data.cend());
-  (void)test;
-  auto bar = packet.offset + num_bytes <= packet.data.cend();
-  (void)bar;
-  DebugAssert(packet.offset + num_bytes <= packet.data.cend(), "Reading too many bytes from buffer.");
+  Assert(packet.offset + num_bytes <= packet.data.cend(), "Reading too many bytes from buffer.");
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(&result));
   packet.offset += num_bytes;
@@ -97,11 +93,7 @@ std::vector<T> PostgresWireHandler::read_values(const InputPacket& packet, const
   std::vector<T> result(num_values);
   auto num_bytes = result.size() * sizeof(T);
 
-  auto test = std::distance(packet.offset + num_bytes, packet.data.cend());
-  (void)test;
-  auto bar = packet.offset + num_bytes <= packet.data.cend();
-  (void)bar;
-  DebugAssert(packet.offset + num_bytes <= packet.data.cend(), "Reading too many bytes from buffer.");
+  Assert(packet.offset + num_bytes <= packet.data.cend(), "Reading too many bytes from buffer.");
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(result.data()));
   packet.offset += num_bytes;

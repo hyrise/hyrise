@@ -31,16 +31,16 @@ class ClientConnection {
   explicit ClientConnection(tcp::socket socket);
 
   boost::future<uint32_t> receive_startup_packet_header();
-  boost::future<void> receive_startup_packet_contents(uint32_t size);
+  boost::future<void> receive_startup_packet_body(uint32_t size);
 
   boost::future<RequestHeader> receive_packet_header();
-  boost::future<std::string> receive_simple_query_packet_contents(uint32_t size);
-  boost::future<ParsePacket> receive_parse_packet_contents(uint32_t size);
-  boost::future<BindPacket> receive_bind_packet_contents(uint32_t size);
-  boost::future<std::string> receive_describe_packet_contents(uint32_t size);
-  boost::future<void> receive_sync_packet_contents(uint32_t size);
-  boost::future<void> receive_flush_packet_contents(uint32_t size);
-  boost::future<std::string> receive_execute_packet_contents(uint32_t size);
+  boost::future<std::string> receive_simple_query_packet_body(uint32_t size);
+  boost::future<ParsePacket> receive_parse_packet_body(uint32_t size);
+  boost::future<BindPacket> receive_bind_packet_body(uint32_t size);
+  boost::future<std::string> receive_describe_packet_body(uint32_t size);
+  boost::future<void> receive_sync_packet_body(uint32_t size);
+  boost::future<void> receive_flush_packet_body(uint32_t size);
+  boost::future<std::string> receive_execute_packet_body(uint32_t size);
 
   boost::future<void> send_ssl_denied();
   boost::future<void> send_auth();

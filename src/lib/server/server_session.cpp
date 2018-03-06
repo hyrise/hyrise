@@ -54,7 +54,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_perform_sessio
       return _connection->send_ssl_denied() >> then >> [=]() { return _perform_session_startup(); };
     }
 
-    return _connection->receive_startup_packet_contents(startup_packet_length) >> then >>
+    return _connection->receive_startup_packet_body(startup_packet_length) >> then >>
            [=]() { return _connection->send_auth(); } >> then >> [=]() { return _connection->send_ready_for_query(); };
   };
 }
@@ -64,39 +64,39 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
   auto process_command = [=](RequestHeader request) {
     switch (request.message_type) {
       case NetworkMessageType::SimpleQueryCommand: {
-        return _connection->receive_simple_query_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_simple_query_packet_body(request.payload_length) >> then >>
                [=](std::string sql) { return _handle_simple_query_command(sql); } >> then >>
                [=]() { return _connection->send_ready_for_query(); };
       }
 
       case NetworkMessageType::ParseCommand: {
-        return _connection->receive_parse_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_parse_packet_body(request.payload_length) >> then >>
                [=](ParsePacket parse_packet) { return _handle_parse_command(parse_packet); };
       }
 
       case NetworkMessageType::BindCommand: {
-        return _connection->receive_bind_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_bind_packet_body(request.payload_length) >> then >>
                [=](BindPacket bind_packet) { return _handle_bind_command(bind_packet); };
       }
 
       case NetworkMessageType::DescribeCommand: {
-        return _connection->receive_describe_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_describe_packet_body(request.payload_length) >> then >>
                [=](std::string portal) { return _handle_describe_command(portal); };
       }
 
       case NetworkMessageType::SyncCommand: {
-        return _connection->receive_sync_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_sync_packet_body(request.payload_length) >> then >>
                [=]() { return _handle_sync_command(); } >> then >>
                [=]() { return _connection->send_ready_for_query(); };
       }
 
       case NetworkMessageType::FlushCommand: {
-        return _connection->receive_flush_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_flush_packet_body(request.payload_length) >> then >>
                [=]() { return _handle_flush_command(); };
       }
 
       case NetworkMessageType::ExecuteCommand: {
-        return _connection->receive_execute_packet_contents(request.payload_length) >> then >>
+        return _connection->receive_execute_packet_body(request.payload_length) >> then >>
                [=](std::string portal) { return _handle_execute_command(portal); };
       }
 

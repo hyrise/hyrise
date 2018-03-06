@@ -131,7 +131,7 @@ std::shared_ptr<OutputPacket> PostgresWireHandler::new_output_packet(NetworkMess
 
 void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
   auto& data = packet.data;
-  DebugAssert(
+  Assert(
       data.size() >= 5,
       "Cannot update the packet size of a packet which is less than NetworkIMessageType + dummy size (i.e. 5 bytes)");
 
