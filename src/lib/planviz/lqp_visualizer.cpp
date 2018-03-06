@@ -27,7 +27,8 @@ void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNo
   }
 }
 
-void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node, std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes) {
+void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
+                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
