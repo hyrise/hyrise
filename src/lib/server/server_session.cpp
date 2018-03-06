@@ -133,6 +133,35 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
 }
 
 template <typename TConnection, typename TTaskRunner>
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_query_response(
+    std::shared_ptr<SQLPipeline> sql_pipeline) {
+  auto result_table = sql_pipeline->get_result_table();
+
+  auto send_row_data = [=]() {
+    // If there is no result table, e.g. after an INSERT command, we cannot send row data
+    if (!result_table) return boost::make_ready_future<uint64_t>(0);
+
+    auto row_description = QueryResponseBuilder::build_row_description(sql_pipeline->get_result_table());
+
+    return _connection->send_row_description(row_description) >> then >> [=]() {
+      return QueryResponseBuilder::send_query_response(
+          [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+    };
+  };
+
+  auto send_command_complete = [=](uint64_t row_count) {
+    auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
+    auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);
+    return _connection->send_command_complete(complete_message);
+  };
+
+  return send_row_data() >> then >> send_command_complete >> then >> [=]() {
+    auto execution_info = QueryResponseBuilder::build_execution_info_message(sql_pipeline);
+    return _connection->send_notice(execution_info);
+  };
+}
+
+template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string sql) {
   auto create_sql_pipeline = [=]() {
     return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
@@ -149,33 +178,6 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
     return _task_runner->dispatch_server_task(task) >> then >> [=]() { return sql_pipeline; };
   };
 
-  auto send_query_response = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
-    auto result_table = sql_pipeline->get_result_table();
-
-    auto send_row_data = [=]() {
-      // If there is no result table, e.g. after an INSERT command, we cannot send row data
-      if (!result_table) return boost::make_ready_future<uint64_t>(0);
-
-      auto row_description = QueryResponseBuilder::build_row_description(sql_pipeline->get_result_table());
-
-      return _connection->send_row_description(row_description) >> then >> [=]() {
-        return QueryResponseBuilder::send_query_response(
-            [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
-      };
-    };
-
-    return send_row_data() >> then >>
-           [=](uint64_t row_count) {
-             auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
-             auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);
-             return _connection->send_command_complete(complete_message);
-           } >>
-           then >> [=]() {
-             auto execution_info = QueryResponseBuilder::build_execution_info_message(sql_pipeline);
-             return _connection->send_notice(execution_info);
-           };
-  };
-
   // A simple query command invalidates unnamed statements and portals
   _prepared_statements.erase("");
   _portals.erase("");
@@ -184,7 +186,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
     if (result->load_table.has_value()) {
       return load_table_file(result->load_table.value().first, result->load_table.value().second);
     } else {
-      return execute_sql_pipeline(result->sql_pipeline) >> then >> send_query_response;
+      return execute_sql_pipeline(result->sql_pipeline) >> then >>
+             [=](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
     }
   };
 }
