@@ -242,9 +242,9 @@ enum class TableType { References, Data };
 
 enum class PartitionSchemaType { 
   Null = 0,
-  Range = 1,
+  RoundRobin = 1,
   Hash = 2,
-  RoundRobin = 3
+  Range = 3
 };
 
 enum class HashFunctionType {

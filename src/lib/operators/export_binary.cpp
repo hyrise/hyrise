@@ -179,7 +179,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
 void ExportBinary::_write_partition_schema_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   const auto partition_schema = table->get_partition_schema();
-  _export_value(ofstream, partition_schema_type_to_uint.left.at(partition_schema->get_type()));
+  _export_value(ofstream, static_cast<uint8_t>(partition_schema->get_type()));
   _export_value(ofstream, partition_schema->partition_count());
 
   switch (partition_schema->get_type()) {

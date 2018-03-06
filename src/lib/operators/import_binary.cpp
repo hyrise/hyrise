@@ -146,7 +146,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 }
 
 std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header(std::ifstream& file) {
-  const auto partition_schema_type = partition_schema_type_to_uint.right.at(_read_value<uint8_t>(file));
+  const auto partition_schema_type = static_cast<PartitionSchemaType>(_read_value<uint8_t>(file));
   const auto partition_count = _read_value<PartitionID>(file);
 
   switch (partition_schema_type) {

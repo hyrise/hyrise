@@ -25,7 +25,6 @@ extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
-extern const boost::bimap<PartitionSchemaType, uint8_t> partition_schema_type_to_uint;
 extern const std::unordered_map<EncodingType, std::string> encoding_type_to_string;
 extern const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string;
 
