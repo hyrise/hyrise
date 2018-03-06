@@ -27,7 +27,7 @@ node {
 
       parallel clangRelease: {
         stage("clang-release") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && CCACHE_LOGFILE=/ccache/log.txt" make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && CCACHE_LOGFILE=/ccache/log.txt make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/hyriseTest clang-release"
           sh "cat /ccache/log.txt"
         }
