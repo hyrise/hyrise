@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "storage/value_column.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

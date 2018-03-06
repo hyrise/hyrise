@@ -2,6 +2,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "base_encoded_column.hpp"
 #include "types.hpp"

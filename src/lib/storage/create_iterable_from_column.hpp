@@ -3,11 +3,9 @@
 #include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
-#include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
-#include "storage/encoding_type.hpp"
 
 namespace opossum {
 
@@ -47,11 +45,6 @@ auto create_iterable_from_column(const DictionaryColumn<T>& column) {
 template <typename T>
 auto create_iterable_from_column(const RunLengthColumn<T>& column) {
   return erase_type_from_iterable_if_debug(RunLengthColumnIterable<T>{column});
-}
-
-template <typename T, typename = std::enable_if_t<encoding_supports<EncodingType::FrameOfReference, T>>>
-auto create_iterable_from_column(const FrameOfReferenceColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{column});
 }
 
 /**
