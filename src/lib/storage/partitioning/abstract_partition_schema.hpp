@@ -36,7 +36,7 @@ class AbstractPartitionSchema : private Noncopyable {
 
   // find partition the values belong in
   virtual PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const = 0;
-  
+
   // produces a map stating the partition each row is in
   virtual std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const = 0;
 

@@ -12,12 +12,12 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
 #include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/partitioning/round_robin_partition_schema.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

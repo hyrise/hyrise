@@ -129,7 +129,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    */
   static void _write_partition_info(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
-                               const PartitionID& partition_id);
+                                    const PartitionID& partition_id);
 
   template <typename T>
   class ExportBinaryVisitor;

@@ -7,11 +7,11 @@
 
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/partitioning/round_robin_partition_schema.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 

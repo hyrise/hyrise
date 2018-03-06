@@ -23,7 +23,6 @@ class Table;
 
 class Partition {
  public:
-
   Partition() = default;
 
   void clear();

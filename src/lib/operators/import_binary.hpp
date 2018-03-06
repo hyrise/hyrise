@@ -11,8 +11,8 @@
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/value_column.hpp"
 #include "storage/partitioning/abstract_hash_function.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 
@@ -178,8 +178,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file,
-                                                                        ChunkOffset row_count);
+  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,

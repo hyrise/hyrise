@@ -43,7 +43,8 @@ TEST_F(StorageRoundRobinPartitionSchemaTest, Name) {
 }
 
 TEST_F(StorageRoundRobinPartitionSchemaTest, GetChunkIDsToExclude) {
-  const auto chunk_ids = t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::Equals, AllTypeVariant{2});
+  const auto chunk_ids =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::Equals, AllTypeVariant{2});
   EXPECT_EQ(chunk_ids.size(), 0u);
 }
 

@@ -8,12 +8,12 @@
 
 #include "import_export/binary.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
-#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -214,7 +214,7 @@ void ExportBinary::_write_partition_schema_header(const std::shared_ptr<const Ta
 }
 
 void ExportBinary::_write_partition_info(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
-                                    const PartitionID& partition_id) {
+                                         const PartitionID& partition_id) {
   const auto partition = table->get_partition_schema()->get_partition(partition_id);
 
   // Iterating over all chunks and get corresponding id
@@ -353,7 +353,7 @@ void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstrea
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize2ByteAligned:
-     _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
+      _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize1ByteAligned:
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());

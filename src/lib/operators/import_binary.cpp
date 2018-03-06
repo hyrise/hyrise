@@ -21,8 +21,8 @@
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/partitioning/round_robin_partition_schema.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -174,9 +174,7 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
       });
       return std::make_shared<RangePartitionSchema>(column_id, bounds);
     }
-    default: {
-      Fail("Unknown partition schema");
-    }
+    default: { Fail("Unknown partition schema"); }
   }
 }
 
@@ -275,13 +273,11 @@ std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std
 std::unique_ptr<AbstractHashFunction> ImportBinary::_resolve_hash_function(uint8_t type_id) {
   HashFunctionType hash_function_type = static_cast<HashFunctionType>(type_id);
   switch (hash_function_type) {
-        case HashFunctionType::Default: {
-          return std::make_unique<HashFunction>();
-        }
-        default: {
-          Fail("Unknown hash function type");
-        }
-      }
+    case HashFunctionType::Default: {
+      return std::make_unique<HashFunction>();
+    }
+    default: { Fail("Unknown hash function type"); }
+  }
 }
 
 }  // namespace opossum

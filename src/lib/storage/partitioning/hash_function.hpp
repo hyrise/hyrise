@@ -1,8 +1,8 @@
 #pragma once
 
+#include "abstract_hash_function.hpp"
 #include "all_type_variant.hpp"
 #include "strong_typedef.hpp"
-#include "abstract_hash_function.hpp"
 
 namespace opossum {
 

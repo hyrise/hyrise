@@ -3,8 +3,8 @@
 #include <map>
 
 #include "all_type_variant.hpp"
-#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "storage/partitioning/abstract_hash_function.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -17,7 +17,8 @@ namespace opossum {
 
 class HashPartitionSchema : public AbstractPartitionSchema {
  public:
-  HashPartitionSchema(ColumnID column_id, std::unique_ptr<AbstractHashFunction>&& hash_function, PartitionID number_of_partitions);
+  HashPartitionSchema(ColumnID column_id, std::unique_ptr<AbstractHashFunction>&& hash_function,
+                      PartitionID number_of_partitions);
 
   std::string name() const override;
   PartitionSchemaType get_type() const override;
@@ -28,7 +29,6 @@ class HashPartitionSchema : public AbstractPartitionSchema {
   std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const override;
   std::vector<ChunkID> get_chunk_ids_to_exclude(PredicateCondition condition,
                                                 const AllTypeVariant& value) const override;
-                                  
 
   ColumnID get_column_id() const;
 

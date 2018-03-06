@@ -125,9 +125,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // partitioning
-  const auto  target_partition_schema = _target_table->get_partition_schema();
-  auto target_partition_mapping =
-      target_partition_schema->get_mapping_to_partitions(_input_table_left());
+  const auto target_partition_schema = _target_table->get_partition_schema();
+  auto target_partition_mapping = target_partition_schema->get_mapping_to_partitions(_input_table_left());
   const auto rows_to_add_to_partition = _count_rows_for_partitions(target_partition_mapping);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
@@ -301,9 +300,8 @@ std::unordered_map<PartitionID, uint32_t> Insert::_count_rows_for_partitions(
     std::map<RowID, PartitionID> target_partition_mapping) {
   std::unordered_map<PartitionID, uint32_t> rows_to_add_to_partition;
   for (const auto& rows_in_partition : target_partition_mapping) {
-    auto insert_result = rows_to_add_to_partition.insert({ rows_in_partition.second, 1 });
-    if (!insert_result.second)
-      insert_result.first->second++;
+    auto insert_result = rows_to_add_to_partition.insert({rows_in_partition.second, 1});
+    if (!insert_result.second) insert_result.first->second++;
   }
   return rows_to_add_to_partition;
 }

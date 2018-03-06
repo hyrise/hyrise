@@ -49,7 +49,7 @@ std::vector<ChunkID> HashPartitionSchema::get_chunk_ids_to_exclude(PredicateCond
   if (condition != PredicateCondition::Equals) {
     return chunk_ids_to_exclude;
   }
-  
+
   PartitionID matching_partition = get_matching_partition_for(value);
 
   for (PartitionID partition_id{0}; partition_id < partition_count(); partition_id++) {

@@ -218,7 +218,6 @@ TableType Table::get_type() const {
   }
 }
 
-
 void Table::apply_partitioning(const std::shared_ptr<AbstractPartitionSchema> partition_schema) {
   if (row_count() > 0) {
     throw std::runtime_error("Unable to create partitioning on non-empty table");

@@ -46,14 +46,15 @@ TEST_F(StorageHashPartitionSchemaTest, GetColumnID) {
 
 TEST_F(StorageHashPartitionSchemaTest, GetChunkIDsToExclude) {
   t0.append({1, "Foo"});
-  const auto chunk_ids = t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::Equals, AllTypeVariant{2});
+  const auto chunk_ids =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::Equals, AllTypeVariant{2});
   EXPECT_EQ(chunk_ids.size(), 2u);
 }
 
-
 TEST_F(StorageHashPartitionSchemaTest, GetChunkIDsToExcludeNotPossible) {
   t0.append({1, "Foo"});
-  const auto chunk_ids = t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::GreaterThan, AllTypeVariant{2});
+  const auto chunk_ids =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::GreaterThan, AllTypeVariant{2});
   EXPECT_EQ(chunk_ids.size(), 0u);
 }
 

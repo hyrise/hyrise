@@ -56,7 +56,8 @@ TEST_F(StorageRangePartitionSchemaTest, GetColumnID) {
 }
 
 TEST_F(StorageRangePartitionSchemaTest, GetChunkIDsToExclude) {
-  const auto chunk_ids = t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::LessThan, AllTypeVariant{4});
+  const auto chunk_ids =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::LessThan, AllTypeVariant{4});
   EXPECT_EQ(chunk_ids.size(), 2u);
 }
 

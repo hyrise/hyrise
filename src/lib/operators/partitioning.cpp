@@ -107,9 +107,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 
 Partitioning::Partitioning(const std::string& table_name,
                            std::shared_ptr<AbstractPartitionSchema> target_partition_schema)
-    : AbstractReadWriteOperator(),
-      _table_name{table_name},
-      _target_partition_schema{target_partition_schema} {}
+    : AbstractReadWriteOperator(), _table_name{table_name}, _target_partition_schema{target_partition_schema} {}
 
 const std::string Partitioning::name() const { return "Partitioning"; }
 
@@ -250,7 +248,8 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
                                                         rows_to_copy);
         }
 
-        for (auto target_index = target_start_index, source_index = 0u; target_index < target_start_index + num_to_insert && source_index < rows_to_copy.size();
+        for (auto target_index = target_start_index, source_index = 0u;
+             target_index < target_start_index + num_to_insert && source_index < rows_to_copy.size();
              target_index++, source_index++) {
           target_chunk->mvcc_columns()->tids[target_index] =
               source->get_chunk(source_chunk_id)->mvcc_columns()->tids[rows_to_copy[source_index]];
@@ -281,9 +280,8 @@ std::unordered_map<PartitionID, uint32_t> Partitioning::_count_rows_for_partitio
     std::map<RowID, PartitionID> target_partition_mapping) {
   std::unordered_map<PartitionID, uint32_t> rows_to_add_to_partition;
   for (const auto& rows_in_partition : target_partition_mapping) {
-    auto insert_result = rows_to_add_to_partition.insert({ rows_in_partition.second, 1 });
-    if (!insert_result.second)
-      insert_result.first->second++;
+    auto insert_result = rows_to_add_to_partition.insert({rows_in_partition.second, 1});
+    if (!insert_result.second) insert_result.first->second++;
   }
   return rows_to_add_to_partition;
 }
