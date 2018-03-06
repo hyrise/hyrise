@@ -13,6 +13,11 @@ namespace opossum {
 class TransactionContext;
 class Insert;
 
+/**
+ * Operator that partitions a table.
+ * Expects the table name of the table to partition as a string and
+ * the target partitioning schema.
+ */
 class Partitioning : public AbstractReadWriteOperator {
  public:
   explicit Partitioning(const std::string& table_name,
