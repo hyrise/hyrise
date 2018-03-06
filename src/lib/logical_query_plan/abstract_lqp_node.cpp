@@ -148,6 +148,13 @@ void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<Abstrac
   _input_changed();
 }
 
+size_t AbstractLQPNode::input_count() const {
+  /**
+   * Testing the shared_ptrs for null in _inputs to determine input count
+   */
+  return _inputs.size() - std::count(_inputs.cbegin(), _inputs.cend(), nullptr);
+}
+
 LQPNodeType AbstractLQPNode::type() const { return _type; }
 
 bool AbstractLQPNode::subplan_is_read_only() const {

@@ -55,6 +55,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -march=native")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
 
+# auto_ptr was removed in clang 5 so we need to tell boost to not include it
+add_definitions(-DBOOST_NO_AUTO_PTR)
+
 # Link Time Optimization (LTO)
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")

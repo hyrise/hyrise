@@ -82,7 +82,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  return std::make_shared<GetTable>(table_node->table_name());
+  auto get_table_operator = std::make_shared<GetTable>(table_node->table_name(), table_node->excluded_chunks());
+  return get_table_operator;
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
