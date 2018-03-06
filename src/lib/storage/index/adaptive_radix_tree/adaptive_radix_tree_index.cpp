@@ -9,8 +9,8 @@
 
 #include "adaptive_radix_tree_nodes.hpp"
 #include "storage/base_dictionary_column.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

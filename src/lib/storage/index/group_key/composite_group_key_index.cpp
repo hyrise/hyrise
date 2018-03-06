@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "storage/base_dictionary_column.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
-#include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
@@ -44,11 +44,10 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   }
 
   // retrieve amount of memory consumed by each concatenated key
-  auto bytes_per_key = std::accumulate(
-      _indexed_columns.begin(), _indexed_columns.end(), CompositeKeyLength{0u},
-      [](auto key_length, const auto& column) {
-        return key_length + byte_width_for_fsba_type(column->compressed_vector_type());
-      });
+  auto bytes_per_key = std::accumulate(_indexed_columns.begin(), _indexed_columns.end(), CompositeKeyLength{0u},
+                                       [](auto key_length, const auto& column) {
+                                         return key_length + byte_width_for_fsba_type(column->compressed_vector_type());
+                                       });
 
   // create concatenated keys and save their positions
   // at this point duplicated keys may be created, they will be handled later
@@ -71,7 +70,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
-    for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
+    for (const auto & [ byte_width, decompressor ] : attribute_vector_widths_and_decompressors) {
       concatenated_key.shift_and_set(decompressor->get(chunk_offset), byte_width * CHAR_BIT);
     }
     keys[chunk_offset] = std::move(concatenated_key);
@@ -137,7 +136,9 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   // fill empty space of key with zeros if less values than columns were provided
   auto empty_bits =
       std::accumulate(_indexed_columns.cbegin() + values.size(), _indexed_columns.cend(), static_cast<uint8_t>(0u),
-                      [](auto value, auto column) { return value + byte_width_for_fsba_type(column->compressed_vector_type()) * CHAR_BIT; });
+                      [](auto value, auto column) {
+                        return value + byte_width_for_fsba_type(column->compressed_vector_type()) * CHAR_BIT;
+                      });
   result <<= empty_bits;
 
   return result;

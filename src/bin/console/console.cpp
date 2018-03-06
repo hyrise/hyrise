@@ -220,8 +220,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline =
-          std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
     } else {
       _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements);
     }
