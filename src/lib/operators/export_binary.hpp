@@ -14,9 +14,6 @@
 
 namespace opossum {
 
-class BaseCompressedVector;
-enum class CompressedVectorType : uint8_t;
-
 /**
  * Note: ExportBinary does not support null values at the moment
  */
@@ -130,7 +127,6 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
-
   /**
    * Dictionary Columns are dumped with the following layout:
    *
@@ -153,18 +149,17 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const BaseDictionaryColumn& base_column,
+  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
+  void handle_column(const BaseDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column,
                      std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
-  // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
-  static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                       const BaseCompressedVector& attribute_vector);
+  // Chooses the right FittedAttributeVector depending on the attribute_vector_width and exports it.
+  static void _export_attribute_vector(std::ofstream& ofstream, const BaseAttributeVector& attribute_vector);
 };
 }  // namespace opossum
