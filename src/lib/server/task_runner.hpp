@@ -1,13 +1,12 @@
 #pragma once
 
-#include <memory>
-
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/future.hpp>
 
+#include <memory>
+
 #include "scheduler/current_scheduler.hpp"
 #include "tasks/server/abstract_server_task.hpp"
-
 #include "then_operator.hpp"
 #include "use_boost_future.hpp"
 
@@ -17,7 +16,7 @@ namespace opossum {
 // to be easily tested with a mocked version of this class.
 class TaskRunner {
  public:
-  TaskRunner(boost::asio::io_service& io_service) : _io_service(io_service) {}
+  explicit TaskRunner(boost::asio::io_service& io_service) : _io_service(io_service) {}
 
   template <typename TResult>
   auto dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future());

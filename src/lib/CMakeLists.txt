@@ -356,8 +356,6 @@ set(
     tasks/server/abstract_server_task.hpp
     tasks/server/bind_server_prepared_statement_task.cpp
     tasks/server/bind_server_prepared_statement_task.hpp
-    tasks/server/commit_transaction_task.cpp
-    tasks/server/commit_transaction_task.hpp
     tasks/server/create_pipeline_task.cpp
     tasks/server/create_pipeline_task.hpp
     tasks/server/execute_server_prepared_statement_task.cpp

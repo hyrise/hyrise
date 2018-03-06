@@ -1,4 +1,3 @@
-
 #include <gmock/gmock.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <server/server_session.hpp>
@@ -298,10 +297,6 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
   EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(sync_request))));
 
   EXPECT_CALL(*_connection, receive_sync_packet_body(42)).WillOnce(Return(ByMove(boost::make_ready_future())));
-
-  // Session commits the transaction and is ReadyForQuery again
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CommitTransactionTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future())));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
 
