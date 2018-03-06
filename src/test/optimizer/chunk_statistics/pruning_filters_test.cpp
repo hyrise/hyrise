@@ -38,4 +38,24 @@ TEST_F(PruningFiltersTest, RangeFilterGapTest) {
   EXPECT_EQ(true, filter->can_prune({9}, PredicateCondition::Equals));
 }
 
+TEST_F(PruningFiltersTest, RangeFilterExtremesTest) {
+  auto filter = RangeFilter<int>::build_filter(_values);
+
+  EXPECT_EQ(true, filter->can_prune({5}, PredicateCondition::Equals));
+  EXPECT_EQ(true, filter->can_prune({9}, PredicateCondition::Equals));
+  EXPECT_EQ(true, filter->can_prune({21}, PredicateCondition::Equals));
+  EXPECT_EQ(true, filter->can_prune({42}, PredicateCondition::GreaterThan));
+  EXPECT_EQ(true, filter->can_prune({-5}, PredicateCondition::LessThan));
+}
+
+TEST_F(PruningFiltersTest, RangeFilterFloatTest) {
+  pmr_vector<float> values = {1.f, 3.f, 458.7f};
+  auto filter = RangeFilter<float>::build_filter(values);
+
+  EXPECT_EQ(true, filter->can_prune({2.f}, PredicateCondition::Equals));
+  EXPECT_EQ(false, filter->can_prune({458.7f}, PredicateCondition::Equals));
+  EXPECT_EQ(true, filter->can_prune({700.f}, PredicateCondition::GreaterThan));
+  EXPECT_EQ(true, filter->can_prune({-5.f}, PredicateCondition::LessThan));
+}
+
 }  // namespace opossum
