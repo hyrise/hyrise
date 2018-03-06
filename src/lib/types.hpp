@@ -240,7 +240,16 @@ enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNu
 
 enum class TableType { References, Data };
 
-enum class PartitionSchemaType { Null, Range, Hash, RoundRobin };
+enum class PartitionSchemaType { 
+  Null = 0,
+  Range = 1,
+  Hash = 2,
+  RoundRobin = 3
+};
+
+enum class HashFunctionType {
+  Default = 0
+};
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

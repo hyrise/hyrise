@@ -186,6 +186,7 @@ void ExportBinary::_write_partition_schema_header(const std::shared_ptr<const Ta
     case PartitionSchemaType::Hash: {
       const auto hash_schema = std::static_pointer_cast<const HashPartitionSchema>(partition_schema);
       _export_value(ofstream, static_cast<ColumnID>(hash_schema->get_column_id()));
+      _export_value(ofstream, static_cast<uint8_t>(hash_schema->get_function_type()));
       break;
     }
     case PartitionSchemaType::Range: {

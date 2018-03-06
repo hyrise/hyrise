@@ -105,6 +105,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column to partition by | ColumnID                              |   4
+   * Hash function type     | uint8_t                               |   1
    * 
    *
    * @param table The table that is to be exported

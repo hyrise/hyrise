@@ -158,8 +158,9 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
     }
     case PartitionSchemaType::Hash: {
       const auto column_id = _read_value<ColumnID>(file);
-      const HashFunction hash_function;
-      return std::make_shared<HashPartitionSchema>(column_id, hash_function, partition_count);
+      const auto hash_function_type = _read_value<uint8_t>(file);
+      auto hash_function = _resolve_hash_function(hash_function_type);
+      return std::make_shared<HashPartitionSchema>(column_id, std::move(hash_function), partition_count);
     }
     case PartitionSchemaType::Range: {
       auto column_id = _read_value<ColumnID>(file);
@@ -269,6 +270,18 @@ std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<DictionaryColumn<T>>(dictionary, attribute_vector, null_value_id);
+}
+
+std::unique_ptr<AbstractHashFunction> ImportBinary::_resolve_hash_function(uint8_t type_id) {
+  HashFunctionType hash_function_type = static_cast<HashFunctionType>(type_id);
+  switch (hash_function_type) {
+        case HashFunctionType::Default: {
+          return std::make_unique<HashFunction>();
+        }
+        default: {
+          Fail("Unknown hash function type");
+        }
+      }
 }
 
 }  // namespace opossum

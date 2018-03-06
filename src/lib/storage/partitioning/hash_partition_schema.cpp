@@ -3,9 +3,9 @@
 
 namespace opossum {
 
-HashPartitionSchema::HashPartitionSchema(ColumnID column_id, HashFunction hash_function,
+HashPartitionSchema::HashPartitionSchema(ColumnID column_id, std::unique_ptr<AbstractHashFunction>&& hash_function,
                                          PartitionID number_of_partitions)
-    : _column_id(column_id), _hash_function(hash_function), _number_of_partitions(number_of_partitions) {
+    : _column_id(column_id), _hash_function(std::move(hash_function)), _number_of_partitions(number_of_partitions) {
   _partitions.reserve(number_of_partitions);
 
   for (PartitionID index{0}; index < _number_of_partitions; ++index) {
@@ -16,6 +16,8 @@ HashPartitionSchema::HashPartitionSchema(ColumnID column_id, HashFunction hash_f
 std::string HashPartitionSchema::name() const { return "HashPartition"; }
 
 PartitionSchemaType HashPartitionSchema::get_type() const { return PartitionSchemaType::Hash; }
+
+HashFunctionType HashPartitionSchema::get_function_type() const { return _hash_function->get_type(); }
 
 void HashPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
   AbstractPartitionSchema::append(values, get_matching_partition_for(values));
@@ -28,7 +30,7 @@ PartitionID HashPartitionSchema::get_matching_partition_for(const std::vector<Al
 }
 
 PartitionID HashPartitionSchema::get_matching_partition_for(const AllTypeVariant& value) const {
-  const auto hash = _hash_function(value);
+  const auto hash = _hash_function->operator()(value);
   PartitionID matching_partition = static_cast<PartitionID>(hash % _number_of_partitions);
   return matching_partition;
 }

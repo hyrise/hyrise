@@ -13,6 +13,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
@@ -67,7 +68,7 @@ TEST_F(OperatorsInsertPartitionedTest, InsertHashPartitioned) {
 
   auto target_table_name = "partitioned_table";
   auto p = Table::create_with_layout_from(t, Chunk::MAX_SIZE);
-  p->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+  p->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, std::make_unique<HashFunction>(), PartitionID{3}));
   StorageManager::get().add_table(target_table_name, p);
 
   auto gt = std::make_shared<GetTable>(table_name);

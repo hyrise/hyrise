@@ -13,6 +13,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/partitioning/hash_function.hpp"
 #include "storage/partitioning/hash_partition_schema.hpp"
 #include "storage/partitioning/null_partition_schema.hpp"
 #include "storage/partitioning/range_partition_schema.hpp"
@@ -181,7 +182,7 @@ TEST_F(OperatorsPartitioningTest, PartitionHash) {
   StorageManager::get().add_table(table_name, t);
 
   auto part = std::make_shared<Partitioning>(
-      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, std::make_unique<HashFunction>(), PartitionID{3}));
   auto context = TransactionManager::get().new_transaction_context();
   part->set_transaction_context(context);
 
@@ -218,7 +219,7 @@ TEST_F(OperatorsPartitioningTest, PartitionHashMVCC) {
   StorageManager::get().add_table(table_name, t);
 
   auto part = std::make_shared<Partitioning>(
-      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, std::make_unique<HashFunction>(), PartitionID{3}));
   auto context = TransactionManager::get().new_transaction_context();
   part->set_transaction_context(context);
 
@@ -256,7 +257,7 @@ TEST_F(OperatorsPartitioningTest, RemovePartitioning) {
   StorageManager::get().add_table(table_name, t);
 
   auto part = std::make_shared<Partitioning>(
-      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, std::make_unique<HashFunction>(), PartitionID{3}));
   auto context = TransactionManager::get().new_transaction_context();
   part->set_transaction_context(context);
 
@@ -287,7 +288,7 @@ TEST_F(OperatorsPartitioningTest, RemovePartitioningMVCC) {
   StorageManager::get().add_table(table_name, t);
 
   auto part = std::make_shared<Partitioning>(
-      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, HashFunction(), PartitionID{3}));
+      table_name, std::make_shared<HashPartitionSchema>(ColumnID{0}, std::make_unique<HashFunction>(), PartitionID{3}));
   auto context = TransactionManager::get().new_transaction_context();
   part->set_transaction_context(context);
 

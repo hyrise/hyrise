@@ -305,7 +305,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRangePartitioned) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnHashPartitioned) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  HashFunction hf;
+  auto hf = std::make_unique<HashFunction>();
   expected_table->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{3}, std::move(hf), PartitionID{3}));
   expected_table->add_column("a", DataType::String);
   expected_table->add_column("b", DataType::Int);

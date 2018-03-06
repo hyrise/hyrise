@@ -21,4 +21,8 @@ const HashValue HashFunction::operator()(const AllTypeVariant& value) const {
   return boost::apply_visitor(visitor, value);
 }
 
+HashFunctionType HashFunction::get_type() const {
+  return HashFunctionType::Default;
+}
+
 }  // namespace opossum

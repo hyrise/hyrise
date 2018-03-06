@@ -9,10 +9,10 @@ namespace opossum {
 class StorageHashPartitionSchemaTest : public BaseTest {
  protected:
   void SetUp() override {
-    HashFunction hf;
+    auto hf = std::make_unique<HashFunction>();
     // Creating a Table partitioned by a HashFunction applied on column 0
     // splitting the Table in 3 Partitions.
-    t0.apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, hf, PartitionID{3}));
+    t0.apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, std::move(hf), PartitionID{3}));
     t0.add_column("int_column", opossum::DataType::Int, false);
     t0.add_column("string_column", opossum::DataType::String, false);
   }

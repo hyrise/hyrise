@@ -12,6 +12,7 @@
 #include "storage/base_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/partitioning/abstract_hash_function.hpp"
 
 namespace opossum {
 
@@ -114,6 +115,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column to partition by | ColumnID                              |   4
+   * Hash function type     | uint8_t                               |   1
    *
    */
   static std::shared_ptr<AbstractPartitionSchema> _read_partitioning_header(std::ifstream& file);
@@ -194,6 +196,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Reads a single value of type T from the input file.
   template <typename T>
   static T _read_value(std::ifstream& file);
+
+  static std::unique_ptr<AbstractHashFunction> _resolve_hash_function(uint8_t type_id);
 
  private:
   // Name of the import file
