@@ -1,6 +1,7 @@
 #include "chunk_column_statistics.hpp"
 
 #include <iterator>
+#include <type_traits>
 
 #include "resolve_type.hpp"
 
@@ -8,11 +9,13 @@
 #include "optimizer/chunk_statistics/min_max_filter.hpp"
 #include "optimizer/chunk_statistics/range_filter.hpp"
 #include "storage/base_encoded_column.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column.hpp"
 #include "storage/value_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -42,39 +45,39 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_col
 }
 
 template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ValueColumn<T>& column) {
-  DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
-  return std::make_shared<ChunkColumnStatistics>();
-}
-
-template <typename T>
 static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(
     const DeprecatedDictionaryColumn<T>& column) {
   const auto& dictionary = *column.dictionary();
   return build_statistics_from_dictionary(dictionary);
 }
 
-template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ReferenceColumn& column) {
-  DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
-  return std::make_shared<ChunkColumnStatistics>();
-}
-
-template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const RunLengthColumn<T>& column) {
-  // TODO(tbjoern): implement build_statistics_from_concrete_column
-  return std::make_shared<ChunkColumnStatistics>();
-}
-
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const BaseColumn& column) {
-  return std::make_shared<ChunkColumnStatistics>();
-}
-
 std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(DataType data_type,
                                                                                std::shared_ptr<BaseColumn> column) {
   std::shared_ptr<ChunkColumnStatistics> statistics;
   resolve_data_and_column_type(data_type, *column, [&statistics](auto type, auto& typed_column) {
-    statistics = build_statistics_from_concrete_column(typed_column);
+    using ColumnType = typename std::decay<decltype(typed_column)>::type;
+    using DataType = typename decltype(type)::type;
+
+    if constexpr (std::is_same_v<ColumnType, DictionaryColumn<DataType>> ||
+        std::is_same_v<ColumnType, DeprecatedDictionaryColumn<DataType>>) {
+      // we can use the fact that dictionary columns have an accessor for the dictionary
+      statistics = build_statistics_from_concrete_column(typed_column);
+    } else if constexpr (std::is_base_of_v<BaseEncodedColumn, ColumnType>) {
+      // if we have a generic encoded column we create the dictionary ourselves
+      auto iterable = create_iterable_from_column(typed_column);
+      pmr_vector<DataType> values;
+      iterable.with_iterators([&](auto it, auto end_it) {
+        for (; it != end_it; ++it) {
+          // we are only interested in non-null values
+          if (!it->is_null()) {
+            values.push_back(it->value());
+          }
+        }
+      });
+      statistics = build_statistics_from_dictionary(values);
+    } else {
+      DebugAssert(false, "ChunkColumnStatistics should only be built for encoded columns.");
+    }
   });
   return statistics;
 }
