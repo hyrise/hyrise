@@ -53,14 +53,14 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, Predic
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& parent, LQPChildSide child_side,
-                   const std::shared_ptr<const AbstractLQPNode>& child);
+bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
+                   const std::shared_ptr<const AbstractLQPNode>& input);
 
 template <typename Functor>
 bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
   if (node == nullptr) return false;
   if (contains_fn(node)) return true;
-  return contained_in_lqp(node->left_child(), contains_fn) || contained_in_lqp(node->right_child(), contains_fn);
+  return contained_in_lqp(node->left_input(), contains_fn) || contained_in_lqp(node->right_input(), contains_fn);
 }
 
 template <typename Functor>
@@ -124,8 +124,8 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);                  \
   ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_reference(), actual_column_reference);
 
-#define ASSERT_LQP_TIE(parent, child_side, child) \
-  if (!opossum::check_lqp_tie(parent, child_side, child)) FAIL();
+#define ASSERT_LQP_TIE(output, input_side, input) \
+  if (!opossum::check_lqp_tie(output, input_side, input)) FAIL();
 
 #define EXPECT_LQP_EQ(lhs, rhs)                                  \
   {                                                              \

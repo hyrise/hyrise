@@ -77,7 +77,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -95,7 +95,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{0}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -113,7 +113,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -128,7 +128,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 
   auto predicate_node_0 = PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}},
                                               PredicateCondition::GreaterThan, ColumnID{1});
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -146,7 +146,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -164,7 +164,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -182,14 +182,14 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::IndexScan);
 }
 
-TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
+TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto stored_table_node = StoredTableNode::make("a");
 
   auto table = StorageManager::get().get_table("a");
@@ -200,11 +200,11 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnParentOfStoredTableNode) {
 
   auto predicate_node_0 =
       PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   auto predicate_node_1 =
       PredicateNode::make(LQPColumnReference{predicate_node_0, ColumnID{1}}, PredicateCondition::LessThan, 15);
-  predicate_node_1->set_left_child(predicate_node_0);
+  predicate_node_1->set_left_input(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::IndexScan);

@@ -60,11 +60,11 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
   ChunkColumns output_columns;
+  auto is_left_side = true;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
     // reusing the same code for left and right side - using a reference_wrapper is ugly, but better than code
     // duplication
-    bool is_left_side = chunk_in == chunk_left;
     auto table = is_left_side ? input_table_left() : input_table_right();
 
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
@@ -100,6 +100,8 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
       }
       output_columns.push_back(std::make_shared<ReferenceColumn>(referenced_table, referenced_column, pos_list_out));
     }
+
+    is_left_side = false;
   }
 
   output->append_chunk(output_columns);

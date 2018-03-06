@@ -222,7 +222,7 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_TRUE(lqp->subtree_is_validated());
+  EXPECT_TRUE(lqp->subplan_is_validated());
 }
 
 TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPNotValidated) {
@@ -232,7 +232,7 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPNotValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_FALSE(lqp->subtree_is_validated());
+  EXPECT_FALSE(lqp->subplan_is_validated());
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQP) {
@@ -261,7 +261,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_TRUE(lqp->subtree_is_validated());
+  EXPECT_TRUE(lqp->subplan_is_validated());
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
@@ -271,7 +271,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_FALSE(lqp->subtree_is_validated());
+  EXPECT_FALSE(lqp->subplan_is_validated());
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {

@@ -9,6 +9,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 
 namespace opossum {
@@ -132,7 +133,7 @@ void AbstractOperator::print(std::ostream& stream) const {
 
       stream << format_bytes(output->estimate_memory_usage());
       stream << "/";
-      stream << op->performance_data().walltime_ns << "ns)";
+      stream << format_duration(op->performance_data().walltime_ns) << ")";
     }
   };
 

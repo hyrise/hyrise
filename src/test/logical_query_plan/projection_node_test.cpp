@@ -33,7 +33,7 @@ class ProjectionNodeTest : public BaseTest {
         _c_expr, _a_expr, LQPExpression::create_column(_b, {"alias_for_b"}),
         LQPExpression::create_binary_operator(ExpressionType::Addition, _b_expr, _c_expr, {"some_addition"}),
         LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _c_expr)});
-    _projection_node->set_left_child(_mock_node);
+    _projection_node->set_left_input(_mock_node);
 
     _some_addition = {_projection_node, ColumnID{3}};
     _a_plus_c = {_projection_node, ColumnID{4}};

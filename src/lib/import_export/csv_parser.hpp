@@ -13,9 +13,10 @@ namespace opossum {
 class Table;
 class Chunk;
 
-/*
- * Creates a Table with values of the parsed csv file <filename> and the corresponding meta file
- * <filename>.meta
+/**
+ * Creates a Table with values of the parsed csv file <filename> and
+ * the corresponding meta file <filename>.meta
+ *
  * The files are parsed according to RFC 4180 if not otherwise specified. [https://tools.ietf.org/html/rfc4180]
  * For non-RFC 4180, all linebreaks within quoted strings are further escaped with an escape character.
  * For the structure of the meta csv file see export_csv.hpp

@@ -8,6 +8,9 @@
 
 #include "import_export/binary.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
@@ -224,23 +227,54 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
-  auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<const DeprecatedDictionaryColumn<T>&>(base_column);
-
-  _export_value(context->ofstream, BinaryColumnType::dictionary_column);
-  _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(column.attribute_vector()->width()));
-
-  // Write the dictionary size and dictionary
-  _export_value(context->ofstream, static_cast<ValueID>(column.unique_values_count()));
-  _export_values(context->ofstream, *column.dictionary());
-
-  _export_attribute_vector(context->ofstream, *column.attribute_vector());
+  Fail("Does not support the deprecated dictionary column any longer.");
 }
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Binary export not implemented yet for new version of dictionary column.");
+  auto context = std::static_pointer_cast<ExportContext>(base_context);
+  const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+
+  const auto is_fixed_size_byte_aligned = [&]() {
+    switch (column.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize4ByteAligned:
+      case CompressedVectorType::FixedSize2ByteAligned:
+      case CompressedVectorType::FixedSize1ByteAligned:
+        return true;
+      default:
+        return false;
+    }
+  }();
+
+  if (!is_fixed_size_byte_aligned) {
+    Fail("Does only support fixed-size byte-aligned compressed attribute vectors.");
+  }
+
+  _export_value(context->ofstream, BinaryColumnType::dictionary_column);
+
+  const auto attribute_vector_width = [&]() {
+    switch (column.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize4ByteAligned:
+        return 4u;
+      case CompressedVectorType::FixedSize2ByteAligned:
+        return 2u;
+      case CompressedVectorType::FixedSize1ByteAligned:
+        return 1u;
+      default:
+        return 0u;
+    }
+  }();
+
+  // Write attribute vector width
+  _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
+
+  // Write the dictionary size and dictionary
+  _export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
+  _export_values(context->ofstream, *column.dictionary());
+
+  // Write attribute vector
+  _export_attribute_vector(context->ofstream, column.compressed_vector_type(), *column.attribute_vector());
 }
 
 template <typename T>
@@ -251,18 +285,20 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseEncodedColumn
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstream& ofstream,
-                                                                    const BaseAttributeVector& attribute_vector) {
-  switch (attribute_vector.width()) {
-    case 1:
-      _export_values(ofstream, dynamic_cast<const FittedAttributeVector<uint8_t>&>(attribute_vector).attributes());
-      break;
-    case 2:
-      _export_values(ofstream, dynamic_cast<const FittedAttributeVector<uint16_t>&>(attribute_vector).attributes());
-      break;
-    case 4:
+                                                                    const CompressedVectorType type,
+                                                                    const BaseCompressedVector& attribute_vector) {
+  switch (type) {
+    case CompressedVectorType::FixedSize4ByteAligned:
+      _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
+      return;
+    case CompressedVectorType::FixedSize2ByteAligned:
+     _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
+      return;
+    case CompressedVectorType::FixedSize1ByteAligned:
+      _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());
+      return;
     default:
-      _export_values(ofstream, dynamic_cast<const FittedAttributeVector<uint32_t>&>(attribute_vector).attributes());
-      break;
+      Fail("Any other type should have been caught before.");
   }
 }
 
