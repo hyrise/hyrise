@@ -8,6 +8,10 @@
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/partitioning/hash_function.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/partitioning/round_robin_partition_schema.hpp"
 
 namespace opossum {
 
@@ -261,7 +265,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  expected_table->create_round_robin_partitioning(PartitionID{3});
+  expected_table->apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(PartitionID{3}));
   expected_table->add_column("a", DataType::String);
   expected_table->add_column("b", DataType::Int);
   expected_table->add_column("c", DataType::Long);
@@ -281,7 +285,8 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRangePartitioned) {
   auto expected_table = std::make_shared<opossum::Table>(2);
-  expected_table->create_range_partitioning(ColumnID{3}, {2.5f, 4.0f});
+  const std::vector<AllTypeVariant> bounds = {2.5f, 4.0f};
+  expected_table->apply_partitioning(std::make_shared<RangePartitionSchema>(ColumnID{3}, bounds));
   expected_table->add_column("a", DataType::String);
   expected_table->add_column("b", DataType::Int);
   expected_table->add_column("c", DataType::Long);
@@ -301,7 +306,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRangePartitioned) {
 TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnHashPartitioned) {
   auto expected_table = std::make_shared<opossum::Table>(2);
   HashFunction hf;
-  expected_table->create_hash_partitioning(ColumnID{3}, std::move(hf), PartitionID{3});
+  expected_table->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{3}, std::move(hf), PartitionID{3}));
   expected_table->add_column("a", DataType::String);
   expected_table->add_column("b", DataType::Int);
   expected_table->add_column("c", DataType::Long);

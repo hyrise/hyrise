@@ -1,13 +1,15 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../lib/storage/partitioning/round_robin_partition_schema.hpp"
+
 namespace opossum {
 
 class StorageRoundRobinPartitionSchemaTest : public BaseTest {
  protected:
   void SetUp() override {
     // Creating a Table with round robin partitioning using two Partitions.
-    t0.create_round_robin_partitioning(PartitionID{2});
+    t0.apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(PartitionID{2}));
     t0.add_column("int_column", opossum::DataType::Int, false);
     t0.add_column("string_column", opossum::DataType::String, false);
   }

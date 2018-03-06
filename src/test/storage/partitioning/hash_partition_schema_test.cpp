@@ -1,6 +1,7 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../lib/storage/partitioning/hash_function.hpp"
 #include "../lib/storage/partitioning/hash_partition_schema.hpp"
 
 namespace opossum {
@@ -11,7 +12,7 @@ class StorageHashPartitionSchemaTest : public BaseTest {
     HashFunction hf;
     // Creating a Table partitioned by a HashFunction applied on column 0
     // splitting the Table in 3 Partitions.
-    t0.create_hash_partitioning(ColumnID{0}, hf, PartitionID{3});
+    t0.apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{0}, hf, PartitionID{3}));
     t0.add_column("int_column", opossum::DataType::Int, false);
     t0.add_column("string_column", opossum::DataType::String, false);
   }

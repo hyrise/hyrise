@@ -15,7 +15,8 @@ class StorageRangePartitionSchemaTest : public BaseTest {
      * Partition 2: 5 < Values <= 10
      * Partition 3: 10 < Values
      */
-    t0.create_range_partitioning(ColumnID{0}, {5, 10});
+    std::vector<AllTypeVariant> bounds = {5, 10};
+    t0.apply_partitioning(std::make_shared<RangePartitionSchema>(ColumnID{0}, bounds));
     t0.add_column("int_column", opossum::DataType::Int, false);
     t0.add_column("string_column", opossum::DataType::String, false);
   }

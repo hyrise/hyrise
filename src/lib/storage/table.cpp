@@ -217,7 +217,7 @@ TableType Table::get_type() const {
 }
 
 
-void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
+void Table::apply_partitioning(const std::shared_ptr<AbstractPartitionSchema> partition_schema) {
   if (row_count() > 0) {
     throw std::runtime_error("Unable to create partitioning on non-empty table");
   }
@@ -225,7 +225,7 @@ void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partitio
   _create_initial_chunks(static_cast<PartitionID>(partition_schema->partition_count()));
 }
 
-void Table::set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
+void Table::set_partitioning_and_clear(const std::shared_ptr<AbstractPartitionSchema> partition_schema) {
   _partition_schema = std::move(partition_schema);
   _chunks.clear();
 }

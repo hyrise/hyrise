@@ -100,7 +100,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
 
   try {
     // check if partitioning information is available
-    auto partition_schema = _read_partitioning_header(file);
+    const auto partition_schema = _read_partitioning_header(file);
     table->set_partitioning_and_clear(partition_schema);
 
     std::map<ChunkID, PartitionID> chunk_to_partition;
@@ -172,6 +172,9 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
         std::copy(typed_bounds.begin(), typed_bounds.end(), std::back_inserter(bounds));
       });
       return std::make_shared<RangePartitionSchema>(column_id, bounds);
+    }
+    default: {
+      Fail("Unknown partition schema");
     }
   }
 }

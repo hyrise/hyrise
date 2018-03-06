@@ -155,9 +155,9 @@ class Table : private Noncopyable {
    * On empty Tables, the PartitionSchema can be altered using the functions below.
    * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
    */
-  void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
+  void apply_partitioning(const std::shared_ptr<AbstractPartitionSchema> partition_schema);
   // this function is needed for deserialization, it does not create a set of initial chunks
-  void set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema);
+  void set_partitioning_and_clear(const std::shared_ptr<AbstractPartitionSchema> partition_schema);
 
   bool is_partitioned() const;
   PartitionID partition_count() const;

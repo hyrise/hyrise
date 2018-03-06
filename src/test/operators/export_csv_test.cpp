@@ -14,6 +14,10 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/partitioning/hash_function.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/partitioning/round_robin_partition_schema.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -108,7 +112,8 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
 }
 
 TEST_F(OperatorsExportCsvTest, MultipleChunksPartitioned) {
-  table->create_range_partitioning(ColumnID{2}, {4.0f});
+  const std::vector<AllTypeVariant> bounds = {4.0f};
+  table->apply_partitioning(std::make_shared<RangePartitionSchema>(ColumnID{2}, bounds));
   table->append({1, "Hallo", 3.5f});
   table->append({2, "Welt!", 3.5f});
   table->append({3, "Gute", -4.0f});

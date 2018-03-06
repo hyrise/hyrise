@@ -1,6 +1,8 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../lib/storage/partitioning/hash_function.hpp"
+
 namespace opossum {
 
 class StorageHashFunctionTest : public BaseTest {
