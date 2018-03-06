@@ -65,7 +65,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 }
-TEST_F(OperatorTaskTest, MakeDiamonShape) {
+TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto gt_a = std::make_shared<GetTable>("table_a");
   auto scan_a = std::make_shared<TableScan>(gt_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
